@@ -355,54 +355,201 @@ export class FeedService {
         returnedPosts: paginatedPosts.length
       });
 
-      // Get engagement metrics for each post
-      const postsWithMetrics = await Promise.all(
-        paginatedPosts.map(async (post) => {
-          // Determine which reactions/tips tables to use based on post type
-          let reactionCount, tipCount, tipTotal, commentCount, viewCount;
+      // PERFORMANCE OPTIMIZATION: Batch fetch engagement metrics to avoid N+1 queries
+      // Instead of 5 queries per post, we do 10 total queries (5 for regular, 5 for quick posts)
 
-          // Determine which reactions/tips tables to use based on post type
-          const isQuickPost = typeof post.id === 'string';
+      // 1. Separate posts by type
+      const regularPostIds = paginatedPosts.filter(p => typeof p.id === 'number').map(p => p.id as number);
+      const quickPostIds = paginatedPosts.filter(p => typeof p.id === 'string').map(p => p.id as string);
 
-          [reactionCount, tipCount, tipTotal, commentCount, viewCount] = await Promise.all([
-            db.select({ count: sql<number>`COUNT(*)` })
-              .from(isQuickPost ? quickPostReactions : reactions)
-              .where(eq((isQuickPost ? quickPostReactions.quickPostId : reactions.postId) as any, post.id)),
-            db.select({ count: sql<number>`COUNT(*)` })
-              .from(isQuickPost ? quickPostTips : tips)
-              .where(eq((isQuickPost ? quickPostTips.quickPostId : tips.postId) as any, post.id)),
-            db.select({ total: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL)), 0)` })
-              .from(isQuickPost ? quickPostTips : tips)
-              .where(eq((isQuickPost ? quickPostTips.quickPostId : tips.postId) as any, post.id)),
-            db.select({ count: sql<number>`COUNT(*)` })
-              .from(comments)
-              .where(and(
-                eq((isQuickPost ? comments.quickPostId : comments.postId) as any, post.id),
-                sql`(${comments.moderationStatus} IS NULL OR ${comments.moderationStatus} != 'blocked')`
-              )),
-            db.select({ count: sql<number>`COUNT(*)` })
-              .from(isQuickPost ? quickPostViews : views)
-              .where(eq((isQuickPost ? quickPostViews.quickPostId : views.postId) as any, post.id))
-          ]);
+      console.log('🔍 [BACKEND FEED] Batching engagement queries for:', {
+        regularPosts: regularPostIds.length,
+        quickPosts: quickPostIds.length,
+        total: paginatedPosts.length
+      });
 
+      // 2. Batch fetch all metrics with GROUP BY (10 queries total instead of 5*N)
+      const [
+        regularReactionsData,
+        quickReactionsData,
+        regularTipsCountData,
+        quickTipsCountData,
+        regularTipsTotalData,
+        quickTipsTotalData,
+        regularCommentsData,
+        quickCommentsData,
+        regularViewsData,
+        quickViewsData
+      ] = await Promise.all([
+        // Regular post reactions
+        regularPostIds.length > 0
+          ? db.select({
+            postId: reactions.postId,
+            count: sql<number>`COUNT(*)::int`
+          })
+            .from(reactions)
+            .where(inArray(reactions.postId, regularPostIds))
+            .groupBy(reactions.postId)
+          : Promise.resolve([]),
 
-          const score = this.calculateEngagementScore(
-            Number(reactionCount[0]?.count || 0),
-            Number(tipCount[0]?.count || 0),
-            Number(commentCount[0]?.count || 0)
-          );
+        // Quick post reactions
+        quickPostIds.length > 0
+          ? db.select({
+            postId: quickPostReactions.quickPostId,
+            count: sql<number>`COUNT(*)::int`
+          })
+            .from(quickPostReactions)
+            .where(inArray(quickPostReactions.quickPostId, quickPostIds))
+            .groupBy(quickPostReactions.quickPostId)
+          : Promise.resolve([]),
 
-          return {
-            ...post,
-            reactionCount: Number(reactionCount[0]?.count || 0),
-            tipCount: Number(tipCount[0]?.count || 0),
-            totalTipAmount: Number(tipTotal[0]?.total || 0),
-            commentCount: Number(commentCount[0]?.count || 0),
-            viewCount: Number(viewCount[0]?.count || 0),
-            engagementScore: score
-          };
-        })
-      );
+        // Regular post tips count
+        regularPostIds.length > 0
+          ? db.select({
+            postId: tips.postId,
+            count: sql<number>`COUNT(*)::int`
+          })
+            .from(tips)
+            .where(inArray(tips.postId, regularPostIds))
+            .groupBy(tips.postId)
+          : Promise.resolve([]),
+
+        // Quick post tips count
+        quickPostIds.length > 0
+          ? db.select({
+            postId: quickPostTips.quickPostId,
+            count: sql<number>`COUNT(*)::int`
+          })
+            .from(quickPostTips)
+            .where(inArray(quickPostTips.quickPostId, quickPostIds))
+            .groupBy(quickPostTips.quickPostId)
+          : Promise.resolve([]),
+
+        // Regular post tips total
+        regularPostIds.length > 0
+          ? db.select({
+            postId: tips.postId,
+            total: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL)), 0)`
+          })
+            .from(tips)
+            .where(inArray(tips.postId, regularPostIds))
+            .groupBy(tips.postId)
+          : Promise.resolve([]),
+
+        // Quick post tips total
+        quickPostIds.length > 0
+          ? db.select({
+            postId: quickPostTips.quickPostId,
+            total: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL)), 0)`
+          })
+            .from(quickPostTips)
+            .where(inArray(quickPostTips.quickPostId, quickPostIds))
+            .groupBy(quickPostTips.quickPostId)
+          : Promise.resolve([]),
+
+        // Regular post comments
+        regularPostIds.length > 0
+          ? db.select({
+            postId: comments.postId,
+            count: sql<number>`COUNT(*)::int`
+          })
+            .from(comments)
+            .where(and(
+              inArray(comments.postId, regularPostIds),
+              sql`(${comments.moderationStatus} IS NULL OR ${comments.moderationStatus} != 'blocked')`
+            ))
+            .groupBy(comments.postId)
+          : Promise.resolve([]),
+
+        // Quick post comments
+        quickPostIds.length > 0
+          ? db.select({
+            postId: comments.quickPostId,
+            count: sql<number>`COUNT(*)::int`
+          })
+            .from(comments)
+            .where(and(
+              inArray(comments.quickPostId, quickPostIds),
+              sql`(${comments.moderationStatus} IS NULL OR ${comments.moderationStatus} != 'blocked')`
+            ))
+            .groupBy(comments.quickPostId)
+          : Promise.resolve([]),
+
+        // Regular post views
+        regularPostIds.length > 0
+          ? db.select({
+            postId: views.postId,
+            count: sql<number>`COUNT(*)::int`
+          })
+            .from(views)
+            .where(inArray(views.postId, regularPostIds))
+            .groupBy(views.postId)
+          : Promise.resolve([]),
+
+        // Quick post views
+        quickPostIds.length > 0
+          ? db.select({
+            postId: quickPostViews.quickPostId,
+            count: sql<number>`COUNT(*)::int`
+          })
+            .from(quickPostViews)
+            .where(inArray(quickPostViews.quickPostId, quickPostIds))
+            .groupBy(quickPostViews.quickPostId)
+          : Promise.resolve([])
+      ]);
+
+      // 3. Build lookup maps for O(1) access
+      const reactionMap = new Map<number | string, number>();
+      const tipCountMap = new Map<number | string, number>();
+      const tipTotalMap = new Map<number | string, number>();
+      const commentMap = new Map<number | string, number>();
+      const viewMap = new Map<number | string, number>();
+
+      // Populate maps with regular post data
+      regularReactionsData.forEach(r => reactionMap.set(r.postId, Number(r.count)));
+      regularTipsCountData.forEach(t => tipCountMap.set(t.postId, Number(t.count)));
+      regularTipsTotalData.forEach(t => tipTotalMap.set(t.postId, Number(t.total)));
+      regularCommentsData.forEach(c => commentMap.set(c.postId, Number(c.count)));
+      regularViewsData.forEach(v => viewMap.set(v.postId, Number(v.count)));
+
+      // Populate maps with quick post data
+      quickReactionsData.forEach(r => reactionMap.set(r.postId, Number(r.count)));
+      quickTipsCountData.forEach(t => tipCountMap.set(t.postId, Number(t.count)));
+      quickTipsTotalData.forEach(t => tipTotalMap.set(t.postId, Number(t.total)));
+      quickCommentsData.forEach(c => commentMap.set(c.postId, Number(c.count)));
+      quickViewsData.forEach(v => viewMap.set(v.postId, Number(v.count)));
+
+      console.log('📊 [BACKEND FEED] Engagement metrics fetched:', {
+        reactions: reactionMap.size,
+        tips: tipCountMap.size,
+        comments: commentMap.size,
+        views: viewMap.size
+      });
+
+      // 4. Attach metrics to posts using map lookups (O(1) per post)
+      const postsWithMetrics = paginatedPosts.map(post => {
+        const reactionCount = reactionMap.get(post.id) || 0;
+        const tipCount = tipCountMap.get(post.id) || 0;
+        const totalTipAmount = tipTotalMap.get(post.id) || 0;
+        const commentCount = commentMap.get(post.id) || 0;
+        const viewCount = viewMap.get(post.id) || 0;
+
+        const score = this.calculateEngagementScore(
+          reactionCount,
+          tipCount,
+          commentCount
+        );
+
+        return {
+          ...post,
+          reactionCount,
+          tipCount,
+          totalTipAmount,
+          commentCount,
+          viewCount,
+          engagementScore: score
+        };
+      });
 
       // Get total count for pagination (excluding blocked content)
       const totalRegularCount = await db
@@ -1181,7 +1328,7 @@ export class FeedService {
       }
 
       safeLogger.info('Inserting comment with values:', commentValues);
-      
+
       // Handle potential database schema issues
       let comment;
       try {
@@ -1191,7 +1338,7 @@ export class FeedService {
           .returning();
       } catch (dbError) {
         safeLogger.error('Database error inserting comment:', dbError);
-        
+
         // If it's a column error, try with minimal required fields
         if (dbError.message && dbError.message.includes('column')) {
           safeLogger.warn('Attempting insert with minimal fields due to schema mismatch');
@@ -1199,7 +1346,7 @@ export class FeedService {
             authorId: commentValues.authorId,
             content: commentValues.content,
           };
-          
+
           // Add postId or quickPostId if they exist
           if (commentValues.postId !== null) {
             minimalCommentValues.postId = commentValues.postId;
@@ -1207,7 +1354,7 @@ export class FeedService {
           if (commentValues.quickPostId !== null) {
             minimalCommentValues.quickPostId = commentValues.quickPostId;
           }
-          
+
           comment = await db
             .insert(comments)
             .values(minimalCommentValues)

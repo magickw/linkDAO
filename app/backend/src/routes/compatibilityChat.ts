@@ -61,29 +61,47 @@ router.get('/api/health', (_req: Request, res: Response) => {
 
 // List conversations (protected)
 router.get('/api/chat/conversations', authMiddleware, async (_req: Request, res: Response) => {
-  if (hasDb) {
-    try {
-      const rows = await db.select({
-        id: conversations.id,
-        title: conversations.title,
-        subject: conversations.subject,
-        participants: conversations.participants,
-        lastMessageId: conversations.lastMessageId,
-        lastActivity: conversations.lastActivity,
-        unreadCount: conversations.unreadCount,
-        createdAt: conversations.createdAt,
-      }).from(conversations).orderBy(desc(conversations.lastActivity));
+  try {
+    if (hasDb) {
+      try {
+        const rows = await db.select({
+          id: conversations.id,
+          title: conversations.title,
+          subject: conversations.subject,
+          participants: conversations.participants,
+          lastMessageId: conversations.lastMessageId,
+          lastActivity: conversations.lastActivity,
+          unreadCount: conversations.unreadCount,
+          createdAt: conversations.createdAt,
+        }).from(conversations).orderBy(desc(conversations.lastActivity));
 
-      return res.json({ conversations: rows });
-    } catch (err) {
-      safeLogger.error('[compatibilityChat] DB error fetching conversations', err);
-      const list = Object.values(inMemoryConversations).sort((a, b) => (b.last_activity || b.created_at).localeCompare(a.last_activity || a.created_at));
-      return res.json({ conversations: list });
+        safeLogger.info(`[compatibilityChat] Successfully fetched ${rows.length} conversations from DB`);
+        return res.json({ conversations: rows });
+      } catch (dbError) {
+        safeLogger.error('[compatibilityChat] DB error fetching conversations', {
+          error: dbError instanceof Error ? dbError.message : String(dbError),
+          stack: dbError instanceof Error ? dbError.stack : undefined
+        });
+        // Fallback to in-memory on DB error
+        const list = Object.values(inMemoryConversations).sort((a, b) => (b.last_activity || b.created_at).localeCompare(a.last_activity || a.created_at));
+        safeLogger.info(`[compatibilityChat] Falling back to in-memory, returning ${list.length} conversations`);
+        return res.json({ conversations: list });
+      }
     }
-  }
 
-  const list = Object.values(inMemoryConversations).sort((a, b) => (b.last_activity || b.created_at).localeCompare(a.last_activity || a.created_at));
-  res.json({ conversations: list });
+    // No DB available, use in-memory
+    const list = Object.values(inMemoryConversations).sort((a, b) => (b.last_activity || b.created_at).localeCompare(a.last_activity || a.created_at));
+    safeLogger.info(`[compatibilityChat] No DB, returning ${list.length} in-memory conversations`);
+    res.json({ conversations: list });
+  } catch (error) {
+    // Catch-all error handler
+    safeLogger.error('[compatibilityChat] Unexpected error in conversations endpoint', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    // Return empty array rather than error to prevent frontend crashes
+    res.json({ conversations: [] });
+  }
 });
 
 // Also support /api/conversations as an alternate path

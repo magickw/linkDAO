@@ -42,10 +42,10 @@ export class SellerController {
         .offset((parseInt(page as string) - 1) * parseInt(limit as string));
         
         // Get total count
-        const totalCountResult = await db.select({ count: marketplaceUsers.userId })
+        const totalCountResult = await db.select({ count: sql<number>`count(*)` })
           .from(marketplaceUsers)
           .where(eq(marketplaceUsers.role, 'seller'));
-        const totalCount = totalCountResult.length > 0 ? totalCountResult[0].count : 0;
+        const totalCount = totalCountResult[0]?.count || 0;
         
         res.json({
           applications: sellers,
@@ -323,10 +323,10 @@ export class SellerController {
       });
 
       // Get total count
-      const totalCountResult = await db.select({ count: marketplaceUsers.userId })
+      const totalCountResult = await db.select({ count: sql<number>`count(*)` })
         .from(marketplaceUsers)
         .where(eq(marketplaceUsers.role, 'seller'));
-      const totalCount = totalCountResult.length || 0;
+      const totalCount = totalCountResult[0]?.count || 0;
 
       res.json({
         sellers: sellersWithPerformance,

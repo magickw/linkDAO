@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { safeLogger } from '../utils/safeLogger';
 import { client } from '../db';
+import { sql } from 'drizzle-orm';
 
 export class CharityController {
     /**
@@ -70,6 +71,10 @@ export class CharityController {
      */
     async getCharityStats(req: Request, res: Response) {
         try {
+            // Import the database service to get proper client
+            const { databaseService } = require('../services/databaseService');
+            const db = databaseService.getDatabase();
+            
             const statsQuery = `
         SELECT 
           COUNT(*) FILTER (WHERE status IN ('pending', 'active') AND is_verified_charity = false) as pending,
@@ -80,13 +85,8 @@ export class CharityController {
         WHERE type = 'charity'
       `;
 
-            if (!client) {
-                safeLogger.error('Database connection not available');
-                return res.status(500).json({ error: 'Database connection not available' });
-            }
-
-            const result = await client.unsafe(statsQuery);
-            const stats: any = result[0] || {};
+            const result = await db.execute(sql.raw(statsQuery));
+            const stats: any = result.rows[0] || {};
 
             res.json({
                 pendingCharityProposals: parseInt(stats.pending || '0'),

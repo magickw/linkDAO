@@ -1,92 +1,187 @@
 import React from 'react';
 import Link from 'next/link';
+import { processContent, formatTimestamp } from '@/utils/contentParser';
+import {
+  MessageCircle,
+  Share2,
+  Bookmark,
+  MoreHorizontal,
+  Heart,
+  ArrowUp,
+  ArrowDown,
+  ExternalLink,
+  Globe,
+  Users,
+  Lock
+} from 'lucide-react';
 
 interface Web3PostCardProps {
-  post: any; // In a real implementation, this would be typed as Post
-  profile: any; // In a real implementation, this would be typed as UserProfile
+  post: any;
+  profile: any;
   className?: string;
 }
 
-export default function Web3PostCard({ post, profile, className = '' }: Web3PostCardProps) {
-  // Format the timestamp
-  const formatTimestamp = (date: Date) => {
-    const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-    if (diffInSeconds < 60) {
-      return `${diffInSeconds} seconds ago`;
-    } else if (diffInSeconds < 3600) {
-      const minutes = Math.floor(diffInSeconds / 60);
-      return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
-    } else if (diffInSeconds < 86400) {
-      const hours = Math.floor(diffInSeconds / 3600);
-      return `${hours} hour${hours > 1 ? 's' : ''} ago`;
-    } else {
-      const days = Math.floor(diffInSeconds / 86400);
-      return `${days} day${days > 1 ? 's' : ''} ago`;
+
+export default function Web3PostCard({ post, profile, className = '' }: Web3PostCardProps) {
+  const timestamp = post.createdAt instanceof Date ? 
+    formatTimestamp(post.createdAt) : 
+    formatTimestamp(new Date(post.createdAt));
+
+  const getVisibilityIcon = () => {
+    switch (post.visibility) {
+      case 'public': return <Globe className="w-3 h-3" />;
+      case 'followers': return <Users className="w-3 h-3" />;
+      case 'community': return <Lock className="w-3 h-3" />;
+      default: return <Globe className="w-3 h-3" />;
     }
   };
 
-  const timestamp = post.createdAt instanceof Date ?
-    formatTimestamp(post.createdAt) :
-    'Unknown time';
-
   return (
-    <div className={`bg-white dark:bg-gray-800 shadow rounded-lg p-6 ${className}`}>
-      <div className="flex">
-        <div className="flex-shrink-0 mr-4">
-          <img
-            className="h-12 w-12 rounded-full border-2 border-primary-500"
-            src={profile.avatarCid || 'https://placehold.co/48'}
-            alt={profile.handle}
-          />
-        </div>
-        <div className="flex-1">
-          <div className="flex items-center">
-            <Link href={`/u/${post.author}`} className="text-sm font-medium text-gray-900 hover:text-primary-600 dark:text-white dark:hover:text-primary-400">
-              {profile.handle}
-            </Link>
-            {profile.ens && (
-              <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">({profile.ens})</span>
-            )}
-            <span className="mx-1 text-gray-300 dark:text-gray-600">·</span>
-            <span className="text-sm text-gray-500 dark:text-gray-400">{timestamp}</span>
-          </div>
-          <p className="mt-2 text-gray-700 dark:text-gray-300">
-            {typeof post.contentCid === 'string' ? post.contentCid : JSON.stringify(post.contentCid)}
-          </p>
+    <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 ${className}`}>
+      {/* Header */}
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-start space-x-3">
+          {/* Avatar */}
+          <Link href={`/profile/${post.author?.walletAddress || profile.walletAddress}`}>
+            <img
+              src={post.author?.avatar || profile.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author?.walletAddress || profile.walletAddress}`}
+              alt="Avatar"
+              className="w-10 h-10 rounded-full ring-2 ring-gray-200 dark:ring-gray-700 hover:ring-4 hover:ring-gray-300 dark:hover:ring-gray-600 transition-all cursor-pointer"
+            />
+          </Link>
 
-          {post.tags && post.tags.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1">
-              {post.tags.map((tag: string, index: number) => (
-                <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200">
-                  #{tag}
+          {/* Author Info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center space-x-2">
+              <Link href={`/profile/${post.author?.walletAddress || profile.walletAddress}`}>
+                <span className="font-semibold text-gray-900 dark:text-white hover:underline cursor-pointer">
+                  {post.author?.displayName || profile.displayName}
                 </span>
-              ))}
+              </Link>
+              {post.author?.verified && (
+                <div className="bg-blue-500 rounded-full p-0.5">
+                  <Heart className="w-3 h-3 text-white fill-current" />
+                </div>
+              )}
+              {getVisibilityIcon()}
             </div>
-          )}
-
-          <div className="mt-4 flex space-x-6">
-            <button className="flex items-center text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 transition-colors">
-              <svg className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-              </svg>
-              <span>24</span>
-            </button>
-            <button className="flex items-center text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 transition-colors">
-              <svg className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-              <span>8</span>
-            </button>
-            <button className="flex items-center text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 transition-colors">
-              <svg className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-              </svg>
-              <span>3</span>
-            </button>
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              {timestamp}
+            </div>
           </div>
         </div>
+
+        {/* More Options */}
+        <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+          <MoreHorizontal className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+        </button>
+      </div>
+
+      {/* Content */}
+      <div className="mb-4 prose prose-sm max-w-none dark:prose-invert">
+        <div className="text-gray-900 dark:text-white leading-relaxed">
+          {processContent(post.content || post.body, post.contentType)}
+        </div>
+      </div>
+
+      {/* Media */}
+      {post.media && post.media.length > 0 && (
+        <div className="mb-4">
+          {post.media.map((media: any, index: number) => (
+            <div key={index} className="rounded-lg overflow-hidden">
+              {media.type === 'image' && (
+                <img
+                  src={media.url}
+                  alt={media.title || 'Post image'}
+                  className="w-full max-h-96 object-cover"
+                  loading="lazy"
+                />
+              )}
+              {media.type === 'video' && (
+                <video
+                  src={media.url}
+                  className="w-full max-h-96"
+                  controls
+                />
+              )}
+              {media.type === 'link' && (
+                <a
+                  href={media.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <div className="flex items-start space-x-3">
+                    {media.thumbnail && (
+                      <img
+                        src={media.thumbnail}
+                        alt={media.title}
+                        className="w-16 h-16 rounded-lg object-cover"
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-gray-900 dark:text-white truncate">
+                        {media.title}
+                      </h4>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                        {media.description}
+                      </p>
+                      <div className="flex items-center space-x-1 mt-1">
+                        <ExternalLink className="w-3 h-3 text-gray-400" />
+                        <span className="text-xs text-gray-400">External link</span>
+                      </div>
+                    </div>
+                  </div>
+                </a>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex items-center space-x-6">
+          {/* Vote */}
+          <div className="flex items-center space-x-2">
+            <button className="flex items-center space-x-1 text-gray-500 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition-colors">
+              <ArrowUp className="w-5 h-5" />
+              <span className="text-sm font-medium">{post.upvotes || 0}</span>
+            </button>
+            <button className="flex items-center space-x-1 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">
+              <ArrowDown className="w-5 h-5" />
+              <span className="text-sm font-medium">{post.downvotes || 0}</span>
+            </button>
+          </div>
+
+          {/* Comments */}
+          <button className="flex items-center space-x-2 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+            <MessageCircle className="w-5 h-5" />
+            <span className="text-sm">{post.comments || post.commentsCount || 0}</span>
+          </button>
+
+          {/* Share */}
+          <button className="flex items-center space-x-2 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+            <Share2 className="w-5 h-5" />
+            <span className="text-sm">Share</span>
+          </button>
+
+          {/* Save */}
+          <button className="flex items-center space-x-2 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+            <Bookmark className="w-5 h-5" />
+            <span className="text-sm">Save</span>
+          </button>
+        </div>
+
+        {/* Staked Amount */}
+        {post.stakedAmount && (
+          <div className="flex items-center space-x-1 text-purple-600 dark:text-purple-400">
+            <span className="text-sm font-medium">
+              {post.stakedAmount} $LDAO staked
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
