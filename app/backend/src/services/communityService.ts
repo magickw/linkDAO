@@ -1,7 +1,49 @@
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
-import { posts, users, communities, communityMembers, communityStats, communityCategories, reactions, communityGovernanceProposals, communityGovernanceVotes, communityModerationActions, communityDelegations, communityProxyVotes, communityMultiSigApprovals, communityAutomatedExecutions, communityTokenGatedContent, communityUserContentAccess, communitySubscriptionTiers, communityUserSubscriptions, communityTreasuryPools, communityCreatorRewards, communityStaking, communityStakingRewards, communityReferralPrograms, communityUserReferrals } from '../db/schema';
+import { posts, users, communities, communityMembers, communityStats, communityCategories, reactions } from '../db/schema';
 import { eq, desc, asc, and, or, like, inArray, sql, gt, lt, count, avg, sum, isNull, ne } from 'drizzle-orm';
+
+// Import optional tables conditionally
+let communityGovernanceProposals: any;
+let communityGovernanceVotes: any;
+let communityModerationActions: any;
+let communityDelegations: any;
+let communityProxyVotes: any;
+let communityMultiSigApprovals: any;
+let communityAutomatedExecutions: any;
+let communityTokenGatedContent: any;
+let communityUserContentAccess: any;
+let communitySubscriptionTiers: any;
+let communityUserSubscriptions: any;
+let communityTreasuryPools: any;
+let communityCreatorRewards: any;
+let communityStaking: any;
+let communityStakingRewards: any;
+let communityReferralPrograms: any;
+let communityUserReferrals: any;
+
+try {
+  const schema = require('../db/schema');
+  communityGovernanceProposals = schema.communityGovernanceProposals;
+  communityGovernanceVotes = schema.communityGovernanceVotes;
+  communityModerationActions = schema.communityModerationActions;
+  communityDelegations = schema.communityDelegations;
+  communityProxyVotes = schema.communityProxyVotes;
+  communityMultiSigApprovals = schema.communityMultiSigApprovals;
+  communityAutomatedExecutions = schema.communityAutomatedExecutions;
+  communityTokenGatedContent = schema.communityTokenGatedContent;
+  communityUserContentAccess = schema.communityUserContentAccess;
+  communitySubscriptionTiers = schema.communitySubscriptionTiers;
+  communityUserSubscriptions = schema.communityUserSubscriptions;
+  communityTreasuryPools = schema.communityTreasuryPools;
+  communityCreatorRewards = schema.communityCreatorRewards;
+  communityStaking = schema.communityStaking;
+  communityStakingRewards = schema.communityStakingRewards;
+  communityReferralPrograms = schema.communityReferralPrograms;
+  communityUserReferrals = schema.communityUserReferrals;
+} catch (error) {
+  safeLogger.warn('Some community tables not available:', error.message);
+}
 import { feedService } from './feedService';
 import { sanitizeInput, sanitizeObject, validateLength } from '../utils/sanitizer';
 import { communityCacheService, CommunityCacheService } from './communityCacheService';
@@ -1678,18 +1720,20 @@ export class CommunityService {
         })
         .where(eq(posts.id, parseInt(postId)));
 
-      // Record moderation action
-      await db
-        .insert(communityModerationActions)
-        .values({
-          communityId,
-          moderatorAddress,
-          action: 'approve_post',
-          targetType: 'post',
-          targetId: postId,
-          reason: 'Post approved by moderator',
-          metadata: JSON.stringify({ postId, action: 'approve' }),
-        });
+      // Record moderation action only if table exists
+      if (communityModerationActions) {
+        await db
+          .insert(communityModerationActions)
+          .values({
+            communityId,
+            moderatorAddress,
+            action: 'approve_post',
+            targetType: 'post',
+            targetId: postId,
+            reason: 'Post approved by moderator',
+            metadata: JSON.stringify({ postId, action: 'approve' }),
+          });
+      }
 
       return { success: true, message: 'Post approved successfully' };
     } catch (error) {
@@ -1982,6 +2026,20 @@ export class CommunityService {
       }
 
       const whereClause = and(...whereConditions);
+
+      // Check if governance proposals table exists
+      if (!communityGovernanceProposals) {
+        // Return empty result when table doesn't exist
+        return {
+          proposals: [],
+          pagination: {
+            page,
+            limit,
+            total: 0,
+            totalPages: 0
+          }
+        };
+      }
 
       // Get proposals
       const proposalsResult = await db

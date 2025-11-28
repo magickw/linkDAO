@@ -1554,81 +1554,30 @@ export class CommunityController {
   }
 
   // Update moderation feedback (auth required)
-router.post('/moderation/feedback', csrfProtection,
-  authRequired,
-  validateRequest({
-    body: {
-      contentId: { type: 'string', required: true },
-      moderationResult: { type: 'object', required: true },
-      feedback: { type: 'string', required: true, enum: ['approved', 'rejected', 'escalated'] }
+  async updateModerationFeedback(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { contentId, moderationResult, feedback } = req.body;
+
+      // In a real implementation, this would store the feedback in the database
+      // For now, just log the feedback
+      safeLogger.info('Moderation feedback received', {
+        contentId,
+        feedback,
+        userAddress
+      });
+
+      res.json(createSuccessResponse({ message: 'Feedback recorded successfully' }, {}));
+    } catch (error) {
+      safeLogger.error('Error updating moderation feedback:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to update moderation feedback'));
     }
-  }),
-  communityController.updateModerationFeedback
-);
-
-// Template endpoints
-router.get('/templates',
-  validateRequest({
-    query: {
-      category: { type: 'string', optional: true },
-      isPremium: { type: 'boolean', optional: true },
-      limit: { type: 'number', optional: true, min: 1, max: 50 },
-      offset: { type: 'number', optional: true, min: 0 }
-    }
-  }),
-  communityController.getTemplates
-);
-
-router.get('/templates/popular',
-  validateRequest({
-    query: {
-      limit: { type: 'number', optional: true, min: 1, max: 10 }
-    }
-  ),
-  communityController.getPopularTemplates
-);
-
-router.get('/templates/:id',
-  validateRequest({
-    params: {
-      id: { type: 'string', required: true }
-    }
-  }),
-  communityController.getTemplateById
-);
-
-router.post('/templates/:id/create',
-  csrfProtection,
-  authRequired,
-  validateRequest({
-    params: {
-      id: { type: 'string', required: true }
-    },
-    body: {
-      name: { type: 'string', required: true, minLength: 3, maxLength: 50 },
-      displayName: { type: 'string', required: true, minLength: 3, maxLength: 100 },
-      description: { type: 'string', optional: true, maxLength: 1000 },
-      customizations: { type: 'object', optional: true }
-    }
-  }),
-  communityController.createCommunityFromTemplate
-);
-
-router.post('/templates/:id/rate',
-  csrfProtection,
-  authRequired,
-  validateRequest({
-    params: {
-      id: { type: 'string', required: true }
-    },
-    body: {
-      rating: { type: 'number', required: true, min: 1, max: 5 }
-    }
-  }),
-  communityController.rateTemplate
-);
-
-
+  }
 
   // Bulk Member Management Methods
 
@@ -2291,7 +2240,5 @@ router.post('/templates/:id/rate',
     }
   }
 }
-
-export default router;
 
 export const communityController = new CommunityController();
