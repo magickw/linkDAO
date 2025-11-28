@@ -912,17 +912,17 @@ class AuthService {
     };
 
     // Try multiple token sources to ensure we get the token
-    const token = this.getToken() || 
-                  localStorage.getItem('linkdao_access_token') ||
-                  localStorage.getItem('token') ||
-                  localStorage.getItem('authToken') ||
-                  localStorage.getItem('auth_token');
+    const token = this.getToken() ||
+      localStorage.getItem('linkdao_access_token') ||
+      localStorage.getItem('token') ||
+      localStorage.getItem('authToken') ||
+      localStorage.getItem('auth_token');
 
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
-    } else {
-      console.warn('No authentication token found');
     }
+    // Note: Missing token is expected during initial page load before authentication
+    // Services should handle unauthenticated requests gracefully
 
     return headers;
   }
