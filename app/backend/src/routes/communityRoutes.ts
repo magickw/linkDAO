@@ -63,7 +63,7 @@ router.get('/my-communities',
   validateRequest({
     query: {
       page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, max: 50 }
+      limit: { type: 'number', optional: true, min: 1, max: 100 }
     }
   }),
   communityController.getMyCommunities

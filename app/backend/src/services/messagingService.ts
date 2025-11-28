@@ -124,6 +124,7 @@ export class MessagingService {
           .select({
             id: conversations.id,
             title: conversations.title,
+            subject: conversations.subject,
             participants: conversations.participants,
             lastActivity: conversations.lastActivity,
             unreadCount: conversations.unreadCount,

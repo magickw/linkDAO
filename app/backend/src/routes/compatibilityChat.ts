@@ -66,6 +66,7 @@ router.get('/api/chat/conversations', authMiddleware, async (_req: Request, res:
       const rows = await db.select({
         id: conversations.id,
         title: conversations.title,
+        subject: conversations.subject,
         participants: conversations.participants,
         lastMessageId: conversations.lastMessageId,
         lastActivity: conversations.lastActivity,
@@ -113,6 +114,7 @@ router.post('/api/chat/conversations/dm', csrfProtection, authMiddleware, async 
     try {
       const inserted = await db.insert(conversations).values({
         title: null,
+        subject: null,
         participants: participants,
         lastMessageId: null,
         lastActivity: new Date(),

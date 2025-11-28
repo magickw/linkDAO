@@ -3308,13 +3308,20 @@ export const pollVotes = pgTable("poll_votes", {
 // Note: Additional messaging tables defined above
 export const conversations = pgTable("conversations", {
   id: uuid("id").defaultRandom().primaryKey(),
-  title: varchar("title", { length: 255 }),
+  subject: varchar("subject", { length: 255 }),
+  title: varchar("title", { length: 255 }), // Optional title (alternative to subject)
   participants: jsonb("participants").notNull(),
-  lastMessageId: uuid("last_message_id"),
+  lastMessageId: uuid("last_message_id"), // Reference to last message
   lastActivity: timestamp("last_activity"),
   unreadCount: integer("unread_count").default(0),
-  archivedBy: jsonb("archived_by").default("[]"),
+  archivedBy: jsonb("archived_by").default("[]"), // Array of user addresses who archived this
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+
+  // Legacy columns from old schema
+  relatedProductId: uuid("related_product_id"),
+  relatedOrderId: integer("related_order_id"),
+  lastMessageAt: timestamp("last_message_at"),
 
   // Marketplace context columns
   conversationType: varchar("conversation_type", { length: 32 }).default("general"),
@@ -3325,7 +3332,6 @@ export const conversations = pgTable("conversations", {
   isAutomated: boolean("is_automated").default(false),
   status: varchar("status", { length: 32 }).default("active"),
   archivedAt: timestamp("archived_at"),
-  updatedAt: timestamp("updated_at").defaultNow(),
 }, (t) => ({
   lastActivityIdx: index("idx_conversations_last_activity").on(t.lastActivity),
 
