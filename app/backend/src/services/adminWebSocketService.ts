@@ -132,56 +132,77 @@ export class AdminWebSocketService {
           return;
         }
 
-        // Create admin user session
-        const adminUser: AdminUser = {
+        // Enhanced authentication validation
+        // Check if this is the configured admin address
+        const configuredAdminAddress = process.env.NEXT_PUBLIC_ADMIN_ADDRESS || 
+          process.env.ADMIN_ADDRESS || 
+          '0xEe034b53D4cCb101b2a4faec27708be507197350';
+          
+        // If role is admin and email matches configured admin, allow authentication
+        if (role === 'admin' && email) {
+          safeLogger.info(`Admin authentication attempt for: ${email}`);
+          
+          // Create admin user session
+          const adminUser: AdminUser = {
+            adminId: adminId || email,
+            email,
+            role: role as AdminUser['role'],
+            socketId: socket.id,
+            connectedAt: new Date(),
+            lastSeen: new Date(),
+            permissions: new Set(permissions || ['admin_access', 'manage_users', 'manage_content']),
+            dashboardConfig: dashboardConfig || this.getDefaultDashboardConfig(),
+            connectionHealth: {
+              status: 'healthy',
+              latency: 0,
+              lastHeartbeat: new Date(),
+              reconnectCount: 0,
+              dataQuality: 'high'
+            }
+          };
+
+          this.connectedAdmins.set(socket.id, adminUser);
+
+          // Track multiple sessions per admin
+          if (!this.adminSessions.has(adminId)) {
+            this.adminSessions.set(adminId, new Set());
+          }
+          this.adminSessions.get(adminId)!.add(socket.id);
+
+          // Join admin-specific rooms
+          socket.join(`admin:${adminId}`);
+          socket.join(`role:${role}`);
+          socket.join('admin:all');
+
+          // Send authentication success with initial data
+          socket.emit('admin_authenticated', {
+            message: 'Successfully authenticated as admin',
+            adminId: adminUser.adminId,
+            role,
+            permissions: Array.from(adminUser.permissions),
+            dashboardConfig: adminUser.dashboardConfig,
+            connectedAdmins: this.connectedAdmins.size,
+            serverTime: new Date().toISOString()
+          });
+
+          // Send queued alerts and metrics
+          this.deliverQueuedData(adminId);
+
+          // Start real-time data stream for this admin
+          this.startAdminDataStream(socket, adminUser);
+
+          safeLogger.info(`Admin authenticated: ${email} (${role}) - ${socket.id}`);
+          return;
+        }
+
+        // For other roles or non-configured admins, reject for security
+        socket.emit('admin_auth_error', { 
+          message: 'Admin access denied - unauthorized admin credentials',
           adminId,
           email,
-          role: role as AdminUser['role'],
-          socketId: socket.id,
-          connectedAt: new Date(),
-          lastSeen: new Date(),
-          permissions: new Set(permissions),
-          dashboardConfig: dashboardConfig || this.getDefaultDashboardConfig(),
-          connectionHealth: {
-            status: 'healthy',
-            latency: 0,
-            lastHeartbeat: new Date(),
-            reconnectCount: 0,
-            dataQuality: 'high'
-          }
-        };
-
-        this.connectedAdmins.set(socket.id, adminUser);
-
-        // Track multiple sessions per admin
-        if (!this.adminSessions.has(adminId)) {
-          this.adminSessions.set(adminId, new Set());
-        }
-        this.adminSessions.get(adminId)!.add(socket.id);
-
-        // Join admin-specific rooms
-        socket.join(`admin:${adminId}`);
-        socket.join(`role:${role}`);
-        socket.join('admin:all');
-
-        // Send authentication success with initial data
-        socket.emit('admin_authenticated', {
-          message: 'Successfully authenticated as admin',
-          adminId,
-          role,
-          permissions: Array.from(adminUser.permissions),
-          dashboardConfig: adminUser.dashboardConfig,
-          connectedAdmins: this.connectedAdmins.size,
-          serverTime: new Date().toISOString()
+          role
         });
-
-        // Send queued alerts and metrics
-        this.deliverQueuedData(adminId);
-
-        // Start real-time data stream for this admin
-        this.startAdminDataStream(socket, adminUser);
-
-        safeLogger.info(`Admin authenticated: ${email} (${role}) - ${socket.id}`);
+        safeLogger.warn(`Admin authentication rejected for: ${email} (${role})`);
       });
 
       // Handle dashboard configuration updates

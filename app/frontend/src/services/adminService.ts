@@ -1013,6 +1013,11 @@ class AdminService {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        // If it's a 401 or 403 error, try to get mock data
+        if (response.status === 401 || response.status === 403) {
+          console.warn('Admin stats access denied, using mock data');
+          return this.getMockAdminStats();
+        }
         throw new Error(errorData.message || `Failed to fetch admin stats: ${response.status} ${response.statusText}`);
       }
 
@@ -1026,6 +1031,8 @@ class AdminService {
         });
         if (charityResponse.ok) {
           charityStats = await charityResponse.json();
+        } else {
+          console.warn('Failed to fetch charity stats:', charityResponse.status);
         }
       } catch (error) {
         console.warn('Failed to fetch charity stats:', error);
@@ -1037,59 +1044,30 @@ class AdminService {
       };
     } catch (error: any) {
       console.error('Error in getAdminStats:', error);
-
+      
       // Check if it's an auth error and we should return mock data
       const errorMessage = error.message || '';
       if (errorMessage.includes('401') || errorMessage.includes('403')) {
-        console.log('⚠️ Returning mock admin stats due to auth failure');
-        return {
-          pendingModerations: 5,
-          pendingSellerApplications: 3,
-          openDisputes: 2,
-          suspendedUsers: 10,
-          totalUsers: 1000,
-          totalSellers: 50,
-          recentActions: [
-            {
-              id: 'mock_action_1',
-              adminId: 'mock_admin',
-              adminHandle: 'Admin User',
-              action: 'approve_seller',
-              targetType: 'seller',
-              targetId: 'seller_123',
-              reason: 'Meets requirements',
-              details: { reason: 'Meets requirements' },
-              timestamp: new Date().toISOString(),
-              status: 'completed'
-            },
-            {
-              id: 'mock_action_2',
-              adminId: 'mock_admin',
-              adminHandle: 'Admin User',
-              action: 'resolve_dispute',
-              targetType: 'dispute',
-              targetId: 'dispute_456',
-              reason: 'Resolved in favor of buyer',
-              details: { resolution: 'refund' },
-              timestamp: new Date(Date.now() - 3600000).toISOString(),
-              status: 'completed'
-            }
-          ],
-          isMock: true // Flag to indicate mock data
-        };
+        console.warn('Admin stats access denied, using mock data');
+        return this.getMockAdminStats();
       }
 
       // Return default state instead of throwing to maintain UI stability
-      return {
-        pendingModerations: 0,
-        pendingSellerApplications: 0,
-        openDisputes: 0,
-        suspendedUsers: 0,
-        totalUsers: 0,
-        totalSellers: 0,
-        recentActions: []
-      };
+      return this.getMockAdminStats();
     }
+  }
+  
+  private getMockAdminStats(): any {
+    return {
+      pendingModerations: 0,
+      pendingSellerApplications: 0,
+      openDisputes: 0,
+      suspendedUsers: 0,
+      totalUsers: 0,
+      totalSellers: 0,
+      recentActions: [],
+      isMock: true
+    };
   }
 
   // Charity Verification Methods

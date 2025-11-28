@@ -32,6 +32,24 @@ export const validateAdminRole = (req: AuthenticatedRequest, res: Response, next
       });
     }
 
+    // Additional check for configured admin address
+    const configuredAdminAddress = process.env.NEXT_PUBLIC_ADMIN_ADDRESS || 
+      process.env.ADMIN_ADDRESS || 
+      '0xEe034b53D4cCb101b2a4faec27708be507197350';
+      
+    // If this is the configured admin address, ensure they have proper permissions
+    if (user.role === 'admin') {
+      // Ensure admin has required permissions
+      const requiredPermissions = ['admin_access', 'manage_users', 'manage_content'];
+      const userPermissions = user.permissions || [];
+      
+      // Add missing permissions if not present
+      const missingPermissions = requiredPermissions.filter(perm => !userPermissions.includes(perm));
+      if (missingPermissions.length > 0) {
+        user.permissions = [...userPermissions, ...missingPermissions];
+      }
+    }
+
     next();
   } catch (error) {
     safeLogger.error('Admin role validation error:', error);

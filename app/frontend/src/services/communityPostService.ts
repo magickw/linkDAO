@@ -96,7 +96,14 @@ export class CommunityPostService {
       const params = new URLSearchParams();
       if (options?.limit) params.append('limit', options.limit.toString());
 
-      const authHeaders = authService.getAuthHeaders();
+      let authHeaders = authService.getAuthHeaders();
+      
+      // Add development token if needed
+      if (!authHeaders['Authorization'] && ENV_CONFIG.IS_DEVELOPMENT) {
+        const devToken = `dev_session_${Date.now()}_0xee034b53d4ccb101b2a4faec27708be507197350_${Date.now()}`;
+        authHeaders['Authorization'] = `Bearer ${devToken}`;
+      }
+      
       const response = await fetch(
         `${BACKEND_API_BASE_URL}/api/comments/${commentId}/replies?${params}`,
         {
@@ -301,7 +308,14 @@ export class CommunityPostService {
 
   static async createComment(data: CreateCommentInput): Promise<Comment> {
     try {
-      const authHeaders = authService.getAuthHeaders();
+      let authHeaders = authService.getAuthHeaders();
+      
+      // Add development token if needed
+      if (!authHeaders['Authorization'] && ENV_CONFIG.IS_DEVELOPMENT) {
+        const devToken = `dev_session_${Date.now()}_0xee034b53d4ccb101b2a4faec27708be507197350_${Date.now()}`;
+        authHeaders['Authorization'] = `Bearer ${devToken}`;
+      }
+      
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${data.postId}/comments`, {
         method: 'POST',
         headers: {

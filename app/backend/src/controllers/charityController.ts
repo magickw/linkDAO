@@ -81,17 +81,18 @@ export class CharityController {
       `;
 
             if (!client) {
-                throw new Error('Database connection not available');
+                safeLogger.error('Database connection not available');
+                return res.status(500).json({ error: 'Database connection not available' });
             }
 
             const result = await client.unsafe(statsQuery);
-            const stats = result[0];
+            const stats: any = result[0] || {};
 
             res.json({
-                pendingCharityProposals: parseInt(stats.pending) || 0,
-                verifiedCharities: parseInt(stats.verified) || 0,
-                rejectedCharities: parseInt(stats.rejected) || 0,
-                totalCharities: parseInt(stats.total) || 0,
+                pendingCharityProposals: parseInt(stats.pending || '0'),
+                verifiedCharities: parseInt(stats.verified || '0'),
+                rejectedCharities: parseInt(stats.rejected || '0'),
+                totalCharities: parseInt(stats.total || '0'),
             });
         } catch (error) {
             safeLogger.error('Error fetching charity stats:', error);

@@ -136,19 +136,27 @@ export class AdminWebSocketManager {
     this.adminUser = adminUser;
     this.dashboardConfig = dashboardConfig || this.getDefaultDashboardConfig();
 
-    const serverUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
+    const serverUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
+    console.log(`Attempting to connect to admin WebSocket at: ${serverUrl}/admin`);
 
     this.socket = io(`${serverUrl}/admin`, {
       transports: ['websocket', 'polling'],
-      timeout: 20000,
+      timeout: 30000, // Increased timeout to 30 seconds
       reconnection: true,
       reconnectionAttempts: this.maxReconnectAttempts,
       reconnectionDelay: this.reconnectDelay,
-      reconnectionDelayMax: 5000,
+      reconnectionDelayMax: 10000,
       forceNew: true,
       // Add additional connection options for better reliability
       randomizationFactor: 0.5,
-      autoConnect: false // We'll manually connect after setting up handlers
+      autoConnect: false, // We'll manually connect after setting up handlers
+      // Add authentication token to handshake
+      auth: {
+        adminId: adminUser.adminId,
+        email: adminUser.email,
+        role: adminUser.role,
+        permissions: adminUser.permissions
+      }
     });
 
     this.setupEventHandlers();
@@ -159,19 +167,34 @@ export class AdminWebSocketManager {
     // Attempt connection
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
-        reject(new Error('Connection timeout'));
-      }, 15000);
+        console.error('Admin WebSocket connection timeout after 30 seconds');
+        this.isConnecting = false;
+        reject(new Error('Connection timeout - please check network connectivity and backend status'));
+      }, 30000);
 
       this.socket!.once('connect', () => {
         console.log('Admin WebSocket connected');
+        clearTimeout(timeout);
         this.connectionHealth.status = 'healthy';
         this.reconnectAttempts = 0;
         this.isConnecting = false;
         this.notifyConnectionListeners(true);
+        
+        // Authenticate immediately after connection
+        this.authenticate()
+          .then(() => {
+            console.log('Admin WebSocket authentication successful');
+            resolve();
+          })
+          .catch((error) => {
+            console.error('Admin WebSocket authentication failed:', error);
+            reject(error);
+          });
       });
 
       this.socket!.once('connect_error', (error) => {
         console.error('Admin WebSocket connection error:', error);
+        clearTimeout(timeout);
         this.connectionHealth.status = 'unstable';
         this.isConnecting = false;
         reject(new Error(`Connection failed: ${error.message}`));
@@ -203,6 +226,10 @@ export class AdminWebSocketManager {
         return;
       }
 
+      // Clear any existing listeners to prevent duplicates
+      this.socket.off('admin_authenticated');
+      this.socket.off('admin_auth_error');
+
       const timeout = setTimeout(() => {
         // If timeout occurs, check if we should fallback to mock mode for configured admin
         if (this.adminUser?.role === 'admin') {
@@ -214,7 +241,7 @@ export class AdminWebSocketManager {
         } else {
           reject(new Error('Authentication timeout'));
         }
-      }, 10000);
+      }, 15000);
 
       this.socket.once('admin_authenticated', (data) => {
         clearTimeout(timeout);
@@ -231,7 +258,11 @@ export class AdminWebSocketManager {
       this.socket.once('admin_auth_error', (error) => {
         clearTimeout(timeout);
         console.error('Admin authentication failed:', error);
-
+        
+        // Check if this is the configured admin address
+        const configuredAdminAddress = process.env.NEXT_PUBLIC_ADMIN_ADDRESS || '0xEe034b53D4cCb101b2a4faec27708be507197350';
+        const currentUserAddress = this.adminUser?.email; // Using email as identifier for now
+        
         // Fallback for configured admin address if backend rejects it
         // This allows frontend development/testing even if backend doesn't recognize the admin
         if (this.adminUser?.role === 'admin') {
@@ -247,12 +278,12 @@ export class AdminWebSocketManager {
         }
       });
 
-      // Send authentication request
+      // Send authentication request with proper data structure
       this.socket.emit('admin_authenticate', {
-        adminId: this.adminUser!.adminId,
+        adminId: this.adminUser!.adminId || this.adminUser!.email,
         email: this.adminUser!.email,
         role: this.adminUser!.role,
-        permissions: this.adminUser!.permissions,
+        permissions: this.adminUser!.permissions || ['admin_access', 'manage_users', 'manage_content'],
         dashboardConfig: this.dashboardConfig
       });
     });

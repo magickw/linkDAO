@@ -798,43 +798,85 @@ export class FeedService {
         throw new Error('User not found');
       }
 
-      // Check if reaction already exists
-      const existingReaction = await db
-        .select()
-        .from(reactions)
-        .where(and(
-          eq(reactions.postId, parseInt(postId)),
-          eq(reactions.userId, user[0].id)
-        ))
-        .limit(1);
+      // Check if postId is a UUID (quick post) or integer (regular post)
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(postId);
 
       let reaction;
 
-      if (existingReaction.length > 0) {
-        // Update existing reaction
-        reaction = await db
-          .update(reactions)
-          .set({
-            type,
-            amount: tokenAmount.toString()
-          })
+      if (isUUID) {
+        // Handle quick post reaction
+        const existingReaction = await db
+          .select()
+          .from(quickPostReactions)
+          .where(and(
+            eq(quickPostReactions.quickPostId, postId),
+            eq(quickPostReactions.userId, user[0].id)
+          ))
+          .limit(1);
+
+        if (existingReaction.length > 0) {
+          // Update existing reaction
+          reaction = await db
+            .update(quickPostReactions)
+            .set({
+              type,
+              amount: tokenAmount.toString()
+            })
+            .where(and(
+              eq(quickPostReactions.quickPostId, postId),
+              eq(quickPostReactions.userId, user[0].id)
+            ))
+            .returning();
+        } else {
+          // Create new reaction
+          reaction = await db
+            .insert(quickPostReactions)
+            .values({
+              quickPostId: postId,
+              userId: user[0].id,
+              type,
+              amount: tokenAmount.toString(),
+              createdAt: new Date()
+            })
+            .returning();
+        }
+      } else {
+        // Handle regular post reaction
+        const existingReaction = await db
+          .select()
+          .from(reactions)
           .where(and(
             eq(reactions.postId, parseInt(postId)),
             eq(reactions.userId, user[0].id)
           ))
-          .returning();
-      } else {
-        // Create new reaction
-        reaction = await db
-          .insert(reactions)
-          .values({
-            postId: parseInt(postId),
-            userId: user[0].id,
-            type,
-            amount: tokenAmount.toString(),
-            createdAt: new Date()
-          })
-          .returning();
+          .limit(1);
+
+        if (existingReaction.length > 0) {
+          // Update existing reaction
+          reaction = await db
+            .update(reactions)
+            .set({
+              type,
+              amount: tokenAmount.toString()
+            })
+            .where(and(
+              eq(reactions.postId, parseInt(postId)),
+              eq(reactions.userId, user[0].id)
+            ))
+            .returning();
+        } else {
+          // Create new reaction
+          reaction = await db
+            .insert(reactions)
+            .values({
+              postId: parseInt(postId),
+              userId: user[0].id,
+              type,
+              amount: tokenAmount.toString(),
+              createdAt: new Date()
+            })
+            .returning();
+        }
       }
 
       // Update post engagement score
