@@ -56,6 +56,26 @@ router.get('*/trending',
   communityController.getTrendingCommunities
 );
 
+// Get communities created by user (auth required)
+// IMPORTANT: This must come BEFORE /:id to avoid routing conflicts
+router.get('/my-communities',
+  authRequired,
+  validateRequest({
+    query: {
+      page: { type: 'number', optional: true, min: 1 },
+      limit: { type: 'number', optional: true, min: 1, max: 50 }
+    }
+  }),
+  communityController.getMyCommunities
+);
+
+// Get user's community memberships (auth required)
+// IMPORTANT: This must come BEFORE /:id to avoid routing conflicts
+router.get('/user/memberships',
+  authRequired,
+  communityController.getUserCommunityMemberships
+);
+
 // Get community details by slug or ID (public)
 // The controller method handles both numeric IDs and slugs
 router.get('/:id',
@@ -91,7 +111,7 @@ router.post('/',
 );
 
 // Update community (auth required)
-router.put('/:id', csrfProtection, 
+router.put('/:id', csrfProtection,
   authRequired,
   validateRequest({
     params: {
@@ -113,7 +133,7 @@ router.put('/:id', csrfProtection,
 );
 
 // Join community (auth required)
-router.post('/:id/join', csrfProtection, 
+router.post('/:id/join', csrfProtection,
   authRequired,
   validateRequest({
     params: {
@@ -124,7 +144,7 @@ router.post('/:id/join', csrfProtection,
 );
 
 // Leave community (auth required)
-router.delete('/:id/leave', csrfProtection, 
+router.delete('/:id/leave', csrfProtection,
   authRequired,
   validateRequest({
     params: {
@@ -151,7 +171,7 @@ router.get('/:id/posts',
 );
 
 // Create post in community (auth required)
-router.post('/:id/posts', csrfProtection, 
+router.post('/:id/posts', csrfProtection,
   authRequired,
   validateRequest({
     params: {
@@ -168,7 +188,7 @@ router.post('/:id/posts', csrfProtection,
 );
 
 // AI-assisted post creation in community (auth required)
-router.post('/:id/posts/ai-assisted', csrfProtection, 
+router.post('/:id/posts/ai-assisted', csrfProtection,
   authRequired,
   validateRequest({
     params: {
@@ -213,7 +233,7 @@ router.get('/:id/stats',
 );
 
 // Moderation actions (auth required, moderator only)
-router.post('/:id/moderate', csrfProtection, 
+router.post('/:id/moderate', csrfProtection,
   authRequired,
   validateRequest({
     params: {
@@ -244,7 +264,7 @@ router.get('/:id/governance',
 );
 
 // Create governance proposal (auth required)
-router.post('/:id/governance', csrfProtection, 
+router.post('/:id/governance', csrfProtection,
   authRequired,
   validateRequest({
     params: {
@@ -262,7 +282,7 @@ router.post('/:id/governance', csrfProtection,
 );
 
 // Vote on governance proposal (auth required)
-router.post('/:id/governance/:proposalId/vote', csrfProtection, 
+router.post('/:id/governance/:proposalId/vote', csrfProtection,
   authRequired,
   validateRequest({
     params: {
@@ -278,7 +298,7 @@ router.post('/:id/governance/:proposalId/vote', csrfProtection,
 );
 
 // Execute governance proposal (auth required)
-router.post('/:id/governance/:proposalId/execute', csrfProtection, 
+router.post('/:id/governance/:proposalId/execute', csrfProtection,
   authRequired,
   validateRequest({
     params: {
@@ -306,7 +326,7 @@ router.get('/:id/moderation/queue',
 );
 
 // Flag content (auth required)
-router.post('/:id/flag', csrfProtection, 
+router.post('/:id/flag', csrfProtection,
   authRequired,
   validateRequest({
     params: {
@@ -336,7 +356,7 @@ router.get('/search/query',
 );
 
 // Create delegation (auth required)
-router.post('/:id/delegations', csrfProtection, 
+router.post('/:id/delegations', csrfProtection,
   authRequired,
   validateRequest({
     params: {
@@ -353,7 +373,7 @@ router.post('/:id/delegations', csrfProtection,
 );
 
 // Revoke delegation (auth required)
-router.delete('/:id/delegations', csrfProtection, 
+router.delete('/:id/delegations', csrfProtection,
   authRequired,
   validateRequest({
     params: {
@@ -383,7 +403,7 @@ router.get('/:id/delegations',
 );
 
 // Create proxy vote (auth required)
-router.post('/proxy-votes', csrfProtection, 
+router.post('/proxy-votes', csrfProtection,
   authRequired,
   validateRequest({
     body: {
@@ -398,7 +418,7 @@ router.post('/proxy-votes', csrfProtection,
 );
 
 // Create multi-signature approval (auth required)
-router.post('/multi-sig-approvals', csrfProtection, 
+router.post('/multi-sig-approvals', csrfProtection,
   authRequired,
   validateRequest({
     body: {
@@ -426,7 +446,7 @@ router.get('/:proposalId/multi-sig-approvals',
 );
 
 // Create automated execution (auth required)
-router.post('/automated-executions', csrfProtection, 
+router.post('/automated-executions', csrfProtection,
   authRequired,
   validateRequest({
     body: {
@@ -469,7 +489,7 @@ router.get('/token-gated-content/:contentId/access',
 );
 
 // Grant access to token-gated content
-router.post('/token-gated-content/:contentId/access', csrfProtection, 
+router.post('/token-gated-content/:contentId/access', csrfProtection,
   authRequired,
   validateRequest({
     params: {
@@ -483,7 +503,7 @@ router.post('/token-gated-content/:contentId/access', csrfProtection,
 );
 
 // Create token-gated content
-router.post('/:communityId/token-gated-content', csrfProtection, 
+router.post('/:communityId/token-gated-content', csrfProtection,
   authRequired,
   validateRequest({
     params: {
@@ -516,7 +536,7 @@ router.get('/posts/:postId/token-gated-content',
 // Subscription tier routes
 
 // Create subscription tier
-router.post('/:communityId/subscription-tiers', csrfProtection, 
+router.post('/:communityId/subscription-tiers', csrfProtection,
   authRequired,
   validateRequest({
     params: {
@@ -548,7 +568,7 @@ router.get('/:communityId/subscription-tiers',
 );
 
 // Subscribe user to a tier
-router.post('/:communityId/subscriptions', csrfProtection, 
+router.post('/:communityId/subscriptions', csrfProtection,
   authRequired,
   validateRequest({
     params: {
@@ -582,24 +602,6 @@ router.get('/search-authors',
     }
   }),
   communityController.searchAuthors
-);
-
-// Get communities created by user (auth required)
-router.get('/my-communities',
-  authRequired,
-  validateRequest({
-    query: {
-      page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, max: 50 }
-    }
-  }),
-  communityController.getMyCommunities
-);
-
-// Get user's community memberships (auth required)
-router.get('/user/memberships', 
-  authRequired,
-  communityController.getUserCommunityMemberships
 );
 
 // Get communities created by user (auth required)
