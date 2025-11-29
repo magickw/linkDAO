@@ -4295,3 +4295,5 @@ export const auditLogs = pgTable("audit_logs", {
   resourceIdx: index("idx_audit_logs_resource").on(t.resourceType, t.resourceId),
   timestampIdx: index("idx_audit_logs_timestamp").on(t.timestamp),
 }));
+
+export * from "./marketplaceSchema";

@@ -27,16 +27,20 @@ export const authMiddleware: RequestHandler = async (req: Request, res: Response
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
+    console.warn(`[AuthMiddleware] No token provided for ${req.method} ${req.path}`);
+    res.setHeader('WWW-Authenticate', 'Bearer realm="LinkDAO API", error="invalid_token", error_description="Access token required"');
     res.status(401).json({
       success: false,
-      error: 'Access token required'
+      error: 'Access token required',
+      code: 'NO_TOKEN',
+      message: 'Please provide an access token in the Authorization header'
     });
     return;
   }
 
   try {
     let decoded: any;
-    
+
     // Support development tokens
     if (process.env.NODE_ENV === 'development' && token.startsWith('dev_session_')) {
       // Parse development session token: dev_session_<walletAddress>_<timestamp>
@@ -126,12 +130,14 @@ export const authMiddleware: RequestHandler = async (req: Request, res: Response
     }
 
     // Normalize user object to match expected interface
+    // IMPORTANT: Normalize wallet addresses to lowercase for consistent comparisons
+    const normalizedAddress = (decoded.walletAddress || decoded.address || '').toLowerCase();
     const areq = req as AuthenticatedRequest;
     areq.user = {
-      address: decoded.walletAddress || decoded.address,
-      walletAddress: decoded.walletAddress || decoded.address,
+      address: normalizedAddress,
+      walletAddress: normalizedAddress,
       userId: decoded.userId || decoded.id,
-      id: decoded.userId || decoded.id || decoded.walletAddress || decoded.address,
+      id: decoded.userId || decoded.id || normalizedAddress,
       kycStatus: decoded.kycStatus,
       permissions: userPermissions,
       role: userRole,
@@ -141,9 +147,33 @@ export const authMiddleware: RequestHandler = async (req: Request, res: Response
 
     next();
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const isExpired = errorMessage.includes('expired') || errorMessage.includes('jwt expired');
+    const isInvalid = errorMessage.includes('invalid') || errorMessage.includes('malformed');
+
+    console.error(`[AuthMiddleware] Token validation failed for ${req.method} ${req.path}:`, {
+      error: errorMessage,
+      isExpired,
+      isInvalid,
+      tokenPrefix: token?.substring(0, 20) + '...'
+    });
+
+    // Set appropriate WWW-Authenticate header
+    if (isExpired) {
+      res.setHeader('WWW-Authenticate', 'Bearer realm="LinkDAO API", error="invalid_token", error_description="Token has expired"');
+    } else if (isInvalid) {
+      res.setHeader('WWW-Authenticate', 'Bearer realm="LinkDAO API", error="invalid_token", error_description="Token is malformed or invalid"');
+    } else {
+      res.setHeader('WWW-Authenticate', 'Bearer realm="LinkDAO API", error="invalid_token", error_description="Token validation failed"');
+    }
+
     res.status(403).json({
       success: false,
-      error: 'Invalid token'
+      error: 'Invalid token',
+      code: isExpired ? 'TOKEN_EXPIRED' : (isInvalid ? 'TOKEN_INVALID' : 'TOKEN_VALIDATION_FAILED'),
+      message: isExpired ? 'Your session has expired. Please sign in again.' :
+        isInvalid ? 'The provided token is invalid.' :
+          'Token validation failed. Please sign in again.'
     });
     return;
   }

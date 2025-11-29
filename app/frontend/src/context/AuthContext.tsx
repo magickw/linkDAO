@@ -720,12 +720,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await loadKYCStatus();
   };
 
-  // Refresh token
+  // Refresh token with improved error handling
   const refreshTokenMethod = useCallback(async () => {
     try {
       const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
       if (!refreshToken) {
-        throw new Error('No refresh token available');
+        console.warn('No refresh token available, skipping refresh');
+        return; // Don't throw - this is not a critical error
       }
 
       const result = await authService.refreshToken();
@@ -733,14 +734,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setAccessToken(result.token);
         localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, result.token);
         localStorage.setItem(STORAGE_KEYS.SIGNATURE_TIMESTAMP, Date.now().toString());
+        console.log('✅ Token refreshed successfully');
+      } else {
+        console.warn('Token refresh failed:', result.error);
       }
     } catch (error) {
-      console.error('Token refresh error:', error);
-      // Only logout if it's a critical auth error, not network issues
       const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes('401') || errorMessage.includes('403')) {
-        console.log('Authentication expired, logging out');
+
+      // Categorize errors
+      const isNetworkError = errorMessage.includes('fetch') ||
+        errorMessage.includes('Network') ||
+        errorMessage.includes('timeout') ||
+        errorMessage.includes('ECONNREFUSED');
+
+      const isAuthError = errorMessage.includes('401') ||
+        errorMessage.includes('403') ||
+        errorMessage.includes('Unauthorized') ||
+        errorMessage.includes('Forbidden');
+
+      if (isNetworkError) {
+        // Network errors - don't logout, just log
+        console.warn('🌐 Token refresh failed due to network error, will retry later:', errorMessage);
+      } else if (isAuthError) {
+        // Authentication errors - logout required
+        console.error('🔐 Authentication expired, logging out:', errorMessage);
         await handleLogout();
+      } else {
+        // Unknown errors - log but don't logout
+        console.error('❌ Token refresh error:', error);
       }
     }
   }, [handleLogout]);
@@ -966,7 +987,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user, accessToken, isConnected, address, connector, login]);
 
-  // Auto-refresh token periodically (less aggressive)
+  // Auto-refresh token periodically with improved error handling
   useEffect(() => {
     if (!accessToken || !user) return;
 
@@ -974,18 +995,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         await refreshTokenMethod();
       } catch (error) {
-        console.error('Token refresh error:', error);
-        // Only logout if it's a critical auth error, not network issues
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes('401') || errorMessage.includes('403')) {
-          console.log('Authentication expired, logging out');
-          await handleLogout();
-        }
+        // Error handling is now done in refreshTokenMethod
+        console.debug('Token refresh interval error (handled):', error);
       }
-    }, 30 * 60 * 1000); // Refresh every 30 minutes (less aggressive)
+    }, 45 * 60 * 1000); // Refresh every 45 minutes (less aggressive)
 
     return () => clearInterval(refreshInterval);
-  }, [user, accessToken, refreshTokenMethod, handleLogout]);
+  }, [user, accessToken, refreshTokenMethod]);
 
   const value: AuthContextType = {
     user,

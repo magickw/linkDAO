@@ -699,6 +699,9 @@ export class CommunityService {
   // Create new community with real database operations
   async createCommunity(data: CreateCommunityData) {
     try {
+      // Normalize creator address to lowercase for consistent comparisons
+      const normalizedCreatorAddress = data.creatorAddress.toLowerCase();
+
       // Validate slug format
       if (!/^[a-z0-9-]+$/.test(data.slug)) {
         throw new Error('Slug can only contain lowercase letters, numbers, and hyphens');
@@ -746,8 +749,8 @@ export class CommunityService {
         isPublic: data.isPublic,
         avatar: data.iconUrl || null,
         banner: data.bannerUrl || null,
-        creatorAddress: data.creatorAddress, // Store the creator's address
-        moderators: JSON.stringify([data.creatorAddress]),
+        creatorAddress: normalizedCreatorAddress, // Store normalized address
+        moderators: JSON.stringify([normalizedCreatorAddress]),
         treasuryAddress: data.governanceEnabled ? null : null, // Will be set later
         governanceToken: data.governanceEnabled ? null : null, // Will be set later
         settings: JSON.stringify({
@@ -782,7 +785,7 @@ export class CommunityService {
         .insert(communityMembers)
         .values({
           communityId: newCommunity.id,
-          userAddress: data.creatorAddress,
+          userAddress: normalizedCreatorAddress,
           role: 'admin',
           reputation: 100, // Starting reputation for creator
           contributions: 1, // Creating community counts as contribution
@@ -818,7 +821,7 @@ export class CommunityService {
         postCount: newCommunity.postCount,
         createdAt: newCommunity.createdAt,
         governanceEnabled: data.governanceEnabled,
-        creatorAddress: data.creatorAddress,
+        creatorAddress: normalizedCreatorAddress,
       };
     } catch (error) {
       safeLogger.error('Error creating community:', error);
@@ -829,6 +832,8 @@ export class CommunityService {
   // Update community with proper implementation
   async updateCommunity(data: UpdateCommunityData) {
     const { communityId, userAddress, updateData } = data;
+    // Normalize user address to lowercase for consistent comparisons
+    const normalizedUserAddress = userAddress.toLowerCase();
 
     try {
       // Sanitize all input data
@@ -877,7 +882,7 @@ export class CommunityService {
         .where(
           and(
             eq(communityMembers.communityId, communityId),
-            eq(communityMembers.userAddress, userAddress),
+            eq(communityMembers.userAddress, normalizedUserAddress),
             eq(communityMembers.isActive, true),
             or(
               eq(communityMembers.role, 'admin'),
@@ -1024,6 +1029,9 @@ export class CommunityService {
 
   // Join community with real membership tracking
   async joinCommunity(data: JoinCommunityData) {
+    // Normalize user address to lowercase for consistent comparisons
+    const normalizedUserAddress = data.userAddress.toLowerCase();
+
     try {
       // Check if community exists and is public
       const communityResult = await db
@@ -1053,7 +1061,7 @@ export class CommunityService {
         .where(
           and(
             eq(communityMembers.communityId, data.communityId),
-            eq(communityMembers.userAddress, data.userAddress)
+            eq(communityMembers.userAddress, normalizedUserAddress)
           )
         )
         .limit(1);
@@ -1067,7 +1075,7 @@ export class CommunityService {
         .insert(communityMembers)
         .values({
           communityId: data.communityId,
-          userAddress: data.userAddress,
+          userAddress: normalizedUserAddress,
           role: 'member',
           reputation: 0,
           contributions: 0,
@@ -1092,7 +1100,7 @@ export class CommunityService {
         data: {
           id: membershipResult[0].id,
           communityId: data.communityId,
-          userAddress: data.userAddress,
+          userAddress: normalizedUserAddress,
           role: 'member',
           reputation: 0,
           contributions: 0,
@@ -1108,6 +1116,9 @@ export class CommunityService {
 
   // Leave community with real membership tracking
   async leaveCommunity(data: JoinCommunityData) {
+    // Normalize user address to lowercase for consistent comparisons
+    const normalizedUserAddress = data.userAddress.toLowerCase();
+
     try {
       // Check if user is a member
       const membershipResult = await db
@@ -1119,7 +1130,7 @@ export class CommunityService {
         .where(
           and(
             eq(communityMembers.communityId, data.communityId),
-            eq(communityMembers.userAddress, data.userAddress)
+            eq(communityMembers.userAddress, normalizedUserAddress)
           )
         )
         .limit(1);
@@ -1298,6 +1309,8 @@ export class CommunityService {
   // Create community post
   async createCommunityPost(data: CreateCommunityPostData) {
     const { communityId, authorAddress, content, mediaUrls, tags, pollData } = data;
+    // Normalize author address to lowercase for consistent comparisons
+    const normalizedAuthorAddress = authorAddress.toLowerCase();
 
     try {
       // Validate input
@@ -1310,7 +1323,7 @@ export class CommunityService {
         .where(
           and(
             eq(communityMembers.communityId, communityId),
-            eq(communityMembers.userAddress, authorAddress),
+            eq(communityMembers.userAddress, normalizedAuthorAddress),
             eq(communityMembers.isActive, true)
           )
         )
@@ -1325,7 +1338,7 @@ export class CommunityService {
         .insert(posts)
         .values({
           communityId,
-          authorAddress,
+          authorAddress: normalizedAuthorAddress,
           content: sanitizeInput(content),
           mediaUrls: mediaUrls ? JSON.stringify(mediaUrls) : null,
           tags: tags ? JSON.stringify(tags) : null,
@@ -1354,7 +1367,7 @@ export class CommunityService {
         .where(
           and(
             eq(communityMembers.communityId, communityId),
-            eq(communityMembers.userAddress, authorAddress)
+            eq(communityMembers.userAddress, normalizedAuthorAddress)
           )
         );
 
@@ -1364,7 +1377,7 @@ export class CommunityService {
         await pushNotificationService.notifyNewPost(
           communityId,
           newPost[0].id.toString(),
-          authorAddress,
+          normalizedAuthorAddress,
           content
         );
       } catch (notificationError) {
@@ -1376,13 +1389,13 @@ export class CommunityService {
       try {
         const mentionRegex = /@([a-zA-Z0-9_]+)/g;
         const mentions = content.match(mentionRegex);
-        
+
         if (mentions) {
           const { pushNotificationService } = await import('./pushNotificationService');
-          
+
           for (const mention of mentions) {
-            const mentionedAddress = mention.substring(1); // Remove @ symbol
-            
+            const mentionedAddress = mention.substring(1).toLowerCase(); // Remove @ symbol and normalize
+
             // Verify that the mentioned user is a community member
             const mentionedMembership = await db
               .select()
@@ -1401,7 +1414,7 @@ export class CommunityService {
                 mentionedAddress,
                 communityId,
                 newPost[0].id.toString(),
-                authorAddress
+                normalizedAuthorAddress
               );
             }
           }
@@ -1416,7 +1429,7 @@ export class CommunityService {
         data: {
           id: newPost[0].id,
           communityId,
-          authorAddress,
+          authorAddress: normalizedAuthorAddress,
           content,
           mediaUrls,
           tags,

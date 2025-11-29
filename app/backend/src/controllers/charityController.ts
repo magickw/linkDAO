@@ -66,15 +66,28 @@ export class CharityController {
         }
     }
 
-    /**
-     * Get charity statistics for admin dashboard
-     */
     async getCharityStats(req: Request, res: Response) {
         try {
-            // Import the database service to get proper client
-            const { databaseService } = require('../services/databaseService');
-            const db = databaseService.getDatabase();
-            
+            console.log('[CharityController] Fetching charity stats');
+
+            // Try to get database service
+            let db;
+            try {
+                const { databaseService } = require('../services/databaseService');
+                db = databaseService.getDatabase();
+
+                if (!db) {
+                    throw new Error('Database service returned null');
+                }
+            } catch (dbServiceError) {
+                console.error('[CharityController] Database service error:', dbServiceError);
+                // Fallback to client if databaseService is not available
+                if (!client) {
+                    throw new Error('No database connection available');
+                }
+                db = { execute: (query: any) => client.unsafe(query.sql) };
+            }
+
             const statsQuery = `
         SELECT 
           COUNT(*) FILTER (WHERE status IN ('pending', 'active') AND is_verified_charity = false) as pending,
@@ -85,18 +98,48 @@ export class CharityController {
         WHERE type = 'charity'
       `;
 
-            const result = await db.execute(sql.raw(statsQuery));
-            const stats: any = result.rows[0] || {};
+            let result;
+            try {
+                result = await db.execute(sql.raw(statsQuery));
+            } catch (queryError) {
+                console.error('[CharityController] Query execution error:', queryError);
+                // Fallback to direct client query
+                if (client) {
+                    result = { rows: await client.unsafe(statsQuery) };
+                } else {
+                    throw queryError;
+                }
+            }
 
-            res.json({
+            const stats: any = result.rows?.[0] || result[0] || {};
+
+            const response = {
                 pendingCharityProposals: parseInt(stats.pending || '0'),
                 verifiedCharities: parseInt(stats.verified || '0'),
                 rejectedCharities: parseInt(stats.rejected || '0'),
                 totalCharities: parseInt(stats.total || '0'),
-            });
+            };
+
+            console.log('[CharityController] Charity stats fetched successfully:', response);
+            res.json(response);
         } catch (error) {
-            safeLogger.error('Error fetching charity stats:', error);
-            res.status(500).json({ error: 'Failed to fetch charity stats' });
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            safeLogger.error('[CharityController] Error fetching charity stats:', {
+                error: errorMessage,
+                stack: error instanceof Error ? error.stack : undefined,
+                path: req.path,
+                method: req.method
+            });
+
+            // Return empty stats instead of error to prevent frontend crashes
+            res.status(200).json({
+                pendingCharityProposals: 0,
+                verifiedCharities: 0,
+                rejectedCharities: 0,
+                totalCharities: 0,
+                error: 'Failed to fetch charity stats',
+                message: errorMessage
+            });
         }
     }
 
