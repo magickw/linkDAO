@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useRef } from 'react';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { processContent, shouldTruncateContent, getTruncatedContent, formatTimestamp } from '@/utils/contentParser';
 import {
@@ -91,6 +92,13 @@ interface Post {
   upvotes?: number;
   downvotes?: number;
   userVote?: 'up' | 'down' | null;
+  community?: {
+    id: string;
+    name: string;
+    displayName: string;
+    slug: string;
+    avatar?: string;
+  };
 }
 
 interface EnhancedPostCardProps {
@@ -150,7 +158,7 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
     }
   };
 
-  
+
 
   return (
     <motion.div
@@ -215,6 +223,21 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
                 </div>
                 <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
                   <span>@{post.author.username}</span>
+                  {post.community && (
+                    <>
+                      <span>•</span>
+                      <Link
+                        href={`/communities/${post.community.slug || post.community.id}`}
+                        className="flex items-center space-x-1 text-xs font-medium text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {post.community.avatar && (
+                          <span className="text-sm">{post.community.avatar}</span>
+                        )}
+                        <span>c/{post.community.displayName}</span>
+                      </Link>
+                    </>
+                  )}
                   <span>•</span>
                   <span>{formatTimestamp(post.timestamp)}</span>
                 </div>
@@ -232,7 +255,7 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
             <div className="text-gray-900 dark:text-white leading-relaxed">
               {processContent(displayContent, post.contentType)}
             </div>
-            
+
             {shouldTruncate && (
               <button
                 onClick={() => setIsExpanded(true)}
@@ -355,22 +378,20 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => handleVote('up')}
-                    className={`flex items-center space-x-1 transition-colors ${
-                      userVote === 'up'
-                        ? 'text-green-600 dark:text-green-400'
-                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                    }`}
+                    className={`flex items-center space-x-1 transition-colors ${userVote === 'up'
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                      }`}
                   >
                     <ArrowUp className="w-5 h-5" />
                     <span className="text-sm font-medium">{post.upvotes || 0}</span>
                   </button>
                   <button
                     onClick={() => handleVote('down')}
-                    className={`flex items-center space-x-1 transition-colors ${
-                      userVote === 'down'
-                        ? 'text-red-600 dark:text-red-400'
-                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                    }`}
+                    className={`flex items-center space-x-1 transition-colors ${userVote === 'down'
+                      ? 'text-red-600 dark:text-red-400'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                      }`}
                   >
                     <ArrowDown className="w-5 h-5" />
                     <span className="text-sm font-medium">{post.downvotes || 0}</span>
@@ -410,11 +431,10 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
                     setIsSaved(!isSaved);
                     onSave?.(post.id);
                   }}
-                  className={`flex items-center space-x-2 transition-colors ${
-                    isSaved
-                      ? 'text-blue-600 dark:text-blue-400'
-                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                  }`}
+                  className={`flex items-center space-x-2 transition-colors ${isSaved
+                    ? 'text-blue-600 dark:text-blue-400'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                    }`}
                 >
                   <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-current' : ''}`} />
                   <span className="text-sm">{isSaved ? 'Saved' : 'Save'}</span>

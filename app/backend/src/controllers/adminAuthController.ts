@@ -60,7 +60,9 @@ class AdminAuthController {
       );
     } catch (error) {
       safeLogger.error('Admin login error:', error);
-      errorResponse(res, 'AUTHENTICATION_ERROR', 'Authentication failed', 500);
+      // Provide more detailed error message for debugging
+      const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
+      errorResponse(res, 'AUTHENTICATION_ERROR', `Admin authentication failed: ${errorMessage}`, 500);
     }
   }
 

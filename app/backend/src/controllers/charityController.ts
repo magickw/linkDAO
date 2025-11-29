@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { safeLogger } from '../utils/safeLogger';
-import { client } from '../db';
+import { databaseService } from '../services/databaseService';
 import { sql } from 'drizzle-orm';
 
 export class CharityController {
@@ -45,11 +45,12 @@ export class CharityController {
             query += ` ORDER BY created_at DESC LIMIT $${params.length + 1}`;
             params.push(parseInt(limit as string));
 
-            if (!client) {
+            const db = databaseService.getDatabase();
+            if (!db) {
                 throw new Error('Database connection not available');
             }
 
-            const result = await client.unsafe(query, params);
+            const result = await db.execute(sql.raw(query), params);
 
             // Transform the data
             const charities = result.map(row => ({
@@ -70,22 +71,9 @@ export class CharityController {
         try {
             console.log('[CharityController] Fetching charity stats');
 
-            // Try to get database service
-            let db;
-            try {
-                const { databaseService } = require('../services/databaseService');
-                db = databaseService.getDatabase();
-
-                if (!db) {
-                    throw new Error('Database service returned null');
-                }
-            } catch (dbServiceError) {
-                console.error('[CharityController] Database service error:', dbServiceError);
-                // Fallback to client if databaseService is not available
-                if (!client) {
-                    throw new Error('No database connection available');
-                }
-                db = { execute: (query: any) => client.unsafe(query.sql) };
+            const db = databaseService.getDatabase();
+            if (!db) {
+                throw new Error('Database connection not available');
             }
 
             const statsQuery = `
@@ -98,18 +86,7 @@ export class CharityController {
         WHERE type = 'charity'
       `;
 
-            let result;
-            try {
-                result = await db.execute(sql.raw(statsQuery));
-            } catch (queryError) {
-                console.error('[CharityController] Query execution error:', queryError);
-                // Fallback to direct client query
-                if (client) {
-                    result = { rows: await client.unsafe(statsQuery) };
-                } else {
-                    throw queryError;
-                }
-            }
+            const result = await db.execute(sql.raw(statsQuery));
 
             const stats: any = result.rows?.[0] || result[0] || {};
 
@@ -178,11 +155,12 @@ export class CharityController {
         WHERE id = $1 AND type = 'charity'
       `;
 
-            if (!client) {
+            const db = databaseService.getDatabase();
+            if (!db) {
                 throw new Error('Database connection not available');
             }
 
-            const result = await client.unsafe(query, [id]);
+            const result = await db.execute(sql.raw(query), [id]);
 
             if (result.length === 0) {
                 return res.status(404).json({ error: 'Charity not found' });
@@ -232,11 +210,12 @@ export class CharityController {
         RETURNING id, title, charity_name as "charityName"
       `;
 
-            if (!client) {
+            const db = databaseService.getDatabase();
+            if (!db) {
                 throw new Error('Database connection not available');
             }
 
-            const result = await client.unsafe(updateQuery, [adminId, notes || '', id]);
+            const result = await db.execute(sql.raw(updateQuery), [adminId, notes || '', id]);
 
             if (result.length === 0) {
                 return res.status(404).json({ error: 'Charity not found' });
@@ -248,7 +227,7 @@ export class CharityController {
         VALUES ($1, $2, $3, $4, $5, NOW())
       `;
 
-            await client.unsafe(logQuery, [
+            await db.execute(sql.raw(logQuery), [
                 adminId,
                 'approved_charity',
                 'charity_proposal',
@@ -305,11 +284,12 @@ export class CharityController {
         RETURNING id, title, charity_name as "charityName"
       `;
 
-            if (!client) {
+            const db = databaseService.getDatabase();
+            if (!db) {
                 throw new Error('Database connection not available');
             }
 
-            const result = await client.unsafe(updateQuery, [adminId, notes, id]);
+            const result = await db.execute(sql.raw(updateQuery), [adminId, notes, id]);
 
             if (result.length === 0) {
                 return res.status(404).json({ error: 'Charity not found' });
@@ -321,7 +301,7 @@ export class CharityController {
         VALUES ($1, $2, $3, $4, $5, NOW())
       `;
 
-            await client.unsafe(logQuery, [
+            await db.execute(sql.raw(logQuery), [
                 adminId,
                 'rejected_charity',
                 'charity_proposal',

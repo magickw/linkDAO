@@ -302,28 +302,20 @@ const CommunitiesPage: React.FC = () => {
       if (pageNum === 1) setLoading(true);
       else setLoadingMore(true);
 
-      // Import FeedService dynamically to avoid circular dependencies
-      const { FeedService } = await import('../services/feedService');
-
-      // Determine which communities to show posts from
-      // If user has joined communities, show those. Otherwise show all for discovery.
-      const communitiesToShow = isConnected && joinedCommunities.length > 0
-        ? joinedCommunities
-        : []; // Empty array = show all communities (handled by backend)
-
-      const response = await FeedService.getEnhancedFeed({
-        sortBy: sortBy,
-        timeRange: timeFilter,
-        feedSource: 'all', // Show all posts (not limited to following)
-        communities: communitiesToShow, // Filter by joined communities if any
-        userAddress: address // Pass user address for personalization
-      }, pageNum, 20);
+      // Use CommunityService to get aggregated feed from followed communities
+      const { CommunityService } = await import('../services/communityService');
+      
+      const response = await CommunityService.getFollowedCommunitiesFeed({
+        page: pageNum,
+        limit: 20,
+        sort: sortBy,
+        timeRange: timeFilter
+      });
 
       // Check if component is still mounted before updating state
       if (!isMounted.current) return;
-
-      // Handle the case where response is not properly structured
-      const newPosts = Array.isArray(response) ? response : (response?.posts || []);
+      
+      const newPosts = response.posts || [];
 
       if (append) {
         setPosts(prev => [...prev, ...newPosts]);
@@ -334,7 +326,7 @@ const CommunitiesPage: React.FC = () => {
       setHasMore(newPosts.length === 20);
       setPage(pageNum);
     } catch (error) {
-      console.error('Failed to fetch posts:', error);
+      console.error('Failed to fetch community posts:', error);
       if (!isMounted.current) return;
       if (!append) setPosts([]);
     } finally {

@@ -312,22 +312,26 @@ export class AdminController {
       
       // Get dispute statistics
       const db = databaseService.getDatabase();
-      const disputeStats = await db.select({
-        total: db.select().from(disputes).then(r => r.length),
-        resolved: db.select().from(disputes).where(eq(disputes.status, 'resolved')).then(r => r.length)
-      });
+      const disputeStatsResult = await db.select({
+        total: sql<number>`count(*)`,
+        resolved: sql<number>`count(*) filter (where status = 'resolved')`
+      }).from(disputes);
+      const disputeStats = disputeStatsResult[0] || { total: 0, resolved: 0 };
       
       // Get user statistics
-      const userStats = await db.select({
-        total: db.select().from(users).then(r => r.length),
-        sellers: db.select().from(marketplaceUsers).where(eq(marketplaceUsers.role, 'seller')).then(r => r.length)
-      });
+      const userStatsResult = await db.select({
+        total: sql<number>`count(*)`,
+        sellers: sql<number>`count(*) filter (where role = 'seller')`
+      }).from(users)
+      .leftJoin(marketplaceUsers, eq(users.id, marketplaceUsers.userId));
+      const userStats = userStatsResult[0] || { total: 0, sellers: 0 };
       
       // Get moderation statistics
-      const moderationStats = await db.select({
-        pending: db.select().from(moderationCases).where(eq(moderationCases.status, 'pending')).then(r => r.length),
-        inReview: db.select().from(moderationCases).where(eq(moderationCases.status, 'in_review')).then(r => r.length)
-      });
+      const moderationStatsResult = await db.select({
+        pending: sql<number>`count(*) filter (where status = 'pending')`,
+        inReview: sql<number>`count(*) filter (where status = 'in_review')`
+      }).from(moderationCases);
+      const moderationStats = moderationStatsResult[0] || { pending: 0, inReview: 0 };
       
       res.json({
         totalAlerts: analytics.totalOrders,

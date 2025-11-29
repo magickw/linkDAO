@@ -1,9 +1,20 @@
+
 import { db } from '../db';
+import {
+  workflowTemplates,
+  workflowInstances,
+  workflowSteps,
+  workflowStepExecutions,
+  workflowTaskAssignments,
+  workflowRules,
+  workflowMetrics
+} from '../db/schema';
+
 import { eq, and, or, desc, asc, sql, inArray } from 'drizzle-orm';
-import { 
-  WorkflowTemplate, 
-  WorkflowInstance, 
-  WorkflowStep, 
+import {
+  WorkflowTemplate,
+  WorkflowInstance,
+  WorkflowStep,
   WorkflowStepExecution,
   WorkflowTaskAssignment,
   WorkflowRule,
@@ -17,8 +28,16 @@ import {
   WorkflowAnalytics,
   AssignmentRule,
   RuleCondition,
-  RuleAction
+  RuleAction,
+  WorkflowCategory,
+  TriggerType,
+  TriggerConfig,
+  StepType,
+  StepConfig,
+  RuleType,
+  TaskType
 } from '../types/workflow';
+
 import { logger } from '../utils/logger';
 import { EventEmitter } from 'events';
 
@@ -73,13 +92,25 @@ export class WorkflowAutomationEngine extends EventEmitter {
         return { ...newTemplate, steps: steps.flat() };
       });
 
-      logger.info(`Workflow template created: ${template.id}`, { templateId: template.id, name: template.name });
+      logger.info(`Workflow template created: ${template.id} `, { templateId: template.id, name: template.name });
       this.emit('templateCreated', template);
-      
-      return template;
+
+      return {
+        ...template,
+        category: template.category as WorkflowCategory,
+        triggerType: template.triggerType as TriggerType,
+        triggerConfig: template.triggerConfig as unknown as TriggerConfig,
+        steps: template.steps.map(step => ({
+          ...step,
+          stepType: step.stepType as StepType,
+          stepConfig: step.stepConfig as unknown as StepConfig,
+          conditions: step.conditions as unknown as Record<string, any>
+        }))
+      };
+
     } catch (error) {
       logger.error('Failed to create workflow template', { error, templateData });
-      throw new Error(`Failed to create workflow template: ${error.message}`);
+      throw new Error(`Failed to create workflow template: ${error.message} `);
     }
   }
 
@@ -97,7 +128,7 @@ export class WorkflowAutomationEngine extends EventEmitter {
       return template || null;
     } catch (error) {
       logger.error('Failed to get workflow template', { error, templateId });
-      throw new Error(`Failed to get workflow template: ${error.message}`);
+      throw new Error(`Failed to get workflow template: ${error.message} `);
     }
   }
 
@@ -112,10 +143,16 @@ export class WorkflowAutomationEngine extends EventEmitter {
         orderBy: desc(workflowTemplates.createdAt)
       });
 
-      return templates;
+      return templates.map(t => ({
+        ...t,
+        category: t.category as WorkflowCategory,
+        triggerType: t.triggerType as TriggerType,
+        triggerConfig: t.triggerConfig as unknown as TriggerConfig
+      }));
+
     } catch (error) {
       logger.error('Failed to list workflow templates', { error, category, isActive });
-      throw new Error(`Failed to list workflow templates: ${error.message}`);
+      throw new Error(`Failed to list workflow templates: ${error.message} `);
     }
   }
 
@@ -126,26 +163,30 @@ export class WorkflowAutomationEngine extends EventEmitter {
         const [updatedTemplate] = await tx.update(workflowTemplates)
           .set({
             ...updates,
-            updatedBy,
             updatedAt: new Date()
           })
           .where(eq(workflowTemplates.id, templateId))
           .returning();
 
         if (!updatedTemplate) {
-          throw new Error(`Workflow template not found: ${templateId}`);
+          throw new Error(`Workflow template not found: ${templateId} `);
         }
 
         return updatedTemplate;
       });
 
-      logger.info(`Workflow template updated: ${template.id}`, { templateId: template.id, name: template.name });
+      logger.info(`Workflow template updated: ${template.id} `, { templateId: template.id, name: template.name });
       this.emit('templateUpdated', template);
-      
-      return template;
+
+      return {
+        ...template,
+        category: template.category as WorkflowCategory,
+        triggerType: template.triggerType as TriggerType,
+        triggerConfig: template.triggerConfig as unknown as TriggerConfig
+      };
     } catch (error) {
       logger.error('Failed to update workflow template', { error, templateId, updates });
-      throw new Error(`Failed to update workflow template: ${error.message}`);
+      throw new Error(`Failed to update workflow template: ${error.message} `);
     }
   }
 
@@ -154,11 +195,11 @@ export class WorkflowAutomationEngine extends EventEmitter {
     try {
       const template = await this.getTemplate(request.templateId);
       if (!template) {
-        throw new Error(`Workflow template not found: ${request.templateId}`);
+        throw new Error(`Workflow template not found: ${request.templateId} `);
       }
 
       if (!template.isActive) {
-        throw new Error(`Workflow template is not active: ${request.templateId}`);
+        throw new Error(`Workflow template is not active: ${request.templateId} `);
       }
 
       // Create workflow instance
@@ -170,18 +211,27 @@ export class WorkflowAutomationEngine extends EventEmitter {
       }).returning();
 
       // Add to execution queue
-      this.executionQueue.set(instance.id, instance);
+      const typedInstance: WorkflowInstance = {
+        ...instance,
+        status: instance.status as WorkflowStatus,
+        contextData: instance.contextData as unknown as Record<string, any>
+      };
+      this.executionQueue.set(instance.id, typedInstance);
 
-      logger.info(`Workflow instance created and queued: ${instance.id}`, { 
-        instanceId: instance.id, 
-        templateId: request.templateId 
+      logger.info(`Workflow instance created and queued: ${instance.id} `, {
+        instanceId: instance.id,
+        templateId: request.templateId
       });
 
-      this.emit('workflowQueued', instance);
-      return instance;
+      return {
+        ...instance,
+        status: instance.status as WorkflowStatus,
+        contextData: instance.contextData as unknown as Record<string, any>
+      };
+
     } catch (error) {
       logger.error('Failed to execute workflow', { error, request });
-      throw new Error(`Failed to execute workflow: ${error.message}`);
+      throw new Error(`Failed to execute workflow: ${error.message} `);
     }
   }
 
@@ -204,7 +254,7 @@ export class WorkflowAutomationEngine extends EventEmitter {
       return instance || null;
     } catch (error) {
       logger.error('Failed to get workflow instance', { error, instanceId });
-      throw new Error(`Failed to get workflow instance: ${error.message}`);
+      throw new Error(`Failed to get workflow instance: ${error.message} `);
     }
   }
 
@@ -250,16 +300,16 @@ export class WorkflowAutomationEngine extends EventEmitter {
         }
       });
 
-      logger.info(`Task completed: ${request.taskId}`, { 
-        taskId: request.taskId, 
-        completedBy, 
-        status: request.status 
+      logger.info(`Task completed: ${request.taskId} `, {
+        taskId: request.taskId,
+        completedBy,
+        status: request.status
       });
 
       this.emit('taskCompleted', { taskId: request.taskId, completedBy, status: request.status });
     } catch (error) {
       logger.error('Failed to complete task', { error, request, completedBy });
-      throw new Error(`Failed to complete task: ${error.message}`);
+      throw new Error(`Failed to complete task: ${error.message} `);
     }
   }
 
@@ -293,7 +343,7 @@ export class WorkflowAutomationEngine extends EventEmitter {
       return tasks;
     } catch (error) {
       logger.error('Failed to get user tasks', { error, userId, status });
-      throw new Error(`Failed to get user tasks: ${error.message}`);
+      throw new Error(`Failed to get user tasks: ${error.message} `);
     }
   }
 
@@ -305,20 +355,32 @@ export class WorkflowAutomationEngine extends EventEmitter {
         createdBy
       }).returning();
 
-      this.ruleEngine.addRule(newRule);
-      
-      logger.info(`Workflow rule created: ${newRule.id}`, { ruleId: newRule.id, name: newRule.name });
-      return newRule;
+      const typedRule: WorkflowRule = {
+        ...newRule,
+        ruleType: newRule.ruleType as RuleType,
+        conditions: newRule.conditions as unknown as RuleCondition[],
+        actions: newRule.actions as unknown as RuleAction[]
+      };
+      this.ruleEngine.addRule(typedRule);
+
+      logger.info(`Workflow rule created: ${newRule.id} `, { ruleId: newRule.id, name: newRule.name });
+      return {
+        ...newRule,
+        ruleType: newRule.ruleType as RuleType,
+        conditions: newRule.conditions as unknown as RuleCondition[],
+        actions: newRule.actions as unknown as RuleAction[]
+      };
+
     } catch (error) {
       logger.error('Failed to create workflow rule', { error, rule });
-      throw new Error(`Failed to create workflow rule: ${error.message}`);
+      throw new Error(`Failed to create workflow rule: ${error.message} `);
     }
   }
 
   async evaluateRules(eventType: string, eventData: Record<string, any>): Promise<void> {
     try {
       const triggeredRules = await this.ruleEngine.evaluateRules(eventType, eventData);
-      
+
       for (const rule of triggeredRules) {
         await this.executeRuleActions(rule, eventData);
       }
@@ -335,8 +397,8 @@ export class WorkflowAutomationEngine extends EventEmitter {
       if (timeRange) {
         conditions.push(
           and(
-            sql`${workflowInstances.createdAt} >= ${timeRange.start}`,
-            sql`${workflowInstances.createdAt} <= ${timeRange.end}`
+            sql`${workflowInstances.createdAt} >= ${timeRange.start} `,
+            sql`${workflowInstances.createdAt} <= ${timeRange.end} `
           )
         );
       }
@@ -355,8 +417,8 @@ export class WorkflowAutomationEngine extends EventEmitter {
         .where(and(whereClause, eq(workflowInstances.status, 'completed')));
 
       const [avgExecutionTime] = await db
-        .select({ 
-          avg: sql<number>`avg(extract(epoch from (completed_at - started_at)))` 
+        .select({
+          avg: sql<number>`avg(extract(epoch from(completed_at - started_at)))`
         })
         .from(workflowInstances)
         .where(and(whereClause, eq(workflowInstances.status, 'completed')));
@@ -365,14 +427,14 @@ export class WorkflowAutomationEngine extends EventEmitter {
       const bottlenecks = await db
         .select({
           stepId: workflowStepExecutions.stepId,
-          averageTime: sql<number>`avg(extract(epoch from (completed_at - started_at)))`,
+          averageTime: sql<number>`avg(extract(epoch from(completed_at - started_at)))`,
           frequency: sql<number>`count(*)`
         })
         .from(workflowStepExecutions)
         .innerJoin(workflowInstances, eq(workflowStepExecutions.instanceId, workflowInstances.id))
         .where(and(whereClause, eq(workflowStepExecutions.status, 'completed')))
         .groupBy(workflowStepExecutions.stepId)
-        .orderBy(desc(sql`avg(extract(epoch from (completed_at - started_at)))`))
+        .orderBy(desc(sql`avg(extract(epoch from(completed_at - started_at)))`))
         .limit(5);
 
       // Get failure reasons
@@ -387,8 +449,8 @@ export class WorkflowAutomationEngine extends EventEmitter {
         .orderBy(desc(sql`count(*)`))
         .limit(10);
 
-      const successRate = totalExecutions.count > 0 
-        ? (successfulExecutions.count / totalExecutions.count) * 100 
+      const successRate = totalExecutions.count > 0
+        ? (successfulExecutions.count / totalExecutions.count) * 100
         : 0;
 
       return {
@@ -397,7 +459,7 @@ export class WorkflowAutomationEngine extends EventEmitter {
         averageExecutionTime: avgExecutionTime.avg || 0,
         bottlenecks: bottlenecks.map(b => ({
           stepId: b.stepId,
-          stepName: `Step ${b.stepId}`, // TODO: Get actual step name
+          stepName: `Step ${b.stepId} `, // TODO: Get actual step name
           averageTime: b.averageTime,
           frequency: b.frequency,
           impact: b.averageTime > 300 ? 'high' : b.averageTime > 60 ? 'medium' : 'low'
@@ -411,7 +473,7 @@ export class WorkflowAutomationEngine extends EventEmitter {
       };
     } catch (error) {
       logger.error('Failed to get workflow analytics', { error, templateId, timeRange });
-      throw new Error(`Failed to get workflow analytics: ${error.message}`);
+      throw new Error(`Failed to get workflow analytics: ${error.message} `);
     }
   }
 
@@ -445,12 +507,12 @@ export class WorkflowAutomationEngine extends EventEmitter {
     try {
       const instance = await this.getWorkflowInstance(instanceId);
       if (!instance) {
-        throw new Error(`Workflow instance not found: ${instanceId}`);
+        throw new Error(`Workflow instance not found: ${instanceId} `);
       }
 
       const template = await this.getTemplate(instance.templateId);
       if (!template) {
-        throw new Error(`Workflow template not found: ${instance.templateId}`);
+        throw new Error(`Workflow template not found: ${instance.templateId} `);
       }
 
       // Update instance status to running
@@ -460,7 +522,7 @@ export class WorkflowAutomationEngine extends EventEmitter {
 
       // Execute steps in order
       const steps = template.steps?.sort((a, b) => a.stepOrder - b.stepOrder) || [];
-      
+
       for (const step of steps) {
         const success = await this.executeWorkflowStep(instanceId, step, instance.contextData);
         if (!success) {
@@ -474,7 +536,7 @@ export class WorkflowAutomationEngine extends EventEmitter {
         .set({ status: 'completed', completedAt: new Date() })
         .where(eq(workflowInstances.id, instanceId));
 
-      logger.info(`Workflow completed: ${instanceId}`, { instanceId });
+      logger.info(`Workflow completed: ${instanceId} `, { instanceId });
       this.emit('workflowCompleted', { instanceId });
 
     } catch (error) {
@@ -484,8 +546,8 @@ export class WorkflowAutomationEngine extends EventEmitter {
   }
 
   private async executeWorkflowStep(
-    instanceId: string, 
-    step: WorkflowStep, 
+    instanceId: string,
+    step: WorkflowStep,
     contextData?: Record<string, any>
   ): Promise<boolean> {
     try {
@@ -522,7 +584,7 @@ export class WorkflowAutomationEngine extends EventEmitter {
           success = this.evaluateConditions(step.stepConfig, contextData);
           break;
         default:
-          throw new Error(`Unknown step type: ${step.stepType}`);
+          throw new Error(`Unknown step type: ${step.stepType} `);
       }
 
       if (success) {
@@ -543,8 +605,8 @@ export class WorkflowAutomationEngine extends EventEmitter {
   }
 
   private async createTaskAssignment(
-    stepExecutionId: string, 
-    stepConfig: any, 
+    stepExecutionId: string,
+    stepConfig: any,
     contextData?: Record<string, any>
   ): Promise<boolean> {
     try {
@@ -553,7 +615,7 @@ export class WorkflowAutomationEngine extends EventEmitter {
         throw new Error('Could not resolve task assignment');
       }
 
-      const dueDate = stepConfig.dueInMinutes 
+      const dueDate = stepConfig.dueInMinutes
         ? new Date(Date.now() + stepConfig.dueInMinutes * 60000)
         : undefined;
 
@@ -586,8 +648,8 @@ export class WorkflowAutomationEngine extends EventEmitter {
   }
 
   private async executeAction(
-    stepExecutionId: string, 
-    stepConfig: any, 
+    stepExecutionId: string,
+    stepConfig: any,
     contextData?: Record<string, any>
   ): Promise<boolean> {
     try {
@@ -603,7 +665,7 @@ export class WorkflowAutomationEngine extends EventEmitter {
           // Make external API call
           return true;
         default:
-          logger.warn(`Unknown action type: ${stepConfig.actionType}`);
+          logger.warn(`Unknown action type: ${stepConfig.actionType} `);
           return false;
       }
     } catch (error) {
@@ -613,8 +675,8 @@ export class WorkflowAutomationEngine extends EventEmitter {
   }
 
   private async sendNotification(
-    stepExecutionId: string, 
-    stepConfig: any, 
+    stepExecutionId: string,
+    stepConfig: any,
     contextData?: Record<string, any>
   ): Promise<boolean> {
     try {
@@ -641,10 +703,10 @@ export class WorkflowAutomationEngine extends EventEmitter {
   private async markWorkflowFailed(instanceId: string, errorMessage: string): Promise<void> {
     try {
       await db.update(workflowInstances)
-        .set({ 
-          status: 'failed', 
-          errorMessage, 
-          completedAt: new Date() 
+        .set({
+          status: 'failed',
+          errorMessage,
+          completedAt: new Date()
         })
         .where(eq(workflowInstances.id, instanceId));
 
@@ -683,7 +745,7 @@ export class WorkflowAutomationEngine extends EventEmitter {
             // Call external API
             break;
           default:
-            logger.warn(`Unknown rule action type: ${action.type}`);
+            logger.warn(`Unknown rule action type: ${action.type} `);
         }
       }
     } catch (error) {
@@ -725,7 +787,7 @@ class RuleEngine {
 
     for (const condition of conditions) {
       const conditionResult = this.evaluateCondition(condition, eventData);
-      
+
       if (currentLogicalOperator === 'AND') {
         result = result && conditionResult;
       } else if (currentLogicalOperator === 'OR') {
@@ -742,7 +804,7 @@ class RuleEngine {
 
   private evaluateCondition(condition: RuleCondition, eventData: Record<string, any>): boolean {
     const fieldValue = this.getNestedValue(eventData, condition.field);
-    
+
     switch (condition.operator) {
       case 'equals':
         return fieldValue === condition.value;
@@ -768,13 +830,5 @@ class RuleEngine {
   }
 }
 
-// Import statements for database tables (these would be defined in the schema)
-const workflowTemplates = {} as any;
-const workflowInstances = {} as any;
-const workflowSteps = {} as any;
-const workflowStepExecutions = {} as any;
-const workflowTaskAssignments = {} as any;
-const workflowRules = {} as any;
-const workflowMetrics = {} as any;
 
 export default WorkflowAutomationEngine;

@@ -249,7 +249,11 @@ export class FeedService {
           communityFilter,
           finalFollowingFilter,
           moderationFilter, // Add moderation filter
-          isNull(posts.parentId) // Only show top-level posts, not comments
+          isNull(posts.parentId), // Only show top-level posts, not comments
+          // EXCLUDE COMMUNITY POSTS: Home feed should only show quick posts
+          // Community posts have communityId or dao set
+          isNull(posts.communityId),
+          isNull(posts.dao)
         ));
 
       console.log('📊 [BACKEND FEED] Regular posts query result:', {
@@ -551,7 +555,7 @@ export class FeedService {
         };
       });
 
-      // Get total count for pagination (excluding blocked content)
+      // Get total count for pagination (excluding blocked content AND community posts)
       const totalRegularCount = await db
         .select({ count: sql<number>`COUNT(*)` })
         .from(posts)
@@ -560,7 +564,10 @@ export class FeedService {
           communityFilter,
           finalFollowingFilter,
           moderationFilter, // Include moderation filter in count
-          isNull(posts.parentId) // Only count top-level posts
+          isNull(posts.parentId), // Only count top-level posts
+          // EXCLUDE COMMUNITY POSTS from count as well
+          isNull(posts.communityId),
+          isNull(posts.dao)
         ));
 
       const totalQuickCount = await db

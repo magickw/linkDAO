@@ -1352,4 +1352,49 @@ export class CommunityService {
       throw error;
     }
   }
+
+  /**
+   * Get feed from followed communities
+   * @param options - Feed options
+   * @returns Feed with posts and pagination
+   */
+  static async getFollowedCommunitiesFeed(options: {
+    page: number;
+    limit: number;
+    sort: string;
+    timeRange: string;
+  }): Promise<{ posts: any[]; pagination: any }> {
+    try {
+      const authHeaders = authService.getAuthHeaders();
+      const params = new URLSearchParams({
+        page: options.page.toString(),
+        limit: options.limit.toString(),
+        sort: options.sort,
+        timeRange: options.timeRange
+      });
+      
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/feed?${params}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authHeaders
+          }
+        },
+        COMMUNITY_RETRY_OPTIONS
+      );
+      
+      const json = await safeJson(response);
+      
+      if (!response.ok) {
+        throw new Error((json && (json.error || json.message)) || 'Failed to fetch community feed');
+      }
+      
+      return json || { posts: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+    } catch (error) {
+      console.error('Error fetching community feed:', error);
+      return { posts: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+    }
+  }
 }

@@ -1,5 +1,6 @@
 import { pgTable, serial, varchar, text, timestamp, integer, uuid, primaryKey, index, boolean, numeric, foreignKey, jsonb, interval, unique } from "drizzle-orm/pg-core";
 import * as marketplaceSchema from "./marketplaceSchema";
+export { marketplaceSchema };
 
 // Users / Profiles
 export const users = pgTable("users", {
@@ -4297,3 +4298,120 @@ export const auditLogs = pgTable("audit_logs", {
 }));
 
 export * from "./marketplaceSchema";
+
+// Workflow Templates
+export const workflowTemplates = pgTable("workflow_templates", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 50 }).notNull(), // WorkflowCategory
+  triggerType: varchar("trigger_type", { length: 50 }).notNull(), // TriggerType
+  triggerConfig: jsonb("trigger_config").notNull(), // TriggerConfig
+  isActive: boolean("is_active").default(true).notNull(),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Workflow Instances
+export const workflowInstances = pgTable("workflow_instances", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  templateId: uuid("template_id").references(() => workflowTemplates.id, { onDelete: "cascade" }).notNull(),
+  status: varchar("status", { length: 20 }).notNull(), // WorkflowStatus
+  priority: integer("priority").default(5).notNull(),
+  contextData: jsonb("context_data"),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  templateIdx: index("workflow_instances_template_idx").on(table.templateId),
+  statusIdx: index("workflow_instances_status_idx").on(table.status),
+}));
+
+// Workflow Steps
+export const workflowSteps = pgTable("workflow_steps", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  templateId: uuid("template_id").references(() => workflowTemplates.id, { onDelete: "cascade" }).notNull(),
+  stepOrder: integer("step_order").notNull(),
+  stepType: varchar("step_type", { length: 50 }).notNull(), // StepType
+  stepConfig: jsonb("step_config").notNull(), // StepConfig
+  conditions: jsonb("conditions"),
+  timeoutMinutes: integer("timeout_minutes").default(60).notNull(),
+  retryCount: integer("retry_count").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  templateIdx: index("workflow_steps_template_idx").on(table.templateId),
+  orderIdx: index("workflow_steps_order_idx").on(table.templateId, table.stepOrder),
+}));
+
+// Workflow Step Executions
+export const workflowStepExecutions = pgTable("workflow_step_executions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  instanceId: uuid("instance_id").references(() => workflowInstances.id, { onDelete: "cascade" }).notNull(),
+  stepId: uuid("step_id").references(() => workflowSteps.id, { onDelete: "cascade" }).notNull(),
+  status: varchar("status", { length: 20 }).notNull(), // StepExecutionStatus
+  inputData: jsonb("input_data"),
+  outputData: jsonb("output_data"),
+  errorMessage: text("error_message"),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  assignedTo: uuid("assigned_to").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  instanceIdx: index("workflow_step_executions_instance_idx").on(table.instanceId),
+  stepIdx: index("workflow_step_executions_step_idx").on(table.stepId),
+  statusIdx: index("workflow_step_executions_status_idx").on(table.status),
+}));
+
+// Workflow Task Assignments
+export const workflowTaskAssignments = pgTable("workflow_task_assignments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  stepExecutionId: uuid("step_execution_id").references(() => workflowStepExecutions.id, { onDelete: "cascade" }).notNull(),
+  assignedTo: uuid("assigned_to").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  assignedBy: uuid("assigned_by").references(() => users.id, { onDelete: "set null" }),
+  taskType: varchar("task_type", { length: 50 }).notNull(), // TaskType
+  taskData: jsonb("task_data").notNull(),
+  priority: integer("priority").default(5).notNull(),
+  dueDate: timestamp("due_date"),
+  status: varchar("status", { length: 20 }).notNull(), // TaskStatus
+  completionData: jsonb("completion_data"),
+  assignedAt: timestamp("assigned_at").defaultNow().notNull(),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+}, (table) => ({
+  stepExecutionIdx: index("workflow_task_assignments_step_execution_idx").on(table.stepExecutionId),
+  assignedToIdx: index("workflow_task_assignments_assigned_to_idx").on(table.assignedTo),
+  statusIdx: index("workflow_task_assignments_status_idx").on(table.status),
+}));
+
+// Workflow Rules
+export const workflowRules = pgTable("workflow_rules", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  ruleType: varchar("rule_type", { length: 50 }).notNull(), // RuleType
+  conditions: jsonb("conditions").notNull(), // RuleCondition[]
+  actions: jsonb("actions").notNull(), // RuleAction[]
+  priority: integer("priority").default(0).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Workflow Metrics
+export const workflowMetrics = pgTable("workflow_metrics", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  templateId: uuid("template_id").references(() => workflowTemplates.id, { onDelete: "set null" }),
+  instanceId: uuid("instance_id").references(() => workflowInstances.id, { onDelete: "set null" }),
+  metricType: varchar("metric_type", { length: 50 }).notNull(), // MetricType
+  metricValue: numeric("metric_value", { precision: 20, scale: 8 }).notNull(),
+  metricUnit: varchar("metric_unit", { length: 20 }),
+  dimensions: jsonb("dimensions"),
+  recordedAt: timestamp("recorded_at").defaultNow().notNull(),
+}, (table) => ({
+  templateIdx: index("workflow_metrics_template_idx").on(table.templateId),
+  instanceIdx: index("workflow_metrics_instance_idx").on(table.instanceId),
+  metricTypeIdx: index("workflow_metrics_type_idx").on(table.metricType),
+}));

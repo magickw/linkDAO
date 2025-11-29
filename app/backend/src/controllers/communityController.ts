@@ -350,6 +350,37 @@ export class CommunityController {
     }
   }
 
+  // Get aggregated feed from followed communities
+  async getFollowedCommunitiesFeed(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const {
+        page = 1,
+        limit = 20,
+        sort = 'new',
+        timeRange = 'all'
+      } = req.query;
+
+      const result = await communityService.getFollowedCommunitiesPosts({
+        userAddress,
+        page: Number(page),
+        limit: Number(limit),
+        sort: sort as string,
+        timeRange: timeRange as string
+      });
+
+      res.json(createSuccessResponse(result, {}));
+    } catch (error) {
+      safeLogger.error('Error getting followed communities feed:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve community feed'));
+    }
+  }
+
   // Create post in community
   async createCommunityPost(req: Request, res: Response): Promise<void> {
     try {
@@ -377,16 +408,16 @@ export class CommunityController {
 
         // If content is not approved, return moderation result
         if (!moderationResult.isApproved) {
-          return res.status(403).json(createErrorResponse('CONTENT_REJECTED', 
+          return res.status(403).json(createErrorResponse('CONTENT_REJECTED',
             `Content not approved: ${moderationResult.reasoning}`, 403, {
-              moderationResult,
-              suggestedActions: await aiModerationService.getSuggestedActions({
-                type: 'post',
-                content,
-                authorAddress: userAddress,
-                communityId: id
-              }, moderationResult)
-            }));
+            moderationResult,
+            suggestedActions: await aiModerationService.getSuggestedActions({
+              type: 'post',
+              content,
+              authorAddress: userAddress,
+              communityId: id
+            }, moderationResult)
+          }));
         }
 
         // Log successful moderation
@@ -2227,7 +2258,7 @@ export class CommunityController {
       }
 
       const { communityHealthService } = await import('../services/communityHealthService');
-      const metricsPromises = adminCommunities.map(membership => 
+      const metricsPromises = adminCommunities.map(membership =>
         communityHealthService.calculateHealthMetrics(membership.communityId)
       );
 

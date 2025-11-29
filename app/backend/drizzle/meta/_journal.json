@@ -477,6 +477,13 @@
       "when": 1761770000038,
       "tag": "0069_add_payout_settings_to_sellers",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1764451917896,
+      "tag": "0068_previous_eternity",
+      "breakpoints": true
     }
   ]
 }

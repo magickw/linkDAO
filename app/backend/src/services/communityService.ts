@@ -425,7 +425,7 @@ export class CommunityService {
 
       // Generate cache key
       const cacheKey = CommunityCacheService.generateCommunityKey(communityId, 'details', userAddress || 'anonymous');
-      
+
       // Try to get from cache first
       const cached = await communityCacheService.get(cacheKey);
       if (cached) {
@@ -544,13 +544,13 @@ export class CommunityService {
       };
 
       safeLogger.info(`Successfully retrieved community details for: ${community.displayName}`);
-      
+
       // Cache the result
       await communityCacheService.set(cacheKey, communityData, {
         ttl: 600, // 10 minutes
         tags: ['community', 'details', communityId]
       });
-      
+
       return communityData;
     } catch (error) {
       safeLogger.error('Error getting community details for ID:', communityId, 'Error:', error);
@@ -1211,7 +1211,12 @@ export class CommunityService {
 
       // Get community name for dao field matching
       const communityResult = await db
-        .select({ name: communities.name })
+        .select({
+          name: communities.name,
+          slug: communities.slug,
+          avatar: communities.avatar,
+          displayName: communities.displayName
+        })
         .from(communities)
         .where(eq(communities.id, communityId))
         .limit(1);
@@ -1289,6 +1294,14 @@ export class CommunityService {
         dao: post.dao,
         communityId: post.communityId,
         createdAt: post.createdAt,
+        // Include community metadata for frontend display
+        community: communityResult[0] ? {
+          id: communityId,
+          name: communityResult[0].name,
+          displayName: communityResult[0].displayName || communityResult[0].name,
+          slug: communityResult[0].slug,
+          avatar: communityResult[0].avatar
+        } : null
       }));
 
       return {
@@ -1303,6 +1316,187 @@ export class CommunityService {
     } catch (error) {
       safeLogger.error('Error getting community posts:', error);
       throw new Error('Failed to get community posts');
+    }
+  }
+
+  // Get posts from all communities the user follows (aggregated feed)
+  async getFollowedCommunitiesPosts(options: {
+    userAddress: string;
+    page: number;
+    limit: number;
+    sort: string;
+    timeRange: string;
+  }) {
+    const { userAddress, page, limit, sort, timeRange } = options;
+
+    try {
+      const offset = (page - 1) * limit;
+      const timeFilter = this.buildTimeFilter(timeRange);
+
+      // Normalize user address
+      const normalizedAddress = userAddress.toLowerCase();
+
+      // Get user ID
+      const user = await db.select({ id: users.id })
+        .from(users)
+        .where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`)
+        .limit(1);
+
+      if (user.length === 0) {
+        // Return empty for non-existent users
+        return {
+          posts: [],
+          pagination: { page, limit, total: 0, totalPages: 0 }
+        };
+      }
+
+      const userId = user[0].id;
+
+      // Get communities user is a member of
+      const memberships = await db
+        .select({ communityId: communityMembers.communityId })
+        .from(communityMembers)
+        .where(and(
+          eq(communityMembers.userAddress, normalizedAddress),
+          eq(communityMembers.isActive, true)
+        ));
+
+      const communityIds = memberships.map(m => m.communityId);
+
+      // If user hasn't joined any communities, show all public community posts for discovery
+      if (communityIds.length === 0) {
+        const allCommunitiesResult = await db
+          .select({ id: communities.id })
+          .from(communities)
+          .where(eq(communities.isPublic, true));
+
+        communityIds.push(...allCommunitiesResult.map(c => c.id));
+      }
+
+      if (communityIds.length === 0) {
+        return {
+          posts: [],
+          pagination: { page, limit, total: 0, totalPages: 0 }
+        };
+      }
+
+      // Build sort order
+      let orderBy;
+      switch (sort) {
+        case 'new':
+        case 'newest':
+          orderBy = desc(posts.createdAt);
+          break;
+        case 'old':
+        case 'oldest':
+          orderBy = asc(posts.createdAt);
+          break;
+        case 'top':
+        case 'popular':
+          orderBy = desc(posts.stakedValue);
+          break;
+        case 'hot':
+        case 'rising':
+          // Hot/rising uses a combination of recent + engagement
+          orderBy = desc(sql`(COALESCE(CAST(${posts.stakedValue} AS DECIMAL), 0) / (EXTRACT(EPOCH FROM (NOW() - ${posts.createdAt})) / 3600 + 2))`);
+          break;
+        default:
+          orderBy = desc(posts.createdAt);
+      }
+
+      // Get community metadata for all relevant communities
+      const communitiesData = await db
+        .select({
+          id: communities.id,
+          name: communities.name,
+          displayName: communities.displayName,
+          slug: communities.slug,
+          avatar: communities.avatar
+        })
+        .from(communities)
+        .where(inArray(communities.id, communityIds));
+
+      const communityMap = new Map(communitiesData.map(c => [c.id, c]));
+
+      // Query posts from these communities
+      const postsResult = await db
+        .select({
+          id: posts.id,
+          authorId: posts.authorId,
+          title: posts.title,
+          contentCid: posts.contentCid,
+          parentId: posts.parentId,
+          mediaCids: posts.mediaCids,
+          tags: posts.tags,
+          stakedValue: posts.stakedValue,
+          reputationScore: posts.reputationScore,
+          dao: posts.dao,
+          communityId: posts.communityId,
+          createdAt: posts.createdAt,
+          authorAddress: users.walletAddress,
+          authorHandle: users.handle,
+        })
+        .from(posts)
+        .leftJoin(users, eq(posts.authorId, users.id))
+        .where(and(
+          or(...communityIds.map(id => eq(posts.communityId, id))),
+          timeFilter,
+          isNull(posts.parentId) // Only top-level posts
+        ))
+        .orderBy(orderBy)
+        .limit(limit)
+        .offset(offset);
+
+      // Transform posts with community metadata
+      const transformedPosts = postsResult.map(post => ({
+        id: post.id.toString(),
+        authorId: post.authorId,
+        authorAddress: post.authorAddress,
+        authorHandle: post.authorHandle,
+        title: post.title,
+        contentCid: post.contentCid,
+        parentId: post.parentId,
+        mediaCids: post.mediaCids ? JSON.parse(post.mediaCids) : [],
+        tags: post.tags ? JSON.parse(post.tags) : [],
+        stakedValue: post.stakedValue ? Number(post.stakedValue) : 0,
+        reputationScore: post.reputationScore || 0,
+        dao: post.dao,
+        communityId: post.communityId,
+        createdAt: post.createdAt,
+        // Include community metadata for frontend display
+        community: post.communityId && communityMap.has(post.communityId) ? {
+          id: post.communityId,
+          name: communityMap.get(post.communityId)!.name,
+          displayName: communityMap.get(post.communityId)!.displayName || communityMap.get(post.communityId)!.name,
+          slug: communityMap.get(post.communityId)!.slug,
+          avatar: communityMap.get(post.communityId)!.avatar
+        } : null
+      }));
+
+      // Get total count
+      const totalResult = await db
+        .select({ count: count() })
+        .from(posts)
+        .where(and(
+          or(...communityIds.map(id => eq(posts.communityId, id))),
+          timeFilter,
+          isNull(posts.parentId)
+        ));
+
+      const total = totalResult[0]?.count || 0;
+
+      return {
+        posts: transformedPosts,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        }
+      };
+    } catch (error) {
+      safeLogger.error('Error getting followed communities posts:', error);
+      throw new Error('Failed to get followed communities posts');
     }
   }
 
@@ -2314,8 +2508,8 @@ export class CommunityService {
 
         // Update proposal vote counts
         const voteColumn = vote === 'yes' ? communityGovernanceProposals.yesVotes :
-                          vote === 'no' ? communityGovernanceProposals.noVotes :
-                          communityGovernanceProposals.abstainVotes;
+          vote === 'no' ? communityGovernanceProposals.noVotes :
+            communityGovernanceProposals.abstainVotes;
 
         await tx
           .update(communityGovernanceProposals)
@@ -5192,8 +5386,8 @@ export class CommunityService {
         )
         .limit(1);
 
-      return membership.length > 0 && 
-             (membership[0].role === 'admin' || membership[0].role === 'moderator');
+      return membership.length > 0 &&
+        (membership[0].role === 'admin' || membership[0].role === 'moderator');
     } catch (error) {
       safeLogger.error('Error checking moderator permission:', error);
       return false;
@@ -5218,6 +5412,283 @@ export class CommunityService {
     } catch (error) {
       safeLogger.error('Error checking membership:', error);
       return false;
+    }
+  }
+
+  // Build time filter for queries
+  private buildTimeFilter(timeRange: string) {
+    const now = new Date();
+    switch (timeRange) {
+      case 'hour':
+        return gt(posts.createdAt, new Date(now.getTime() - 60 * 60 * 1000));
+      case 'day':
+        return gt(posts.createdAt, new Date(now.getTime() - 24 * 60 * 60 * 1000));
+      case 'week':
+        return gt(posts.createdAt, new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000));
+      case 'month':
+        return gt(posts.createdAt, new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000));
+      case 'year':
+        return gt(posts.createdAt, new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000));
+      default:
+        return undefined; // 'all' - no time filter
+    }
+  }
+
+  // Build sort order for queries
+  private buildSortOrder(sort: string) {
+    switch (sort) {
+      case 'hot':
+        return desc(sql`(posts.reputation_score * 0.7 + posts.staked_value * 0.3)`);
+      case 'top':
+        return desc(sql`posts.reputation_score`);
+      case 'new':
+        return desc(posts.createdAt);
+      case 'rising':
+        return desc(sql`(posts.reputation_score / EXTRACT(EPOCH FROM (NOW() - posts.createdAt)))`);
+      default:
+        return desc(posts.createdAt);
+    }
+  }
+
+  // Get all community posts (for discovery)
+  private async getAllCommunityPosts(options: {
+    page: number;
+    limit: number;
+    sort: string;
+    timeRange: string;
+  }) {
+    const { page, limit, sort, timeRange } = options;
+    
+    try {
+      const offset = (page - 1) * limit;
+      const timeFilter = this.buildTimeFilter(timeRange);
+      const orderBy = this.buildSortOrder(sort);
+
+      // Get public communities
+      const publicCommunities = await db
+        .select({ id: communities.id })
+        .from(communities)
+        .where(eq(communities.isPrivate, false));
+
+      const communityIds = publicCommunities.map(c => c.id);
+
+      if (communityIds.length === 0) {
+        return { posts: [], pagination: { page, limit, total: 0, totalPages: 0 } };
+      }
+
+      // Get community metadata
+      const communitiesData = await db
+        .select({
+          id: communities.id,
+          name: communities.name,
+          displayName: communities.displayName,
+          slug: communities.slug,
+          avatar: communities.avatar
+        })
+        .from(communities)
+        .where(inArray(communities.id, communityIds));
+
+      const communityMap = new Map(communitiesData.map(c => [c.id, c]));
+
+      // Query posts
+      const postsResult = await db
+        .select({
+          id: posts.id,
+          authorId: posts.authorId,
+          title: posts.title,
+          contentCid: posts.contentCid,
+          parentId: posts.parentId,
+          mediaCids: posts.mediaCids,
+          tags: posts.tags,
+          stakedValue: posts.stakedValue,
+          reputationScore: posts.reputationScore,
+          dao: posts.dao,
+          communityId: posts.communityId,
+          createdAt: posts.createdAt,
+          authorAddress: users.walletAddress,
+          authorHandle: users.handle,
+        })
+        .from(posts)
+        .leftJoin(users, eq(posts.authorId, users.id))
+        .where(
+          and(
+            inArray(posts.communityId, communityIds),
+            timeFilter || sql`1=1`,
+            isNull(posts.parentId)
+          )
+        )
+        .orderBy(orderBy)
+        .limit(limit)
+        .offset(offset);
+
+      // Transform posts
+      const transformedPosts = postsResult.map(post => ({
+        ...post,
+        mediaCids: post.mediaCids ? JSON.parse(post.mediaCids) : [],
+        tags: post.tags ? JSON.parse(post.tags) : [],
+        stakedValue: post.stakedValue ? Number(post.stakedValue) : 0,
+        reputationScore: post.reputationScore || 0,
+        community: post.communityId && communityMap.has(post.communityId) ? {
+          id: post.communityId,
+          name: communityMap.get(post.communityId)!.name,
+          displayName: communityMap.get(post.communityId)!.displayName,
+          slug: communityMap.get(post.communityId)!.slug,
+          avatar: communityMap.get(post.communityId)!.avatar
+        } : null
+      }));
+
+      // Get total count
+      const totalResult = await db
+        .select({ count: count() })
+        .from(posts)
+        .where(
+          and(
+            inArray(posts.communityId, communityIds),
+            timeFilter || sql`1=1`,
+            isNull(posts.parentId)
+          )
+        );
+
+      return {
+        posts: transformedPosts,
+        pagination: {
+          page,
+          limit,
+          total: totalResult[0]?.count || 0,
+          totalPages: Math.ceil((totalResult[0]?.count || 0) / limit)
+        }
+      };
+    } catch (error) {
+      safeLogger.error('Error getting all community posts:', error);
+      return { posts: [], pagination: { page, limit, total: 0, totalPages: 0 } };
+    }
+  }
+
+  // Get posts from followed communities
+  async getFollowedCommunitiesPosts(options: {
+    userAddress: string;
+    page: number;
+    limit: number;
+    sort: string;
+    timeRange: string;
+  }) {
+    const { userAddress, page, limit, sort, timeRange } = options;
+    
+    try {
+      // Get user's joined communities
+      const normalizedAddress = userAddress.toLowerCase();
+      const user = await db.select({ id: users.id })
+        .from(users)
+        .where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`)
+        .limit(1);
+      
+      if (user.length === 0) {
+        // Return empty for non-existent users
+        return { posts: [], pagination: { page, limit, total: 0, totalPages: 0 } };
+      }
+      
+      // Get communities user is a member of
+      const memberships = await db
+        .select({ communityId: communityMembers.communityId })
+        .from(communityMembers)
+        .where(and(
+          eq(communityMembers.userAddress, normalizedAddress),
+          eq(communityMembers.isActive, true)
+        ));
+      
+      const communityIds = memberships.map(m => m.communityId);
+      
+      if (communityIds.length === 0) {
+        // Show all public community posts for discovery
+        return this.getAllCommunityPosts({ page, limit, sort, timeRange });
+      }
+      
+      // Fetch posts from these communities
+      const offset = (page - 1) * limit;
+      const timeFilter = this.buildTimeFilter(timeRange);
+      const orderBy = this.buildSortOrder(sort);
+      
+      // Get community metadata for all user's communities
+      const communities = await db
+        .select({
+          id: communities.id,
+          name: communities.name,
+          displayName: communities.displayName,
+          slug: communities.slug,
+          avatar: communities.avatar
+        })
+        .from(communities)
+        .where(inArray(communities.id, communityIds));
+      
+      const communityMap = new Map(communities.map(c => [c.id, c]));
+      
+      // Query posts from these communities
+      const postsResult = await db
+        .select({
+          id: posts.id,
+          authorId: posts.authorId,
+          title: posts.title,
+          contentCid: posts.contentCid,
+          parentId: posts.parentId,
+          mediaCids: posts.mediaCids,
+          tags: posts.tags,
+          stakedValue: posts.stakedValue,
+          reputationScore: posts.reputationScore,
+          dao: posts.dao,
+          communityId: posts.communityId,
+          createdAt: posts.createdAt,
+          authorAddress: users.walletAddress,
+          authorHandle: users.handle,
+        })
+        .from(posts)
+        .leftJoin(users, eq(posts.authorId, users.id))
+        .where(and(
+          or(...communityIds.map(id => eq(posts.communityId, id))),
+          timeFilter || sql`1=1`,
+          isNull(posts.parentId)
+        ))
+        .orderBy(orderBy)
+        .limit(limit)
+        .offset(offset);
+      
+      // Transform posts with community metadata
+      const transformedPosts = postsResult.map(post => ({
+        ...post,
+        mediaCids: post.mediaCids ? JSON.parse(post.mediaCids) : [],
+        tags: post.tags ? JSON.parse(post.tags) : [],
+        stakedValue: post.stakedValue ? Number(post.stakedValue) : 0,
+        reputationScore: post.reputationScore || 0,
+        community: post.communityId && communityMap.has(post.communityId) ? {
+          id: post.communityId,
+          name: communityMap.get(post.communityId)!.name,
+          displayName: communityMap.get(post.communityId)!.displayName,
+          slug: communityMap.get(post.communityId)!.slug,
+          avatar: communityMap.get(post.communityId)!.avatar
+        } : null
+      }));
+      
+      // Get total count
+      const totalResult = await db
+        .select({ count: count() })
+        .from(posts)
+        .where(and(
+          or(...communityIds.map(id => eq(posts.communityId, id))),
+          timeFilter || sql`1=1`,
+          isNull(posts.parentId)
+        ));
+      
+      return {
+        posts: transformedPosts,
+        pagination: {
+          page,
+          limit,
+          total: totalResult[0]?.count || 0,
+          totalPages: Math.ceil((totalResult[0]?.count || 0) / limit)
+        }
+      };
+    } catch (error) {
+      safeLogger.error('Error getting followed communities posts:', error);
+      throw new Error('Failed to get followed communities posts');
     }
   }
 }
