@@ -1527,16 +1527,41 @@ export class CommunityService {
         throw new Error('User is not a member of this community');
       }
 
+      // Get the user ID from the users table
+      const userResult = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAuthorAddress})`)
+        .limit(1);
+
+      if (userResult.length === 0) {
+        // Create user if not exists
+        const newUser = await db
+          .insert(users)
+          .values({
+            walletAddress: normalizedAuthorAddress,
+            role: 'user',
+            createdAt: new Date(),
+            updatedAt: new Date()
+          })
+          .returning();
+        
+        if (newUser.length === 0) {
+          throw new Error('Failed to create user');
+        }
+        userResult.push(newUser[0]);
+      }
+
       // Create the post
       const newPost = await db
         .insert(posts)
         .values({
           communityId,
-          authorAddress: normalizedAuthorAddress,
+          authorId: userResult[0].id,
           content: sanitizeInput(content),
-          mediaUrls: mediaUrls ? JSON.stringify(mediaUrls) : null,
+          contentCid: `local-${Date.now()}`, // Temporary CID for local content
+          mediaCids: mediaUrls ? JSON.stringify(mediaUrls) : null,
           tags: tags ? JSON.stringify(tags) : null,
-          pollData: pollData ? JSON.stringify(pollData) : null,
           createdAt: new Date(),
           updatedAt: new Date()
         })
@@ -1623,11 +1648,11 @@ export class CommunityService {
         data: {
           id: newPost[0].id,
           communityId,
+          authorId: userResult[0].id,
           authorAddress: normalizedAuthorAddress,
           content,
           mediaUrls,
           tags,
-          pollData,
           createdAt: newPost[0].createdAt
         }
       };
@@ -5468,7 +5493,7 @@ export class CommunityService {
       const publicCommunities = await db
         .select({ id: communities.id })
         .from(communities)
-        .where(eq(communities.isPrivate, false));
+        .where(eq(communities.isPublic, true));
 
       const communityIds = publicCommunities.map(c => c.id);
 

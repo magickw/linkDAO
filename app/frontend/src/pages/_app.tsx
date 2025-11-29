@@ -26,6 +26,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import { WalletLoginBridgeWithToast } from '@/components/Auth/WalletLoginBridgeWithToast';
 import OfflineIndicator from '@/components/OfflineIndicator';
 import Head from 'next/head';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/globals.css';
 import '../styles/enhanced-glassmorphism.css';
 import '../styles/mobile-optimizations.css';
@@ -383,6 +384,7 @@ export default function App({ Component, pageProps, router }: AppProps) {
         </QueryClientProvider>
       </WagmiProvider>
     </ErrorBoundary>
+    <SpeedInsights />
     </>
   );
 }
