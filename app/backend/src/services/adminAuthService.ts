@@ -6,6 +6,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { eq, and, gt } from 'drizzle-orm';
 import { users, adminSessions, adminAuditLog } from '../db/schema';
+import { adminAuthFix } from '../utils/adminAuthFix';
 
 const connectionString = process.env.DATABASE_URL!;
 const sql = postgres(connectionString, { ssl: 'require' });
@@ -266,6 +267,11 @@ export class AdminAuthService {
           success: false,
           message: 'Your account does not have administrative privileges. Please contact your system administrator.',
         };
+      }
+
+      // Apply admin auth fix for configured admin address
+      if (user.walletAddress) {
+        await adminAuthFix.ensureAdminPermissions(user.walletAddress);
       }
 
       await this.resetLoginAttempts(user.id);

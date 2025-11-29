@@ -6,7 +6,7 @@ import { databaseService } from "../services/databaseService";
 import AuditLoggingService from "../services/auditLoggingService";
 import { adminConfigurationService } from "../services/adminConfigurationService";
 import { eq, desc, sql } from "drizzle-orm";
-import { users, disputes, marketplaceUsers, sellerVerifications, moderationCases } from "../db/schema";
+import { users, disputes, marketplaceUsers, sellerVerifications, moderationCases, communityGovernanceProposals } from "../db/schema";
 import { AuthenticatedRequest } from "../middleware/adminAuthMiddleware";
 
 export class AdminController {
@@ -356,6 +356,7 @@ export class AdminController {
       let openDisputes = 0;
       let totalUsers = 0;
       let totalSellers = 0;
+      let pendingCharityProposals = 0;
       
       try {
         // Get moderation statistics
@@ -410,6 +411,20 @@ export class AdminController {
         totalSellers = 0; // Default to 0 if table doesn't exist or query fails
       }
       
+      try {
+        // Get charity proposal statistics
+        const charityStatsResult = await db.select({ count: sql<number>`count(*)` })
+          .from(communityGovernanceProposals)
+          .where(eq(communityGovernanceProposals.type, 'charity'));
+        
+        if (charityStatsResult.length > 0) {
+          pendingCharityProposals = charityStatsResult[0].count || 0;
+        }
+      } catch (charityError) {
+        safeLogger.warn("Error fetching charity stats:", charityError);
+        pendingCharityProposals = 0; // Default to 0 if table doesn't exist or query fails
+      }
+      
       // Get suspended users (placeholder - would need actual suspension table)
       const suspendedUsers = 0;
       
@@ -423,6 +438,7 @@ export class AdminController {
         suspendedUsers,
         totalUsers,
         totalSellers,
+        pendingCharityProposals,
         recentActions
       });
     } catch (error) {
