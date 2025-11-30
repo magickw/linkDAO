@@ -1466,10 +1466,10 @@ export class CommunityService {
         // Include community metadata for frontend display
         community: post.communityId && communityMap.has(post.communityId) ? {
           id: post.communityId,
-          name: communityMap.get(post.communityId)!.name,
-          displayName: communityMap.get(post.communityId)!.displayName || communityMap.get(post.communityId)!.name,
-          slug: communityMap.get(post.communityId)!.slug,
-          avatar: communityMap.get(post.communityId)!.avatar
+          name: communityMap.get(post.communityId)?.name || 'Unknown',
+          displayName: communityMap.get(post.communityId)?.displayName || communityMap.get(post.communityId)?.name || 'Unknown',
+          slug: communityMap.get(post.communityId)?.slug || '',
+          avatar: communityMap.get(post.communityId)?.avatar || null
         } : null
       }));
 
@@ -5537,10 +5537,10 @@ export class CommunityService {
         reputationScore: post.reputationScore || 0,
         community: post.communityId && communityMap.has(post.communityId) ? {
           id: post.communityId,
-          name: communityMap.get(post.communityId)!.name,
-          displayName: communityMap.get(post.communityId)!.displayName,
-          slug: communityMap.get(post.communityId)!.slug,
-          avatar: communityMap.get(post.communityId)!.avatar
+          name: communityMap.get(post.communityId)?.name || 'Unknown',
+          displayName: communityMap.get(post.communityId)?.displayName || 'Unknown',
+          slug: communityMap.get(post.communityId)?.slug || '',
+          avatar: communityMap.get(post.communityId)?.avatar || null
         } : null
       }));
 
@@ -5568,36 +5568,6 @@ export class CommunityService {
     } catch (error) {
       safeLogger.error('Error getting all community posts:', error);
       return { posts: [], pagination: { page, limit, total: 0, totalPages: 0 } };
-    }
-  }
-
-  
-          avatar: communityMap.get(post.communityId)!.avatar
-        } : null
-      }));
-      
-      // Get total count
-      const totalResult = await db
-        .select({ count: count() })
-        .from(posts)
-        .where(and(
-          or(...communityIds.map(id => eq(posts.communityId, id))),
-          timeFilter || sql`1=1`,
-          isNull(posts.parentId)
-        ));
-      
-      return {
-        posts: transformedPosts,
-        pagination: {
-          page,
-          limit,
-          total: totalResult[0]?.count || 0,
-          totalPages: Math.ceil((totalResult[0]?.count || 0) / limit)
-        }
-      };
-    } catch (error) {
-      safeLogger.error('Error getting followed communities posts:', error);
-      throw new Error('Failed to get followed communities posts');
     }
   }
 }
