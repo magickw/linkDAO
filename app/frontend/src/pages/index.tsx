@@ -71,6 +71,8 @@ export default function Home() {
   const [hasNewPosts, setHasNewPosts] = useState(false);
   const [feedRefreshKey, setFeedRefreshKey] = useState(0);
   const [wsSubscribed, setWsSubscribed] = useState(false);
+  const [isSupportWidgetOpen, setIsSupportWidgetOpen] = useState(false);
+  const [isWalletSheetOpen, setIsWalletSheetOpen] = useState(false);
   const mainContentRef = useRef<HTMLDivElement>(null);
   const isMounted = useRef(true);
 
