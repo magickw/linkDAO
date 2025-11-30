@@ -279,6 +279,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const now = Date.now();
         if (now - lastAuthTime >= AUTH_COOLDOWN) {
           console.log('🔗 Wallet connected, checking for existing session...');
+          setLastAuthTime(now); // Update cooldown timer to prevent infinite loop
           const hasValidSession = await checkStoredSession();
           if (hasValidSession) {
             console.log('✅ Restored session without requiring signature');
@@ -1001,6 +1002,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const now = Date.now();
     if (now - lastAuthTime >= AUTH_COOLDOWN) {
       console.log('🔐 Wallet connected but not authenticated, triggering login...');
+      setLastAuthTime(now); // Update cooldown timer
       try {
         const result = await login(address, connector, 'connected');
         return result;
@@ -1012,7 +1014,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         };
       }
     } else {
-      console.log('⏳ Authentication cooldown active, skipping auto-login');
+      console.log(`⏳ Authentication cooldown active, skipping login (${AUTH_COOLDOWN - (now - lastAuthTime)}ms remaining)`);
       return { success: true }; // Return success to prevent error loops
     }
   }, [user, accessToken, isConnected, address, connector, login]);
