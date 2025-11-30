@@ -66,6 +66,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [kycStatus, setKycStatus] = useState<KYCStatus | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
+  // Add authentication cooldown tracking (MUST be declared before use in useEffect)
+  const [lastAuthTime, setLastAuthTime] = useState<number>(0);
+  const AUTH_COOLDOWN = 5000; // 5 seconds cooldown between auth attempts
+
   const { address, isConnected, connector } = useAccount();
   const { disconnect } = useDisconnect();
   const { validateSession } = useSessionValidation();
@@ -432,10 +436,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false);
     }
   }, [storeSession, validateSession]);
-
-  // Add authentication cooldown tracking
-  const [lastAuthTime, setLastAuthTime] = useState<number>(0);
-  const AUTH_COOLDOWN = 5000; // 5 seconds cooldown between auth attempts
 
   // Login with wallet authentication (legacy method for compatibility)
   const login = async (walletAddress: string, connector: any, status: string): Promise<{ success: boolean; error?: string }> => {
