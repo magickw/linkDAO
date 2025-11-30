@@ -24,7 +24,6 @@ import { performanceMonitor, memoryMonitor } from '@/utils/performanceMonitor';
 import { initializeExtensionErrorSuppression, debugExtensionErrors } from '@/utils/extensionErrorHandler';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { WalletLoginBridgeWithToast } from '@/components/Auth/WalletLoginBridgeWithToast';
-import OfflineIndicator from '@/components/OfflineIndicator';
 import Head from 'next/head';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/globals.css';
@@ -39,9 +38,9 @@ const queryClient = new QueryClient();
 function AppContent({ children }: { children: React.ReactNode }) {
   const [isOnline, setIsOnline] = React.useState(true);
   const [updateAvailable, setUpdateAvailable] = React.useState(false);
-      const swUtilRef = React.useRef<ServiceWorkerUtil | null>(null);
-      const [isBackendAvailable, setIsBackendAvailable] = React.useState(true);
-      const [retryAttempt, setRetryAttempt] = React.useState(0);
+  const swUtilRef = React.useRef<ServiceWorkerUtil | null>(null);
+  const [isBackendAvailable, setIsBackendAvailable] = React.useState(true);
+  const [retryAttempt, setRetryAttempt] = React.useState(0);
 
   // Initialize service worker, performance monitoring, and network status
   React.useEffect(() => {
@@ -66,17 +65,17 @@ function AppContent({ children }: { children: React.ReactNode }) {
     // Network status monitoring
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
-    
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-    
+
     // Service worker registration with enhanced error handling
     if ('serviceWorker' in navigator) {
       swUtilRef.current = new ServiceWorkerUtil();
       swUtilRef.current.register()
         .then(() => console.log('Service Worker registered successfully'))
         .catch(error => console.warn('Service Worker registration failed:', error));
-      
+
       // Check for updates
       setInterval(() => {
         swUtilRef.current?.checkForUpdates()
@@ -93,12 +92,12 @@ function AppContent({ children }: { children: React.ReactNode }) {
       if (event && (event.message || event.reason || event.error)) {
         const errorText = String(event.message || event.reason || event.error?.message || '').toLowerCase();
         const errorSource = event.filename || event.source || '';
-        if (errorText.includes('chrome.runtime.sendmessage') || 
-            errorText.includes('opfgelmcmbiajamepnmloijbpoleiama') ||
-            errorText.includes('extension id') ||
-            errorText.includes('runtime.sendmessage(optional string extensionid') ||
-            errorText.includes('cannot redefine property: ethereum') ||
-            errorSource.includes('background-redux-new.js')) {
+        if (errorText.includes('chrome.runtime.sendmessage') ||
+          errorText.includes('opfgelmcmbiajamepnmloijbpoleiama') ||
+          errorText.includes('extension id') ||
+          errorText.includes('runtime.sendmessage(optional string extensionid') ||
+          errorText.includes('cannot redefine property: ethereum') ||
+          errorSource.includes('background-redux-new.js')) {
           console.debug('🚫 IMMEDIATE: Chrome/extension runtime error blocked');
           event.preventDefault?.();
           event.stopPropagation?.();
@@ -107,23 +106,23 @@ function AppContent({ children }: { children: React.ReactNode }) {
         }
       }
     };
-    
+
     // Apply immediately with highest priority
     window.addEventListener('error', immediateErrorSuppressor, { capture: true, passive: false });
     window.addEventListener('unhandledrejection', immediateErrorSuppressor, { capture: true, passive: false });
-    
+
     // Enable debug mode for extension errors in development
     debugExtensionErrors(process.env.NODE_ENV === 'development');
-    
+
     // Initialize extension error suppression
     const cleanupExtensionErrorSuppression = initializeExtensionErrorSuppression();
-    
+
     // More aggressive error handling for chrome.runtime.sendMessage specifically
     const chromeRuntimeErrorHandler = (event: ErrorEvent) => {
       const message = event.message || '';
       const filename = event.filename || '';
       const stack = event.error?.stack || '';
-      
+
       // Very specific patterns for chrome.runtime.sendMessage errors
       const chromeRuntimePatterns = [
         'chrome.runtime.sendMessage',
@@ -135,15 +134,15 @@ function AppContent({ children }: { children: React.ReactNode }) {
         'opfgelmcmbiajamepnmloijbpoleiama',
         'Cannot redefine property: ethereum'
       ];
-      
+
       // Check all error information
       const allErrorText = `${message} ${filename} ${stack}`.toLowerCase();
-      
+
       // Look for the specific error pattern
-      const isChromeRuntimeError = chromeRuntimePatterns.some(pattern => 
+      const isChromeRuntimeError = chromeRuntimePatterns.some(pattern =>
         allErrorText.includes(pattern.toLowerCase())
       ) || allErrorText.includes('chrome-extension://opfgelmcmbiajamepnmloijbpoleiama');
-      
+
       if (isChromeRuntimeError) {
         console.debug('🔇 Chrome runtime error suppressed:', {
           message: message.substring(0, 200),
@@ -151,25 +150,25 @@ function AppContent({ children }: { children: React.ReactNode }) {
           extensionId: 'opfgelmcmbiajamepnmloijbpoleiama',
           timestamp: new Date().toISOString()
         });
-        
+
         // Prevent error from propagating
         event.preventDefault();
         event.stopImmediatePropagation();
         return false;
       }
     };
-    
+
     // Handle promise rejections for chrome runtime errors
     const chromeRuntimeRejectionHandler = (event: PromiseRejectionEvent) => {
       const reason = event.reason || '';
       let message = '';
-      
+
       if (typeof reason === 'string') {
         message = reason;
       } else if (reason && typeof reason === 'object') {
         message = reason.message || reason.toString() || '';
       }
-      
+
       const chromeRuntimePatterns = [
         'chrome.runtime.sendMessage',
         'Error in invocation of runtime.sendMessage',
@@ -179,47 +178,47 @@ function AppContent({ children }: { children: React.ReactNode }) {
         'opfgelmcmbiajamepnmloijbpoleiama',
         'Cannot redefine property: ethereum'
       ];
-      
-      const isChromeRuntimeError = chromeRuntimePatterns.some(pattern => 
+
+      const isChromeRuntimeError = chromeRuntimePatterns.some(pattern =>
         message.toLowerCase().includes(pattern.toLowerCase())
       );
-      
+
       if (isChromeRuntimeError) {
         console.debug('🔇 Chrome runtime promise rejection suppressed:', {
           reason: message.substring(0, 200),
           extensionId: 'opfgelmcmbiajamepnmloijbpoleiama',
           timestamp: new Date().toISOString()
         });
-        
+
         event.preventDefault();
         return false;
       }
     };
-    
+
     // Add Chrome runtime specific handlers with highest priority (capture phase, first)
     window.addEventListener('error', chromeRuntimeErrorHandler, { capture: true, passive: false });
     window.addEventListener('unhandledrejection', chromeRuntimeRejectionHandler, { capture: true, passive: false });
-    
+
     // Also override console.error temporarily to catch any console-level errors
     const originalConsoleError = console.error;
     console.error = (...args: any[]) => {
       const message = args.join(' ');
       const source = args.find(arg => typeof arg === 'string' && arg.includes('background-redux-new.js')) || '';
-      if (message.toLowerCase().includes('chrome.runtime.sendmessage') || 
-          message.toLowerCase().includes('opfgelmcmbiajamepnmloijbpoleiama') ||
-          message.toLowerCase().includes('cannot redefine property: ethereum') ||
-          source.includes('background-redux-new.js')) {
+      if (message.toLowerCase().includes('chrome.runtime.sendmessage') ||
+        message.toLowerCase().includes('opfgelmcmbiajamepnmloijbpoleiama') ||
+        message.toLowerCase().includes('cannot redefine property: ethereum') ||
+        source.includes('background-redux-new.js')) {
         console.debug('🔇 Console error suppressed (chrome/runtime extension):', message.substring(0, 200));
         return;
       }
       originalConsoleError.apply(console, args);
     };
-    
+
     const initializeServices = async () => {
       try {
         // Initialize performance monitoring
         performanceMonitor.mark('app_init');
-        
+
         // Start memory monitoring in production
         if (process.env.NODE_ENV === 'production') {
           memoryMonitor.start();
@@ -279,8 +278,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
   return (
     <>
       {children}
-      <OfflineIndicator />
-      
+
       {/* Offline Indicator */}
       {!isOnline && (
         <div className="fixed bottom-4 left-4 bg-yellow-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
@@ -364,31 +362,31 @@ export default function App({ Component, pageProps, router }: AppProps) {
               chain={base}
             >
               <SellerQueryProvider queryClient={queryClient}>
-              <RainbowKitProvider>
-                <Web3Provider>
-                  <AuthProvider>
-                    <ToastProvider>
-                      <NavigationProvider>
-                        <ContactProvider>
-                          <EnhancedThemeProvider defaultTheme="system">
-                            <AppContent>
-                              <Component {...pageProps} />
-                            </AppContent>
-                            {/* Automatic wallet login bridge with toast notifications */}
-                            <WalletLoginBridgeWithToast />
-                          </EnhancedThemeProvider>
-                        </ContactProvider>
-                      </NavigationProvider>
-                    </ToastProvider>
-                  </AuthProvider>
-                </Web3Provider>
-              </RainbowKitProvider>
-            </SellerQueryProvider>
-          </OnchainKitProvider>
-        </QueryClientProvider>
-      </WagmiProvider>
-    </ErrorBoundary>
-    <SpeedInsights />
+                <RainbowKitProvider>
+                  <Web3Provider>
+                    <AuthProvider>
+                      <ToastProvider>
+                        <NavigationProvider>
+                          <ContactProvider>
+                            <EnhancedThemeProvider defaultTheme="system">
+                              <AppContent>
+                                <Component {...pageProps} />
+                              </AppContent>
+                              {/* Automatic wallet login bridge with toast notifications */}
+                              <WalletLoginBridgeWithToast />
+                            </EnhancedThemeProvider>
+                          </ContactProvider>
+                        </NavigationProvider>
+                      </ToastProvider>
+                    </AuthProvider>
+                  </Web3Provider>
+                </RainbowKitProvider>
+              </SellerQueryProvider>
+            </OnchainKitProvider>
+          </QueryClientProvider>
+        </WagmiProvider>
+      </ErrorBoundary>
+      <SpeedInsights />
     </>
   );
 }
