@@ -186,16 +186,16 @@ export const NotificationCenter: React.FC = () => {
               <CardTitle className="text-sm font-medium">Categories</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{Object.keys(stats.byCategory).length}</div>
+              <div className="text-2xl font-bold">{Object.keys(stats.byCategory || {}).length}</div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-medium">Types</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{Object.keys(stats.byType).length}</div>
+              <div className="text-2xl font-bold">{Object.keys(stats.byType || {}).length}</div>
             </CardContent>
           </Card>
         </div>
