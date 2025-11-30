@@ -126,7 +126,16 @@ class AnalyticsService {
       if (startDate) params.append('startDate', startDate.toISOString());
       if (endDate) params.append('endDate', endDate.toISOString());
 
-      const response = await requestManager.request<{data: AnalyticsMetrics}>(`${this.baseUrl}/overview?${params}`);
+      // Get auth token
+      const token = this.getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await requestManager.request<{data: AnalyticsMetrics}>(`${this.baseUrl}/overview?${params}`, {
+        headers
+      });
       return response.data;
     } catch (error) {
       console.error('Error fetching overview metrics:', error);
@@ -155,7 +164,16 @@ class AnalyticsService {
       if (startDate) params.append('startDate', startDate.toISOString());
       if (endDate) params.append('endDate', endDate.toISOString());
 
-      const response = await requestManager.request<{data: UserBehaviorData}>(`${this.baseUrl}/user-behavior?${params}`);
+      // Get auth token
+      const token = this.getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await requestManager.request<{data: UserBehaviorData}>(`${this.baseUrl}/user-behavior?${params}`, {
+        headers
+      });
       return response.data;
     } catch (error) {
       console.error('Error fetching user behavior analytics:', error);
@@ -181,7 +199,16 @@ class AnalyticsService {
       if (startDate) params.append('startDate', startDate.toISOString());
       if (endDate) params.append('endDate', endDate.toISOString());
 
-      const response = await requestManager.request<{data: SalesAnalytics}>(`${this.baseUrl}/sales?${params}`);
+      // Get auth token
+      const token = this.getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await requestManager.request<{data: SalesAnalytics}>(`${this.baseUrl}/sales?${params}`, {
+        headers
+      });
       return response.data;
     } catch (error) {
       console.error('Error fetching sales analytics:', error);
@@ -209,7 +236,16 @@ class AnalyticsService {
       if (startDate) params.append('startDate', startDate.toISOString());
       if (endDate) params.append('endDate', endDate.toISOString());
 
-      const response = await requestManager.request<{data: SellerAnalytics}>(`${this.baseUrl}/seller/${sellerId}?${params}`);
+      // Get auth token
+      const token = this.getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await requestManager.request<{data: SellerAnalytics}>(`${this.baseUrl}/seller/${sellerId}?${params}`, {
+        headers
+      });
       return response.data;
     } catch (error) {
       console.error('Error fetching seller analytics:', error);
@@ -242,7 +278,16 @@ class AnalyticsService {
    */
   async getMarketTrends(): Promise<MarketTrends> {
     try {
-      const response = await requestManager.request<{data: MarketTrends}>(`${this.baseUrl}/market-trends`);
+      // Get auth token
+      const token = this.getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await requestManager.request<{data: MarketTrends}>(`${this.baseUrl}/market-trends`, {
+        headers
+      });
       return response.data;
     } catch (error) {
       console.error('Error fetching market trends:', error);
@@ -260,7 +305,16 @@ class AnalyticsService {
    */
   async getAnomalies(): Promise<AnomalyAlert[]> {
     try {
-      const response = await requestManager.request<{data: AnomalyAlert[]}>(`${this.baseUrl}/anomalies`);
+      // Get auth token
+      const token = this.getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await requestManager.request<{data: AnomalyAlert[]}>(`${this.baseUrl}/anomalies`, {
+        headers
+      });
       return response.data;
     } catch (error) {
       console.error('Error fetching anomaly alerts:', error);
@@ -273,7 +327,16 @@ class AnalyticsService {
    */
   async getRealTimeStats(): Promise<RealTimeStats> {
     try {
-      const response = await requestManager.request<{data: RealTimeStats}>(`${this.baseUrl}/dashboard`);
+      // Get auth token
+      const token = this.getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await requestManager.request<{data: RealTimeStats}>(`${this.baseUrl}/dashboard`, {
+        headers
+      });
       return response.data;
     } catch (error) {
       console.error('Error fetching real-time stats:', error);
@@ -295,7 +358,16 @@ class AnalyticsService {
    */
   async getPlatformHealth(): Promise<any> {
     try {
-      const response = await requestManager.request<{data: any}>(`${this.baseUrl}/health`);
+      // Get auth token
+      const token = this.getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await requestManager.request<{data: any}>(`${this.baseUrl}/health`, {
+        headers
+      });
       return response.data;
     } catch (error) {
       console.error('Error fetching platform health:', error);
@@ -393,11 +465,18 @@ class AnalyticsService {
     errorMessage?: string;
   }): Promise<void> {
     try {
+      // Get auth token
+      const token = this.getAuthToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       await requestManager.request(`${this.baseUrl}/track/transaction`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(transactionData)
       });
     } catch (error) {
@@ -411,11 +490,18 @@ class AnalyticsService {
    */
   async generateReport(reportType: string, parameters: any = {}): Promise<any> {
     try {
+      // Get auth token
+      const token = this.getAuthToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await requestManager.request<{data: any}>(`${this.baseUrl}/report`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           reportType,
           parameters
@@ -447,7 +533,16 @@ class AnalyticsService {
     params.append('format', format);
 
     try {
-      const response = await requestManager.request<any>(`${this.baseUrl}/export?${params}`);
+      // Get auth token
+      const token = this.getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await requestManager.request<any>(`${this.baseUrl}/export?${params}`, {
+        headers
+      });
       return response;
     } catch (error) {
       console.error('Error exporting analytics data:', error);
@@ -458,6 +553,27 @@ class AnalyticsService {
         startDate: startDate?.toISOString(),
         endDate: endDate?.toISOString()
       };
+    }
+  }
+
+  /**
+   * Get authentication token from localStorage
+   */
+  private getAuthToken(): string {
+    // Check if we're in a browser environment before accessing localStorage
+    if (typeof window === 'undefined' || !window.localStorage) {
+      return '';
+    }
+    
+    // Get from localStorage using the same pattern as other services
+    try {
+      return localStorage.getItem('token') || 
+             localStorage.getItem('authToken') || 
+             localStorage.getItem('auth_token') || 
+             localStorage.getItem('linkdao_access_token') || '';
+    } catch (error) {
+      console.debug('Failed to get auth token from localStorage:', error);
+      return '';
     }
   }
 

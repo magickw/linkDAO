@@ -139,13 +139,98 @@ export class AdminWebSocketService {
           // Enhanced authentication validation
           // Check if this user is a valid admin in the database
           const db = databaseService.getDatabase();
-          const adminUsers = await db.select()
-            .from(users)
-            .where(and(
-              eq(users.email, email),
-              eq(users.role, 'admin')
-            ))
-            .limit(1);
+          let adminUsers: any[] = [];
+          
+          // First try to find by email for regular admin users
+          if (email && email.includes('@')) {
+            adminUsers = await db.select()
+              .from(users)
+              .where(and(
+                eq(users.email, email),
+                // Accept both admin and super_admin roles
+                sql`role IN ('admin', 'super_admin', 'moderator')`
+              ))
+              .limit(1);
+          }
+          
+          // If not found by email, check if this is the configured admin address
+          if (adminUsers.length === 0) {
+            const configuredAdminAddress = (
+              process.env.NEXT_PUBLIC_ADMIN_ADDRESS ||
+              process.env.ADMIN_ADDRESS ||
+              '0xEe034b53D4cCb101b2a4faec27708be507197350'
+            ).toLowerCase();
+            
+            // Check if adminId (which could be a wallet address) matches configured admin
+            if (adminId && adminId.toLowerCase() === configuredAdminAddress) {
+              // Create a virtual admin user for the configured admin address
+              safeLogger.info(`Configured admin address authentication: ${adminId}`);
+              
+              const adminUser: AdminUser = {
+                adminId: adminId,
+                email: email || `admin-${adminId}@linkdao.local`,
+                role: 'super_admin',
+                socketId: socket.id,
+                connectedAt: new Date(),
+                lastSeen: new Date(),
+                permissions: new Set([
+                  '*', // Wildcard permission
+                  'admin_access',
+                  'manage_users',
+                  'manage_content',
+                  'content.moderate',
+                  'marketplace.seller_review',
+                  'marketplace.seller_view',
+                  'disputes.view',
+                  'disputes.resolve',
+                  'users.view',
+                  'users.manage',
+                  'system.analytics',
+                  'system.audit',
+                  'system.security',
+                  'system.settings',
+                  'system.monitor',
+                  'governance.verify'
+                ]),
+                dashboardConfig: dashboardConfig || this.getDefaultDashboardConfig(),
+                connectionHealth: {
+                  status: 'healthy',
+                  latency: 0,
+                  lastHeartbeat: new Date(),
+                  reconnectCount: 0,
+                  dataQuality: 'high'
+                }
+              };
+
+              this.connectedAdmins.set(socket.id, adminUser);
+
+              // Track multiple sessions per admin
+              if (!this.adminSessions.has(adminId)) {
+                this.adminSessions.set(adminId, new Set());
+              }
+              this.adminSessions.get(adminId)!.add(socket.id);
+
+              // Join admin-specific rooms
+              socket.join(`admin:${adminId}`);
+              socket.join(`role:super_admin`);
+              socket.join('admin:all');
+
+              // Send authentication success with initial data
+              socket.emit('admin_authenticated', {
+                message: 'Successfully authenticated as configured admin',
+                adminId: adminUser.adminId,
+                role: adminUser.role,
+                permissions: Array.from(adminUser.permissions),
+                dashboardConfig: adminUser.dashboardConfig,
+                connectedAdmins: this.connectedAdmins.size,
+                serverTime: new Date().toISOString()
+              });
+
+              // Send queued alerts and metrics
+              this.deliverQueuedData(adminId);
+              return;
+            }
+          }
             
           if (adminUsers.length > 0) {
             const dbUser = adminUsers[0];

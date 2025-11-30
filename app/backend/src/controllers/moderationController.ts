@@ -11,14 +11,16 @@ export class ModerationController {
     try {
       const { page = 1, limit = 10, type, status, priority, search, dateFrom, dateTo, contentKeyword } = req.query;
       
-      const db = databaseService.getDatabase();
-      
-      if (!db) {
+      // Check database connection first
+      if (!databaseService.isDatabaseConnected()) {
+        safeLogger.warn("Database not connected in moderation controller");
         return res.status(503).json({ 
           error: "Database service unavailable",
           message: "The database is currently not accessible. Please try again later."
         });
       }
+      
+      const db = databaseService.getDatabase();
       
       try {
         // Build query with filters
