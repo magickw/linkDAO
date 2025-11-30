@@ -490,6 +490,8 @@ app.use('/api/docs', apiDocsRoutes);
 app.use('/api/onboarding', onboardingRoutes);
 // Enhanced fiat payment routes
 app.use('/api/enhanced-fiat-payment', enhancedFiatPaymentRoutes);
+// Backward compatibility alias without /api prefix (for service worker or cached requests)
+app.use('/enhanced-fiat-payment', enhancedFiatPaymentRoutes);
 
 // Add root-level health endpoint for frontend compatibility
 app.get('/health', async (req, res) => {
@@ -693,6 +695,8 @@ app.use('/api/mobile', mobileRoutes);
 
 // User profile API routes
 app.use('/api/profiles', userProfileRoutes);
+// Backward compatibility alias for user profiles (legacy path)
+app.use('/users/profile', userProfileRoutes);
 
 // Import proxy routes
 import proxyRoutes from './routes/proxyRoutes';

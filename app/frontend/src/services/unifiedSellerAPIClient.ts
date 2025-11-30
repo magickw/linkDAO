@@ -238,7 +238,9 @@ export class UnifiedSellerAPIClient {
       // Add authentication headers only if required
       if (requireAuth) {
         // Get authentication token if available
-        const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+        const token = localStorage.getItem('linkdao_access_token') ||
+          localStorage.getItem('token') ||
+          localStorage.getItem('authToken');
 
         // Get wallet address for authentication
         const walletAddress = localStorage.getItem('linkdao_wallet_address');
@@ -345,7 +347,9 @@ export class UnifiedSellerAPIClient {
   async requestWithFormData<T>(endpoint: string, formData: FormData, options?: Omit<RequestInit, 'body'>): Promise<T> {
     try {
       // Get authentication token if available
-      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+      const token = localStorage.getItem('linkdao_access_token') ||
+        localStorage.getItem('token') ||
+        localStorage.getItem('authToken');
 
       // Get wallet address for authentication
       const walletAddress = localStorage.getItem('linkdao_wallet_address');
