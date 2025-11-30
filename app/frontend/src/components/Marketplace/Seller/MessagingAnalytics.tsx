@@ -123,8 +123,17 @@ export const MessagingAnalytics: React.FC = () => {
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
-        // In a real implementation, we would pass the actual seller address
-        const data = await marketplaceMessagingAnalyticsService.getSellerMessagingAnalytics('0x1234567890123456789012345678901234567890');
+        // Get seller address from auth context or wallet
+        const sellerAddress = localStorage.getItem('linkdao_wallet_address') || 
+                           localStorage.getItem('wallet_address') || '';
+        
+        if (!sellerAddress) {
+          console.warn('No seller address found for analytics');
+          setLoading(false);
+          return;
+        }
+
+        const data = await marketplaceMessagingAnalyticsService.getSellerMessagingAnalytics(sellerAddress);
         setAnalytics(data);
       } catch (error) {
         console.error('Failed to fetch messaging analytics:', error);

@@ -37,68 +37,60 @@ class MarketplaceMessagingAnalyticsService {
    * Get messaging analytics for a seller
    */
   async getSellerMessagingAnalytics(sellerAddress: string): Promise<SellerMessagingAnalytics> {
-    // In a real implementation, this would fetch data from the backend
-    // For now, we'll return mock data
-    return {
-      avgResponseTime: 45, // 45 minutes
-      responseTimeTrend: 'improving',
-      conversionRate: 24, // 24%
-      conversionTrend: 'stable',
-      activeConversations: 12,
-      unreadCount: 3,
-      responseTimeHistory: [
-        { date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), responseTime: 65 },
-        { date: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000), responseTime: 62 },
-        { date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), responseTime: 58 },
-        { date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000), responseTime: 55 },
-        { date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), responseTime: 52 },
-        { date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), responseTime: 48 },
-        { date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), responseTime: 46 },
-        { date: new Date(), responseTime: 45 }
-      ],
-      commonQuestions: [
-        { keyword: 'shipping', count: 24 },
-        { keyword: 'return', count: 18 },
-        { keyword: 'size', count: 15 },
-        { keyword: 'material', count: 12 },
-        { keyword: 'delivery', count: 10 }
-      ]
-    };
+    // Fetch real data from backend
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/marketplace/seller/${sellerAddress}/messaging-analytics`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch messaging analytics');
+    }
+
+    const data = await response.json();
+    return data.data || data;
   }
 
   /**
    * Get messaging metrics for a seller
    */
   async getSellerMessagingMetrics(sellerAddress: string): Promise<SellerMessagingMetrics> {
-    // In a real implementation, this would fetch data from the backend
-    // For now, we'll return mock data
-    return {
-      totalMessages: 342,
-      messagesSent: 187,
-      messagesReceived: 155,
-      responseRate: 92, // 92%
-      avgMessageLength: 87, // 87 characters
-      peakActivityHours: [9, 10, 14, 15, 16], // 9-11 AM and 2-4 PM
-      mostActiveDay: 'tuesday'
-    };
+    // Fetch real data from backend
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/marketplace/seller/${sellerAddress}/messaging-metrics`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch messaging metrics');
+    }
+
+    const data = await response.json();
+    return data.data || data;
   }
 
   /**
    * Get conversation analytics
    */
   async getConversationAnalytics(conversationId: string): Promise<any> {
-    // In a real implementation, this would fetch data from the backend
-    // For now, we'll return mock data
-    return {
-      conversationId,
-      sellerResponseTimeAvg: '32 minutes',
-      buyerResponseTimeAvg: '125 minutes',
-      messageCount: 24,
-      convertedToSale: true,
-      saleAmount: '0.245 ETH',
-      firstResponseTime: '18 minutes',
-      resolutionTime: '2 days 4 hours'
-    };
+    // Fetch real data from backend
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/marketplace/conversation/${conversationId}/analytics`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch conversation analytics');
+    }
+
+    const data = await response.json();
+    return data.data || data;
   }
 
   /**

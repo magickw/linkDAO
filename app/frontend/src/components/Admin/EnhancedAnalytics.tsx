@@ -116,54 +116,24 @@ export function EnhancedAnalytics() {
       // Process seller growth data
       const sellerGrowthData = processSellerGrowthData(sellersResponse.applications);
       
-      // Process revenue data (mock for now)
-      const revenueData = processRevenueData();
+      // Process revenue data from backend
+      const revenueData = await processRevenueData();
       
       // Create analytics object with real data
       const analyticsData: AnalyticsData = {
         userGrowth: userGrowthData,
         sellerGrowth: sellerGrowthData,
         revenueData: revenueData,
-        disputeStats: {
-          total: 156,
-          resolved: 142,
-          pending: 14,
-          averageResolutionTime: 2.3
-        },
-        moderationStats: {
-          total: 1247,
-          approved: 1089,
-          rejected: 134,
-          pending: 24
-        },
+        disputeStats: await fetchDisputeStats(),
+        moderationStats: await fetchModerationStats(),
         platformHealth: {
           activeUsers: platformHealthResponse.activeUsers.monthly,
           activeSellers: sellersResponse.applications.filter(app => app.status === 'approved').length,
           totalTransactions: platformHealthResponse.totalOrders,
           totalVolume: platformHealthResponse.totalRevenue
         },
-        userDemographics: {
-          ageGroups: {
-            '18-24': 1200,
-            '25-34': 2100,
-            '35-44': 1800,
-            '45-54': 900,
-            '55+': 600
-          },
-          locations: {
-            'North America': 2400,
-            'Europe': 1800,
-            'Asia': 1200,
-            'South America': 300,
-            'Africa': 200,
-            'Oceania': 100
-          }
-        },
-        contentMetrics: {
-          totalPosts: 15420,
-          totalComments: 42890,
-          engagementRate: 12.4
-        }
+        userDemographics: await fetchUserDemographics(),
+        contentMetrics: await fetchContentMetrics()
       };
       
       setAnalytics(analyticsData);
@@ -213,11 +183,119 @@ export function EnhancedAnalytics() {
     return { labels, data };
   };
 
-  // Process revenue data (mock for now)
-  const processRevenueData = () => {
-    const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-    const data = [12000, 19000, 15000, 18000, 22000, 25000];
-    return { labels, data };
+  // Process revenue data from backend
+  const processRevenueData = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/admin/analytics/revenue`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('linkdao_access_token') || localStorage.getItem('token')}`,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch revenue data');
+      }
+      
+      const data = await response.json();
+      return data.data || { labels: [], data: [] };
+    } catch (error) {
+      console.error('Error fetching revenue data:', error);
+      return { labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'], data: [0, 0, 0, 0, 0, 0] };
+    }
+  };
+
+  // Fetch dispute statistics from backend
+  const fetchDisputeStats = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/admin/analytics/disputes`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('linkdao_access_token') || localStorage.getItem('token')}`,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch dispute stats');
+      }
+      
+      const data = await response.json();
+      return data.data || { total: 0, resolved: 0, pending: 0, averageResolutionTime: 0 };
+    } catch (error) {
+      console.error('Error fetching dispute stats:', error);
+      return { total: 0, resolved: 0, pending: 0, averageResolutionTime: 0 };
+    }
+  };
+
+  // Fetch moderation statistics from backend
+  const fetchModerationStats = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/admin/analytics/moderation`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('linkdao_access_token') || localStorage.getItem('token')}`,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch moderation stats');
+      }
+      
+      const data = await response.json();
+      return data.data || { total: 0, approved: 0, rejected: 0, pending: 0 };
+    } catch (error) {
+      console.error('Error fetching moderation stats:', error);
+      return { total: 0, approved: 0, rejected: 0, pending: 0 };
+    }
+  };
+
+  // Fetch user demographics from backend
+  const fetchUserDemographics = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/admin/analytics/demographics`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('linkdao_access_token') || localStorage.getItem('token')}`,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch user demographics');
+      }
+      
+      const data = await response.json();
+      return data.data || { ageGroups: {}, locations: {} };
+    } catch (error) {
+      console.error('Error fetching user demographics:', error);
+      return { ageGroups: {}, locations: {} };
+    }
+  };
+
+  // Fetch content metrics from backend
+  const fetchContentMetrics = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/admin/analytics/content`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('linkdao_access_token') || localStorage.getItem('token')}`,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch content metrics');
+      }
+      
+      const data = await response.json();
+      return data.data || { totalPosts: 0, totalComments: 0, engagementRate: 0 };
+    } catch (error) {
+      console.error('Error fetching content metrics:', error);
+      return { totalPosts: 0, totalComments: 0, engagementRate: 0 };
+    }
   };
 
   const exportData = async () => {
