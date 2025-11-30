@@ -98,7 +98,6 @@ export default function Home() {
 
   // Refs for accessibility and memory leak prevention
   const skipToContentRef = useRef<HTMLAnchorElement>(null);
-  const isMounted = useRef(true);
 
   // Cleanup on unmount to prevent memory leaks
   useEffect(() => {
