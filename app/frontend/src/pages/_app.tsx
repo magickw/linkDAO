@@ -92,12 +92,14 @@ function AppContent({ children }: { children: React.ReactNode }) {
     const immediateErrorSuppressor = (event: any) => {
       if (event && (event.message || event.reason || event.error)) {
         const errorText = String(event.message || event.reason || event.error?.message || '').toLowerCase();
+        const errorSource = event.filename || event.source || '';
         if (errorText.includes('chrome.runtime.sendmessage') || 
             errorText.includes('opfgelmcmbiajamepnmloijbpoleiama') ||
             errorText.includes('extension id') ||
             errorText.includes('runtime.sendmessage(optional string extensionid') ||
-            errorText.includes('cannot redefine property: ethereum')) {
-          console.debug('🚫 IMMEDIATE: Chrome runtime error blocked');
+            errorText.includes('cannot redefine property: ethereum') ||
+            errorSource.includes('background-redux-new.js')) {
+          console.debug('🚫 IMMEDIATE: Chrome/extension runtime error blocked');
           event.preventDefault?.();
           event.stopPropagation?.();
           event.stopImmediatePropagation?.();
@@ -202,10 +204,12 @@ function AppContent({ children }: { children: React.ReactNode }) {
     const originalConsoleError = console.error;
     console.error = (...args: any[]) => {
       const message = args.join(' ');
+      const source = args.find(arg => typeof arg === 'string' && arg.includes('background-redux-new.js')) || '';
       if (message.toLowerCase().includes('chrome.runtime.sendmessage') || 
           message.toLowerCase().includes('opfgelmcmbiajamepnmloijbpoleiama') ||
-          message.toLowerCase().includes('cannot redefine property: ethereum')) {
-        console.debug('🔇 Console error suppressed (chrome.runtime):', message.substring(0, 200));
+          message.toLowerCase().includes('cannot redefine property: ethereum') ||
+          source.includes('background-redux-new.js')) {
+        console.debug('🔇 Console error suppressed (chrome/runtime extension):', message.substring(0, 200));
         return;
       }
       originalConsoleError.apply(console, args);
