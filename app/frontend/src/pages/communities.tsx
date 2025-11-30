@@ -62,6 +62,7 @@ import {
 import CommunityCardEnhanced from '@/components/Community/CommunityCardEnhanced';
 import MyCommunitiesCard from '@/components/Community/MyCommunitiesCard';
 import { CommunityService } from '@/services/communityService';
+import { authService } from '@/services/authService';
 import { Community } from '@/models/Community';
 import { FeedSortType } from '@/types/feed';
 
@@ -231,8 +232,10 @@ const CommunitiesPage: React.FC = () => {
         setCommunities(communitiesData);
 
 
-        // Load user's community memberships if wallet is connected
-        if (address && isConnected) {
+        // Load user's community memberships if wallet is connected AND authenticated with backend
+        // Check both wallet connection and backend authentication to avoid 401 errors
+        const isBackendAuthenticated = authService.isAuthenticated();
+        if (address && isConnected && isBackendAuthenticated) {
           try {
             // Fetch both memberships and created communities (same approach as /create-post page)
             const [memberCommunitiesResponse, createdCommunitiesResponse] = await Promise.all([

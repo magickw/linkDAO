@@ -7,6 +7,7 @@ import { ArrowLeft, ChevronDown, Plus, X } from 'lucide-react';
 import RichTextEditor from '@/components/EnhancedPostComposer/RichTextEditor';
 import { CommunityService } from '@/services/communityService';
 import { PostService } from '@/services/postService';
+import { authService } from '@/services/authService';
 import { useWeb3 } from '@/context/Web3Context';
 import { useToast } from '@/context/ToastContext';
 
@@ -32,7 +33,9 @@ const CreatePostPage: React.FC = () => {
   // Fetch user's communities (both memberships and created)
   useEffect(() => {
     const fetchUserCommunities = async () => {
-      if (isConnected && address) {
+      // Check both wallet connection and backend authentication to avoid 401 errors
+      const isBackendAuthenticated = authService.isAuthenticated();
+      if (isConnected && address && isBackendAuthenticated) {
         try {
           const allUserCommunities = [];
           let page = 1;
