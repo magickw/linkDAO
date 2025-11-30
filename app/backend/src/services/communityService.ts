@@ -5463,13 +5463,13 @@ export class CommunityService {
   private buildSortOrder(sort: string) {
     switch (sort) {
       case 'hot':
-        return desc(sql`(posts.reputation_score * 0.7 + posts.staked_value * 0.3)`);
+        return desc(sql`(posts.reputationScore * 0.7 + posts.stakedValue * 0.3)`);
       case 'top':
-        return desc(sql`posts.reputation_score`);
+        return desc(sql`posts.reputationScore`);
       case 'new':
         return desc(posts.createdAt);
       case 'rising':
-        return desc(sql`(posts.reputation_score / EXTRACT(EPOCH FROM (NOW() - posts.createdAt)))`);
+        return desc(sql`(posts.reputationScore / EXTRACT(EPOCH FROM (NOW() - posts.createdAt)))`);
       default:
         return desc(posts.createdAt);
     }

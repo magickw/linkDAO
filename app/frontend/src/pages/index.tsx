@@ -68,10 +68,11 @@ export default function Home() {
   const { navigationState, openModal, closeModal } = useNavigation();
 
   const [mounted, setMounted] = useState(false);
-  const [isWalletSheetOpen, setIsWalletSheetOpen] = useState(false);
   const [hasNewPosts, setHasNewPosts] = useState(false);
-  const [isSupportWidgetOpen, setIsSupportWidgetOpen] = useState(false);
   const [feedRefreshKey, setFeedRefreshKey] = useState(0);
+  const [wsSubscribed, setWsSubscribed] = useState(false);
+  const mainContentRef = useRef<HTMLDivElement>(null);
+  const isMounted = useRef(true);
 
   // Newsletter subscription handler
   const handleNewsletterSubscribe = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -121,6 +122,20 @@ export default function Home() {
     setFeedRefreshKey(prev => prev + 1);
   }, []);
 
+  // Debounced refresh to prevent rapid updates
+  const debouncedRefresh = useCallback(
+    (() => {
+      let timeoutId: NodeJS.Timeout;
+      return () => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          handleRefreshFeed();
+        }, 500); // 500ms debounce
+      };
+    })(),
+    [handleRefreshFeed]
+  );
+
   // Keyboard navigation support
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -145,28 +160,32 @@ export default function Home() {
 
   // Subscribe to feed updates when connected
   useEffect(() => {
-    if (wsConnected && address) {
+    if (wsConnected && address && !wsSubscribed) {
       // Subscribe to global feed updates
       subscribe('feed', 'all', {
         eventTypes: ['feed_update', 'new_post']
       });
+      setWsSubscribed(true);
 
       // Listen for new posts with stable callback
       const handleFeedUpdate = (data: any) => {
         if (!isMounted.current) return;
         console.log('New post received:', data);
-        // Add the new post to the feed immediately
-        setFeedRefreshKey(prev => prev + 1);
-        addToast('New post added to feed', 'success');
+        // Only refresh if it's not the user's own post (to prevent double refresh)
+        if (data.author?.toLowerCase() !== address.toLowerCase()) {
+          debouncedRefresh();
+          addToast('New post added to feed', 'success');
+        }
       };
 
       on('feed_update', handleFeedUpdate);
 
       return () => {
         off('feed_update', handleFeedUpdate);
+        setWsSubscribed(false);
       };
     }
-  }, [wsConnected, address, subscribe, on, off, addToast]);
+  }, [wsConnected, address, wsSubscribed, subscribe, on, off, addToast, debouncedRefresh]);
 
   // Handle post creation with useCallback and mount check
   const handlePostSubmit = useCallback(async (postData: CreatePostInput) => {
@@ -192,9 +211,7 @@ export default function Home() {
 
       addToast('Post created successfully!', 'success');
       closeModal('postCreation');
-      // Force feed refresh to show the new post
-      setFeedRefreshKey(prev => prev + 1);
-      // Set hasNewPosts to trigger the refresh banner
+      // Set hasNewPosts to trigger the refresh banner (but don't double refresh)
       setHasNewPosts(true);
     } catch (error) {
       console.error('Error creating post:', error);

@@ -41,7 +41,10 @@ export const useChatHistory = (): UseChatHistoryReturn => {
   const conversationLimit = 20;
 
   useEffect(() => {
-    loadConversations();
+    // Only load conversations if user is authenticated
+    if (user) {
+      loadConversations();
+    }
     
     const handleOnline = () => {
       setIsOnline(true);
@@ -58,9 +61,16 @@ export const useChatHistory = (): UseChatHistoryReturn => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [user]);
 
   const loadConversations = useCallback(async (append = false) => {
+    // Don't attempt to load conversations if user is not authenticated
+    if (!user) {
+      setConversations([]);
+      setHasMoreConversations(false);
+      return;
+    }
+
     try {
       setConversationsLoading(true);
       setError(null);
@@ -84,7 +94,7 @@ export const useChatHistory = (): UseChatHistoryReturn => {
     } finally {
       setConversationsLoading(false);
     }
-  }, [conversationOffset, conversationLimit]);
+  }, [conversationOffset, conversationLimit, user]);
 
   const loadMoreConversations = useCallback(async () => {
     if (conversationsLoading || !hasMoreConversations) return;

@@ -59,7 +59,7 @@ export interface ContactContextType {
   createGroup: (group: Omit<ContactGroup, 'id' | 'createdAt'>) => Promise<void>;
   updateGroup: (id: string, updates: Partial<ContactGroup>) => Promise<void>;
   deleteGroup: (id: string) => Promise<void>;
-  startChat: (contact: Contact) => void;
+  startChat: (contact: Contact | null) => void;
   setOnStartChat: (callback: ((contact: Contact) => void) | null) => void;
 }
 

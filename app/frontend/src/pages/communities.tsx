@@ -341,7 +341,7 @@ const CommunitiesPage: React.FC = () => {
 
   useEffect(() => {
     fetchPosts(1, false);
-  }, [sortBy, timeFilter, joinedCommunities, address]);
+  }, [sortBy, timeFilter, address]);
 
   // Infinite scroll handler
   useEffect(() => {

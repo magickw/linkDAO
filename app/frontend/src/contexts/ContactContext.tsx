@@ -280,8 +280,13 @@ export function ContactProvider({ children }: { children: React.ReactNode }) {
     setOnStartChatCallback(callback);
   }, []);
 
-  const startChat = useCallback((contact: Contact) => {
+  const startChat = useCallback((contact: Contact | null) => {
     console.log("ContactContext: startChat called with contact:", contact);
+    if (!contact) {
+      console.log("ContactContext: Ignoring startChat call with null contact");
+      return;
+    }
+    
     if (onStartChatCallback) {
       console.log("ContactContext: Calling onStartChatCallback with contact:", contact);
       onStartChatCallback(contact);
