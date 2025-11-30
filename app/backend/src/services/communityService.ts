@@ -5441,24 +5441,6 @@ export class CommunityService {
   }
 
   // Build time filter for queries
-  private buildTimeFilter(timeRange: string) {
-    const now = new Date();
-    switch (timeRange) {
-      case 'hour':
-        return gt(posts.createdAt, new Date(now.getTime() - 60 * 60 * 1000));
-      case 'day':
-        return gt(posts.createdAt, new Date(now.getTime() - 24 * 60 * 60 * 1000));
-      case 'week':
-        return gt(posts.createdAt, new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000));
-      case 'month':
-        return gt(posts.createdAt, new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000));
-      case 'year':
-        return gt(posts.createdAt, new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000));
-      default:
-        return undefined; // 'all' - no time filter
-    }
-  }
-
   // Build sort order for queries
   private buildSortOrder(sort: string) {
     switch (sort) {
@@ -5589,105 +5571,7 @@ export class CommunityService {
     }
   }
 
-  // Get posts from followed communities
-  async getFollowedCommunitiesPosts(options: {
-    userAddress: string;
-    page: number;
-    limit: number;
-    sort: string;
-    timeRange: string;
-  }) {
-    const { userAddress, page, limit, sort, timeRange } = options;
-    
-    try {
-      // Get user's joined communities
-      const normalizedAddress = userAddress.toLowerCase();
-      const user = await db.select({ id: users.id })
-        .from(users)
-        .where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`)
-        .limit(1);
-      
-      if (user.length === 0) {
-        // Return empty for non-existent users
-        return { posts: [], pagination: { page, limit, total: 0, totalPages: 0 } };
-      }
-      
-      // Get communities user is a member of
-      const memberships = await db
-        .select({ communityId: communityMembers.communityId })
-        .from(communityMembers)
-        .where(and(
-          eq(communityMembers.userAddress, normalizedAddress),
-          eq(communityMembers.isActive, true)
-        ));
-      
-      const communityIds = memberships.map(m => m.communityId);
-      
-      if (communityIds.length === 0) {
-        // Show all public community posts for discovery
-        return this.getAllCommunityPosts({ page, limit, sort, timeRange });
-      }
-      
-      // Fetch posts from these communities
-      const offset = (page - 1) * limit;
-      const timeFilter = this.buildTimeFilter(timeRange);
-      const orderBy = this.buildSortOrder(sort);
-      
-      // Get community metadata for all user's communities
-      const communities = await db
-        .select({
-          id: communities.id,
-          name: communities.name,
-          displayName: communities.displayName,
-          slug: communities.slug,
-          avatar: communities.avatar
-        })
-        .from(communities)
-        .where(inArray(communities.id, communityIds));
-      
-      const communityMap = new Map(communities.map(c => [c.id, c]));
-      
-      // Query posts from these communities
-      const postsResult = await db
-        .select({
-          id: posts.id,
-          authorId: posts.authorId,
-          title: posts.title,
-          contentCid: posts.contentCid,
-          parentId: posts.parentId,
-          mediaCids: posts.mediaCids,
-          tags: posts.tags,
-          stakedValue: posts.stakedValue,
-          reputationScore: posts.reputationScore,
-          dao: posts.dao,
-          communityId: posts.communityId,
-          createdAt: posts.createdAt,
-          authorAddress: users.walletAddress,
-          authorHandle: users.handle,
-        })
-        .from(posts)
-        .leftJoin(users, eq(posts.authorId, users.id))
-        .where(and(
-          or(...communityIds.map(id => eq(posts.communityId, id))),
-          timeFilter || sql`1=1`,
-          isNull(posts.parentId)
-        ))
-        .orderBy(orderBy)
-        .limit(limit)
-        .offset(offset);
-      
-      // Transform posts with community metadata
-      const transformedPosts = postsResult.map(post => ({
-        ...post,
-        mediaCids: post.mediaCids ? JSON.parse(post.mediaCids) : [],
-        tags: post.tags ? JSON.parse(post.tags) : [],
-        stakedValue: post.stakedValue ? Number(post.stakedValue) : 0,
-        reputationScore: post.reputationScore || 0,
-        community: post.communityId && communityMap.has(post.communityId) ? {
-          id: post.communityId,
-          name: communityMap.get(post.communityId)!.name,
-          displayName: communityMap.get(post.communityId)!.displayName,
-          slug: communityMap.get(post.communityId)!.slug,
+  
           avatar: communityMap.get(post.communityId)!.avatar
         } : null
       }));

@@ -1153,7 +1153,7 @@ class AdminService {
         });
       }
 
-      const response = await fetch(`${this.baseUrl}/api/admin/audit?${params}`, {
+      const response = await fetch(`${this.baseUrl}/api/admin/audit/logs?${params}`, {
         headers: this.getHeaders(),
       });
 

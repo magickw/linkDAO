@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { safeLogger } from '../utils/safeLogger';
 import { databaseService } from "../services/databaseService";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { moderationCases } from "../db/schema";
 
 export class ModerationController {
