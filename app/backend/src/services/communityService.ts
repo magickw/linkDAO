@@ -998,6 +998,8 @@ export class CommunityService {
           postCount: communities.postCount,
           isPublic: communities.isPublic,
           createdAt: communities.createdAt,
+          creatorAddress: communities.creatorAddress,
+          moderators: communities.moderators,
           trendingScore: communityStats.trendingScore,
           growthRate7d: communityStats.growthRate7d,
         })
@@ -1018,6 +1020,8 @@ export class CommunityService {
         postCount: community.postCount,
         isPublic: community.isPublic,
         createdAt: community.createdAt,
+        creatorAddress: community.creatorAddress,
+        moderators: community.moderators ? JSON.parse(community.moderators) : [],
         trendingScore: community.trendingScore ? Number(community.trendingScore) : 0,
         growthRate: community.growthRate7d ? Number(community.growthRate7d) : 0,
       }));
