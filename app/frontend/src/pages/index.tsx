@@ -97,7 +97,6 @@ export default function Home() {
   };
 
   // Refs for accessibility and memory leak prevention
-  const mainContentRef = useRef<HTMLDivElement>(null);
   const skipToContentRef = useRef<HTMLAnchorElement>(null);
   const isMounted = useRef(true);
 
