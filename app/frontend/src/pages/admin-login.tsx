@@ -23,6 +23,9 @@ const AdminLoginPage: NextPage = () => {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [lastAuthAttempt, setLastAuthAttempt] = useState(0);
+  const [hasAuthenticated, setHasAuthenticated] = useState(false);
+  const AUTH_COOLDOWN = 5000; // 5 seconds cooldown
 
   // Check if user is already authenticated and has admin role
   useEffect(() => {
@@ -38,18 +41,32 @@ const AdminLoginPage: NextPage = () => {
     }
   }, [isAuthenticated, isLoading, user, router]);
 
-  // Handle wallet connection completion
+  // Reset authentication state when wallet disconnects
   useEffect(() => {
-    if (isConnected && address && loginMethod === 'wallet') {
-      // Wallet is connected, now authenticate with backend
-      console.log('Wallet connected:', address);
-      authenticateWithBackend();
+    if (!isConnected) {
+      setHasAuthenticated(false);
+      setLastAuthAttempt(0);
     }
-  }, [isConnected, address, loginMethod]);
+  }, [isConnected]);
+
+  // Handle wallet connection completion with loop prevention
+  useEffect(() => {
+    if (isConnected && address && loginMethod === 'wallet' && !hasAuthenticated) {
+      const now = Date.now();
+      if (now - lastAuthAttempt >= AUTH_COOLDOWN) {
+        // Wallet is connected, now authenticate with backend
+        console.log('Wallet connected:', address);
+        setLastAuthAttempt(now);
+        authenticateWithBackend();
+      } else {
+        console.log('⏳ Authentication cooldown active, skipping attempt');
+      }
+    }
+  }, [isConnected, address, loginMethod, hasAuthenticated, lastAuthAttempt]);
 
   // Function to authenticate with backend
   const authenticateWithBackend = async () => {
-    if (!address) return;
+    if (!address || hasAuthenticated) return;
     
     setIsSubmitting(true);
     setError('');
@@ -62,6 +79,9 @@ const AdminLoginPage: NextPage = () => {
       console.log('Authentication result:', result);
       
       if (result.success && result.user) {
+        // Mark as authenticated to prevent loops
+        setHasAuthenticated(true);
+        
         // Refresh user context to get updated role
         await refreshUser();
         setSuccessMessage('Authentication successful! Checking admin privileges...');

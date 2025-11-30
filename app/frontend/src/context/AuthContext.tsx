@@ -270,14 +270,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      // If wallet is connected but no user, try to restore session
+      // If wallet is connected but no user, try to restore session (with cooldown)
       if (isConnected && address && !user && !isLoading) {
-        console.log('🔗 Wallet connected, checking for existing session...');
-        const hasValidSession = await checkStoredSession();
-        if (hasValidSession) {
-          console.log('✅ Restored session without requiring signature');
+        const now = Date.now();
+        if (now - lastAuthTime >= AUTH_COOLDOWN) {
+          console.log('🔗 Wallet connected, checking for existing session...');
+          const hasValidSession = await checkStoredSession();
+          if (hasValidSession) {
+            console.log('✅ Restored session without requiring signature');
+          } else {
+            console.log('🔐 No valid session found, signature will be required when needed');
+          }
         } else {
-          console.log('🔐 No valid session found, signature will be required when needed');
+          console.log('⏳ Wallet connection change cooldown active, skipping session check');
         }
         return;
       }
@@ -294,7 +299,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     handleWalletConnectionChange();
-  }, [isConnected, address, user, isLoading, checkStoredSession]);
+  }, [isConnected, address, user, isLoading, checkStoredSession, lastAuthTime]);
 
   // Load KYC status
   const loadKYCStatus = async () => {
@@ -394,6 +399,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
 
+      // Prevent authentication loops by checking if we already have a valid session
+      if (user && user.address?.toLowerCase() === normalizedWalletAddress && accessToken) {
+        console.log('✅ Session already exists for MetaMask, no action needed');
+        setIsLoading(false);
+        return;
+      }
+
       // Only request signature if we don't have a valid session
       console.log('🔐 Requesting new signature for authentication...');
       const result = await authService.authenticateWallet(walletAddress, null, 'connected');
@@ -421,9 +433,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [storeSession, validateSession]);
 
+  // Add authentication cooldown tracking
+  const [lastAuthTime, setLastAuthTime] = useState<number>(0);
+  const AUTH_COOLDOWN = 5000; // 5 seconds cooldown between auth attempts
+
   // Login with wallet authentication (legacy method for compatibility)
   const login = async (walletAddress: string, connector: any, status: string): Promise<{ success: boolean; error?: string }> => {
     console.log('🔐 Login called for address:', walletAddress);
+
+    // Check authentication cooldown to prevent rapid retry loops
+    const now = Date.now();
+    if (now - lastAuthTime < AUTH_COOLDOWN) {
+      console.log(`⏳ Authentication cooldown active, skipping attempt (${AUTH_COOLDOWN - (now - lastAuthTime)}ms remaining)`);
+      return { success: true }; // Return success to prevent error loops
+    }
+    setLastAuthTime(now);
 
     // Normalize address to lowercase for case-insensitive comparisons
     const normalizedAddress = walletAddress.toLowerCase();
@@ -973,17 +997,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       };
     }
 
-    // If wallet is connected but not authenticated, trigger login
-    console.log('🔐 Wallet connected but not authenticated, triggering login...');
-    try {
-      const result = await login(address, connector, 'connected');
-      return result;
-    } catch (error: any) {
-      console.error('Authentication failed:', error);
-      return {
-        success: false,
-        error: error.message || 'Authentication failed. Please try again.'
-      };
+    // If wallet is connected but not authenticated, trigger login (with cooldown check)
+    const now = Date.now();
+    if (now - lastAuthTime >= AUTH_COOLDOWN) {
+      console.log('🔐 Wallet connected but not authenticated, triggering login...');
+      try {
+        const result = await login(address, connector, 'connected');
+        return result;
+      } catch (error: any) {
+        console.error('Authentication failed:', error);
+        return {
+          success: false,
+          error: error.message || 'Authentication failed. Please try again.'
+        };
+      }
+    } else {
+      console.log('⏳ Authentication cooldown active, skipping auto-login');
+      return { success: true }; // Return success to prevent error loops
     }
   }, [user, accessToken, isConnected, address, connector, login]);
 
