@@ -4,7 +4,7 @@ import { moderationAuditLog } from '../db/schema';
 import { ModerationAuditLog } from '../models/ModerationModels';
 import evidenceStorageService from './evidenceStorageService';
 import crypto from 'crypto';
-import { eq, and, gte, lte, desc, asc } from 'drizzle-orm';
+import { eq, and, gte, lte, desc, asc, sql } from 'drizzle-orm';
 
 export type ActorType = 'user' | 'moderator' | 'system' | 'ai';
 
@@ -56,7 +56,7 @@ class AuditLoggingService {
     try {
       // Generate unique ID for this audit entry
       const auditId = crypto.randomUUID();
-      
+
       // Create audit log record
       const auditLog = {
         actionType: entry.actionType,
@@ -138,16 +138,16 @@ class AuditLoggingService {
       }
 
       const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-      const orderBy = query.orderBy === 'asc' 
+      const orderBy = query.orderBy === 'asc'
         ? asc(moderationAuditLog.createdAt)
         : desc(moderationAuditLog.createdAt);
 
       // Get total count
-      const totalResult = await db.select({ count: moderationAuditLog.id })
+      const totalResult = await db.select({ count: sql<number>`count(*)` })
         .from(moderationAuditLog)
         .where(whereClause);
-      
-      const total = totalResult.length;
+
+      const total = Number(totalResult[0]?.count || 0);
 
       // Get paginated results
       const logs = await db.select()
@@ -200,7 +200,7 @@ class AuditLoggingService {
 
       // Verify IPFS record exists and is valid
       const exists = await evidenceStorageService.verifyEvidenceExists(ipfsHash);
-      
+
       // Generate local hash for comparison
       const localData = {
         id: auditLog.id,
@@ -211,7 +211,7 @@ class AuditLoggingService {
         newState: auditLog.newState,
         createdAt: auditLog.createdAt,
       };
-      
+
       const localHash = crypto.createHash('sha256')
         .update(JSON.stringify(localData))
         .digest('hex');
@@ -247,7 +247,7 @@ class AuditLoggingService {
       actorId: params.moderatorId,
       actorType: params.moderatorId ? 'moderator' : 'ai',
       oldState: { status: params.oldStatus },
-      newState: { 
+      newState: {
         status: params.newStatus,
         decision: params.decision,
       },
@@ -352,7 +352,7 @@ class AuditLoggingService {
     // Process in batches to avoid overwhelming the system
     for (let i = 0; i < entries.length; i += this.BATCH_SIZE) {
       const batch = entries.slice(i, i + this.BATCH_SIZE);
-      
+
       const batchPromises = batch.map(entry => this.createAuditLog(entry));
       const batchResults = await Promise.allSettled(batchPromises);
 
@@ -412,7 +412,7 @@ class AuditLoggingService {
         }
       }
 
-      const daysDiff = params.startDate && params.endDate 
+      const daysDiff = params.startDate && params.endDate
         ? Math.ceil((params.endDate.getTime() - params.startDate.getTime()) / (1000 * 60 * 60 * 24))
         : 1;
 

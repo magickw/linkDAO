@@ -63,6 +63,7 @@ import CommunityCardEnhanced from '@/components/Community/CommunityCardEnhanced'
 import MyCommunitiesCard from '@/components/Community/MyCommunitiesCard';
 import { CommunityService } from '@/services/communityService';
 import { authService } from '@/services/authService';
+import { useAuth } from '@/context/AuthContext';
 import { Community } from '@/models/Community';
 import { FeedSortType } from '@/types/feed';
 
@@ -148,6 +149,7 @@ const CommunitiesPage: React.FC = () => {
   const router = useRouter();
   const { isMobile, triggerHapticFeedback } = useMobileOptimization();
   const { address, isConnected } = useWeb3();
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
   // Memory leak prevention: Track component mount status
   const isMounted = useRef(true);
@@ -234,8 +236,7 @@ const CommunitiesPage: React.FC = () => {
 
         // Load user's community memberships if wallet is connected AND authenticated with backend
         // Check both wallet connection and backend authentication to avoid 401 errors
-        const isBackendAuthenticated = authService.isAuthenticated();
-        if (address && isConnected && isBackendAuthenticated) {
+        if (address && isConnected && isAuthenticated) {
           try {
             // Fetch both memberships and created communities (same approach as /create-post page)
             const [memberCommunitiesResponse, createdCommunitiesResponse] = await Promise.all([
@@ -296,7 +297,7 @@ const CommunitiesPage: React.FC = () => {
     };
 
     loadEnhancedCommunities();
-  }, [address, isConnected]);
+  }, [address, isConnected, isAuthenticated]);
 
   // Load posts from backend API with pagination
   const fetchPosts = async (pageNum: number = 1, append: boolean = false) => {
@@ -305,19 +306,20 @@ const CommunitiesPage: React.FC = () => {
       if (pageNum === 1) setLoading(true);
       else setLoadingMore(true);
 
-      // Use CommunityService to get aggregated feed from followed communities
-      const { CommunityService } = await import('../services/communityService');
-      
-      const response = await CommunityService.getFollowedCommunitiesFeed({
-        page: pageNum,
-        limit: 20,
-        sort: sortBy,
-        timeRange: timeFilter
-      });
+      // Use FeedService to get enhanced feed which supports both public and authenticated views
+      const { FeedService } = await import('../services/feedService');
+
+      const response = await FeedService.getEnhancedFeed({
+        sortBy,
+        timeRange: timeFilter,
+        // If authenticated, prefer 'following', otherwise 'all'
+        feedSource: isAuthenticated ? 'following' : 'all',
+        userAddress: address
+      }, pageNum, 20);
 
       // Check if component is still mounted before updating state
       if (!isMounted.current) return;
-      
+
       const newPosts = response.posts || [];
 
       if (append) {
@@ -326,7 +328,7 @@ const CommunitiesPage: React.FC = () => {
         setPosts(newPosts);
       }
 
-      setHasMore(newPosts.length === 20);
+      setHasMore(response.hasMore);
       setPage(pageNum);
     } catch (error) {
       console.error('Failed to fetch community posts:', error);
@@ -343,8 +345,15 @@ const CommunitiesPage: React.FC = () => {
   };
 
   useEffect(() => {
+    // Wait for auth loading to complete to avoid race conditions
+    if (isAuthLoading) return;
+
+    // If we have an address (wallet connected) but are not authenticated yet, wait.
+    // This prevents sending requests without tokens when the user is actually logging in.
+    if (address && !isAuthenticated) return;
+
     fetchPosts(1, false);
-  }, [sortBy, timeFilter, address]);
+  }, [sortBy, timeFilter, address, isAuthenticated, isAuthLoading]);
 
   // Infinite scroll handler
   useEffect(() => {
