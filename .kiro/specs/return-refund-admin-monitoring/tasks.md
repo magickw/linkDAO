@@ -215,7 +215,7 @@ This document outlines the implementation tasks for the comprehensive return and
 **Dependencies:** Task 1.2
 
 #### Subtasks:
-- [ ] Create RefundMonitoringService class
+- [-] Create RefundMonitoringService class
   - Transaction tracking
   - Provider status monitoring
   - Reconciliation logic

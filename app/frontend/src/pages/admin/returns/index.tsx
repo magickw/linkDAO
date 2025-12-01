@@ -8,10 +8,10 @@ import {
     RealtimeMetrics,
     ReturnAnalytics
 } from '@/services/returnAnalyticsService';
-import { ReturnMetricsCards } from '@/components/admin/returns/ReturnMetricsCards';
-import { ReturnTrendsChart } from '@/components/admin/returns/ReturnTrendsChart';
-import { StatusDistributionChart } from '@/components/admin/returns/StatusDistributionChart';
-import { RecentReturnsTable } from '@/components/admin/returns/RecentReturnsTable';
+import { ReturnMetricsCards } from '@/components/Admin/returns/ReturnMetricsCards';
+import { ReturnTrendsChart } from '@/components/Admin/returns/ReturnTrendsChart';
+import { StatusDistributionChart } from '@/components/Admin/returns/StatusDistributionChart';
+import { RecentReturnsTable } from '@/components/Admin/returns/RecentReturnsTable';
 import { useAuth } from '@/hooks/useAuth';
 import { io } from 'socket.io-client';
 
