@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { 
   MarketplaceListing
 } from '@/services/marketplaceService';
+import PurchaseInterface from './PurchaseInterface';
 
 interface ListingCardProps {
   listing: MarketplaceListing;
@@ -10,6 +11,8 @@ interface ListingCardProps {
 }
 
 const ListingCard: React.FC<ListingCardProps> = ({ listing, onAction }) => {
+  const [showPurchaseInterface, setShowPurchaseInterface] = useState(false);
+
   const formatAddress = (addr: string) => {
     return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
   };
@@ -42,6 +45,15 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing, onAction }) => {
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const handleBuyNow = () => {
+    setShowPurchaseInterface(true);
+  };
+
+  const handlePurchaseComplete = () => {
+    setShowPurchaseInterface(false);
+    onAction?.(listing);
   };
 
   return (
@@ -87,7 +99,7 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing, onAction }) => {
         <div className="mt-6 flex space-x-3">
           <button
             className="flex-1 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 text-sm font-medium"
-            onClick={() => onAction?.(listing)}
+            onClick={handleBuyNow}
           >
             {listing.listingType === 'AUCTION' ? 'Place Bid' : 'Buy Now'}
           </button>
@@ -98,6 +110,15 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing, onAction }) => {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Purchase Interface Modal */}
+      <PurchaseInterface
+        listing={listing}
+        isOpen={showPurchaseInterface}
+        onClose={() => setShowPurchaseInterface(false)}
+        onPurchaseComplete={handlePurchaseComplete}
+      />
       </div>
     </div>
   );

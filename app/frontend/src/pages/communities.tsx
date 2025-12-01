@@ -256,6 +256,23 @@ const CommunitiesPage: React.FC = () => {
 
             setJoinedCommunities(Array.from(allUserCommunityIds));
 
+            // Merge user communities into the main list so they appear in the sidebar
+            // The sidebar filters 'communities' based on 'joinedCommunities', so we need to ensure
+            // all joined/created communities are actually present in the 'communities' array.
+            setCommunities(prev => {
+              const existingIds = new Set(prev.map(c => c.id));
+              const newCommunities = [...prev];
+
+              [...memberCommunitiesResponse.communities, ...createdCommunitiesResponse.communities].forEach(c => {
+                if (c && c.id && !existingIds.has(c.id)) {
+                  newCommunities.push(c);
+                  existingIds.add(c.id);
+                }
+              });
+
+              return newCommunities;
+            });
+
             // Set admin roles for communities where user is admin (case-insensitive)
             const adminRoles: Record<string, string> = {};
             communitiesData.forEach(community => {
