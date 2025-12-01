@@ -1,17 +1,6 @@
-import { pgTable, serial, varchar, text, timestamp, integer, uuid, primaryKey, index, boolean, numeric, foreignKey, jsonb, interval, unique } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, text, timestamp, integer, uuid, primaryKey, index, boolean, numeric, foreignKey, jsonb, interval, unique, date, decimal } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import * as marketplaceSchema from "./marketplaceSchema";
-import { decimal } from "drizzle-orm/gel-core";
-import { decimal } from "drizzle-orm/gel-core";
-import { decimal } from "drizzle-orm/gel-core";
-import { date } from "zod";
-import { decimal } from "drizzle-orm/gel-core";
-import { decimal } from "drizzle-orm/gel-core";
-import { decimal } from "drizzle-orm/gel-core";
-import { decimal } from "drizzle-orm/gel-core";
-import { decimal } from "drizzle-orm/gel-core";
-import { decimal } from "drizzle-orm/gel-core";
-import { decimal } from "drizzle-orm/gel-core";
-import { decimal } from "drizzle-orm/gel-core";
 export { marketplaceSchema };
 
 // Users / Profiles
@@ -4534,7 +4523,7 @@ export const returnAnalytics = pgTable('return_analytics', {
   id: uuid('id').primaryKey().defaultRandom(),
   sellerId: uuid('seller_id'),
   buyerId: uuid('buyer_id'),
-  date: date('date').notNull(),
+  date: date('date').default(sql`CURRENT_DATE`),
   totalReturns: integer('total_returns').default(0),
   approvedReturns: integer('approved_returns').default(0),
   rejectedReturns: integer('rejected_returns').default(0),
