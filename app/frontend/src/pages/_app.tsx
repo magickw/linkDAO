@@ -151,10 +151,9 @@ function AppContent({ children }: { children: React.ReactNode }) {
           timestamp: new Date().toISOString()
         });
 
-        // Prevent error from propagating
-        event.preventDefault();
+        // Stop error propagation but allow default browser behavior (navigation, etc.)
         event.stopImmediatePropagation();
-        return false;
+        return true; // Allow default actions like link clicks
       }
     };
 
@@ -190,8 +189,9 @@ function AppContent({ children }: { children: React.ReactNode }) {
           timestamp: new Date().toISOString()
         });
 
-        event.preventDefault();
-        return false;
+        // Stop propagation but allow default browser behavior
+        event.stopImmediatePropagation();
+        return true; // Allow default actions
       }
     };
 
