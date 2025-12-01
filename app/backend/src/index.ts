@@ -860,6 +860,10 @@ app.use('/api/auth', require('./routes/authRoutes').default);
 // Security routes
 app.use('/api/security', securityRoutes);
 
+// Return and refund routes
+import returnRoutes from './routes/returnRoutes';
+app.use('/api/returns', returnRoutes);
+
 // Marketplace verification routes
 app.use('/api/marketplace/verification', marketplaceVerificationRoutes);
 

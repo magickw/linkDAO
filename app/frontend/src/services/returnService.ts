@@ -89,6 +89,53 @@ class ReturnService {
 
     return res;
   }
+
+  async getReturnMessages(returnId: string) {
+    const res = await fetchWithRetry<any>(`${API_BASE_URL}/returns/${returnId}/messages`);
+    return res;
+  }
+
+  async addReturnMessage(returnId: string, messageData: {
+    message: string;
+    attachments?: string[];
+    isInternal?: boolean;
+  }) {
+    const res = await fetchWithRetry<any>(`${API_BASE_URL}/returns/${returnId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(messageData)
+    });
+
+    return res;
+  }
+
+  async getReturnHistory(returnId: string) {
+    const res = await fetchWithRetry<any>(`${API_BASE_URL}/returns/${returnId}/history`);
+    return res;
+  }
+
+  async generateShippingLabel(returnId: string) {
+    const res = await fetchWithRetry<any>(`${API_BASE_URL}/returns/${returnId}/shipping-label`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    return res;
+  }
+
+  async updateTracking(returnId: string, trackingData: {
+    trackingNumber?: string;
+    carrier?: string;
+    status?: string;
+  }) {
+    const res = await fetchWithRetry<any>(`${API_BASE_URL}/returns/${returnId}/tracking`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(trackingData)
+    });
+
+    return res;
+  }
 }
 
 export const returnService = new ReturnService();

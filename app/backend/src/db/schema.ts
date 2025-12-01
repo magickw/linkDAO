@@ -1,5 +1,17 @@
 import { pgTable, serial, varchar, text, timestamp, integer, uuid, primaryKey, index, boolean, numeric, foreignKey, jsonb, interval, unique } from "drizzle-orm/pg-core";
 import * as marketplaceSchema from "./marketplaceSchema";
+import { decimal } from "drizzle-orm/gel-core";
+import { decimal } from "drizzle-orm/gel-core";
+import { decimal } from "drizzle-orm/gel-core";
+import { date } from "zod";
+import { decimal } from "drizzle-orm/gel-core";
+import { decimal } from "drizzle-orm/gel-core";
+import { decimal } from "drizzle-orm/gel-core";
+import { decimal } from "drizzle-orm/gel-core";
+import { decimal } from "drizzle-orm/gel-core";
+import { decimal } from "drizzle-orm/gel-core";
+import { decimal } from "drizzle-orm/gel-core";
+import { decimal } from "drizzle-orm/gel-core";
 export { marketplaceSchema };
 
 // Users / Profiles
@@ -4415,3 +4427,123 @@ export const workflowMetrics = pgTable("workflow_metrics", {
   instanceIdx: index("workflow_metrics_instance_idx").on(table.instanceId),
   metricTypeIdx: index("workflow_metrics_type_idx").on(table.metricType),
 }));
+
+// Return and Refund System Tables
+export const returnPolicies = pgTable('return_policies', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  sellerId: uuid('seller_id').notNull(),
+  acceptsReturns: boolean('accepts_returns').default(true),
+  returnWindowDays: integer('return_window_days').default(30),
+  autoApproveLowRisk: boolean('auto_approve_low_risk').default(false),
+  requiresOriginalPackaging: boolean('requires_original_packaging').default(true),
+  restockingFeePercentage: decimal('restocking_fee_percentage', { precision: 5, scale: 2 }).default('0'),
+  returnShippingPaidBy: varchar('return_shipping_paid_by', { length: 10 }).default('buyer'),
+  acceptedReasons: text('accepted_reasons').array().default(['defective', 'not_as_described', 'changed_mind', 'damaged_in_shipping']),
+  excludedCategories: text('excluded_categories').array(),
+  minimumOrderValue: decimal('minimum_order_value', { precision: 10, scale: 2 }),
+  maximumReturnsPerCustomer: integer('maximum_returns_per_customer').default(10),
+  policyText: text('policy_text'),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const returns = pgTable('returns', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orderId: uuid('order_id').notNull(),
+  buyerId: uuid('buyer_id').notNull(),
+  sellerId: uuid('seller_id').notNull(),
+  returnReason: varchar('return_reason', { length: 50 }).notNull(),
+  returnReasonDetails: text('return_reason_details'),
+  itemsToReturn: jsonb('items_to_return').notNull(),
+  originalAmount: decimal('original_amount', { precision: 10, scale: 2 }).notNull(),
+  refundAmount: decimal('refund_amount', { precision: 10, scale: 2 }),
+  restockingFee: decimal('restocking_fee', { precision: 10, scale: 2 }).default('0'),
+  returnShippingCost: decimal('return_shipping_cost', { precision: 10, scale: 2 }).default('0'),
+  status: varchar('status', { length: 20 }).default('requested'),
+  refundStatus: varchar('refund_status', { length: 20 }).default('pending'),
+  riskScore: integer('risk_score').default(0),
+  riskLevel: varchar('risk_level', { length: 10 }).default('low'),
+  riskFactors: text('risk_factors').array(),
+  requiresManualReview: boolean('requires_manual_review').default(false),
+  returnLabelUrl: text('return_label_url'),
+  returnTrackingNumber: varchar('return_tracking_number', { length: 100 }),
+  returnCarrier: varchar('return_carrier', { length: 50 }),
+  refundTransactionId: varchar('refund_transaction_id', { length: 100 }),
+  approvedAt: timestamp('approved_at'),
+  approvedBy: uuid('approved_by'),
+  rejectedAt: timestamp('rejected_at'),
+  rejectedBy: uuid('rejected_by'),
+  rejectionReason: text('rejection_reason'),
+  shippedAt: timestamp('shipped_at'),
+  receivedAt: timestamp('received_at'),
+  inspectedAt: timestamp('inspected_at'),
+  refundedAt: timestamp('refunded_at'),
+  completedAt: timestamp('completed_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const returnStatusHistory = pgTable('return_status_history', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  returnId: uuid('return_id').notNull().references(() => returns.id, { onDelete: 'cascade' }),
+  fromStatus: varchar('from_status', { length: 20 }),
+  toStatus: varchar('to_status', { length: 20 }).notNull(),
+  notes: text('notes'),
+  changedBy: uuid('changed_by'),
+  changedByRole: varchar('changed_by_role', { length: 20 }),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const returnMessages = pgTable('return_messages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  returnId: uuid('return_id').notNull().references(() => returns.id, { onDelete: 'cascade' }),
+  senderId: uuid('sender_id').notNull(),
+  senderRole: varchar('sender_role', { length: 20 }).notNull(),
+  message: text('message').notNull(),
+  attachments: jsonb('attachments'),
+  isInternal: boolean('is_internal').default(false),
+  readByBuyer: boolean('read_by_buyer').default(false),
+  readBySeller: boolean('read_by_seller').default(false),
+  readByAdmin: boolean('read_by_admin').default(false),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const refundTransactions = pgTable('refund_transactions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  returnId: uuid('return_id').notNull().references(() => returns.id, { onDelete: 'cascade' }),
+  orderId: uuid('order_id').notNull(),
+  amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
+  currency: varchar('currency', { length: 3 }).default('USD'),
+  refundType: varchar('refund_type', { length: 20 }).default('full'),
+  provider: varchar('provider', { length: 50 }).notNull(),
+  providerRefundId: varchar('provider_refund_id', { length: 100 }),
+  providerFee: decimal('provider_fee', { precision: 10, scale: 2 }).default('0'),
+  status: varchar('status', { length: 20 }).default('pending'),
+  failureReason: text('failure_reason'),
+  processedAt: timestamp('processed_at'),
+  completedAt: timestamp('completed_at'),
+  errorMessage: text('error_message'),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const returnAnalytics = pgTable('return_analytics', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  sellerId: uuid('seller_id'),
+  buyerId: uuid('buyer_id'),
+  date: date('date').notNull(),
+  totalReturns: integer('total_returns').default(0),
+  approvedReturns: integer('approved_returns').default(0),
+  rejectedReturns: integer('rejected_returns').default(0),
+  completedReturns: integer('completed_returns').default(0),
+  totalRefundAmount: decimal('total_refund_amount', { precision: 12, scale: 2 }).default('0'),
+  averageProcessingTimeHours: decimal('average_processing_time_hours', { precision: 8, scale: 2 }),
+  returnRatePercentage: decimal('return_rate_percentage', { precision: 5, scale: 2 }),
+  topReturnReasons: jsonb('top_return_reasons'),
+  riskDistribution: jsonb('risk_distribution'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
