@@ -438,6 +438,7 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
                 post={{
                   ...post,
                   // Ensure compatibility with EnhancedPost interface
+                  author: post.author || post.authorAddress || '',
                   contentCid: post.contentCid || post.content || '',
                   mediaCids: post.mediaCids || [],
                   tags: post.tags || [],

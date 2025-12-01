@@ -1,12 +1,13 @@
-import { 
-  Conversation, 
-  ConversationFilter, 
-  ConversationSettings, 
-  MessageSearchQuery, 
+import {
+  Conversation,
+  ConversationFilter,
+  ConversationSettings,
+  MessageSearchQuery,
   MessageSearchResult,
   GroupConversation,
   ConversationMember
 } from '../types/messaging';
+import { authService } from './authService';
 
 export class ConversationManagementService {
   private static instance: ConversationManagementService;
@@ -21,12 +22,19 @@ export class ConversationManagementService {
   }
 
   /**
+   * Get authentication headers for API requests
+   */
+  private getAuthHeaders(): Record<string, string> {
+    return authService.getAuthHeaders();
+  }
+
+  /**
    * Search conversations by various criteria
    */
   async searchConversations(
     query: string,
     filter?: ConversationFilter,
-    userAddress?: string
+    _userAddress?: string
   ): Promise<Conversation[]> {
     try {
       const params = new URLSearchParams();
@@ -38,14 +46,12 @@ export class ConversationManagementService {
       if (filter?.participantAddress) params.append('participant', filter.participantAddress);
 
       const response = await fetch(`/api/conversations/search?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${userAddress}`,
-        },
+        headers: this.getAuthHeaders(),
       });
 
       if (response.ok) {
         const data = await response.json();
-        return data.conversations;
+        return data.conversations || [];
       }
 
       return [];
@@ -60,21 +66,18 @@ export class ConversationManagementService {
    */
   async searchMessages(
     searchQuery: MessageSearchQuery,
-    userAddress: string
+    _userAddress?: string
   ): Promise<MessageSearchResult[]> {
     try {
       const response = await fetch('/api/messages/search', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userAddress}`,
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify(searchQuery),
       });
 
       if (response.ok) {
         const data = await response.json();
-        return data.results;
+        return data.results || [];
       }
 
       return [];
@@ -89,16 +92,13 @@ export class ConversationManagementService {
    */
   async archiveConversation(
     conversationId: string,
-    userAddress: string,
+    _userAddress?: string,
     reason?: string
   ): Promise<boolean> {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/archive`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userAddress}`,
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify({ reason }),
       });
 
@@ -114,14 +114,12 @@ export class ConversationManagementService {
    */
   async unarchiveConversation(
     conversationId: string,
-    userAddress: string
+    _userAddress?: string
   ): Promise<boolean> {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/unarchive`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${userAddress}`,
-        },
+        headers: this.getAuthHeaders(),
       });
 
       return response.ok;
@@ -136,16 +134,13 @@ export class ConversationManagementService {
    */
   async deleteConversation(
     conversationId: string,
-    userAddress: string,
+    _userAddress?: string,
     deleteForEveryone: boolean = false
   ): Promise<boolean> {
     try {
       const response = await fetch(`/api/conversations/${conversationId}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userAddress}`,
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify({ deleteForEveryone }),
       });
 
@@ -161,15 +156,13 @@ export class ConversationManagementService {
    */
   async toggleConversationPin(
     conversationId: string,
-    userAddress: string,
-    isPinned: boolean
+    _userAddress?: string,
+    isPinned?: boolean
   ): Promise<boolean> {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/pin`, {
         method: isPinned ? 'POST' : 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${userAddress}`,
-        },
+        headers: this.getAuthHeaders(),
       });
 
       return response.ok;
@@ -184,17 +177,14 @@ export class ConversationManagementService {
    */
   async toggleConversationMute(
     conversationId: string,
-    userAddress: string,
-    isMuted: boolean,
+    _userAddress?: string,
+    isMuted?: boolean,
     muteUntil?: Date
   ): Promise<boolean> {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/mute`, {
         method: isMuted ? 'POST' : 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userAddress}`,
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify({ muteUntil }),
       });
 
@@ -211,15 +201,12 @@ export class ConversationManagementService {
   async updateConversationSettings(
     conversationId: string,
     settings: Partial<ConversationSettings>,
-    userAddress: string
+    _userAddress?: string
   ): Promise<boolean> {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/settings`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userAddress}`,
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify(settings),
       });
 
@@ -235,13 +222,11 @@ export class ConversationManagementService {
    */
   async getConversationSettings(
     conversationId: string,
-    userAddress: string
+    _userAddress?: string
   ): Promise<ConversationSettings | null> {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/settings`, {
-        headers: {
-          'Authorization': `Bearer ${userAddress}`,
-        },
+        headers: this.getAuthHeaders(),
       });
 
       if (response.ok) {
@@ -261,15 +246,12 @@ export class ConversationManagementService {
   async setConversationTitle(
     conversationId: string,
     title: string,
-    userAddress: string
+    _userAddress?: string
   ): Promise<boolean> {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/title`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userAddress}`,
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify({ title }),
       });
 
@@ -287,16 +269,13 @@ export class ConversationManagementService {
     name: string,
     description: string,
     participants: string[],
-    creatorAddress: string,
+    _creatorAddress?: string,
     settings?: Partial<GroupConversation['settings']>
   ): Promise<GroupConversation | null> {
     try {
       const response = await fetch('/api/conversations/group', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${creatorAddress}`,
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify({
           name,
           description,
@@ -329,15 +308,12 @@ export class ConversationManagementService {
     conversationId: string,
     memberAddress: string,
     role: 'admin' | 'member',
-    userAddress: string
+    _userAddress?: string
   ): Promise<boolean> {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/members`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userAddress}`,
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify({
           memberAddress,
           role,
@@ -357,14 +333,12 @@ export class ConversationManagementService {
   async removeGroupMember(
     conversationId: string,
     memberAddress: string,
-    userAddress: string
+    _userAddress?: string
   ): Promise<boolean> {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/members/${memberAddress}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${userAddress}`,
-        },
+        headers: this.getAuthHeaders(),
       });
 
       return response.ok;
@@ -381,15 +355,12 @@ export class ConversationManagementService {
     conversationId: string,
     memberAddress: string,
     role: 'admin' | 'member',
-    userAddress: string
+    _userAddress?: string
   ): Promise<boolean> {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/members/${memberAddress}/role`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userAddress}`,
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify({ role }),
       });
 
@@ -405,14 +376,12 @@ export class ConversationManagementService {
    */
   async leaveGroupConversation(
     conversationId: string,
-    userAddress: string
+    _userAddress?: string
   ): Promise<boolean> {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/leave`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${userAddress}`,
-        },
+        headers: this.getAuthHeaders(),
       });
 
       return response.ok;
@@ -427,18 +396,16 @@ export class ConversationManagementService {
    */
   async getGroupMembers(
     conversationId: string,
-    userAddress: string
+    _userAddress?: string
   ): Promise<ConversationMember[]> {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/members`, {
-        headers: {
-          'Authorization': `Bearer ${userAddress}`,
-        },
+        headers: this.getAuthHeaders(),
       });
 
       if (response.ok) {
         const data = await response.json();
-        return data.members;
+        return data.members || [];
       }
 
       return [];
@@ -454,15 +421,12 @@ export class ConversationManagementService {
   async updateGroupSettings(
     conversationId: string,
     settings: Partial<GroupConversation['settings']>,
-    userAddress: string
+    _userAddress?: string
   ): Promise<boolean> {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/group-settings`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userAddress}`,
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify(settings),
       });
 
@@ -480,15 +444,12 @@ export class ConversationManagementService {
     communityId: string,
     title: string,
     description: string,
-    creatorAddress: string
+    _creatorAddress?: string
   ): Promise<Conversation | null> {
     try {
       const response = await fetch('/api/conversations/community-announcement', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${creatorAddress}`,
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify({
           communityId,
           title,
@@ -512,7 +473,7 @@ export class ConversationManagementService {
    */
   async getFilteredConversations(
     filter: ConversationFilter,
-    userAddress: string,
+    _userAddress?: string,
     limit: number = 50,
     offset: number = 0
   ): Promise<{ conversations: Conversation[]; total: number }> {
@@ -527,9 +488,7 @@ export class ConversationManagementService {
       params.append('offset', offset.toString());
 
       const response = await fetch(`/api/conversations/filter?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${userAddress}`,
-        },
+        headers: this.getAuthHeaders(),
       });
 
       if (response.ok) {
@@ -549,7 +508,7 @@ export class ConversationManagementService {
   async exportConversation(
     conversationId: string,
     format: 'json' | 'csv' | 'html',
-    userAddress: string,
+    _userAddress?: string,
     options?: {
       includeMedia?: boolean;
       dateRange?: { start: Date; end: Date };
@@ -558,10 +517,7 @@ export class ConversationManagementService {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/export`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userAddress}`,
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify({
           format,
           ...options,
@@ -584,7 +540,7 @@ export class ConversationManagementService {
    */
   async getConversationAnalytics(
     conversationId: string,
-    userAddress: string,
+    _userAddress?: string,
     period?: { start: Date; end: Date }
   ): Promise<any> {
     try {
@@ -595,9 +551,7 @@ export class ConversationManagementService {
       }
 
       const response = await fetch(`/api/conversations/${conversationId}/analytics?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${userAddress}`,
-        },
+        headers: this.getAuthHeaders(),
       });
 
       if (response.ok) {
@@ -615,16 +569,14 @@ export class ConversationManagementService {
    * Block/unblock a user in conversations
    */
   async toggleUserBlock(
-    userAddress: string,
-    targetAddress: string,
-    isBlocked: boolean
+    _userAddress?: string,
+    targetAddress?: string,
+    isBlocked?: boolean
   ): Promise<boolean> {
     try {
       const response = await fetch(`/api/users/${targetAddress}/block`, {
         method: isBlocked ? 'POST' : 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${userAddress}`,
-        },
+        headers: this.getAuthHeaders(),
       });
 
       return response.ok;
@@ -641,15 +593,12 @@ export class ConversationManagementService {
     conversationId: string,
     reason: string,
     description: string,
-    userAddress: string
+    _userAddress?: string
   ): Promise<boolean> {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/report`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userAddress}`,
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify({
           reason,
           description,
@@ -668,18 +617,16 @@ export class ConversationManagementService {
    */
   async getParticipantsInfo(
     conversationId: string,
-    userAddress: string
+    _userAddress?: string
   ): Promise<Array<{ address: string; isOnline: boolean; lastSeen?: Date }>> {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/participants`, {
-        headers: {
-          'Authorization': `Bearer ${userAddress}`,
-        },
+        headers: this.getAuthHeaders(),
       });
 
       if (response.ok) {
         const data = await response.json();
-        return data.participants;
+        return data.participants || [];
       }
 
       return [];
@@ -694,16 +641,13 @@ export class ConversationManagementService {
    */
   async clearConversationHistory(
     conversationId: string,
-    userAddress: string,
+    _userAddress?: string,
     clearForEveryone: boolean = false
   ): Promise<boolean> {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/clear`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userAddress}`,
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify({ clearForEveryone }),
       });
 
@@ -719,16 +663,13 @@ export class ConversationManagementService {
    */
   async createConversationBackup(
     conversationId: string,
-    userAddress: string,
+    _userAddress?: string,
     includeMedia: boolean = true
   ): Promise<string | null> {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/backup`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userAddress}`,
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify({ includeMedia }),
       });
 
@@ -749,14 +690,12 @@ export class ConversationManagementService {
    */
   async restoreConversationBackup(
     backupId: string,
-    userAddress: string
+    _userAddress?: string
   ): Promise<boolean> {
     try {
       const response = await fetch(`/api/conversations/restore/${backupId}`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${userAddress}`,
-        },
+        headers: this.getAuthHeaders(),
       });
 
       return response.ok;

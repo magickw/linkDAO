@@ -106,6 +106,11 @@ export interface CreateSellerProfileRequest {
   taxId?: string; // Plain text tax ID, will be encrypted on backend
   taxIdType?: string;
   coverImageUrl?: string;
+  coverImageCdn?: string;
+  coverImageIpfs?: string;
+  profilePicture?: string;
+  profileImageCdn?: string;
+  profileImageIpfs?: string;
 }
 
 export interface UpdateSellerProfileRequest {
@@ -137,6 +142,11 @@ export interface UpdateSellerProfileRequest {
   taxId?: string; // Plain text tax ID, will be encrypted on backend
   taxIdType?: string;
   coverImageUrl?: string;
+  coverImageCdn?: string;
+  coverImageIpfs?: string;
+  profilePicture?: string;
+  profileImageCdn?: string;
+  profileImageIpfs?: string;
   payoutSettings?: any; // JSON with fiat withdrawal details
 }
 

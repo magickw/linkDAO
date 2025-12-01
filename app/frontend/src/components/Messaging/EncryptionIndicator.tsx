@@ -21,6 +21,8 @@ export const EncryptionIndicator: React.FC<EncryptionIndicatorProps> = ({
   } | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [keyExchangeErrors, setKeyExchangeErrors] = useState<Record<string, string>>({});
 
   const encryptionService = MessageEncryptionService.getInstance();
 
@@ -29,6 +31,7 @@ export const EncryptionIndicator: React.FC<EncryptionIndicatorProps> = ({
   }, [conversationId, participants]);
 
   const checkEncryptionStatus = async () => {
+    setError(null);
     try {
       const status = await encryptionService.getConversationEncryptionStatus(
         conversationId,
@@ -37,36 +40,66 @@ export const EncryptionIndicator: React.FC<EncryptionIndicatorProps> = ({
       setEncryptionStatus(status);
     } catch (error) {
       console.error('Failed to check encryption status:', error);
+      setError('Failed to check encryption status. Please try again.');
     }
   };
 
   const initializeEncryption = async () => {
     setIsInitializing(true);
+    setError(null);
     try {
       const success = await encryptionService.initializeConversationEncryption(
         conversationId,
         participants,
         currentUserAddress
       );
-      
+
       if (success) {
         await checkEncryptionStatus();
+      } else {
+        // Get the current status to show which keys are missing
+        const status = await encryptionService.getConversationEncryptionStatus(
+          conversationId,
+          participants
+        );
+        if (status.missingKeys.length > 0) {
+          setError(`Cannot enable encryption: Missing keys for ${status.missingKeys.length} participant(s). Please exchange keys first.`);
+        } else {
+          setError('Failed to initialize encryption. Please try again.');
+        }
       }
     } catch (error) {
       console.error('Failed to initialize encryption:', error);
+      setError(error instanceof Error ? error.message : 'Failed to initialize encryption. Please try again.');
     } finally {
       setIsInitializing(false);
     }
   };
 
   const exchangeKeys = async (otherUserAddress: string) => {
+    // Clear previous error for this address
+    setKeyExchangeErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[otherUserAddress];
+      return newErrors;
+    });
+
     try {
       const result = await encryptionService.exchangeKeys(currentUserAddress, otherUserAddress);
       if (result.success) {
         await checkEncryptionStatus();
+      } else {
+        setKeyExchangeErrors(prev => ({
+          ...prev,
+          [otherUserAddress]: 'Key exchange failed. The other user may need to be online.'
+        }));
       }
     } catch (error) {
       console.error('Key exchange failed:', error);
+      setKeyExchangeErrors(prev => ({
+        ...prev,
+        [otherUserAddress]: error instanceof Error ? error.message : 'Key exchange failed. Please try again.'
+      }));
     }
   };
 
@@ -77,6 +110,17 @@ export const EncryptionIndicator: React.FC<EncryptionIndicatorProps> = ({
           <div className="w-4 h-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600"></div>
           <span className="text-sm">Checking encryption...</span>
         </div>
+        {error && (
+          <div className="mt-2 text-sm text-red-600 dark:text-red-400">
+            {error}
+            <button
+              onClick={checkEncryptionStatus}
+              className="ml-2 underline hover:no-underline"
+            >
+              Retry
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -148,19 +192,32 @@ export const EncryptionIndicator: React.FC<EncryptionIndicatorProps> = ({
                 <span className="font-medium text-gray-900 dark:text-white">Missing keys for: </span>
                 <div className="mt-1 space-y-1">
                   {encryptionStatus.missingKeys.map((address) => (
-                    <div key={address} className="flex items-center justify-between">
-                      <span className="text-gray-600 dark:text-gray-400 font-mono text-xs">
-                        {address.slice(0, 6)}...{address.slice(-4)}
-                      </span>
-                      <button
-                        onClick={() => exchangeKeys(address)}
-                        className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-1 rounded hover:bg-blue-200 dark:hover:bg-blue-800"
-                      >
-                        Exchange Keys
-                      </button>
+                    <div key={address}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600 dark:text-gray-400 font-mono text-xs">
+                          {address.slice(0, 6)}...{address.slice(-4)}
+                        </span>
+                        <button
+                          onClick={() => exchangeKeys(address)}
+                          className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-1 rounded hover:bg-blue-200 dark:hover:bg-blue-800"
+                        >
+                          Exchange Keys
+                        </button>
+                      </div>
+                      {keyExchangeErrors[address] && (
+                        <div className="mt-1 text-xs text-red-600 dark:text-red-400">
+                          {keyExchangeErrors[address]}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {error && (
+              <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-sm text-red-600 dark:text-red-400">
+                {error}
               </div>
             )}
 

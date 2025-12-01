@@ -41,7 +41,33 @@ function SellerOnboardingComponent({ onComplete }: SellerOnboardingProps) {
     progress,
   } = useSellerOnboarding();
 
-  const [stepData, setStepData] = useState<Record<string, any>>({});
+  // Load initial state from localStorage if available
+  const [stepData, setStepData] = useState<Record<string, any>>(() => {
+    if (typeof window !== 'undefined' && address) {
+      try {
+        const saved = localStorage.getItem(`onboarding_data_${address}`);
+        return saved ? JSON.parse(saved) : {};
+      } catch (e) {
+        console.error('Failed to load onboarding data', e);
+        return {};
+      }
+    }
+    return {};
+  });
+
+  // Save to localStorage whenever stepData changes
+  React.useEffect(() => {
+    if (address && Object.keys(stepData).length > 0) {
+      localStorage.setItem(`onboarding_data_${address}`, JSON.stringify(stepData));
+    }
+  }, [stepData, address]);
+
+  // Clear localStorage on completion
+  React.useEffect(() => {
+    if (isCompleted && address) {
+      localStorage.removeItem(`onboarding_data_${address}`);
+    }
+  }, [isCompleted, address]);
 
   if (loading) {
     return (
@@ -75,6 +101,14 @@ function SellerOnboardingComponent({ onComplete }: SellerOnboardingProps) {
   }
 
   if (isCompleted) {
+    // Auto-redirect after 3 seconds
+    React.useEffect(() => {
+      const timer = setTimeout(() => {
+        router.push('/marketplace/seller/dashboard');
+      }, 3000);
+      return () => clearTimeout(timer);
+    }, [router]);
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
         <GlassPanel className="max-w-md w-full text-center">
@@ -86,7 +120,7 @@ function SellerOnboardingComponent({ onComplete }: SellerOnboardingProps) {
             </div>
             <h1 className="text-2xl font-bold text-white mb-2">Welcome to the Marketplace! 🎉</h1>
             <p className="text-gray-300 mb-6">
-              Your seller account is now set up and ready to go. Start listing your products and building your reputation!
+              Your seller account is now set up and ready to go. Redirecting you to your dashboard...
             </p>
           </div>
 
@@ -96,7 +130,7 @@ function SellerOnboardingComponent({ onComplete }: SellerOnboardingProps) {
               variant="primary"
               className="w-full"
             >
-              Go to Seller Dashboard
+              Go to Seller Dashboard Now
             </Button>
             <Button
               onClick={() => router.push('/marketplace/seller/profile')}

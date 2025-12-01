@@ -836,7 +836,7 @@ export class OfflineMessageQueueService {
   /**
    * Force sync (for manual retry)
    */
-  async forcSync(): Promise<void> {
+  async forceSync(): Promise<void> {
     if (this.isOnline) {
       await this.syncPendingMessages();
     }

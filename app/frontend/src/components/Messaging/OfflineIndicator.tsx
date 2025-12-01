@@ -59,7 +59,7 @@ export const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({ className = 
 
   const handleForceSync = async () => {
     try {
-      await queueService.forcSync();
+      await queueService.forceSync();
       await updateStats();
     } catch (error) {
       console.error('Force sync failed:', error);

@@ -250,12 +250,26 @@ export class SellerProfileService {
     }
   }
 
+  // Valid onboarding steps
+  private readonly VALID_STEPS = [
+    'profile_setup',
+    'business_info',
+    'verification',
+    'payout_setup',
+    'first_listing'
+  ] as const;
+
   /**
    * Update onboarding step completion
    */
   async updateOnboardingStep(walletAddress: string, step: keyof OnboardingSteps, completed: boolean, data?: any): Promise<OnboardingStatus> {
     try {
       safeLogger.info('Starting updateOnboardingStep:', { walletAddress, step, completed });
+
+      // Validate step
+      if (!this.VALID_STEPS.includes(step as any)) {
+        throw new Error(`Invalid onboarding step: ${step}. Valid steps are: ${this.VALID_STEPS.join(', ')}`);
+      }
 
       const profile = await this.getProfile(walletAddress);
       if (!profile) {
@@ -267,11 +281,10 @@ export class SellerProfileService {
         [step]: completed
       };
 
+      const updates: UpdateSellerProfileRequest = {};
+
       // If data is provided, update the profile with that data
       if (data && Object.keys(data).length > 0) {
-        // Map data to profile updates
-        const updates: UpdateSellerProfileRequest = {};
-
         // Handle Business Info Step Data
         if (step === 'business_info') {
           if (data.businessType) updates.businessType = data.businessType;
@@ -305,6 +318,14 @@ export class SellerProfileService {
           if (data.storeName) updates.storeName = data.storeName;
           if (data.bio) updates.bio = data.bio;
           if (data.description) updates.description = data.description;
+          if (data.coverImage) {
+            updates.coverImageUrl = data.coverImage;
+            updates.coverImageCdn = data.coverImage; // Assuming the URL is a CDN URL
+          }
+          if (data.logo) {
+            updates.profilePicture = data.logo;
+            updates.profileImageCdn = data.logo; // Assuming the URL is a CDN URL
+          }
         }
 
         // Handle Payout Setup Step Data
@@ -331,12 +352,24 @@ export class SellerProfileService {
         onboardingCompleted
       });
 
-      // Update onboardingSteps using drizzle ORM with proper JSON serialization
+      // If newly completed, log it (and potentially send notification in future)
+      if (onboardingCompleted && !profile.onboardingCompleted) {
+        safeLogger.info('Seller onboarding completed:', { walletAddress });
+      }
+
+      // Prepare DB updates
+      const dbUpdates: any = { ...updates };
+      if (updates.socialLinks) {
+        dbUpdates.socialLinks = JSON.stringify(updates.socialLinks);
+      }
+
+      // Update database
       await db
         .update(sellers)
         .set({
           onboardingSteps: updatedSteps,
           onboardingCompleted,
+          ...dbUpdates,
           updatedAt: new Date(),
         })
         .where(eq(sellers.walletAddress, walletAddress));

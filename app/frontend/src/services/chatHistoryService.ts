@@ -78,19 +78,20 @@ class ChatHistoryService {
           priority: 'high',
           maxRetries: 5
         });
-        
+
         // Return a temporary message object for UI purposes
-        return {
+        const tempMessage: ChatMessage = {
           id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           conversationId: message.conversationId,
           fromAddress: message.fromAddress,
           content: message.content,
-          contentType: message.contentType,
+          contentType: message.contentType || 'text',
           timestamp: new Date(),
-          deliveryStatus: 'sent', // Changed from 'pending' to match the type
+          deliveryStatus: 'sent',
           ...(message.replyToId && { replyToId: message.replyToId }),
           ...(message.attachments && { attachments: message.attachments })
-        } as unknown as ChatMessage; // Cast to unknown first to bypass type checking
+        };
+        return tempMessage;
       }
       
       throw error;

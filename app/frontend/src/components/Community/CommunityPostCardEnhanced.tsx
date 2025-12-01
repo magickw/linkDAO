@@ -393,7 +393,7 @@ export default function CommunityPostCardEnhanced({
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
               <span className="font-medium text-gray-900 dark:text-white">
-                u/{post.author.slice(0, 6)}...{post.author.slice(-4)}
+                u/{post.author ? `${post.author.slice(0, 6)}...${post.author.slice(-4)}` : 'Unknown'}
               </span>
               <span>•</span>
               <span>{formatTimestamp(post.createdAt)}</span>

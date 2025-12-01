@@ -141,7 +141,7 @@ export const useOfflineMessageQueue = (): UseOfflineMessageQueueReturn => {
   // Force sync
   const forceSync = useCallback(async (): Promise<void> => {
     try {
-      await queueService.forcSync();
+      await queueService.forceSync();
       await updateStats();
     } catch (error) {
       console.error('Failed to force sync:', error);

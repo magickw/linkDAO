@@ -833,7 +833,7 @@ describe('OfflineMessageQueueService', () => {
       };
       mockDB.transaction.mockReturnValue(mockTransaction);
 
-      await queueService.forcSync();
+      await queueService.forceSync();
 
       // Simulate successful retrieval
       setTimeout(() => {
@@ -846,7 +846,7 @@ describe('OfflineMessageQueueService', () => {
     it('should not sync when offline', async () => {
       Object.defineProperty(navigator, 'onLine', { value: false });
       
-      await queueService.forcSync();
+      await queueService.forceSync();
 
       expect(mockDB.transaction).not.toHaveBeenCalled();
     });
@@ -918,7 +918,7 @@ describe('OfflineMessageQueueService', () => {
       mockDB.transaction.mockReturnValue(mockTransaction);
 
       // Should not start another sync
-      await queueService.forcSync();
+      await queueService.forceSync();
 
       expect(mockDB.transaction).not.toHaveBeenCalled();
     });
