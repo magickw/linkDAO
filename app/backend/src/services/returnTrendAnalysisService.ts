@@ -1,5 +1,5 @@
 import { db } from '../db/index';
-import { returns, returnAnalyticsDaily, returnAnalyticsHourly } from '../db/schema';
+import { returns, returnAnalyticsDaily, returnAnalyticsHourly, users } from '../db/schema';
 import { eq, and, gte, lte, sql, desc, count, avg, sum } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 import { redisService } from './redisService';
@@ -86,6 +86,7 @@ export interface ReturnTrendAnalysis {
   growthRate: GrowthRateData;
   projectedVolume: number;
   trendDirection: 'increasing' | 'decreasing' | 'stable';
+  geographicDistribution?: GeographicDistributionAnalytics;
 }
 
 export interface CategoryReturnStats {
@@ -117,6 +118,35 @@ export interface CategoryComparison {
   previousPeriodReturns: number;
   percentageChange: number;
   trend: 'improving' | 'worsening' | 'stable';
+}
+
+export interface GeographicReturnData {
+  country: string;
+  countryCode: string;
+  state?: string;
+  city?: string;
+  totalReturns: number;
+  totalRefundAmount: number;
+  averageProcessingTime: number;
+  approvalRate: number;
+  returnRate: number;
+  percentageOfTotalReturns: number;
+  trendDirection: 'increasing' | 'decreasing' | 'stable';
+  topReturnReasons: Array<{ reason: string; count: number }>;
+}
+
+export interface GeographicDistributionAnalytics {
+  byCountry: GeographicReturnData[];
+  byState: GeographicReturnData[];
+  byCity: GeographicReturnData[];
+  topRegions: GeographicReturnData[];
+  insights: string[];
+  heatmapData: Array<{
+    location: string;
+    coordinates?: { lat: number; lng: number };
+    value: number;
+    intensity: number;
+  }>;
 }
 
 // ============================================================================
@@ -1491,6 +1521,650 @@ export class ReturnTrendAnalysisService {
   }
 
   // ========================================================================
+  // GEOGRAPHIC DISTRIBUTION ANALYSIS
+  // ========================================================================
+
+  /**
+   * Get geographic distribution of returns
+   * Validates: Property 4 - Comprehensive Trend Analysis (geographic dimension)
+   */
+  async getGeographicDistributionAnalytics(
+    period: AnalyticsPeriod,
+    sellerId?: string
+  ): Promise<GeographicDistributionAnalytics> {
+    const cacheKey = `return:geographic:distribution:${sellerId || 'all'}:${period.start}:${period.end}`;
+
+    try {
+      // Try cache first
+      const cached = await redisService.get(cacheKey);
+      if (cached) {
+        safeLogger.debug('Returning cached geographic distribution analytics');
+        return cached;
+      }
+
+      const startDate = new Date(period.start);
+      const endDate = new Date(period.end);
+
+      // Get geographic data at different levels
+      const [byCountry, byState, byCity] = await Promise.all([
+        this.getReturnsByCountry(startDate, endDate, sellerId),
+        this.getReturnsByState(startDate, endDate, sellerId),
+        this.getReturnsByCity(startDate, endDate, sellerId),
+      ]);
+
+      // Identify top regions (by total returns)
+      const topRegions = [...byCountry]
+        .sort((a, b) => b.totalReturns - a.totalReturns)
+        .slice(0, 10);
+
+      // Generate heatmap data
+      const heatmapData = this.generateHeatmapData(byCountry, byState);
+
+      // Generate insights
+      const insights = this.generateGeographicInsights(byCountry, byState, byCity);
+
+      const analytics: GeographicDistributionAnalytics = {
+        byCountry,
+        byState,
+        byCity,
+        topRegions,
+        insights,
+        heatmapData,
+      };
+
+      // Cache the result
+      await redisService.set(cacheKey, analytics, this.CACHE_TTL.TREND_ANALYSIS);
+
+      safeLogger.info('Geographic distribution analytics completed', {
+        sellerId: sellerId || 'all',
+        totalCountries: byCountry.length,
+        totalStates: byState.length,
+        totalCities: byCity.length,
+      });
+
+      return analytics;
+    } catch (error) {
+      safeLogger.error('Error getting geographic distribution analytics:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get returns aggregated by country
+   */
+  private async getReturnsByCountry(
+    startDate: Date,
+    endDate: Date,
+    sellerId?: string
+  ): Promise<GeographicReturnData[]> {
+    try {
+      // Build query conditions
+      const conditions = [
+        gte(returns.createdAt, startDate),
+        lte(returns.createdAt, endDate)
+      ];
+
+      if (sellerId) {
+        conditions.push(eq(returns.sellerId, sellerId));
+      }
+
+      // Get all returns with buyer information
+      const periodReturns = await db
+        .select({
+          return: returns,
+          buyer: {
+            shippingCountry: users.shippingCountry,
+            billingCountry: users.billingCountry,
+          }
+        })
+        .from(returns)
+        .leftJoin(users, eq(returns.buyerId, users.id))
+        .where(and(...conditions));
+
+      // Group by country
+      const countryMap = new Map<string, {
+        returns: typeof periodReturns;
+        totalOrders: number;
+      }>();
+
+      periodReturns.forEach(item => {
+        // Use shipping country, fallback to billing country
+        const country = item.buyer?.shippingCountry || item.buyer?.billingCountry || 'Unknown';
+        
+        const existing = countryMap.get(country) || { returns: [], totalOrders: 0 };
+        existing.returns.push(item);
+        countryMap.set(country, existing);
+      });
+
+      // Calculate stats for each country
+      const countryStats: GeographicReturnData[] = [];
+      const totalReturns = periodReturns.length;
+
+      for (const [countryCode, data] of countryMap.entries()) {
+        const countryReturns = data.returns;
+        const countryTotalReturns = countryReturns.length;
+
+        // Calculate approval rate
+        const approvedReturns = countryReturns.filter(
+          r => r.return.status === 'approved' || r.return.status === 'completed'
+        ).length;
+        const approvalRate = countryTotalReturns > 0 
+          ? (approvedReturns / countryTotalReturns) * 100 
+          : 0;
+
+        // Calculate total refund amount
+        const totalRefundAmount = countryReturns.reduce((sum, item) => {
+          return sum + (Number(item.return.refundAmount) || 0);
+        }, 0);
+
+        // Calculate average processing time
+        const processingTimes = countryReturns
+          .filter(r => r.return.completedAt && r.return.createdAt)
+          .map(r => {
+            const completedAt = r.return.completedAt as Date;
+            const createdAt = r.return.createdAt as Date;
+            return (completedAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60); // hours
+          });
+
+        const averageProcessingTime = processingTimes.length > 0
+          ? processingTimes.reduce((sum, time) => sum + time, 0) / processingTimes.length
+          : 0;
+
+        // Calculate percentage of total returns
+        const percentageOfTotalReturns = totalReturns > 0
+          ? (countryTotalReturns / totalReturns) * 100
+          : 0;
+
+        // Get top return reasons for this country
+        const reasonCounts = new Map<string, number>();
+        countryReturns.forEach(item => {
+          const reason = item.return.returnReason || 'unknown';
+          reasonCounts.set(reason, (reasonCounts.get(reason) || 0) + 1);
+        });
+
+        const topReturnReasons = Array.from(reasonCounts.entries())
+          .map(([reason, count]) => ({ reason, count }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 3);
+
+        countryStats.push({
+          country: this.getCountryName(countryCode),
+          countryCode,
+          totalReturns: countryTotalReturns,
+          totalRefundAmount,
+          averageProcessingTime,
+          approvalRate,
+          returnRate: 0, // Would need total orders per country
+          percentageOfTotalReturns,
+          trendDirection: 'stable', // Would calculate from historical data
+          topReturnReasons,
+        });
+      }
+
+      // Sort by total returns descending
+      return countryStats.sort((a, b) => b.totalReturns - a.totalReturns);
+    } catch (error) {
+      safeLogger.error('Error getting returns by country:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get returns aggregated by state/province
+   */
+  private async getReturnsByState(
+    startDate: Date,
+    endDate: Date,
+    sellerId?: string
+  ): Promise<GeographicReturnData[]> {
+    try {
+      // Build query conditions
+      const conditions = [
+        gte(returns.createdAt, startDate),
+        lte(returns.createdAt, endDate)
+      ];
+
+      if (sellerId) {
+        conditions.push(eq(returns.sellerId, sellerId));
+      }
+
+      // Get all returns with buyer information
+      const periodReturns = await db
+        .select({
+          return: returns,
+          buyer: {
+            shippingState: users.shippingState,
+            shippingCountry: users.shippingCountry,
+            billingState: users.billingState,
+            billingCountry: users.billingCountry,
+          }
+        })
+        .from(returns)
+        .leftJoin(users, eq(returns.buyerId, users.id))
+        .where(and(...conditions));
+
+      // Group by state and country
+      const stateMap = new Map<string, {
+        returns: typeof periodReturns;
+        country: string;
+      }>();
+
+      periodReturns.forEach(item => {
+        const state = item.buyer?.shippingState || item.buyer?.billingState;
+        const country = item.buyer?.shippingCountry || item.buyer?.billingCountry || 'Unknown';
+        
+        if (!state) return; // Skip if no state information
+
+        const key = `${state}|${country}`;
+        const existing = stateMap.get(key) || { returns: [], country };
+        existing.returns.push(item);
+        stateMap.set(key, existing);
+      });
+
+      // Calculate stats for each state
+      const stateStats: GeographicReturnData[] = [];
+      const totalReturns = periodReturns.length;
+
+      for (const [key, data] of stateMap.entries()) {
+        const [state, countryCode] = key.split('|');
+        const stateReturns = data.returns;
+        const stateTotalReturns = stateReturns.length;
+
+        // Calculate approval rate
+        const approvedReturns = stateReturns.filter(
+          r => r.return.status === 'approved' || r.return.status === 'completed'
+        ).length;
+        const approvalRate = stateTotalReturns > 0 
+          ? (approvedReturns / stateTotalReturns) * 100 
+          : 0;
+
+        // Calculate total refund amount
+        const totalRefundAmount = stateReturns.reduce((sum, item) => {
+          return sum + (Number(item.return.refundAmount) || 0);
+        }, 0);
+
+        // Calculate average processing time
+        const processingTimes = stateReturns
+          .filter(r => r.return.completedAt && r.return.createdAt)
+          .map(r => {
+            const completedAt = r.return.completedAt as Date;
+            const createdAt = r.return.createdAt as Date;
+            return (completedAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+          });
+
+        const averageProcessingTime = processingTimes.length > 0
+          ? processingTimes.reduce((sum, time) => sum + time, 0) / processingTimes.length
+          : 0;
+
+        // Calculate percentage of total returns
+        const percentageOfTotalReturns = totalReturns > 0
+          ? (stateTotalReturns / totalReturns) * 100
+          : 0;
+
+        // Get top return reasons
+        const reasonCounts = new Map<string, number>();
+        stateReturns.forEach(item => {
+          const reason = item.return.returnReason || 'unknown';
+          reasonCounts.set(reason, (reasonCounts.get(reason) || 0) + 1);
+        });
+
+        const topReturnReasons = Array.from(reasonCounts.entries())
+          .map(([reason, count]) => ({ reason, count }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 3);
+
+        stateStats.push({
+          country: this.getCountryName(countryCode),
+          countryCode,
+          state,
+          totalReturns: stateTotalReturns,
+          totalRefundAmount,
+          averageProcessingTime,
+          approvalRate,
+          returnRate: 0,
+          percentageOfTotalReturns,
+          trendDirection: 'stable',
+          topReturnReasons,
+        });
+      }
+
+      // Sort by total returns descending
+      return stateStats.sort((a, b) => b.totalReturns - a.totalReturns);
+    } catch (error) {
+      safeLogger.error('Error getting returns by state:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get returns aggregated by city
+   */
+  private async getReturnsByCity(
+    startDate: Date,
+    endDate: Date,
+    sellerId?: string
+  ): Promise<GeographicReturnData[]> {
+    try {
+      // Build query conditions
+      const conditions = [
+        gte(returns.createdAt, startDate),
+        lte(returns.createdAt, endDate)
+      ];
+
+      if (sellerId) {
+        conditions.push(eq(returns.sellerId, sellerId));
+      }
+
+      // Get all returns with buyer information
+      const periodReturns = await db
+        .select({
+          return: returns,
+          buyer: {
+            shippingCity: users.shippingCity,
+            shippingState: users.shippingState,
+            shippingCountry: users.shippingCountry,
+            billingCity: users.billingCity,
+            billingState: users.billingState,
+            billingCountry: users.billingCountry,
+          }
+        })
+        .from(returns)
+        .leftJoin(users, eq(returns.buyerId, users.id))
+        .where(and(...conditions));
+
+      // Group by city, state, and country
+      const cityMap = new Map<string, {
+        returns: typeof periodReturns;
+        state: string;
+        country: string;
+      }>();
+
+      periodReturns.forEach(item => {
+        const city = item.buyer?.shippingCity || item.buyer?.billingCity;
+        const state = item.buyer?.shippingState || item.buyer?.billingState || '';
+        const country = item.buyer?.shippingCountry || item.buyer?.billingCountry || 'Unknown';
+        
+        if (!city) return; // Skip if no city information
+
+        const key = `${city}|${state}|${country}`;
+        const existing = cityMap.get(key) || { returns: [], state, country };
+        existing.returns.push(item);
+        cityMap.set(key, existing);
+      });
+
+      // Calculate stats for each city
+      const cityStats: GeographicReturnData[] = [];
+      const totalReturns = periodReturns.length;
+
+      for (const [key, data] of cityMap.entries()) {
+        const [city, state, countryCode] = key.split('|');
+        const cityReturns = data.returns;
+        const cityTotalReturns = cityReturns.length;
+
+        // Only include cities with significant return volume
+        if (cityTotalReturns < 3) continue;
+
+        // Calculate approval rate
+        const approvedReturns = cityReturns.filter(
+          r => r.return.status === 'approved' || r.return.status === 'completed'
+        ).length;
+        const approvalRate = cityTotalReturns > 0 
+          ? (approvedReturns / cityTotalReturns) * 100 
+          : 0;
+
+        // Calculate total refund amount
+        const totalRefundAmount = cityReturns.reduce((sum, item) => {
+          return sum + (Number(item.return.refundAmount) || 0);
+        }, 0);
+
+        // Calculate average processing time
+        const processingTimes = cityReturns
+          .filter(r => r.return.completedAt && r.return.createdAt)
+          .map(r => {
+            const completedAt = r.return.completedAt as Date;
+            const createdAt = r.return.createdAt as Date;
+            return (completedAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+          });
+
+        const averageProcessingTime = processingTimes.length > 0
+          ? processingTimes.reduce((sum, time) => sum + time, 0) / processingTimes.length
+          : 0;
+
+        // Calculate percentage of total returns
+        const percentageOfTotalReturns = totalReturns > 0
+          ? (cityTotalReturns / totalReturns) * 100
+          : 0;
+
+        // Get top return reasons
+        const reasonCounts = new Map<string, number>();
+        cityReturns.forEach(item => {
+          const reason = item.return.returnReason || 'unknown';
+          reasonCounts.set(reason, (reasonCounts.get(reason) || 0) + 1);
+        });
+
+        const topReturnReasons = Array.from(reasonCounts.entries())
+          .map(([reason, count]) => ({ reason, count }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 3);
+
+        cityStats.push({
+          country: this.getCountryName(countryCode),
+          countryCode,
+          state: state || undefined,
+          city,
+          totalReturns: cityTotalReturns,
+          totalRefundAmount,
+          averageProcessingTime,
+          approvalRate,
+          returnRate: 0,
+          percentageOfTotalReturns,
+          trendDirection: 'stable',
+          topReturnReasons,
+        });
+      }
+
+      // Sort by total returns descending, limit to top 50 cities
+      return cityStats
+        .sort((a, b) => b.totalReturns - a.totalReturns)
+        .slice(0, 50);
+    } catch (error) {
+      safeLogger.error('Error getting returns by city:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate heatmap data for visualization
+   */
+  private generateHeatmapData(
+    byCountry: GeographicReturnData[],
+    byState: GeographicReturnData[]
+  ): Array<{
+    location: string;
+    coordinates?: { lat: number; lng: number };
+    value: number;
+    intensity: number;
+  }> {
+    try {
+      const heatmapData: Array<{
+        location: string;
+        coordinates?: { lat: number; lng: number };
+        value: number;
+        intensity: number;
+      }> = [];
+
+      // Find max returns for normalization
+      const maxReturns = Math.max(
+        ...byCountry.map(c => c.totalReturns),
+        ...byState.map(s => s.totalReturns)
+      );
+
+      // Add country-level data
+      byCountry.forEach(country => {
+        heatmapData.push({
+          location: `${country.country} (${country.countryCode})`,
+          value: country.totalReturns,
+          intensity: maxReturns > 0 ? country.totalReturns / maxReturns : 0,
+        });
+      });
+
+      // Add state-level data for top states
+      byState.slice(0, 20).forEach(state => {
+        heatmapData.push({
+          location: `${state.state}, ${state.countryCode}`,
+          value: state.totalReturns,
+          intensity: maxReturns > 0 ? state.totalReturns / maxReturns : 0,
+        });
+      });
+
+      return heatmapData.sort((a, b) => b.value - a.value);
+    } catch (error) {
+      safeLogger.error('Error generating heatmap data:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Generate insights from geographic data
+   */
+  private generateGeographicInsights(
+    byCountry: GeographicReturnData[],
+    byState: GeographicReturnData[],
+    byCity: GeographicReturnData[]
+  ): string[] {
+    const insights: string[] = [];
+
+    try {
+      // Insight 1: Top country
+      if (byCountry.length > 0) {
+        const topCountry = byCountry[0];
+        insights.push(
+          `${topCountry.country} accounts for ${topCountry.percentageOfTotalReturns.toFixed(1)}% of all returns with ${topCountry.totalReturns} returns`
+        );
+      }
+
+      // Insight 2: Geographic concentration
+      if (byCountry.length >= 3) {
+        const top3Percentage = byCountry
+          .slice(0, 3)
+          .reduce((sum, c) => sum + c.percentageOfTotalReturns, 0);
+        
+        insights.push(
+          `Top 3 countries represent ${top3Percentage.toFixed(1)}% of total returns, indicating ${
+            top3Percentage > 70 ? 'high' : top3Percentage > 50 ? 'moderate' : 'low'
+          } geographic concentration`
+        );
+      }
+
+      // Insight 3: Processing time variations
+      if (byCountry.length > 1) {
+        const avgProcessingTime = byCountry.reduce((sum, c) => sum + c.averageProcessingTime, 0) / byCountry.length;
+        const slowCountries = byCountry.filter(c => c.averageProcessingTime > avgProcessingTime * 1.5);
+        
+        if (slowCountries.length > 0) {
+          insights.push(
+            `${slowCountries.length} ${slowCountries.length === 1 ? 'country has' : 'countries have'} processing times 50% above average (${slowCountries.map(c => c.country).slice(0, 3).join(', ')})`
+          );
+        }
+      }
+
+      // Insight 4: Approval rate variations
+      if (byCountry.length > 1) {
+        const avgApprovalRate = byCountry.reduce((sum, c) => sum + c.approvalRate, 0) / byCountry.length;
+        const lowApprovalCountries = byCountry.filter(c => c.approvalRate < avgApprovalRate * 0.8);
+        
+        if (lowApprovalCountries.length > 0) {
+          insights.push(
+            `${lowApprovalCountries.length} ${lowApprovalCountries.length === 1 ? 'country has' : 'countries have'} approval rates 20% below average`
+          );
+        }
+      }
+
+      // Insight 5: Top return reasons by region
+      if (byCountry.length > 0 && byCountry[0].topReturnReasons.length > 0) {
+        const topCountry = byCountry[0];
+        const topReason = topCountry.topReturnReasons[0];
+        insights.push(
+          `In ${topCountry.country}, "${topReason.reason}" is the most common return reason (${topReason.count} returns)`
+        );
+      }
+
+      // Insight 6: State-level concentration
+      if (byState.length > 0) {
+        const topState = byState[0];
+        insights.push(
+          `${topState.state}, ${topState.country} has the highest state-level return volume with ${topState.totalReturns} returns`
+        );
+      }
+
+      // Insight 7: City-level hotspots
+      if (byCity.length > 0) {
+        const topCity = byCity[0];
+        insights.push(
+          `${topCity.city} is the top city for returns with ${topCity.totalReturns} returns (${topCity.percentageOfTotalReturns.toFixed(1)}% of total)`
+        );
+      }
+
+      // Insight 8: Refund amount concentration
+      if (byCountry.length > 0) {
+        const sortedByRefund = [...byCountry].sort((a, b) => b.totalRefundAmount - a.totalRefundAmount);
+        const topRefundCountry = sortedByRefund[0];
+        const totalRefunds = byCountry.reduce((sum, c) => sum + c.totalRefundAmount, 0);
+        const percentage = totalRefunds > 0 ? (topRefundCountry.totalRefundAmount / totalRefunds) * 100 : 0;
+        
+        insights.push(
+          `${topRefundCountry.country} accounts for ${percentage.toFixed(1)}% of total refund amount ($${topRefundCountry.totalRefundAmount.toFixed(2)})`
+        );
+      }
+
+    } catch (error) {
+      safeLogger.error('Error generating geographic insights:', error);
+    }
+
+    return insights;
+  }
+
+  /**
+   * Get human-readable country name from country code
+   */
+  private getCountryName(countryCode: string): string {
+    // In production, this would use a comprehensive country code mapping
+    // For now, return the code if unknown
+    const countryNames: Record<string, string> = {
+      'US': 'United States',
+      'CA': 'Canada',
+      'GB': 'United Kingdom',
+      'AU': 'Australia',
+      'DE': 'Germany',
+      'FR': 'France',
+      'IT': 'Italy',
+      'ES': 'Spain',
+      'NL': 'Netherlands',
+      'BE': 'Belgium',
+      'CH': 'Switzerland',
+      'AT': 'Austria',
+      'SE': 'Sweden',
+      'NO': 'Norway',
+      'DK': 'Denmark',
+      'FI': 'Finland',
+      'IE': 'Ireland',
+      'PT': 'Portugal',
+      'PL': 'Poland',
+      'CZ': 'Czech Republic',
+      'JP': 'Japan',
+      'CN': 'China',
+      'KR': 'South Korea',
+      'IN': 'India',
+      'BR': 'Brazil',
+      'MX': 'Mexico',
+      'AR': 'Argentina',
+      'Unknown': 'Unknown',
+    };
+
+    return countryNames[countryCode] || countryCode;
+  }
+
+  // ========================================================================
   // COMPREHENSIVE TREND ANALYSIS
   // ========================================================================
 
@@ -1500,9 +2174,10 @@ export class ReturnTrendAnalysisService {
    */
   async getComprehensiveTrendAnalysis(
     period: AnalyticsPeriod,
-    sellerId?: string
+    sellerId?: string,
+    includeGeographic: boolean = false
   ): Promise<ReturnTrendAnalysis> {
-    const cacheKey = `return:trend:comprehensive:${sellerId || 'all'}:${period.start}:${period.end}`;
+    const cacheKey = `return:trend:comprehensive:${sellerId || 'all'}:${period.start}:${period.end}:${includeGeographic}`;
 
     try {
       // Try cache first
@@ -1529,12 +2204,19 @@ export class ReturnTrendAnalysisService {
         this.calculateGrowthRates(period, sellerId),
       ]);
 
+      // Optionally include geographic distribution
+      let geographicDistribution: GeographicDistributionAnalytics | undefined;
+      if (includeGeographic) {
+        geographicDistribution = await this.getGeographicDistributionAnalytics(period, sellerId);
+      }
+
       const analysis: ReturnTrendAnalysis = {
         periodComparison,
         seasonalPatterns,
         growthRate,
         projectedVolume: growthRate.projectedVolume.nextMonth,
         trendDirection: growthRate.trendDirection,
+        geographicDistribution,
       };
 
       // Cache the result
@@ -1544,6 +2226,7 @@ export class ReturnTrendAnalysisService {
         sellerId: sellerId || 'all',
         trendDirection: analysis.trendDirection,
         monthlyGrowthRate: growthRate.monthlyGrowthRate,
+        includeGeographic,
       });
 
       return analysis;

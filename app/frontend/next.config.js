@@ -3,7 +3,12 @@ const webpack = require('webpack');
 
 const nextConfig = {
   reactStrictMode: true,
-
+  
+  // Configure path aliases
+  experimental: {
+    esmExternals: false,
+  },
+  
   outputFileTracingRoot: require("path").join(__dirname),
 
   // Exclude playwright from output file tracing
@@ -38,6 +43,12 @@ const nextConfig = {
   },
 
   webpack: (config, { isServer }) => {
+    // Configure path aliases
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': require('path').resolve(__dirname, 'src'),
+    };
+
     // Use IgnorePlugin to completely ignore playwright modules
     config.plugins.push(
       new webpack.IgnorePlugin({
