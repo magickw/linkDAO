@@ -241,10 +241,10 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
         }, 2000);
       } else if (paymentMethod === 'x402') {
       // Process x402 payment with enhanced error handling
-      try {
-        setIsProcessing(true);
-        setErrorMessage('');
+      setIsProcessing(true);
+      setErrorMessage('');
 
+      try {
         // Validate inputs
         if (!address) {
           throw new Error('Wallet not connected');
