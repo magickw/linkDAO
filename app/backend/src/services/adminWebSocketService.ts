@@ -4,7 +4,7 @@ import { Server as HttpServer } from 'http';
 import { getWebSocketService } from './webSocketService';
 import { databaseService } from './databaseService';
 import { users } from '../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 
 interface AdminUser {
   adminId: string;
@@ -87,10 +87,10 @@ export class AdminWebSocketService {
     if (existingService && (existingService as any).io) {
       this.io = (existingService as any).io;
     } else {
-      const allowedOrigins = process.env.FRONTEND_URL 
+      const allowedOrigins = process.env.FRONTEND_URL
         ? process.env.FRONTEND_URL.split(',').map(url => url.trim())
         : ["http://localhost:3000"];
-        
+
       this.io = new Server(httpServer, {
         cors: {
           origin: allowedOrigins,
@@ -114,15 +114,15 @@ export class AdminWebSocketService {
       safeLogger.info(`Admin client connected: ${socket.id}`);
 
       // Handle admin authentication
-      socket.on('admin_authenticate', async (data: { 
-        adminId: string; 
-        email: string; 
-        role: string; 
+      socket.on('admin_authenticate', async (data: {
+        adminId: string;
+        email: string;
+        role: string;
         permissions: string[];
         dashboardConfig?: DashboardConfig;
       }) => {
         const { adminId, email, role, permissions, dashboardConfig } = data;
-        
+
         if (!adminId || !email || !role) {
           socket.emit('admin_auth_error', { message: 'Invalid admin credentials' });
           return;
@@ -140,7 +140,7 @@ export class AdminWebSocketService {
           // Check if this user is a valid admin in the database
           const db = databaseService.getDatabase();
           let adminUsers: any[] = [];
-          
+
           // First try to find by email for regular admin users
           if (email && email.includes('@')) {
             adminUsers = await db.select()
@@ -152,7 +152,7 @@ export class AdminWebSocketService {
               ))
               .limit(1);
           }
-          
+
           // If not found by email, check if this is the configured admin address
           if (adminUsers.length === 0) {
             const configuredAdminAddress = (
@@ -160,12 +160,12 @@ export class AdminWebSocketService {
               process.env.ADMIN_ADDRESS ||
               '0xEe034b53D4cCb101b2a4faec27708be507197350'
             ).toLowerCase();
-            
+
             // Check if adminId (which could be a wallet address) matches configured admin
             if (adminId && adminId.toLowerCase() === configuredAdminAddress) {
               // Create a virtual admin user for the configured admin address
               safeLogger.info(`Configured admin address authentication: ${adminId}`);
-              
+
               const adminUser: AdminUser = {
                 adminId: adminId,
                 email: email || `admin-${adminId}@linkdao.local`,
@@ -231,11 +231,11 @@ export class AdminWebSocketService {
               return;
             }
           }
-            
+
           if (adminUsers.length > 0) {
             const dbUser = adminUsers[0];
             safeLogger.info(`Admin authentication attempt for: ${email}`);
-            
+
             // Create admin user session with database user data
             const adminUser: AdminUser = {
               adminId: dbUser.id,
@@ -290,7 +290,7 @@ export class AdminWebSocketService {
           }
 
           // For non-admin users, reject for security
-          socket.emit('admin_auth_error', { 
+          socket.emit('admin_auth_error', {
             message: 'Admin access denied - user is not an administrator',
             adminId,
             email,
@@ -299,7 +299,7 @@ export class AdminWebSocketService {
           safeLogger.warn(`Admin authentication rejected for non-admin user: ${email} (${role})`);
         } catch (error) {
           safeLogger.error('Admin authentication error:', error);
-          socket.emit('admin_auth_error', { 
+          socket.emit('admin_auth_error', {
             message: 'Authentication service error - please try again later',
             adminId,
             email,
@@ -317,11 +317,11 @@ export class AdminWebSocketService {
         }
 
         admin.dashboardConfig = { ...admin.dashboardConfig, ...data.config };
-        
+
         // Persist configuration (would integrate with database)
         this.persistDashboardConfig(admin.adminId, admin.dashboardConfig);
 
-        socket.emit('dashboard_config_updated', { 
+        socket.emit('dashboard_config_updated', {
           config: admin.dashboardConfig,
           timestamp: new Date().toISOString()
         });
@@ -330,7 +330,7 @@ export class AdminWebSocketService {
       });
 
       // Handle real-time metric subscriptions
-      socket.on('subscribe_metrics', (data: { 
+      socket.on('subscribe_metrics', (data: {
         categories: string[];
         interval: number;
         filters?: Record<string, any>;
@@ -342,7 +342,7 @@ export class AdminWebSocketService {
         }
 
         // Validate subscription permissions
-        const hasPermission = data.categories.every(category => 
+        const hasPermission = data.categories.every(category =>
           this.hasMetricPermission(admin, category)
         );
 
@@ -371,7 +371,7 @@ export class AdminWebSocketService {
         if (!admin) return;
 
         this.acknowledgeAlert(data.alertId, admin.adminId);
-        
+
         // Broadcast acknowledgment to other admin sessions
         socket.to('admin:all').emit('alert_acknowledged', {
           alertId: data.alertId,
@@ -404,8 +404,8 @@ export class AdminWebSocketService {
           admin.connectionHealth.lastHeartbeat = new Date();
           admin.connectionHealth.status = 'healthy';
         }
-        
-        socket.emit('admin_heartbeat_ack', { 
+
+        socket.emit('admin_heartbeat_ack', {
           timestamp: new Date().toISOString(),
           serverLoad: this.getServerLoad()
         });
@@ -437,16 +437,16 @@ export class AdminWebSocketService {
       // Handle disconnection
       socket.on('disconnect', (reason) => {
         const admin = this.connectedAdmins.get(socket.id);
-        
+
         if (admin) {
           // Update connection health
           admin.connectionHealth.status = 'unstable';
-          
+
           // Remove from admin sessions tracking
           const adminSessionSet = this.adminSessions.get(admin.adminId);
           if (adminSessionSet) {
             adminSessionSet.delete(socket.id);
-            
+
             // If no more sessions for this admin, clean up
             if (adminSessionSet.size === 0) {
               this.adminSessions.delete(admin.adminId);
@@ -456,7 +456,7 @@ export class AdminWebSocketService {
 
           // Remove from connected admins
           this.connectedAdmins.delete(socket.id);
-          
+
           safeLogger.info(`Admin disconnected: ${admin.email} (${socket.id}) - Reason: ${reason}`);
         }
       });
@@ -486,7 +486,7 @@ export class AdminWebSocketService {
 
     // Set up periodic data updates based on dashboard config
     const interval = admin.dashboardConfig.refreshInterval || 5000;
-    
+
     const dataStreamInterval = setInterval(() => {
       if (!this.connectedAdmins.has(socket.id)) {
         clearInterval(dataStreamInterval);
@@ -503,7 +503,7 @@ export class AdminWebSocketService {
   private async sendInitialDashboardData(socket: any, admin: AdminUser) {
     try {
       const dashboardData = await this.generateDashboardData(admin);
-      
+
       socket.emit('dashboard_initial_data', {
         data: dashboardData,
         timestamp: new Date().toISOString(),
@@ -511,7 +511,7 @@ export class AdminWebSocketService {
       });
     } catch (error) {
       safeLogger.error('Error sending initial dashboard data:', error);
-      socket.emit('dashboard_error', { 
+      socket.emit('dashboard_error', {
         message: 'Failed to load initial dashboard data',
         error: error instanceof Error ? error.message : 'Unknown error'
       });
@@ -521,7 +521,7 @@ export class AdminWebSocketService {
   private async sendDashboardUpdate(socket: any, admin: AdminUser) {
     try {
       const updateData = await this.generateDashboardUpdate(admin);
-      
+
       socket.emit('dashboard_update', {
         data: updateData,
         timestamp: new Date().toISOString(),
@@ -555,7 +555,7 @@ export class AdminWebSocketService {
   // Metric collection methods (would integrate with actual monitoring systems)
   private async getSystemMetrics(admin: AdminUser): Promise<Record<string, any>> {
     if (!this.hasMetricPermission(admin, 'system')) return {};
-    
+
     return {
       cpu: Math.random() * 100,
       memory: Math.random() * 100,
@@ -568,7 +568,7 @@ export class AdminWebSocketService {
 
   private async getUserMetrics(admin: AdminUser): Promise<Record<string, any>> {
     if (!this.hasMetricPermission(admin, 'users')) return {};
-    
+
     return {
       totalUsers: 10000 + Math.floor(Math.random() * 1000),
       activeUsers: 500 + Math.floor(Math.random() * 100),
@@ -579,7 +579,7 @@ export class AdminWebSocketService {
 
   private async getBusinessMetrics(admin: AdminUser): Promise<Record<string, any>> {
     if (!this.hasMetricPermission(admin, 'business')) return {};
-    
+
     return {
       revenue: 50000 + Math.random() * 10000,
       transactions: 1000 + Math.floor(Math.random() * 200),
@@ -590,7 +590,7 @@ export class AdminWebSocketService {
 
   private async getSecurityMetrics(admin: AdminUser): Promise<Record<string, any>> {
     if (!this.hasMetricPermission(admin, 'security')) return {};
-    
+
     return {
       threatLevel: 'low',
       blockedRequests: Math.floor(Math.random() * 100),
@@ -616,14 +616,15 @@ export class AdminWebSocketService {
   // Permission and security methods
   private hasMetricPermission(admin: AdminUser, category: string): boolean {
     if (admin.role === 'super_admin') return true;
-    
+
     const permissionMap: Record<string, string[]> = {
       'system': ['admin', 'super_admin'],
       'users': ['admin', 'moderator', 'analyst', 'super_admin'],
       'business': ['admin', 'analyst', 'super_admin'],
-      'security': ['admin', 'super_admin']
+      'security': ['admin', 'super_admin'],
+      'returns': ['admin', 'analyst', 'super_admin', 'moderator']
     };
-    
+
     return permissionMap[category]?.includes(admin.role) || false;
   }
 
@@ -642,10 +643,10 @@ export class AdminWebSocketService {
 
     this.connectedAdmins.forEach((admin, socketId) => {
       const timeSinceLastSeen = now.getTime() - admin.lastSeen.getTime();
-      
+
       if (timeSinceLastSeen > staleThreshold) {
         admin.connectionHealth.status = 'degraded';
-        
+
         // Send connection check
         this.io.of('/admin').to(socketId).emit('admin_connection_check', {
           timestamp: now.toISOString()
@@ -668,10 +669,10 @@ export class AdminWebSocketService {
     if (!socket) return;
 
     const { connectionHealth } = admin;
-    
+
     // Adjust update frequency based on connection quality
     let newInterval = admin.dashboardConfig.refreshInterval || 5000;
-    
+
     if (connectionHealth.dataQuality === 'low') {
       newInterval *= 2; // Reduce frequency for poor connections
     } else if (connectionHealth.latency > 1000) {
@@ -681,7 +682,7 @@ export class AdminWebSocketService {
     // Update the data stream interval if needed
     if ((socket as any).adminDataInterval) {
       clearInterval((socket as any).adminDataInterval);
-      
+
       const dataStreamInterval = setInterval(() => {
         if (!this.connectedAdmins.has(socket.id)) {
           clearInterval(dataStreamInterval);
@@ -689,7 +690,7 @@ export class AdminWebSocketService {
         }
         this.sendDashboardUpdate(socket, admin);
       }, newInterval);
-      
+
       (socket as any).adminDataInterval = dataStreamInterval;
     }
   }
@@ -809,6 +810,17 @@ export class AdminWebSocketService {
     });
   }
 
+  /**
+   * Broadcast return analytics update to subscribed admins
+   */
+  public broadcastReturnUpdate(data: any) {
+    // Broadcast to admins subscribed to 'returns' metrics
+    this.io.of('/admin').to('metrics:returns').emit('return_metrics_update', {
+      data,
+      timestamp: new Date().toISOString()
+    });
+  }
+
   public sendToRole(role: string, event: string, data: any) {
     this.io.of('/admin').to(`role:${role}`).emit(event, {
       ...data,
@@ -865,7 +877,7 @@ export class AdminWebSocketService {
       if (now.getTime() - admin.lastSeen.getTime() > staleThreshold) {
         safeLogger.info(`Cleaning up stale admin connection: ${admin.adminId} (${socketId})`);
         this.connectedAdmins.delete(socketId);
-        
+
         const adminSessionSet = this.adminSessions.get(admin.adminId);
         if (adminSessionSet) {
           adminSessionSet.delete(socketId);
@@ -879,7 +891,7 @@ export class AdminWebSocketService {
 
   public close() {
     safeLogger.info('Shutting down Admin WebSocket service...');
-    
+
     // Clear intervals
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval);

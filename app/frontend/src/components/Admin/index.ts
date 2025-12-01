@@ -3,3 +3,4 @@ export { ThresholdTuningPanel } from './ThresholdTuningPanel';
 export { VendorConfigurationPanel } from './VendorConfigurationPanel';
 export { SystemStatusDashboard } from './SystemStatusDashboard';
 export { AuditLogAnalysis } from './AuditLogAnalysis';
+export { ReturnMonitoringDashboard } from './returns/ReturnMonitoringDashboard';
