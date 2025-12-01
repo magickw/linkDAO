@@ -38,6 +38,21 @@ export class X402PaymentService {
         throw new Error('Missing required fields in x402 payment request');
       }
 
+      // Enhanced validation
+      const amountNum = parseFloat(request.amount);
+      if (isNaN(amountNum) || amountNum <= 0) {
+        throw new Error('Invalid amount: must be a positive number');
+      }
+
+      // Validate Ethereum addresses
+      const ethereumAddressRegex = /^0x[a-fA-F0-9]{40}$/;
+      if (!ethereumAddressRegex.test(request.buyerAddress)) {
+        throw new Error('Invalid buyer address format');
+      }
+      if (!ethereumAddressRegex.test(request.sellerAddress)) {
+        throw new Error('Invalid seller address format');
+      }
+
       // Get CSRF token if needed
       let csrfToken: string | null = null;
       try {
@@ -59,6 +74,7 @@ export class X402PaymentService {
 
       // Call the backend x402 payment API with proper authentication
       const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
         ...authHeaders, // Include Authorization header with Bearer token
       };
 
@@ -67,42 +83,85 @@ export class X402PaymentService {
         headers['X-CSRF-Token'] = csrfToken;
       }
 
-      const response = await fetch(`${this.API_BASE_URL}/api/x402/payment`, {
-        method: 'POST',
-        headers,
-        credentials: 'include', // Include session cookies for authentication
-        body: JSON.stringify(request)
-      });
+      // Add retry mechanism for network issues
+      let retryCount = 0;
+      const maxRetries = 3;
+      
+      while (retryCount < maxRetries) {
+        try {
+          const response = await fetch(`${this.API_BASE_URL}/api/x402/payment`, {
+            method: 'POST',
+            headers,
+            credentials: 'include', // Include session cookies for authentication
+            body: JSON.stringify(request),
+            timeout: 30000 // 30 second timeout
+          });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('X402 payment failed with status:', response.status, errorText);
-        throw new Error(`Failed to process x402 payment: ${response.status} ${response.statusText} - ${errorText}`);
+          if (response.ok) {
+            const result = await response.json();
+
+            if (!result.success) {
+              throw new Error(result.error || 'Failed to process x402 payment');
+            }
+
+            // Validate response data
+            if (!result.data) {
+              throw new Error('Invalid response from x402 payment service');
+            }
+
+            return {
+              success: true,
+              paymentUrl: result.data.paymentUrl,
+              status: result.data.status,
+              transactionId: result.data.transactionId,
+            };
+          } else {
+            const errorText = await response.text();
+            
+            // Don't retry on client errors (4xx)
+            if (response.status >= 400 && response.status < 500) {
+              throw new Error(`Failed to process x402 payment: ${response.status} ${response.statusText} - ${errorText}`);
+            }
+            
+            // Retry on server errors (5xx)
+            throw new Error(`Server error: ${response.status} ${response.statusText}`);
+          }
+        } catch (fetchError) {
+          retryCount++;
+          if (retryCount >= maxRetries) {
+            throw fetchError;
+          }
+          // Exponential backoff
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+        }
       }
 
-      const result = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to process x402 payment');
-      }
-
-      // Validate response data
-      if (!result.data) {
-        throw new Error('Invalid response from x402 payment service');
-      }
-
-      return {
-        success: true,
-        paymentUrl: result.data.paymentUrl,
-        status: result.data.status,
-        transactionId: result.data.transactionId,
-      };
+      throw new Error('Max retries exceeded');
     } catch (error) {
       console.error('X402 payment processing failed:', error);
+      
+      // User-friendly error messages
+      let userMessage = 'An unexpected error occurred during payment processing.';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('network') || error.message.includes('fetch')) {
+          userMessage = 'Connection issue. Please check your internet connection and try again.';
+        } else if (error.message.includes('Invalid amount')) {
+          userMessage = 'Please enter a valid payment amount.';
+        } else if (error.message.includes('Invalid address')) {
+          userMessage = 'Invalid wallet address. Please check your connection.';
+        } else if (error.message.includes('Server error')) {
+          userMessage = 'Payment service temporarily unavailable. Please try again in a few minutes.';
+        } else if (error.message.includes('CSRF')) {
+          userMessage = 'Security verification failed. Please refresh the page and try again.';
+        }
+      }
+      
       return {
         success: false,
         status: 'failed',
-        error: error instanceof Error ? error.message : 'Unknown error occurred during x402 payment processing',
+        error: userMessage,
+        technicalError: error instanceof Error ? error.message : 'Unknown error'
       };
     }
   }

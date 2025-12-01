@@ -11,6 +11,7 @@ import { tokenService } from '@/services/web3/tokenService';
 import { fiatPaymentService, FiatPaymentQuote } from '@/services/payment/fiatPaymentService';
 import { dexService, DexSwapQuote } from '@/services/web3/dexService';
 import { x402PaymentService } from '@/services/x402PaymentService';
+import { x402PaymentMonitor } from '@/services/x402PaymentMonitor';
 import { Button } from '@/design-system/components/Button';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { 
@@ -115,24 +116,43 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
           setSelectedQuote(quotes[0]);
         }
       } else if (paymentMethod === 'x402') {
-        // For x402, we need to estimate costs differently - let's create mock quotes
-        const expectedAmount = parseFloat(amount); // User is buying LDAO tokens, so amount stays the same
-        const costUSD = expectedAmount * (tokenInfo?.priceUSD || 0.5);
-        const mockQuote: DexSwapQuote = {
-          dex: 'uniswap', // Using uniswap since x402 is not a DEX
-          fromToken: 'USD',
-          toToken: 'LDAO',
-          fromAmount: costUSD.toString(),
-          toAmount: expectedAmount.toString(),
-          expectedAmount: expectedAmount.toString(),
-          fee: '0.01', // Very low fees for x402 - string format
-          priceImpact: 0.001,
-          slippage: 0.005,
-          path: ['USD', 'LDAO'],
-          estimatedGas: '21000'
-        };
-        setDexQuotes([mockQuote]);
-        setSelectedQuote(mockQuote);
+      // For x402, create realistic quotes with enhanced fee calculation
+      const amountNum = parseFloat(amount);
+      const tokenPrice = tokenInfo?.priceUSD || 0.5;
+      const estimatedTokens = amountNum / tokenPrice;
+      
+      // Calculate x402 fees (typically 1% or lower)
+      const x402FeeRate = 0.01; // 1%
+      const x402Fee = amountNum * x402FeeRate;
+      const netAmount = amountNum - x402Fee;
+      const netTokens = netAmount / tokenPrice;
+      
+      const mockQuote = {
+        id: 'x402-quote-' + Date.now(),
+        type: 'x402' as const,
+        fromToken: 'USD',
+        toToken: 'LDAO',
+        fromAmount: amount,
+        toAmount: netTokens.toFixed(6),
+        price: tokenPrice.toFixed(6),
+        priceImpact: '0.05', // Lower price impact with x402
+        dex: 'coinbase-x402',
+        route: ['x402-protocol', 'coinbase-processor'],
+        estimatedGas: '0.1', // Minimal gas fees
+        fee: x402Fee.toFixed(2),
+        estimatedTime: '30 seconds - 2 minutes',
+        confidence: 98,
+        // Additional x402-specific fields
+        processor: 'Coinbase',
+        protocol: 'x402',
+        feeBreakdown: {
+          protocol: x402Fee.toFixed(2),
+          network: '0.00',
+          processor: '0.00'
+        }
+      };
+      setDexQuotes([mockQuote]);
+    }
       } else {
         // Fetch DEX quotes for swapping USDC to LDAO
         const fromToken = 'USDC';
@@ -220,48 +240,89 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
           }, 2000);
         }, 2000);
       } else if (paymentMethod === 'x402') {
-        // Process x402 payment
-        try {
-          // Create x402 payment request
-          const costUSD = parseFloat(amount) * (tokenInfo?.priceUSD || 0.5);
-          const x402Request = {
-            orderId: `ldao-purchase-${Date.now()}`,
-            amount: costUSD.toString(),
-            currency: 'USD',
-            buyerAddress: address,
-            sellerAddress: '0x0000000000000000000000000000000000000000', // Platform address
-            listingId: 'ldao-token-purchase'
-          };
+      // Process x402 payment with enhanced error handling
+      try {
+        setIsProcessing(true);
+        setErrorMessage('');
 
-          // Process the x402 payment
-          const paymentResult = await x402PaymentService.processPayment(x402Request);
-          
-          if (paymentResult.success && paymentResult.paymentUrl) {
-            // Redirect to x402 payment page
-            window.open(paymentResult.paymentUrl, '_blank');
-            
-            // Simulate successful purchase
-            setTimeout(() => {
-              setTransactionStatus('success');
-              // Refresh user balance
-              loadUserBalance();
-              // Notify parent of success
-              if (onPurchaseSuccess) {
-                onPurchaseSuccess();
-              }
-              // Close modal after a delay
-              setTimeout(() => {
-                onClose();
-                setTransactionStatus('idle');
-              }, 2000);
-            }, 2000);
-          } else {
-            throw new Error(paymentResult.error || 'X402 payment failed');
-          }
-        } catch (error) {
-          throw new Error(`X402 payment failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        // Validate inputs
+        if (!address) {
+          throw new Error('Wallet not connected');
         }
-      } else {
+
+        const amountNum = parseFloat(amount);
+        if (isNaN(amountNum) || amountNum <= 0) {
+          throw new Error('Invalid amount');
+        }
+
+        // Create x402 payment request with enhanced metadata
+        const x402Request = {
+          orderId: `ldao-purchase-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          amount: amount,
+          currency: 'USD',
+          buyerAddress: address,
+          sellerAddress: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6', // Platform treasury
+          listingId: 'ldao-token-purchase',
+          metadata: {
+            tokenType: 'LDAO',
+            purchaseType: 'marketplace',
+            platform: 'linkdao',
+            timestamp: new Date().toISOString()
+          }
+        };
+
+        // Process the x402 payment
+        const paymentResult = await x402PaymentService.processPayment(x402Request);
+
+        if (paymentResult.success && paymentResult.paymentUrl) {
+          // Store transaction details for status checking
+          if (paymentResult.transactionId) {
+            localStorage.setItem(`x402_${paymentResult.transactionId}`, JSON.stringify({
+              orderId: x402Request.orderId,
+              amount: amount,
+              status: 'pending',
+              timestamp: Date.now()
+            }));
+          }
+
+          // Redirect to x402 payment page in new window
+          const paymentWindow = window.open(paymentResult.paymentUrl, '_blank', 'width=500,height=600');
+          
+          // Start payment status polling
+          if (paymentResult.transactionId) {
+            x402PaymentMonitor.startMonitoring(
+              paymentResult.transactionId,
+              x402Request.orderId,
+              (status) => {
+                if (status === 'completed') {
+                  setTransactionStatus('success');
+                  onPurchaseSuccess?.();
+                  paymentWindow?.close();
+                } else if (status === 'failed') {
+                  throw new Error('Payment failed during processing');
+                }
+              }
+            );
+          }
+        } else {
+          throw new Error(paymentResult.error || 'X402 payment initialization failed');
+        }
+      } catch (error) {
+        setTransactionStatus('error');
+        setErrorMessage(error instanceof Error ? error.message : 'X402 payment failed');
+        
+        // Log error for debugging
+        console.error('X402 Payment Error:', {
+          error,
+          amount,
+          paymentMethod,
+          address: address,
+          timestamp: new Date().toISOString()
+        });
+      } finally {
+        setIsProcessing(false);
+      }
+    } else {
         // Execute DEX swap using the real DEX service
         const quote = selectedQuote as DexSwapQuote;
         const fromToken = 'USDC';

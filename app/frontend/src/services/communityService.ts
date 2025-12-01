@@ -417,7 +417,7 @@ export class CommunityService {
 
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/user/memberships?page=${page}&limit=${limit}`,
+        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/my-communities?page=${page}&limit=${limit}`,
         {
           method: 'GET',
           headers: {
@@ -473,7 +473,7 @@ export class CommunityService {
 
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/my-communities?page=${page}&limit=${limit}`,
+        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/user/created?page=${page}&limit=${limit}`,
         {
           method: 'GET',
           headers: {
