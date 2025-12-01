@@ -34,7 +34,9 @@ export default function CommentThread({
   const [replyContent, setReplyContent] = useState('');
   const [replySubmitting, setReplySubmitting] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const [replies, setReplies] = useState<Comment[]>(comment.replies || []);
+  const [replies, setReplies] = useState<Comment[]>(
+    Array.isArray(comment.replies) ? comment.replies : []
+  );
   const [userVote, setUserVote] = useState<'upvote' | 'downvote' | null>(null);
   const [loadingReplies, setLoadingReplies] = useState(false);
   const [repliesLoaded, setRepliesLoaded] = useState(false);

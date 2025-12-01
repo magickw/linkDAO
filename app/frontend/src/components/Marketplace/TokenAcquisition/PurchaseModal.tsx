@@ -527,28 +527,28 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
                   <div>
                     <div className="font-medium text-white">
                       {paymentMethod === 'fiat' 
-                        ? (quote as FiatPaymentQuote).provider.toUpperCase()
+                        ? (quote as FiatPaymentQuote)?.provider?.toUpperCase() || 'UNKNOWN'
                         : paymentMethod === 'x402'
                         ? 'x402 Protocol'
-                        : (quote as DexSwapQuote).dex.toUpperCase()}
+                        : (quote as DexSwapQuote)?.dex?.toUpperCase() || 'UNKNOWN'}
                     </div>
                     <div className="text-sm text-white/70">
                       {paymentMethod === 'fiat' 
-                        ? `Fee: ${(quote as FiatPaymentQuote).fees.toFixed(2)}`
+                        ? `Fee: ${(quote as FiatPaymentQuote)?.fees?.toFixed(2) || '0.00'}`
                         : paymentMethod === 'x402'
                         ? 'Minimal fees'
-                        : `Fee: ${(quote as DexSwapQuote).fee} ETH`}
+                        : `Fee: ${(quote as DexSwapQuote)?.fee || '0.00'} ETH`}
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="font-medium text-white">
                       {paymentMethod === 'fiat' 
-                        ? `${(quote as FiatPaymentQuote).totalCost.toFixed(2)}`
-                        : `${(quote as DexSwapQuote).expectedAmount} LDAO`}
+                        ? `${(quote as FiatPaymentQuote)?.totalCost?.toFixed(2) || '0.00'}`
+                        : `${(quote as DexSwapQuote)?.expectedAmount || '0.00'} LDAO`}
                     </div>
                     <div className="text-sm text-white/70">
                       {paymentMethod === 'fiat' 
-                        ? (quote as FiatPaymentQuote).estimatedCompletionTime
+                        ? (quote as FiatPaymentQuote)?.estimatedCompletionTime || 'N/A'
                         : paymentMethod === 'x402'
                         ? '1-2 minutes'
                         : 'Instant'}
@@ -588,15 +588,15 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
                   <>
                     <div className="flex justify-between text-sm">
                       <span className="text-white/70">Provider</span>
-                      <span className="text-white">{(selectedQuote as FiatPaymentQuote).provider.toUpperCase()}</span>
+                      <span className="text-white">{(selectedQuote as FiatPaymentQuote)?.provider?.toUpperCase() || 'UNKNOWN'}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-white/70">Fees</span>
-                      <span className="text-white">${(selectedQuote as FiatPaymentQuote).fees.toFixed(2)}</span>
+                      <span className="text-white">${(selectedQuote as FiatPaymentQuote)?.fees?.toFixed(2) || '0.00'}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-white/70">Subtotal</span>
-                      <span className="text-white">${((selectedQuote as FiatPaymentQuote).amount).toFixed(2)}</span>
+                      <span className="text-white">${((selectedQuote as FiatPaymentQuote)?.amount || 0).toFixed(2)}</span>
                     </div>
                   </>
                 )}
@@ -620,11 +620,11 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
                   <>
                     <div className="flex justify-between text-sm">
                       <span className="text-white/70">DEX</span>
-                      <span className="text-white">{(selectedQuote as DexSwapQuote).dex.toUpperCase()}</span>
+                      <span className="text-white">{(selectedQuote as DexSwapQuote)?.dex?.toUpperCase() || 'UNKNOWN'}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-white/70">Network Fee</span>
-                      <span className="text-white">{(selectedQuote as DexSwapQuote).fee} ETH</span>
+                      <span className="text-white">{(selectedQuote as DexSwapQuote)?.fee || '0.00'} ETH</span>
                     </div>
                   </>
                 )}
@@ -632,7 +632,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
                   <span className="text-white">Total</span>
                   <span className="text-white">
                     {selectedQuote && paymentMethod === 'fiat' 
-                      ? `${(selectedQuote as FiatPaymentQuote).totalCost.toFixed(2)} USD`
+                      ? `${(selectedQuote as FiatPaymentQuote)?.totalCost?.toFixed(2) || '0.00'} USD`
                       : paymentMethod === 'x402'
                       ? `${(parseFloat(amount) * (tokenInfo?.priceUSD || 0.5)).toFixed(2)} USD`
                       : `${amount || '0'} LDAO`}
