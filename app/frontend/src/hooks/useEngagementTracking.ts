@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { useAuth } from './useAuth';
+import { useAuth } from '@/context/AuthContext';
 import { EngagementAnalyticsService } from '../services/engagementAnalyticsService';
 import type { EngagementInteraction } from '../types/engagementAnalytics';
 
