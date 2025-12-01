@@ -190,11 +190,11 @@ This document outlines the implementation tasks for the comprehensive return and
   - Category-wise return rates
   - Category performance comparison
   - Category trend analysis
-- [-] Implement seller performance analytics
+- [x] Implement seller performance analytics
   - Seller return metrics
   - Seller compliance scoring
   - Seller comparison analysis
-- [ ] Add return reason analysis
+- [x] Add return reason analysis
   - Reason categorization
   - Reason trend analysis
   - NLP-based reason clustering
