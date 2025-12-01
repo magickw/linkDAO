@@ -51,8 +51,15 @@ export default function StakingVoteButton({
       setRequiredStake(result.requiredStake || '0');
       setUserStake(result.currentStake || '0');
     } catch (error) {
-      console.error('Error checking staking requirements:', error);
-    }
+    console.error('Error checking staking requirements:', error);
+    // Return fallback values instead of throwing error
+    return {
+      canStake: false,
+      requiredStake: ethers.parseEther('100'),
+      userStake: ethers.parseEther('0'),
+      error: error.message
+    };
+  }
   };
 
   const handleVoteClick = () => {

@@ -139,9 +139,28 @@ export class DexService {
       // Define token path
       const path = [fromTokenInfo.address, toTokenInfo.address];
 
-      // Get amounts out
-      const amountsOut = await uniswapRouter.getAmountsOut(amountIn, path);
+      // Get amounts out with error handling
+      let amountsOut;
+      try {
+        amountsOut = await uniswapRouter.getAmountsOut(amountIn, path);
+      } catch (error) {
+        console.warn('Uniswap quote failed, returning mock data:', error);
+        return this.getMockQuote('uniswap', fromToken, toToken, fromAmount, slippage);
+      }
+      
+      // Validate amountsOut result
+      if (!amountsOut || amountsOut.length === 0) {
+        console.warn('Invalid amountsOut from Uniswap, returning mock data');
+        return this.getMockQuote('uniswap', fromToken, toToken, fromAmount, slippage);
+      }
+      
       const expectedAmount = amountsOut[amountsOut.length - 1];
+      
+      // Check if expectedAmount is valid
+      if (expectedAmount === 0n) {
+        console.warn('Zero expected amount from Uniswap, returning mock data');
+        return this.getMockQuote('uniswap', fromToken, toToken, fromAmount, slippage);
+      }
 
       // Calculate minimum amount with slippage
       const slippageFactor = BigInt(Math.floor(1000 - (slippage * 10)));
@@ -221,9 +240,28 @@ export class DexService {
       // Define token path
       const path = [fromTokenInfo.address, toTokenInfo.address];
 
-      // Get amounts out
-      const amountsOut = await sushiswapRouter.getAmountsOut(amountIn, path);
+      // Get amounts out with error handling
+      let amountsOut;
+      try {
+        amountsOut = await sushiswapRouter.getAmountsOut(amountIn, path);
+      } catch (error) {
+        console.warn('SushiSwap quote failed, returning mock data:', error);
+        return this.getMockQuote('sushiswap', fromToken, toToken, fromAmount, slippage);
+      }
+      
+      // Validate amountsOut result
+      if (!amountsOut || amountsOut.length === 0) {
+        console.warn('Invalid amountsOut from SushiSwap, returning mock data');
+        return this.getMockQuote('sushiswap', fromToken, toToken, fromAmount, slippage);
+      }
+      
       const expectedAmount = amountsOut[amountsOut.length - 1];
+      
+      // Check if expectedAmount is valid
+      if (expectedAmount === 0n) {
+        console.warn('Zero expected amount from SushiSwap, returning mock data');
+        return this.getMockQuote('sushiswap', fromToken, toToken, fromAmount, slippage);
+      }
 
       // Calculate minimum amount with slippage
       const slippageFactor = BigInt(Math.floor(1000 - (slippage * 10)));

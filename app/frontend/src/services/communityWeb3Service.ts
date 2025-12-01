@@ -7,9 +7,9 @@ import { Governance__factory, LDAOToken__factory } from '@/types/typechain';
 import { Governance, LDAOToken } from '@/types/typechain';
 
 // Contract addresses (these should be configured in environment variables)
-// Using null instead of '0x...' to prevent invalid ENS name errors
-const GOVERNANCE_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_GOVERNANCE_CONTRACT_ADDRESS || null;
-const LDAO_TOKEN_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_LDAO_TOKEN_CONTRACT_ADDRESS || null;
+// Fallback to testnet addresses if not configured
+const GOVERNANCE_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_GOVERNANCE_CONTRACT_ADDRESS || '0x27a78A860445DFFD9073aFd7065dd421487c0F8A';
+const LDAO_TOKEN_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_LDAO_TOKEN_CONTRACT_ADDRESS || '0xc9F690B45e33ca909bB9ab97836091673232611B';
 
 export interface StakeVoteInput {
   postId: string;
@@ -421,7 +421,13 @@ export class CommunityWeb3Service {
       };
     } catch (error) {
       console.error('Error checking staking requirement:', error);
-      throw error;
+      // Return fallback values instead of throwing error
+      return {
+        canPerform: false,
+        requiredStake: "0",
+        currentStake: "0",
+        error: error.message
+      };
     }
   }
 

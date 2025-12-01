@@ -22,8 +22,14 @@ export class TokenService {
 
   async getTokenInfo(tokenAddress: string): Promise<TokenInfo | null> {
     try {
+      // Validate input
+      if (!tokenAddress) {
+        console.warn('Token address is null or undefined');
+        return null;
+      }
+
       // Check if this is the LDAO token
-      if (tokenAddress === 'LDAO' || tokenAddress.toLowerCase() === 'ldao') {
+      if (tokenAddress === 'LDAO' || (tokenAddress && tokenAddress.toLowerCase() === 'ldao')) {
         // Get actual token info from the contract
         const tokenInfo = await ldaoTokenService.getTokenInfo();
         
