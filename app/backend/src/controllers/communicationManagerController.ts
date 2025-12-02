@@ -35,6 +35,19 @@ const resolveEscalationSchema = z.object({
 });
 
 export class CommunicationManagerController {
+  constructor() {
+    // Bind all methods to ensure 'this' context is preserved
+    this.logCommunication = this.logCommunication.bind(this);
+    this.getCommunicationLogs = this.getCommunicationLogs.bind(this);
+    this.createEscalationTrigger = this.createEscalationTrigger.bind(this);
+    this.resolveEscalation = this.resolveEscalation.bind(this);
+    this.getEscalationTriggers = this.getEscalationTriggers.bind(this);
+    this.routeEscalation = this.routeEscalation.bind(this);
+    this.preserveEscalationContext = this.preserveEscalationContext.bind(this);
+    this.getCommunicationPatterns = this.getCommunicationPatterns.bind(this);
+    this.getCommunicationAnalytics = this.getCommunicationAnalytics.bind(this);
+  }
+
   /**
    * Log communication for audit trail
    */

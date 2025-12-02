@@ -460,6 +460,7 @@ import securityRoutes from './routes/securityRoutes';
 import searchRoutes from './routes/searchRoutes';
 // Import reputation routes
 import reputationRoutes from './routes/reputationRoutes';
+import advancedReputationRoutes from './routes/advancedReputationRoutes';
 // Import onboarding routes
 import onboardingRoutes from './routes/onboardingRoutes';
 // Import API documentation routes
@@ -471,6 +472,9 @@ app.use('/marketplace/reputation', reputationRoutes);
 
 // Add API reputation routes for frontend compatibility
 app.use('/api/reputation', reputationRoutes);
+
+// Advanced reputation routes
+app.use('/api/reputation/advanced', advancedReputationRoutes);
 
 // Register routes with enhanced error handling
 app.use('/api/posts', postRoutes);

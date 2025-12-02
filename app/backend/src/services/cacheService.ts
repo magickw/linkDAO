@@ -45,6 +45,7 @@ export class CacheService {
     responseTimeSum: 0
   };
   private statsResetInterval: ReturnType<typeof setInterval> | null = null;
+  private static loggedInit: boolean = false;
 
   constructor() {
     // Check if Redis is disabled or if we're in a memory-critical environment
@@ -52,10 +53,13 @@ export class CacheService {
 
     if (process.env.REDIS_ENABLED === 'false' || process.env.REDIS_ENABLED === '0' || isMemoryCritical) {
       this.useRedis = false;
-      if (isMemoryCritical) {
-        safeLogger.warn('Redis functionality is disabled due to memory-critical environment (<512MB)');
-      } else {
-        safeLogger.warn('Redis functionality is disabled via REDIS_ENABLED environment variable');
+      if (!CacheService.loggedInit) {
+        if (isMemoryCritical) {
+          safeLogger.warn('Redis functionality is disabled due to memory-critical environment (<512MB)');
+        } else {
+          safeLogger.warn('Redis functionality is disabled via REDIS_ENABLED environment variable');
+        }
+        CacheService.loggedInit = true;
       }
     } else {
       this.config = this.loadConfig();
@@ -114,7 +118,10 @@ export class CacheService {
     try {
       // Use Redis URL if provided (for cloud services like Render)
       if (process.env.REDIS_URL) {
-        safeLogger.info('🔗 Attempting Redis connection to:', process.env.REDIS_URL.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
+        if (!CacheService.loggedInit) {
+          safeLogger.info('🔗 Attempting Redis connection to:', process.env.REDIS_URL.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
+          CacheService.loggedInit = true;
+        }
 
         this.redis = new Redis(process.env.REDIS_URL, {
           maxRetriesPerRequest: this.config.redis.maxRetriesPerRequest,

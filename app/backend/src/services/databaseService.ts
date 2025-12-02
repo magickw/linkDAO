@@ -12,6 +12,7 @@ dotenv.config();
 export class DatabaseService {
   public db: any; // Changed from private to public for testing
   private isConnected: boolean = false;
+  private static initialized: boolean = false;
 
   constructor() {
     this.initializeDatabase();
@@ -23,7 +24,11 @@ export class DatabaseService {
       if (databaseInstance) {
         this.db = databaseInstance;
         this.isConnected = true;
-        safeLogger.info('✅ Database service initialized successfully');
+        // Only log once on first initialization
+        if (!DatabaseService.initialized) {
+          safeLogger.info('✅ Database service initialized successfully');
+          DatabaseService.initialized = true;
+        }
       } else {
         safeLogger.warn('⚠️ Database service running in offline mode - no database connection available');
         this.isConnected = false;
