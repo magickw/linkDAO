@@ -1,3 +1,5 @@
+/// <reference path="../types/express.d.ts" />
+
 import { Request, Response } from 'express';
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { advancedReputationService } from '../services/advancedReputationService';
@@ -31,12 +33,7 @@ export class AdvancedReputationController {
       );
 
       res.status(200).json(createSuccessResponse(impact, {
-        requestId: res.locals.requestId,
-        metadata: {
-          userId,
-          eventType,
-          calculatedAt: new Date().toISOString()
-        }
+        requestId: res.locals.requestId
       }));
     } catch (error) {
       logger.error('Error calculating advanced reputation impact:', error);
@@ -91,12 +88,7 @@ export class AdvancedReputationController {
       );
 
       res.status(200).json(createSuccessResponse(update, {
-        requestId: res.locals.requestId,
-        metadata: {
-          userId,
-          eventType,
-          appliedAt: new Date().toISOString()
-        }
+        requestId: res.locals.requestId
       }));
     } catch (error) {
       logger.error('Error applying advanced reputation change:', error);
@@ -129,11 +121,7 @@ export class AdvancedReputationController {
       const analytics = await advancedReputationService.getAdvancedReputationAnalytics(userId);
 
       res.status(200).json(createSuccessResponse(analytics, {
-        requestId: res.locals.requestId,
-        metadata: {
-          userId,
-          analyzedAt: new Date().toISOString()
-        }
+        requestId: res.locals.requestId
       }));
     } catch (error) {
       logger.error('Error getting advanced reputation analytics:', error);
@@ -200,12 +188,7 @@ export class AdvancedReputationController {
       });
 
       res.status(202).json(createSuccessResponse(operation, {
-        requestId: res.locals.requestId,
-        metadata: {
-          operationId: operation.operationId,
-          status: operation.status,
-          initiatedAt: operation.createdAt.toISOString()
-        }
+        requestId: res.locals.requestId
       }));
     } catch (error) {
       logger.error('Error initiating bulk reputation operation:', error);
@@ -247,11 +230,7 @@ export class AdvancedReputationController {
       };
 
       res.status(200).json(createSuccessResponse(status, {
-        requestId: res.locals.requestId,
-        metadata: {
-          operationId,
-          checkedAt: new Date().toISOString()
-        }
+        requestId: res.locals.requestId
       }));
     } catch (error) {
       logger.error('Error getting bulk operation status:', error);
@@ -306,11 +285,7 @@ export class AdvancedReputationController {
         message: 'Progressive penalty system configured successfully',
         violationType: config.violationType 
       }, {
-        requestId: res.locals.requestId,
-        metadata: {
-          violationType: config.violationType,
-          configuredAt: new Date().toISOString()
-        }
+        requestId: res.locals.requestId
       }));
     } catch (error) {
       logger.error('Error configuring progressive penalty:', error);
@@ -352,12 +327,7 @@ export class AdvancedReputationController {
       );
 
       res.status(200).json(createSuccessResponse(result, {
-        requestId: res.locals.requestId,
-        metadata: {
-          userId,
-          violationType,
-          appliedAt: new Date().toISOString()
-        }
+        requestId: res.locals.requestId
       }));
     } catch (error) {
       logger.error('Error applying progressive penalty:', error);
@@ -399,12 +369,7 @@ export class AdvancedReputationController {
       };
 
       res.status(200).json(createSuccessResponse(prediction, {
-        requestId: res.locals.requestId,
-        metadata: {
-          userId,
-          eventType,
-          predictedAt: new Date().toISOString()
-        }
+        requestId: res.locals.requestId
       }));
     } catch (error) {
       logger.error('Error predicting reputation impact:', error);
@@ -454,11 +419,7 @@ export class AdvancedReputationController {
       };
 
       res.status(200).json(createSuccessResponse(networkInfluence, {
-        requestId: res.locals.requestId,
-        metadata: {
-          userId,
-          calculatedAt: new Date().toISOString()
-        }
+        requestId: res.locals.requestId
       }));
     } catch (error) {
       logger.error('Error getting network influence:', error);

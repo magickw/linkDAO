@@ -1,6 +1,14 @@
 import { Router } from 'express';
 import { performanceMonitoringService } from '../services/performanceMonitoringService';
 import { logger } from '../utils/logger';
+import { PerformanceOptimizationIntegration } from '../middleware/performanceOptimizationIntegration';
+
+// This would be injected by the main application
+let performanceOptimizer: PerformanceOptimizationIntegration;
+
+export function setPerformanceOptimizer(optimizer: PerformanceOptimizationIntegration) {
+  performanceOptimizer = optimizer;
+}
 
 const router = Router();
 

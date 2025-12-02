@@ -1,3 +1,5 @@
+/// <reference path="../types/express.d.ts" />
+
 import { Request, Response } from 'express';
 import { sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { enhancedCommunityReportingService } from '../services/enhancedCommunityReportingService';
@@ -56,11 +58,7 @@ export class EnhancedCommunityReportingController {
       });
 
       res.status(201).json(createSuccessResponse(report, {
-        requestId: res.locals.requestId,
-        metadata: {
-          reportId: report.id,
-          submittedAt: report.createdAt.toISOString()
-        }
+        requestId: res.locals.requestId
       }));
     } catch (error) {
       logger.error('Error submitting enhanced community report:', error);
@@ -112,12 +110,7 @@ export class EnhancedCommunityReportingController {
       );
 
       res.status(200).json(createSuccessResponse(weight, {
-        requestId: res.locals.requestId,
-        metadata: {
-          userId,
-          reportType: reportType || 'general',
-          calculatedAt: new Date().toISOString()
-        }
+        requestId: res.locals.requestId
       }));
     } catch (error) {
       logger.error('Error calculating reporting weight:', error);
@@ -161,11 +154,7 @@ export class EnhancedCommunityReportingController {
       const result = await enhancedCommunityReportingService.processValidationResult(reportId, validatorVotes);
 
       res.status(200).json(createSuccessResponse(result, {
-        requestId: res.locals.requestId,
-        metadata: {
-          reportId,
-          processedAt: new Date().toISOString()
-        }
+        requestId: res.locals.requestId
       }));
     } catch (error) {
       logger.error('Error processing validation result:', error);
@@ -218,11 +207,7 @@ export class EnhancedCommunityReportingController {
       const analytics = await enhancedCommunityReportingService.getEnhancedReportingAnalytics(timeRange);
 
       res.status(200).json(createSuccessResponse(analytics, {
-        requestId: res.locals.requestId,
-        metadata: {
-          timeRange,
-          generatedAt: new Date().toISOString()
-        }
+        requestId: res.locals.requestId
       }));
     } catch (error) {
       logger.error('Error getting enhanced reporting analytics:', error);
@@ -277,11 +262,7 @@ export class EnhancedCommunityReportingController {
       };
 
       res.status(200).json(createSuccessResponse(reportDetails, {
-        requestId: res.locals.requestId,
-        metadata: {
-          reportId,
-          retrievedAt: new Date().toISOString()
-        }
+        requestId: res.locals.requestId
       }));
     } catch (error) {
       logger.error('Error getting report details:', error);
@@ -351,13 +332,7 @@ export class EnhancedCommunityReportingController {
       };
 
       res.status(200).json(createSuccessResponse(history, {
-        requestId: res.locals.requestId,
-        metadata: {
-          userId,
-          limit: limitNum,
-          offset: offsetNum,
-          retrievedAt: new Date().toISOString()
-        }
+        requestId: res.locals.requestId
       }));
     } catch (error) {
       logger.error('Error getting user reporting history:', error);
@@ -418,12 +393,7 @@ export class EnhancedCommunityReportingController {
       ].slice(0, limitNum);
 
       res.status(200).json(createSuccessResponse(leaderboard, {
-        requestId: res.locals.requestId,
-        metadata: {
-          period: periodStr,
-          limit: limitNum,
-          generatedAt: new Date().toISOString()
-        }
+        requestId: res.locals.requestId
       }));
     } catch (error) {
       logger.error('Error getting reporting leaderboard:', error);

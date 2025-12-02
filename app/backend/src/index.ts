@@ -50,9 +50,8 @@ dotenv.config();
 import { validateSecurityConfig } from './config/securityConfig';
 import {
   rateLimitWithCache,
-  cacheMiddleware,
   cachingMiddleware
-} from './middleware/rateLimit';
+} from './middleware/cachingMiddleware';
 import { ultimateCorsMiddleware } from './middleware/ultimateCors';
 // import { ultraEmergencyCorsMiddleware } from './middleware/ultraEmergencyCors';
 // import { corsMiddleware } from './middleware/corsMiddleware';
@@ -477,6 +476,7 @@ app.use('/api/reputation', reputationRoutes);
 app.use('/api/reputation/advanced', advancedReputationRoutes);
 
 // Enhanced community reporting routes
+import enhancedCommunityReportingRoutes from './routes/enhancedCommunityReportingRoutes';
 app.use('/api/community-reporting', enhancedCommunityReportingRoutes);
 
 // Register routes with enhanced error handling
@@ -510,7 +510,7 @@ app.get('/health', async (req, res) => {
   });
 
   // Get Redis status
-  let redisStatus = { enabled: false, connected: false };
+  let redisStatus: any = { enabled: false, connected: false };
   try {
     const { redisService } = await import('./services/redisService');
     // Test Redis connection to ensure current status
@@ -525,7 +525,7 @@ app.get('/health', async (req, res) => {
   }
 
   // Get database status
-  let databaseStatus = { enabled: false, connected: false };
+  let databaseStatus: any = { enabled: false, connected: false };
   try {
     // Test database connection
     if (dbPool) {
@@ -551,7 +551,7 @@ app.get('/health', async (req, res) => {
       enabled: true,
       connected: false,
       error: error.message
-    };
+    } as any;
   }
 
   res.status(200).json({
@@ -874,8 +874,8 @@ app.use('/api/auth', require('./routes/authRoutes').default);
 app.use('/api/security', securityRoutes);
 
 // Return and refund routes
-import returnRoutes from './routes/returnRoutes';
-app.use('/api/returns', returnRoutes);
+// import returnRoutes from './routes/returnRoutes';
+// app.use('/api/returns', returnRoutes);
 
 // Marketplace verification routes
 app.use('/api/marketplace/verification', marketplaceVerificationRoutes);
