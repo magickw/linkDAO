@@ -8,7 +8,11 @@ echo "Environment: ${NODE_ENV:-production}"
 echo "Node: $(node --version)"
 echo "NPM: $(npm --version)"
 
-# Create dist directory
+# Clean up old build artifacts to prevent cache issues
+echo "🧹 Cleaning old build artifacts..."
+rm -rf dist
+
+# Create fresh dist directory
 echo "📁 Creating dist directory..."
 mkdir -p dist
 
