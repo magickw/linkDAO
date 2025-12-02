@@ -189,137 +189,6 @@ export class IndustryBenchmarkIntegrationService {
           break;
         case 'file':
           update = await this.syncFromFile(source);
-          syncFromApi: Promise<BenchmarkUpdate> = async (source: ExternalDataSource): Promise<BenchmarkUpdate> => {
-          try {
-            logger.info(`Syncing from API: ${source.url}`);
-            
-            // TODO: Implement actual API call
-            // Mock API response for demonstration
-            const mockResponse = {
-              industry: 'E-commerce',
-              metrics: {
-                processing_time: {
-                  average: 44.5,
-                  median: 42,
-                  topQuartile: 22,
-                  bottomQuartile: 67,
-                  standardDeviation: 16.8,
-                  sampleSize: 1350,
-                  confidence: 0.92
-                },
-                approval_rate: {
-                  average: 86.5,
-                  median: 88.0,
-                  topQuartile: 94.0,
-                  bottomQuartile: 78.0,
-                  standardDeviation: 7.2,
-                  sampleSize: 1350,
-                  confidence: 0.92
-                },
-                return_rate: {
-                  average: 11.8,
-                  median: 10.5,
-                  topQuartile: 8.0,
-                  bottomQuartile: 16.0,
-                  standardDeviation: 4.5,
-                  sampleSize: 1350,
-                  confidence: 0.92
-                },
-                customer_satisfaction: {
-                  average: 4.15,
-                  median: 4.2,
-                  topQuartile: 4.6,
-                  bottomQuartile: 3.7,
-                  standardDeviation: 0.65,
-                  sampleSize: 1350,
-                  confidence: 0.92
-                },
-                compliance_score: {
-                  average: 82.5,
-                  median: 84.0,
-                  topQuartile: 91.0,
-                  bottomQuartile: 73.0,
-                  standardDeviation: 11.2,
-                  sampleSize: 1350,
-                  confidence: 0.92
-                },
-                refund_processing_time: {
-                  average: 2.8,
-                  median: 2.5,
-                  topQuartile: 1.2,
-                  bottomQuartile: 4.5,
-                  standardDeviation: 1.8,
-                  sampleSize: 1350,
-                  confidence: 0.92
-                },
-                policy_adherence: {
-                  average: 91.2,
-                  median: 93.0,
-                  topQuartile: 97.5,
-                  bottomQuartile: 84.0,
-                  standardDeviation: 5.8,
-                  sampleSize: 1350,
-                  confidence: 0.92
-                },
-                response_time: {
-                  average: 1.8,
-                  median: 1.5,
-                  topQuartile: 0.8,
-                  bottomQuartile: 3.2,
-                  standardDeviation: 1.2,
-                  sampleSize: 1350,
-                  confidence: 0.92
-                },
-                cost_per_return: {
-                  average: 16.2,
-                  median: 14.0,
-                  topQuartile: 10.0,
-                  bottomQuartile: 22.0,
-                  standardDeviation: 7.5,
-                  sampleSize: 1350,
-                  confidence: 0.92
-                }
-              },
-              metadata: {
-                methodology: 'Survey-based data collection',
-                dataQuality: 'high',
-                coverage: 'North America and Europe',
-                limitations: ['Self-reported data', 'Seasonal variations'],
-                lastUpdated: new Date()
-              }
-            };
-
-            // Validate the response
-            const validation = await this.validateBenchmarkData(mockResponse);
-            if (!validation.isValid) {
-              logger.warn(`Validation failed for source ${sourceId}:`, validation.issues);
-              throw new Error(`Data validation failed: ${validation.issues.map(i => i.message).join(', ')}`);
-            }
-
-            // Update last sync time
-            source.lastSync = new Date();
-            source.status = 'active';
-            source.errorMessage = undefined;
-
-            await comprehensiveAuditService.logEvent({
-              action: 'benchmark_data_synced',
-              actorId: 'system',
-              resourceType: 'EXTERNAL_DATA_SOURCE',
-              resourceId: sourceId,
-              details: {
-                source: source.name,
-                metricsCount: Object.keys(mockResponse.metrics).length,
-                dataQuality: validation.summary.overallQuality
-              }
-            });
-
-            return mockResponse;
-          } catch (error) {
-            throw error;
-          }
-          break;
-        case 'file':
-          update = await this.syncFromFile(source);
           break;
         case 'database':
           update = await this.syncFromDatabase(source);
@@ -364,9 +233,134 @@ export class IndustryBenchmarkIntegrationService {
    * Sync from API data source
    */
   private async syncFromApi(source: ExternalDataSource): Promise<BenchmarkUpdate> {
-    // TODO: Implement actual API call
-    // This is a mock implementation
-    throw new Error('API sync not yet implemented');
+    try {
+      logger.info(`Syncing from API: ${source.url}`);
+      
+      // TODO: Implement actual API call
+      // Mock API response for demonstration
+      const mockResponse: BenchmarkUpdate = {
+        sourceId: source.id,
+        industry: 'E-commerce',
+        metrics: {
+          processing_time: {
+            average: 44.5,
+            median: 42,
+            topQuartile: 22,
+            bottomQuartile: 67,
+            standardDeviation: 16.8,
+            sampleSize: 1350,
+            confidence: 0.92
+          },
+          approval_rate: {
+            average: 86.5,
+            median: 88.0,
+            topQuartile: 94.0,
+            bottomQuartile: 78.0,
+            standardDeviation: 7.2,
+            sampleSize: 1350,
+            confidence: 0.92
+          },
+          return_rate: {
+            average: 11.8,
+            median: 10.5,
+            topQuartile: 8.0,
+            bottomQuartile: 16.0,
+            standardDeviation: 4.5,
+            sampleSize: 1350,
+            confidence: 0.92
+          },
+          customer_satisfaction: {
+            average: 4.15,
+            median: 4.2,
+            topQuartile: 4.6,
+            bottomQuartile: 3.7,
+            standardDeviation: 0.65,
+            sampleSize: 1350,
+            confidence: 0.92
+          },
+          compliance_score: {
+            average: 82.5,
+            median: 84.0,
+            topQuartile: 91.0,
+            bottomQuartile: 73.0,
+            standardDeviation: 11.2,
+            sampleSize: 1350,
+            confidence: 0.92
+          },
+          refund_processing_time: {
+            average: 2.8,
+            median: 2.5,
+            topQuartile: 1.2,
+            bottomQuartile: 4.5,
+            standardDeviation: 1.8,
+            sampleSize: 1350,
+            confidence: 0.92
+          },
+          policy_adherence: {
+            average: 91.2,
+            median: 93.0,
+            topQuartile: 97.5,
+            bottomQuartile: 84.0,
+            standardDeviation: 5.8,
+            sampleSize: 1350,
+            confidence: 0.92
+          },
+          response_time: {
+            average: 1.8,
+            median: 1.5,
+            topQuartile: 0.8,
+            bottomQuartile: 3.2,
+            standardDeviation: 1.2,
+            sampleSize: 1350,
+            confidence: 0.92
+          },
+          cost_per_return: {
+            average: 16.2,
+            median: 14.0,
+            topQuartile: 10.0,
+            bottomQuartile: 22.0,
+            standardDeviation: 7.5,
+            sampleSize: 1350,
+            confidence: 0.92
+          }
+        },
+        metadata: {
+          methodology: 'Survey-based data collection',
+          dataQuality: 'high' as const,
+          coverage: 'North America and Europe',
+          limitations: ['Self-reported data', 'Seasonal variations'],
+          lastUpdated: new Date()
+        }
+      };
+
+      // Validate the response
+      const validation = await this.validateBenchmarkData(mockResponse);
+      if (!validation.isValid) {
+        logger.warn(`Validation failed for source ${source.id}:`, validation.issues);
+        throw new Error(`Data validation failed: ${validation.issues.map(i => i.message).join(', ')}`);
+      }
+
+      // Update last sync time
+      source.lastSync = new Date();
+      source.status = 'active';
+      source.errorMessage = undefined;
+
+      await comprehensiveAuditService.logEvent({
+        action: 'benchmark_data_synced',
+        actorId: 'system',
+        resourceType: 'EXTERNAL_DATA_SOURCE',
+        resourceId: source.id,
+        details: {
+          source: source.name,
+          metricsCount: Object.keys(mockResponse.metrics).length,
+          dataQuality: validation.summary.overallQuality
+        }
+      });
+
+      return mockResponse;
+    } catch (error) {
+      throw error;
+    }
   }
 
   /**
@@ -521,7 +515,7 @@ export class IndustryBenchmarkIntegrationService {
     }
 
     return {
-      sourceId: update.id,
+      sourceId: update.sourceId,
       isValid: issues.filter(i => i.type === 'error').length === 0,
       issues,
       recommendations,

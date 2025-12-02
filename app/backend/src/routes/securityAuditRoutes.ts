@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { securityAuditController } from '../controllers/securityAuditController';
 import { adminAuthMiddleware } from '../middleware/auth';
-import { csrfProtection } from '../middleware/csrf';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { rateLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
