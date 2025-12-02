@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { communicationManagerController } from '../controllers/communicationManagerController';
 import { adminAuthMiddleware } from '../middleware/auth';
 import { csrfProtection } from '../middleware/csrfProtection';
@@ -11,66 +11,91 @@ const router = Router();
  * All routes require admin authentication
  */
 
+// Helper function to safely wrap controller methods
+const safeHandler = (methodName: keyof typeof communicationManagerController) => {
+  return async (req: Request, res: Response) => {
+    try {
+      const method = communicationManagerController?.[methodName];
+      if (typeof method === 'function') {
+        // Call the bound method
+        await (method as any).call(communicationManagerController, req, res);
+      } else {
+        res.status(503).json({
+          success: false,
+          error: 'Communication manager service unavailable',
+          message: `Controller method ${methodName} is not available`
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  };
+};
+
 // Communication logging and audit trail
-router.post('/log', 
-  adminAuthMiddleware, 
-  csrfProtection, 
+router.post('/log',
+  adminAuthMiddleware,
+  csrfProtection,
   rateLimiter(100, 60), // 100 requests per minute
-  communicationManagerController.logCommunication
+  safeHandler('logCommunication')
 );
 
-router.get('/logs', 
-  adminAuthMiddleware, 
+router.get('/logs',
+  adminAuthMiddleware,
   rateLimiter(100, 60), // 100 requests per minute
-  communicationManagerController.getCommunicationLogs
+  safeHandler('getCommunicationLogs')
 );
 
 // Dispute escalation management
-router.post('/escalation', 
-  adminAuthMiddleware, 
-  csrfProtection, 
+router.post('/escalation',
+  adminAuthMiddleware,
+  csrfProtection,
   rateLimiter(50, 60), // 50 requests per minute
-  communicationManagerController.createEscalationTrigger
+  safeHandler('createEscalationTrigger')
 );
 
-router.put('/escalation/:escalationId/resolve', 
-  adminAuthMiddleware, 
-  csrfProtection, 
+router.put('/escalation/:escalationId/resolve',
+  adminAuthMiddleware,
+  csrfProtection,
   rateLimiter(50, 60), // 50 requests per minute
-  communicationManagerController.resolveEscalation
+  safeHandler('resolveEscalation')
 );
 
-router.get('/escalations', 
-  adminAuthMiddleware, 
+router.get('/escalations',
+  adminAuthMiddleware,
   rateLimiter(100, 60), // 100 requests per minute
-  communicationManagerController.getEscalationTriggers
+  safeHandler('getEscalationTriggers')
 );
 
-router.post('/escalation/:escalationId/route', 
-  adminAuthMiddleware, 
-  csrfProtection, 
+router.post('/escalation/:escalationId/route',
+  adminAuthMiddleware,
+  csrfProtection,
   rateLimiter(50, 60), // 50 requests per minute
-  communicationManagerController.routeEscalation
+  safeHandler('routeEscalation')
 );
 
-router.post('/escalation/:escalationId/preserve-context', 
-  adminAuthMiddleware, 
-  csrfProtection, 
+router.post('/escalation/:escalationId/preserve-context',
+  adminAuthMiddleware,
+  csrfProtection,
   rateLimiter(50, 60), // 50 requests per minute
-  communicationManagerController.preserveEscalationContext
+  safeHandler('preserveEscalationContext')
 );
 
 // Communication pattern detection and analytics
-router.get('/patterns', 
-  adminAuthMiddleware, 
+router.get('/patterns',
+  adminAuthMiddleware,
   rateLimiter(50, 60), // 50 requests per minute
-  communicationManagerController.getCommunicationPatterns
+  safeHandler('getCommunicationPatterns')
 );
 
-router.get('/analytics', 
-  adminAuthMiddleware, 
+router.get('/analytics',
+  adminAuthMiddleware,
   rateLimiter(30, 60), // 30 requests per minute
-  communicationManagerController.getCommunicationAnalytics
+  safeHandler('getCommunicationAnalytics')
 );
 
 export default router;
