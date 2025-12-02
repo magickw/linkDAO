@@ -1,88 +1,92 @@
-/**
- * Security Audit Controller
- * REST API endpoints for security audit logging and reporting
- */
-
 import { Request, Response } from 'express';
-import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { securityAuditService, SecurityAuditEvent, SecurityIncident, TamperDetectionRecord } from '../services/securityAuditService';
 import { safeLogger } from '../utils/safeLogger';
-import { securityAuditLoggingService, AuditQuery } from '../services/securityAuditLoggingService';
+import { z } from 'zod';
+
+// Validation schemas
+const auditEventSchema = z.object({
+  userId: z.string().optional(),
+  sessionId: z.string().optional(),
+  ipAddress: z.string(),
+  userAgent: z.string().optional(),
+  actionType: z.string(),
+  resourceType: z.string(),
+  resourceId: z.string().optional(),
+  actionCategory: z.enum(['read', 'write', 'approve', 'reject', 'export', 'configure']),
+  beforeState: z.any().optional(),
+  afterState: z.any().optional(),
+  changes: z.record(z.any()).optional(),
+  reason: z.string().optional(),
+  justification: z.string().optional(),
+  riskScore: z.number().min(0).max(10),
+  severity: z.enum(['low', 'medium', 'high', 'critical']),
+  outcome: z.enum(['success', 'failure', 'partial']),
+  complianceFlags: z.array(z.string()),
+  requiresApproval: z.boolean().optional(),
+  approvedBy: z.string().optional(),
+  approvedAt: z.date().optional(),
+  metadata: z.record(z.any()).optional()
+});
+
+const auditQuerySchema = z.object({
+  userId: z.string().optional(),
+  sessionId: z.string().optional(),
+  actionType: z.string().optional(),
+  resourceType: z.string().optional(),
+  resourceId: z.string().optional(),
+  startDate: z.string().optional().transform(val => val ? new Date(val) : undefined),
+  endDate: z.string().optional().transform(val => val ? new Date(val) : undefined),
+  severity: z.string().optional(),
+  outcome: z.string().optional(),
+  limit: z.number().optional(),
+  offset: z.number().optional(),
+  orderBy: z.enum(['timestamp', 'riskScore', 'severity']).optional(),
+  sortOrder: z.enum(['asc', 'desc']).optional()
+});
+
+const incidentReportSchema = z.object({
+  severity: z.enum(['low', 'medium', 'high', 'critical']),
+  category: z.string(),
+  title: z.string(),
+  description: z.string(),
+  affectedSystems: z.array(z.string()),
+  indicators: z.array(z.string())
+});
+
+const tamperDetectionSchema = z.object({
+  resourceType: z.string(),
+  resourceId: z.string(),
+  expectedHash: z.string(),
+  actualHash: z.string(),
+  detectedBy: z.string(),
+  discrepancy: z.string()
+});
+
+const tamperResolutionSchema = z.object({
+  recordId: z.string(),
+  resolutionNotes: z.string(),
+  resolvedBy: z.string()
+});
 
 export class SecurityAuditController {
   /**
-   * Query audit events with filters
+   * Initialize the security audit service
    */
-  async queryAuditEvents(req: Request, res: Response): Promise<void> {
+  async initializeService(req: Request, res: Response): Promise<void> {
     try {
-      const query: AuditQuery = {
-        startDate: req.query.startDate ? new Date(req.query.startDate as string) : undefined,
-        endDate: req.query.endDate ? new Date(req.query.endDate as string) : undefined,
-        eventTypes: req.query.eventTypes ? (req.query.eventTypes as string).split(',') : undefined,
-        categories: req.query.categories ? (req.query.categories as string).split(',') : undefined,
-        severities: req.query.severities ? (req.query.severities as string).split(',') : undefined,
-        userIds: req.query.userIds ? (req.query.userIds as string).split(',') : undefined,
-        ipAddresses: req.query.ipAddresses ? (req.query.ipAddresses as string).split(',') : undefined,
-        outcomes: req.query.outcomes ? (req.query.outcomes as string).split(',') : undefined,
-        riskScoreMin: req.query.riskScoreMin ? parseFloat(req.query.riskScoreMin as string) : undefined,
-        riskScoreMax: req.query.riskScoreMax ? parseFloat(req.query.riskScoreMax as string) : undefined,
-        complianceFlags: req.query.complianceFlags ? (req.query.complianceFlags as string).split(',') : undefined,
-        correlationId: req.query.correlationId as string,
-        limit: req.query.limit ? parseInt(req.query.limit as string) : 100,
-        offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
-        sortBy: req.query.sortBy as 'timestamp' | 'riskScore' | 'severity',
-        sortOrder: req.query.sortOrder as 'asc' | 'desc'
-      };
-
-      const events = await securityAuditLoggingService.queryAuditEvents(query);
-
+      await securityAuditService.initialize();
+      
       res.json({
         success: true,
-        data: events,
-        pagination: {
-          limit: query.limit,
-          offset: query.offset,
-          total: events.length
-        }
+        message: 'Security audit service initialized successfully'
       });
     } catch (error) {
-      safeLogger.error('Error querying audit events:', error);
+      safeLogger.error('Error initializing security audit service:', error);
+      
       res.status(500).json({
         success: false,
-        error: 'Failed to query audit events'
-      });
-    }
-  }
-
-  /**
-   * Generate audit report for a date range
-   */
-  async generateAuditReport(req: Request, res: Response): Promise<void> {
-    try {
-      const { startDate, endDate, includeRecommendations = true } = req.body;
-
-      if (!startDate || !endDate) {
-        res.status(400).json({
-          success: false,
-          error: 'Start date and end date are required'
-        });
-        return;
-      }
-
-      const report = await securityAuditLoggingService.generateAuditReport(
-        new Date(startDate),
-        new Date(endDate),
-        includeRecommendations
-      );
-
-      res.json({
-        success: true,
-        data: report
-      });
-    } catch (error) {
-      safeLogger.error('Error generating audit report:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to generate audit report'
+        error: 'Failed to initialize security audit service',
+        message: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   }
@@ -92,53 +96,30 @@ export class SecurityAuditController {
    */
   async logSecurityEvent(req: Request, res: Response): Promise<void> {
     try {
-      const {
-        category,
-        eventType,
-        severity,
-        userId,
-        sessionId,
-        resource,
-        action,
-        outcome,
-        details = {},
-        riskScore,
-        complianceFlags = [],
-        correlationId,
-        threatIndicators = []
-      } = req.body;
-
-      // Get IP address from request
-      const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
-      const userAgent = req.get('User-Agent');
-
-      const eventId = await securityAuditLoggingService.logSecurityEvent({
-        category,
-        eventType,
-        severity,
-        userId,
-        sessionId,
-        ipAddress,
-        userAgent,
-        resource,
-        action,
-        outcome,
-        details,
-        riskScore,
-        complianceFlags,
-        correlationId,
-        threatIndicators
-      });
-
+      const eventData = auditEventSchema.parse(req.body);
+      
+      const eventId = await securityAuditService.logSecurityEvent(eventData);
+      
       res.status(201).json({
         success: true,
         data: { eventId }
       });
     } catch (error) {
       safeLogger.error('Error logging security event:', error);
+      
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid request data',
+          details: error.errors
+        });
+        return;
+      }
+      
       res.status(500).json({
         success: false,
-        error: 'Failed to log security event'
+        error: 'Failed to log security event',
+        message: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   }
@@ -150,10 +131,18 @@ export class SecurityAuditController {
     try {
       const { userId, action, outcome, details = {} } = req.body;
       
+      if (!userId || !action || !outcome) {
+        res.status(400).json({
+          success: false,
+          error: 'userId, action, and outcome are required'
+        });
+        return;
+      }
+      
       const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
       const userAgent = req.get('User-Agent');
 
-      const eventId = await securityAuditLoggingService.logAuthenticationEvent(
+      const eventId = await securityAuditService.logAuthenticationEvent(
         userId,
         action,
         outcome,
@@ -161,16 +150,18 @@ export class SecurityAuditController {
         details,
         userAgent
       );
-
+      
       res.status(201).json({
         success: true,
         data: { eventId }
       });
     } catch (error) {
       safeLogger.error('Error logging authentication event:', error);
+      
       res.status(500).json({
         success: false,
-        error: 'Failed to log authentication event'
+        error: 'Failed to log authentication event',
+        message: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   }
@@ -189,27 +180,26 @@ export class SecurityAuditController {
         });
         return;
       }
-
-      const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
-
-      const eventId = await securityAuditLoggingService.logDataAccessEvent(
+      
+      const eventId = await securityAuditService.logDataAccessEvent(
         userId,
         resource,
         action,
         outcome,
-        ipAddress,
         details
       );
-
+      
       res.status(201).json({
         success: true,
         data: { eventId }
       });
     } catch (error) {
       safeLogger.error('Error logging data access event:', error);
+      
       res.status(500).json({
         success: false,
-        error: 'Failed to log data access event'
+        error: 'Failed to log data access event',
+        message: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   }
@@ -228,10 +218,10 @@ export class SecurityAuditController {
         });
         return;
       }
-
+      
       const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
 
-      const eventId = await securityAuditLoggingService.logAdminAction(
+      const eventId = await securityAuditService.logAdminAction(
         adminUserId,
         action,
         targetResource,
@@ -239,16 +229,18 @@ export class SecurityAuditController {
         ipAddress,
         details
       );
-
+      
       res.status(201).json({
         success: true,
         data: { eventId }
       });
     } catch (error) {
       safeLogger.error('Error logging admin action:', error);
+      
       res.status(500).json({
         success: false,
-        error: 'Failed to log admin action'
+        error: 'Failed to log admin action',
+        message: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   }
@@ -267,269 +259,328 @@ export class SecurityAuditController {
         });
         return;
       }
-
+      
       const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
 
-      const eventId = await securityAuditLoggingService.logSecurityIncident(
+      const eventId = await securityAuditService.logSecurityIncident(
         incidentType,
         severity,
         ipAddress,
         details,
         threatIndicators
       );
-
+      
       res.status(201).json({
         success: true,
         data: { eventId }
       });
     } catch (error) {
       safeLogger.error('Error logging security incident:', error);
+      
       res.status(500).json({
         success: false,
-        error: 'Failed to log security incident'
+        error: 'Failed to log security incident',
+        message: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   }
 
   /**
-   * Create compliance rule
+   * Query audit events
    */
-  async createComplianceRule(req: Request, res: Response): Promise<void> {
+  async queryAuditEvents(req: Request, res: Response): Promise<void> {
     try {
-      const {
-        name,
-        description,
-        regulation,
-        eventTypes,
-        conditions,
-        actions,
-        isActive = true,
-        severity
-      } = req.body;
-
-      if (!name || !regulation || !eventTypes || !conditions || !actions || !severity) {
-        res.status(400).json({
-          success: false,
-          error: 'name, regulation, eventTypes, conditions, actions, and severity are required'
-        });
-        return;
-      }
-
-      const ruleId = await securityAuditLoggingService.createComplianceRule({
-        name,
-        description,
-        regulation,
-        eventTypes,
-        conditions,
-        actions,
-        isActive,
-        severity
-      });
-
-      res.status(201).json({
-        success: true,
-        data: { ruleId }
-      });
-    } catch (error) {
-      safeLogger.error('Error creating compliance rule:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to create compliance rule'
-      });
-    }
-  }
-
-  /**
-   * Create retention policy
-   */
-  async createRetentionPolicy(req: Request, res: Response): Promise<void> {
-    try {
-      const {
-        name,
-        description,
-        categories,
-        retentionPeriodDays,
-        archiveAfterDays,
-        encryptionRequired = false,
-        complianceRequirements = [],
-        isActive = true
-      } = req.body;
-
-      if (!name || !categories || !retentionPeriodDays) {
-        res.status(400).json({
-          success: false,
-          error: 'name, categories, and retentionPeriodDays are required'
-        });
-        return;
-      }
-
-      const policyId = await securityAuditLoggingService.createRetentionPolicy({
-        name,
-        description,
-        categories,
-        retentionPeriodDays,
-        archiveAfterDays,
-        encryptionRequired,
-        complianceRequirements,
-        isActive
-      });
-
-      res.status(201).json({
-        success: true,
-        data: { policyId }
-      });
-    } catch (error) {
-      safeLogger.error('Error creating retention policy:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to create retention policy'
-      });
-    }
-  }
-
-  /**
-   * Export audit data
-   */
-  async exportAuditData(req: Request, res: Response): Promise<void> {
-    try {
-      const query: AuditQuery = {
-        startDate: req.query.startDate ? new Date(req.query.startDate as string) : undefined,
-        endDate: req.query.endDate ? new Date(req.query.endDate as string) : undefined,
-        eventTypes: req.query.eventTypes ? (req.query.eventTypes as string).split(',') : undefined,
-        categories: req.query.categories ? (req.query.categories as string).split(',') : undefined,
-        severities: req.query.severities ? (req.query.severities as string).split(',') : undefined,
-        userIds: req.query.userIds ? (req.query.userIds as string).split(',') : undefined,
-        ipAddresses: req.query.ipAddresses ? (req.query.ipAddresses as string).split(',') : undefined,
-        outcomes: req.query.outcomes ? (req.query.outcomes as string).split(',') : undefined,
-        riskScoreMin: req.query.riskScoreMin ? parseFloat(req.query.riskScoreMin as string) : undefined,
-        riskScoreMax: req.query.riskScoreMax ? parseFloat(req.query.riskScoreMax as string) : undefined,
-        complianceFlags: req.query.complianceFlags ? (req.query.complianceFlags as string).split(',') : undefined,
-        correlationId: req.query.correlationId as string
-      };
-
-      const format = (req.query.format as 'json' | 'csv' | 'xml') || 'json';
-      const encrypt = req.query.encrypt === 'true';
-
-      const exportId = await securityAuditLoggingService.exportAuditData(query, format, encrypt);
-
+      const queryData = auditQuerySchema.parse(req.query);
+      
+      const events = await securityAuditService.queryAuditEvents(queryData);
+      
       res.json({
         success: true,
-        data: { exportId, format, encrypted: encrypt }
+        data: events,
+        count: events.length,
+        timestamp: new Date().toISOString()
       });
     } catch (error) {
-      safeLogger.error('Error exporting audit data:', error);
+      safeLogger.error('Error querying audit events:', error);
+      
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid query parameters',
+          details: error.errors
+        });
+        return;
+      }
+      
       res.status(500).json({
         success: false,
-        error: 'Failed to export audit data'
+        error: 'Failed to query audit events',
+        message: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   }
 
   /**
-   * Get audit statistics
+   * Report a security incident
    */
-  async getAuditStatistics(req: Request, res: Response): Promise<void> {
+  async reportIncident(req: Request, res: Response): Promise<void> {
+    try {
+      const incidentData = incidentReportSchema.parse(req.body);
+      
+      const incident = await securityAuditService.reportIncident(
+        incidentData.severity,
+        incidentData.category,
+        incidentData.title,
+        incidentData.description,
+        incidentData.affectedSystems,
+        incidentData.indicators
+      );
+      
+      res.status(201).json({
+        success: true,
+        data: incident
+      });
+    } catch (error) {
+      safeLogger.error('Error reporting incident:', error);
+      
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid request data',
+          details: error.errors
+        });
+        return;
+      }
+      
+      res.status(500).json({
+        success: false,
+        error: 'Failed to report incident',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
+   * Get incident by ID
+   */
+  async getIncident(req: Request, res: Response): Promise<void> {
+    try {
+      const { incidentId } = req.params;
+      
+      const incident = securityAuditService.getIncident(incidentId);
+      
+      if (!incident) {
+        res.status(404).json({
+          success: false,
+          error: 'Incident not found'
+        });
+        return;
+      }
+      
+      res.json({
+        success: true,
+        data: incident
+      });
+    } catch (error) {
+      safeLogger.error('Error getting incident:', error);
+      
+      res.status(500).json({
+        success: false,
+        error: 'Failed to get incident',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
+   * Get all incidents
+   */
+  async getAllIncidents(req: Request, res: Response): Promise<void> {
+    try {
+      const incidents = securityAuditService.getAllIncidents();
+      
+      res.json({
+        success: true,
+        data: incidents,
+        count: incidents.length,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      safeLogger.error('Error getting incidents:', error);
+      
+      res.status(500).json({
+        success: false,
+        error: 'Failed to get incidents',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
+   * Update incident status
+   */
+  async updateIncidentStatus(req: Request, res: Response): Promise<void> {
+    try {
+      const { incidentId } = req.params;
+      const { status, updatedBy } = req.body;
+      
+      if (!status || !updatedBy) {
+        res.status(400).json({
+          success: false,
+          error: 'status and updatedBy are required'
+        });
+        return;
+      }
+      
+      const success = await securityAuditService.updateIncidentStatus(
+        incidentId,
+        status,
+        updatedBy
+      );
+      
+      if (success) {
+        res.json({
+          success: true,
+          message: 'Incident status updated successfully'
+        });
+      } else {
+        res.status(404).json({
+          success: false,
+          error: 'Incident not found'
+        });
+      }
+    } catch (error) {
+      safeLogger.error('Error updating incident status:', error);
+      
+      res.status(500).json({
+        success: false,
+        error: 'Failed to update incident status',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
+   * Record tamper detection
+   */
+  async recordTamperDetection(req: Request, res: Response): Promise<void> {
+    try {
+      const tamperData = tamperDetectionSchema.parse(req.body);
+      
+      const record = await securityAuditService.recordTamperDetection(
+        tamperData.resourceType,
+        tamperData.resourceId,
+        tamperData.expectedHash,
+        tamperData.actualHash,
+        tamperData.detectedBy,
+        tamperData.discrepancy
+      );
+      
+      res.status(201).json({
+        success: true,
+        data: record
+      });
+    } catch (error) {
+      safeLogger.error('Error recording tamper detection:', error);
+      
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid request data',
+          details: error.errors
+        });
+        return;
+      }
+      
+      res.status(500).json({
+        success: false,
+        error: 'Failed to record tamper detection',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
+   * Resolve tamper detection
+   */
+  async resolveTamperDetection(req: Request, res: Response): Promise<void> {
+    try {
+      const resolutionData = tamperResolutionSchema.parse(req.body);
+      
+      const success = await securityAuditService.resolveTamperDetection(
+        resolutionData.recordId,
+        resolutionData.resolutionNotes,
+        resolutionData.resolvedBy
+      );
+      
+      if (success) {
+        res.json({
+          success: true,
+          message: 'Tamper detection resolved successfully'
+        });
+      } else {
+        res.status(404).json({
+          success: false,
+          error: 'Tamper detection record not found'
+        });
+      }
+    } catch (error) {
+      safeLogger.error('Error resolving tamper detection:', error);
+      
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid request data',
+          details: error.errors
+        });
+        return;
+      }
+      
+      res.status(500).json({
+        success: false,
+        error: 'Failed to resolve tamper detection',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
+   * Generate audit report
+   */
+  async generateAuditReport(req: Request, res: Response): Promise<void> {
     try {
       const { startDate, endDate } = req.query;
       
       if (!startDate || !endDate) {
         res.status(400).json({
           success: false,
-          error: 'Start date and end date are required'
+          error: 'startDate and endDate are required'
         });
         return;
       }
-
-      const events = await securityAuditLoggingService.queryAuditEvents({
-        startDate: new Date(startDate as string),
-        endDate: new Date(endDate as string)
-      });
-
-      const statistics = {
-        totalEvents: events.length,
-        eventsByCategory: events.reduce((acc, event) => {
-          acc[event.category] = (acc[event.category] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>),
-        eventsBySeverity: events.reduce((acc, event) => {
-          acc[event.severity] = (acc[event.severity] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>),
-        averageRiskScore: events.length > 0 
-          ? events.reduce((sum, event) => sum + event.riskScore, 0) / events.length 
-          : 0,
-        highRiskEvents: events.filter(e => e.riskScore >= 7.0).length,
-        criticalEvents: events.filter(e => e.severity === 'critical').length,
-        failedEvents: events.filter(e => e.outcome === 'failure').length,
-        uniqueUsers: new Set(events.filter(e => e.userId).map(e => e.userId)).size,
-        uniqueIpAddresses: new Set(events.map(e => e.ipAddress)).size
-      };
-
+      
+      const report = await securityAuditService.generateAuditReport(
+        new Date(startDate as string),
+        new Date(endDate as string),
+        req.query as any
+      );
+      
       res.json({
         success: true,
-        data: statistics
+        data: report,
+        timestamp: new Date().toISOString()
       });
     } catch (error) {
-      safeLogger.error('Error getting audit statistics:', error);
+      safeLogger.error('Error generating audit report:', error);
+      
       res.status(500).json({
         success: false,
-        error: 'Failed to get audit statistics'
-      });
-    }
-  }
-
-  /**
-   * Get compliance summary
-   */
-  async getComplianceSummary(req: Request, res: Response): Promise<void> {
-    try {
-      const { startDate, endDate } = req.query;
-      
-      if (!startDate || !endDate) {
-        res.status(400).json({
-          success: false,
-          error: 'Start date and end date are required'
-        });
-        return;
-      }
-
-      const events = await securityAuditLoggingService.queryAuditEvents({
-        startDate: new Date(startDate as string),
-        endDate: new Date(endDate as string)
-      });
-
-      const complianceEvents = events.filter(e => e.complianceFlags.length > 0);
-      
-      const complianceSummary = {
-        totalComplianceEvents: complianceEvents.length,
-        complianceByRegulation: complianceEvents.reduce((acc, event) => {
-          event.complianceFlags.forEach(flag => {
-            acc[flag] = (acc[flag] || 0) + 1;
-          });
-          return acc;
-        }, {} as Record<string, number>),
-        complianceViolations: events.filter(e => 
-          e.complianceFlags.length > 0 && 
-          (e.severity === 'error' || e.severity === 'critical' || e.outcome === 'failure')
-        ).length,
-        gdprEvents: complianceEvents.filter(e => e.complianceFlags.includes('GDPR')).length,
-        soxEvents: complianceEvents.filter(e => e.complianceFlags.includes('SOX')).length,
-        hipaaEvents: complianceEvents.filter(e => e.complianceFlags.includes('HIPAA')).length,
-        iso27001Events: complianceEvents.filter(e => e.complianceFlags.includes('ISO27001')).length
-      };
-
-      res.json({
-        success: true,
-        data: complianceSummary
-      });
-    } catch (error) {
-      safeLogger.error('Error getting compliance summary:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to get compliance summary'
+        error: 'Failed to generate audit report',
+        message: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   }
 }
 
+// Export singleton instance
 export const securityAuditController = new SecurityAuditController();

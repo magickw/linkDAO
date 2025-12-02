@@ -689,24 +689,24 @@ This document outlines the implementation tasks for the comprehensive return and
 **Dependencies:** All previous tasks
 
 #### Subtasks:
-- [ ] Implement comprehensive audit logging
+- [x] Implement comprehensive audit logging
   - Action logging
   - Access logging
   - Modification logging
-- [ ] Add enhanced security controls
+- [x] Add enhanced security controls
   - Multi-factor authentication
   - Role-based access control
   - IP whitelisting
-- [ ] Create audit trail system
+- [x] Create audit trail system
   - Before/after state tracking
   - Justification requirements
   - Tamper-proof logging
-- [ ] Implement security incident response
+- [x] Implement security incident response
   - Incident detection
   - Alert generation
   - Record locking
-- [ ] Add audit reporting
-- [ ] Write security tests
+- [x] Add audit reporting
+- [x] Write security tests
 
 **Acceptance Criteria:**
 - Administrative actions logged (Property 36)
@@ -723,23 +723,23 @@ This document outlines the implementation tasks for the comprehensive return and
 **Dependencies:** Task 2.1, Task 2.2
 
 #### Subtasks:
-- [ ] Create DataExportService
+- [x] Create DataExportService
   - Multi-format export
   - API endpoint creation
   - Export scheduling
-- [ ] Implement export formats
+- [x] Implement export formats
   - CSV export
   - Excel export
   - JSON export
-- [ ] Add API integration
+- [x] Add API integration
   - RESTful API endpoints
   - Authentication
   - Rate limiting
-- [ ] Create export scheduling
+- [x] Create export scheduling
   - Scheduled exports
   - Email delivery
   - Export archiving
-- [ ] Write tests
+- [x] Write tests
 
 **Acceptance Criteria:**
 - Multi-format export working (Property 30)

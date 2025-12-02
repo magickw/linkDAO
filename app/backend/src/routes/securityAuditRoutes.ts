@@ -1,35 +1,104 @@
-/**
- * Security Audit Routes
- * API routes for security audit logging and reporting
- */
-
 import { Router } from 'express';
-import { csrfProtection } from '../middleware/csrfProtection';
 import { securityAuditController } from '../controllers/securityAuditController';
-import { authMiddleware } from '../middleware/authMiddleware';
-import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
+import { adminAuthMiddleware } from '../middleware/auth';
+import { csrfProtection } from '../middleware/csrf';
+import { rateLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
-// Apply authentication middleware to all routes
-router.use(authMiddleware);
+/**
+ * Security Audit Routes
+ * All routes require admin authentication
+ */
 
-// Query and reporting routes (admin only)
-router.get('/events', adminAuthMiddleware, securityAuditController.queryAuditEvents.bind(securityAuditController));
-router.post('/reports/generate', csrfProtection,  adminAuthMiddleware, securityAuditController.generateAuditReport.bind(securityAuditController));
-router.get('/statistics', adminAuthMiddleware, securityAuditController.getAuditStatistics.bind(securityAuditController));
-router.get('/compliance/summary', adminAuthMiddleware, securityAuditController.getComplianceSummary.bind(securityAuditController));
-router.get('/export', adminAuthMiddleware, securityAuditController.exportAuditData.bind(securityAuditController));
+// Service initialization
+router.post('/initialize', 
+  adminAuthMiddleware, 
+  csrfProtection, 
+  rateLimiter(10, 60), // 10 requests per minute
+  securityAuditController.initializeService
+);
 
 // Event logging routes (system use)
-router.post('/events/security', csrfProtection,  securityAuditController.logSecurityEvent.bind(securityAuditController));
-router.post('/events/authentication', csrfProtection,  securityAuditController.logAuthenticationEvent.bind(securityAuditController));
-router.post('/events/data-access', csrfProtection,  securityAuditController.logDataAccessEvent.bind(securityAuditController));
-router.post('/events/admin-action', csrfProtection,  securityAuditController.logAdminAction.bind(securityAuditController));
-router.post('/events/security-incident', csrfProtection,  securityAuditController.logSecurityIncident.bind(securityAuditController));
+router.post('/events/security', 
+  csrfProtection, 
+  securityAuditController.logSecurityEvent
+);
 
-// Configuration routes (admin only)
-router.post('/compliance/rules', csrfProtection,  adminAuthMiddleware, securityAuditController.createComplianceRule.bind(securityAuditController));
-router.post('/retention/policies', csrfProtection,  adminAuthMiddleware, securityAuditController.createRetentionPolicy.bind(securityAuditController));
+router.post('/events/authentication', 
+  csrfProtection, 
+  securityAuditController.logAuthenticationEvent
+);
+
+router.post('/events/data-access', 
+  csrfProtection, 
+  securityAuditController.logDataAccessEvent
+);
+
+router.post('/events/admin-action', 
+  csrfProtection, 
+  securityAuditController.logAdminAction
+);
+
+router.post('/events/security-incident', 
+  csrfProtection, 
+  securityAuditController.logSecurityIncident
+);
+
+// Audit event querying
+router.get('/events', 
+  adminAuthMiddleware, 
+  rateLimiter(100, 60), // 100 requests per minute
+  securityAuditController.queryAuditEvents
+);
+
+// Incident management
+router.post('/incidents', 
+  adminAuthMiddleware, 
+  csrfProtection, 
+  rateLimiter(50, 60), // 50 requests per minute
+  securityAuditController.reportIncident
+);
+
+router.get('/incidents/:incidentId', 
+  adminAuthMiddleware, 
+  rateLimiter(100, 60), // 100 requests per minute
+  securityAuditController.getIncident
+);
+
+router.get('/incidents', 
+  adminAuthMiddleware, 
+  rateLimiter(100, 60), // 100 requests per minute
+  securityAuditController.getAllIncidents
+);
+
+router.put('/incidents/:incidentId/status', 
+  adminAuthMiddleware, 
+  csrfProtection, 
+  rateLimiter(50, 60), // 50 requests per minute
+  securityAuditController.updateIncidentStatus
+);
+
+// Tamper detection
+router.post('/tamper-detection', 
+  adminAuthMiddleware, 
+  csrfProtection, 
+  rateLimiter(50, 60), // 50 requests per minute
+  securityAuditController.recordTamperDetection
+);
+
+router.put('/tamper-detection/resolve', 
+  adminAuthMiddleware, 
+  csrfProtection, 
+  rateLimiter(50, 60), // 50 requests per minute
+  securityAuditController.resolveTamperDetection
+);
+
+// Reporting
+router.get('/reports', 
+  adminAuthMiddleware, 
+  rateLimiter(30, 60), // 30 requests per minute
+  securityAuditController.generateAuditReport
+);
 
 export default router;

@@ -676,7 +676,14 @@ export class WorkflowAutomationEngine extends EventEmitter {
     }
   }
 
-  // Rule Engine Integration
+  async createWorkflowRule(
+    rule: Omit<typeof workflowRules.$inferInsert, 'id' | 'createdAt' | 'updatedAt'>,
+    createdBy: string
+  ): Promise<{
+      success: boolean;
+      ruleId?: string;
+      error?: string;
+    }> {
     try {
       const [newRule] = await db.insert(workflowRules).values({
         ...rule,
@@ -693,15 +700,16 @@ export class WorkflowAutomationEngine extends EventEmitter {
 
       logger.info(`Workflow rule created: ${newRule.id} `, { ruleId: newRule.id, name: newRule.name });
       return {
-        ...newRule,
-        ruleType: newRule.ruleType as RuleType,
-        conditions: newRule.conditions as unknown as RuleCondition[],
-        actions: newRule.actions as unknown as RuleAction[]
+        success: true,
+        ruleId: newRule.id
       };
 
     } catch (error) {
       logger.error('Failed to create workflow rule', { error, rule });
-      throw new Error(`Failed to create workflow rule: ${error.message} `);
+      return {
+        success: false,
+        error: `Failed to create workflow rule: ${error.message}`
+      };
     }
   }
 

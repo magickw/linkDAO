@@ -903,6 +903,12 @@ app.use('/api/customer-experience', customerExperienceRoutes);
 // Communication management routes
 app.use('/api/communication', communicationManagerRoutes);
 
+// Security audit routes
+app.use('/api/security-audit', require('./routes/securityAuditRoutes').default);
+
+// Data export routes
+app.use('/api/data-export', require('./routes/dataExportRoutes').default);
+
 // Marketplace registration routes
 app.use('/api/marketplace/registration', marketplaceRegistrationRoutes);
 
