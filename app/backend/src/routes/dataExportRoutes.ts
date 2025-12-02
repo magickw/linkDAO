@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { dataExportController } from '../controllers/dataExportController';
 import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
 import { csrfProtection } from '../middleware/csrfProtection';
-import { rateLimiter } from '../middleware/rateLimiting';
+import { rateLimiter } from '../middleware/rateLimitingMiddleware';
 
 const router = Router();
 

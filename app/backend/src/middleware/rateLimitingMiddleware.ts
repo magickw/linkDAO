@@ -381,3 +381,14 @@ export const tieredRateLimit = (req: Request, res: Response, next: NextFunction)
   
   return rateLimiter(req, res, next);
 };
+
+/**
+ * Simple rate limiter factory for backward compatibility
+ * Usage: rateLimiter(maxRequests, windowSeconds)
+ */
+export function rateLimiter(maxRequests: number, windowSeconds: number) {
+  return rateLimitingMiddleware({
+    max: maxRequests,
+    windowMs: windowSeconds * 1000
+  });
+}

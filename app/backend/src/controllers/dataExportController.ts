@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { dataExportService, ExportRequest, ExportFormat, ScheduledExport } from '../services/dataExportService';
 import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
 import { csrfProtection } from '../middleware/csrfProtection';
-import { rateLimiter } from '../middleware/rateLimiting';
+import { rateLimiter } from '../middleware/rateLimitingMiddleware';
 
 export class DataExportController {
   /**
