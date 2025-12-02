@@ -4723,6 +4723,185 @@ export const returnAnalyticsDaily = pgTable("return_analytics_daily", {
   dateIdx: index("idx_return_analytics_daily_date").on(t.date),
 }));
 
+// Return Analytics Weekly - Weekly aggregated metrics
+export const returnAnalyticsWeekly = pgTable("return_analytics_weekly", {
+  id: uuid("id").defaultRandom().primaryKey(),
+
+  // Time dimension
+  weekStart: date("week_start").notNull(),
+  weekEnd: date("week_end").notNull(),
+  weekNumber: integer("week_number").notNull(),
+  year: integer("year").notNull(),
+
+  // Volume metrics
+  totalReturns: integer("total_returns").default(0),
+  newReturns: integer("new_returns").default(0),
+  approvedReturns: integer("approved_returns").default(0),
+  rejectedReturns: integer("rejected_returns").default(0),
+  completedReturns: integer("completed_returns").default(0),
+  cancelledReturns: integer("cancelled_returns").default(0),
+
+  // Status distribution
+  statusRequested: integer("status_requested").default(0),
+  statusApproved: integer("status_approved").default(0),
+  statusRejected: integer("status_rejected").default(0),
+  statusInTransit: integer("status_in_transit").default(0),
+  statusReceived: integer("status_received").default(0),
+  statusInspected: integer("status_inspected").default(0),
+  statusRefundProcessing: integer("status_refund_processing").default(0),
+  statusCompleted: integer("status_completed").default(0),
+
+  // Financial metrics
+  totalRefundAmount: decimal("total_refund_amount", { precision: 20, scale: 8 }).default("0"),
+  avgRefundAmount: decimal("avg_refund_amount", { precision: 20, scale: 8 }).default("0"),
+  maxRefundAmount: decimal("max_refund_amount", { precision: 20, scale: 8 }).default("0"),
+  minRefundAmount: decimal("min_refund_amount", { precision: 20, scale: 8 }).default("0"),
+  totalRestockingFees: decimal("total_restocking_fees", { precision: 20, scale: 8 }).default("0"),
+  totalShippingCosts: decimal("total_shipping_costs", { precision: 20, scale: 8 }).default("0"),
+  netRefundImpact: decimal("net_refund_impact", { precision: 20, scale: 8 }).default("0"),
+
+  // Processing time metrics (in hours)
+  avgApprovalTime: decimal("avg_approval_time", { precision: 10, scale: 2 }),
+  avgRefundTime: decimal("avg_refund_time", { precision: 10, scale: 2 }),
+  avgTotalResolutionTime: decimal("avg_total_resolution_time", { precision: 10, scale: 2 }),
+  medianApprovalTime: decimal("median_approval_time", { precision: 10, scale: 2 }),
+  p95ApprovalTime: decimal("p95_approval_time", { precision: 10, scale: 2 }),
+  p99ApprovalTime: decimal("p99_approval_time", { precision: 10, scale: 2 }),
+
+  // Return reasons breakdown
+  reasonDefective: integer("reason_defective").default(0),
+  reasonWrongItem: integer("reason_wrong_item").default(0),
+  reasonNotAsDescribed: integer("reason_not_as_described").default(0),
+  reasonDamagedShipping: integer("reason_damaged_shipping").default(0),
+  reasonChangedMind: integer("reason_changed_mind").default(0),
+  reasonBetterPrice: integer("reason_better_price").default(0),
+  reasonNoLongerNeeded: integer("reason_no_longer_needed").default(0),
+  reasonOther: integer("reason_other").default(0),
+
+  // Risk metrics
+  highRiskReturns: integer("high_risk_returns").default(0),
+  mediumRiskReturns: integer("medium_risk_returns").default(0),
+  lowRiskReturns: integer("low_risk_returns").default(0),
+  flaggedForReview: integer("flagged_for_review").default(0),
+  fraudDetected: integer("fraud_detected").default(0),
+  avgRiskScore: decimal("avg_risk_score", { precision: 5, scale: 2 }),
+
+  // Customer satisfaction
+  avgSatisfactionScore: decimal("avg_satisfaction_score", { precision: 3, scale: 2 }),
+  satisfactionResponses: integer("satisfaction_responses").default(0),
+  npsScore: integer("nps_score"),
+
+  // Week-over-week comparison
+  returnRateChange: decimal("return_rate_change", { precision: 5, scale: 2 }),
+  volumeChange: decimal("volume_change", { precision: 5, scale: 2 }),
+  refundAmountChange: decimal("refund_amount_change", { precision: 5, scale: 2 }),
+
+  // Return rate
+  returnRate: decimal("return_rate", { precision: 5, scale: 2 }),
+  totalOrders: integer("total_orders").default(0),
+
+  // Metadata
+  calculatedAt: timestamp("calculated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  weekIdx: index("idx_return_analytics_weekly_week").on(t.weekStart, t.year),
+  yearWeekIdx: index("idx_return_analytics_weekly_year_week").on(t.year, t.weekNumber),
+}));
+
+// Return Analytics Monthly - Monthly aggregated metrics
+export const returnAnalyticsMonthly = pgTable("return_analytics_monthly", {
+  id: uuid("id").defaultRandom().primaryKey(),
+
+  // Time dimension
+  month: integer("month").notNull(),
+  year: integer("year").notNull(),
+  monthStart: date("month_start").notNull(),
+  monthEnd: date("month_end").notNull(),
+
+  // Volume metrics
+  totalReturns: integer("total_returns").default(0),
+  newReturns: integer("new_returns").default(0),
+  approvedReturns: integer("approved_returns").default(0),
+  rejectedReturns: integer("rejected_returns").default(0),
+  completedReturns: integer("completed_returns").default(0),
+  cancelledReturns: integer("cancelled_returns").default(0),
+
+  // Status distribution
+  statusRequested: integer("status_requested").default(0),
+  statusApproved: integer("status_approved").default(0),
+  statusRejected: integer("status_rejected").default(0),
+  statusInTransit: integer("status_in_transit").default(0),
+  statusReceived: integer("status_received").default(0),
+  statusInspected: integer("status_inspected").default(0),
+  statusRefundProcessing: integer("status_refund_processing").default(0),
+  statusCompleted: integer("status_completed").default(0),
+
+  // Financial metrics
+  totalRefundAmount: decimal("total_refund_amount", { precision: 20, scale: 8 }).default("0"),
+  avgRefundAmount: decimal("avg_refund_amount", { precision: 20, scale: 8 }).default("0"),
+  maxRefundAmount: decimal("max_refund_amount", { precision: 20, scale: 8 }).default("0"),
+  minRefundAmount: decimal("min_refund_amount", { precision: 20, scale: 8 }).default("0"),
+  totalRestockingFees: decimal("total_restocking_fees", { precision: 20, scale: 8 }).default("0"),
+  totalShippingCosts: decimal("total_shipping_costs", { precision: 20, scale: 8 }).default("0"),
+  netRefundImpact: decimal("net_refund_impact", { precision: 20, scale: 8 }).default("0"),
+
+  // Processing time metrics (in hours)
+  avgApprovalTime: decimal("avg_approval_time", { precision: 10, scale: 2 }),
+  avgRefundTime: decimal("avg_refund_time", { precision: 10, scale: 2 }),
+  avgTotalResolutionTime: decimal("avg_total_resolution_time", { precision: 10, scale: 2 }),
+  medianApprovalTime: decimal("median_approval_time", { precision: 10, scale: 2 }),
+  p95ApprovalTime: decimal("p95_approval_time", { precision: 10, scale: 2 }),
+  p99ApprovalTime: decimal("p99_approval_time", { precision: 10, scale: 2 }),
+
+  // Return reasons breakdown
+  reasonDefective: integer("reason_defective").default(0),
+  reasonWrongItem: integer("reason_wrong_item").default(0),
+  reasonNotAsDescribed: integer("reason_not_as_described").default(0),
+  reasonDamagedShipping: integer("reason_damaged_shipping").default(0),
+  reasonChangedMind: integer("reason_changed_mind").default(0),
+  reasonBetterPrice: integer("reason_better_price").default(0),
+  reasonNoLongerNeeded: integer("reason_no_longer_needed").default(0),
+  reasonOther: integer("reason_other").default(0),
+
+  // Risk metrics
+  highRiskReturns: integer("high_risk_returns").default(0),
+  mediumRiskReturns: integer("medium_risk_returns").default(0),
+  lowRiskReturns: integer("low_risk_returns").default(0),
+  flaggedForReview: integer("flagged_for_review").default(0),
+  fraudDetected: integer("fraud_detected").default(0),
+  avgRiskScore: decimal("avg_risk_score", { precision: 5, scale: 2 }),
+
+  // Customer satisfaction
+  avgSatisfactionScore: decimal("avg_satisfaction_score", { precision: 3, scale: 2 }),
+  satisfactionResponses: integer("satisfaction_responses").default(0),
+  npsScore: integer("nps_score"),
+
+  // Month-over-month comparison
+  returnRateChange: decimal("return_rate_change", { precision: 5, scale: 2 }),
+  volumeChange: decimal("volume_change", { precision: 5, scale: 2 }),
+  refundAmountChange: decimal("refund_amount_change", { precision: 5, scale: 2 }),
+
+  // Year-over-year comparison
+  yoyReturnRateChange: decimal("yoy_return_rate_change", { precision: 5, scale: 2 }),
+  yoyVolumeChange: decimal("yoy_volume_change", { precision: 5, scale: 2 }),
+  yoyRefundAmountChange: decimal("yoy_refund_amount_change", { precision: 5, scale: 2 }),
+
+  // Return rate
+  returnRate: decimal("return_rate", { precision: 5, scale: 2 }),
+  totalOrders: integer("total_orders").default(0),
+
+  // Seasonal indicators
+  isSeasonalPeak: boolean("is_seasonal_peak").default(false),
+  seasonalFactor: decimal("seasonal_factor", { precision: 5, scale: 2 }),
+
+  // Metadata
+  calculatedAt: timestamp("calculated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  monthIdx: index("idx_return_analytics_monthly_month").on(t.month, t.year),
+  yearIdx: index("idx_return_analytics_monthly_year").on(t.year),
+}));
+
 // Return Metrics Realtime - Real-time monitoring data
 export const returnMetricsRealtime = pgTable("return_metrics_realtime", {
   id: uuid("id").defaultRandom().primaryKey(),

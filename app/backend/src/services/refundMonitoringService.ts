@@ -317,6 +317,245 @@ export class RefundMonitoringService {
   }
 
   /**
+   * Monitor provider health metrics
+   * Comprehensive health monitoring for all payment providers
+   * @returns Detailed health metrics for each provider
+   */
+  async monitorProviderHealth(): Promise<Array<{
+    provider: 'stripe' | 'paypal' | 'blockchain';
+    health: {
+      overall: 'healthy' | 'warning' | 'critical';
+      uptime: number; // Percentage
+      responseTime: number; // Average in ms
+      errorRate: number; // Percentage
+      throughput: number; // Transactions per minute
+    };
+    metrics: {
+      last5Minutes: {
+        successCount: number;
+        failureCount: number;
+        averageResponseTime: number;
+      };
+      last15Minutes: {
+        successCount: number;
+        failureCount: number;
+        averageResponseTime: number;
+      };
+      lastHour: {
+        successCount: number;
+        failureCount: number;
+        averageResponseTime: number;
+      };
+    };
+    alerts: Array<{
+      severity: 'info' | 'warning' | 'critical';
+      message: string;
+      timestamp: Date;
+    }>;
+    recommendations: string[];
+  }>> {
+    try {
+      const providers: Array<'stripe' | 'paypal' | 'blockchain'> = ['stripe', 'paypal', 'blockchain'];
+      const healthReports = [];
+
+      const now = new Date();
+      const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+      const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
+      const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+
+      for (const provider of providers) {
+        // Get metrics for different time windows
+        const [last5MinStats] = await db
+          .select({
+            successCount: sql<number>`COUNT(CASE WHEN ${refundProviderTransactions.providerStatus} = 'completed' THEN 1 END)`,
+            failureCount: sql<number>`COUNT(CASE WHEN ${refundProviderTransactions.providerStatus} = 'failed' THEN 1 END)`,
+            averageResponseTime: sql<number>`AVG(EXTRACT(EPOCH FROM (${refundProviderTransactions.completedAt} - ${refundProviderTransactions.createdAt})) * 1000)`
+          })
+          .from(refundProviderTransactions)
+          .where(
+            and(
+              eq(refundProviderTransactions.providerName, provider),
+              gte(refundProviderTransactions.createdAt, fiveMinutesAgo)
+            )
+          );
+
+        const [last15MinStats] = await db
+          .select({
+            successCount: sql<number>`COUNT(CASE WHEN ${refundProviderTransactions.providerStatus} = 'completed' THEN 1 END)`,
+            failureCount: sql<number>`COUNT(CASE WHEN ${refundProviderTransactions.providerStatus} = 'failed' THEN 1 END)`,
+            averageResponseTime: sql<number>`AVG(EXTRACT(EPOCH FROM (${refundProviderTransactions.completedAt} - ${refundProviderTransactions.createdAt})) * 1000)`
+          })
+          .from(refundProviderTransactions)
+          .where(
+            and(
+              eq(refundProviderTransactions.providerName, provider),
+              gte(refundProviderTransactions.createdAt, fifteenMinutesAgo)
+            )
+          );
+
+        const [lastHourStats] = await db
+          .select({
+            successCount: sql<number>`COUNT(CASE WHEN ${refundProviderTransactions.providerStatus} = 'completed' THEN 1 END)`,
+            failureCount: sql<number>`COUNT(CASE WHEN ${refundProviderTransactions.providerStatus} = 'failed' THEN 1 END)`,
+            averageResponseTime: sql<number>`AVG(EXTRACT(EPOCH FROM (${refundProviderTransactions.completedAt} - ${refundProviderTransactions.createdAt})) * 1000)`
+          })
+          .from(refundProviderTransactions)
+          .where(
+            and(
+              eq(refundProviderTransactions.providerName, provider),
+              gte(refundProviderTransactions.createdAt, oneHourAgo)
+            )
+          );
+
+        // Calculate health metrics
+        const hourSuccessCount = Number(lastHourStats.successCount) || 0;
+        const hourFailureCount = Number(lastHourStats.failureCount) || 0;
+        const hourTotalCount = hourSuccessCount + hourFailureCount;
+        
+        const uptime = hourTotalCount > 0 ? (hourSuccessCount / hourTotalCount) * 100 : 100;
+        const errorRate = hourTotalCount > 0 ? (hourFailureCount / hourTotalCount) * 100 : 0;
+        const responseTime = Number(lastHourStats.averageResponseTime) || 0;
+        const throughput = hourTotalCount / 60; // Transactions per minute
+
+        // Determine overall health status
+        let overall: 'healthy' | 'warning' | 'critical';
+        if (uptime >= 99 && errorRate < 1 && responseTime < 2000) {
+          overall = 'healthy';
+        } else if (uptime >= 95 && errorRate < 5 && responseTime < 5000) {
+          overall = 'warning';
+        } else {
+          overall = 'critical';
+        }
+
+        // Generate alerts
+        const alerts: Array<{ severity: 'info' | 'warning' | 'critical'; message: string; timestamp: Date }> = [];
+        
+        if (uptime < 95) {
+          alerts.push({
+            severity: 'critical',
+            message: `Low uptime detected: ${uptime.toFixed(2)}%`,
+            timestamp: now
+          });
+        } else if (uptime < 99) {
+          alerts.push({
+            severity: 'warning',
+            message: `Uptime below optimal: ${uptime.toFixed(2)}%`,
+            timestamp: now
+          });
+        }
+
+        if (errorRate > 5) {
+          alerts.push({
+            severity: 'critical',
+            message: `High error rate: ${errorRate.toFixed(2)}%`,
+            timestamp: now
+          });
+        } else if (errorRate > 1) {
+          alerts.push({
+            severity: 'warning',
+            message: `Elevated error rate: ${errorRate.toFixed(2)}%`,
+            timestamp: now
+          });
+        }
+
+        if (responseTime > 5000) {
+          alerts.push({
+            severity: 'critical',
+            message: `Very slow response time: ${responseTime.toFixed(0)}ms`,
+            timestamp: now
+          });
+        } else if (responseTime > 2000) {
+          alerts.push({
+            severity: 'warning',
+            message: `Slow response time: ${responseTime.toFixed(0)}ms`,
+            timestamp: now
+          });
+        }
+
+        if (throughput < 0.1 && hourTotalCount > 0) {
+          alerts.push({
+            severity: 'info',
+            message: `Low transaction volume: ${throughput.toFixed(2)} tx/min`,
+            timestamp: now
+          });
+        }
+
+        // Generate recommendations
+        const recommendations: string[] = [];
+        
+        if (overall === 'critical') {
+          recommendations.push('Immediate investigation required - provider experiencing critical issues');
+          recommendations.push('Consider enabling failover to backup provider');
+          recommendations.push('Check provider status page for known outages');
+        } else if (overall === 'warning') {
+          recommendations.push('Monitor provider closely for degradation');
+          recommendations.push('Review recent error logs for patterns');
+          recommendations.push('Prepare failover procedures if issues persist');
+        }
+
+        if (errorRate > 5) {
+          recommendations.push('Investigate root cause of high error rate');
+          recommendations.push('Review recent API changes or updates');
+          recommendations.push('Check authentication and credentials');
+        }
+
+        if (responseTime > 3000) {
+          recommendations.push('Optimize API request patterns');
+          recommendations.push('Implement request caching where possible');
+          recommendations.push('Check network connectivity and latency');
+        }
+
+        if (throughput > 10) {
+          recommendations.push('High transaction volume - ensure adequate capacity');
+          recommendations.push('Monitor for rate limiting issues');
+        }
+
+        healthReports.push({
+          provider,
+          health: {
+            overall,
+            uptime,
+            responseTime,
+            errorRate,
+            throughput
+          },
+          metrics: {
+            last5Minutes: {
+              successCount: Number(last5MinStats.successCount) || 0,
+              failureCount: Number(last5MinStats.failureCount) || 0,
+              averageResponseTime: Number(last5MinStats.averageResponseTime) || 0
+            },
+            last15Minutes: {
+              successCount: Number(last15MinStats.successCount) || 0,
+              failureCount: Number(last15MinStats.failureCount) || 0,
+              averageResponseTime: Number(last15MinStats.averageResponseTime) || 0
+            },
+            lastHour: {
+              successCount: hourSuccessCount,
+              failureCount: hourFailureCount,
+              averageResponseTime: responseTime
+            }
+          },
+          alerts,
+          recommendations
+        });
+      }
+
+      logger.info('Provider health monitoring completed', {
+        providersMonitored: healthReports.length,
+        healthyProviders: healthReports.filter(r => r.health.overall === 'healthy').length,
+        warningProviders: healthReports.filter(r => r.health.overall === 'warning').length,
+        criticalProviders: healthReports.filter(r => r.health.overall === 'critical').length
+      });
+
+      return healthReports;
+    } catch (error) {
+      logger.error('Error monitoring provider health:', error);
+      throw new Error('Failed to monitor provider health');
+    }
+  }
+
+  /**
    * Get refund reconciliation data
    * Tracks reconciliation status and identifies discrepancies
    * @param startDate - Start date for reconciliation period
@@ -1208,6 +1447,182 @@ export class RefundMonitoringService {
     } else {
       this.recentAlerts.clear();
       logger.info('Cleared all alert cooldowns');
+    }
+  }
+
+  /**
+   * Calculate revenue impact from refunds
+   * Property 24: Comprehensive Cost Calculation
+   * Property 25: Multi-Dimensional Impact Analysis
+   * 
+   * Calculates total refunded revenue, platform fee impact, and seller revenue impact
+   * @param startDate - Start date for analysis period
+   * @param endDate - End date for analysis period
+   * @returns Revenue impact metrics
+   */
+  async calculateRevenueImpact(
+    startDate: Date,
+    endDate: Date
+  ): Promise<{
+    totalRefundedRevenue: number;
+    platformFeeImpact: number;
+    sellerRevenueImpact: number;
+    refundCount: number;
+    averageRefundAmount: number;
+    refundsByProvider: Record<string, {
+      totalRefunded: number;
+      platformFeeImpact: number;
+      sellerImpact: number;
+      count: number;
+    }>;
+    refundsByStatus: Record<string, {
+      totalRefunded: number;
+      count: number;
+    }>;
+    periodComparison?: {
+      previousPeriodRevenue: number;
+      changeAmount: number;
+      changePercentage: number;
+    };
+  }> {
+    try {
+      logger.info('Calculating revenue impact', { startDate, endDate });
+
+      // Get all refund records for the period
+      const [revenueStats] = await db
+        .select({
+          totalRefundedRevenue: sum(refundFinancialRecords.refundAmount),
+          platformFeeImpact: sum(refundFinancialRecords.platformFeeImpact),
+          sellerRevenueImpact: sum(refundFinancialRecords.sellerImpact),
+          refundCount: count(refundFinancialRecords.id),
+          averageRefundAmount: avg(refundFinancialRecords.refundAmount)
+        })
+        .from(refundFinancialRecords)
+        .where(
+          and(
+            gte(refundFinancialRecords.createdAt, startDate),
+            lte(refundFinancialRecords.createdAt, endDate),
+            eq(refundFinancialRecords.status, 'completed')
+          )
+        );
+
+      // Get breakdown by payment provider
+      const providerBreakdown = await db
+        .select({
+          provider: refundFinancialRecords.paymentProvider,
+          totalRefunded: sum(refundFinancialRecords.refundAmount),
+          platformFeeImpact: sum(refundFinancialRecords.platformFeeImpact),
+          sellerImpact: sum(refundFinancialRecords.sellerImpact),
+          count: count(refundFinancialRecords.id)
+        })
+        .from(refundFinancialRecords)
+        .where(
+          and(
+            gte(refundFinancialRecords.createdAt, startDate),
+            lte(refundFinancialRecords.createdAt, endDate),
+            eq(refundFinancialRecords.status, 'completed')
+          )
+        )
+        .groupBy(refundFinancialRecords.paymentProvider);
+
+      // Get breakdown by status
+      const statusBreakdown = await db
+        .select({
+          status: refundFinancialRecords.status,
+          totalRefunded: sum(refundFinancialRecords.refundAmount),
+          count: count(refundFinancialRecords.id)
+        })
+        .from(refundFinancialRecords)
+        .where(
+          and(
+            gte(refundFinancialRecords.createdAt, startDate),
+            lte(refundFinancialRecords.createdAt, endDate)
+          )
+        )
+        .groupBy(refundFinancialRecords.status);
+
+      // Calculate period comparison (previous period of same length)
+      const periodLength = endDate.getTime() - startDate.getTime();
+      const previousStartDate = new Date(startDate.getTime() - periodLength);
+      const previousEndDate = new Date(startDate.getTime());
+
+      const [previousPeriodStats] = await db
+        .select({
+          totalRefundedRevenue: sum(refundFinancialRecords.refundAmount)
+        })
+        .from(refundFinancialRecords)
+        .where(
+          and(
+            gte(refundFinancialRecords.createdAt, previousStartDate),
+            lte(refundFinancialRecords.createdAt, previousEndDate),
+            eq(refundFinancialRecords.status, 'completed')
+          )
+        );
+
+      // Format provider breakdown
+      const refundsByProvider: Record<string, {
+        totalRefunded: number;
+        platformFeeImpact: number;
+        sellerImpact: number;
+        count: number;
+      }> = {};
+
+      providerBreakdown.forEach(provider => {
+        refundsByProvider[provider.provider] = {
+          totalRefunded: Number(provider.totalRefunded) || 0,
+          platformFeeImpact: Number(provider.platformFeeImpact) || 0,
+          sellerImpact: Number(provider.sellerImpact) || 0,
+          count: Number(provider.count) || 0
+        };
+      });
+
+      // Format status breakdown
+      const refundsByStatus: Record<string, {
+        totalRefunded: number;
+        count: number;
+      }> = {};
+
+      statusBreakdown.forEach(status => {
+        refundsByStatus[status.status] = {
+          totalRefunded: Number(status.totalRefunded) || 0,
+          count: Number(status.count) || 0
+        };
+      });
+
+      // Calculate period comparison
+      const currentRevenue = Number(revenueStats.totalRefundedRevenue) || 0;
+      const previousRevenue = Number(previousPeriodStats.totalRefundedRevenue) || 0;
+      const changeAmount = currentRevenue - previousRevenue;
+      const changePercentage = previousRevenue > 0 
+        ? (changeAmount / previousRevenue) * 100 
+        : 0;
+
+      const result = {
+        totalRefundedRevenue: currentRevenue,
+        platformFeeImpact: Number(revenueStats.platformFeeImpact) || 0,
+        sellerRevenueImpact: Number(revenueStats.sellerRevenueImpact) || 0,
+        refundCount: Number(revenueStats.refundCount) || 0,
+        averageRefundAmount: Number(revenueStats.averageRefundAmount) || 0,
+        refundsByProvider,
+        refundsByStatus,
+        periodComparison: {
+          previousPeriodRevenue: previousRevenue,
+          changeAmount,
+          changePercentage
+        }
+      };
+
+      logger.info('Revenue impact calculated successfully', {
+        totalRefundedRevenue: result.totalRefundedRevenue,
+        platformFeeImpact: result.platformFeeImpact,
+        sellerRevenueImpact: result.sellerRevenueImpact,
+        refundCount: result.refundCount
+      });
+
+      return result;
+    } catch (error) {
+      logger.error('Error calculating revenue impact:', error);
+      throw new Error('Failed to calculate revenue impact');
     }
   }
 }
