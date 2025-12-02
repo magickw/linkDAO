@@ -4417,6 +4417,46 @@ export const workflowMetrics = pgTable("workflow_metrics", {
   metricTypeIdx: index("workflow_metrics_type_idx").on(table.metricType),
 }));
 
+// Workflow Auto-Approval System Tables
+export const workflowApprovalCriteria = pgTable('workflow_approval_criteria', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  entityType: varchar('entity_type', { length: 50 }).notNull(), // 'return', 'dispute', 'refund', 'verification'
+  maxRiskScore: integer('max_risk_score'),
+  maxAmount: decimal('max_amount', { precision: 10, scale: 2 }),
+  requirePositiveHistory: boolean('require_positive_history').default(false),
+  requireFraudCheck: boolean('require_fraud_check').default(false),
+  priority: integer('priority').default(1),
+  isActive: boolean('is_active').default(true),
+  createdBy: uuid('created_by'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => ({
+  entityTypeIdx: index("workflow_approval_criteria_entity_type_idx").on(table.entityType),
+  priorityIdx: index("workflow_approval_criteria_priority_idx").on(table.priority),
+  activeIdx: index("workflow_approval_criteria_active_idx").on(table.isActive),
+}));
+
+export const workflowDecisions = pgTable('workflow_decisions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  entityType: varchar('entity_type', { length: 50 }).notNull(),
+  entityId: uuid('entity_id').notNull(),
+  decisionType: varchar('decision_type', { length: 50 }).notNull(), // 'auto_approved', 'auto_rejected', 'manual_approved', 'manual_rejected', 'escalated'
+  reason: text('reason').notNull(),
+  confidence: decimal('confidence', { precision: 5, scale: 4 }).notNull(),
+  riskScore: integer('risk_score').notNull(),
+  riskLevel: varchar('risk_level', { length: 10 }).notNull(), // 'low', 'medium', 'high'
+  criteria: text('criteria').array(),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => ({
+  entityIdx: index("workflow_decisions_entity_idx").on(table.entityType, table.entityId),
+  decisionTypeIdx: index("workflow_decisions_type_idx").on(table.decisionType),
+  riskScoreIdx: index("workflow_decisions_risk_score_idx").on(table.riskScore),
+  createdAtIdx: index("workflow_decisions_created_at_idx").on(table.createdAt),
+}));
+
 // Return and Refund System Tables
 export const returnPolicies = pgTable('return_policies', {
   id: uuid('id').primaryKey().defaultRandom(),

@@ -409,6 +409,12 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                 {/* Search */}
                 <Link
                   href="/search"
+                  onClick={() => {
+                    // Force navigation to ensure page refresh on first visit
+                    if (typeof window !== 'undefined') {
+                      window.location.href = '/search';
+                    }
+                  }}
                   className="group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gradient-to-r dark:hover:from-gray-700/50 dark:hover:to-gray-600/50 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm"
                 >
                   <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -443,6 +449,12 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                 {/* Governance */}
                 <Link
                   href="/governance"
+                  onClick={() => {
+                    // Force navigation to ensure page refresh on first visit
+                    if (typeof window !== 'undefined') {
+                      window.location.href = '/governance';
+                    }
+                  }}
                   className="group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gradient-to-r dark:hover:from-purple-900/30 dark:hover:to-pink-900/30 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm relative"
                 >
                   <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -455,6 +467,12 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                 {/* Marketplace */}
                 <Link
                   href="/marketplace"
+                  onClick={() => {
+                    // Force navigation to ensure page refresh on first visit
+                    if (typeof window !== 'undefined') {
+                      window.location.href = '/marketplace';
+                    }
+                  }}
                   className="group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gradient-to-r dark:hover:from-green-900/30 dark:hover:to-emerald-900/30 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm"
                 >
                   <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -466,6 +484,12 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                 {/* LDAO Dashboard */}
                 <Link
                   href="/ldao-dashboard"
+                  onClick={() => {
+                    // Force navigation to ensure page refresh on first visit
+                    if (typeof window !== 'undefined') {
+                      window.location.href = '/ldao-dashboard';
+                    }
+                  }}
                   className="group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gradient-to-r dark:hover:from-purple-900/30 dark:hover:to-pink-900/30 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm"
                 >
                   <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">

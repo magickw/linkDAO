@@ -22,7 +22,16 @@ const Header = () => {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center">
-            <Link href="/marketplace" className="flex items-center gap-2 text-2xl font-bold text-blue-600">
+            <Link 
+              href="/marketplace" 
+              onClick={() => {
+                // Force navigation to ensure page refresh on first visit
+                if (typeof window !== 'undefined') {
+                  window.location.href = '/marketplace';
+                }
+              }}
+              className="flex items-center gap-2 text-2xl font-bold text-blue-600"
+            >
               <img src="/logo.png" alt="LinkDAO Logo" className="h-10 w-10" />
               <span>LinkDAO Marketplace</span>
             </Link>
@@ -81,16 +90,52 @@ const Header = () => {
                   <User size={24} className="text-gray-700" />
                 </button>
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                  <Link href="/marketplace/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                  <Link 
+                    href="/marketplace/profile" 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (typeof window !== 'undefined') {
+                        window.location.href = '/marketplace/profile';
+                      }
+                    }}
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
                     My Profile
                   </Link>
-                  <Link href="/marketplace/orders" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                  <Link 
+                    href="/marketplace/orders" 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (typeof window !== 'undefined') {
+                        window.location.href = '/marketplace/orders';
+                      }
+                    }}
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
                     My Orders
                   </Link>
-                  <Link href="/marketplace/listings" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                  <Link 
+                    href="/marketplace/listings" 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (typeof window !== 'undefined') {
+                        window.location.href = '/marketplace/listings';
+                      }
+                    }}
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
                     My Listings
                   </Link>
-                  <Link href="/marketplace/settings" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                  <Link 
+                    href="/marketplace/settings" 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (typeof window !== 'undefined') {
+                        window.location.href = '/marketplace/settings';
+                      }
+                    }}
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
                     Settings
                   </Link>
                 </div>

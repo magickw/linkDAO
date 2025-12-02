@@ -7,7 +7,8 @@ import {
   ExecuteWorkflowRequest, 
   CompleteTaskRequest,
   WorkflowRule,
-  TaskStatus
+  TaskStatus,
+  ApprovalCriteria
 } from '../types/workflow';
 import { logger } from '../utils/logger';
 
@@ -572,6 +573,131 @@ export class WorkflowAutomationController {
       });
     } catch (error) {
       logger.error('Failed to test workflow', { error, body: req.body });
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  // Auto-Approval System
+  async evaluateAutoApproval(req: Request, res: Response): Promise<void> {
+    try {
+      const { entityType, entityId, riskScore, riskLevel, amount, userId, sellerId, historicalData } = req.body;
+
+      // Validate required fields
+      if (!entityType || !entityId || riskScore === undefined || !riskLevel) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required fields: entityType, entityId, riskScore, riskLevel'
+        });
+        return;
+      }
+
+      const result = await this.workflowEngine.evaluateAutoApproval({
+        entityType,
+        entityId,
+        riskScore,
+        riskLevel,
+        amount,
+        userId,
+        sellerId,
+        historicalData
+      });
+
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      logger.error('Failed to evaluate auto-approval', { error, body: req.body });
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  async createApprovalCriteria(req: Request, res: Response): Promise<void> {
+    try {
+      const criteriaData: Omit<ApprovalCriteria, 'id' | 'createdAt' | 'updatedAt'> = req.body;
+      const createdBy = req.user?.id;
+
+      // Validate required fields
+      if (!criteriaData.name || !criteriaData.entityType) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required fields: name, entityType'
+        });
+        return;
+      }
+
+      const criteria = await this.workflowEngine.createApprovalCriteria({
+        ...criteriaData,
+        createdBy
+      });
+
+      res.status(201).json({
+        success: true,
+        data: criteria
+      });
+    } catch (error) {
+      logger.error('Failed to create approval criteria', { error, body: req.body });
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  async getApprovalCriteria(req: Request, res: Response): Promise<void> {
+    try {
+      const { entityType } = req.params;
+
+      if (!entityType) {
+        res.status(400).json({
+          success: false,
+          error: 'Entity type is required'
+        });
+        return;
+      }
+
+      const criteria = await this.workflowEngine.getApprovalCriteria(entityType);
+
+      res.json({
+        success: true,
+        data: criteria
+      });
+    } catch (error) {
+      logger.error('Failed to get approval criteria', { error, entityType: req.params.entityType });
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  async recoverWorkflow(req: Request, res: Response): Promise<void> {
+    try {
+      const { instanceId } = req.params;
+      const { recoveryStrategy } = req.body;
+
+      if (!instanceId) {
+        res.status(400).json({
+          success: false,
+          error: 'Instance ID is required'
+        });
+        return;
+      }
+
+      const success = await this.workflowEngine.recoverFailedWorkflow(instanceId, recoveryStrategy);
+
+      res.json({
+        success: true,
+        data: { recovered: success }
+      });
+    } catch (error) {
+      logger.error('Failed to recover workflow', { error, instanceId: req.params.instanceId });
       res.status(500).json({
         success: false,
         error: error.message

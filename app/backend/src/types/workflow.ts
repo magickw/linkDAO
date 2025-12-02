@@ -360,3 +360,61 @@ export interface WorkflowDesignerData {
     triggerConfig: TriggerConfig;
   };
 }
+
+// Auto-Approval System Types
+export interface ApprovalCriteria {
+  id: string;
+  name: string;
+  description?: string;
+  entityType: 'return' | 'dispute' | 'refund' | 'verification';
+  maxRiskScore?: number;
+  maxAmount?: number;
+  requirePositiveHistory: boolean;
+  requireFraudCheck: boolean;
+  priority: number;
+  isActive: boolean;
+  createdBy?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface AutoApprovalResult {
+  approved: boolean;
+  reason: string;
+  confidence: number;
+  requiresManualReview: boolean;
+  appliedCriteria?: string[];
+  score?: number;
+  maxScore?: number;
+}
+
+export interface WorkflowDecision {
+  id: string;
+  entityType: 'return' | 'dispute' | 'refund' | 'verification';
+  entityId: string;
+  decisionType: WorkflowDecisionType;
+  reason: string;
+  confidence: number;
+  riskScore: number;
+  riskLevel: 'low' | 'medium' | 'high';
+  criteria?: string[];
+  metadata?: Record<string, any>;
+  createdAt: Date;
+}
+
+export type WorkflowDecisionType = 'auto_approved' | 'auto_rejected' | 'manual_approved' | 'manual_rejected' | 'escalated';
+
+export interface EnhancedWorkflowAnalytics extends WorkflowAnalytics {
+  efficiency: {
+    averageSteps: number;
+    averageTaskCompletionTime: number;
+    automationRate: number;
+  };
+  resourceUtilization: Array<{
+    userId: string;
+    taskCount: number;
+    averageCompletionTime: number;
+    successRate: number;
+  }>;
+  optimizationSuggestions: string[];
+}

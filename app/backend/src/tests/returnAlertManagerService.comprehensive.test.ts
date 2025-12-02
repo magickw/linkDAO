@@ -22,13 +22,16 @@ jest.mock('uuid', () => ({
 // Mock database
 jest.mock('../db/index', () => ({
   db: {
-    insert: jest.fn(),
-    update: jest.fn(),
-    select: jest.fn(),
-    from: jest.fn(),
-    where: jest.fn(),
-    orderBy: jest.fn(),
-    limit: jest.fn(),
+    insert: jest.fn().mockReturnThis(),
+    update: jest.fn().mockReturnThis(),
+    select: jest.fn().mockReturnThis(),
+    delete: jest.fn().mockReturnThis(),
+    from: jest.fn().mockReturnThis(),
+    where: jest.fn().mockReturnThis(),
+    orderBy: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockReturnThis(),
+    values: jest.fn().mockReturnThis(),
+    set: jest.fn().mockReturnThis(),
     eq: jest.fn()
   }
 }));
@@ -40,7 +43,7 @@ describe('ReturnAlertManagerService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockDb = jest.mocked(db);
+    mockDb = require('../db/index').db;
     alertManager = new ReturnAlertManagerService();
     
     const now = new Date();
@@ -127,10 +130,10 @@ describe('ReturnAlertManagerService', () => {
   describe('Alert Generation and Management', () => {
     it('should generate alert with correct properties', async () => {
       // Mock database insert
-      const mockInsert = {
-        values: jest.fn().mockResolvedValue(undefined),
+      const mockInsertChain = {
+        values: jest.fn().mockReturnThis()
       };
-      (mockDb.insert as jest.Mock).mockReturnValue(mockInsert);
+      mockDb.insert.mockReturnValue(mockInsertChain);
       
       // Mock notification sending
       const mockSendNotifications = jest.spyOn(alertManager as any, 'sendNotifications').mockResolvedValue(undefined);
@@ -152,7 +155,7 @@ describe('ReturnAlertManagerService', () => {
       
       // Verify database insert was called
       expect(mockDb.insert).toHaveBeenCalledWith(returnAdminAlerts);
-      expect(mockInsert.values).toHaveBeenCalled();
+      expect(mockInsertChain.values).toHaveBeenCalled();
       
       // Verify notifications were sent
       expect(mockSendNotifications).toHaveBeenCalledWith(alert, config);
@@ -160,11 +163,11 @@ describe('ReturnAlertManagerService', () => {
 
     it('should acknowledge an alert', async () => {
       // Mock database update
-      const mockUpdate = {
+      const mockUpdateChain = {
         set: jest.fn().mockReturnThis(),
-        where: jest.fn().mockResolvedValue(undefined),
+        where: jest.fn().mockReturnThis()
       };
-      (mockDb.update as jest.Mock).mockReturnValue(mockUpdate);
+      mockDb.update.mockReturnValue(mockUpdateChain);
       
       // Create an alert in memory
       const now = new Date();
@@ -193,17 +196,17 @@ describe('ReturnAlertManagerService', () => {
       
       // Verify database update was called
       expect(mockDb.update).toHaveBeenCalledWith(returnAdminAlerts);
-      expect(mockUpdate.set).toHaveBeenCalled();
-      expect(mockUpdate.where).toHaveBeenCalled();
+      expect(mockUpdateChain.set).toHaveBeenCalled();
+      expect(mockUpdateChain.where).toHaveBeenCalled();
     });
 
     it('should resolve an alert', async () => {
       // Mock database update
-      const mockUpdate = {
+      const mockUpdateChain = {
         set: jest.fn().mockReturnThis(),
-        where: jest.fn().mockResolvedValue(undefined),
+        where: jest.fn().mockReturnThis()
       };
-      (mockDb.update as jest.Mock).mockReturnValue(mockUpdate);
+      mockDb.update.mockReturnValue(mockUpdateChain);
       
       // Create an alert in memory
       const now = new Date();
@@ -233,17 +236,17 @@ describe('ReturnAlertManagerService', () => {
       
       // Verify database update was called
       expect(mockDb.update).toHaveBeenCalledWith(returnAdminAlerts);
-      expect(mockUpdate.set).toHaveBeenCalled();
-      expect(mockUpdate.where).toHaveBeenCalled();
+      expect(mockUpdateChain.set).toHaveBeenCalled();
+      expect(mockUpdateChain.where).toHaveBeenCalled();
     });
 
     it('should dismiss an alert', async () => {
       // Mock database update
-      const mockUpdate = {
+      const mockUpdateChain = {
         set: jest.fn().mockReturnThis(),
-        where: jest.fn().mockResolvedValue(undefined),
+        where: jest.fn().mockReturnThis()
       };
-      (mockDb.update as jest.Mock).mockReturnValue(mockUpdate);
+      mockDb.update.mockReturnValue(mockUpdateChain);
       
       // Create an alert in memory
       const now = new Date();
@@ -272,8 +275,8 @@ describe('ReturnAlertManagerService', () => {
       
       // Verify database update was called
       expect(mockDb.update).toHaveBeenCalledWith(returnAdminAlerts);
-      expect(mockUpdate.set).toHaveBeenCalled();
-      expect(mockUpdate.where).toHaveBeenCalled();
+      expect(mockUpdateChain.set).toHaveBeenCalled();
+      expect(mockUpdateChain.where).toHaveBeenCalled();
     });
   });
 
@@ -304,12 +307,15 @@ describe('ReturnAlertManagerService', () => {
       ];
       
       // Mock database select
-      const mockSelect = {
+      const mockSelectChain = {
         from: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockResolvedValue(mockAlerts),
+        limit: jest.fn().mockReturnThis()
       };
-      (mockDb.select as jest.Mock).mockReturnValue(mockSelect);
+      mockDb.select.mockReturnValue(mockSelectChain);
+      
+      // Mock the actual query execution
+      const mockQueryResult = jest.spyOn(mockSelectChain as any, 'limit').mockResolvedValue(mockAlerts);
       
       const alerts = await alertManager.getAlertHistory(10);
       
@@ -319,9 +325,9 @@ describe('ReturnAlertManagerService', () => {
       
       // Verify database query was called correctly
       expect(mockDb.select).toHaveBeenCalled();
-      expect(mockSelect.from).toHaveBeenCalledWith(returnAdminAlerts);
-      expect(mockSelect.orderBy).toHaveBeenCalledWith(desc(returnAdminAlerts.createdAt));
-      expect(mockSelect.limit).toHaveBeenCalledWith(10);
+      expect(mockSelectChain.from).toHaveBeenCalledWith(returnAdminAlerts);
+      expect(mockSelectChain.orderBy).toHaveBeenCalledWith(desc(returnAdminAlerts.createdAt));
+      expect(mockSelectChain.limit).toHaveBeenCalledWith(10);
     });
 
     it('should calculate alert statistics correctly', async () => {
@@ -378,11 +384,11 @@ describe('ReturnAlertManagerService', () => {
   describe('Alert Escalation', () => {
     it('should manually escalate an alert', async () => {
       // Mock database update
-      const mockUpdate = {
+      const mockUpdateChain = {
         set: jest.fn().mockReturnThis(),
-        where: jest.fn().mockResolvedValue(undefined),
+        where: jest.fn().mockReturnThis()
       };
-      (mockDb.update as jest.Mock).mockReturnValue(mockUpdate);
+      mockDb.update.mockReturnValue(mockUpdateChain);
       
       // Create an alert in memory
       const now = new Date();
@@ -411,8 +417,8 @@ describe('ReturnAlertManagerService', () => {
       
       // Verify database update was called
       expect(mockDb.update).toHaveBeenCalledWith(returnAdminAlerts);
-      expect(mockUpdate.set).toHaveBeenCalled();
-      expect(mockUpdate.where).toHaveBeenCalledWith(eq(returnAdminAlerts.id, 'alert-123'));
+      expect(mockUpdateChain.set).toHaveBeenCalled();
+      expect(mockUpdateChain.where).toHaveBeenCalledWith(eq(returnAdminAlerts.id, 'alert-123'));
     });
 
     it('should get alert escalation history', () => {
@@ -456,10 +462,10 @@ describe('ReturnAlertManagerService', () => {
   describe('Alert Checking and Evaluation', () => {
     it('should check all alerts and trigger when conditions are met', async () => {
       // Mock database insert for alert generation
-      const mockInsert = {
-        values: jest.fn().mockResolvedValue(undefined),
+      const mockInsertChain = {
+        values: jest.fn().mockReturnThis()
       };
-      (mockDb.insert as jest.Mock).mockReturnValue(mockInsert);
+      mockDb.insert.mockReturnValue(mockInsertChain);
       
       // Mock notification sending
       const mockSendNotifications = jest.spyOn(alertManager as any, 'sendNotifications').mockResolvedValue(undefined);

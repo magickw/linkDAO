@@ -7,10 +7,16 @@ import {
   workflowStepExecutions,
   workflowTaskAssignments,
   workflowRules,
-  workflowMetrics
+  workflowMetrics,
+  workflowDecisions,
+  workflowApprovalCriteria,
+  returns,
+  returnPolicies,
+  disputes,
+  users
 } from '../db/schema';
 
-import { eq, and, or, desc, asc, sql, inArray } from 'drizzle-orm';
+import { eq, and, or, desc, asc, sql, inArray, gt, lte } from 'drizzle-orm';
 import {
   WorkflowTemplate,
   WorkflowInstance,
@@ -35,11 +41,19 @@ import {
   StepType,
   StepConfig,
   RuleType,
-  TaskType
+  TaskType,
+  WorkflowDecision,
+  WorkflowDecisionType,
+  ApprovalCriteria,
+  AutoApprovalResult
 } from '../types/workflow';
 
 import { logger } from '../utils/logger';
 import { EventEmitter } from 'events';
+import { taskAssignmentService } from './taskAssignmentService';
+import { fraudDetectionEngine } from './fraudDetectionEngine';
+import { returnFraudDetectionService } from './returnFraudDetectionService';
+import { aiContentRiskScoringService } from './aiContentRiskScoringService';
 
 export class WorkflowAutomationEngine extends EventEmitter {
   private static instance: WorkflowAutomationEngine;
@@ -347,8 +361,322 @@ export class WorkflowAutomationEngine extends EventEmitter {
     }
   }
 
+  // Auto-Approval System
+  async evaluateAutoApproval(context: {
+    entityType: 'return' | 'dispute' | 'refund' | 'verification';
+    entityId: string;
+    riskScore: number;
+    riskLevel: 'low' | 'medium' | 'high';
+    amount?: number;
+    userId?: string;
+    sellerId?: string;
+    historicalData?: Record<string, any>;
+  }): Promise<AutoApprovalResult> {
+    try {
+      // Get approval criteria for entity type
+      const criteria = await this.getApprovalCriteria(context.entityType);
+      const decision = await this.makeAutoApprovalDecision(context, criteria);
+      
+      // Log the decision
+      await this.logApprovalDecision(context, decision);
+      
+      // Emit event for workflow triggers
+      this.emit('autoApprovalEvaluated', { context, decision });
+      
+      return decision;
+    } catch (error) {
+      logger.error('Failed to evaluate auto-approval', { error, context });
+      return {
+        approved: false,
+        reason: 'System error during evaluation',
+        confidence: 0,
+        requiresManualReview: true
+      };
+    }
+  }
+
+  async createApprovalCriteria(criteria: Omit<ApprovalCriteria, 'id' | 'createdAt' | 'updatedAt'>): Promise<ApprovalCriteria> {
+    try {
+      const [newCriteria] = await db.insert(workflowApprovalCriteria).values(criteria).returning();
+      
+      logger.info(`Approval criteria created: ${newCriteria.id}`, { 
+        criteriaId: newCriteria.id, 
+        entityType: criteria.entityType 
+      });
+      
+      return newCriteria;
+    } catch (error) {
+      logger.error('Failed to create approval criteria', { error, criteria });
+      throw new Error(`Failed to create approval criteria: ${error.message}`);
+    }
+  }
+
+  async getApprovalCriteria(entityType: string): Promise<ApprovalCriteria[]> {
+    try {
+      const criteria = await db.query.workflowApprovalCriteria.findMany({
+        where: and(
+          eq(workflowApprovalCriteria.entityType, entityType),
+          eq(workflowApprovalCriteria.isActive, true)
+        ),
+        orderBy: desc(workflowApprovalCriteria.priority)
+      });
+      
+      return criteria;
+    } catch (error) {
+      logger.error('Failed to get approval criteria', { error, entityType });
+      throw new Error(`Failed to get approval criteria: ${error.message}`);
+    }
+  }
+
+  private async makeAutoApprovalDecision(
+    context: {
+      entityType: 'return' | 'dispute' | 'refund' | 'verification';
+      entityId: string;
+      riskScore: number;
+      riskLevel: 'low' | 'medium' | 'high';
+      amount?: number;
+      userId?: string;
+      sellerId?: string;
+      historicalData?: Record<string, any>;
+    },
+    criteria: ApprovalCriteria[]
+  ): Promise<AutoApprovalResult> {
+    let totalScore = 0;
+    let maxScore = 0;
+    let appliedCriteria: string[] = [];
+    let rejectionReasons: string[] = [];
+
+    for (const criterion of criteria) {
+      const criterionScore = await this.evaluateCriterion(context, criterion);
+      totalScore += criterionScore.score;
+      maxScore += criterionScore.maxScore;
+      
+      if (criterionScore.applied) {
+        appliedCriteria.push(criterion.name);
+      }
+      
+      if (criterionScore.rejectionReason) {
+        rejectionReasons.push(criterionScore.rejectionReason);
+      }
+    }
+
+    const confidence = maxScore > 0 ? (totalScore / maxScore) : 0;
+    const approved = confidence >= 0.7 && rejectionReasons.length === 0;
+    const requiresManualReview = confidence < 0.5 || rejectionReasons.length > 0;
+
+    return {
+      approved,
+      reason: approved ? 'Auto-approved based on criteria' : rejectionReasons.join(', ') || 'Does not meet approval criteria',
+      confidence,
+      requiresManualReview,
+      appliedCriteria,
+      score: totalScore,
+      maxScore
+    };
+  }
+
+  private async evaluateCriterion(
+    context: {
+      entityType: 'return' | 'dispute' | 'refund' | 'verification';
+      entityId: string;
+      riskScore: number;
+      riskLevel: 'low' | 'medium' | 'high';
+      amount?: number;
+      userId?: string;
+      sellerId?: string;
+      historicalData?: Record<string, any>;
+    },
+    criterion: ApprovalCriteria
+  ): Promise<{
+    score: number;
+    maxScore: number;
+    applied: boolean;
+    rejectionReason?: string;
+  }> {
+    let score = 0;
+    let maxScore = 100;
+    let applied = false;
+    let rejectionReason: string | undefined;
+
+    // Risk-based evaluation
+    if (criterion.maxRiskScore !== undefined) {
+      if (context.riskScore > criterion.maxRiskScore) {
+        rejectionReason = `Risk score ${context.riskScore} exceeds maximum ${criterion.maxRiskScore}`;
+        return { score: 0, maxScore, applied: false, rejectionReason };
+      }
+      score += 30;
+    }
+
+    // Amount-based evaluation
+    if (criterion.maxAmount !== undefined && context.amount !== undefined) {
+      if (context.amount > criterion.maxAmount) {
+        rejectionReason = `Amount ${context.amount} exceeds maximum ${criterion.maxAmount}`;
+        return { score: 0, maxScore, applied: false, rejectionReason };
+      }
+      score += 25;
+    }
+
+    // User history evaluation
+    if (context.userId && criterion.requirePositiveHistory) {
+      const userHistory = await this.evaluateUserHistory(context.userId, context.entityType);
+      if (!userHistory.hasPositiveHistory) {
+        rejectionReason = 'User does not have sufficient positive history';
+        return { score: 0, maxScore, applied: false, rejectionReason };
+      }
+      score += 25;
+    }
+
+    // Fraud detection integration
+    if (criterion.requireFraudCheck) {
+      const fraudCheck = await this.performFraudCheck(context);
+      if (fraudCheck.isSuspicious) {
+        rejectionReason = `Fraud check failed: ${fraudCheck.reason}`;
+        return { score: 0, maxScore, applied: false, rejectionReason };
+      }
+      score += 20;
+    }
+
+    applied = score > 0;
+    return { score, maxScore, applied, rejectionReason };
+  }
+
+  private async evaluateUserHistory(userId: string, entityType: string): Promise<{
+    hasPositiveHistory: boolean;
+    completionRate: number;
+    disputeRate: number;
+    averageRating: number;
+  }> {
+    try {
+      // Get user statistics based on entity type
+      let completionRate = 0.95; // Default high completion rate
+      let disputeRate = 0.02; // Default low dispute rate
+      let averageRating = 4.5; // Default good rating
+
+      if (entityType === 'return') {
+        // Get return-specific statistics
+        const [returnStats] = await db
+          .select({
+            totalReturns: sql<number>`count(*)`,
+            approvedReturns: sql<number>`count(case when status = 'approved' then 1 end)`,
+            disputedReturns: sql<number>`count(case when status = 'disputed' then 1 end)`
+          })
+          .from(returns)
+          .where(eq(returns.buyerId, userId));
+
+        if (returnStats.totalReturns > 0) {
+          completionRate = returnStats.approvedReturns / returnStats.totalReturns;
+          disputeRate = returnStats.disputedReturns / returnStats.totalReturns;
+        }
+      }
+
+      const hasPositiveHistory = completionRate > 0.9 && disputeRate < 0.1 && averageRating > 4.0;
+      
+      return {
+        hasPositiveHistory,
+        completionRate,
+        disputeRate,
+        averageRating
+      };
+    } catch (error) {
+      logger.error('Failed to evaluate user history', { error, userId, entityType });
+      return {
+        hasPositiveHistory: false,
+        completionRate: 0,
+        disputeRate: 1,
+        averageRating: 0
+      };
+    }
+  }
+
+  private async performFraudCheck(context: {
+    entityType: string;
+    entityId: string;
+    riskScore: number;
+    userId?: string;
+    sellerId?: string;
+  }): Promise<{
+    isSuspicious: boolean;
+    reason?: string;
+    confidence: number;
+  }> {
+    try {
+      let fraudCheck;
+
+      switch (context.entityType) {
+        case 'return':
+          fraudCheck = await returnFraudDetectionService.calculateRiskScore({
+            returnId: context.entityId,
+            buyerId: context.userId!,
+            sellerId: context.sellerId!,
+            reason: 'workflow_evaluation',
+            amount: 0
+          });
+          break;
+        case 'dispute':
+          fraudCheck = await fraudDetectionEngine.analyzeTransaction({
+            transactionId: context.entityId,
+            userId: context.userId!,
+            amount: 0,
+            paymentMethod: 'unknown',
+            userContext: {
+              accountAge: 30,
+              transactionHistory: [],
+              verificationStatus: 'unverified'
+            }
+          });
+          break;
+        default:
+          return { isSuspicious: false, confidence: 1.0 };
+      }
+
+      return {
+        isSuspicious: fraudCheck.recommendation === 'auto_reject' || fraudCheck.riskScore > 70,
+        reason: fraudCheck.reason,
+        confidence: fraudCheck.riskScore / 100
+      };
+    } catch (error) {
+      logger.error('Failed to perform fraud check', { error, context });
+      return { isSuspicious: true, reason: 'Fraud check failed', confidence: 0.5 };
+    }
+  }
+
+  private async logApprovalDecision(
+    context: {
+      entityType: 'return' | 'dispute' | 'refund' | 'verification';
+      entityId: string;
+      riskScore: number;
+      riskLevel: 'low' | 'medium' | 'high';
+    },
+    decision: AutoApprovalResult
+  ): Promise<void> {
+    try {
+      await db.insert(workflowDecisions).values({
+        entityType: context.entityType,
+        entityId: context.entityId,
+        decisionType: decision.approved ? 'auto_approved' : 'auto_rejected',
+        reason: decision.reason,
+        confidence: decision.confidence,
+        riskScore: context.riskScore,
+        riskLevel: context.riskLevel,
+        criteria: decision.appliedCriteria,
+        metadata: {
+          score: decision.score,
+          maxScore: decision.maxScore,
+          requiresManualReview: decision.requiresManualReview
+        }
+      });
+
+      logger.info(`Auto-approval decision logged: ${context.entityId}`, {
+        entityId: context.entityId,
+        decision: decision.approved ? 'approved' : 'rejected',
+        confidence: decision.confidence
+      });
+    } catch (error) {
+      logger.error('Failed to log approval decision', { error, context, decision });
+    }
+  }
+
   // Rule Engine Integration
-  async createRule(rule: Omit<WorkflowRule, 'id' | 'createdAt' | 'updatedAt'>, createdBy?: string): Promise<WorkflowRule> {
     try {
       const [newRule] = await db.insert(workflowRules).values({
         ...rule,
@@ -389,7 +717,237 @@ export class WorkflowAutomationEngine extends EventEmitter {
     }
   }
 
-  // Analytics and Monitoring
+  // Error Recovery System
+  async recoverFailedWorkflow(instanceId: string, recoveryStrategy?: string): Promise<boolean> {
+    try {
+      const instance = await this.getWorkflowInstance(instanceId);
+      if (!instance) {
+        throw new Error(`Workflow instance not found: ${instanceId}`);
+      }
+
+      if (instance.status !== 'failed') {
+        logger.warn(`Workflow instance is not failed, skipping recovery: ${instanceId}`, {
+          instanceId,
+          status: instance.status
+        });
+        return false;
+      }
+
+      logger.info(`Attempting workflow recovery: ${instanceId}`, {
+        instanceId,
+        recoveryStrategy: recoveryStrategy || 'default'
+      });
+
+      // Analyze failure and determine recovery approach
+      const failureAnalysis = await this.analyzeWorkflowFailure(instanceId);
+      
+      switch (recoveryStrategy || 'retry') {
+        case 'retry':
+          return await this.retryFailedWorkflow(instanceId, failureAnalysis);
+        case 'rollback':
+          return await this.rollbackWorkflow(instanceId, failureAnalysis);
+        case 'escalate':
+          return await this.escalateFailedWorkflow(instanceId, failureAnalysis);
+        case 'skip':
+          return await this.skipFailedStep(instanceId, failureAnalysis);
+        default:
+          return await this.retryFailedWorkflow(instanceId, failureAnalysis);
+      }
+    } catch (error) {
+      logger.error('Failed to recover workflow', { error, instanceId, recoveryStrategy });
+      return false;
+    }
+  }
+
+  private async analyzeWorkflowFailure(instanceId: string): Promise<{
+    failurePoint: string;
+    errorType: string;
+    retryable: boolean;
+    escalationRequired: boolean;
+  }> {
+    try {
+      const stepExecutions = await db.query.workflowStepExecutions.findMany({
+        where: eq(workflowStepExecutions.instanceId, instanceId),
+        orderBy: desc(workflowStepExecutions.createdAt)
+      });
+
+      const failedStep = stepExecutions.find(step => step.status === 'failed');
+      if (!failedStep) {
+        return {
+          failurePoint: 'unknown',
+          errorType: 'unknown',
+          retryable: false,
+          escalationRequired: true
+        };
+      }
+
+      const errorMessage = failedStep.errorMessage || '';
+      const errorType = this.categorizeError(errorMessage);
+      const retryable = this.isRetryableError(errorType);
+      const escalationRequired = !retryable || stepExecutions.filter(s => s.stepId === failedStep.stepId).length > 3;
+
+      return {
+        failurePoint: failedStep.stepId,
+        errorType,
+        retryable,
+        escalationRequired
+      };
+    } catch (error) {
+      logger.error('Failed to analyze workflow failure', { error, instanceId });
+      return {
+        failurePoint: 'unknown',
+        errorType: 'analysis_failed',
+        retryable: false,
+        escalationRequired: true
+      };
+    }
+  }
+
+  private categorizeError(errorMessage: string): string {
+    if (errorMessage.includes('timeout')) return 'timeout';
+    if (errorMessage.includes('network')) return 'network';
+    if (errorMessage.includes('validation')) return 'validation';
+    if (errorMessage.includes('authorization')) return 'authorization';
+    if (errorMessage.includes('rate_limit')) return 'rate_limit';
+    if (errorMessage.includes('dependency')) return 'dependency';
+    return 'unknown';
+  }
+
+  private isRetryableError(errorType: string): boolean {
+    const retryableErrors = ['timeout', 'network', 'rate_limit', 'dependency'];
+    return retryableErrors.includes(errorType);
+  }
+
+  private async retryFailedWorkflow(
+    instanceId: string, 
+    failureAnalysis: { failurePoint: string; retryable: boolean }
+  ): Promise<boolean> {
+    if (!failureAnalysis.retryable) {
+      return false;
+    }
+
+    try {
+      // Reset the failed step
+      await db.update(workflowStepExecutions)
+        .set({ 
+          status: 'pending',
+          errorMessage: null,
+          startedAt: null,
+          completedAt: null
+        })
+        .where(and(
+          eq(workflowStepExecutions.instanceId, instanceId),
+          eq(workflowStepExecutions.stepId, failureAnalysis.failurePoint)
+        ));
+
+      // Reset workflow instance
+      await db.update(workflowInstances)
+        .set({ 
+          status: 'running',
+          errorMessage: null
+        })
+        .where(eq(workflowInstances.id, instanceId));
+
+      // Add back to execution queue
+      const instance = await this.getWorkflowInstance(instanceId);
+      if (instance) {
+        this.executionQueue.set(instanceId, instance);
+      }
+
+      logger.info(`Workflow retry initiated: ${instanceId}`, { instanceId, failurePoint: failureAnalysis.failurePoint });
+      return true;
+    } catch (error) {
+      logger.error('Failed to retry workflow', { error, instanceId });
+      return false;
+    }
+  }
+
+  private async rollbackWorkflow(
+    instanceId: string, 
+    failureAnalysis: { failurePoint: string }
+  ): Promise<boolean> {
+    try {
+      // Mark workflow as rolled back
+      await db.update(workflowInstances)
+        .set({ 
+          status: 'rolled_back',
+          errorMessage: `Rolled back due to failure at step: ${failureAnalysis.failurePoint}`
+        })
+        .where(eq(workflowInstances.id, instanceId));
+
+      logger.info(`Workflow rolled back: ${instanceId}`, { instanceId, failurePoint: failureAnalysis.failurePoint });
+      return true;
+    } catch (error) {
+      logger.error('Failed to rollback workflow', { error, instanceId });
+      return false;
+    }
+  }
+
+  private async escalateFailedWorkflow(
+    instanceId: string, 
+    failureAnalysis: { failurePoint: string; errorType: string }
+  ): Promise<boolean> {
+    try {
+      // Create escalation task
+      await taskAssignmentService.createEscalationTask({
+        taskId: instanceId,
+        currentAssignee: 'system',
+        escalationReason: 'manual',
+        originalDueDate: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+      });
+
+      // Mark workflow as escalated
+      await db.update(workflowInstances)
+        .set({ 
+          status: 'escalated',
+          errorMessage: `Escalated due to ${failureAnalysis.errorType} error at step: ${failureAnalysis.failurePoint}`
+        })
+        .where(eq(workflowInstances.id, instanceId));
+
+      logger.info(`Workflow escalated: ${instanceId}`, { 
+        instanceId, 
+        failurePoint: failureAnalysis.failurePoint,
+        errorType: failureAnalysis.errorType 
+      });
+      return true;
+    } catch (error) {
+      logger.error('Failed to escalate workflow', { error, instanceId });
+      return false;
+    }
+  }
+
+  private async skipFailedStep(
+    instanceId: string, 
+    failureAnalysis: { failurePoint: string }
+  ): Promise<boolean> {
+    try {
+      // Mark failed step as skipped
+      await db.update(workflowStepExecutions)
+        .set({ 
+          status: 'skipped',
+          completedAt: new Date(),
+          errorMessage: 'Step skipped due to failure recovery'
+        })
+        .where(and(
+          eq(workflowStepExecutions.instanceId, instanceId),
+          eq(workflowStepExecutions.stepId, failureAnalysis.failurePoint)
+        ));
+
+      // Continue workflow execution
+      this.continueWorkflowExecution(instanceId);
+
+      logger.info(`Failed step skipped: ${instanceId}`, { 
+        instanceId, 
+        skippedStep: failureAnalysis.failurePoint 
+      });
+      return true;
+    } catch (error) {
+      logger.error('Failed to skip step', { error, instanceId });
+      return false;
+    }
+  }
+
+  // Enhanced Analytics and Monitoring
   async getWorkflowAnalytics(templateId?: string, timeRange?: { start: Date; end: Date }): Promise<WorkflowAnalytics> {
     try {
       const conditions = [];
@@ -453,23 +1011,83 @@ export class WorkflowAutomationEngine extends EventEmitter {
         ? (successfulExecutions.count / totalExecutions.count) * 100
         : 0;
 
+      // Calculate SLA breaches (workflows taking longer than expected)
+      const slaBreaches = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(workflowInstances)
+        .where(and(
+          whereClause,
+          eq(workflowInstances.status, 'completed'),
+          sql`extract(epoch from (completed_at - started_at)) > 3600` // > 1 hour
+        ));
+
+      // Get efficiency metrics
+      const efficiencyMetrics = await db
+        .select({
+          avgSteps: sql<number>`avg(step_count)`,
+          avgTaskCompletionTime: sql<number>`avg(task_completion_time)`,
+          automationRate: sql<number>`sum(case when auto_approved then 1 else 0 end) / count(*)`
+        })
+        .from(workflowInstances)
+        .where(whereClause);
+
+      // Get resource utilization
+      const resourceUtilization = await db
+        .select({
+          userId: workflowTaskAssignments.assignedTo,
+          taskCount: sql<number>`count(*)`,
+          avgCompletionTime: sql<number>`avg(extract(epoch from (completed_at - assigned_at)))`,
+          successRate: sql<number>`sum(case when status = 'completed' then 1 else 0 end) / count(*)`
+        })
+        .from(workflowTaskAssignments)
+        .innerJoin(workflowStepExecutions, eq(workflowTaskAssignments.stepExecutionId, workflowStepExecutions.id))
+        .innerJoin(workflowInstances, eq(workflowStepExecutions.instanceId, workflowInstances.id))
+        .where(whereClause)
+        .groupBy(workflowTaskAssignments.assignedTo)
+        .orderBy(desc(sql`count(*)`))
+        .limit(10);
+
       return {
         totalExecutions: totalExecutions.count,
         successRate,
         averageExecutionTime: avgExecutionTime.avg || 0,
         bottlenecks: bottlenecks.map(b => ({
           stepId: b.stepId,
-          stepName: `Step ${b.stepId} `, // TODO: Get actual step name
+          stepName: `Step ${b.stepId}`,
           averageTime: b.averageTime,
           frequency: b.frequency,
           impact: b.averageTime > 300 ? 'high' : b.averageTime > 60 ? 'medium' : 'low'
         })),
-        slaBreaches: 0, // TODO: Calculate SLA breaches
+        slaBreaches: slaBreaches[0]?.count || 0,
         topFailureReasons: failureReasons.map(f => ({
           reason: f.reason || 'Unknown',
           count: f.count,
           percentage: totalExecutions.count > 0 ? (f.count / totalExecutions.count) * 100 : 0
-        }))
+        })),
+        efficiency: {
+          averageSteps: efficiencyMetrics[0]?.avgSteps || 0,
+          averageTaskCompletionTime: efficiencyMetrics[0]?.avgTaskCompletionTime || 0,
+          automationRate: efficiencyMetrics[0]?.automationRate || 0
+        },
+        resourceUtilization: resourceUtilization.map(r => ({
+          userId: r.userId,
+          taskCount: r.taskCount,
+          averageCompletionTime: r.avgCompletionTime,
+          successRate: r.successRate
+        })),
+        optimizationSuggestions: this.generateOptimizationSuggestions({
+          bottlenecks: bottlenecks.map(b => ({
+            stepId: b.stepId,
+            averageTime: b.averageTime,
+            frequency: b.frequency
+          })),
+          failureReasons: failureReasons.map(f => ({
+            reason: f.reason || 'Unknown',
+            count: f.count
+          })),
+          slaBreaches: slaBreaches[0]?.count || 0,
+          successRate
+        })
       };
     } catch (error) {
       logger.error('Failed to get workflow analytics', { error, templateId, timeRange });
@@ -636,15 +1254,95 @@ export class WorkflowAutomationEngine extends EventEmitter {
     }
   }
 
-  private async resolveAssignment(assignmentRules: AssignmentRule[], contextData?: Record<string, any>): Promise<string | null> {
-    // Simple implementation - in production, this would be more sophisticated
-    for (const rule of assignmentRules || []) {
-      if (rule.type === 'user' && rule.criteria.userId) {
-        return rule.criteria.userId;
+  private async resolveAssignment(
+    assignmentRules: AssignmentRule[], 
+    contextData?: Record<string, any>
+  ): Promise<string | null> {
+    try {
+      // Use the task assignment service for intelligent routing
+      const assignmentContext = {
+        taskType: contextData?.taskType || 'workflow_task',
+        priority: contextData?.priority || 5,
+        requiredSkills: contextData?.requiredSkills,
+        department: contextData?.department,
+        complexity: this.assessComplexity(contextData),
+        estimatedDuration: contextData?.estimatedDuration
+      };
+
+      // Delegate to task assignment service for intelligent routing
+      const assignedUser = await taskAssignmentService.assignTask(
+        assignmentContext,
+        contextData?.assignmentStrategy || 'intelligent'
+      );
+
+      if (assignedUser) {
+        logger.info(`Task assigned intelligently to user: ${assignedUser}`, {
+          assignmentContext,
+          strategy: contextData?.assignmentStrategy || 'intelligent'
+        });
+        return assignedUser;
       }
-      // TODO: Implement other assignment types (role, skill, workload, round_robin)
+
+      // Fallback to simple assignment rules
+      for (const rule of assignmentRules || []) {
+        if (rule.type === 'user' && rule.criteria.userId) {
+          return rule.criteria.userId;
+        }
+        if (rule.type === 'role' && rule.criteria.role) {
+          // Find user with specific role
+          const [user] = await db
+            .select({ id: users.id })
+            .from(users)
+            .where(eq(users.role, rule.criteria.role))
+            .limit(1);
+          
+          if (user) return user.id;
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      logger.error('Failed to resolve assignment', { error, assignmentRules, contextData });
+      return null;
     }
-    return null;
+  }
+
+  private assessComplexity(contextData?: Record<string, any>): 'low' | 'medium' | 'high' {
+    if (!contextData) return 'medium';
+
+    let complexityScore = 0;
+    
+    // Risk-based complexity
+    if (contextData.riskScore) {
+      if (contextData.riskScore > 70) complexityScore += 3;
+      else if (contextData.riskScore > 40) complexityScore += 2;
+      else complexityScore += 1;
+    }
+    
+    // Amount-based complexity
+    if (contextData.amount) {
+      if (contextData.amount > 1000) complexityScore += 3;
+      else if (contextData.amount > 100) complexityScore += 2;
+      else complexityScore += 1;
+    }
+    
+    // Entity type complexity
+    switch (contextData.entityType) {
+      case 'dispute': complexityScore += 2; break;
+      case 'verification': complexityScore += 1; break;
+      case 'return': complexityScore += 1; break;
+      default: complexityScore += 1;
+    }
+    
+    // Historical data complexity
+    if (contextData.historicalData) {
+      if (contextData.historicalData.previousDisputes > 0) complexityScore += 2;
+      if (contextData.historicalData.userComplaints > 0) complexityScore += 1;
+    }
+
+    if (complexityScore >= 6) return 'high';
+    if (complexityScore >= 3) return 'medium';
+    return 'low';
   }
 
   private async executeAction(
@@ -722,6 +1420,44 @@ export class WorkflowAutomationEngine extends EventEmitter {
     if (instance && instance.status === 'running') {
       this.executionQueue.set(instanceId, instance);
     }
+  }
+
+  private generateOptimizationSuggestions(analytics: {
+    bottlenecks: Array<{ stepId: string; averageTime: number; frequency: number }>;
+    failureReasons: Array<{ reason: string; count: number }>;
+    slaBreaches: number;
+    successRate: number;
+  }): string[] {
+    const suggestions: string[] = [];
+
+    // Bottleneck suggestions
+    const highImpactBottlenecks = analytics.bottlenecks.filter(b => b.averageTime > 300);
+    if (highImpactBottlenecks.length > 0) {
+      suggestions.push(`Optimize ${highImpactBottlenecks.length} high-impact bottlenecks with average execution time > 5 minutes`);
+    }
+
+    // Failure rate suggestions
+    if (analytics.successRate < 90) {
+      suggestions.push(`Improve success rate from ${analytics.successRate.toFixed(1)}% to target 95%+`);
+    }
+
+    // SLA breach suggestions
+    if (analytics.slaBreaches > 0) {
+      suggestions.push(`Investigate ${analytics.slaBreaches} SLA breaches and optimize workflow execution time`);
+    }
+
+    // Common failure suggestions
+    const topFailures = analytics.failureReasons.slice(0, 3);
+    topFailures.forEach(failure => {
+      suggestions.push(`Address common failure: "${failure.reason}" (${failure.count} occurrences)`);
+    });
+
+    // Automation suggestions
+    if (analytics.bottlenecks.some(b => b.frequency > 100 && b.averageTime < 60)) {
+      suggestions.push('Consider automating high-frequency, low-complexity tasks to reduce manual workload');
+    }
+
+    return suggestions;
   }
 
   private async executeRuleActions(rule: WorkflowRule, eventData: Record<string, any>): Promise<void> {

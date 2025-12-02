@@ -45,4 +45,10 @@ router.get('/bottlenecks', validateAdminRole, workflowController.getBottleneckAn
 router.post('/validate-design', csrfProtection,  validateAdminRole, workflowController.validateWorkflowDesign.bind(workflowController));
 router.post('/test', csrfProtection,  validateAdminRole, workflowController.testWorkflow.bind(workflowController));
 
+// Auto-Approval System Routes
+router.post('/auto-approval/evaluate', csrfProtection, workflowController.evaluateAutoApproval.bind(workflowController));
+router.post('/approval-criteria', csrfProtection, validateAdminRole, workflowController.createApprovalCriteria.bind(workflowController));
+router.get('/approval-criteria/:entityType', validateAdminRole, workflowController.getApprovalCriteria.bind(workflowController));
+router.post('/instances/:instanceId/recover', csrfProtection, validateAdminRole, workflowController.recoverWorkflow.bind(workflowController));
+
 export default router;

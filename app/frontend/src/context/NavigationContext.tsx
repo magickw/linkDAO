@@ -176,16 +176,16 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
 
   // Navigation functions that update URL
   const navigateToFeed = () => {
-    router.push('/', undefined, { shallow: true });
+    router.push('/');
   };
 
   const navigateToCommunity = (communityId: string) => {
-    router.push(`/?view=community&community=${communityId}`, undefined, { shallow: true });
+    router.push(`/?view=community&community=${communityId}`);
   };
 
   const navigateToPost = (postId: string, communityId?: string) => {
     if (communityId) {
-      router.push(`/communities/${communityId}?post=${postId}`, undefined, { shallow: true });
+      router.push(`/communities/${communityId}?post=${postId}`);
     } else {
       // If no community ID, we can't navigate to a specific post without context
       // This would be an error case in the new routing structure

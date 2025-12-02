@@ -843,6 +843,12 @@ import dexTradingRoutes from './routes/dexTradingRoutes';
 import stakingRoutes from './routes/stakingRoutes';
 import { ldaoPostLaunchMonitoringRoutes } from './routes/ldaoPostLaunchMonitoringRoutes';
 
+// Import customer experience routes
+import customerExperienceRoutes from './routes/customerExperienceRoutes';
+
+// Import communication manager routes
+import communicationManagerRoutes from './routes/communicationManagerRoutes';
+
 // Register DEX, staking, and LDAO monitoring routes
 app.use('/api/dex', dexTradingRoutes);
 app.use('/api/staking', stakingRoutes);
@@ -890,6 +896,12 @@ app.use('/api/admin/workflows', authMiddleware, workflowAutomationRoutes);
 
 // Analytics routes
 app.use('/api/analytics', analyticsRoutes);
+
+// Customer experience routes
+app.use('/api/customer-experience', customerExperienceRoutes);
+
+// Communication management routes
+app.use('/api/communication', communicationManagerRoutes);
 
 // Marketplace registration routes
 app.use('/api/marketplace/registration', marketplaceRegistrationRoutes);
