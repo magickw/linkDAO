@@ -476,6 +476,9 @@ app.use('/api/reputation', reputationRoutes);
 // Advanced reputation routes
 app.use('/api/reputation/advanced', advancedReputationRoutes);
 
+// Enhanced community reporting routes
+app.use('/api/community-reporting', enhancedCommunityReportingRoutes);
+
 // Register routes with enhanced error handling
 app.use('/api/posts', postRoutes);
 app.use('/api/quick-posts', quickPostRoutes);
