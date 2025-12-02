@@ -437,22 +437,20 @@ Customer Satisfaction: ${data.analytics?.customerSatisfaction || 0}/5.0
 CATEGORY BREAKDOWN
 ------------------
 ${data.categoryData.map((cat: any) => 
-  `${cat.category}: ${cat.count} returns (${cat.percentage}%), Avg: $${cat.avgRefundAmount}`
-).join('
-')}
+  `${cat.category}: ${cat.count} returns (${cat.percentage}%), Avg: ${cat.avgRefundAmount}`
+).join('\n')}
 
 SELLER PERFORMANCE
 ------------------
 ${data.sellerPerformance.map((seller: any) => 
   `${seller.sellerName}: ${seller.totalReturns} returns, ${seller.approvalRate}% approval, ${seller.avgProcessingTime} days avg processing`
-).join('
-')}
+).join('\n')}
 
 TREND ANALYSIS
 ----------------
 ${data.trendData.map((trend: any) => 
   `${trend.date}: ${trend.returns} returns, ${trend.refunds} refunds, ${trend.approvalRate.toFixed(1)}% approval rate`
-).join('
+).join('\n')}
 ')}
     `.trim();
 

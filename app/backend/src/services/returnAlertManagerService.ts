@@ -682,7 +682,7 @@ export class ReturnAlertManagerService {
     
     // Store in database
     try {
-      await db.insert(returnAdminAlerts).values({
+      const alertValues: any = {
         alertType: alert.alertType,
         severity: alert.severity,
         title: alert.title,
@@ -690,14 +690,15 @@ export class ReturnAlertManagerService {
         affectedEntityType: alert.affectedEntityType,
         affectedEntityId: alert.affectedEntityId,
         triggerMetric: alert.triggerMetric,
-        triggerThreshold: alert.triggerThreshold,
-        actualValue: alert.actualValue,
+        triggerThreshold: alert.triggerThreshold !== undefined ? alert.triggerThreshold.toString() : null,
+        actualValue: alert.actualValue !== undefined ? alert.actualValue.toString() : null,
         contextData: alert.contextData,
         recommendedActions: alert.recommendedActions,
         status: alert.status,
         createdAt: alert.createdAt,
         updatedAt: alert.updatedAt
-      });
+      };
+      await db.insert(returnAdminAlerts).values(alertValues);
     } catch (error) {
       safeLogger.error('Error storing alert in database:', error);
     }

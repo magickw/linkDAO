@@ -2,6 +2,9 @@ import { db } from '../db';
 import { users } from '../db/schema';
 import { marketplaceUsers, marketplaceOrders } from '../db/marketplaceSchema';
 import { eq, and, gte, lte, sql, desc, asc } from 'drizzle-orm';
+import { EventEmitter } from 'events';
+import { realTimeComplianceMonitoringService } from './realTimeComplianceMonitoringService';
+import { realTimeComplianceAlertService } from './realTimeComplianceAlertService';
 
 /**
  * Seller Return Performance Analytics Service
@@ -107,7 +110,27 @@ export interface PlatformAverages {
   medianProcessingTime: number;
 }
 
-export class SellerReturnPerformanceService {
+export class SellerReturnPerformanceService extends EventEmitter {
+  constructor() {
+    super();
+    this.setupRealTimeListeners();
+  }
+
+  /**
+   * Setup real-time event listeners
+   */
+  private setupRealTimeListeners(): void {
+    // Listen to real-time compliance monitoring events
+    realTimeComplianceMonitoringService.on('violation_detected', (alert) => {
+      this.emit('real_time_violation', alert);
+    });
+
+    // Listen to alert service events
+    realTimeComplianceAlertService.on('alert_processed', (alert) => {
+      this.emit('compliance_alert', alert);
+    });
+  }
+
   /**
    * Get comprehensive return metrics for a specific seller
    * Property 4: Comprehensive Trend Analysis - includes all dimensions
@@ -241,6 +264,16 @@ export class SellerReturnPerformanceService {
       // Detect policy violations
       const violations = await this.detectPolicyViolations(sellerId, sellerReturns, startDate, endDate);
 
+      // Emit real-time violation detection if new violations found
+      if (violations.length > 0) {
+        this.emit('violations_detected', {
+          sellerId,
+          sellerName: seller.handle || 'Unknown Seller',
+          violations,
+          timestamp: new Date()
+        });
+      }
+
       // Calculate compliance metrics
       const platformAverages = await this.getPlatformAverages(startDate, endDate);
       
@@ -282,9 +315,18 @@ export class SellerReturnPerformanceService {
         customerComplaintRate
       );
 
+      // Emit compliance score update for real-time monitoring
+      this.emit('compliance_score_updated', {
+        sellerId,
+        sellerName: seller.handle || 'Unknown Seller',
+        complianceScore,
+        previousScore: await this.getPreviousComplianceScore(sellerId),
+        timestamp: new Date()
+      });
+
       return {
         sellerId,
-        sellerName: seller.displayName || seller.handle || 'Unknown',
+        sellerName: seller.handle || 'Unknown Seller',
         complianceScore,
         policyViolations: violations.length,
         processingTimeCompliance,
@@ -586,6 +628,14 @@ export class SellerReturnPerformanceService {
   ): Promise<number> {
     // Placeholder - would integrate with customer support system
     return 5.2;
+  }
+
+  /**
+   * Get previous compliance score for comparison
+   */
+  private async getPreviousComplianceScore(sellerId: string): Promise<number | null> {
+    // TODO: Implement actual cache/database lookup for previous score
+    return null;
   }
 
   /**
