@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { EnhancedWalletData, TokenBalance, Transaction, QuickAction } from '../../types/wallet';
+import { getTokenLogoWithFallback } from '../../utils/tokenLogoUtils';
 
 interface WalletDashboardProps {
   walletData: EnhancedWalletData | null;
@@ -311,9 +312,30 @@ const WalletDashboard = React.memo(function WalletDashboard({
               return (
                 <div key={index} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center text-white text-xs font-bold">
-                      {token.symbol ? token.symbol.substring(0, 2) : 'TK'}
-                    </div>
+                    {(() => {
+                      const logoUrl = getTokenLogoWithFallback(token.symbol, token.logoUrl);
+                      return logoUrl ? (
+                        <img 
+                          src={logoUrl} 
+                          alt={token.symbol} 
+                          className="w-8 h-8 rounded-full object-contain"
+                          onError={(e) => {
+                            // Fallback to gradient circle with initials if image fails to load
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            target.parentElement!.innerHTML = `
+                              <div class="w-8 h-8 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center text-white text-xs font-bold">
+                                ${token.symbol ? token.symbol.substring(0, 2) : 'TK'}
+                              </div>
+                            `;
+                          }}
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center text-white text-xs font-bold">
+                          {token.symbol ? token.symbol.substring(0, 2) : 'TK'}
+                        </div>
+                      );
+                    })()}
                     <div>
                       <p className="font-medium text-gray-900 dark:text-white text-sm">
                         {token.symbol || 'Unknown'}

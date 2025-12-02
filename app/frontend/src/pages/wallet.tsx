@@ -10,6 +10,7 @@ import { RefreshCw, TrendingUp, TrendingDown, ExternalLink, Copy } from 'lucide-
 import { useAccount, useBalance, useSwitchChain } from 'wagmi';
 import { base, baseSepolia, mainnet, polygon, arbitrum, sepolia } from '@/lib/wagmi';
 import { getTokensForChain, SUPPORTED_CHAINS } from '@/config/payment';
+import { getTokenLogoWithFallback } from '@/utils/tokenLogoUtils';
 
 export default function Wallet() {
   const { isConnected } = useWeb3();
@@ -531,9 +532,33 @@ export default function Wallet() {
                         <tr key={asset.name} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
-                              <div className="flex-shrink-0 h-10 w-10 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center">
-                                <span className="text-gray-700 dark:text-gray-300 font-medium">{asset.name.charAt(0)}</span>
-                              </div>
+                              {(() => {
+                                // Find the token in the tokens array to get its logoUrl
+                                const tokenItem = tokens.find(t => t.symbol === asset.name);
+                                const logoUrl = tokenItem ? getTokenLogoWithFallback(tokenItem.symbol, tokenItem.logoUrl) : null;
+                                
+                                return logoUrl ? (
+                                  <img 
+                                    src={logoUrl} 
+                                    alt={asset.name} 
+                                    className="flex-shrink-0 h-10 w-10 rounded-full object-contain"
+                                    onError={(e) => {
+                                      // Fallback to gradient circle with initials if image fails to load
+                                      const target = e.target as HTMLImageElement;
+                                      target.style.display = 'none';
+                                      target.parentElement!.innerHTML = `
+                                        <div class="flex-shrink-0 h-10 w-10 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center">
+                                          <span class="text-gray-700 dark:text-gray-300 font-medium">${asset.name.charAt(0)}</span>
+                                        </div>
+                                      `;
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="flex-shrink-0 h-10 w-10 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center">
+                                    <span className="text-gray-700 dark:text-gray-300 font-medium">{asset.name.charAt(0)}</span>
+                                  </div>
+                                );
+                              })()}
                               <div className="ml-4">
                                 <div className="text-sm font-medium text-gray-900 dark:text-white">{asset.name}</div>
                               </div>

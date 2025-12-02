@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { EnhancedWalletData, TokenBalance, PortfolioAnalytics } from '../../types/wallet';
+import { getTokenLogoWithFallback } from '../../utils/tokenLogoUtils';
 
 interface PortfolioModalProps {
   isOpen: boolean;
@@ -358,86 +359,107 @@ export default function PortfolioModal({
                     return (
                       <div key={index} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
                         <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center text-white font-bold">
-                      {token.symbol.substring(0, 2)}
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900 dark:text-white">
-                        {token.symbol}
-                      </p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {token.name}
-                      </p>
-                      {/* Chain labels */}
-                      {token.chains && token.chains.length > 0 && (
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {token.chains.map((cid) => (
-                            <span
-                              key={`${token.symbol}-${cid}`}
-                              className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200"
-                            >
-                              {cid === 1 && 'Ethereum'}
-                              {cid === 8453 && 'Base'}
-                              {cid === 84532 && 'Base Sepolia'}
-                              {cid === 137 && 'Polygon'}
-                              {cid === 42161 && 'Arbitrum'}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      {/* Toggle breakdown */}
-                      {token.chainBreakdown && token.chainBreakdown.length > 0 && (
-                        <div className="mt-2">
-                          <button
-                            onClick={() => toggleExpanded(token.symbol)}
-                            className="text-xs text-primary-600 dark:text-primary-400 hover:underline"
-                          >
-                            {expanded[token.symbol] ? 'Hide per-chain breakdown' : 'View per-chain breakdown'}
-                          </button>
-                          {expanded[token.symbol] && (
-                            <div className="mt-2 space-y-1">
-                              {token.chainBreakdown.map((b, i) => {
-                                const explorerTokenUrl = (cid?: number, addr?: string) => {
-                                  if (!addr || addr === '0x0000000000000000000000000000000000000000') return null;
-                                  switch (cid) {
-                                    case 1: return `https://etherscan.io/token/${addr}`;
-                                    case 8453: return `https://basescan.org/token/${addr}`;
-                                    case 84532: return `https://base-sepolia.basescan.org/token/${addr}`;
-                                    case 137: return `https://polygonscan.com/token/${addr}`;
-                                    case 42161: return `https://arbiscan.io/token/${addr}`;
-                                    default: return null;
-                                  }
-                                };
-                                const url = explorerTokenUrl(b.chainId, b.contractAddress);
-                                return (
-                                  <div key={`${token.symbol}-bd-${b.chainId}-${i}`} className="flex items-center text-xs text-gray-600 dark:text-gray-300">
-                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-600 text-[10px] mr-2">
-                                      {b.chainId === 1 && 'Ethereum'}
-                                      {b.chainId === 8453 && 'Base'}
-                                      {b.chainId === 84532 && 'Base Sepolia'}
-                                      {b.chainId === 137 && 'Polygon'}
-                                      {b.chainId === 42161 && 'Arbitrum'}
-                                    </span>
-                                    <span className="mr-2">{formatNumber(b.balance)} {token.symbol}</span>
-                                    <span className="text-gray-500 dark:text-gray-400">({formatCurrency(b.valueUSD)})</span>
-                                    {url && (
-                                      <a
-                                        href={url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="ml-2 text-[10px] text-primary-600 dark:text-primary-400 hover:underline"
-                                      >
-                                        View token
-                                      </a>
-                                    )}
+                          {(() => {
+                            const logoUrl = getTokenLogoWithFallback(token.symbol, token.logoUrl);
+                            return logoUrl ? (
+                              <img 
+                                src={logoUrl} 
+                                alt={token.symbol} 
+                                className="w-12 h-12 rounded-full object-contain"
+                                onError={(e) => {
+                                  // Fallback to gradient circle with initials if image fails to load
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                  target.parentElement!.innerHTML = `
+                                    <div class="w-12 h-12 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center text-white font-bold">
+                                      ${token.symbol.substring(0, 2)}
+                                    </div>
+                                  `;
+                                }}
+                              />
+                            ) : (
+                              <div className="w-12 h-12 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center text-white font-bold">
+                                {token.symbol.substring(0, 2)}
+                              </div>
+                            );
+                          })()}
+                          <div>
+                            <p className="font-semibold text-gray-900 dark:text-white">
+                              {token.symbol}
+                            </p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              {token.name}
+                            </p>
+                            {/* Chain labels */}
+                            {token.chains && token.chains.length > 0 && (
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                {token.chains.map((cid) => (
+                                  <span
+                                    key={`${token.symbol}-${cid}`}
+                                    className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200"
+                                  >
+                                    {cid === 1 && 'Ethereum'}
+                                    {cid === 8453 && 'Base'}
+                                    {cid === 84532 && 'Base Sepolia'}
+                                    {cid === 137 && 'Polygon'}
+                                    {cid === 42161 && 'Arbitrum'}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {/* Toggle breakdown */}
+                            {token.chainBreakdown && token.chainBreakdown.length > 0 && (
+                              <div className="mt-2">
+                                <button
+                                  onClick={() => toggleExpanded(token.symbol)}
+                                  className="text-xs text-primary-600 dark:text-primary-400 hover:underline"
+                                >
+                                  {expanded[token.symbol] ? 'Hide per-chain breakdown' : 'View per-chain breakdown'}
+                                </button>
+                                {expanded[token.symbol] && (
+                                  <div className="mt-2 space-y-1">
+                                    {token.chainBreakdown.map((b, i) => {
+                                      const explorerTokenUrl = (cid?: number, addr?: string) => {
+                                        if (!addr || addr === '0x0000000000000000000000000000000000000000') return null;
+                                        switch (cid) {
+                                          case 1: return `https://etherscan.io/token/${addr}`;
+                                          case 8453: return `https://basescan.org/token/${addr}`;
+                                          case 84532: return `https://base-sepolia.basescan.org/token/${addr}`;
+                                          case 137: return `https://polygonscan.com/token/${addr}`;
+                                          case 42161: return `https://arbiscan.io/token/${addr}`;
+                                          default: return null;
+                                        }
+                                      };
+                                      const url = explorerTokenUrl(b.chainId, b.contractAddress);
+                                      return (
+                                        <div key={`${token.symbol}-bd-${b.chainId}-${i}`} className="flex items-center text-xs text-gray-600 dark:text-gray-300">
+                                          <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-600 text-[10px] mr-2">
+                                            {b.chainId === 1 && 'Ethereum'}
+                                            {b.chainId === 8453 && 'Base'}
+                                            {b.chainId === 84532 && 'Base Sepolia'}
+                                            {b.chainId === 137 && 'Polygon'}
+                                            {b.chainId === 42161 && 'Arbitrum'}
+                                          </span>
+                                          <span className="mr-2">{formatNumber(b.balance)} {token.symbol}</span>
+                                          <span className="text-gray-500 dark:text-gray-400">({formatCurrency(b.valueUSD)})</span>
+                                          {url && (
+                                            <a
+                                              href={url}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="ml-2 text-[10px] text-primary-600 dark:text-primary-400 hover:underline"
+                                            >
+                                              View token
+                                            </a>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
                                   </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                         
                         <div className="text-center">

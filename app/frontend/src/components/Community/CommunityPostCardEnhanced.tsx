@@ -224,8 +224,16 @@ export default function CommunityPostCardEnhanced({
 
       const newCommentObj = await CommunityPostService.createComment(commentData);
 
-      // Add new comment to the list
-      setComments(prevComments => [newCommentObj, ...prevComments]);
+      // Validate comment structure before adding to state
+      if (!newCommentObj || typeof newCommentObj !== 'object') {
+        throw new Error('Invalid comment response from server');
+      }
+
+      // Add new comment to the list with defensive coding
+      setComments(prevComments => {
+        const currentComments = Array.isArray(prevComments) ? prevComments : [];
+        return [newCommentObj, ...currentComments];
+      });
       setNewComment('');
 
       addToast('Comment posted!', 'success');

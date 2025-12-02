@@ -683,7 +683,7 @@ const CommunitiesPage: React.FC = () => {
 
                 {/* My Communities Card */}
                 <MyCommunitiesCard
-                  communities={communityList.filter(c => joinedCommunities.includes(c.id) || userAdminRoles[c.id])}
+                  communities={communityList.filter(c => joinedCommunities.includes(c.id) || userAdminRoles[c.id] || (address && c.creatorAddress && c.creatorAddress.toLowerCase() === address.toLowerCase()))}
                   maxDisplay={10}
                   onManageClick={() => router.push('/communities/manage')}
                 />

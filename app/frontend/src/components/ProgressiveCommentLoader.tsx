@@ -57,15 +57,21 @@ export default function ProgressiveCommentLoader({
       
       if (parentId) {
         // Loading replies for a specific comment
-        setComments(prevComments => 
-          updateCommentsWithReplies(prevComments, parentId, newComments)
-        );
+        setComments(prevComments => {
+          const currentComments = Array.isArray(prevComments) ? prevComments : [];
+          const validNewComments = Array.isArray(newComments) ? newComments : [];
+          return updateCommentsWithReplies(currentComments, parentId, validNewComments);
+        });
       } else {
         // Loading top-level comments
         if (pageNum === 1) {
           setComments(newComments);
         } else {
-          setComments(prevComments => [...prevComments, ...newComments]);
+          setComments(prevComments => {
+            const currentComments = Array.isArray(prevComments) ? prevComments : [];
+            const validNewComments = Array.isArray(newComments) ? newComments : [];
+            return [...currentComments, ...validNewComments];
+          });
         }
       }
       
