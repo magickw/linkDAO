@@ -65,6 +65,7 @@ import { CharityVerification } from './CharityVerification';
 import { CharityProposal } from '../Governance/CharityProposalCard';
 import { UserMonitoringDashboard } from './UserMonitoringDashboard';
 import { NewsletterManagement } from './NewsletterManagement';
+import { ReturnMonitoringDashboard } from './returns/ReturnMonitoringDashboard';
 
 interface AdminStats {
   pendingModerations: number;
@@ -318,6 +319,7 @@ export function EnhancedAdminDashboard() {
     { id: 'analytics', label: 'Analytics', icon: BarChart3, permission: 'system.analytics', category: 'analytics' },
     { id: 'enhanced-analytics', label: 'Enhanced Analytics', icon: LineChart, permission: 'system.analytics', category: 'analytics' },
     { id: 'monitoring', label: 'User Monitoring', icon: Activity, permission: 'system.analytics', category: 'analytics' },
+    { id: 'returns', label: 'Return Monitoring', icon: Package, permission: 'marketplace.seller_view', category: 'business' },
     { id: 'charity-verification', label: 'Charity Verification', icon: Heart, permission: 'governance.verify', category: 'governance' },
   ].filter(tab => !tab.permission || hasPermission(tab.permission));
 
@@ -840,6 +842,10 @@ export function EnhancedAdminDashboard() {
                   );
                 }}
               />
+            )}
+            
+            {activeTab === 'returns' && hasPermission('marketplace.seller_view') && (
+              <ReturnMonitoringDashboard />
             )}
           </div>
         </main>
