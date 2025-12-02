@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { communicationManagerController } from '../controllers/communicationManagerController';
-import { adminAuthMiddleware } from '../middleware/auth';
+import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
 import { csrfProtection } from '../middleware/csrfProtection';
 import { rateLimiter } from '../middleware/rateLimiter';
 
