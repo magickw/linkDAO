@@ -1,81 +1,59 @@
-import express from 'express';
-import { safeLogger } from '../utils/safeLogger';
-import { csrfProtection } from '../middleware/csrfProtection';
-import { Request, Response } from 'express';
-import PerformanceOptimizationIntegration from '../middleware/performanceOptimizationIntegration';
+import { Router } from 'express';
+import { performanceMonitoringService } from '../services/performanceMonitoringService';
+import { logger } from '../utils/logger';
 
-const router = express.Router();
+const router = Router();
 
-// This would be injected by the main application
-let performanceOptimizer: PerformanceOptimizationIntegration;
-
-export function setPerformanceOptimizer(optimizer: PerformanceOptimizationIntegration) {
-  performanceOptimizer = optimizer;
-}
-
-/**
- * Get performance metrics
- */
-router.get('/metrics', async (req: Request, res: Response) => {
+// Get performance metrics
+router.get('/metrics', async (req, res) => {
   try {
-    if (!performanceOptimizer) {
-      return res.status(503).json({
-        success: false,
-        error: 'Performance optimizer not initialized'
-      });
+    const { start, end } = req.query;
+    
+    let timeRange;
+    if (start && end) {
+      timeRange = {
+        start: new Date(start as string),
+        end: new Date(end as string)
+      };
     }
 
-    const metrics = performanceOptimizer.getMetrics();
+    const metrics = performanceMonitoringService.getMetrics(timeRange);
     
     res.json({
       success: true,
-      data: {
-        timestamp: new Date().toISOString(),
-        metrics,
-        summary: {
-          status: metrics.averageResponseTime < 1000 ? 'healthy' : 
-                 metrics.averageResponseTime < 2000 ? 'degraded' : 'critical',
-          responseTime: `${metrics.averageResponseTime.toFixed(2)}ms`,
-          cacheEfficiency: `${(metrics.cacheHitRate * 100).toFixed(1)}%`,
-          compressionSavings: `${(metrics.compressionRate * 100).toFixed(1)}%`,
-          poolUtilization: `${metrics.poolUtilization.toFixed(1)}%`
-        }
-      }
+      data: metrics,
+      count: metrics.length
     });
-
   } catch (error) {
-    safeLogger.error('Error getting performance metrics:', error);
+    logger.error('Failed to fetch performance metrics', { error });
     res.status(500).json({
       success: false,
-      error: 'Failed to retrieve performance metrics'
+      error: 'Failed to fetch performance metrics'
     });
   }
 });
 
-/**
- * Get comprehensive performance report
- */
-router.get('/report', async (req: Request, res: Response) => {
+// Get performance report
+router.get('/report', async (req, res) => {
   try {
-    if (!performanceOptimizer) {
-      return res.status(503).json({
-        success: false,
-        error: 'Performance optimizer not initialized'
-      });
+    const { start, end } = req.query;
+    
+    let timeRange;
+    if (start && end) {
+      timeRange = {
+        start: new Date(start as string),
+        end: new Date(end as string)
+      };
     }
 
-    const report = await performanceOptimizer.getPerformanceReport();
+    const report = performanceMonitoringService.getPerformanceReport(timeRange);
     
     res.json({
       success: true,
-      data: {
-        timestamp: new Date().toISOString(),
-        report
-      }
+      data: report
     });
-
   } catch (error) {
-    safeLogger.error('Error generating performance report:', error);
+    logger.error('Failed to generate performance report', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to generate performance report'
@@ -83,243 +61,157 @@ router.get('/report', async (req: Request, res: Response) => {
   }
 });
 
-/**
- * Trigger manual optimization
- */
-router.post('/optimize', csrfProtection,  async (req: Request, res: Response) => {
+// Get performance alerts
+router.get('/alerts', async (req, res) => {
   try {
-    if (!performanceOptimizer) {
-      return res.status(503).json({
-        success: false,
-        error: 'Performance optimizer not initialized'
+    const { resolved } = req.query;
+    const alerts = performanceMonitoringService.getAlerts(resolved === 'true');
+    
+    res.json({
+      success: true,
+      data: alerts,
+      count: alerts.length
+    });
+  } catch (error) {
+    logger.error('Failed to fetch performance alerts', { error });
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch performance alerts'
+    });
+  }
+});
+
+// Resolve alert
+router.post('/alerts/:alertId/resolve', async (req, res) => {
+  try {
+    const { alertId } = req.params;
+    const success = performanceMonitoringService.resolveAlert(alertId);
+    
+    if (success) {
+      res.json({
+        success: true,
+        message: 'Alert resolved successfully'
       });
-    }
-
-    await performanceOptimizer.runOptimization();
-    
-    res.json({
-      success: true,
-      data: {
-        message: 'Performance optimization completed',
-        timestamp: new Date().toISOString()
-      }
-    });
-
-  } catch (error) {
-    safeLogger.error('Error running optimization:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to run optimization'
-    });
-  }
-});
-
-/**
- * Reset performance metrics
- */
-router.post('/metrics/reset', csrfProtection,  async (req: Request, res: Response) => {
-  try {
-    if (!performanceOptimizer) {
-      return res.status(503).json({
-        success: false,
-        error: 'Performance optimizer not initialized'
-      });
-    }
-
-    performanceOptimizer.resetMetrics();
-    
-    res.json({
-      success: true,
-      data: {
-        message: 'Performance metrics reset',
-        timestamp: new Date().toISOString()
-      }
-    });
-
-  } catch (error) {
-    safeLogger.error('Error resetting metrics:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to reset metrics'
-    });
-  }
-});
-
-/**
- * Get cache statistics
- */
-router.get('/cache/stats', async (req: Request, res: Response) => {
-  try {
-    const { cacheService } = await import('../services/cacheService');
-    const stats = await cacheService.getStats();
-    const healthCheck = await cacheService.healthCheck();
-    
-    res.json({
-      success: true,
-      data: {
-        timestamp: new Date().toISOString(),
-        stats,
-        health: healthCheck,
-        recommendations: []
-      }
-    });
-
-  } catch (error) {
-    safeLogger.error('Error getting cache stats:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to retrieve cache statistics'
-    });
-  }
-});
-
-/**
- * Clear cache
- */
-router.post('/cache/clear', csrfProtection,  async (req: Request, res: Response) => {
-  try {
-    const { pattern } = req.body;
-    const { cacheService } = await import('../services/cacheService');
-    
-    let clearedCount = 0;
-    if (pattern) {
-      clearedCount = await cacheService.invalidatePattern(pattern);
     } else {
-      // Clear all cache - would need to implement this method
-      clearedCount = await cacheService.invalidatePattern('*');
-    }
-    
-    res.json({
-      success: true,
-      data: {
-        message: `Cleared ${clearedCount} cache entries`,
-        pattern: pattern || 'all',
-        timestamp: new Date().toISOString()
-      }
-    });
-
-  } catch (error) {
-    safeLogger.error('Error clearing cache:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to clear cache'
-    });
-  }
-});
-
-/**
- * Warm cache
- */
-router.post('/cache/warm', csrfProtection,  async (req: Request, res: Response) => {
-  try {
-    const { cacheService } = await import('../services/cacheService');
-    await cacheService.warmCache();
-    
-    res.json({
-      success: true,
-      data: {
-        message: 'Cache warming initiated',
-        timestamp: new Date().toISOString()
-      }
-    });
-
-  } catch (error) {
-    safeLogger.error('Error warming cache:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to warm cache'
-    });
-  }
-});
-
-/**
- * Get database performance metrics
- */
-router.get('/database/metrics', async (req: Request, res: Response) => {
-  try {
-    if (!performanceOptimizer) {
-      return res.status(503).json({
+      res.status(404).json({
         success: false,
-        error: 'Performance optimizer not initialized'
+        error: 'Alert not found'
       });
     }
-
-    const metrics = performanceOptimizer.getMetrics();
-    
-    res.json({
-      success: true,
-      data: {
-        timestamp: new Date().toISOString(),
-        database: metrics.components.database || {},
-        connectionPool: metrics.components.connectionPool || {},
-        indexing: metrics.components.indexing || {}
-      }
-    });
-
   } catch (error) {
-    safeLogger.error('Error getting database metrics:', error);
+    logger.error('Failed to resolve performance alert', { error, alertId: req.params.alertId });
     res.status(500).json({
       success: false,
-      error: 'Failed to retrieve database metrics'
+      error: 'Failed to resolve alert'
     });
   }
 });
 
-/**
- * Health check endpoint
- */
-router.get('/health', async (req: Request, res: Response) => {
+// Get health status
+router.get('/health', async (req, res) => {
   try {
-    const health = {
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      components: {
-        optimizer: performanceOptimizer ? 'available' : 'unavailable',
-        cache: 'unknown',
-        database: 'unknown'
-      }
+    const healthStatus = performanceMonitoringService.getHealthStatus();
+    
+    res.status(healthStatus.status === 'critical' ? 503 : 200).json({
+      success: true,
+      data: healthStatus
+    });
+  } catch (error) {
+    logger.error('Failed to fetch health status', { error });
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch health status'
+    });
+  }
+});
+
+// Update thresholds
+router.put('/thresholds', async (req, res) => {
+  try {
+    const thresholds = req.body;
+    
+    // Validate thresholds
+    const validThresholds = {
+      responseTime: thresholds.responseTime && thresholds.responseTime > 0,
+      errorRate: thresholds.errorRate && thresholds.errorRate >= 0 && thresholds.errorRate <= 100,
+      memoryUsage: thresholds.memoryUsage && thresholds.memoryUsage > 0,
+      cpuUsage: thresholds.cpuUsage && thresholds.cpuUsage >= 0 && thresholds.cpuUsage <= 100,
+      databaseQueryTime: thresholds.databaseQueryTime && thresholds.databaseQueryTime > 0
     };
 
-    // Check cache health
-    try {
-      const { cacheService } = await import('../services/cacheService');
-      const cacheHealth = await cacheService.healthCheck();
-      health.components.cache = cacheHealth.connected ? 'healthy' : 'unhealthy';
-    } catch (error) {
-      health.components.cache = 'error';
+    if (!Object.values(validThresholds).every(Boolean)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid threshold values'
+      });
     }
 
-    // Check database health
-    if (performanceOptimizer) {
-      const metrics = performanceOptimizer.getMetrics();
-      health.components.database = metrics.databaseQueryTime < 2000 ? 'healthy' : 'degraded';
-    }
-
-    // Determine overall status
-    const unhealthyComponents = Object.values(health.components).filter(
-      status => status === 'unhealthy' || status === 'error' || status === 'unavailable'
-    );
-
-    if (unhealthyComponents.length > 0) {
-      health.status = unhealthyComponents.length === Object.keys(health.components).length ? 'critical' : 'degraded';
-    }
-
-    const statusCode = health.status === 'healthy' ? 200 : health.status === 'degraded' ? 200 : 503;
+    performanceMonitoringService.updateThresholds(thresholds);
     
-    res.status(statusCode).json({
-      success: health.status !== 'critical',
-      data: health
+    res.json({
+      success: true,
+      message: 'Thresholds updated successfully',
+      data: thresholds
+    });
+  } catch (error) {
+    logger.error('Failed to update performance thresholds', { error });
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update thresholds'
+    });
+  }
+});
+
+// Get real-time metrics stream (Server-Sent Events)
+router.get('/stream', async (req, res) => {
+  try {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*'
+    });
+
+    // Send initial data
+    const initialReport = performanceMonitoringService.getPerformanceReport();
+    res.write(`data: ${JSON.stringify({ type: 'report', data: initialReport })}\n\n`);
+
+    // Listen for new metrics and alerts
+    const onMetric = (metric: any) => {
+      res.write(`data: ${JSON.stringify({ type: 'metric', data: metric })}\n\n`);
+    };
+
+    const onAlert = (alert: any) => {
+      res.write(`data: ${JSON.stringify({ type: 'alert', data: alert })}\n\n`);
+    };
+
+    const onAlertResolved = (alert: any) => {
+      res.write(`data: ${JSON.stringify({ type: 'alert_resolved', data: alert })}\n\n`);
+    };
+
+    performanceMonitoringService.on('metric', onMetric);
+    performanceMonitoringService.on('alert', onAlert);
+    performanceMonitoringService.on('alertResolved', onAlertResolved);
+
+    // Send periodic health updates
+    const healthInterval = setInterval(() => {
+      const healthStatus = performanceMonitoringService.getHealthStatus();
+      res.write(`data: ${JSON.stringify({ type: 'health', data: healthStatus })}\n\n`);
+    }, 30000); // Every 30 seconds
+
+    // Clean up on disconnect
+    req.on('close', () => {
+      performanceMonitoringService.removeListener('metric', onMetric);
+      performanceMonitoringService.removeListener('alert', onAlert);
+      performanceMonitoringService.removeListener('alertResolved', onAlertResolved);
+      clearInterval(healthInterval);
     });
 
   } catch (error) {
-    safeLogger.error('Error checking performance health:', error);
-    res.status(503).json({
+    logger.error('Failed to establish performance stream', { error });
+    res.status(500).json({
       success: false,
-      error: 'Health check failed',
-      data: {
-        status: 'critical',
-        timestamp: new Date().toISOString()
-      }
+      error: 'Failed to establish performance stream'
     });
   }
 });

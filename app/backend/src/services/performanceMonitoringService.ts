@@ -1,351 +1,448 @@
 import { logger } from '../utils/logger';
+import { EventEmitter } from 'events';
 
-// Performance metrics interface
-interface PerformanceMetrics {
-  requestCount: number;
-  errorCount: number;
-  averageResponseTime: number;
-  maxResponseTime: number;
-  minResponseTime: number;
-  errorRate: number;
-  throughput: number; // requests per second
-  lastUpdated: Date;
-}
-
-interface EndpointMetrics extends PerformanceMetrics {
+export interface PerformanceMetrics {
+  timestamp: Date;
+  responseTime: number;
   endpoint: string;
   method: string;
+  statusCode: number;
+  memoryUsage?: NodeJS.MemoryUsage;
+  cpuUsage?: NodeJS.CpuUsage;
+  databaseQueryTime?: number;
+  cacheHitRate?: number;
+  errorCount?: number;
 }
 
-interface ServiceMetrics {
-  overall: PerformanceMetrics;
-  endpoints: Map<string, EndpointMetrics>;
-  alerts: AlertMetric[];
+export interface AlertThresholds {
+  responseTime: number; // ms
+  errorRate: number; // percentage
+  memoryUsage: number; // MB
+  cpuUsage: number; // percentage
+  databaseQueryTime: number; // ms
 }
 
-interface AlertMetric {
-  type: 'high_error_rate' | 'slow_response' | 'high_throughput' | 'service_down';
-  message: string;
-  timestamp: Date;
+export interface PerformanceAlert {
+  id: string;
+  type: 'response_time' | 'error_rate' | 'memory_usage' | 'cpu_usage' | 'database_performance';
   severity: 'low' | 'medium' | 'high' | 'critical';
-  metadata?: any;
+  message: string;
+  metric: PerformanceMetrics;
+  threshold: number;
+  timestamp: Date;
+  resolved: boolean;
+  resolvedAt?: Date;
 }
 
-class PerformanceMonitoringService {
-  private metrics: ServiceMetrics = {
-    overall: this.createEmptyMetrics(),
-    endpoints: new Map(),
-    alerts: []
-  };
+export class PerformanceMonitoringService extends EventEmitter {
+  private static instance: PerformanceMonitoringService;
+  private metrics: PerformanceMetrics[] = [];
+  private alerts: PerformanceAlert[] = [];
+  private thresholds: AlertThresholds;
+  private metricsWindow: number = 3600000; // 1 hour in ms
+  private alertCooldowns: Map<string, Date> = new Map();
+  private monitoringInterval?: NodeJS.Timeout;
 
-  private readonly ALERT_THRESHOLDS = {
-    ERROR_RATE: 0.05, // 5%
-    SLOW_RESPONSE: 2000, // 2 seconds
-    VERY_SLOW_RESPONSE: 5000, // 5 seconds
-    HIGH_THROUGHPUT: 100, // requests per second
-    MAX_ALERTS: 100 // Maximum alerts to keep in memory
-  };
-
-  private createEmptyMetrics(): PerformanceMetrics {
-    return {
-      requestCount: 0,
-      errorCount: 0,
-      averageResponseTime: 0,
-      maxResponseTime: 0,
-      minResponseTime: Infinity,
-      errorRate: 0,
-      throughput: 0,
-      lastUpdated: new Date()
+  constructor() {
+    super();
+    this.thresholds = {
+      responseTime: 300, // 300ms
+      errorRate: 5, // 5%
+      memoryUsage: 1024, // 1GB
+      cpuUsage: 80, // 80%
+      databaseQueryTime: 100 // 100ms
     };
+    this.startMonitoring();
   }
 
-  // Record a request and its performance metrics
-  recordRequest(
-    method: string,
-    endpoint: string,
-    responseTime: number,
-    statusCode: number,
-    error?: any
-  ): void {
-    const isError = statusCode >= 400;
-    const endpointKey = `${method} ${endpoint}`;
-
-    // Update overall metrics
-    this.updateMetrics(this.metrics.overall, responseTime, isError);
-
-    // Update endpoint-specific metrics
-    if (!this.metrics.endpoints.has(endpointKey)) {
-      this.metrics.endpoints.set(endpointKey, {
-        ...this.createEmptyMetrics(),
-        endpoint,
-        method
-      });
+  static getInstance(): PerformanceMonitoringService {
+    if (!PerformanceMonitoringService.instance) {
+      PerformanceMonitoringService.instance = new PerformanceMonitoringService();
     }
-
-    const endpointMetrics = this.metrics.endpoints.get(endpointKey)!;
-    this.updateMetrics(endpointMetrics, responseTime, isError);
-
-    // Check for alerts
-    this.checkAlerts(endpointKey, endpointMetrics, responseTime, statusCode, error);
-
-    // Log performance data
-    this.logPerformanceData(method, endpoint, responseTime, statusCode, isError);
+    return PerformanceMonitoringService.instance;
   }
 
-  private updateMetrics(metrics: PerformanceMetrics, responseTime: number, isError: boolean): void {
-    metrics.requestCount++;
-    
-    if (isError) {
-      metrics.errorCount++;
-    }
+  private startMonitoring(): void {
+    // Collect system metrics every 30 seconds
+    this.monitoringInterval = setInterval(() => {
+      this.collectSystemMetrics();
+    }, 30000);
 
-    // Update response time metrics
-    metrics.maxResponseTime = Math.max(metrics.maxResponseTime, responseTime);
-    metrics.minResponseTime = Math.min(metrics.minResponseTime, responseTime);
-    
-    // Calculate new average response time
-    const totalTime = (metrics.averageResponseTime * (metrics.requestCount - 1)) + responseTime;
-    metrics.averageResponseTime = totalTime / metrics.requestCount;
+    // Clean old metrics every 5 minutes
+    setInterval(() => {
+      this.cleanupOldMetrics();
+    }, 300000);
 
-    // Calculate error rate
-    metrics.errorRate = metrics.errorCount / metrics.requestCount;
-
-    // Calculate throughput (simplified - would need time window in production)
-    const timeWindow = (Date.now() - metrics.lastUpdated.getTime()) / 1000; // seconds
-    if (timeWindow > 0) {
-      metrics.throughput = metrics.requestCount / Math.max(timeWindow, 1);
-    }
-
-    metrics.lastUpdated = new Date();
+    logger.info('Performance monitoring service started');
   }
 
-  private checkAlerts(
-    endpointKey: string,
-    metrics: EndpointMetrics,
-    responseTime: number,
-    statusCode: number,
-    error?: any
-  ): void {
-    const alerts: AlertMetric[] = [];
+  private collectSystemMetrics(): void {
+    try {
+      const memUsage = process.memoryUsage();
+      const cpuUsage = process.cpuUsage();
 
-    // Check error rate
-    if (metrics.errorRate > this.ALERT_THRESHOLDS.ERROR_RATE && metrics.requestCount > 10) {
-      alerts.push({
-        type: 'high_error_rate',
-        message: `High error rate detected for ${endpointKey}: ${(metrics.errorRate * 100).toFixed(2)}%`,
-        timestamp: new Date(),
-        severity: metrics.errorRate > 0.1 ? 'critical' : 'high',
-        metadata: {
-          endpoint: endpointKey,
-          errorRate: metrics.errorRate,
-          errorCount: metrics.errorCount,
-          requestCount: metrics.requestCount
-        }
-      });
-    }
-
-    // Check slow response times
-    if (responseTime > this.ALERT_THRESHOLDS.VERY_SLOW_RESPONSE) {
-      alerts.push({
-        type: 'slow_response',
-        message: `Very slow response detected for ${endpointKey}: ${responseTime}ms`,
-        timestamp: new Date(),
-        severity: 'critical',
-        metadata: {
-          endpoint: endpointKey,
-          responseTime,
-          statusCode,
-          error: error ? error.message : undefined
-        }
-      });
-    } else if (responseTime > this.ALERT_THRESHOLDS.SLOW_RESPONSE) {
-      alerts.push({
-        type: 'slow_response',
-        message: `Slow response detected for ${endpointKey}: ${responseTime}ms`,
-        timestamp: new Date(),
-        severity: 'medium',
-        metadata: {
-          endpoint: endpointKey,
-          responseTime,
-          statusCode
-        }
-      });
-    }
-
-    // Check high throughput
-    if (metrics.throughput > this.ALERT_THRESHOLDS.HIGH_THROUGHPUT) {
-      alerts.push({
-        type: 'high_throughput',
-        message: `High throughput detected for ${endpointKey}: ${metrics.throughput.toFixed(2)} req/s`,
-        timestamp: new Date(),
-        severity: 'medium',
-        metadata: {
-          endpoint: endpointKey,
-          throughput: metrics.throughput,
-          requestCount: metrics.requestCount
-        }
-      });
-    }
-
-    // Add alerts and log them
-    alerts.forEach(alert => {
-      this.addAlert(alert);
-      logger.warn(alert.message, {
-        alertType: alert.type,
-        severity: alert.severity,
-        metadata: alert.metadata,
-        critical: alert.severity === 'critical'
-      });
-    });
-  }
-
-  private addAlert(alert: AlertMetric): void {
-    this.metrics.alerts.unshift(alert);
-    
-    // Keep only the most recent alerts
-    if (this.metrics.alerts.length > this.ALERT_THRESHOLDS.MAX_ALERTS) {
-      this.metrics.alerts = this.metrics.alerts.slice(0, this.ALERT_THRESHOLDS.MAX_ALERTS);
-    }
-  }
-
-  private logPerformanceData(
-    method: string,
-    endpoint: string,
-    responseTime: number,
-    statusCode: number,
-    isError: boolean
-  ): void {
-    const logLevel = isError ? 'warn' : responseTime > this.ALERT_THRESHOLDS.SLOW_RESPONSE ? 'warn' : 'info';
-    
-    logger[logLevel](`API Performance: ${method} ${endpoint}`, {
-      performance: {
-        responseTime,
-        statusCode,
-        isError
-      },
-      endpoint: `${method} ${endpoint}`,
-      operation: 'api_request'
-    });
-  }
-
-  // Get current metrics
-  getMetrics(): ServiceMetrics {
-    return {
-      overall: { ...this.metrics.overall },
-      endpoints: new Map(this.metrics.endpoints),
-      alerts: [...this.metrics.alerts]
-    };
-  }
-
-  // Get metrics for a specific endpoint
-  getEndpointMetrics(method: string, endpoint: string): EndpointMetrics | null {
-    const key = `${method} ${endpoint}`;
-    const metrics = this.metrics.endpoints.get(key);
-    return metrics ? { ...metrics } : null;
-  }
-
-  // Get recent alerts
-  getRecentAlerts(limit: number = 10): AlertMetric[] {
-    return this.metrics.alerts.slice(0, limit);
-  }
-
-  // Get alerts by severity
-  getAlertsBySeverity(severity: AlertMetric['severity']): AlertMetric[] {
-    return this.metrics.alerts.filter(alert => alert.severity === severity);
-  }
-
-  // Reset metrics (useful for testing or periodic resets)
-  resetMetrics(): void {
-    this.metrics = {
-      overall: this.createEmptyMetrics(),
-      endpoints: new Map(),
-      alerts: []
-    };
-    
-    logger.info('Performance metrics reset', {
-      operation: 'metrics_reset',
-      timestamp: new Date().toISOString()
-    });
-  }
-
-  // Get health status based on metrics
-  getHealthStatus(): {
-    status: 'healthy' | 'degraded' | 'unhealthy';
-    issues: string[];
-    metrics: {
-      errorRate: number;
-      averageResponseTime: number;
-      recentAlerts: number;
-    };
-  } {
-    const { overall, alerts } = this.metrics;
-    const recentAlerts = alerts.filter(alert => 
-      Date.now() - alert.timestamp.getTime() < 300000 // Last 5 minutes
-    );
-    
-    const criticalAlerts = recentAlerts.filter(alert => alert.severity === 'critical');
-    const issues: string[] = [];
-    
-    let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
-    
-    // Check for critical issues
-    if (criticalAlerts.length > 0) {
-      status = 'unhealthy';
-      issues.push(`${criticalAlerts.length} critical alerts in the last 5 minutes`);
-    }
-    
-    // Check error rate
-    if (overall.errorRate > 0.1) {
-      status = status === 'healthy' ? 'degraded' : status;
-      issues.push(`High error rate: ${(overall.errorRate * 100).toFixed(2)}%`);
-    }
-    
-    // Check response times
-    if (overall.averageResponseTime > this.ALERT_THRESHOLDS.SLOW_RESPONSE) {
-      status = status === 'healthy' ? 'degraded' : status;
-      issues.push(`Slow average response time: ${overall.averageResponseTime.toFixed(0)}ms`);
-    }
-    
-    return {
-      status,
-      issues,
-      metrics: {
-        errorRate: overall.errorRate,
-        averageResponseTime: overall.averageResponseTime,
-        recentAlerts: recentAlerts.length
+      // Check memory usage
+      const memoryMB = memUsage.heapUsed / 1024 / 1024;
+      if (memoryMB > this.thresholds.memoryUsage) {
+        this.createAlert({
+          type: 'memory_usage',
+          severity: memoryMB > this.thresholds.memoryUsage * 1.5 ? 'critical' : 'high',
+          message: `High memory usage: ${memoryMB.toFixed(2)}MB`,
+          metric: {
+            timestamp: new Date(),
+            responseTime: 0,
+            endpoint: 'system',
+            method: 'MONITOR',
+            statusCode: 200,
+            memoryUsage: memUsage,
+            cpuUsage
+          },
+          threshold: this.thresholds.memoryUsage
+        });
       }
+
+      // Check CPU usage (simplified)
+      const cpuPercent = (cpuUsage.user + cpuUsage.system) / 1000000; // Convert to seconds
+      if (cpuPercent > this.thresholds.cpuUsage) {
+        this.createAlert({
+          type: 'cpu_usage',
+          severity: cpuPercent > this.thresholds.cpuUsage * 1.5 ? 'critical' : 'high',
+          message: `High CPU usage: ${cpuPercent.toFixed(2)}%`,
+          metric: {
+            timestamp: new Date(),
+            responseTime: 0,
+            endpoint: 'system',
+            method: 'MONITOR',
+            statusCode: 200,
+            memoryUsage: memUsage,
+            cpuUsage
+          },
+          threshold: this.thresholds.cpuUsage
+        });
+      }
+    } catch (error) {
+      logger.error('Failed to collect system metrics', { error });
+    }
+  }
+
+  private cleanupOldMetrics(): void {
+    const cutoffTime = new Date(Date.now() - this.metricsWindow);
+    this.metrics = this.metrics.filter(metric => metric.timestamp > cutoffTime);
+  }
+
+  recordMetric(metric: Omit<PerformanceMetrics, 'timestamp'>): void {
+    const fullMetric: PerformanceMetrics = {
+      ...metric,
+      timestamp: new Date()
+    };
+
+    this.metrics.push(fullMetric);
+
+    // Check for performance issues
+    this.checkPerformanceThresholds(fullMetric);
+
+    // Emit metric for real-time monitoring
+    this.emit('metric', fullMetric);
+  }
+
+  private checkPerformanceThresholds(metric: PerformanceMetrics): void {
+    // Check response time
+    if (metric.responseTime > this.thresholds.responseTime) {
+      this.createAlert({
+        type: 'response_time',
+        severity: metric.responseTime > this.thresholds.responseTime * 2 ? 'critical' : 'high',
+        message: `Slow response time: ${metric.responseTime}ms for ${metric.method} ${metric.endpoint}`,
+        metric,
+        threshold: this.thresholds.responseTime
+      });
+    }
+
+    // Check database query time
+    if (metric.databaseQueryTime && metric.databaseQueryTime > this.thresholds.databaseQueryTime) {
+      this.createAlert({
+        type: 'database_performance',
+        severity: metric.databaseQueryTime > this.thresholds.databaseQueryTime * 2 ? 'critical' : 'high',
+        message: `Slow database query: ${metric.databaseQueryTime}ms`,
+        metric,
+        threshold: this.thresholds.databaseQueryTime
+      });
+    }
+
+    // Check error rate
+    if (metric.statusCode >= 400) {
+      this.checkErrorRate(metric);
+    }
+  }
+
+  private checkErrorRate(metric: PerformanceMetrics): void {
+    const recentMetrics = this.metrics.filter(m => 
+      m.timestamp > new Date(Date.now() - 300000) && // Last 5 minutes
+      m.endpoint === metric.endpoint
+    );
+
+    if (recentMetrics.length < 10) return; // Not enough data
+
+    const errorCount = recentMetrics.filter(m => m.statusCode >= 400).length;
+    const errorRate = (errorCount / recentMetrics.length) * 100;
+
+    if (errorRate > this.thresholds.errorRate) {
+      this.createAlert({
+        type: 'error_rate',
+        severity: errorRate > this.thresholds.errorRate * 2 ? 'critical' : 'high',
+        message: `High error rate: ${errorRate.toFixed(2)}% for ${metric.endpoint}`,
+        metric,
+        threshold: this.thresholds.errorRate
+      });
+    }
+  }
+
+  private createAlert(alertData: Omit<PerformanceAlert, 'id' | 'timestamp' | 'resolved'>): void {
+    // Check cooldown to prevent alert spam
+    const cooldownKey = `${alertData.type}-${alertData.metric.endpoint}`;
+    const lastAlert = this.alertCooldowns.get(cooldownKey);
+    
+    if (lastAlert && Date.now() - lastAlert.getTime() < 60000) { // 1 minute cooldown
+      return;
+    }
+
+    const alert: PerformanceAlert = {
+      ...alertData,
+      id: `alert-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: new Date(),
+      resolved: false
+    };
+
+    this.alerts.push(alert);
+    this.alertCooldowns.set(cooldownKey, new Date());
+
+    // Emit alert for real-time notifications
+    this.emit('alert', alert);
+
+    logger.warn('Performance alert created', {
+      alertId: alert.id,
+      type: alert.type,
+      severity: alert.severity,
+      message: alert.message
+    });
+  }
+
+  getMetrics(timeRange?: { start: Date; end: Date }): PerformanceMetrics[] {
+    if (!timeRange) {
+      return this.metrics;
+    }
+
+    return this.metrics.filter(metric => 
+      metric.timestamp >= timeRange.start && metric.timestamp <= timeRange.end
+    );
+  }
+
+  getAlerts(resolved?: boolean): PerformanceAlert[] {
+    return this.alerts.filter(alert => resolved === undefined || alert.resolved === resolved);
+  }
+
+  resolveAlert(alertId: string): boolean {
+    const alert = this.alerts.find(a => a.id === alertId);
+    if (!alert) return false;
+
+    alert.resolved = true;
+    alert.resolvedAt = new Date();
+
+    this.emit('alertResolved', alert);
+    logger.info('Performance alert resolved', { alertId });
+
+    return true;
+  }
+
+  updateThresholds(newThresholds: Partial<AlertThresholds>): void {
+    this.thresholds = { ...this.thresholds, ...newThresholds };
+    logger.info('Performance thresholds updated', { thresholds: this.thresholds });
+  }
+
+  getPerformanceReport(timeRange?: { start: Date; end: Date }): {
+    summary: {
+      totalRequests: number;
+      averageResponseTime: number;
+      errorRate: number;
+      p95ResponseTime: number;
+      p99ResponseTime: number;
+    };
+    endpoints: Array<{
+      endpoint: string;
+      requestCount: number;
+      averageResponseTime: number;
+      errorRate: number;
+    }>;
+    alerts: PerformanceAlert[];
+  } {
+    const metrics = this.getMetrics(timeRange);
+    const alerts = this.getAlerts(false);
+
+    if (metrics.length === 0) {
+      return {
+        summary: {
+          totalRequests: 0,
+          averageResponseTime: 0,
+          errorRate: 0,
+          p95ResponseTime: 0,
+          p99ResponseTime: 0
+        },
+        endpoints: [],
+        alerts
+      };
+    }
+
+    // Calculate percentiles
+    const responseTimes = metrics.map(m => m.responseTime).sort((a, b) => a - b);
+    const p95Index = Math.floor(responseTimes.length * 0.95);
+    const p99Index = Math.floor(responseTimes.length * 0.99);
+
+    const totalRequests = metrics.length;
+    const averageResponseTime = metrics.reduce((sum, m) => sum + m.responseTime, 0) / totalRequests;
+    const errorCount = metrics.filter(m => m.statusCode >= 400).length;
+    const errorRate = (errorCount / totalRequests) * 100;
+
+    // Group by endpoint
+    const endpointGroups = metrics.reduce((groups, metric) => {
+      const key = metric.endpoint;
+      if (!groups[key]) {
+        groups[key] = [];
+      }
+      groups[key].push(metric);
+      return groups;
+    }, {} as Record<string, PerformanceMetrics[]>);
+
+    const endpoints = Object.entries(endpointGroups).map(([endpoint, endpointMetrics]) => {
+      const endpointRequestCount = endpointMetrics.length;
+      const endpointAverageResponseTime = endpointMetrics.reduce((sum, m) => sum + m.responseTime, 0) / endpointRequestCount;
+      const endpointErrorCount = endpointMetrics.filter(m => m.statusCode >= 400).length;
+      const endpointErrorRate = (endpointErrorCount / endpointRequestCount) * 100;
+
+      return {
+        endpoint,
+        requestCount: endpointRequestCount,
+        averageResponseTime: endpointAverageResponseTime,
+        errorRate: endpointErrorRate
+      };
+    });
+
+    return {
+      summary: {
+        totalRequests,
+        averageResponseTime,
+        errorRate,
+        p95ResponseTime: responseTimes[p95Index] || 0,
+        p99ResponseTime: responseTimes[p99Index] || 0
+      },
+      endpoints,
+      alerts
     };
   }
 
-  // Generate performance report
-  generateReport(): {
-    summary: PerformanceMetrics;
-    topEndpoints: EndpointMetrics[];
-    slowestEndpoints: EndpointMetrics[];
-    errorProneEndpoints: EndpointMetrics[];
-    recentAlerts: AlertMetric[];
+  getHealthStatus(): {
+    status: 'healthy' | 'warning' | 'critical';
+    checks: Array<{
+      name: string;
+      status: 'pass' | 'fail' | 'warn';
+      message?: string;
+    }>;
   } {
-    const endpointArray = Array.from(this.metrics.endpoints.values());
+    const checks = [];
+    let overallStatus: 'healthy' | 'warning' | 'critical' = 'healthy';
+
+    // Check response times
+    const recentMetrics = this.metrics.filter(m => 
+      m.timestamp > new Date(Date.now() - 300000) // Last 5 minutes
+    );
+
+    if (recentMetrics.length > 0) {
+      const avgResponseTime = recentMetrics.reduce((sum, m) => sum + m.responseTime, 0) / recentMetrics.length;
+      if (avgResponseTime > this.thresholds.responseTime * 2) {
+        checks.push({
+          name: 'response_time',
+          status: 'fail',
+          message: `Average response time: ${avgResponseTime.toFixed(2)}ms`
+        });
+        overallStatus = 'critical';
+      } else if (avgResponseTime > this.thresholds.responseTime) {
+        checks.push({
+          name: 'response_time',
+          status: 'warn',
+          message: `Average response time: ${avgResponseTime.toFixed(2)}ms`
+        });
+        overallStatus = overallStatus === 'healthy' ? 'warning' : overallStatus;
+      } else {
+        checks.push({
+          name: 'response_time',
+          status: 'pass'
+        });
+      }
+    }
+
+    // Check error rate
+    if (recentMetrics.length > 10) {
+      const errorCount = recentMetrics.filter(m => m.statusCode >= 400).length;
+      const errorRate = (errorCount / recentMetrics.length) * 100;
+      
+      if (errorRate > this.thresholds.errorRate * 2) {
+        checks.push({
+          name: 'error_rate',
+          status: 'fail',
+          message: `Error rate: ${errorRate.toFixed(2)}%`
+        });
+        overallStatus = 'critical';
+      } else if (errorRate > this.thresholds.errorRate) {
+        checks.push({
+          name: 'error_rate',
+          status: 'warn',
+          message: `Error rate: ${errorRate.toFixed(2)}%`
+        });
+        overallStatus = overallStatus === 'healthy' ? 'warning' : overallStatus;
+      } else {
+        checks.push({
+          name: 'error_rate',
+          status: 'pass'
+        });
+      }
+    }
+
+    // Check memory usage
+    const memUsage = process.memoryUsage();
+    const memoryMB = memUsage.heapUsed / 1024 / 1024;
     
+    if (memoryMB > this.thresholds.memoryUsage * 1.5) {
+      checks.push({
+        name: 'memory_usage',
+        status: 'fail',
+        message: `Memory usage: ${memoryMB.toFixed(2)}MB`
+      });
+      overallStatus = 'critical';
+    } else if (memoryMB > this.thresholds.memoryUsage) {
+      checks.push({
+        name: 'memory_usage',
+        status: 'warn',
+        message: `Memory usage: ${memoryMB.toFixed(2)}MB`
+      });
+      overallStatus = overallStatus === 'healthy' ? 'warning' : overallStatus;
+    } else {
+      checks.push({
+        name: 'memory_usage',
+        status: 'pass'
+      });
+    }
+
     return {
-      summary: { ...this.metrics.overall },
-      topEndpoints: endpointArray
-        .sort((a, b) => b.requestCount - a.requestCount)
-        .slice(0, 10),
-      slowestEndpoints: endpointArray
-        .sort((a, b) => b.averageResponseTime - a.averageResponseTime)
-        .slice(0, 10),
-      errorProneEndpoints: endpointArray
-        .filter(endpoint => endpoint.errorRate > 0)
-        .sort((a, b) => b.errorRate - a.errorRate)
-        .slice(0, 10),
-      recentAlerts: this.getRecentAlerts(20)
+      status: overallStatus,
+      checks
     };
+  }
+
+  stopMonitoring(): void {
+    if (this.monitoringInterval) {
+      clearInterval(this.monitoringInterval);
+      this.monitoringInterval = undefined;
+    }
+    logger.info('Performance monitoring service stopped');
   }
 }
 
-// Export singleton instance
-export const performanceMonitoringService = new PerformanceMonitoringService();
-
-// Export types
-export type { PerformanceMetrics, EndpointMetrics, ServiceMetrics, AlertMetric };
+export const performanceMonitoringService = PerformanceMonitoringService.getInstance();
