@@ -4545,26 +4545,26 @@ export const returnAnalytics = pgTable('return_analytics', {
 export const returnEvents = pgTable("return_events", {
   id: uuid("id").defaultRandom().primaryKey(),
   returnId: uuid("return_id").notNull(),
-  
+
   // Event classification
   eventType: varchar("event_type", { length: 50 }).notNull(),
   eventCategory: varchar("event_category", { length: 30 }).notNull(),
-  
+
   // Event data
   eventData: jsonb("event_data").notNull().default('{}'),
   previousState: jsonb("previous_state"),
   newState: jsonb("new_state"),
-  
+
   // Actor information
   actorId: uuid("actor_id"),
   actorRole: varchar("actor_role", { length: 20 }),
   actorIpAddress: varchar("actor_ip_address", { length: 45 }),
   actorUserAgent: text("actor_user_agent"),
-  
+
   // Context
   sessionId: varchar("session_id", { length: 100 }),
   automated: boolean("automated").default(false),
-  
+
   // Metadata
   metadata: jsonb("metadata").default('{}'),
   timestamp: timestamp("timestamp").notNull().defaultNow(),
@@ -4582,10 +4582,10 @@ export const returnEvents = pgTable("return_events", {
 // Return Analytics Hourly - Hourly aggregated metrics
 export const returnAnalyticsHourly = pgTable("return_analytics_hourly", {
   id: uuid("id").defaultRandom().primaryKey(),
-  
+
   // Time dimension
   hourTimestamp: timestamp("hour_timestamp").notNull().unique(),
-  
+
   // Volume metrics
   totalReturns: integer("total_returns").default(0),
   newReturns: integer("new_returns").default(0),
@@ -4593,7 +4593,7 @@ export const returnAnalyticsHourly = pgTable("return_analytics_hourly", {
   rejectedReturns: integer("rejected_returns").default(0),
   completedReturns: integer("completed_returns").default(0),
   cancelledReturns: integer("cancelled_returns").default(0),
-  
+
   // Status distribution
   statusRequested: integer("status_requested").default(0),
   statusApproved: integer("status_approved").default(0),
@@ -4603,7 +4603,7 @@ export const returnAnalyticsHourly = pgTable("return_analytics_hourly", {
   statusInspected: integer("status_inspected").default(0),
   statusRefundProcessing: integer("status_refund_processing").default(0),
   statusCompleted: integer("status_completed").default(0),
-  
+
   // Financial metrics
   totalRefundAmount: decimal("total_refund_amount", { precision: 20, scale: 8 }).default("0"),
   avgRefundAmount: decimal("avg_refund_amount", { precision: 20, scale: 8 }).default("0"),
@@ -4611,14 +4611,14 @@ export const returnAnalyticsHourly = pgTable("return_analytics_hourly", {
   minRefundAmount: decimal("min_refund_amount", { precision: 20, scale: 8 }).default("0"),
   totalRestockingFees: decimal("total_restocking_fees", { precision: 20, scale: 8 }).default("0"),
   totalShippingCosts: decimal("total_shipping_costs", { precision: 20, scale: 8 }).default("0"),
-  
+
   // Processing time metrics (in hours)
   avgApprovalTime: decimal("avg_approval_time", { precision: 10, scale: 2 }),
   avgRefundTime: decimal("avg_refund_time", { precision: 10, scale: 2 }),
   avgTotalResolutionTime: decimal("avg_total_resolution_time", { precision: 10, scale: 2 }),
   medianApprovalTime: decimal("median_approval_time", { precision: 10, scale: 2 }),
   p95ApprovalTime: decimal("p95_approval_time", { precision: 10, scale: 2 }),
-  
+
   // Return reasons breakdown
   reasonDefective: integer("reason_defective").default(0),
   reasonWrongItem: integer("reason_wrong_item").default(0),
@@ -4628,18 +4628,18 @@ export const returnAnalyticsHourly = pgTable("return_analytics_hourly", {
   reasonBetterPrice: integer("reason_better_price").default(0),
   reasonNoLongerNeeded: integer("reason_no_longer_needed").default(0),
   reasonOther: integer("reason_other").default(0),
-  
+
   // Risk metrics
   highRiskReturns: integer("high_risk_returns").default(0),
   mediumRiskReturns: integer("medium_risk_returns").default(0),
   lowRiskReturns: integer("low_risk_returns").default(0),
   flaggedForReview: integer("flagged_for_review").default(0),
   fraudDetected: integer("fraud_detected").default(0),
-  
+
   // Customer satisfaction
   avgSatisfactionScore: decimal("avg_satisfaction_score", { precision: 3, scale: 2 }),
   satisfactionResponses: integer("satisfaction_responses").default(0),
-  
+
   // Metadata
   calculatedAt: timestamp("calculated_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
@@ -4650,10 +4650,10 @@ export const returnAnalyticsHourly = pgTable("return_analytics_hourly", {
 // Return Analytics Daily - Daily aggregated metrics
 export const returnAnalyticsDaily = pgTable("return_analytics_daily", {
   id: uuid("id").defaultRandom().primaryKey(),
-  
+
   // Time dimension
   date: date("date").notNull().unique(),
-  
+
   // Volume metrics
   totalReturns: integer("total_returns").default(0),
   newReturns: integer("new_returns").default(0),
@@ -4661,7 +4661,7 @@ export const returnAnalyticsDaily = pgTable("return_analytics_daily", {
   rejectedReturns: integer("rejected_returns").default(0),
   completedReturns: integer("completed_returns").default(0),
   cancelledReturns: integer("cancelled_returns").default(0),
-  
+
   // Status distribution
   statusRequested: integer("status_requested").default(0),
   statusApproved: integer("status_approved").default(0),
@@ -4671,7 +4671,7 @@ export const returnAnalyticsDaily = pgTable("return_analytics_daily", {
   statusInspected: integer("status_inspected").default(0),
   statusRefundProcessing: integer("status_refund_processing").default(0),
   statusCompleted: integer("status_completed").default(0),
-  
+
   // Financial metrics
   totalRefundAmount: decimal("total_refund_amount", { precision: 20, scale: 8 }).default("0"),
   avgRefundAmount: decimal("avg_refund_amount", { precision: 20, scale: 8 }).default("0"),
@@ -4680,7 +4680,7 @@ export const returnAnalyticsDaily = pgTable("return_analytics_daily", {
   totalRestockingFees: decimal("total_restocking_fees", { precision: 20, scale: 8 }).default("0"),
   totalShippingCosts: decimal("total_shipping_costs", { precision: 20, scale: 8 }).default("0"),
   netRefundImpact: decimal("net_refund_impact", { precision: 20, scale: 8 }).default("0"),
-  
+
   // Processing time metrics (in hours)
   avgApprovalTime: decimal("avg_approval_time", { precision: 10, scale: 2 }),
   avgRefundTime: decimal("avg_refund_time", { precision: 10, scale: 2 }),
@@ -4688,7 +4688,7 @@ export const returnAnalyticsDaily = pgTable("return_analytics_daily", {
   medianApprovalTime: decimal("median_approval_time", { precision: 10, scale: 2 }),
   p95ApprovalTime: decimal("p95_approval_time", { precision: 10, scale: 2 }),
   p99ApprovalTime: decimal("p99_approval_time", { precision: 10, scale: 2 }),
-  
+
   // Return reasons breakdown
   reasonDefective: integer("reason_defective").default(0),
   reasonWrongItem: integer("reason_wrong_item").default(0),
@@ -4698,7 +4698,7 @@ export const returnAnalyticsDaily = pgTable("return_analytics_daily", {
   reasonBetterPrice: integer("reason_better_price").default(0),
   reasonNoLongerNeeded: integer("reason_no_longer_needed").default(0),
   reasonOther: integer("reason_other").default(0),
-  
+
   // Risk metrics
   highRiskReturns: integer("high_risk_returns").default(0),
   mediumRiskReturns: integer("medium_risk_returns").default(0),
@@ -4706,16 +4706,16 @@ export const returnAnalyticsDaily = pgTable("return_analytics_daily", {
   flaggedForReview: integer("flagged_for_review").default(0),
   fraudDetected: integer("fraud_detected").default(0),
   avgRiskScore: decimal("avg_risk_score", { precision: 5, scale: 2 }),
-  
+
   // Customer satisfaction
   avgSatisfactionScore: decimal("avg_satisfaction_score", { precision: 3, scale: 2 }),
   satisfactionResponses: integer("satisfaction_responses").default(0),
   npsScore: integer("nps_score"),
-  
+
   // Return rate
   returnRate: decimal("return_rate", { precision: 5, scale: 2 }),
   totalOrders: integer("total_orders").default(0),
-  
+
   // Metadata
   calculatedAt: timestamp("calculated_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
@@ -4905,35 +4905,35 @@ export const returnAnalyticsMonthly = pgTable("return_analytics_monthly", {
 // Return Metrics Realtime - Real-time monitoring data
 export const returnMetricsRealtime = pgTable("return_metrics_realtime", {
   id: uuid("id").defaultRandom().primaryKey(),
-  
+
   // Timestamp (5-minute intervals)
   timestamp: timestamp("timestamp").notNull().unique(),
-  
+
   // Current state metrics
   activeReturns: integer("active_returns").default(0),
   pendingApproval: integer("pending_approval").default(0),
   pendingRefund: integer("pending_refund").default(0),
   inTransitReturns: integer("in_transit_returns").default(0),
-  
+
   // Rate metrics (per minute)
   returnsPerMinute: decimal("returns_per_minute", { precision: 10, scale: 2 }).default("0"),
   approvalsPerMinute: decimal("approvals_per_minute", { precision: 10, scale: 2 }).default("0"),
   refundsPerMinute: decimal("refunds_per_minute", { precision: 10, scale: 2 }).default("0"),
-  
+
   // Processing queue depth
   manualReviewQueueDepth: integer("manual_review_queue_depth").default(0),
   refundProcessingQueueDepth: integer("refund_processing_queue_depth").default(0),
   inspectionQueueDepth: integer("inspection_queue_depth").default(0),
-  
+
   // Alert triggers
   volumeSpikeDetected: boolean("volume_spike_detected").default(false),
   processingDelayDetected: boolean("processing_delay_detected").default(false),
   refundFailureSpikeDetected: boolean("refund_failure_spike_detected").default(false),
-  
+
   // System health
   avgApiResponseTimeMs: integer("avg_api_response_time_ms"),
   errorRate: decimal("error_rate", { precision: 5, scale: 2 }),
-  
+
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
   timestampIdx: index("idx_return_metrics_realtime_timestamp").on(t.timestamp),
@@ -4943,47 +4943,47 @@ export const returnMetricsRealtime = pgTable("return_metrics_realtime", {
 export const sellerReturnPerformance = pgTable("seller_return_performance", {
   id: uuid("id").defaultRandom().primaryKey(),
   sellerId: uuid("seller_id").notNull(),
-  
+
   // Time period
   periodStart: date("period_start").notNull(),
   periodEnd: date("period_end").notNull(),
   periodType: varchar("period_type", { length: 20 }).notNull(),
-  
+
   // Volume metrics
   totalReturns: integer("total_returns").default(0),
   approvedReturns: integer("approved_returns").default(0),
   rejectedReturns: integer("rejected_returns").default(0),
   approvalRate: decimal("approval_rate", { precision: 5, scale: 2 }),
-  
+
   // Financial impact
   totalRefundAmount: decimal("total_refund_amount", { precision: 20, scale: 8 }).default("0"),
   totalRevenue: decimal("total_revenue", { precision: 20, scale: 8 }).default("0"),
   refundToRevenueRatio: decimal("refund_to_revenue_ratio", { precision: 5, scale: 4 }),
-  
+
   // Processing performance
   avgApprovalTimeHours: decimal("avg_approval_time_hours", { precision: 10, scale: 2 }),
   avgRefundTimeHours: decimal("avg_refund_time_hours", { precision: 10, scale: 2 }),
   slaComplianceRate: decimal("sla_compliance_rate", { precision: 5, scale: 2 }),
-  
+
   // Quality metrics
   returnRate: decimal("return_rate", { precision: 5, scale: 2 }),
   defectRate: decimal("defect_rate", { precision: 5, scale: 2 }),
   customerSatisfaction: decimal("customer_satisfaction", { precision: 3, scale: 2 }),
-  
+
   // Risk indicators
   fraudIncidents: integer("fraud_incidents").default(0),
   policyViolations: integer("policy_violations").default(0),
   avgRiskScore: decimal("avg_risk_score", { precision: 5, scale: 2 }),
-  
+
   // Compliance
   policyCompliant: boolean("policy_compliant").default(true),
   complianceScore: decimal("compliance_score", { precision: 5, scale: 2 }),
   violations: jsonb("violations").default('[]'),
-  
+
   // Rankings
   performanceRank: integer("performance_rank"),
   categoryRank: integer("category_rank"),
-  
+
   // Metadata
   calculatedAt: timestamp("calculated_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
@@ -4998,36 +4998,36 @@ export const sellerReturnPerformance = pgTable("seller_return_performance", {
 export const categoryReturnAnalytics = pgTable("category_return_analytics", {
   id: uuid("id").defaultRandom().primaryKey(),
   categoryId: uuid("category_id").notNull(),
-  
+
   // Time period
   periodStart: date("period_start").notNull(),
   periodEnd: date("period_end").notNull(),
-  
+
   // Volume metrics
   totalReturns: integer("total_returns").default(0),
   totalOrders: integer("total_orders").default(0),
   returnRate: decimal("return_rate", { precision: 5, scale: 2 }),
-  
+
   // Financial metrics
   totalRefundAmount: decimal("total_refund_amount", { precision: 20, scale: 8 }).default("0"),
   avgRefundAmount: decimal("avg_refund_amount", { precision: 20, scale: 8 }).default("0"),
-  
+
   // Return reasons (category-specific patterns)
   topReturnReasons: jsonb("top_return_reasons"),
-  
+
   // Quality indicators
   defectRate: decimal("defect_rate", { precision: 5, scale: 2 }),
   damageRate: decimal("damage_rate", { precision: 5, scale: 2 }),
   misdescriptionRate: decimal("misdescription_rate", { precision: 5, scale: 2 }),
-  
+
   // Trends
   returnRateTrend: varchar("return_rate_trend", { length: 20 }),
   trendPercentage: decimal("trend_percentage", { precision: 5, scale: 2 }),
-  
+
   // Benchmarks
   industryBenchmarkReturnRate: decimal("industry_benchmark_return_rate", { precision: 5, scale: 2 }),
   performanceVsBenchmark: varchar("performance_vs_benchmark", { length: 20 }),
-  
+
   // Metadata
   calculatedAt: timestamp("calculated_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
@@ -5040,45 +5040,45 @@ export const categoryReturnAnalytics = pgTable("category_return_analytics", {
 // Refund Provider Performance - Payment provider tracking
 export const refundProviderPerformance = pgTable("refund_provider_performance", {
   id: uuid("id").defaultRandom().primaryKey(),
-  
+
   // Provider identification
   provider: varchar("provider", { length: 30 }).notNull(),
-  
+
   // Time period
   periodStart: timestamp("period_start").notNull(),
   periodEnd: timestamp("period_end").notNull(),
-  
+
   // Volume metrics
   totalRefunds: integer("total_refunds").default(0),
   successfulRefunds: integer("successful_refunds").default(0),
   failedRefunds: integer("failed_refunds").default(0),
   pendingRefunds: integer("pending_refunds").default(0),
   successRate: decimal("success_rate", { precision: 5, scale: 2 }),
-  
+
   // Financial metrics
   totalRefundAmount: decimal("total_refund_amount", { precision: 20, scale: 8 }).default("0"),
   totalFees: decimal("total_fees", { precision: 20, scale: 8 }).default("0"),
   avgRefundAmount: decimal("avg_refund_amount", { precision: 20, scale: 8 }).default("0"),
-  
+
   // Performance metrics
   avgProcessingTimeMinutes: decimal("avg_processing_time_minutes", { precision: 10, scale: 2 }),
   medianProcessingTimeMinutes: decimal("median_processing_time_minutes", { precision: 10, scale: 2 }),
   p95ProcessingTimeMinutes: decimal("p95_processing_time_minutes", { precision: 10, scale: 2 }),
-  
+
   // Reliability metrics
   uptimePercentage: decimal("uptime_percentage", { precision: 5, scale: 2 }),
   errorRate: decimal("error_rate", { precision: 5, scale: 2 }),
   retryRate: decimal("retry_rate", { precision: 5, scale: 2 }),
-  
+
   // Error analysis
   errorBreakdown: jsonb("error_breakdown"),
   topErrors: jsonb("top_errors"),
-  
+
   // Status
   operationalStatus: varchar("operational_status", { length: 20 }),
   lastSuccessfulRefund: timestamp("last_successful_refund"),
   lastFailure: timestamp("last_failure"),
-  
+
   // Metadata
   calculatedAt: timestamp("calculated_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
@@ -5091,26 +5091,26 @@ export const refundProviderPerformance = pgTable("refund_provider_performance", 
 // Return Admin Alerts - Alert tracking and management
 export const returnAdminAlerts = pgTable("return_admin_alerts", {
   id: uuid("id").defaultRandom().primaryKey(),
-  
+
   // Alert classification
   alertType: varchar("alert_type", { length: 50 }).notNull(),
   severity: varchar("severity", { length: 20 }).notNull(),
-  
+
   // Alert details
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description").notNull(),
   affectedEntityType: varchar("affected_entity_type", { length: 30 }),
   affectedEntityId: uuid("affected_entity_id"),
-  
+
   // Metrics that triggered alert
   triggerMetric: varchar("trigger_metric", { length: 50 }),
   triggerThreshold: decimal("trigger_threshold", { precision: 20, scale: 8 }),
   actualValue: decimal("actual_value", { precision: 20, scale: 8 }),
-  
+
   // Context
   contextData: jsonb("context_data").default('{}'),
   recommendedActions: jsonb("recommended_actions"),
-  
+
   // Status
   status: varchar("status", { length: 20 }).notNull().default('active'),
   acknowledgedAt: timestamp("acknowledged_at"),
@@ -5118,11 +5118,11 @@ export const returnAdminAlerts = pgTable("return_admin_alerts", {
   resolvedAt: timestamp("resolved_at"),
   resolvedBy: uuid("resolved_by"),
   resolutionNotes: text("resolution_notes"),
-  
+
   // Notification
   notifiedAdmins: jsonb("notified_admins"),
   notificationSentAt: timestamp("notification_sent_at"),
-  
+
   // Metadata
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -5136,37 +5136,37 @@ export const returnAdminAlerts = pgTable("return_admin_alerts", {
 // Return Admin Audit Log - Comprehensive admin action tracking
 export const returnAdminAuditLog = pgTable("return_admin_audit_log", {
   id: uuid("id").defaultRandom().primaryKey(),
-  
+
   // Admin identification
   adminId: uuid("admin_id").notNull(),
   adminEmail: varchar("admin_email", { length: 255 }),
   adminRole: varchar("admin_role", { length: 50 }),
-  
+
   // Action details
   actionType: varchar("action_type", { length: 50 }).notNull(),
   actionCategory: varchar("action_category", { length: 30 }).notNull(),
-  
+
   // Target entity
   entityType: varchar("entity_type", { length: 30 }).notNull(),
   entityId: uuid("entity_id"),
-  
+
   // Change tracking
   beforeState: jsonb("before_state"),
   afterState: jsonb("after_state"),
   changes: jsonb("changes"),
-  
+
   // Context
   reason: text("reason"),
   justification: text("justification"),
   ipAddress: varchar("ip_address", { length: 45 }),
   userAgent: text("user_agent"),
   sessionId: varchar("session_id", { length: 100 }),
-  
+
   // Security
   requiresApproval: boolean("requires_approval").default(false),
   approvedBy: uuid("approved_by"),
   approvedAt: timestamp("approved_at"),
-  
+
   // Metadata
   timestamp: timestamp("timestamp").notNull().defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
@@ -5184,37 +5184,37 @@ export const returnAdminAuditLog = pgTable("return_admin_audit_log", {
 // Refund Financial Records - Main table for tracking all refund financial transactions
 export const refundFinancialRecords = pgTable("refund_financial_records", {
   id: uuid("id").defaultRandom().primaryKey(),
-  
+
   // Return and refund identification
   returnId: uuid("return_id").notNull(),
   refundId: varchar("refund_id", { length: 255 }).notNull(),
-  
+
   // Financial amounts
   originalAmount: decimal("original_amount", { precision: 20, scale: 8 }).notNull(),
   refundAmount: decimal("refund_amount", { precision: 20, scale: 8 }).notNull(),
   processingFee: decimal("processing_fee", { precision: 20, scale: 8 }).notNull().default('0'),
   platformFeeImpact: decimal("platform_fee_impact", { precision: 20, scale: 8 }).notNull().default('0'),
   sellerImpact: decimal("seller_impact", { precision: 20, scale: 8 }).notNull().default('0'),
-  
+
   // Payment provider details
   paymentProvider: varchar("payment_provider", { length: 50 }).notNull(),
   providerTransactionId: varchar("provider_transaction_id", { length: 255 }),
-  
+
   // Status tracking
   status: varchar("status", { length: 20 }).notNull().default('pending'),
   processedAt: timestamp("processed_at"),
-  
+
   // Reconciliation
   reconciled: boolean("reconciled").notNull().default(false),
   reconciledAt: timestamp("reconciled_at"),
-  
+
   // Additional details
   currency: varchar("currency", { length: 10 }).notNull().default('USD'),
   refundMethod: varchar("refund_method", { length: 50 }),
   failureReason: text("failure_reason"),
   retryCount: integer("retry_count").notNull().default(0),
   metadata: jsonb("metadata"),
-  
+
   // Timestamps
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -5232,16 +5232,16 @@ export const refundFinancialRecords = pgTable("refund_financial_records", {
 // Refund Provider Transactions - Provider-specific transaction details
 export const refundProviderTransactions = pgTable("refund_provider_transactions", {
   id: uuid("id").defaultRandom().primaryKey(),
-  
+
   // Link to main refund record
   refundRecordId: uuid("refund_record_id").notNull().references(() => refundFinancialRecords.id, { onDelete: 'cascade' }),
-  
+
   // Provider details
   providerName: varchar("provider_name", { length: 50 }).notNull(),
   providerTransactionId: varchar("provider_transaction_id", { length: 255 }).notNull(),
   providerStatus: varchar("provider_status", { length: 50 }).notNull(),
   providerResponse: jsonb("provider_response"),
-  
+
   // Transaction details
   transactionType: varchar("transaction_type", { length: 50 }).notNull(),
   amount: decimal("amount", { precision: 20, scale: 8 }).notNull(),
@@ -5249,29 +5249,29 @@ export const refundProviderTransactions = pgTable("refund_provider_transactions"
   feeAmount: decimal("fee_amount", { precision: 20, scale: 8 }).default('0'),
   netAmount: decimal("net_amount", { precision: 20, scale: 8 }).notNull(),
   exchangeRate: decimal("exchange_rate", { precision: 20, scale: 8 }),
-  
+
   // Account details
   destinationAccount: varchar("destination_account", { length: 255 }),
   sourceAccount: varchar("source_account", { length: 255 }),
-  
+
   // Blockchain specific
   blockchainTxHash: varchar("blockchain_tx_hash", { length: 66 }),
   blockchainNetwork: varchar("blockchain_network", { length: 50 }),
   confirmationCount: integer("confirmation_count").default(0),
-  
+
   // Timing
   estimatedCompletion: timestamp("estimated_completion"),
   completedAt: timestamp("completed_at"),
   failedAt: timestamp("failed_at"),
-  
+
   // Failure details
   failureCode: varchar("failure_code", { length: 50 }),
   failureMessage: text("failure_message"),
-  
+
   // Webhook tracking
   webhookReceived: boolean("webhook_received").default(false),
   webhookData: jsonb("webhook_data"),
-  
+
   // Timestamps
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -5291,31 +5291,31 @@ export const refundProviderTransactions = pgTable("refund_provider_transactions"
 // Refund Reconciliation Records - Reconciliation status tracking
 export const refundReconciliationRecords = pgTable("refund_reconciliation_records", {
   id: uuid("id").defaultRandom().primaryKey(),
-  
+
   // Link to main refund record
   refundRecordId: uuid("refund_record_id").notNull().references(() => refundFinancialRecords.id, { onDelete: 'cascade' }),
-  
+
   // Reconciliation details
   reconciliationDate: date("reconciliation_date").notNull(),
   reconciliationStatus: varchar("reconciliation_status", { length: 30 }).notNull().default('pending'),
-  
+
   // Amount tracking
   expectedAmount: decimal("expected_amount", { precision: 20, scale: 8 }).notNull(),
   actualAmount: decimal("actual_amount", { precision: 20, scale: 8 }),
   discrepancyAmount: decimal("discrepancy_amount", { precision: 20, scale: 8 }).default('0'),
   discrepancyReason: text("discrepancy_reason"),
-  
+
   // Reconciliation tracking
   reconciledBy: uuid("reconciled_by"),
   reconciliationNotes: text("reconciliation_notes"),
   supportingDocuments: jsonb("supporting_documents"),
-  
+
   // Resolution
   resolutionStatus: varchar("resolution_status", { length: 30 }),
   resolutionNotes: text("resolution_notes"),
   resolvedAt: timestamp("resolved_at"),
   resolvedBy: uuid("resolved_by"),
-  
+
   // Timestamps
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -5333,26 +5333,26 @@ export const refundReconciliationRecords = pgTable("refund_reconciliation_record
 // Refund Transaction Audit Log - Comprehensive audit trail
 export const refundTransactionAuditLog = pgTable("refund_transaction_audit_log", {
   id: uuid("id").defaultRandom().primaryKey(),
-  
+
   // Link to main refund record
   refundRecordId: uuid("refund_record_id").notNull().references(() => refundFinancialRecords.id, { onDelete: 'cascade' }),
-  
+
   // Action details
   actionType: varchar("action_type", { length: 50 }).notNull(),
   actionDescription: text("action_description").notNull(),
-  
+
   // Actor details
   performedBy: uuid("performed_by"),
   performedByRole: varchar("performed_by_role", { length: 30 }),
-  
+
   // State tracking
   previousState: jsonb("previous_state"),
   newState: jsonb("new_state"),
-  
+
   // Context
   ipAddress: varchar("ip_address", { length: 45 }),
   userAgent: text("user_agent"),
-  
+
   // Timestamp
   timestamp: timestamp("timestamp").notNull().defaultNow(),
 }, (t) => ({
@@ -5369,32 +5369,32 @@ export const refundTransactionAuditLog = pgTable("refund_transaction_audit_log",
 // Refund Batch Processing - Batch processing records
 export const refundBatchProcessing = pgTable("refund_batch_processing", {
   id: uuid("id").defaultRandom().primaryKey(),
-  
+
   // Batch identification
   batchId: varchar("batch_id", { length: 100 }).notNull().unique(),
   providerName: varchar("provider_name", { length: 50 }).notNull(),
-  
+
   // Batch statistics
   totalRefunds: integer("total_refunds").notNull(),
   successfulRefunds: integer("successful_refunds").default(0),
   failedRefunds: integer("failed_refunds").default(0),
   pendingRefunds: integer("pending_refunds").default(0),
-  
+
   // Amount tracking
   totalAmount: decimal("total_amount", { precision: 20, scale: 8 }).notNull(),
   processedAmount: decimal("processed_amount", { precision: 20, scale: 8 }).default('0'),
-  
+
   // Status
   batchStatus: varchar("batch_status", { length: 30 }).notNull().default('processing'),
-  
+
   // Timing
   startedAt: timestamp("started_at").notNull().defaultNow(),
   completedAt: timestamp("completed_at"),
-  
+
   // Error tracking
   errorSummary: jsonb("error_summary"),
   metadata: jsonb("metadata"),
-  
+
   // Timestamps
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -5408,20 +5408,20 @@ export const refundBatchProcessing = pgTable("refund_batch_processing", {
 // Refund Batch Items - Individual items within batch processing
 export const refundBatchItems = pgTable("refund_batch_items", {
   id: uuid("id").defaultRandom().primaryKey(),
-  
+
   // Batch and refund links
   batchId: uuid("batch_id").notNull().references(() => refundBatchProcessing.id, { onDelete: 'cascade' }),
   refundRecordId: uuid("refund_record_id").notNull().references(() => refundFinancialRecords.id, { onDelete: 'cascade' }),
-  
+
   // Processing details
   processingOrder: integer("processing_order").notNull(),
   itemStatus: varchar("item_status", { length: 30 }).notNull().default('pending'),
   processedAt: timestamp("processed_at"),
-  
+
   // Error tracking
   errorMessage: text("error_message"),
   retryCount: integer("retry_count").default(0),
-  
+
   // Timestamp
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (t) => ({
@@ -5438,4 +5438,162 @@ export const refundBatchItems = pgTable("refund_batch_items", {
   statusIdx: index("idx_batch_items_status").on(t.itemStatus),
 }));
 
+// ============================================================================
+// FRAUD DETECTION AND RISK MANAGEMENT SYSTEM
+// ============================================================================
+
+// Risk Assessments - Comprehensive risk scoring for returns
+export const riskAssessments = pgTable("risk_assessments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+
+  // Return and user links
+  returnId: uuid("return_id").notNull().references(() => returns.id, { onDelete: 'cascade' }),
+  userId: uuid("user_id").notNull().references(() => users.id),
+
+  // Risk scoring
+  riskScore: integer("risk_score").notNull(), // 0-100
+  riskLevel: varchar("risk_level", { length: 10 }).notNull(), // 'low' | 'medium' | 'high'
+  confidence: decimal("confidence", { precision: 5, scale: 4 }).notNull(), // 0.0-1.0
+
+  // Assessment details
+  flags: jsonb("flags").default('[]'), // Array of risk flags
+  features: jsonb("features").notNull(), // Extracted features used for scoring
+  modelVersion: varchar("model_version", { length: 50 }).notNull(),
+  modelType: varchar("model_type", { length: 50 }).notNull(), // 'rule_based' | 'ml_model'
+
+  // Recommendation
+  recommendation: varchar("recommendation", { length: 20 }).notNull(), // 'auto_approve' | 'manual_review' | 'auto_reject'
+  recommendationReason: text("recommendation_reason"),
+
+  // Timestamps
+  assessmentDate: timestamp("assessment_date").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({
+  returnFk: foreignKey({
+    columns: [t.returnId],
+    foreignColumns: [returns.id]
+  }),
+  userFk: foreignKey({
+    columns: [t.userId],
+    foreignColumns: [users.id]
+  }),
+  returnIdIdx: index("idx_risk_assessments_return_id").on(t.returnId),
+  userIdIdx: index("idx_risk_assessments_user_id").on(t.userId),
+  riskLevelIdx: index("idx_risk_assessments_risk_level").on(t.riskLevel),
+  recommendationIdx: index("idx_risk_assessments_recommendation").on(t.recommendation),
+  assessmentDateIdx: index("idx_risk_assessments_assessment_date").on(t.assessmentDate),
+}));
+
+// Risk Features - Individual features contributing to risk score
+export const riskFeatures = pgTable("risk_features", {
+  id: uuid("id").defaultRandom().primaryKey(),
+
+  // Assessment link
+  assessmentId: uuid("assessment_id").notNull().references(() => riskAssessments.id, { onDelete: 'cascade' }),
+
+  // Feature details
+  featureName: varchar("feature_name", { length: 100 }).notNull(),
+  featureValue: text("feature_value").notNull(), // Stored as string, can be parsed
+  featureType: varchar("feature_type", { length: 20 }).notNull(), // 'numeric' | 'categorical' | 'boolean'
+
+  // Contribution to risk
+  weight: decimal("weight", { precision: 5, scale: 4 }).notNull(), // Feature weight in model
+  contribution: decimal("contribution", { precision: 8, scale: 4 }).notNull(), // Contribution to final score
+
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({
+  assessmentFk: foreignKey({
+    columns: [t.assessmentId],
+    foreignColumns: [riskAssessments.id]
+  }),
+  assessmentIdIdx: index("idx_risk_features_assessment_id").on(t.assessmentId),
+  featureNameIdx: index("idx_risk_features_feature_name").on(t.featureName),
+}));
+
+// Fraud Patterns - Detected fraud patterns and anomalies
+export const fraudPatterns = pgTable("fraud_patterns", {
+  id: uuid("id").defaultRandom().primaryKey(),
+
+  // Pattern identification
+  patternType: varchar("pattern_type", { length: 50 }).notNull(), // 'high_frequency' | 'high_value' | 'reason_abuse' | 'velocity' | 'geographic' | 'coordinated'
+  severity: varchar("severity", { length: 10 }).notNull(), // 'low' | 'medium' | 'high' | 'critical'
+
+  // Pattern details
+  description: text("description").notNull(),
+  detectionCriteria: jsonb("detection_criteria").notNull(), // Criteria used to detect this pattern
+
+  // Detection statistics
+  detectionCount: integer("detection_count").default(0),
+  firstDetected: timestamp("first_detected").notNull().defaultNow(),
+  lastDetected: timestamp("last_detected").notNull().defaultNow(),
+
+  // Affected entities
+  affectedUsers: jsonb("affected_users").default('[]'), // Array of user IDs
+  affectedReturns: jsonb("affected_returns").default('[]'), // Array of return IDs
+
+  // Pattern status
+  isActive: boolean("is_active").default(true),
+  resolvedAt: timestamp("resolved_at"),
+  resolvedBy: uuid("resolved_by"),
+  resolutionNotes: text("resolution_notes"),
+
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({
+  patternTypeIdx: index("idx_fraud_patterns_pattern_type").on(t.patternType),
+  severityIdx: index("idx_fraud_patterns_severity").on(t.severity),
+  isActiveIdx: index("idx_fraud_patterns_is_active").on(t.isActive),
+  lastDetectedIdx: index("idx_fraud_patterns_last_detected").on(t.lastDetected),
+}));
+
+// User Fraud Profiles - Historical fraud indicators per user
+export const userFraudProfiles = pgTable("user_fraud_profiles", {
+  id: uuid("id").defaultRandom().primaryKey(),
+
+  // User link
+  userId: uuid("user_id").notNull().unique().references(() => users.id, { onDelete: 'cascade' }),
+
+  // Return statistics
+  totalReturns: integer("total_returns").default(0),
+  highRiskReturns: integer("high_risk_returns").default(0),
+  approvedReturns: integer("approved_returns").default(0),
+  rejectedReturns: integer("rejected_returns").default(0),
+
+  // Financial statistics
+  totalReturnValue: decimal("total_return_value", { precision: 12, scale: 2 }).default('0'),
+  averageReturnValue: decimal("average_return_value", { precision: 10, scale: 2 }).default('0'),
+
+  // Risk indicators
+  averageRiskScore: decimal("average_risk_score", { precision: 5, scale: 2 }).default('0'),
+  fraudConfirmations: integer("fraud_confirmations").default(0), // Confirmed fraud cases
+  falsePositives: integer("false_positives").default(0), // False fraud alerts
+
+  // Behavioral patterns
+  returnFrequency: decimal("return_frequency", { precision: 5, scale: 2 }).default('0'), // Returns per month
+  lastReturnDate: timestamp("last_return_date"),
+  accountAge: integer("account_age"), // Days since account creation
+
+  // Pattern flags
+  detectedPatterns: jsonb("detected_patterns").default('[]'), // Array of pattern types detected
+
+  // Profile status
+  trustScore: integer("trust_score").default(50), // 0-100, starts at 50
+  isBlacklisted: boolean("is_blacklisted").default(false),
+  blacklistedAt: timestamp("blacklisted_at"),
+  blacklistReason: text("blacklist_reason"),
+
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({
+  userFk: foreignKey({
+    columns: [t.userId],
+    foreignColumns: [users.id]
+  }),
+  userIdIdx: index("idx_user_fraud_profiles_user_id").on(t.userId),
+  trustScoreIdx: index("idx_user_fraud_profiles_trust_score").on(t.trustScore),
+  isBlacklistedIdx: index("idx_user_fraud_profiles_is_blacklisted").on(t.isBlacklisted),
+}));
 
