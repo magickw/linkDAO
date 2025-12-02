@@ -128,7 +128,7 @@ describe('ReturnAlertManagerService', () => {
     it('should generate alert with correct properties', async () => {
       // Mock database insert
       const mockInsert = {
-        values: jest.fn().mockResolvedValue({}),
+        values: jest.fn().mockResolvedValue(undefined),
       };
       (mockDb.insert as jest.Mock).mockReturnValue(mockInsert);
       
@@ -162,7 +162,7 @@ describe('ReturnAlertManagerService', () => {
       // Mock database update
       const mockUpdate = {
         set: jest.fn().mockReturnThis(),
-        where: jest.fn().mockResolvedValue({}),
+        where: jest.fn().mockResolvedValue(undefined),
       };
       (mockDb.update as jest.Mock).mockReturnValue(mockUpdate);
       
@@ -201,7 +201,7 @@ describe('ReturnAlertManagerService', () => {
       // Mock database update
       const mockUpdate = {
         set: jest.fn().mockReturnThis(),
-        where: jest.fn().mockResolvedValue({}),
+        where: jest.fn().mockResolvedValue(undefined),
       };
       (mockDb.update as jest.Mock).mockReturnValue(mockUpdate);
       
@@ -241,7 +241,7 @@ describe('ReturnAlertManagerService', () => {
       // Mock database update
       const mockUpdate = {
         set: jest.fn().mockReturnThis(),
-        where: jest.fn().mockResolvedValue({}),
+        where: jest.fn().mockResolvedValue(undefined),
       };
       (mockDb.update as jest.Mock).mockReturnValue(mockUpdate);
       
@@ -380,7 +380,7 @@ describe('ReturnAlertManagerService', () => {
       // Mock database update
       const mockUpdate = {
         set: jest.fn().mockReturnThis(),
-        where: jest.fn().mockResolvedValue({}),
+        where: jest.fn().mockResolvedValue(undefined),
       };
       (mockDb.update as jest.Mock).mockReturnValue(mockUpdate);
       
@@ -457,7 +457,7 @@ describe('ReturnAlertManagerService', () => {
     it('should check all alerts and trigger when conditions are met', async () => {
       // Mock database insert for alert generation
       const mockInsert = {
-        values: jest.fn().mockResolvedValue({}),
+        values: jest.fn().mockResolvedValue(undefined),
       };
       (mockDb.insert as jest.Mock).mockReturnValue(mockInsert);
       
