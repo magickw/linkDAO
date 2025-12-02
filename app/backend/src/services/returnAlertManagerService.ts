@@ -1170,7 +1170,22 @@ export class ReturnAlertManagerService {
           high: 0,
           critical: 0
         } as Record<AlertSeverity, number>,
-        byType: {} as Record<ReturnAlertType, number>,
+        byType: {
+          'volume_spike': 0,
+          'processing_delay': 0,
+          'refund_failure_spike': 0,
+          'high_risk_pattern': 0,
+          'fraud_detected': 0,
+          'policy_violation': 0,
+          'sla_breach': 0,
+          'provider_degradation': 0,
+          'system_error': 0,
+          'return_rate_increase': 0,
+          'high_value_return_spike': 0,
+          'repeat_returner': 0,
+          'geographic_anomaly': 0,
+          'reason_pattern_abuse': 0
+        } as Record<ReturnAlertType, number>,
         unresolved: 0
       };
       
@@ -1188,7 +1203,22 @@ export class ReturnAlertManagerService {
       return {
         total: 0,
         bySeverity: { low: 0, medium: 0, high: 0, critical: 0 },
-        byType: {} as Record<ReturnAlertType, number>,
+        byType: {
+          'volume_spike': 0,
+          'processing_delay': 0,
+          'refund_failure_spike': 0,
+          'high_risk_pattern': 0,
+          'fraud_detected': 0,
+          'policy_violation': 0,
+          'sla_breach': 0,
+          'provider_degradation': 0,
+          'system_error': 0,
+          'return_rate_increase': 0,
+          'high_value_return_spike': 0,
+          'repeat_returner': 0,
+          'geographic_anomaly': 0,
+          'reason_pattern_abuse': 0
+        } as Record<ReturnAlertType, number>,
         unresolved: 0
       };
     }

@@ -369,8 +369,7 @@ export const ReturnAnalyticsDashboard: React.FC = () => {
         `${seller.approvalRate}%`,
         `${seller.avgProcessingTime} days`
       ])
-    ].map(row => row.join(',')).join('
-');
+    ].map(row => row.join(',')).join('\n');
 
     // Download CSV file
     const blob = new Blob([csvContent], { type: 'text/csv' });
