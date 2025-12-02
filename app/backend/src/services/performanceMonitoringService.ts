@@ -145,6 +145,26 @@ export class PerformanceMonitoringService extends EventEmitter {
     this.emit('metric', fullMetric);
   }
 
+  recordRequest(
+    method: string,
+    endpoint: string,
+    responseTime: number,
+    statusCode: number,
+    error?: any
+  ): void {
+    const metric: Omit<PerformanceMetrics, 'timestamp'> = {
+      method,
+      endpoint,
+      responseTime,
+      statusCode,
+      memoryUsage: process.memoryUsage(),
+      cpuUsage: process.cpuUsage(),
+      errorCount: statusCode >= 400 ? 1 : 0
+    };
+
+    this.recordMetric(metric);
+  }
+
   private checkPerformanceThresholds(metric: PerformanceMetrics): void {
     // Check response time
     if (metric.responseTime > this.thresholds.responseTime) {

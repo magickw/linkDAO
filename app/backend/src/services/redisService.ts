@@ -5,13 +5,23 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export class RedisService {
-  private client: Redis.RedisClientType;
+  private client: Redis.RedisClientType | null = null;
   private isConnected: boolean = false;
   private useRedis: boolean = true; // Flag to enable/disable Redis functionality
   private reconnectAttempts: number = 0;
-  private maxReconnectAttempts: number = 5;
+  private maxReconnectAttempts: number = 3; // Reduced from 5 to prevent excessive retries
+  private connectionPromise: Promise<void> | null = null;
+  private static instance: RedisService | null = null;
 
-  constructor() {
+  // Singleton pattern to ensure only one instance
+  static getInstance(): RedisService {
+    if (!RedisService.instance) {
+      RedisService.instance = new RedisService();
+    }
+    return RedisService.instance;
+  }
+
+  private constructor() {
     // Check if Redis is disabled or if we're in a memory-critical environment
     const isMemoryCritical = process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 512;
     
@@ -118,34 +128,64 @@ export class RedisService {
   }
 
   async connect(): Promise<void> {
+    // Return immediately if Redis is disabled
     if (!this.useRedis) {
       safeLogger.info('Redis is disabled, skipping connection attempt');
-      return; // Don't try to connect if Redis is disabled
+      return;
     }
+
+    // Return immediately if already connected
+    if (this.isConnected) {
+      return;
+    }
+
+    // If a connection attempt is already in progress, wait for it
+    if (this.connectionPromise) {
+      return this.connectionPromise;
+    }
+
+    // Create a new connection promise
+    this.connectionPromise = this.doConnect();
     
-    if (!this.isConnected) {
-      try {
-        safeLogger.info('Attempting to connect to Redis...', {
-          redisUrl: (process.env.REDIS_URL || 'redis://localhost:6379').replace(/\/\/[^:]+:[^@]+@/, '//***:***@')
-        });
-        await this.client.connect();
-        safeLogger.info('Successfully connected to Redis');
-      } catch (error) {
-        safeLogger.error('Failed to connect to Redis:', {
-          error: {
-            name: error.name,
-            message: error.message,
-            code: (error as any).code,
-            errno: (error as any).errno,
-            syscall: (error as any).syscall,
-            address: (error as any).address,
-            port: (error as any).port
-          },
-          redisUrl: (process.env.REDIS_URL || 'redis://localhost:6379').replace(/\/\/[^:]+:[^@]+@/, '//***:***@')
-        });
-        this.useRedis = false; // Disable Redis on connection failure
-        throw error;
-      }
+    try {
+      await this.connectionPromise;
+    } finally {
+      // Clear the connection promise after completion
+      this.connectionPromise = null;
+    }
+  }
+
+  private async doConnect(): Promise<void> {
+    if (!this.useRedis || !this.client) {
+      safeLogger.info('Redis is disabled or client not available, skipping connection attempt');
+      return;
+    }
+
+    if (this.isConnected) {
+      return;
+    }
+
+    try {
+      safeLogger.info('Attempting to connect to Redis...', {
+        redisUrl: (process.env.REDIS_URL || 'redis://localhost:6379').replace(/\/\/[^:]+:[^@]+@/, '//***:***@')
+      });
+      await this.client.connect();
+      safeLogger.info('Successfully connected to Redis');
+    } catch (error) {
+      safeLogger.error('Failed to connect to Redis:', {
+        error: {
+          name: error.name,
+          message: error.message,
+          code: (error as any).code,
+          errno: (error as any).errno,
+          syscall: (error as any).syscall,
+          address: (error as any).address,
+          port: (error as any).port
+        },
+        redisUrl: (process.env.REDIS_URL || 'redis://localhost:6379').replace(/\/\/[^:]+:[^@]+@/, '//***:***@')
+      });
+      this.useRedis = false; // Disable Redis on connection failure
+      throw error;
     }
   }
 
@@ -446,4 +486,4 @@ export class RedisService {
 }
 
 // Singleton instance
-export const redisService = new RedisService();
+export const redisService = RedisService.getInstance();
