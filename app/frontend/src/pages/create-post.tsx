@@ -10,6 +10,21 @@ import { PostService } from '@/services/postService';
 import { authService } from '@/services/authService';
 import { useWeb3 } from '@/context/Web3Context';
 import { useToast } from '@/context/ToastContext';
+import CommunityAvatar from '@/components/Community/CommunityAvatar';
+
+// Helper function to get emoji for dropdown (URLs can't be displayed in <option>)
+function getAvatarEmoji(avatar?: string): string {
+  if (!avatar) return '🏛️';
+  // If it's a URL, return default emoji
+  if (avatar.startsWith('http://') || avatar.startsWith('https://') || avatar.startsWith('/')) {
+    return '🏛️';
+  }
+  // If it's a short string (emoji), return it
+  if (avatar.length <= 4) {
+    return avatar;
+  }
+  return '🏛️';
+}
 
 const CreatePostPage: React.FC = () => {
   const router = useRouter();
@@ -329,7 +344,7 @@ const CreatePostPage: React.FC = () => {
                         <option value="">Choose a community...</option>
                         {userCommunities.map(community => (
                           <option key={community.id} value={community.id}>
-                            {community.avatar || '🏛️'} {community.displayName || community.name}
+                            {getAvatarEmoji(community.avatar)} {community.displayName || community.name}
                           </option>
                         ))}
                       </select>
@@ -352,7 +367,11 @@ const CreatePostPage: React.FC = () => {
                   {selectedCommunityData && (
                     <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                       <div className="flex items-center space-x-3">
-                        <div className="text-2xl">{selectedCommunityData.avatar || '🏛️'}</div>
+                        <CommunityAvatar
+                          avatar={selectedCommunityData.avatar}
+                          name={selectedCommunityData.displayName || selectedCommunityData.name}
+                          size="md"
+                        />
                         <div className="flex-1">
                           <div className="font-medium text-gray-900 dark:text-white">
                             {selectedCommunityData.displayName || selectedCommunityData.name}

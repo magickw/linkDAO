@@ -29,6 +29,7 @@ import { Community } from '@/models/Community';
 import CommunitySettingsModal from './CommunityManagement/CommunitySettingsModal';
 import CommunityPostCreator from './Community/CommunityPostCreator';
 import CommunityPostCardEnhanced from './Community/CommunityPostCardEnhanced';
+import CommunityAvatar from './Community/CommunityAvatar';
 
 interface CommunityViewProps {
   communitySlug: string;
@@ -296,8 +297,12 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
           <div className="p-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-start justify-between">
               <div className="flex items-center space-x-4 -mt-12">
-                <div className="text-5xl bg-white dark:bg-gray-800 rounded-full p-2 border-4 border-white dark:border-gray-800">
-                  {communityData?.avatar || '🏛️'}
+                <div className="bg-white dark:bg-gray-800 rounded-full p-1 border-4 border-white dark:border-gray-800">
+                  <CommunityAvatar
+                    avatar={communityData?.avatar}
+                    name={communityData?.displayName || communityData?.name || 'Community'}
+                    size="xl"
+                  />
                 </div>
                 <div className="mt-8">
                   <h1 className="text-2xl font-bold text-gray-900 dark:text-white">

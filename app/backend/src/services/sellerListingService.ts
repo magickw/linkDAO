@@ -255,7 +255,7 @@ class SellerListingService {
       views: 0,
       favorites: 0,
       listingStatus: initialListingStatus,
-      publishedAt: seller.isVerified ? new Date() : undefined,
+      publishedAt: new Date(), // Always set publishedAt for marketplace visibility
     }).returning();
 
     return {

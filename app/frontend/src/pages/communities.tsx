@@ -733,7 +733,7 @@ const CommunitiesPage: React.FC = () => {
                         />
                         <div className="text-left flex-1 min-w-0">
                           <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                            {community.name}
+                            {community.displayName || community.name}
                           </div>
                           <div className="text-xs text-gray-500 dark:text-gray-400">
                             {community.memberCount?.toLocaleString() || 0} members
@@ -839,7 +839,7 @@ const CommunitiesPage: React.FC = () => {
                         onClick={() => handleCommunitySelect(c)}
                         className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded text-xs hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                       >
-                        {c.name}
+                        {c.displayName || c.name}
                       </button>
                     ))}
                   </div>
