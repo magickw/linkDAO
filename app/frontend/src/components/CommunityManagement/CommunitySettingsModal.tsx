@@ -195,7 +195,7 @@ export default function CommunitySettingsModal({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-            Community Settings - r/{community.name}
+            Community Settings - dao/{community.name}
           </h2>
           <button
             onClick={onClose}

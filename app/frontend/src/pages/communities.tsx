@@ -344,12 +344,25 @@ const CommunitiesPage: React.FC = () => {
       // Use FeedService to get enhanced feed which supports both public and authenticated views
       const { FeedService } = await import('../services/feedService');
 
+      // Determine feed source based on user's community memberships
+      let feedSource = 'all'; // Default to all posts for unauthenticated users
+      if (isAuthenticated && address) {
+        // If user has joined communities, show posts from those communities
+        if (joinedCommunities.length > 0) {
+          feedSource = 'following';
+        } else {
+          // If authenticated but no joined communities, show trending posts to encourage discovery
+          feedSource = 'trending';
+        }
+      }
+
       const response = await FeedService.getEnhancedFeed({
         sortBy,
         timeRange: timeFilter,
-        // If authenticated, prefer 'following', otherwise 'all'
-        feedSource: isAuthenticated ? 'following' : 'all',
-        userAddress: address
+        feedSource,
+        userAddress: address,
+        // If user has joined communities, filter by those
+        communityIds: feedSource === 'following' ? joinedCommunities : undefined
       }, pageNum, 20);
 
       // Check if component is still mounted before updating state
@@ -388,7 +401,7 @@ const CommunitiesPage: React.FC = () => {
     if (address && !isAuthenticated) return;
 
     fetchPosts(1, false);
-  }, [sortBy, timeFilter, address, isAuthenticated, isAuthLoading]);
+  }, [sortBy, timeFilter, address, isAuthenticated, isAuthLoading, joinedCommunities]);
 
   // Infinite scroll handler
   useEffect(() => {
@@ -638,14 +651,22 @@ const CommunitiesPage: React.FC = () => {
     // Ensure post is a valid object
     if (!post || typeof post !== 'object') return false;
 
-    // Posts from joined communities
-    if (joinedCommunities.includes(post.communityId)) return true;
+    // If user has joined communities, prioritize posts from those communities
+    if (joinedCommunities.length > 0) {
+      // Only show posts from joined communities
+      return joinedCommunities.includes(post.communityId);
+    }
 
-    // Popular posts (suggested) - ensure upvotes property exists
-    if (typeof post.upvotes === 'number' && post.upvotes > 100) return true;
+    // For users who haven't joined any communities, show trending/popular posts
+    // to encourage community discovery
+    if (typeof post.upvotes === 'number' && post.upvotes > 10) return true;
 
-    // Interest-based suggestions - ensure tags property exists and is an array
-    if (Array.isArray(post.tags) && post.tags.some(tag => ['ethereum', 'defi', 'nft'].includes(tag))) return true;
+    // Also show recent posts (within last 24 hours) to show activity
+    if (post.createdAt) {
+      const postDate = new Date(post.createdAt);
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      if (postDate > oneDayAgo) return true;
+    }
 
     return false;
   });
@@ -826,22 +847,33 @@ const CommunitiesPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Show user's recently visited communities */}
-              {!loading && joinedCommunities.length > 0 && (
+              {/* Show user's joined communities or suggested communities */}
+              {!loading && (
                 <div className="mb-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3">
                   <h2 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">
-                    Top Communities
+                    {joinedCommunities.length > 0 ? 'Your Communities' : 'Suggested Communities'}
                   </h2>
                   <div className="flex flex-wrap gap-1">
-                    {communityList.filter(c => joinedCommunities.includes(c.id)).slice(0, 6).map(c => (
-                      <button
-                        key={c.id}
-                        onClick={() => handleCommunitySelect(c)}
-                        className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded text-xs hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                      >
-                        {c.displayName || c.name}
-                      </button>
-                    ))}
+                    {joinedCommunities.length > 0 
+                      ? communityList.filter(c => joinedCommunities.includes(c.id)).slice(0, 6).map(c => (
+                          <button
+                            key={c.id}
+                            onClick={() => handleCommunitySelect(c)}
+                            className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded text-xs hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                          >
+                            {c.displayName || c.name}
+                          </button>
+                        ))
+                      : communityList.slice(0, 6).map(c => (
+                          <button
+                            key={c.id}
+                            onClick={() => handleCommunitySelect(c)}
+                            className="px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded text-xs hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                          >
+                            {c.displayName || c.name}
+                          </button>
+                        ))
+                    }
                   </div>
                 </div>
               )}
@@ -867,9 +899,16 @@ const CommunitiesPage: React.FC = () => {
               {/* Enhanced Empty State with Error Handling */}
               {!loading && filteredPosts.length === 0 && (
                 <EmptyStates
-                  type={error ? 'no-posts' : joinedCommunities.length === 0 ? 'not-joined' : activeQuickFilters.length > 0 ? 'no-filter-results' : 'no-posts'}
-                  onAction={error ? () => { setError(null); fetchPosts(1, false); } : handleCreatePost}
-                  actionLabel={error ? 'Try Again' : undefined}
+                  type={error ? 'no-posts' : 
+                       joinedCommunities.length === 0 ? 'not-joined' : 
+                       activeQuickFilters.length > 0 ? 'no-filter-results' : 
+                       'no-posts'}
+                  onAction={error ? () => { setError(null); fetchPosts(1, false); } : 
+                             joinedCommunities.length === 0 ? () => router.push('/communities') : 
+                             handleCreatePost}
+                  actionLabel={error ? 'Try Again' : 
+                              joinedCommunities.length === 0 ? 'Explore Communities' : 
+                              undefined}
                   activeFilters={activeQuickFilters}
                 />
               )}
