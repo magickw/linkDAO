@@ -225,6 +225,12 @@ export class CommunityOfflineCacheService {
   async cacheCommunity(community: Community): Promise<void> {
     if (!this.db) return;
 
+    // Validate that community has an id before caching
+    if (!community || !community.id) {
+      console.error('Cannot cache community: missing id', community);
+      return;
+    }
+
     const cachedCommunity: CachedCommunity = {
       ...community,
       cachedAt: new Date(),
@@ -255,7 +261,7 @@ export class CommunityOfflineCacheService {
 
       request.onsuccess = () => {
         const community = request.result;
-        if (community) {
+        if (community && community.id) {
           // Update last accessed time
           community.lastAccessed = new Date();
           community.accessCount = (community.accessCount || 0) + 1;
@@ -297,6 +303,12 @@ export class CommunityOfflineCacheService {
           const addPromises: Promise<void>[] = [];
           
           posts.forEach(post => {
+            // Skip posts without valid id
+            if (!post || !post.id) {
+              console.error('Cannot cache post: missing id', post);
+              return;
+            }
+            
             const cachedPost: CachedCommunityPost = {
               ...post,
               cachedAt: new Date(),
@@ -345,7 +357,9 @@ export class CommunityOfflineCacheService {
           const updateStore = updateTransaction.objectStore('communityPosts');
           
           posts.forEach(post => {
-            updateStore.put(post);
+            if (post && post.id) {
+              updateStore.put(post);
+            }
           });
         }
         
@@ -378,6 +392,12 @@ export class CommunityOfflineCacheService {
           const addPromises: Promise<void>[] = [];
           
           members.forEach(member => {
+            // Skip members without valid id
+            if (!member || !member.id) {
+              console.error('Cannot cache member: missing id', member);
+              return;
+            }
+            
             const cachedMember: CachedCommunityMember = {
               ...member,
               cachedAt: new Date()

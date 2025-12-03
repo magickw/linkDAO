@@ -443,8 +443,13 @@ export class CommunityService {
       }
 
       // Normalize payload to expected structure
-      if (json && typeof json === 'object' && Array.isArray(json.communities)) {
-        return json as { communities: Community[]; pagination: any };
+      if (json && typeof json === 'object') {
+        if (Array.isArray(json.communities)) {
+          return json as { communities: Community[]; pagination: any };
+        }
+        if (json.data && Array.isArray(json.data.communities)) {
+          return json.data as { communities: Community[]; pagination: any };
+        }
       }
       if (Array.isArray(json)) {
         return { communities: json, pagination: { page: 1, limit, total: json.length, totalPages: 1 } };
@@ -504,8 +509,13 @@ export class CommunityService {
       }
 
       // Normalize payload to expected structure
-      if (json && typeof json === 'object' && Array.isArray(json.communities)) {
-        return json as { communities: Community[]; pagination: any };
+      if (json && typeof json === 'object') {
+        if (Array.isArray(json.communities)) {
+          return json as { communities: Community[]; pagination: any };
+        }
+        if (json.data && Array.isArray(json.data.communities)) {
+          return json.data as { communities: Community[]; pagination: any };
+        }
       }
       if (Array.isArray(json)) {
         return { communities: json, pagination: { page: 1, limit, total: json.length, totalPages: 1 } };
@@ -879,7 +889,7 @@ export class CommunityService {
 
     try {
       const authHeaders = authService.getAuthHeaders();
-      
+
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${communityId}/governance/${proposalId}/vote`,
         {
@@ -930,7 +940,7 @@ export class CommunityService {
 
     try {
       const authHeaders = authService.getAuthHeaders();
-      
+
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${communityId}/delegations`,
         {
@@ -980,7 +990,7 @@ export class CommunityService {
 
     try {
       const authHeaders = authService.getAuthHeaders();
-      
+
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${communityId}/delegations`,
         {
@@ -1029,7 +1039,7 @@ export class CommunityService {
 
     try {
       const authHeaders = authService.getAuthHeaders();
-      
+
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${communityId}/delegations?delegateAddress=${delegateAddress}&page=${page}&limit=${limit}`,
         {
@@ -1079,7 +1089,7 @@ export class CommunityService {
 
     try {
       const authHeaders = authService.getAuthHeaders();
-      
+
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/proxy-votes`,
         {
@@ -1139,7 +1149,7 @@ export class CommunityService {
 
     try {
       const authHeaders = authService.getAuthHeaders();
-      
+
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${communityId}/subscription-tiers`,
         {
@@ -1225,7 +1235,7 @@ export class CommunityService {
 
     try {
       const authHeaders = authService.getAuthHeaders();
-      
+
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${communityId}/subscriptions`,
         {
@@ -1270,7 +1280,7 @@ export class CommunityService {
 
     try {
       const authHeaders = authService.getAuthHeaders();
-      
+
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${communityId}/subscriptions`,
         {
@@ -1305,7 +1315,7 @@ export class CommunityService {
    * @param options - Search options
    * @returns Search results
    */
-  static async searchCommunities(
+  static async searchCommunitiesAdvanced(
     query: string,
     options: {
       page?: number;
@@ -1372,7 +1382,7 @@ export class CommunityService {
         sort: options.sort,
         timeRange: options.timeRange
       });
-      
+
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/feed?${params}`,
         {
@@ -1384,13 +1394,13 @@ export class CommunityService {
         },
         COMMUNITY_RETRY_OPTIONS
       );
-      
+
       const json = await safeJson(response);
-      
+
       if (!response.ok) {
         throw new Error((json && (json.error || json.message)) || 'Failed to fetch community feed');
       }
-      
+
       return json || { posts: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
     } catch (error) {
       console.error('Error fetching community feed:', error);

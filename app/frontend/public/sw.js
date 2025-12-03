@@ -219,7 +219,9 @@ self.addEventListener('fetch', (event) => {
   } else if (isAPI(request)) {
     event.respondWith(networkFirst(request, DYNAMIC_CACHE));
   } else if (isNavigation(request)) {
-    event.respondWith(navigationHandler(request));
+    // Temporarily bypass service worker for navigation to test routing
+    // event.respondWith(navigationHandler(request));
+    return;
   } else {
     event.respondWith(networkFirst(request, DYNAMIC_CACHE));
   }
