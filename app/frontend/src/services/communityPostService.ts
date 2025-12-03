@@ -84,7 +84,7 @@ export class CommunityPostService {
   }
 
   /**
-   * Get replies to a specific comment
+   * Get replies to a specific comment with exponential backoff for errors
    */
   static async getCommentReplies(
     commentId: string,
@@ -92,40 +92,64 @@ export class CommunityPostService {
       limit?: number;
     }
   ): Promise<Comment[]> {
-    try {
-      const params = new URLSearchParams();
-      if (options?.limit) params.append('limit', options.limit.toString());
+    const maxRetries = 3;
+    const baseDelay = 1000; // 1 second
 
-      let authHeaders = authService.getAuthHeaders();
-      
-      // Add development token if needed
-      if (!authHeaders['Authorization'] && ENV_CONFIG.IS_DEVELOPMENT) {
-        const devToken = `dev_session_${Date.now()}_0xee034b53d4ccb101b2a4faec27708be507197350_${Date.now()}`;
-        authHeaders['Authorization'] = `Bearer ${devToken}`;
-      }
-      
-      const response = await fetch(
-        `${BACKEND_API_BASE_URL}/api/comments/${commentId}/replies?${params}`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            ...authHeaders
-          }
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const params = new URLSearchParams();
+        if (options?.limit) params.append('limit', options.limit.toString());
+
+        let authHeaders = authService.getAuthHeaders();
+
+        // Add development token if needed
+        if (!authHeaders['Authorization'] && ENV_CONFIG.IS_DEVELOPMENT) {
+          const devToken = `dev_session_${Date.now()}_0xee034b53d4ccb101b2a4faec27708be507197350_${Date.now()}`;
+          authHeaders['Authorization'] = `Bearer ${devToken}`;
         }
-      );
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || `Failed to fetch comment replies: ${response.statusText}`);
+        const response = await fetch(
+          `${BACKEND_API_BASE_URL}/api/comments/${commentId}/replies?${params}`,
+          {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              ...authHeaders
+            }
+          }
+        );
+
+        // Handle rate limiting and service unavailable with exponential backoff
+        if (response.status === 503 || response.status === 429) {
+          if (attempt < maxRetries) {
+            const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 1000; // Add jitter
+            console.warn(`Service unavailable (${response.status}), retrying in ${delay}ms... (attempt ${attempt + 1}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue; // Retry
+          }
+          // Max retries reached
+          throw new Error(`Service temporarily unavailable. Please try again later.`);
+        }
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({ error: response.statusText }));
+          throw new Error(error.error || `Failed to fetch comment replies: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        return result.data || result;
+      } catch (error) {
+        // If this is the last attempt or a non-retryable error, handle it
+        if (attempt === maxRetries || (error instanceof Error && !error.message.includes('Service temporarily unavailable'))) {
+          console.error('Error fetching comment replies:', error);
+          return []; // Return empty array on error to prevent UI breakage
+        }
+        // Otherwise, retry on next iteration
       }
-
-      const result = await response.json();
-      return result.data || result;
-    } catch (error) {
-      console.error('Error fetching comment replies:', error);
-      return []; // Return empty array on error to prevent UI breakage
     }
+
+    // Fallback (should not reach here)
+    return [];
   }
 
   static async getPost(communityId: string, postId: string): Promise<Post | null> {
@@ -309,13 +333,13 @@ export class CommunityPostService {
   static async createComment(data: CreateCommentInput): Promise<Comment> {
     try {
       let authHeaders = authService.getAuthHeaders();
-      
+
       // Add development token if needed
       if (!authHeaders['Authorization'] && ENV_CONFIG.IS_DEVELOPMENT) {
         const devToken = `dev_session_${Date.now()}_0xee034b53d4ccb101b2a4faec27708be507197350_${Date.now()}`;
         authHeaders['Authorization'] = `Bearer ${devToken}`;
       }
-      
+
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${data.postId}/comments`, {
         method: 'POST',
         headers: {

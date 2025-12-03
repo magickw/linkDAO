@@ -41,26 +41,22 @@ export default function CommentThread({
   const [loadingReplies, setLoadingReplies] = useState(false);
   const [repliesLoaded, setRepliesLoaded] = useState(false);
 
-  // Fetch replies when comment is expanded (not collapsed)
-  React.useEffect(() => {
-    const fetchReplies = async () => {
-      // Only fetch if not collapsed, not already loaded, and comment has no pre-loaded replies
-      if (!collapsed && !repliesLoaded && (!comment.replies || comment.replies.length === 0)) {
-        setLoadingReplies(true);
-        try {
-          const fetchedReplies = await CommunityPostService.getCommentReplies(comment.id);
-          setReplies(fetchedReplies);
-          setRepliesLoaded(true);
-        } catch (error) {
-          console.error('Error fetching replies:', error);
-        } finally {
-          setLoadingReplies(false);
-        }
-      }
-    };
+  // Manually fetch replies when user wants to view them
+  const handleLoadReplies = useCallback(async () => {
+    if (repliesLoaded || loadingReplies) return;
 
-    fetchReplies();
-  }, [collapsed, comment.id, comment.replies, repliesLoaded]);
+    setLoadingReplies(true);
+    try {
+      const fetchedReplies = await CommunityPostService.getCommentReplies(comment.id);
+      setReplies(fetchedReplies);
+      setRepliesLoaded(true);
+    } catch (error) {
+      console.error('Error fetching replies:', error);
+      addToast('Failed to load replies. Please try again.', 'error');
+    } finally {
+      setLoadingReplies(false);
+    }
+  }, [comment.id, repliesLoaded, loadingReplies, addToast]);
 
   // Calculate vote score
   const voteScore = comment.upvotes - comment.downvotes;
@@ -214,14 +210,24 @@ export default function CommentThread({
                 <span className="italic">edited</span>
               </>
             )}
-            {replies.length > 0 && (
+            {(replies.length > 0 || comment.replyCount > 0) && (
               <>
                 <span>•</span>
                 <button
-                  onClick={() => setCollapsed(!collapsed)}
+                  onClick={() => {
+                    if (collapsed && !repliesLoaded) {
+                      handleLoadReplies();
+                    }
+                    setCollapsed(!collapsed);
+                  }}
                   className="hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200"
+                  disabled={loadingReplies}
                 >
-                  {collapsed ? `[+] ${replies.length} replies` : '[-] collapse'}
+                  {loadingReplies
+                    ? 'Loading...'
+                    : collapsed
+                      ? `[+] ${comment.replyCount || replies.length} ${(comment.replyCount || replies.length) === 1 ? 'reply' : 'replies'}`
+                      : '[-] collapse'}
                 </button>
               </>
             )}

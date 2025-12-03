@@ -443,17 +443,32 @@ export class CommunityService {
       }
 
       // Normalize payload to expected structure
+      // Backend wraps response in createSuccessResponse({ communities, pagination })
+      // which creates: { success: true, data: { communities: [...], pagination: {...} } }
       if (json && typeof json === 'object') {
-        if (Array.isArray(json.communities)) {
-          return json as { communities: Community[]; pagination: any };
+        // Check wrapped response first (most common case)
+        if (json.data && typeof json.data === 'object') {
+          if (Array.isArray(json.data.communities)) {
+            return {
+              communities: json.data.communities,
+              pagination: json.data.pagination || { page: 1, limit, total: json.data.communities.length, totalPages: 1 }
+            };
+          }
         }
-        if (json.data && Array.isArray(json.data.communities)) {
-          return json.data as { communities: Community[]; pagination: any };
+        // Fallback: Check direct structure (for backwards compatibility)
+        if (Array.isArray(json.communities)) {
+          return {
+            communities: json.communities,
+            pagination: json.pagination || { page: 1, limit, total: json.communities.length, totalPages: 1 }
+          };
         }
       }
+      // Fallback: If response is a plain array
       if (Array.isArray(json)) {
         return { communities: json, pagination: { page: 1, limit, total: json.length, totalPages: 1 } };
       }
+      // Default: Return empty
+      console.warn('Unexpected response structure from getMyCommunities:', json);
       return { communities: [], pagination: { page: 1, limit, total: 0, totalPages: 0 } };
     } catch (error) {
       clearTimeout(timeoutId);
@@ -509,17 +524,32 @@ export class CommunityService {
       }
 
       // Normalize payload to expected structure
+      // Backend wraps response in createSuccessResponse({ communities, pagination })
+      // which creates: { success: true, data: { communities: [...], pagination: {...} } }
       if (json && typeof json === 'object') {
-        if (Array.isArray(json.communities)) {
-          return json as { communities: Community[]; pagination: any };
+        // Check wrapped response first (most common case)
+        if (json.data && typeof json.data === 'object') {
+          if (Array.isArray(json.data.communities)) {
+            return {
+              communities: json.data.communities,
+              pagination: json.data.pagination || { page: 1, limit, total: json.data.communities.length, totalPages: 1 }
+            };
+          }
         }
-        if (json.data && Array.isArray(json.data.communities)) {
-          return json.data as { communities: Community[]; pagination: any };
+        // Fallback: Check direct structure (for backwards compatibility)
+        if (Array.isArray(json.communities)) {
+          return {
+            communities: json.communities,
+            pagination: json.pagination || { page: 1, limit, total: json.communities.length, totalPages: 1 }
+          };
         }
       }
+      // Fallback: If response is a plain array
       if (Array.isArray(json)) {
         return { communities: json, pagination: { page: 1, limit, total: json.length, totalPages: 1 } };
       }
+      // Default: Return empty
+      console.warn('Unexpected response structure from getMyCreatedCommunities:', json);
       return { communities: [], pagination: { page: 1, limit, total: 0, totalPages: 0 } };
     } catch (error) {
       clearTimeout(timeoutId);

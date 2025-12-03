@@ -32,6 +32,7 @@ export interface Comment {
   upvotes: number;
   downvotes: number;
   replies: Comment[];
+  replyCount?: number; // Total number of replies (used for lazy loading)
   depth: number;
   isDeleted: boolean;
   isEdited: boolean;
