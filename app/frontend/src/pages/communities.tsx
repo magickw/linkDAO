@@ -259,11 +259,12 @@ const CommunitiesPage: React.FC = () => {
             // Merge user communities into the main list so they appear in the sidebar
             // The sidebar filters 'communities' based on 'joinedCommunities', so we need to ensure
             // all joined/created communities are actually present in the 'communities' array.
+            const allUserCommunities = [...memberCommunitiesResponse.communities, ...createdCommunitiesResponse.communities];
             setCommunities(prev => {
               const existingIds = new Set(prev.map(c => c.id));
               const newCommunities = [...prev];
 
-              [...memberCommunitiesResponse.communities, ...createdCommunitiesResponse.communities].forEach(c => {
+              allUserCommunities.forEach(c => {
                 if (c && c.id && !existingIds.has(c.id)) {
                   newCommunities.push(c);
                   existingIds.add(c.id);
@@ -274,8 +275,24 @@ const CommunitiesPage: React.FC = () => {
             });
 
             // Set admin roles for communities where user is admin (case-insensitive)
+            // Check both the initial communitiesData and the user's communities
             const adminRoles: Record<string, string> = {};
-            communitiesData.forEach(community => {
+            const allCommunitiesToCheck = [...communitiesData, ...allUserCommunities];
+            
+            // First, mark all created communities as admin (user is always admin of communities they created)
+            createdCommunitiesResponse.communities.forEach(community => {
+              if (community && community.id) {
+                adminRoles[community.id] = 'admin';
+              }
+            });
+            
+            // Then check other communities for admin/moderator status
+            allCommunitiesToCheck.forEach(community => {
+              if (!community || !community.id) return;
+              
+              // Skip if already marked as admin
+              if (adminRoles[community.id]) return;
+              
               // Check if user is an admin/moderator of this community (based on moderators field)
               if (community.moderators && Array.isArray(community.moderators) &&
                 address && community.moderators.some(mod => mod.toLowerCase() === address.toLowerCase())) {
@@ -683,7 +700,13 @@ const CommunitiesPage: React.FC = () => {
 
                 {/* My Communities Card */}
                 <MyCommunitiesCard
-                  communities={communityList.filter(c => joinedCommunities.includes(c.id) || userAdminRoles[c.id] || (address && c.creatorAddress && c.creatorAddress.toLowerCase() === address.toLowerCase()))}
+                  communities={communityList.filter(c => {
+                    if (!c || !c.id) return false;
+                    // Include if: in joinedCommunities, has admin role, or is creator
+                    return joinedCommunities.includes(c.id) || 
+                           userAdminRoles[c.id] || 
+                           (address && c.creatorAddress && c.creatorAddress.toLowerCase() === address.toLowerCase());
+                  })}
                   maxDisplay={10}
                   onManageClick={() => router.push('/communities/manage')}
                 />

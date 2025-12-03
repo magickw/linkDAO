@@ -376,7 +376,10 @@ export class CommunityPostService {
   ): Promise<Comment[]> {
     try {
       const params = new URLSearchParams();
-      if (options?.sortBy) params.append('sortBy', options.sortBy);
+      // Backend route expects sortBy parameter
+      if (options?.sortBy) {
+        params.append('sortBy', options.sortBy);
+      }
       if (options?.limit) params.append('limit', options.limit.toString());
 
       const authHeaders = authService.getAuthHeaders();
@@ -397,7 +400,28 @@ export class CommunityPostService {
       }
 
       const result = await response.json();
-      return result.data || result;
+      // Backend returns { success: true, data: { comments: [...], pagination: {...} } }
+      // Extract the comments array from the response
+      if (result.data) {
+        // If data is an object with a comments property, extract it
+        if (typeof result.data === 'object' && result.data.comments && Array.isArray(result.data.comments)) {
+          return result.data.comments;
+        }
+        // If data is already an array, return it (backward compatibility)
+        if (Array.isArray(result.data)) {
+          return result.data;
+        }
+      }
+      // Fallback: if result is an array, return it
+      if (Array.isArray(result)) {
+        return result;
+      }
+      // If result is an object with comments property, extract it
+      if (result.comments && Array.isArray(result.comments)) {
+        return result.comments;
+      }
+      // Default: return empty array
+      return [];
     } catch (error) {
       console.error('Error fetching post comments:', error);
       throw error;

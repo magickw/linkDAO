@@ -326,14 +326,23 @@ export class FeedController {
       const {
         page = 1,
         limit = 20,
-        sort = 'newest'
+        sortBy = 'new'
       } = req.query;
+
+      // Map sortBy to sort parameter expected by feedService
+      const sortMap: Record<string, string> = {
+        'new': 'newest',
+        'best': 'best',
+        'top': 'top',
+        'controversial': 'controversial'
+      };
+      const sort = sortMap[sortBy as string] || 'newest';
 
       const comments = await feedService.getPostComments({
         postId: id,
         page: Number(page),
         limit: Number(limit),
-        sort: sort as string
+        sort: sort
       });
 
       res.json(apiResponse.success(comments, 'Comments retrieved successfully'));
