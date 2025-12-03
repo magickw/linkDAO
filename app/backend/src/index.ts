@@ -895,8 +895,7 @@ app.use('/api/admin/ai', authMiddleware, adminAIRoutes);
 // System health monitoring routes
 app.use('/api/admin/system-health', authMiddleware, systemHealthMonitoringRoutes);
 
-// Charity routes
-app.use('/api/admin', authMiddleware, charityRoutes);
+// Charity routes are now handled in adminRoutes.ts
 
 // Workflow automation routes
 app.use('/api/admin/workflows', authMiddleware, workflowAutomationRoutes);

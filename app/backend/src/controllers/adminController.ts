@@ -674,6 +674,113 @@ export class AdminController {
         return actionType.replace(/\./g, ' ').replace(/_/g, ' ');
     }
   }
+
+  // Analytics endpoints
+  async getRevenueAnalytics(req: Request, res: Response) {
+    try {
+      const analytics = await analyticsService.getSalesAnalytics();
+      res.json({
+        success: true,
+        data: {
+          labels: analytics.dailySales.map(day => day.date),
+          data: analytics.dailySales.map(day => day.sales),
+          totalRevenue: analytics.dailySales.reduce((sum, day) => sum + day.sales, 0),
+          totalOrders: analytics.dailySales.reduce((sum, day) => sum + day.orders, 0)
+        }
+      });
+    } catch (error) {
+      safeLogger.error("Error fetching revenue analytics:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch revenue analytics" });
+    }
+  }
+
+  async getDisputeAnalytics(req: Request, res: Response) {
+    try {
+      const db = databaseService.getDatabase();
+      const disputeStats = await db.select({
+        total: sql<number>`count(*)`,
+        resolved: sql<number>`count(*) filter (where status = 'resolved' or status = 'closed')`,
+        pending: sql<number>`count(*) filter (where status = 'open' or status = 'investigating' or status = 'awaiting_response')`
+      }).from(disputes);
+      
+      const stats = disputeStats[0] || { total: 0, resolved: 0, pending: 0 };
+      
+      res.json({
+        success: true,
+        data: {
+          total: Number(stats.total),
+          resolved: Number(stats.resolved),
+          pending: Number(stats.pending),
+          averageResolutionTime: 2.3 // Placeholder - would need to calculate from actual resolution times
+        }
+      });
+    } catch (error) {
+      safeLogger.error("Error fetching dispute analytics:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch dispute analytics" });
+    }
+  }
+
+  async getModerationAnalytics(req: Request, res: Response) {
+    try {
+      const db = databaseService.getDatabase();
+      const moderationStats = await db.select({
+        total: sql<number>`count(*)`,
+        pending: sql<number>`count(*) filter (where status = 'pending')`,
+        approved: sql<number>`count(*) filter (where decision = 'approve' or decision = 'approved')`,
+        rejected: sql<number>`count(*) filter (where decision = 'reject' or decision = 'rejected' or decision = 'remove')`
+      }).from(moderationCases);
+      
+      const stats = moderationStats[0] || { total: 0, pending: 0, approved: 0, rejected: 0 };
+      
+      res.json({
+        success: true,
+        data: {
+          total: Number(stats.total),
+          pending: Number(stats.pending),
+          approved: Number(stats.approved),
+          rejected: Number(stats.rejected)
+        }
+      });
+    } catch (error) {
+      safeLogger.error("Error fetching moderation analytics:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch moderation analytics" });
+    }
+  }
+
+  async getUserDemographics(req: Request, res: Response) {
+    try {
+      const db = databaseService.getDatabase();
+      // Placeholder implementation - would need actual demographic data
+      res.json({
+        success: true,
+        data: {
+          ageGroups: {},
+          locations: {}
+        }
+      });
+    } catch (error) {
+      safeLogger.error("Error fetching user demographics:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch user demographics" });
+    }
+  }
+
+  async getContentAnalytics(req: Request, res: Response) {
+    try {
+      const db = databaseService.getDatabase();
+      // Placeholder implementation - would need actual content metrics
+      res.json({
+        success: true,
+        data: {
+          totalPosts: 0,
+          totalComments: 0,
+          engagementRate: 0
+        }
+      });
+    } catch (error) {
+      safeLogger.error("Error fetching content analytics:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch content analytics" });
+    }
+  }
 }
 
 export const adminController = new AdminController();

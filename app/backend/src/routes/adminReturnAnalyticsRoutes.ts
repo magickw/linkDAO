@@ -1,22 +1,16 @@
 import { Router, Request, Response } from 'express';
 import { returnAnalyticsService } from '../services/returnAnalyticsService';
-import { authMiddleware } from '../middleware/authMiddleware';
 import {
-    validateAdminRole,
     requirePermission,
     adminRateLimit,
-    auditAdminAction,
     AuthenticatedRequest
 } from '../middleware/adminAuthMiddleware';
 import { safeLogger } from '../utils/logger';
 
 const router = Router();
 
-// Apply authentication middleware to all routes
-router.use(authMiddleware);
-
-// Apply admin role validation to all routes
-router.use(validateAdminRole);
+// Note: Authentication and admin role validation are handled by parent adminRoutes
+// These routes are mounted under /api/admin/returns which already has authMiddleware and validateAdminRole
 
 // Apply rate limiting to all routes (100 requests per 15 minutes default)
 router.use(adminRateLimit());

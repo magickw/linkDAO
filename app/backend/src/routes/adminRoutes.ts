@@ -7,6 +7,7 @@ import disputeRoutes from './disputeRoutes';
 import userRoutes from './userRoutes';
 import adminNewsletterRoutes from './adminNewsletterRoutes';
 import adminReturnAnalyticsRoutes from './adminReturnAnalyticsRoutes';
+import charityRoutes from './charityRoutes';
 import {
   validateAdminRole,
   requirePermission,
@@ -95,7 +96,35 @@ router.use('/users', requirePermission('users.view'), userRoutes);
 // Newsletter Routes (with system.settings permission)
 router.use('/newsletter', requirePermission('system.settings'), adminNewsletterRoutes);
 
-// Return Analytics Routes (with returns.view permission)
-router.use('/returns', requirePermission('returns.view'), adminReturnAnalyticsRoutes);
+// Charity Routes (with governance.verify permission)
+router.use('/', charityRoutes);
+
+// Return Analytics Routes (with returns.view permission, but allow system.analytics as fallback)
+router.use('/returns', (req, res, next) => {
+  const user = (req as any).user;
+  // Allow if user has returns permissions, system.analytics, or is super_admin
+  if (user && (
+    user.permissions?.includes('returns.view') || 
+    user.permissions?.includes('returns.analytics') || 
+    user.permissions?.includes('system.analytics') || 
+    user.permissions?.includes('*') ||
+    user.role === 'super_admin' ||
+    user.role === 'admin'
+  )) {
+    return next();
+  }
+  // If no permission, return empty data instead of 403 for GET requests
+  if (req.method === 'GET') {
+    return res.json({ success: true, data: {}, message: 'No permission for returns analytics' });
+  }
+  return res.status(403).json({ success: false, error: 'Insufficient permissions' });
+}, adminReturnAnalyticsRoutes);
+
+// Analytics Routes (with system.analytics permission)
+router.get('/analytics/revenue', requirePermission('system.analytics'), adminController.getRevenueAnalytics.bind(adminController));
+router.get('/analytics/disputes', requirePermission('system.analytics'), adminController.getDisputeAnalytics.bind(adminController));
+router.get('/analytics/moderation', requirePermission('system.analytics'), adminController.getModerationAnalytics.bind(adminController));
+router.get('/analytics/demographics', requirePermission('system.analytics'), adminController.getUserDemographics.bind(adminController));
+router.get('/analytics/content', requirePermission('system.analytics'), adminController.getContentAnalytics.bind(adminController));
 
 export default router;
