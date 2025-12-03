@@ -6,7 +6,6 @@
 import { ApiCacheManager } from '../utils/apiCacheManager';
 import { fetchWithRetry } from '../utils/apiUtils';
 import { API_BASE_URL } from '../config/api';
-import { sessionManager } from './sessionManager';
 
 // Fallback data for offline/error scenarios
 const MOCK_PRODUCTS: Product[] = [
@@ -786,18 +785,29 @@ export class UnifiedMarketplaceService {
 
   async createListing(input: CreateListingInput): Promise<MarketplaceListing> {
     try {
-      // Get current session to include wallet authentication
-      const session = await sessionManager.getSession();
-      
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
-      
-      // Add wallet authentication if available
-      if (session?.walletAddress) {
-        headers['X-Wallet-Address'] = session.walletAddress;
+
+      // Get authentication data directly from localStorage (consistent with authService)
+      if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('linkdao_access_token') ||
+          localStorage.getItem('token') ||
+          localStorage.getItem('authToken');
+        const walletAddress = localStorage.getItem('linkdao_wallet_address') ||
+          localStorage.getItem('wallet_address');
+
+        // Add Authorization header with Bearer token (required for CSRF bypass)
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        // Add wallet authentication if available
+        if (walletAddress) {
+          headers['X-Wallet-Address'] = walletAddress;
+        }
       }
-      
+
       const response = await fetch(`${this.baseUrl}/api/marketplace/seller/listings`, {
         method: 'POST',
         headers,

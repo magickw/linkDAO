@@ -185,7 +185,7 @@ export default function CommunityPostCardEnhanced({
   // Load comments when component mounts
   useEffect(() => {
     loadComments();
-  }, [loadComments]);
+  }, [post.id]); // Only reload when post ID changes
 
   // Toggle comments visibility
   const toggleComments = () => {

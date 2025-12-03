@@ -2,6 +2,7 @@
 -- This migration adds comprehensive content moderation infrastructure
 
 -- Core moderation cases table
+DROP TABLE IF EXISTS moderation_cases CASCADE;
 CREATE TABLE moderation_cases (
     id SERIAL PRIMARY KEY,
     content_id VARCHAR(64) NOT NULL,
@@ -19,6 +20,7 @@ CREATE TABLE moderation_cases (
 );
 
 -- User enforcement actions table
+DROP TABLE IF EXISTS moderation_actions CASCADE;
 CREATE TABLE moderation_actions (
     id SERIAL PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(id),
@@ -31,6 +33,7 @@ CREATE TABLE moderation_actions (
 );
 
 -- Community reports table
+DROP TABLE IF EXISTS content_reports CASCADE;
 CREATE TABLE content_reports (
     id SERIAL PRIMARY KEY,
     content_id VARCHAR(64) NOT NULL,
@@ -43,6 +46,7 @@ CREATE TABLE content_reports (
 );
 
 -- Appeals system table
+DROP TABLE IF EXISTS moderation_appeals CASCADE;
 CREATE TABLE moderation_appeals (
     id SERIAL PRIMARY KEY,
     case_id INTEGER NOT NULL REFERENCES moderation_cases(id),
@@ -55,6 +59,7 @@ CREATE TABLE moderation_appeals (
 );
 
 -- Jury selection and voting for appeals
+DROP TABLE IF EXISTS appeal_jurors CASCADE;
 CREATE TABLE appeal_jurors (
     id SERIAL PRIMARY KEY,
     appeal_id INTEGER NOT NULL REFERENCES moderation_appeals(id),
@@ -71,6 +76,7 @@ CREATE TABLE appeal_jurors (
 );
 
 -- Policy rules configuration
+DROP TABLE IF EXISTS moderation_policies CASCADE;
 CREATE TABLE moderation_policies (
     id SERIAL PRIMARY KEY,
     category VARCHAR(48) NOT NULL,
@@ -85,6 +91,7 @@ CREATE TABLE moderation_policies (
 );
 
 -- Vendor API configurations and status
+DROP TABLE IF EXISTS moderation_vendors CASCADE;
 CREATE TABLE moderation_vendors (
     id SERIAL PRIMARY KEY,
     vendor_name VARCHAR(32) NOT NULL UNIQUE,
@@ -102,6 +109,7 @@ CREATE TABLE moderation_vendors (
 );
 
 -- Audit log for all moderation decisions
+DROP TABLE IF EXISTS moderation_audit_log CASCADE;
 CREATE TABLE moderation_audit_log (
     id SERIAL PRIMARY KEY,
     case_id INTEGER REFERENCES moderation_cases(id),
@@ -117,6 +125,7 @@ CREATE TABLE moderation_audit_log (
 );
 
 -- Performance metrics and monitoring
+DROP TABLE IF EXISTS moderation_metrics CASCADE;
 CREATE TABLE moderation_metrics (
     id SERIAL PRIMARY KEY,
     metric_type VARCHAR(32) NOT NULL,
@@ -127,6 +136,7 @@ CREATE TABLE moderation_metrics (
 );
 
 -- Content hashes for duplicate detection
+DROP TABLE IF EXISTS content_hashes CASCADE;
 CREATE TABLE content_hashes (
     id SERIAL PRIMARY KEY,
     content_id VARCHAR(64) NOT NULL,
@@ -138,6 +148,7 @@ CREATE TABLE content_hashes (
 );
 
 -- Reputation impact tracking
+DROP TABLE IF EXISTS reputation_impacts CASCADE;
 CREATE TABLE reputation_impacts (
     id SERIAL PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(id),

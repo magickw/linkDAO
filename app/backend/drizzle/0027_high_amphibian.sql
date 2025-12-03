@@ -59,6 +59,8 @@ CREATE TABLE "alert_configurations" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
+DROP TABLE IF EXISTS "appeal_jurors" CASCADE;
+--> statement-breakpoint
 CREATE TABLE "appeal_jurors" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"appeal_id" integer NOT NULL,

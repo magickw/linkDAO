@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS "appeal_jurors" CASCADE;
+--> statement-breakpoint
 CREATE TABLE "appeal_jurors" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"appeal_id" integer NOT NULL,
@@ -12,6 +14,8 @@ CREATE TABLE "appeal_jurors" (
 	"voted_at" timestamp
 );
 --> statement-breakpoint
+DROP TABLE IF EXISTS "blockchain_events" CASCADE;
+--> statement-breakpoint
 CREATE TABLE "blockchain_events" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"order_id" varchar(64),
@@ -24,6 +28,8 @@ CREATE TABLE "blockchain_events" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
+DROP TABLE IF EXISTS "cdn_access_logs" CASCADE;
+--> statement-breakpoint
 CREATE TABLE "cdn_access_logs" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"asset_id" uuid NOT NULL,
@@ -35,6 +41,8 @@ CREATE TABLE "cdn_access_logs" (
 	"response_time" integer
 );
 --> statement-breakpoint
+DROP TABLE IF EXISTS "content_hashes" CASCADE;
+--> statement-breakpoint
 CREATE TABLE "content_hashes" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"content_id" varchar(64) NOT NULL,
@@ -43,6 +51,8 @@ CREATE TABLE "content_hashes" (
 	"hash_value" varchar(128) NOT NULL,
 	"created_at" timestamp DEFAULT now()
 );
+--> statement-breakpoint
+DROP TABLE IF EXISTS "content_reports" CASCADE;
 --> statement-breakpoint
 CREATE TABLE "content_reports" (
 	"id" serial PRIMARY KEY NOT NULL,
@@ -55,6 +65,8 @@ CREATE TABLE "content_reports" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
+DROP TABLE IF EXISTS "content_verification" CASCADE;
+--> statement-breakpoint
 CREATE TABLE "content_verification" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"asset_id" uuid NOT NULL,
@@ -62,6 +74,8 @@ CREATE TABLE "content_verification" (
 	"algorithm" varchar(20) NOT NULL,
 	"created_at" timestamp DEFAULT now()
 );
+--> statement-breakpoint
+DROP TABLE IF EXISTS "digital_asset_access_logs" CASCADE;
 --> statement-breakpoint
 CREATE TABLE "digital_asset_access_logs" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -75,6 +89,8 @@ CREATE TABLE "digital_asset_access_logs" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
+DROP TABLE IF EXISTS "digital_asset_analytics" CASCADE;
+--> statement-breakpoint
 CREATE TABLE "digital_asset_analytics" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"asset_id" uuid NOT NULL,
@@ -84,6 +100,8 @@ CREATE TABLE "digital_asset_analytics" (
 	"revenue" numeric(20, 8) DEFAULT '0',
 	"unique_users" integer DEFAULT 0
 );
+--> statement-breakpoint
+DROP TABLE IF EXISTS "digital_asset_licenses" CASCADE;
 --> statement-breakpoint
 CREATE TABLE "digital_asset_licenses" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -97,6 +115,8 @@ CREATE TABLE "digital_asset_licenses" (
 	"status" varchar(20) DEFAULT 'active',
 	"created_at" timestamp DEFAULT now()
 );
+--> statement-breakpoint
+DROP TABLE IF EXISTS "digital_asset_purchases" CASCADE;
 --> statement-breakpoint
 CREATE TABLE "digital_asset_purchases" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,

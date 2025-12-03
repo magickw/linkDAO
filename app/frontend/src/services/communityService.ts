@@ -10,6 +10,7 @@ import { requestManager } from './requestManager';
 import { communityCircuitBreaker } from './circuitBreaker';
 import { globalRequestCoalescer } from '../hooks/useRequestCoalescing';
 import { authService } from './authService';
+import { cacheInvalidationService } from './communityCache';
 
 // Get the backend API base URL from environment variables
 import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
@@ -695,11 +696,17 @@ export class CommunityService {
       }
 
       const json = await safeJson(response);
-      const community = json as Community;
+      // Handle backend's wrapped response structure: { success: true, data: {...} }
+      const community = (json?.data || json) as Community;
 
       // Update cache
       if (community) {
         await this.offlineCacheService.cacheCommunity(community);
+        
+        // Invalidate community cache when avatar is updated
+        if (data.avatar !== undefined) {
+          cacheInvalidationService.invalidateCommunity(id);
+        }
       }
 
       return community;

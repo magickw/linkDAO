@@ -103,7 +103,7 @@ export default function EnhancedCommentSystem({
   // Load comments on mount and when postId or sort changes
   useEffect(() => {
     loadComments();
-  }, [loadComments]);
+  }, [postId, sortBy]); // Remove loadComments dependency to prevent infinite loop
 
   // Handle image upload
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
