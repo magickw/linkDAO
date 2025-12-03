@@ -448,7 +448,7 @@ export default function CommunityPostCardEnhanced({
             )}
 
             <div className="text-gray-900 dark:text-white whitespace-pre-wrap break-words">
-              {post.contentCid}
+              {post.content}
             </div>
 
             {/* Media */}
