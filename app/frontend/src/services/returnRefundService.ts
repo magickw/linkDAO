@@ -4,7 +4,7 @@
  */
 
 import { fetchWithRetry } from '../utils/apiUtils';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
 
 export interface ReturnRefundRequest {
   orderId: string;
@@ -70,7 +70,7 @@ class ReturnRefundService {
    */
   async submitReturnRequest(request: ReturnRefundRequest): Promise<ReturnRefundResponse> {
     try {
-      const response = await fetchWithRetry<ReturnRefundResponse>(`${API_BASE_URL}/marketplace/returns`, {
+      const response = await fetchWithRetry<ReturnRefundResponse>(`${API_BASE_URL}${API_ENDPOINTS.MARKETPLACE}/returns`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(request)
@@ -89,7 +89,7 @@ class ReturnRefundService {
   async checkReturnEligibility(orderId: string, productId: string): Promise<ReturnEligibility> {
     try {
       const response = await fetchWithRetry<ReturnEligibility>(
-        `${API_BASE_URL}/marketplace/returns/eligibility?orderId=${orderId}&productId=${productId}`
+        `${API_BASE_URL}${API_ENDPOINTS.MARKETPLACE}/returns/eligibility?orderId=${orderId}&productId=${productId}`
       );
 
       return response;
@@ -104,7 +104,7 @@ class ReturnRefundService {
    */
   async getReturnRequest(returnId: string): Promise<ReturnRefundResponse> {
     try {
-      const response = await fetchWithRetry<ReturnRefundResponse>(`${API_BASE_URL}/marketplace/returns/${returnId}`);
+      const response = await fetchWithRetry<ReturnRefundResponse>(`${API_BASE_URL}${API_ENDPOINTS.MARKETPLACE}/returns/${returnId}`);
 
       return response;
     } catch (error) {
@@ -123,7 +123,7 @@ class ReturnRefundService {
   }): Promise<ReturnRefundResponse[]> {
     try {
       const response = await fetchWithRetry<ReturnRefundResponse[]>(
-        `${API_BASE_URL}/marketplace/returns/user/${userAddress}?role=seller&limit=100&offset=0`
+        `${API_BASE_URL}${API_ENDPOINTS.MARKETPLACE}/returns/user/${userAddress}?role=seller&limit=100&offset=0`
       );
 
       return response;
@@ -138,7 +138,7 @@ class ReturnRefundService {
    */
   async cancelReturnRequest(returnId: string): Promise<{ success: boolean }> {
     try {
-      const response = await fetchWithRetry(`${API_BASE_URL}/marketplace/returns/${returnId}/cancel`, {
+      const response = await fetchWithRetry(`${API_BASE_URL}${API_ENDPOINTS.MARKETPLACE}/returns/${returnId}/cancel`, {
         method: 'POST'
       });
 
@@ -161,7 +161,7 @@ class ReturnRefundService {
   ): Promise<{ success: boolean }> {
     try {
       const response = await fetchWithRetry(
-        `${API_BASE_URL}/marketplace/returns/${returnId}/tracking`,
+        `${API_BASE_URL}${API_ENDPOINTS.MARKETPLACE}/returns/${returnId}/tracking`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -191,7 +191,7 @@ class ReturnRefundService {
     try {
       const endpoint = response.approved ? 'approve' : 'reject';
       const apiResponse = await fetchWithRetry(
-        `${API_BASE_URL}/marketplace/returns/${returnId}/${endpoint}`,
+        `${API_BASE_URL}${API_ENDPOINTS.MARKETPLACE}/returns/${returnId}/${endpoint}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -227,7 +227,7 @@ class ReturnRefundService {
       const data = await fetchWithRetry<{
         transactionHash?: string;
         refundId?: string;
-      }>(`${API_BASE_URL}/marketplace/returns/${returnId}/refund`, {
+      }>(`${API_BASE_URL}${API_ENDPOINTS.MARKETPLACE}/returns/${returnId}/refund`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ provider: paymentProvider })
@@ -241,9 +241,9 @@ class ReturnRefundService {
       };
     } catch (error) {
       console.error('Error processing refund:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Refund processing failed' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Refund processing failed'
       };
     }
   }
@@ -264,7 +264,7 @@ class ReturnRefundService {
         freeReturnShipping: boolean;
         conditions: string[];
       }>(
-        `${API_BASE_URL}/marketplace/products/${productId}/refund-policy`
+        `${API_BASE_URL}${API_ENDPOINTS.MARKETPLACE}/products/${productId}/refund-policy`
       );
 
       return response;
@@ -289,7 +289,7 @@ class ReturnRefundService {
     try {
       // fetchWithRetry returns parsed JSON when using a generic type.
       const data = await fetchWithRetry<{ id: string }>(
-        `${API_BASE_URL}/marketplace/return-policies`,
+        `${API_BASE_URL}${API_ENDPOINTS.MARKETPLACE}/return-policies`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -300,9 +300,9 @@ class ReturnRefundService {
       return { success: true, policyId: data.id };
     } catch (error) {
       console.error('Error creating return policy:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to create return policy' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to create return policy'
       };
     }
   }
@@ -321,7 +321,7 @@ class ReturnRefundService {
   }>): Promise<{ success: boolean; error?: string }> {
     try {
       const response = await fetchWithRetry(
-        `${API_BASE_URL}/marketplace/return-policies/${policyId}`,
+        `${API_BASE_URL}${API_ENDPOINTS.MARKETPLACE}/return-policies/${policyId}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -332,9 +332,9 @@ class ReturnRefundService {
       return { success: true };
     } catch (error) {
       console.error('Error updating return policy:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to update return policy' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to update return policy'
       };
     }
   }
@@ -345,7 +345,7 @@ class ReturnRefundService {
   async getSellerReturnPolicy(sellerId: string): Promise<any> {
     try {
       const response = await fetchWithRetry(
-        `${API_BASE_URL}/marketplace/return-policies/${sellerId}`
+        `${API_BASE_URL}${API_ENDPOINTS.MARKETPLACE}/return-policies/${sellerId}`
       );
 
       return response;
@@ -369,7 +369,7 @@ class ReturnRefundService {
         riskLevel: 'low' | 'medium' | 'high';
         riskFactors: string[];
       }>(
-        `${API_BASE_URL}/marketplace/returns/risk-assessment`,
+        `${API_BASE_URL}${API_ENDPOINTS.MARKETPLACE}/returns/risk-assessment`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -404,7 +404,7 @@ class ReturnRefundService {
       });
 
       const response = await fetchWithRetry(
-        `${API_BASE_URL}/marketplace/returns/analytics?${params.toString()}`
+        `${API_BASE_URL}${API_ENDPOINTS.MARKETPLACE}/returns/analytics?${params.toString()}`
       );
 
       return response;
@@ -429,7 +429,7 @@ class ReturnRefundService {
         trackingNumber?: string;
         success?: boolean;
         error?: string;
-      }>(`${API_BASE_URL}/marketplace/returns/${returnId}/label`, {
+      }>(`${API_BASE_URL}${API_ENDPOINTS.MARKETPLACE}/returns/${returnId}/label`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -465,7 +465,7 @@ class ReturnRefundService {
         riskScore: number;
         riskLevel: 'low' | 'medium' | 'high';
         flags: string[];
-      }>(`${API_BASE_URL}/marketplace/returns/${returnId}/risk-assessment`, {
+      }>(`${API_BASE_URL}${API_ENDPOINTS.MARKETPLACE}/returns/${returnId}/risk-assessment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)

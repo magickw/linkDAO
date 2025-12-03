@@ -6,7 +6,7 @@
 import { ApiCacheManager } from '../utils/apiCacheManager';
 import { fetchWithRetry } from '../utils/apiUtils';
 import { API_BASE_URL } from '../config/api';
-import { SessionManager } from './sessionManager';
+import { sessionManager } from './sessionManager';
 
 // Fallback data for offline/error scenarios
 const MOCK_PRODUCTS: Product[] = [
@@ -787,7 +787,6 @@ export class UnifiedMarketplaceService {
   async createListing(input: CreateListingInput): Promise<MarketplaceListing> {
     try {
       // Get current session to include wallet authentication
-      const sessionManager = SessionManager.getInstance();
       const session = await sessionManager.getSession();
       
       const headers: Record<string, string> = {

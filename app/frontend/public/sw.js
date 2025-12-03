@@ -1840,8 +1840,22 @@ function checkRateLimit(requestKey, now) {
     return true;
   }
 
-  const endpoint = requestKey.split(':')[1].split('?')[0]; // Extract endpoint without query params
-  const url = new URL(endpoint, 'http://localhost'); // Create URL object for parsing
+  // Robust URL extraction from requestKey (format: METHOD:URL)
+  const urlString = requestKey.substring(requestKey.indexOf(':') + 1);
+  let url;
+  try {
+    url = new URL(urlString);
+  } catch (e) {
+    // Fallback for relative URLs or invalid formats
+    try {
+      url = new URL(urlString, 'http://localhost');
+    } catch (e2) {
+      console.warn('Failed to parse URL for rate limiting:', urlString);
+      return true; // Fail open if URL is unparseable
+    }
+  }
+
+  const endpoint = url.pathname;
 
   // Skip rate limiting for placeholder endpoints
   if (endpoint.includes('/api/placeholder')) {
