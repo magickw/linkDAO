@@ -33,13 +33,24 @@ async function decryptAddressData(encryptedData: string): Promise<any> {
   if (!encryptedData) {
     return {};
   }
-  
+
   try {
-    const encryptedObj = JSON.parse(encryptedData);
-    const decryptedData = await encryptionService.decryptData(encryptedObj);
-    return JSON.parse(decryptedData);
+    const parsed = JSON.parse(encryptedData);
+
+    // Check if this looks like encrypted data (has required fields)
+    // EncryptedData format: { encrypted, iv, tag?, salt?, algorithm, timestamp }
+    if (parsed && typeof parsed === 'object' && parsed.encrypted && parsed.iv && parsed.algorithm) {
+      // This is encrypted data, try to decrypt
+      const decryptedData = await encryptionService.decryptData(parsed);
+      return JSON.parse(decryptedData);
+    } else {
+      // This is plain JSON data (legacy or unencrypted) - return as-is
+      return parsed;
+    }
   } catch (error) {
-    safeLogger.error('Error decrypting address data:', error);
+    // If JSON parsing failed, it might be a plain string or corrupted data
+    // Log at debug/warn level since this is expected for legacy data
+    safeLogger.warn('Unable to parse address data, returning empty object');
     return {};
   }
 }

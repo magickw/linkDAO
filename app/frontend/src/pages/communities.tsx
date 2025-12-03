@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
 import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 import { useWeb3 } from '@/context/Web3Context';
+import CommunityAvatar from '@/components/Community/CommunityAvatar';
 
 // Web3-Native Community Enhancement Components
 import { LivePostUpdates } from '@/components/RealTimeUpdates/LivePostUpdates';
@@ -725,7 +726,11 @@ const CommunitiesPage: React.FC = () => {
                         onClick={() => handleCommunitySelect(community)}
                         className="w-full flex items-center space-x-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                       >
-                        <span className="text-lg">{community.avatar || '🏛️'}</span>
+                        <CommunityAvatar
+                          avatar={community.avatar}
+                          name={community.displayName || community.name}
+                          size="sm"
+                        />
                         <div className="text-left flex-1 min-w-0">
                           <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
                             {community.name}

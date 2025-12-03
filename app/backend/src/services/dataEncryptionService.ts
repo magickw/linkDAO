@@ -257,7 +257,7 @@ export class DataEncryptionService {
     try {
       const iv = Buffer.from(encryptedData.iv, 'hex');
       const decipher = crypto.createDecipheriv(encryptedData.algorithm, this.masterKey, iv);
-      
+
       if (encryptedData.tag && 'setAuthTag' in decipher) {
         (decipher as any).setAuthTag(Buffer.from(encryptedData.tag, 'hex'));
       }
@@ -273,7 +273,8 @@ export class DataEncryptionService {
       return decrypted;
 
     } catch (error) {
-      logger.error('Decryption failed', { error });
+      // Log at debug level since decryption failures are expected for legacy/migrated data
+      logger.debug('Decryption failed - data may have been encrypted with different key or is corrupted');
       throw new Error('Failed to decrypt data');
     }
   }

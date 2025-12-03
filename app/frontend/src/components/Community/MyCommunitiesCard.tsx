@@ -2,6 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Settings } from 'lucide-react';
 import { Community } from '@/models/Community';
+import CommunityAvatar from './CommunityAvatar';
 
 interface MyCommunitiesCardProps {
   communities: Community[];
@@ -53,7 +54,11 @@ const MyCommunitiesCard: React.FC<MyCommunitiesCardProps> = ({
                 href={`/communities/${community.slug || community.name}`}
                 className="w-full flex items-center space-x-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group"
               >
-                <span className="text-lg flex-shrink-0">{community.avatar || '🏛️'}</span>
+                <CommunityAvatar
+                  avatar={community.avatar}
+                  name={community.displayName || community.name}
+                  size="sm"
+                />
                 <div className="text-left flex-1 min-w-0">
                   <div className="text-sm font-medium text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                     {community.displayName || community.name}

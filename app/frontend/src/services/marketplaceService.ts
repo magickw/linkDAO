@@ -3,7 +3,7 @@
  * Consolidates all marketplace functionality with enhanced error handling and offline support
  */
 
-import { ApiCacheManager } from '../utils/apiCacheManager';
+// import { ApiCacheManager } from '../utils/apiCacheManager';
 import { fetchWithRetry } from '../utils/apiUtils';
 import { API_BASE_URL } from '../config/api';
 
@@ -263,7 +263,7 @@ export interface CreateListingInput {
   metadataURI?: string;
   nftStandard?: 'ERC721' | 'ERC1155';
   tokenId?: string;
-  
+
   // For seller listing service
   walletAddress?: string;
   title?: string;
@@ -456,7 +456,7 @@ export class UnifiedMarketplaceService {
       const response = await fetch(`${this.baseUrl}/api/marketplace/listings/${id}`, {
         signal: this.createTimeoutSignal(10000)
       });
-      
+
       if (!response.ok) {
         if (response.status === 404) return null;
         throw new Error('Failed to fetch product');
@@ -482,7 +482,7 @@ export class UnifiedMarketplaceService {
           'Content-Type': 'application/json',
         }
       });
-      
+
       if (!response.ok) {
         if (response.status === 404) return null;
         if (response.status >= 500) {
@@ -592,7 +592,7 @@ export class UnifiedMarketplaceService {
         limit,
         status: 'active'
       };
-      
+
       const result = await this.getProducts(filters);
       return result.products;
     } catch (error) {
@@ -608,11 +608,11 @@ export class UnifiedMarketplaceService {
         status: 'active',
         sortBy: 'popular'
       };
-      
+
       const result = await this.getProducts(filters);
-      return result.products.filter(product => 
-        product.seller?.daoApproved && 
-        product.trust?.safetyScore && 
+      return result.products.filter(product =>
+        product.seller?.daoApproved &&
+        product.trust?.safetyScore &&
         product.trust.safetyScore > 90
       );
     } catch (error) {
@@ -647,7 +647,7 @@ export class UnifiedMarketplaceService {
       const response = await fetch(`${this.baseUrl}/api/marketplace/search?${params.toString()}`, {
         signal: this.createTimeoutSignal(10000)
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to search products');
       }
@@ -674,7 +674,7 @@ export class UnifiedMarketplaceService {
       const response = await fetch(`${this.baseUrl}/api/marketplace/search-suggestions?${params.toString()}`, {
         signal: this.createTimeoutSignal(5000)
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to get search suggestions');
       }
@@ -707,7 +707,7 @@ export class UnifiedMarketplaceService {
       const response = await fetch(`${this.baseUrl}/api/marketplace/auctions/active?${new URLSearchParams(filters as any).toString()}`, {
         signal: this.createTimeoutSignal(10000)
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch active auctions');
       }
@@ -737,7 +737,7 @@ export class UnifiedMarketplaceService {
         }),
         signal: this.createTimeoutSignal(10000)
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to place bid');
       }
@@ -756,7 +756,7 @@ export class UnifiedMarketplaceService {
   }) => void): Promise<() => void> {
     try {
       const eventSource = new EventSource(`${this.baseUrl}/api/marketplace/auctions/${auctionId}/stream`);
-      
+
       eventSource.onmessage = (event) => {
         try {
           const update = JSON.parse(event.data);
@@ -775,7 +775,7 @@ export class UnifiedMarketplaceService {
       };
     } catch (error) {
       console.error('Error subscribing to auction updates:', error);
-      return () => {};
+      return () => { };
     }
   }
 
@@ -784,6 +784,7 @@ export class UnifiedMarketplaceService {
   // ============================================================================
 
   async createListing(input: CreateListingInput): Promise<MarketplaceListing> {
+    console.log('[MarketplaceService] createListing called with:', input);
     try {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -841,7 +842,7 @@ export class UnifiedMarketplaceService {
       const response = await fetch(`${this.baseUrl}/api/marketplace/listings?${params.toString()}`, {
         signal: this.createTimeoutSignal(10000)
       });
-      
+
       if (!response.ok) {
         console.warn('Marketplace listings request was not ok:', response.status, response.statusText);
         return [];
@@ -982,33 +983,33 @@ export class UnifiedMarketplaceService {
     baseDelay: number = 1000
   ): Promise<T> {
     let lastError: Error;
-    
+
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         return await operation();
       } catch (error) {
         lastError = error as Error;
-        
+
         // Don't retry on certain errors
         if (error instanceof Error) {
-          if (error.message.includes('not found') || 
-              error.message.includes('404') ||
-              error.message.includes('unauthorized') ||
-              error.message.includes('forbidden')) {
+          if (error.message.includes('not found') ||
+            error.message.includes('404') ||
+            error.message.includes('unauthorized') ||
+            error.message.includes('forbidden')) {
             throw error;
           }
         }
-        
+
         if (attempt === maxRetries) {
           throw lastError;
         }
-        
+
         // Exponential backoff with jitter
         const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 1000;
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
-    
+
     throw lastError!;
   }
 
@@ -1066,7 +1067,7 @@ export class UnifiedMarketplaceService {
       // Try to use the seller service if available
       const { sellerService } = await import('@/services/sellerService');
       const sellerProfile = await sellerService.getSellerProfile(sellerId);
-      
+
       if (sellerProfile) {
         return {
           id: sellerProfile.walletAddress,
@@ -1081,7 +1082,7 @@ export class UnifiedMarketplaceService {
           isOnline: true // Default value
         };
       }
-      
+
       return null;
     } catch (error) {
       console.error('Error fetching seller by ID:', error);
@@ -1332,20 +1333,20 @@ export class UnifiedMarketplaceService {
 export const marketplaceService = new UnifiedMarketplaceService();
 
 // Export legacy functions for backward compatibility
-export const getProductsByCategory = (category: string): Promise<MockProduct[]> => 
+export const getProductsByCategory = (category: string): Promise<MockProduct[]> =>
   marketplaceService.getProductsByListingType('FIXED_PRICE');
 
-export const getProductsByListingType = (listingType: 'FIXED_PRICE' | 'AUCTION'): Promise<MockProduct[]> => 
+export const getProductsByListingType = (listingType: 'FIXED_PRICE' | 'AUCTION'): Promise<MockProduct[]> =>
   marketplaceService.getProductsByListingType(listingType);
 
-export const getFeaturedProducts = (): Promise<MockProduct[]> => 
+export const getFeaturedProducts = (): Promise<MockProduct[]> =>
   marketplaceService.getAllProducts();
 
-export const getProductById = (id: string): Promise<MockProduct | undefined> => 
+export const getProductById = (id: string): Promise<MockProduct | undefined> =>
   marketplaceService.getProductById(id).then(p => p ? marketplaceService['convertToMockProduct'](p) : undefined);
 
-export const searchProducts = (query: string): Promise<MockProduct[]> => 
-  marketplaceService.searchProducts(query).then(products => 
+export const searchProducts = (query: string): Promise<MockProduct[]> =>
+  marketplaceService.searchProducts(query).then(products =>
     products.map(p => marketplaceService['convertToMockProduct'](p))
   );
 

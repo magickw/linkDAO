@@ -5,6 +5,7 @@ import { Post } from '@/models/Post';
 import { Community } from '@/models/Community';
 import { LoadingSkeletons } from '@/components/LoadingSkeletons';
 import { EmptyState, RetryState } from '@/components/FallbackStates';
+import CommunityAvatar from '@/components/Community/CommunityAvatar';
 
 interface TrendingContentProps {
   timeRange?: 'hour' | 'day' | 'week' | 'month';
@@ -190,21 +191,13 @@ export default function TrendingContent({
                   <span className="text-sm font-medium text-gray-500 dark:text-gray-400 w-6">
                     {index + 1}
                   </span>
-                  
-                  {community.avatar ? (
-                    <img 
-                      src={community.avatar} 
-                      alt={community.displayName}
-                      className="w-8 h-8 rounded-full"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 bg-gradient-to-br from-primary-400 to-secondary-500 rounded-full flex items-center justify-center">
-                      <span className="text-white font-bold text-xs">
-                        {community.displayName.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                  )}
-                  
+
+                  <CommunityAvatar
+                    avatar={community.avatar}
+                    name={community.displayName}
+                    size="sm"
+                  />
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2">
                       <h4 className="font-medium text-gray-900 dark:text-white truncate">

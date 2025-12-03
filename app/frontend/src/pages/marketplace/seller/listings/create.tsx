@@ -6,14 +6,14 @@ import { marketplaceService, type MarketplaceListing } from '@/services/marketpl
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { Button } from '@/design-system/components/Button';
 import Layout from '@/components/Layout';
-import { 
-  Upload, 
-  X, 
-  Image as ImageIcon, 
-  Info, 
-  Eye, 
-  Shield, 
-  ChevronLeft, 
+import {
+  Upload,
+  X,
+  Image as ImageIcon,
+  Info,
+  Eye,
+  Shield,
+  ChevronLeft,
   ChevronRight,
   Star,
   Check,
@@ -29,29 +29,29 @@ interface EnhancedFormData {
   description: string;
   category: string;
   tags: string[];
-  
+
   // SEO Metadata
   seoTitle: string;
   seoDescription: string;
-  
+
   // Item Details
   itemType: 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE';
   condition: string;
-  
+
   // Pricing
   price: string;
   currency: 'USDC' | 'USDT' | 'ETH' | 'USD';
   listingType: 'FIXED_PRICE' | 'AUCTION';
   duration: number;
   royalty: number;
-  
+
   // Quantity & Inventory
   quantity: number;
   unlimitedQuantity: boolean;
-  
+
   // Security & Trust
   escrowEnabled: boolean;
-  
+
   // Blockchain
   tokenAddress: string;
 }
@@ -75,7 +75,7 @@ const CATEGORIES = [
 
 // Popular tags
 const POPULAR_TAGS = [
-  'rare', 'limited-edition', 'handmade', 'vintage', 'premium', 
+  'rare', 'limited-edition', 'handmade', 'vintage', 'premium',
   'exclusive', 'collectible', 'digital-art', 'gaming', 'music',
   'photography', 'utility', 'access-token', 'membership'
 ];
@@ -86,7 +86,7 @@ type FormStep = 'basic' | 'details' | 'pricing' | 'images' | 'review';
 const STEP_TITLES = {
   basic: 'Basic Information',
   details: 'Item Details',
-  pricing: 'Pricing & Terms', 
+  pricing: 'Pricing & Terms',
   images: 'Images & Media',
   review: 'Review & Publish'
 };
@@ -97,7 +97,7 @@ const CreateListingPage: React.FC = () => {
   const { address, isConnected } = useAccount();
   const { addToast } = useToast();
   const router = useRouter();
-  
+
   // Enhanced form state
   const [currentStep, setCurrentStep] = useState<FormStep>('basic');
   const [formData, setFormData] = useState<EnhancedFormData>({
@@ -119,26 +119,26 @@ const CreateListingPage: React.FC = () => {
     escrowEnabled: true,
     tokenAddress: ''
   });
-  
+
   // Image management
   const [images, setImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [primaryImageIndex, setPrimaryImageIndex] = useState(0);
   const [dragActive, setDragActive] = useState(false);
-  
+
   // UI state
   const [loading, setLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [ethPrice, setEthPrice] = useState<number>(2400); // Mock ETH price
   const [newTag, setNewTag] = useState('');
-  
+
   // State for field-specific errors
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  
+
   // Real-time validation
   const validateField = (field: keyof EnhancedFormData, value: any) => {
     let error = '';
-    
+
     switch (field) {
       case 'title':
         if (!value.trim()) {
@@ -149,7 +149,7 @@ const CreateListingPage: React.FC = () => {
           error = 'Title must be less than 100 characters';
         }
         break;
-        
+
       case 'description':
         if (!value.trim()) {
           error = 'Product description is required';
@@ -159,13 +159,13 @@ const CreateListingPage: React.FC = () => {
           error = 'Description must be less than 2000 characters';
         }
         break;
-        
+
       case 'category':
         if (!value) {
           error = 'Please select a category';
         }
         break;
-        
+
       case 'price':
         if (!value) {
           error = 'Price is required';
@@ -176,20 +176,20 @@ const CreateListingPage: React.FC = () => {
           }
         }
         break;
-        
+
       case 'quantity':
         if (value < 1) {
           error = 'Quantity must be at least 1';
         }
         break;
     }
-    
+
     setFieldErrors(prev => ({
       ...prev,
       [field]: error
     }));
   };
-  
+
   // Use the singleton marketplace service
   const service = useMemo(() => marketplaceService, []);
 
@@ -203,7 +203,7 @@ const CreateListingPage: React.FC = () => {
         console.error('Failed to fetch ETH price:', error);
       }
     };
-    
+
     fetchEthPrice();
     const interval = setInterval(fetchEthPrice, 30000); // Update every 30s
     return () => clearInterval(interval);
@@ -270,7 +270,7 @@ const CreateListingPage: React.FC = () => {
   // Form validation by step
   const validateStep = (step: FormStep): boolean => {
     const { isValid, errors } = validateForm();
-    
+
     switch (step) {
       case 'basic':
         return !errors.title && !errors.description && !errors.category;
@@ -340,7 +340,7 @@ const CreateListingPage: React.FC = () => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFiles(Array.from(e.dataTransfer.files));
     }
@@ -354,7 +354,7 @@ const CreateListingPage: React.FC = () => {
 
   const handleFiles = (files: File[]) => {
     const imageFiles = files.filter(file => file.type.startsWith('image/'));
-    
+
     if (imageFiles.length === 0) {
       addToast('Please select valid image files', 'error');
       return;
@@ -362,13 +362,13 @@ const CreateListingPage: React.FC = () => {
 
     const remainingSlots = 10 - images.length;
     const filesToAdd = imageFiles.slice(0, remainingSlots);
-    
+
     if (filesToAdd.length < imageFiles.length) {
       addToast(`Only ${remainingSlots} more images can be added (max 10 total)`, 'warning');
     }
 
     setImages(prev => [...prev, ...filesToAdd]);
-    
+
     filesToAdd.forEach(file => {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -383,7 +383,7 @@ const CreateListingPage: React.FC = () => {
   const removeImage = (index: number) => {
     setImages(prev => prev.filter((_, i) => i !== index));
     setImagePreviews(prev => prev.filter((_, i) => i !== index));
-    
+
     // Adjust primary image index if needed
     if (primaryImageIndex === index) {
       setPrimaryImageIndex(0);
@@ -395,16 +395,16 @@ const CreateListingPage: React.FC = () => {
   const moveImage = (fromIndex: number, toIndex: number) => {
     const newImages = [...images];
     const newPreviews = [...imagePreviews];
-    
+
     const [movedImage] = newImages.splice(fromIndex, 1);
     const [movedPreview] = newPreviews.splice(fromIndex, 1);
-    
+
     newImages.splice(toIndex, 0, movedImage);
     newPreviews.splice(toIndex, 0, movedPreview);
-    
+
     setImages(newImages);
     setImagePreviews(newPreviews);
-    
+
     // Update primary image index
     if (primaryImageIndex === fromIndex) {
       setPrimaryImageIndex(toIndex);
@@ -419,16 +419,16 @@ const CreateListingPage: React.FC = () => {
       addToast('Please connect your wallet first', 'error');
       return;
     }
-    
+
     try {
       setLoading(true);
-      
+
       // Validate required fields
       if (!formData.title) throw new Error('Title is required');
       if (!formData.description) throw new Error('Description is required');
       if (!formData.price || parseFloat(formData.price) <= 0) throw new Error('Valid price is required');
       if (images.length === 0) throw new Error('At least one image is required');
-      
+
       // Prepare data in the format expected by the backend
       const listingData = {
         walletAddress: address,
@@ -450,12 +450,22 @@ const CreateListingPage: React.FC = () => {
           seoDescription: formData.seoDescription || formData.description.substring(0, 160)
         }
       };
-      
+
+      console.log('[CREATE] About to call marketplaceService.createListing');
+      console.log('[CREATE] marketplaceService:', marketplaceService);
+      console.log('[CREATE] marketplaceService.createListing:', marketplaceService.createListing);
+      console.log('[CREATE] listingData:', listingData);
+
       await marketplaceService.createListing(listingData);
-      
+
       addToast('🎉 Listing created successfully!', 'success');
       router.push('/marketplace/seller/dashboard');
     } catch (error: any) {
+      console.error('[CREATE] Error caught:', error);
+      console.error('[CREATE] Error message:', error?.message);
+      console.error('[CREATE] Error stack:', error?.stack);
+      console.error('[CREATE] Error type:', typeof error);
+      console.error('[CREATE] Error keys:', error ? Object.keys(error) : 'null');
       addToast(error.message || 'Failed to create listing', 'error');
       console.error('Error creating listing:', error);
     } finally {
@@ -470,27 +480,25 @@ const CreateListingPage: React.FC = () => {
         const isActive = step === currentStep;
         const isCompleted = STEP_ORDER.indexOf(currentStep) > index;
         const isAccessible = index <= STEP_ORDER.indexOf(currentStep);
-        
+
         return (
           <React.Fragment key={step}>
             <div
-              className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-medium cursor-pointer transition-all ${
-                isActive
+              className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-medium cursor-pointer transition-all ${isActive
                   ? 'bg-indigo-500 text-white'
                   : isCompleted
-                  ? 'bg-green-500 text-white'
-                  : isAccessible
-                  ? 'bg-white/20 text-white hover:bg-white/30'
-                  : 'bg-white/10 text-white/50 cursor-not-allowed'
-              }`}
+                    ? 'bg-green-500 text-white'
+                    : isAccessible
+                      ? 'bg-white/20 text-white hover:bg-white/30'
+                      : 'bg-white/10 text-white/50 cursor-not-allowed'
+                }`}
               onClick={() => isAccessible && goToStep(step)}
             >
               {isCompleted ? <Check size={16} /> : index + 1}
             </div>
             {index < STEP_ORDER.length - 1 && (
-              <div className={`w-12 h-0.5 mx-2 ${
-                isCompleted ? 'bg-green-500' : 'bg-white/20'
-              }`} />
+              <div className={`w-12 h-0.5 mx-2 ${isCompleted ? 'bg-green-500' : 'bg-white/20'
+                }`} />
             )}
           </React.Fragment>
         );
@@ -519,16 +527,15 @@ const CreateListingPage: React.FC = () => {
       NFT: { icon: '🎨', label: 'NFT', desc: 'Non-fungible tokens, digital collectibles' },
       SERVICE: { icon: '🛠️', label: 'Service', desc: 'Consultation, development, design work' }
     };
-    
+
     const info = typeInfo[type];
-    
+
     return (
       <div
-        className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-          selected
+        className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${selected
             ? 'border-indigo-400 bg-indigo-500/20'
             : 'border-white/20 bg-white/5 hover:border-white/40'
-        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         onClick={!disabled ? onClick : undefined}
       >
         <div className="text-2xl mb-2">{info.icon}</div>
@@ -558,7 +565,7 @@ const CreateListingPage: React.FC = () => {
     <Layout title="Create Listing - LinkDAO Marketplace" fullWidth={true}>
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          
+
           {/* Header */}
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold text-white mb-4">
@@ -567,7 +574,7 @@ const CreateListingPage: React.FC = () => {
             <p className="text-white/80 text-lg">
               List your items securely on the decentralized marketplace
             </p>
-            
+
             {/* Trust Indicators */}
             <div className="flex items-center justify-center gap-6 mt-6 text-sm text-white/70">
               <div className="flex items-center gap-2">
@@ -588,14 +595,14 @@ const CreateListingPage: React.FC = () => {
           <GlassPanel variant="primary" className="mb-8">
             <div className="p-8">
               <StepIndicator />
-              
+
               {/* Step Content */}
               {currentStep === 'basic' && (
                 <div className="space-y-6">
                   <h2 className="text-xl font-semibold text-white mb-6">
                     {STEP_TITLES.basic}
                   </h2>
-                  
+
                   {/* Title */}
                   <div>
                     <label className="block text-sm font-medium text-white/90 mb-2">
@@ -605,9 +612,8 @@ const CreateListingPage: React.FC = () => {
                       type="text"
                       value={formData.title}
                       onChange={(e) => handleFormChange('title', e.target.value)}
-                      className={`block w-full rounded-lg bg-white/10 border ${
-                        fieldErrors.title ? 'border-red-500' : 'border-white/20'
-                      } text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2`}
+                      className={`block w-full rounded-lg bg-white/10 border ${fieldErrors.title ? 'border-red-500' : 'border-white/20'
+                        } text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2`}
                       placeholder="Give your item a clear, descriptive title"
                       maxLength={80}
                     />
@@ -632,9 +638,8 @@ const CreateListingPage: React.FC = () => {
                     <select
                       value={formData.category}
                       onChange={(e) => handleFormChange('category', e.target.value)}
-                      className={`block w-full rounded-lg bg-white/10 border ${
-                        fieldErrors.category ? 'border-red-500' : 'border-white/20'
-                      } text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2 [&>option]:bg-gray-800 [&>option]:text-white`}
+                      className={`block w-full rounded-lg bg-white/10 border ${fieldErrors.category ? 'border-red-500' : 'border-white/20'
+                        } text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2 [&>option]:bg-gray-800 [&>option]:text-white`}
                     >
                       <option value="">Select a category</option>
                       {CATEGORIES.map(cat => (
@@ -657,9 +662,8 @@ const CreateListingPage: React.FC = () => {
                       value={formData.description}
                       onChange={(e) => handleFormChange('description', e.target.value)}
                       rows={6}
-                      className={`block w-full rounded-lg bg-white/10 border ${
-                        fieldErrors.description ? 'border-red-500' : 'border-white/20'
-                      } text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2`}
+                      className={`block w-full rounded-lg bg-white/10 border ${fieldErrors.description ? 'border-red-500' : 'border-white/20'
+                        } text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2`}
                       placeholder="Describe your item in detail. Include key features, condition, and what makes it special...&#10;&#10;For physical items, mention materials, dimensions, weight, and any special care instructions."
                       maxLength={2000}
                     />
@@ -667,11 +671,10 @@ const CreateListingPage: React.FC = () => {
                       <p className="text-xs text-white/60">
                         Be detailed - this helps buyers make informed decisions
                       </p>
-                      <p className={`text-xs ${
-                        formData.description.length < 100 ? 'text-orange-400' :
-                        formData.description.length > 1800 ? 'text-red-400' :
-                        'text-green-400'
-                      }`}>
+                      <p className={`text-xs ${formData.description.length < 100 ? 'text-orange-400' :
+                          formData.description.length > 1800 ? 'text-red-400' :
+                            'text-green-400'
+                        }`}>
                         {formData.description.length}/2000
                       </p>
                     </div>
@@ -683,7 +686,7 @@ const CreateListingPage: React.FC = () => {
                   {/* SEO Metadata */}
                   <div className="bg-white/5 rounded-lg p-4 border border-white/20">
                     <h4 className="text-lg font-medium text-white mb-4">SEO Optimization (Optional)</h4>
-                    
+
                     {/* SEO Title */}
                     <div className="mb-4">
                       <label className="block text-sm font-medium text-white/90 mb-2">
@@ -706,7 +709,7 @@ const CreateListingPage: React.FC = () => {
                         </p>
                       </div>
                     </div>
-                    
+
                     {/* SEO Description */}
                     <div>
                       <label className="block text-sm font-medium text-white/90 mb-2">
@@ -730,7 +733,7 @@ const CreateListingPage: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Tags */}
                   <div>
                     <label className="block text-sm font-medium text-white/90 mb-2">
@@ -763,7 +766,7 @@ const CreateListingPage: React.FC = () => {
                           Add
                         </Button>
                       </div>
-                      
+
                       {/* Popular tags */}
                       <div>
                         <p className="text-xs text-white/60 mb-2">Popular tags:</p>
@@ -781,7 +784,7 @@ const CreateListingPage: React.FC = () => {
                           ))}
                         </div>
                       </div>
-                      
+
                       {/* Current tags */}
                       {formData.tags.length > 0 && (
                         <div className="flex flex-wrap gap-2">
@@ -812,7 +815,7 @@ const CreateListingPage: React.FC = () => {
                   <h2 className="text-xl font-semibold text-white mb-6">
                     {STEP_TITLES.details}
                   </h2>
-                  
+
                   {/* Item Type Selection */}
                   <div>
                     <label className="block text-sm font-medium text-white/90 mb-4">
@@ -854,7 +857,7 @@ const CreateListingPage: React.FC = () => {
                   {formData.itemType === 'PHYSICAL' && (
                     <div className="space-y-4">
                       <h4 className="text-lg font-medium text-white">Product Options</h4>
-                      
+
                       {/* Colors */}
                       <div>
                         <label className="block text-sm font-medium text-white/90 mb-2">
@@ -866,7 +869,7 @@ const CreateListingPage: React.FC = () => {
                           className="block w-full rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2"
                         />
                       </div>
-                      
+
                       {/* Sizes/Dimensions */}
                       <div>
                         <label className="block text-sm font-medium text-white/90 mb-2">
@@ -910,11 +913,10 @@ const CreateListingPage: React.FC = () => {
                           min="1"
                           max={formData.unlimitedQuantity ? undefined : 999999}
                           disabled={formData.unlimitedQuantity}
-                          className={`block w-32 rounded-lg bg-white/10 border ${
-                            fieldErrors.quantity ? 'border-red-500' : 'border-white/20'
-                          } text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2 disabled:opacity-50`}
+                          className={`block w-32 rounded-lg bg-white/10 border ${fieldErrors.quantity ? 'border-red-500' : 'border-white/20'
+                            } text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2 disabled:opacity-50`}
                         />
-                        
+
                         {formData.itemType === 'DIGITAL' && (
                           <label className="flex items-center gap-2 text-white/80">
                             <input
@@ -927,11 +929,11 @@ const CreateListingPage: React.FC = () => {
                           </label>
                         )}
                       </div>
-                      
+
                       {fieldErrors.quantity && (
                         <p className="text-red-400 text-sm">{fieldErrors.quantity}</p>
                       )}
-                      
+
                       {formData.itemType === 'DIGITAL' && !formData.unlimitedQuantity && (
                         <p className="text-xs text-white/60">
                           For digital goods, consider if you're selling limited licenses or unlimited access
@@ -947,7 +949,7 @@ const CreateListingPage: React.FC = () => {
                   <h2 className="text-xl font-semibold text-white mb-6">
                     {STEP_TITLES.pricing}
                   </h2>
-                  
+
                   {/* Listing Type */}
                   <div>
                     <label className="block text-sm font-medium text-white/90 mb-4">
@@ -955,22 +957,20 @@ const CreateListingPage: React.FC = () => {
                     </label>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div
-                        className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                          formData.listingType === 'FIXED_PRICE'
+                        className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${formData.listingType === 'FIXED_PRICE'
                             ? 'border-indigo-400 bg-indigo-500/20'
                             : 'border-white/20 bg-white/5 hover:border-white/40'
-                        }`}
+                          }`}
                         onClick={() => handleFormChange('listingType', 'FIXED_PRICE')}
                       >
                         <h3 className="font-medium text-white mb-1">Fixed Price</h3>
                         <p className="text-sm text-white/70">Set a fixed price for immediate purchase</p>
                       </div>
                       <div
-                        className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                          formData.listingType === 'AUCTION'
+                        className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${formData.listingType === 'AUCTION'
                             ? 'border-indigo-400 bg-indigo-500/20'
                             : 'border-white/20 bg-white/5 hover:border-white/40'
-                        }`}
+                          }`}
                         onClick={() => handleFormChange('listingType', 'AUCTION')}
                       >
                         <h3 className="font-medium text-white mb-1">Auction</h3>
@@ -990,9 +990,8 @@ const CreateListingPage: React.FC = () => {
                         step="0.001"
                         value={formData.price}
                         onChange={(e) => handleFormChange('price', e.target.value)}
-                        className={`block w-full rounded-lg bg-white/10 border ${
-                          fieldErrors.price ? 'border-red-500' : 'border-white/20'
-                        } text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2`}
+                        className={`block w-full rounded-lg bg-white/10 border ${fieldErrors.price ? 'border-red-500' : 'border-white/20'
+                          } text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2`}
                         placeholder="0.01"
                       />
                       {formData.price && <ETHPriceDisplay ethAmount={formData.price} />}
@@ -1058,7 +1057,7 @@ const CreateListingPage: React.FC = () => {
                           Enable Escrow Protection (Recommended)
                         </label>
                         <p className="text-white/70 text-sm mt-1">
-                          Funds are held securely until buyer confirms receipt. 
+                          Funds are held securely until buyer confirms receipt.
                           Provides protection for both buyer and seller.
                         </p>
                       </div>
@@ -1073,14 +1072,13 @@ const CreateListingPage: React.FC = () => {
                   <h2 className="text-xl font-semibold text-white mb-6">
                     {STEP_TITLES.images}
                   </h2>
-                  
+
                   {/* Image Upload Area */}
                   <div
-                    className={`border-2 border-dashed rounded-lg p-8 text-center transition-all ${
-                      dragActive
+                    className={`border-2 border-dashed rounded-lg p-8 text-center transition-all ${dragActive
                         ? 'border-indigo-400 bg-indigo-500/10'
                         : 'border-white/30 bg-white/5 hover:border-white/50'
-                    }`}
+                      }`}
                     onDragEnter={handleDrag}
                     onDragLeave={handleDrag}
                     onDragOver={handleDrag}
@@ -1121,30 +1119,29 @@ const CreateListingPage: React.FC = () => {
                       <h3 className="text-lg font-medium text-white">
                         Images ({images.length}/10)
                       </h3>
-                      
+
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {imagePreviews.map((preview, index) => (
                           <div
                             key={index}
-                            className={`relative group rounded-lg overflow-hidden border-2 transition-all ${
-                              primaryImageIndex === index
+                            className={`relative group rounded-lg overflow-hidden border-2 transition-all ${primaryImageIndex === index
                                 ? 'border-indigo-400'
                                 : 'border-white/20 hover:border-white/40'
-                            }`}
+                              }`}
                           >
                             <img
                               src={preview}
                               alt={`Preview ${index + 1}`}
                               className="w-full h-32 object-cover"
                             />
-                            
+
                             {/* Primary badge */}
                             {primaryImageIndex === index && (
                               <div className="absolute top-2 left-2 bg-indigo-500 text-white text-xs px-2 py-1 rounded">
                                 Primary
                               </div>
                             )}
-                            
+
                             {/* Action buttons */}
                             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                               <button
@@ -1164,7 +1161,7 @@ const CreateListingPage: React.FC = () => {
                                 <X className="h-4 w-4 text-white" />
                               </button>
                             </div>
-                            
+
                             {/* Reorder buttons */}
                             <div className="absolute bottom-2 right-2 flex gap-1">
                               {index > 0 && (
@@ -1191,7 +1188,7 @@ const CreateListingPage: React.FC = () => {
                           </div>
                         ))}
                       </div>
-                      
+
                       <div className="flex items-center gap-2 text-sm text-white/70">
                         <Info className="h-4 w-4" />
                         <span>Click star to set primary image. Use arrows to reorder.</span>
@@ -1206,7 +1203,7 @@ const CreateListingPage: React.FC = () => {
                   <h2 className="text-xl font-semibold text-white mb-6">
                     {STEP_TITLES.review}
                   </h2>
-                  
+
                   {/* Preview Toggle */}
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-lg font-medium text-white">Listing Preview</h3>
@@ -1240,9 +1237,8 @@ const CreateListingPage: React.FC = () => {
                                     key={index}
                                     src={preview}
                                     alt={`Thumbnail ${index + 1}`}
-                                    className={`w-16 h-16 object-cover rounded cursor-pointer border-2 ${
-                                      index === primaryImageIndex ? 'border-indigo-400' : 'border-white/20'
-                                    }`}
+                                    className={`w-16 h-16 object-cover rounded cursor-pointer border-2 ${index === primaryImageIndex ? 'border-indigo-400' : 'border-white/20'
+                                      }`}
                                     onClick={() => setPrimaryImageIndex(index)}
                                   />
                                 ))}
@@ -1250,21 +1246,21 @@ const CreateListingPage: React.FC = () => {
                             )}
                           </div>
                         )}
-                        
+
                         {/* Details */}
                         <div className="space-y-4">
                           <div>
                             <h4 className="text-xl font-semibold text-white">{formData.title}</h4>
                             <p className="text-white/70">{CATEGORIES.find(c => c.value === formData.category)?.label}</p>
                           </div>
-                          
+
                           <div className="text-2xl font-bold text-white">
                             {formData.price} ETH
                             <ETHPriceDisplay ethAmount={formData.price} />
                           </div>
-                          
+
                           <p className="text-white/80">{formData.description}</p>
-                          
+
                           {formData.tags.length > 0 && (
                             <div className="flex flex-wrap gap-2">
                               {formData.tags.map(tag => (
@@ -1277,7 +1273,7 @@ const CreateListingPage: React.FC = () => {
                               ))}
                             </div>
                           )}
-                          
+
                           <div className="space-y-2 text-sm text-white/70">
                             <div>Type: {formData.itemType}</div>
                             <div>Condition: {formData.condition}</div>
@@ -1321,7 +1317,7 @@ const CreateListingPage: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="space-y-4">
                       <h4 className="font-semibold text-white">Pricing & Terms</h4>
                       <div className="space-y-2 text-sm">
@@ -1347,7 +1343,7 @@ const CreateListingPage: React.FC = () => {
                         )}
                         <div className="flex justify-between">
                           <span className="text-white/70">Escrow:</span>
-                          <span className={formData.escrowEnabled ? 'text-green-400' : 'text-white'}>  
+                          <span className={formData.escrowEnabled ? 'text-green-400' : 'text-white'}>
                             {formData.escrowEnabled ? 'Enabled' : 'Disabled'}
                           </span>
                         </div>
@@ -1397,13 +1393,13 @@ const CreateListingPage: React.FC = () => {
                   <ChevronLeft className="h-4 w-4 mr-2" />
                   Previous
                 </Button>
-                
+
                 <div className="text-center">
                   <p className="text-sm text-white/60">
                     Step {currentStepIndex + 1} of {STEP_ORDER.length}
                   </p>
                 </div>
-                
+
                 {currentStep === 'review' ? (
                   <Button
                     type="button"

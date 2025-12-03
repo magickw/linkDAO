@@ -221,7 +221,7 @@ export default function Home() {
   }, [isConnected, address, createPost, addToast, closeModal]);
 
   // If not connected, show enhanced landing page
-  if (!mounted || !isConnected) {
+  if (!isConnected) {
     const scrollToFeatures = () => {
       document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
     };
@@ -972,50 +972,50 @@ export default function Home() {
               className="focus:outline-none"
             >
               <div className="py-6 px-4">
-                  {/* Post Composer - Inline Facebook-style */}
-                  <div className="mb-6">
-                    <Suspense fallback={<FeedSkeleton />}>
-                      <FacebookStylePostComposer
-                        onSubmit={handlePostSubmit}
-                        isLoading={isCreatingPost}
-                        userAvatar={(profile as any)?.avatar}
-                        userName={(profile as any)?.handle || `${address?.slice(0, 6)}...${address?.slice(-4)}`}
-                      />
-                    </Suspense>
-                  </div>
-
-                  {/* New Posts Banner - Real-time Update Indicator */}
-                  {hasNewPosts && (
-                    <div className="sticky top-4 z-30 flex justify-center mb-6 animate-fade-in">
-                      <button
-                        onClick={handleRefreshFeed}
-                        className="group flex items-center gap-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 active:scale-95"
-                        aria-label="Refresh feed to see new posts"
-                      >
-                        <RefreshCw className="w-4 h-4 animate-spin-slow" />
-                        <span className="font-medium">New posts available</span>
-                        <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs font-bold group-hover:bg-white/30 transition-colors">
-                          ↑
-                        </span>
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Enhanced Feed View with Advanced Features */}
+                {/* Post Composer - Inline Facebook-style */}
+                <div className="mb-6">
                   <Suspense fallback={<FeedSkeleton />}>
-                    {navigationState.activeView === 'community' && navigationState.activeCommunity ? (
-                      <CommunityView communitySlug={navigationState.activeCommunity} />
-                    ) : (
-                      <EnhancedHomeFeed
-                        externalRefreshKey={feedRefreshKey}
-                        userProfile={profile}
-                        className=""
-                      />
-                    )}
+                    <FacebookStylePostComposer
+                      onSubmit={handlePostSubmit}
+                      isLoading={isCreatingPost}
+                      userAvatar={(profile as any)?.avatar}
+                      userName={(profile as any)?.handle || `${address?.slice(0, 6)}...${address?.slice(-4)}`}
+                    />
                   </Suspense>
                 </div>
+
+                {/* New Posts Banner - Real-time Update Indicator */}
+                {hasNewPosts && (
+                  <div className="sticky top-4 z-30 flex justify-center mb-6 animate-fade-in">
+                    <button
+                      onClick={handleRefreshFeed}
+                      className="group flex items-center gap-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 active:scale-95"
+                      aria-label="Refresh feed to see new posts"
+                    >
+                      <RefreshCw className="w-4 h-4 animate-spin-slow" />
+                      <span className="font-medium">New posts available</span>
+                      <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs font-bold group-hover:bg-white/30 transition-colors">
+                        ↑
+                      </span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Enhanced Feed View with Advanced Features */}
+                <Suspense fallback={<FeedSkeleton />}>
+                  {navigationState.activeView === 'community' && navigationState.activeCommunity ? (
+                    <CommunityView communitySlug={navigationState.activeCommunity} />
+                  ) : (
+                    <EnhancedHomeFeed
+                      externalRefreshKey={feedRefreshKey}
+                      userProfile={profile}
+                      className=""
+                    />
+                  )}
+                </Suspense>
               </div>
             </div>
+          </div>
 
           {/* Right Sidebar - Activity & Notifications */}
           <div className="hidden lg:block lg:col-span-3">

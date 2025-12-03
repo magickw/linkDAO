@@ -8,6 +8,7 @@ import DeFiChartEmbed from './DeFiChartEmbed';
 import DAOGovernanceEmbed from './DAOGovernanceEmbed';
 import { SmartRightSidebar } from './SmartRightSidebar';
 import enhancedUserService, { SuggestedUser } from '../services/enhancedUserService';
+import CommunityAvatar from './Community/CommunityAvatar';
 
 interface TrendingDAO {
   id: string;
@@ -727,10 +728,10 @@ const DashboardRightSidebar = memo(() => {
           </div>
           <div className="p-4">
             <div className="flex items-center mb-4">
-              <img 
-                src={currentCommunity.avatar} 
-                alt={currentCommunity.displayName}
-                className="w-12 h-12 rounded-lg"
+              <CommunityAvatar
+                avatar={currentCommunity.avatar}
+                name={currentCommunity.displayName}
+                size="lg"
               />
               <div className="ml-3">
                 <h4 className="font-medium text-gray-900 dark:text-white">{currentCommunity.displayName}</h4>
@@ -1014,15 +1015,15 @@ const DashboardRightSidebar = memo(() => {
                 .filter(c => c.id !== currentCommunity.id)
                 .slice(0, 3)
                 .map((community) => (
-                  <Link 
+                  <Link
                     key={community.id}
                     href={`/communities/${community.id}`}
                     className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                   >
-                    <img 
-                      src={community.avatar} 
-                      alt={community.displayName}
-                      className="w-10 h-10 rounded-lg"
+                    <CommunityAvatar
+                      avatar={community.avatar}
+                      name={community.displayName}
+                      size="md"
                     />
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-gray-900 dark:text-white text-sm truncate">
