@@ -444,26 +444,33 @@ export default function CommunityPostCardEnhanced({
           {/* Post Content */}
           <div className="mb-4">
             {/* Post Title */}
-            {post.title && (
+            {post.title && post.title.trim() !== '' ? (
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 leading-tight">
                 {post.title}
               </h3>
+            ) : (
+              // Fallback to first line of content as title if no explicit title
+              post.content && post.content.trim() !== '' && (
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 leading-tight">
+                  {post.content.split('\n')[0].substring(0, 100)}
+                  {post.content.split('\n')[0].length > 100 ? '...' : ''}
+                </h3>
+              )
             )}
-
             <div className="text-gray-900 dark:text-white leading-relaxed">
-              {processContent(getTruncatedContent(post.content, 280, isExpanded), 'text')}
+
+              {processContent(getTruncatedContent(post.content, 10000, isExpanded), 'text')}
             </div>
             
-            {shouldTruncateContent(post.content, 280, isExpanded) && (
+            {shouldTruncateContent(post.content, 10000, isExpanded) && (
               <button
                 onClick={() => setIsExpanded(true)}
                 className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium mt-2 flex items-center space-x-1"
               >
                 <span>Show more</span>
               </button>
-            )}
-            
-            {isExpanded && shouldTruncateContent(post.content, 280, false) && (
+            )}            
+            {isExpanded && shouldTruncateContent(post.content, 10000, false) && (
               <button
                 onClick={() => setIsExpanded(false)}
                 className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium mt-2 flex items-center space-x-1"
@@ -471,7 +478,6 @@ export default function CommunityPostCardEnhanced({
                 <span>Show less</span>
               </button>
             )}
-
             {/* Media */}
             {post.mediaCids && post.mediaCids.length > 0 && (
               <div className="mt-3 grid grid-cols-1 gap-2">

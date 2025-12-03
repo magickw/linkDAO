@@ -100,8 +100,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
           errorSource.includes('background-redux-new.js')) {
           console.debug('🚫 IMMEDIATE: Chrome/extension runtime error blocked');
           event.preventDefault?.();
-          event.stopPropagation?.();
-          event.stopImmediatePropagation?.();
+          // Don't stop propagation to allow navigation
           return false;
         }
       }
@@ -151,9 +150,10 @@ function AppContent({ children }: { children: React.ReactNode }) {
           timestamp: new Date().toISOString()
         });
 
-        // Stop error propagation but allow default browser behavior (navigation, etc.)
-        event.stopImmediatePropagation();
-        return true; // Allow default actions like link clicks
+        // Only suppress the error, don't stop propagation to allow navigation
+        event.preventDefault();
+        // Don't call stopImmediatePropagation() to allow navigation events
+        return false; // Don't prevent default actions like navigation
       }
     };
 
@@ -189,9 +189,10 @@ function AppContent({ children }: { children: React.ReactNode }) {
           timestamp: new Date().toISOString()
         });
 
-        // Stop propagation but allow default browser behavior
-        event.stopImmediatePropagation();
-        return true; // Allow default actions
+        // Only suppress the error, don't stop propagation to allow navigation
+        event.preventDefault();
+        // Don't call stopImmediatePropagation() to allow navigation events
+        return false; // Don't prevent default actions like navigation
       }
     };
 
