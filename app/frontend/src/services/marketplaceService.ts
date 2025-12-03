@@ -6,6 +6,7 @@
 import { ApiCacheManager } from '../utils/apiCacheManager';
 import { fetchWithRetry } from '../utils/apiUtils';
 import { API_BASE_URL } from '../config/api';
+import { SessionManager } from './sessionManager';
 
 // Fallback data for offline/error scenarios
 const MOCK_PRODUCTS: Product[] = [
@@ -785,11 +786,22 @@ export class UnifiedMarketplaceService {
 
   async createListing(input: CreateListingInput): Promise<MarketplaceListing> {
     try {
+      // Get current session to include wallet authentication
+      const sessionManager = SessionManager.getInstance();
+      const session = await sessionManager.getSession();
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      // Add wallet authentication if available
+      if (session?.walletAddress) {
+        headers['X-Wallet-Address'] = session.walletAddress;
+      }
+      
       const response = await fetch(`${this.baseUrl}/api/marketplace/seller/listings`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(input),
         signal: this.createTimeoutSignal(10000)
       });

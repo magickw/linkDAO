@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { CommunityPost, Comment, CreateCommentInput } from '@/models/CommunityPost';
 import { EnhancedPost } from '@/types/feed';
 import { Community } from '@/models/Community';
@@ -182,11 +182,13 @@ export default function CommunityPostCardEnhanced({
     }
   }, [post.id, commentsLoading, addToast]);
 
+  // Load comments when component mounts
+  useEffect(() => {
+    loadComments();
+  }, [loadComments]);
+
   // Toggle comments visibility
   const toggleComments = () => {
-    if (!showComments && comments.length === 0) {
-      loadComments();
-    }
     setShowComments(!showComments);
   };
 

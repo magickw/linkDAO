@@ -25,25 +25,35 @@ export class LDAOTokenService {
   /**
    * Get the LDAO token contract instance
    */
-  private async getContract(): Promise<LDAOToken | null> {
+  private async getContract(requireSigner: boolean = false): Promise<LDAOToken | null> {
     try {
       // Return cached contract if available
       if (this.contract) {
         return this.contract;
       }
 
-      // Get signer for write operations or provider for read operations
-      const signer = await getSigner();
+      // Get provider first (always needed)
       const provider = await getProvider();
+      if (!provider) {
+        throw new Error('No provider available');
+      }
 
-      if (!signer && !provider) {
-        throw new Error('No wallet or provider available');
+      // For read-only operations, provider is sufficient
+      // For write operations, signer is required
+      let signerOrProvider = provider;
+      
+      if (requireSigner) {
+        const signer = await getSigner();
+        if (!signer) {
+          throw new Error('No wallet connected - signer required for this operation');
+        }
+        signerOrProvider = signer;
       }
 
       // Create contract instance
       this.contract = LDAOToken__factory.connect(
         LDAO_TOKEN_ADDRESS,
-        (signer || provider) as any
+        signerOrProvider as any
       );
 
       return this.contract;
@@ -89,7 +99,8 @@ export class LDAOTokenService {
     totalSupply: string;
   } | null> {
     try {
-      const contract = await this.getContract();
+      // Use provider-only for read-only operation
+      const contract = await this.getContract(false);
       if (!contract) {
         throw new Error('Unable to connect to LDAO contract');
       }
@@ -161,7 +172,8 @@ export class LDAOTokenService {
     error?: string;
   }> {
     try {
-      const contract = await this.getContract();
+      // Require signer for write operation
+      const contract = await this.getContract(true);
       if (!contract) {
         throw new Error('Unable to connect to LDAO contract');
       }
@@ -209,7 +221,8 @@ export class LDAOTokenService {
     isActive: boolean;
   }> | null> {
     try {
-      const contract = await this.getContract();
+      // Use provider-only for read-only operation
+      const contract = await this.getContract(false);
       if (!contract) {
         throw new Error('Unable to connect to LDAO contract');
       }
@@ -249,7 +262,8 @@ export class LDAOTokenService {
    */
   async getUserStakedAmount(userAddress: string): Promise<string> {
     try {
-      const contract = await this.getContract();
+      // Use provider-only for read-only operation
+      const contract = await this.getContract(false);
       if (!contract) {
         throw new Error('Unable to connect to LDAO contract');
       }
