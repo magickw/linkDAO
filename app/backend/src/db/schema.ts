@@ -808,7 +808,7 @@ export const sellerTransactions = pgTable("seller_transactions", {
   sellerWalletAddress: varchar("seller_wallet_address", { length: 66 }).notNull(),
   transactionType: varchar("transaction_type", { length: 20 }).notNull(),
   amount: numeric("amount", { precision: 20, scale: 8 }).notNull(),
-  currency: varchar("currency", { length: 10 }).default("ETH"),
+  currency: varchar("currency", { length: 10 }).default("USD"),
   counterpartyAddress: varchar("counterparty_address", { length: 66 }),
   transactionHash: varchar("transaction_hash", { length: 66 }),
   createdAt: timestamp("created_at").defaultNow(),

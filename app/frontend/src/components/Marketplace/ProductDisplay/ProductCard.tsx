@@ -599,7 +599,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 {isAuction ? (
                   <div className="flex flex-col">
                     <span className="text-white font-bold">
-                      {highestBid ? `${highestBid} ETH` : `${product.price.amount} ETH`}
+                      {highestBid ? `${highestBid} ${product.price.currency}` : `${product.price.amount} ${product.price.currency}`}
                     </span>
                     <div className="flex items-center gap-1">
                       <span className="text-sm text-white/70">Ends in:</span>
@@ -884,13 +884,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               <div className="flex justify-between items-center mb-2">
                 <span className="text-white/70 text-sm">Current Bid</span>
                 <span className="text-white font-bold">
-                  {highestBid ? `${highestBid} ETH` : `${product.price.amount} ETH`}
+                  {highestBid ? `${highestBid} ${product.price.currency}` : `${product.price.amount} ${product.price.currency}`}
                 </span>
               </div>
               {reservePrice && (
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-white/70 text-sm">Reserve Price</span>
-                  <span className="text-white">{reservePrice} ETH</span>
+                  <span className="text-white">{reservePrice} {product.price.currency}</span>
                 </div>
               )}
               <div className="flex justify-between items-center">

@@ -28,6 +28,14 @@ const pendingRequests = new Map();
 const failedRequests = new Map();
 const requestCounts = new Map();
 const circuitBreakerStates = new Map();
+const backgroundUpdateTimestamps = new Map();
+
+// Background update throttle configuration (in ms)
+const BACKGROUND_UPDATE_THROTTLE = {
+  comments: 30000,      // 30 seconds for comments
+  feed: 60000,          // 1 minute for feed
+  default: 15000        // 15 seconds for other APIs
+};
 
 // Health check configuration
 const HEALTH_CHECK_INTERVAL = 30000; // 30 seconds
@@ -226,6 +234,18 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(networkFirst(request, DYNAMIC_CACHE));
   }
 });
+
+// Clean up old background update timestamps every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  const maxAge = 300000; // 5 minutes
+
+  for (const [key, timestamp] of backgroundUpdateTimestamps.entries()) {
+    if (now - timestamp > maxAge) {
+      backgroundUpdateTimestamps.delete(key);
+    }
+  }
+}, 300000);
 
 // Cache first strategy - for static assets with enhanced error handling
 async function cacheFirst(request, cacheName) {
@@ -827,8 +847,30 @@ async function getCachedResponseWithTTL(request, cacheName, ttl) {
   }
 }
 
-// Background cache update for critical APIs
+// Background cache update for critical APIs with throttling
 async function updateCacheInBackground(request, cacheName, requestKey) {
+  // Check if this endpoint was recently updated
+  const lastUpdate = backgroundUpdateTimestamps.get(requestKey);
+  const now = Date.now();
+
+  // Determine throttle time based on endpoint type
+  const url = new URL(request.url);
+  let throttleTime = BACKGROUND_UPDATE_THROTTLE.default;
+
+  if (url.pathname.includes('/comments')) {
+    throttleTime = BACKGROUND_UPDATE_THROTTLE.comments;
+  } else if (url.pathname.includes('/feed')) {
+    throttleTime = BACKGROUND_UPDATE_THROTTLE.feed;
+  }
+
+  // Skip if recently updated
+  if (lastUpdate && (now - lastUpdate) < throttleTime) {
+    return; // Silently skip
+  }
+
+  // Update timestamp
+  backgroundUpdateTimestamps.set(requestKey, now);
+
   try {
     const networkResponse = await fetch(request);
 

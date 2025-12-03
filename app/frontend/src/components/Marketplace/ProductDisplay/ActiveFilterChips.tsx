@@ -29,10 +29,10 @@ export const ActiveFilterChips: React.FC<ActiveFilterChipsProps> = ({
     const { min, max } = filters.priceRange;
     if (min !== undefined || max !== undefined) {
       const label = min !== undefined && max !== undefined
-        ? `Price: ${min} - ${max} ETH`
+        ? `Price: $${min} - $${max}`
         : min !== undefined
-        ? `Price: ${min}+ ETH`
-        : `Price: up to ${max} ETH`;
+          ? `Price: $${min}+`
+          : `Price: up to $${max}`;
       activeFilters.push({ key: 'priceRange', label });
     }
   }
