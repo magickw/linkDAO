@@ -9,14 +9,16 @@ import { safeLogger } from '../utils/logger';
 
 const router = Router();
 
-// Note: Authentication and admin role validation are handled by parent adminRoutes
-// These routes are mounted under /api/admin/returns which already has authMiddleware and validateAdminRole
+// Note: Authentication, admin role validation, and audit logging are handled by parent adminRoutes
+// These routes are mounted under /api/admin/returns which already has:
+// - authMiddleware
+// - validateAdminRole
+// - adminRateLimit()
+// - auditAdminAction('admin_operation')
 
-// Apply rate limiting to all routes (100 requests per 15 minutes default)
+// Apply additional rate limiting to all routes (100 requests per 15 minutes default)
+// This is in addition to the parent rate limiting
 router.use(adminRateLimit());
-
-// Apply audit logging to all routes
-router.use(auditAdminAction('return_analytics'));
 
 // ============================================================================
 // REAL-TIME METRICS ENDPOINT
