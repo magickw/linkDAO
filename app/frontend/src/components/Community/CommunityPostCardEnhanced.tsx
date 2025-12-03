@@ -17,6 +17,7 @@ import CommunityGovernance from '../CommunityGovernance';
 import PostInteractionBar from '../PostInteractionBar';
 import OptimizedImage from '../OptimizedImage';
 import { motion } from 'framer-motion';
+import { processContent, shouldTruncateContent, getTruncatedContent } from '@/utils/contentParser';
 
 // Helper function to check if post is a community post
 const isCommunityPost = (post: EnhancedPost): boolean => {
@@ -122,6 +123,8 @@ export default function CommunityPostCardEnhanced({
     );
   }
 
+  const [isExpanded, setIsExpanded] = useState(false);
+  
   // Format timestamp
   const formatTimestamp = (date: Date) => {
     const now = new Date();
@@ -447,9 +450,27 @@ export default function CommunityPostCardEnhanced({
               </h3>
             )}
 
-            <div className="text-gray-900 dark:text-white whitespace-pre-wrap break-words">
-              {post.content}
+            <div className="text-gray-900 dark:text-white leading-relaxed">
+              {processContent(getTruncatedContent(post.content, 280, isExpanded), 'text')}
             </div>
+            
+            {shouldTruncateContent(post.content, 280, isExpanded) && (
+              <button
+                onClick={() => setIsExpanded(true)}
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium mt-2 flex items-center space-x-1"
+              >
+                <span>Show more</span>
+              </button>
+            )}
+            
+            {isExpanded && shouldTruncateContent(post.content, 280, false) && (
+              <button
+                onClick={() => setIsExpanded(false)}
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium mt-2 flex items-center space-x-1"
+              >
+                <span>Show less</span>
+              </button>
+            )}
 
             {/* Media */}
             {post.mediaCids && post.mediaCids.length > 0 && (
