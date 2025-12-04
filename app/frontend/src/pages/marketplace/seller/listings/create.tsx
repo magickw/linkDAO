@@ -506,13 +506,19 @@ const CreateListingPage: React.FC = () => {
     </div>
   );
 
-  const ETHPriceDisplay = ({ ethAmount }: { ethAmount: string }) => {
-    const usdValue = parseFloat(ethAmount || '0') * ethPrice;
-    return (
-      <p className="text-sm text-green-400 mt-1">
-        ≈ ${usdValue.toFixed(2)} USD
-      </p>
-    );
+  const PriceDisplay = ({ amount, currency }: { amount: string; currency: string }) => {
+    // Only show conversion for ETH currency
+    if (currency === 'ETH' && amount) {
+      const usdValue = parseFloat(amount || '0') * ethPrice;
+      return (
+        <p className="text-sm text-green-400 mt-1">
+          ≈ ${usdValue.toFixed(2)} USD
+        </p>
+      );
+    }
+    
+    // For USD or other currencies, don't show conversion
+    return null;
   };
 
   const ItemTypeCard = ({ type, selected, onClick, disabled }: {
@@ -992,7 +998,7 @@ const CreateListingPage: React.FC = () => {
                           } text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2`}
                         placeholder="0.01"
                       />
-                      {formData.price && <ETHPriceDisplay ethAmount={formData.price} />}
+                      {formData.price && <PriceDisplay amount={formData.price} currency={formData.currency} />}
                       {fieldErrors.price && (
                         <p className="text-red-400 text-sm">{fieldErrors.price}</p>
                       )}
@@ -1253,8 +1259,8 @@ const CreateListingPage: React.FC = () => {
                           </div>
 
                           <div className="text-2xl font-bold text-white">
-                            {formData.price} ETH
-                            <ETHPriceDisplay ethAmount={formData.price} />
+                            {formData.price} {formData.currency}
+                            <PriceDisplay amount={formData.price} currency={formData.currency} />
                           </div>
 
                           <p className="text-white/80">{formData.description}</p>
@@ -1321,7 +1327,7 @@ const CreateListingPage: React.FC = () => {
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
                           <span className="text-white/70">Price:</span>
-                          <span className="text-white">{formData.price} ETH</span>
+                          <span className="text-white">{formData.price} {formData.currency}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-white/70">Listing Type:</span>
