@@ -18,6 +18,7 @@ import { ProposalCreator } from '@/components/EnhancedPostComposer/ProposalCreat
 import { ProposalData } from '@/types/enhancedPost';
 import { CharityProposalForm, CharityProposalData } from '@/components/Governance/CharityProposalForm';
 import { CharityProposalCard, CharityProposal } from '@/components/Governance/CharityProposalCard';
+import { EnhancedProposalCard } from '@/components/Governance/EnhancedProposalCard';
 import { ethers } from 'ethers';
 
 
@@ -396,57 +397,47 @@ function GovernanceContent() {
           {(activeTab === 'active' || activeTab === 'ended') && (
             <div className="space-y-4">
               {filteredProposals.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-gray-600 dark:text-gray-400">
-                    {searchTerm ? 'No proposals found matching your search.' : `No ${activeTab} proposals.`}
+                <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 border-dashed">
+                  <div className="mx-auto h-12 w-12 text-gray-400 mb-3">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">No proposals found</h3>
+                  <p className="text-gray-500 dark:text-gray-400 mt-1">
+                    {searchTerm ? 'Try adjusting your search terms.' : `There are no ${activeTab} proposals at the moment.`}
                   </p>
+                  {activeTab === 'active' && (
+                    <button
+                      onClick={() => setActiveTab('create')}
+                      className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium"
+                    >
+                      Create Proposal
+                    </button>
+                  )}
                 </div>
               ) : (
-                filteredProposals.map((proposal) => {
-                  const analysis = proposalAnalyses[proposal.id];
-                  return (
-                    <div key={proposal.id} className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                      <h3 className="text-lg font-semibold mb-2">{proposal.title}</h3>
-                      <p className="text-gray-600 dark:text-gray-300 mb-4">{proposal.description}</p>
+                <div className="grid gap-4">
+                  {filteredProposals.map((proposal) => {
+                    const analysis = proposalAnalyses[proposal.id];
+                    // Mock user vote for demonstration - in real app, fetch from contract/backend
+                    // const userVote = userVotes[proposal.id]; 
 
-                      {analysis && (
-                        <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded">
-                          <h4 className="font-semibold mb-2">AI Analysis</h4>
-                          <p className="text-sm text-gray-700 dark:text-gray-300">{analysis.analysis}</p>
-                          <div className="mt-2">
-                            <span className="text-sm font-medium">Recommendation: </span>
-                            <span className={`text-sm font-bold ${analysis.recommendation === 'APPROVE'
-                              ? 'text-green-600 dark:text-green-400'
-                              : analysis.recommendation === 'REJECT'
-                                ? 'text-red-600 dark:text-red-400'
-                                : 'text-yellow-600 dark:text-yellow-400'
-                              }`}>
-                              {analysis.recommendation.toUpperCase()}
-                            </span>
-                          </div>
-                          <div className="mt-1">
-                            <span className="text-sm font-medium">Confidence: </span>
-                            <span className="text-sm">{analysis.overallScore.toFixed(1)}%</span>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="flex justify-between items-center">
-                        <span className={`px-2 py-1 text-xs font-medium rounded ${proposal.status === 'active'
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                          : proposal.status === 'passed'
-                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                            : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-                          }`}>
-                          {proposal.status}
-                        </span>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          Votes: {proposal.forVotes} For / {proposal.againstVotes} Against
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
+                    return (
+                      <EnhancedProposalCard
+                        key={proposal.id}
+                        proposal={proposal}
+                        analysis={analysis}
+                        // userVote={userVote}
+                        onClick={() => {
+                          // Navigate to proposal details or expand
+                          // router.push(`/governance/proposal/${proposal.id}`);
+                          console.log('Clicked proposal:', proposal.id);
+                        }}
+                      />
+                    );
+                  })}
+                </div>
               )}
             </div>
           )}

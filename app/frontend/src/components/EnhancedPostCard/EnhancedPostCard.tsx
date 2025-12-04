@@ -369,7 +369,7 @@ const EnhancedPostCard = React.memo(({
               if (onExpand) onExpand();
               else setExpanded(!expanded);
             }}
-            className={`${categoryStyle} ${className}`}
+            className={`${categoryStyle} ${className} transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary-500/10 dark:hover:shadow-primary-900/20`}
           >
             {/* Header with improved visual hierarchy */}
             <div className="px-6 py-4 border-b border-gray-200/50 dark:border-gray-700/50">

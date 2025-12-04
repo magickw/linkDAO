@@ -10,6 +10,9 @@ export interface TokenInfo {
   logoUrl?: string;
   priceUSD?: number;
   priceChange24h?: number;
+  volume24h?: number;
+  marketCap?: number;
+  liquidity?: number;
 }
 
 export interface TokenBalance {
@@ -53,19 +56,19 @@ export interface CommunityWithWeb3Data {
   avatar: string;
   memberCount: number;
   isActive: boolean;
-  
+
   // User-specific data
   userRole: 'admin' | 'moderator' | 'member' | 'none';
   userTokenBalance?: number;
   userStakingStatus?: UserStakingStatus;
   governanceNotifications?: number;
-  
+
   // Web3 specific fields
   governanceToken?: GovernanceToken;
   treasuryBalance?: TreasuryBalance;
   stakingRequirements?: StakingRequirement;
   onChainData?: OnChainData;
-  
+
   // Activity indicators
   recentActivity?: ActivitySnapshot;
   trendingTopics?: string[];

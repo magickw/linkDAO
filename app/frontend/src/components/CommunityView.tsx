@@ -30,6 +30,9 @@ import CommunitySettingsModal from './CommunityManagement/CommunitySettingsModal
 import CommunityPostCreator from './Community/CommunityPostCreator';
 import CommunityPostCardEnhanced from './Community/CommunityPostCardEnhanced';
 import CommunityAvatar from './Community/CommunityAvatar';
+import { EnhancedProposalCard } from './Governance/EnhancedProposalCard';
+import { useVotingPower } from '@/hooks/useGovernanceContract';
+import { Proposal } from '@/types/governance';
 
 interface CommunityViewProps {
   communitySlug: string;
@@ -555,34 +558,65 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
           </div>
 
           {/* Live Governance Proposals */}
+          {/* Live Governance Proposals */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3">
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm flex items-center space-x-1 uppercase tracking-wide">
-              <Vote className="w-3 h-3" />
-              <span>Live Governance</span>
-            </h3>
-            <div className="space-y-2">
-              <div className="text-xs">
-                <div className="font-medium text-gray-900 dark:text-white mb-1">Proposal #42: Treasury Allocation</div>
-                <div className="flex justify-between text-gray-600 dark:text-gray-400 mb-1">
-                  <span>For: 78%</span>
-                  <span>Against: 22%</span>
-                </div>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                  <div className="bg-green-500 h-1.5 rounded-full" style={{ width: '78%' }}></div>
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Ends in 3d 12h</div>
-              </div>
-              <div className="text-xs border-t border-gray-200 dark:border-gray-700 pt-2">
-                <div className="font-medium text-gray-900 dark:text-white mb-1">Proposal #43: Protocol Upgrade</div>
-                <div className="flex justify-between text-gray-600 dark:text-gray-400 mb-1">
-                  <span>For: 65%</span>
-                  <span>Against: 35%</span>
-                </div>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                  <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: '65%' }}></div>
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Ends in 5d 8h</div>
-              </div>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-semibold text-gray-900 dark:text-white text-sm flex items-center space-x-1 uppercase tracking-wide">
+                <Vote className="w-3 h-3" />
+                <span>Live Governance</span>
+              </h3>
+              {isConnected && (
+                <span className="text-xs font-medium text-primary-600 dark:text-primary-400">
+                  Power: {1250}
+                </span>
+              )}
+            </div>
+            <div className="space-y-3">
+              {/* Mock Proposal 1 */}
+              <EnhancedProposalCard
+                proposal={{
+                  id: '42',
+                  title: 'Treasury Allocation',
+                  description: 'Allocate 50k LDAO for community grants',
+                  type: 'treasury',
+                  proposer: '0x123...',
+                  status: 'active',
+                  forVotes: '78000',
+                  againstVotes: '22000',
+                  abstainVotes: '0',
+                  quorum: '100000',
+                  participationRate: 15,
+                  startTime: new Date(),
+                  endTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days left
+                }}
+                userVote="For"
+                onClick={() => console.log('Clicked proposal 42')}
+              />
+
+              {/* Mock Proposal 2 */}
+              <EnhancedProposalCard
+                proposal={{
+                  id: '43',
+                  title: 'Protocol Upgrade v2.1',
+                  description: 'Implement new staking mechanics',
+                  type: 'upgrade',
+                  proposer: '0x456...',
+                  status: 'active',
+                  forVotes: '65000',
+                  againstVotes: '35000',
+                  abstainVotes: '5000',
+                  quorum: '100000',
+                  participationRate: 12,
+                  startTime: new Date(),
+                  endTime: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5 days left
+                }}
+                onClick={() => console.log('Clicked proposal 43')}
+              />
+            </div>
+            <div className="mt-3 text-center">
+              <Link href="/governance" className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
+                View all proposals
+              </Link>
             </div>
           </div>
 

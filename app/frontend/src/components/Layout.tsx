@@ -229,10 +229,10 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
         twitterSite="@linkdao"
         ogSiteName="LinkDAO"
       />
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-100/20 via-gray-50 to-gray-100 dark:from-indigo-900/20 dark:via-gray-900 dark:to-gray-800">
 
 
-        <header className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 sticky top-0 z-40">
+        <header className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-sm dark:shadow-gray-900/50 sticky top-0 z-40 border-b border-gray-200/50 dark:border-gray-700/50">
           <div className="max-w-screen-2xl mx-auto px-0 py-4 sm:px-2 lg:px-4 flex items-center gap-4">
             <Link href="/" className="flex items-center gap-2 text-2xl font-bold text-primary-600 dark:text-primary-400 whitespace-nowrap">
               <img src="/logo.png" alt="LinkDAO Logo" className="h-10 w-10" />
@@ -432,7 +432,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
           )}
         </header>
 
-        <main className={fullWidth ? (isMobile ? "w-full px-0" : "w-full") : "max-w-screen-2xl mx-auto px-1 sm:px-2 lg:px-3 py-6"}>
+        <main className={fullWidth ? (isMobile ? "w-full px-0" : "w-full") : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"}>
           {children}
         </main>
 
