@@ -48,7 +48,7 @@ interface CommunityPostCardEnhancedProps {
   isLoading?: boolean;
 }
 
-export default function CommunityPostCardEnhanced({
+function CommunityPostCardEnhanced({
   post,
   community,
   userMembership,

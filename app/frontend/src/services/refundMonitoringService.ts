@@ -1,4 +1,43 @@
-import { apiClient } from '../config/api';
+import { API_BASE_URL } from '../config/api';
+
+// Simple API client mimicking axios interface
+const apiClient = {
+  async get(url: string, options?: { params?: Record<string, any>; responseType?: string }) {
+    const fullUrl = new URL(url, API_BASE_URL);
+    if (options?.params) {
+      Object.entries(options.params).forEach(([key, value]) => {
+        fullUrl.searchParams.append(key, String(value));
+      });
+    }
+    const response = await fetch(fullUrl.toString(), {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    if (options?.responseType === 'blob') {
+      return { data: await response.blob() };
+    }
+    return { data: await response.json() };
+  },
+  async post(url: string, body?: any) {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return { data: await response.json() };
+  },
+  async patch(url: string, body?: any) {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return { data: await response.json() };
+  },
+};
 
 /**
  * Refund Transaction Tracker Interface

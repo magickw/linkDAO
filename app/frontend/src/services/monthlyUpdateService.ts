@@ -1,4 +1,6 @@
-import { API_URL } from '../config';
+import { API_BASE_URL } from '../config/api';
+
+const API_URL = API_BASE_URL;
 
 export interface MonthlyUpdateHighlight {
     title: string;

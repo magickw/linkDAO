@@ -325,8 +325,7 @@ export const RefundAnalyticsInterface: React.FC = () => {
     }
 
     // Convert to CSV string
-    const csvString = csvContent.map(row => row.join(',')).join('
-');
+    const csvString = csvContent.map(row => row.join(',')).join('\n');
 
     // Download CSV file
     const blob = new Blob([csvString], { type: 'text/csv' });
@@ -493,20 +492,14 @@ Pending Refunds: ${data.transactionTracker.pendingRefunds}
 
 PROVIDER STATUS
 ----------------
-${data.providerStatus && data.providerStatus.length > 0 ? 
-  data.providerStatus.map((provider: any) => 
-    `${provider.provider.toUpperCase()}:
-` +
-    `  Status: ${provider.status}
-` +
-    `  Success Rate: ${provider.successRate}%
-` +
-    `  Error Rate: ${provider.errorRate}%
-` +
-    `  Avg Processing Time: ${formatDuration(provider.averageProcessingTime)}
-`
-  ).join('
-') : 'No provider data available'
+${data.providerStatus && data.providerStatus.length > 0 ?
+  data.providerStatus.map((provider: any) =>
+    `${provider.provider.toUpperCase()}:\n` +
+    `  Status: ${provider.status}\n` +
+    `  Success Rate: ${provider.successRate}%\n` +
+    `  Error Rate: ${provider.errorRate}%\n` +
+    `  Avg Processing Time: ${formatDuration(provider.averageProcessingTime)}`
+  ).join('\n\n') : 'No provider data available'
 }
 
 RECONCILIATION METRICS
@@ -528,16 +521,14 @@ Permanent Failures: ${data.failureAnalysis.permanentFailures}
 Retryable Failures: ${data.failureAnalysis.retryableFailures}
 
 Failures by Provider:
-${Object.entries(data.failureAnalysis.failuresByProvider).map(([provider, count]) => 
+${Object.entries(data.failureAnalysis.failuresByProvider).map(([provider, count]) =>
   `  ${provider}: ${count}`
-).join('
-')}
+).join('\n')}
 
 Failures by Reason:
-${Object.entries(data.failureAnalysis.failuresByReason).map(([reason, count]) => 
+${Object.entries(data.failureAnalysis.failuresByReason).map(([reason, count]) =>
   `  ${reason}: ${count}`
-).join('
-')}
+).join('\n')}
 ` : 'No failure analysis data available'}
     `.trim();
 

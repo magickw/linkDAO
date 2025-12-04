@@ -119,7 +119,6 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing, onAction }) => {
         onClose={() => setShowPurchaseInterface(false)}
         onPurchaseComplete={handlePurchaseComplete}
       />
-      </div>
     </div>
   );
 };

@@ -599,10 +599,11 @@ export const RiskReporting: React.FC = () => {
                           onChange={(e) => setGenerateConfig(prev => ({ ...prev, includeRecommendations: e.target.checked }))}
                           className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                         />
-                        <label htmlFor="includeRecommendations" className="text-sm font-medium text-gray-700">
+                        <span className="text-sm font-medium text-gray-700">
                           Include recommendations
-                        </label>
-                      </div>
+                        </span>
+                      </label>
+                    </div>
                   </div>
 
                   <div className="flex justify-end space-x-3">
