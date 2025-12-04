@@ -242,10 +242,10 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
   }
 
   return (
-    <div className={`grid grid-cols-12 gap-6 max-w-screen-2xl mx-auto ${className}`}>
-      {/* Left Sidebar - Navigation */}
-      <div className={`col-span-12 ${isMobile ? 'order-3' : 'lg:col-span-3'}`}>
-        <div className="sticky top-6 space-y-4">
+    <div className={`grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-6 max-w-screen-2xl mx-auto px-0 sm:px-2 lg:px-4 ${className}`}>
+      {/* Left Sidebar - Navigation - Hidden on mobile */}
+      <div className="hidden lg:block lg:col-span-3">
+        <div className="sticky top-24 space-y-4">
           {/* Community Navigation */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
             <h3 className="font-semibold text-gray-900 dark:text-white mb-3 text-sm">
@@ -287,7 +287,7 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
       </div>
 
       {/* Center Column - Community Feed */}
-      <div className={`col-span-12 ${isMobile ? '' : 'lg:col-span-6'}`}>
+      <div className="col-span-1 lg:col-span-6">
         {/* Reddit-style Community Header */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-4 overflow-hidden">
           <div

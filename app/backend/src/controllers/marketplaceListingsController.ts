@@ -34,78 +34,73 @@ export class MarketplaceListingsController {
         search
       } = req.query;
 
-      // Use the BlockchainMarketplaceService to get listings
-      const allListings = await this.marketplaceService.getActiveListings();
+      // Build filters for the database query
+      const filters: MarketplaceListingFilters = {
+        limit: limit ? parseInt(limit as string) : 20,
+        offset: offset ? parseInt(offset as string) : 0,
+        sortBy: ['createdAt', 'price', 'title'].includes(sortBy as string)
+          ? (sortBy as 'createdAt' | 'price' | 'title')
+          : 'createdAt',
+        sortOrder: (sortOrder as 'asc' | 'desc') || 'desc',
+        isActive: isActive !== 'false' // Default to true unless explicitly set to false
+      };
 
-      // Apply filters
-      let filteredListings = allListings;
-      
       if (category) {
-        filteredListings = filteredListings.filter(listing => 
-          listing.itemType.toLowerCase() === (category as string).toLowerCase()
-        );
-      }
-      
-      if (priceMin) {
-        filteredListings = filteredListings.filter(listing => 
-          Number(listing.price) >= Number(priceMin)
-        );
-      }
-      
-      if (priceMax) {
-        filteredListings = filteredListings.filter(listing => 
-          Number(listing.price) <= Number(priceMax)
-        );
-      }
-      
-      if (sellerAddress) {
-        filteredListings = filteredListings.filter(listing => 
-          listing.sellerWalletAddress === sellerAddress
-        );
+        filters.category = category as string;
       }
 
-      // Apply pagination
-      const limitNum = limit ? parseInt(limit as string) : 20;
-      const offsetNum = offset ? parseInt(offset as string) : 0;
-      
-      const paginatedListings = filteredListings.slice(offsetNum, offsetNum + limitNum);
-      
-      // Map listings to the expected response format
-      const mappedListings = paginatedListings.map(listing => ({
+      if (sellerAddress) {
+        filters.sellerAddress = sellerAddress as string;
+      }
+
+      if (priceMin || priceMax) {
+        filters.priceRange = {
+          min: priceMin ? (priceMin as string) : '0',
+          max: priceMax ? (priceMax as string) : '999999999'
+        };
+      }
+
+      // Use the database service to get listings from products table
+      let result;
+      if (search) {
+        result = await this.listingsService.searchListings(search as string, filters);
+      } else {
+        result = await this.listingsService.getListings(filters);
+      }
+
+      // Map listings to the expected response format with enriched data
+      const mappedListings = result.listings.map(listing => ({
         id: listing.id,
-        sellerId: listing.sellerWalletAddress,
-        title: `Listing ${listing.id}`,
-        description: `Description for listing ${listing.id}`,
+        sellerId: listing.sellerAddress,
+        title: listing.title,
+        description: listing.description || '',
         price: Number(listing.price),
-        currency: 'USD',
-        category: {
-          id: listing.itemType.toLowerCase(),
-          name: listing.itemType,
-          slug: listing.itemType.toLowerCase()
-        },
-        images: [],
-        inventory: listing.quantity,
-        status: listing.status.toLowerCase(),
-        tags: [listing.itemType],
+        currency: listing.currency || 'USD',
+        category: listing.category ? {
+          id: listing.category,
+          name: listing.category,
+          slug: listing.category.toLowerCase()
+        } : null,
+        images: listing.images || [],
+        inventory: 1,
+        status: listing.isActive ? 'active' : 'inactive',
+        tags: [],
         shipping: {
           weight: 0.5,
           freeShipping: true
         },
-        nft: listing.nftStandard ? {
-          standard: listing.nftStandard,
-          tokenId: listing.tokenId
-        } : null,
+        nft: null,
         views: 0,
         favorites: 0,
-        listingStatus: listing.status.toLowerCase(),
+        listingStatus: listing.isActive ? 'active' : 'inactive',
         publishedAt: listing.createdAt,
         createdAt: listing.createdAt,
         updatedAt: listing.updatedAt,
         seller: {
-          id: listing.sellerWalletAddress,
-          walletAddress: listing.sellerWalletAddress,
-          displayName: `Seller ${listing.sellerWalletAddress.substring(0, 6)}`,
-          storeName: `Store ${listing.sellerWalletAddress.substring(0, 6)}`,
+          id: listing.sellerAddress,
+          walletAddress: listing.sellerAddress,
+          displayName: listing.sellerAddress ? `Seller ${listing.sellerAddress.substring(0, 6)}...` : 'Unknown',
+          storeName: listing.sellerAddress ? `Store ${listing.sellerAddress.substring(0, 6)}` : 'Unknown Store',
           rating: 4.5,
           reputation: 85,
           verified: true,
@@ -115,7 +110,7 @@ export class MarketplaceListingsController {
         },
         trust: {
           verified: true,
-          escrowProtected: listing.isEscrowed,
+          escrowProtected: true,
           onChainCertified: false,
           safetyScore: 85
         },
@@ -126,16 +121,16 @@ export class MarketplaceListingsController {
         specifications: {}
       }));
 
-      const result = {
+      const response = {
         listings: mappedListings,
-        total: filteredListings.length,
-        limit: limitNum,
-        offset: offsetNum,
-        hasNext: offsetNum + limitNum < filteredListings.length,
-        hasPrevious: offsetNum > 0
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        hasNext: result.hasNext,
+        hasPrevious: result.hasPrevious
       };
 
-      res.json(createSuccessResponse(result));
+      res.json(createSuccessResponse(response));
     } catch (error) {
       safeLogger.error('Error in getListings:', error);
       res.status(500).json(createErrorResponse(
@@ -162,20 +157,10 @@ export class MarketplaceListingsController {
         return;
       }
 
-      const listing = await this.marketplaceService.getListingById(id);
+      // Use the database service to get the listing
+      const listing = await this.listingsService.getListingById(id);
 
       if (!listing) {
-        // Known test listing IDs that don't exist - suppress logging for these
-        const testListingIds = [
-          '550e8400-e29b-41d4-a716-446655440001',
-          '550e8400-e29b-41d4-a716-446655440002'
-        ];
-
-        // Only log 404s for non-test listings
-        if (!testListingIds.includes(id)) {
-          safeLogger.warn(`Listing not found: ${id}`);
-        }
-
         res.status(404).json(createErrorResponse(
           'LISTING_NOT_FOUND',
           'Marketplace listing not found'
@@ -183,42 +168,39 @@ export class MarketplaceListingsController {
         return;
       }
 
-      // Map the marketplace service listing to the expected response format
+      // Map the listing to the expected response format
       const responseListing = {
         id: listing.id,
-        sellerId: listing.sellerWalletAddress,
-        title: `Listing ${listing.id}`,
-        description: `Description for listing ${listing.id}`,
+        sellerId: listing.sellerAddress,
+        title: listing.title,
+        description: listing.description || '',
         price: Number(listing.price),
-        currency: 'USD',
-        category: {
-          id: listing.itemType.toLowerCase(),
-          name: listing.itemType,
-          slug: listing.itemType.toLowerCase()
-        },
-        images: [],
-        inventory: listing.quantity,
-        status: listing.status.toLowerCase(),
-        tags: [listing.itemType],
+        currency: listing.currency || 'USD',
+        category: listing.category ? {
+          id: listing.category,
+          name: listing.category,
+          slug: listing.category.toLowerCase()
+        } : null,
+        images: listing.images || [],
+        inventory: 1,
+        status: listing.isActive ? 'active' : 'inactive',
+        tags: [],
         shipping: {
           weight: 0.5,
           freeShipping: true
         },
-        nft: listing.nftStandard ? {
-          standard: listing.nftStandard,
-          tokenId: listing.tokenId
-        } : null,
+        nft: null,
         views: 0,
         favorites: 0,
-        listingStatus: listing.status.toLowerCase(),
+        listingStatus: listing.isActive ? 'active' : 'inactive',
         publishedAt: listing.createdAt,
         createdAt: listing.createdAt,
         updatedAt: listing.updatedAt,
         seller: {
-          id: listing.sellerWalletAddress,
-          walletAddress: listing.sellerWalletAddress,
-          displayName: `Seller ${listing.sellerWalletAddress.substring(0, 6)}`,
-          storeName: `Store ${listing.sellerWalletAddress.substring(0, 6)}`,
+          id: listing.sellerAddress,
+          walletAddress: listing.sellerAddress,
+          displayName: listing.sellerAddress ? `Seller ${listing.sellerAddress.substring(0, 6)}...` : 'Unknown',
+          storeName: listing.sellerAddress ? `Store ${listing.sellerAddress.substring(0, 6)}` : 'Unknown Store',
           rating: 4.5,
           reputation: 85,
           verified: true,
@@ -228,7 +210,7 @@ export class MarketplaceListingsController {
         },
         trust: {
           verified: true,
-          escrowProtected: listing.isEscrowed,
+          escrowProtected: true,
           onChainCertified: false,
           safetyScore: 85
         },

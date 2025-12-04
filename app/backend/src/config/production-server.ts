@@ -135,7 +135,9 @@ class ProductionServerManager {
       const { default: sellerVerificationRoutes } = await import('../routes/sellerVerificationRoutes');
       const { sellerImageRoutes } = await import('../routes/sellerImageRoutes');
       const { default: listingRoutes } = await import('../routes/marketplaceListingsRoutes');
-      const { default: authRoutes } = await import('../routes/authRoutes'); // Changed from authenticationRoutes to authRoutes
+      // Import documentation routes
+      const { default: docsRoutes } = await import('../routes/docsRoutes');
+      const { default: authRoutes } = await import('../routes/authRoutes');
       const { default: reputationRoutes } = await import('../routes/reputationRoutes');
       const { default: healthRoutes } = await import('../routes/healthRoutes');
       
@@ -216,6 +218,8 @@ class ProductionServerManager {
       this.app.use('/api/newsletter', newsletterRoutes);
       // Mount enhanced fiat payment routes
       this.app.use('/api/enhanced-fiat-payment', enhancedFiatPaymentRoutes);
+      // Mount documentation routes
+      this.app.use('/api/docs', docsRoutes);
 
       safeLogger.info('✅ Application routes configured');
 
