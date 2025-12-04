@@ -1,20 +1,7 @@
-/**
- * DAO Leaderboard Component
- * Displays rankings for top voters, posters, engaged wallets, and stakers
- */
-
 import React, { useState, useEffect } from 'react';
 import { Trophy, Vote, MessageSquare, Activity, Coins, Medal, Crown } from 'lucide-react';
 import OnChainIdentityBadge from './OnChainIdentityBadge';
-
-interface LeaderboardEntry {
-    rank: number;
-    address: string;
-    ensName?: string;
-    value: number;
-    change?: number;
-    isCurrentUser?: boolean;
-}
+import { leaderboardService, type LeaderboardEntry } from '@/services/leaderboardService';
 
 type LeaderboardType = 'voters' | 'posters' | 'engaged' | 'stakers';
 
@@ -39,56 +26,57 @@ export const DAOLeaderboard: React.FC<DAOLeaderboardProps> = ({
         stakers: []
     });
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        // Mock data for demonstration - replace with actual API call
-        const mockData: Record<LeaderboardType, LeaderboardEntry[]> = {
-            voters: [
-                { rank: 1, address: '0x1234...5678', ensName: 'alice.eth', value: 1250, change: 5 },
-                { rank: 2, address: '0x2345...6789', ensName: 'bob.eth', value: 980, change: -2 },
-                { rank: 3, address: '0x3456...7890', value: 875, change: 12 },
-                { rank: 4, address: '0x4567...8901', ensName: 'charlie.eth', value: 720, change: 3 },
-                { rank: 5, address: '0x5678...9012', value: 650, change: -5 }
-            ],
-            posters: [
-                { rank: 1, address: '0x6789...0123', ensName: 'creator.eth', value: 342, change: 8 },
-                { rank: 2, address: '0x7890...1234', value: 298, change: 15 },
-                { rank: 3, address: '0x8901...2345', ensName: 'writer.eth', value: 256, change: -3 },
-                { rank: 4, address: '0x9012...3456', value: 189, change: 7 },
-                { rank: 5, address: '0x0123...4567', value: 145, change: 2 }
-            ],
-            engaged: [
-                { rank: 1, address: '0x1111...2222', ensName: 'active.eth', value: 9850, change: 25 },
-                { rank: 2, address: '0x2222...3333', value: 8920, change: 18 },
-                { rank: 3, address: '0x3333...4444', ensName: 'engaged.eth', value: 7650, change: -5 },
-                { rank: 4, address: '0x4444...5555', value: 6890, change: 12 },
-                { rank: 5, address: '0x5555...6666', value: 5940, change: 8 }
-            ],
-            stakers: [
-                { rank: 1, address: '0xaaaa...bbbb', ensName: 'whale.eth', value: 500000, change: 10 },
-                { rank: 2, address: '0xbbbb...cccc', value: 350000, change: 5 },
-                { rank: 3, address: '0xcccc...dddd', ensName: 'hodler.eth', value: 280000, change: -2 },
-                { rank: 4, address: '0xdddd...eeee', value: 195000, change: 15 },
-                { rank: 5, address: '0xeeee...ffff', value: 142000, change: 7 }
-            ]
+        const fetchLeaderboardData = async () => {
+            setLoading(true);
+            setError(null);
+
+            try {
+                // Fetch all leaderboard data in parallel
+                const [votersRes, postersRes, engagedRes, stakersRes] = await Promise.all([
+                    leaderboardService.getTopVoters({
+                        communityId,
+                        limit: maxEntries,
+                        timeRange: '7d',
+                        userAddress: currentUserAddress
+                    }),
+                    leaderboardService.getTopPosters({
+                        communityId,
+                        limit: maxEntries,
+                        timeRange: '7d',
+                        userAddress: currentUserAddress
+                    }),
+                    leaderboardService.getMostEngaged({
+                        communityId,
+                        limit: maxEntries,
+                        timeRange: '7d',
+                        userAddress: currentUserAddress
+                    }),
+                    leaderboardService.getTopStakers({
+                        communityId,
+                        limit: maxEntries,
+                        userAddress: currentUserAddress
+                    })
+                ]);
+
+                setLeaderboardData({
+                    voters: votersRes.success ? votersRes.data : [],
+                    posters: postersRes.success ? postersRes.data : [],
+                    engaged: engagedRes.success ? engagedRes.data : [],
+                    stakers: stakersRes.success ? stakersRes.data : []
+                });
+            } catch (err) {
+                console.error('Error fetching leaderboard data:', err);
+                setError('Failed to load leaderboard data');
+            } finally {
+                setLoading(false);
+            }
         };
 
-        // Mark current user if present
-        if (currentUserAddress) {
-            Object.keys(mockData).forEach((key) => {
-                const type = key as LeaderboardType;
-                mockData[type] = mockData[type].map(entry => ({
-                    ...entry,
-                    isCurrentUser: entry.address.toLowerCase() === currentUserAddress.toLowerCase()
-                }));
-            });
-        }
-
-        setTimeout(() => {
-            setLeaderboardData(mockData);
-            setLoading(false);
-        }, 500);
-    }, [communityId, currentUserAddress]);
+        fetchLeaderboardData();
+    }, [communityId, currentUserAddress, maxEntries]);
 
     const tabs: Array<{ id: LeaderboardType; label: string; icon: React.ReactNode }> = [
         { id: 'voters', label: 'Top Voters', icon: <Vote className="w-4 h-4" /> },
@@ -140,6 +128,22 @@ export const DAOLeaderboard: React.FC<DAOLeaderboardProps> = ({
         );
     }
 
+    if (error) {
+        return (
+            <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 ${className}`}>
+                <div className="text-center py-8">
+                    <p className="text-red-600 dark:text-red-400 mb-2">{error}</p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                        Retry
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     const currentData = leaderboardData[activeTab];
 
     return (
@@ -160,8 +164,8 @@ export const DAOLeaderboard: React.FC<DAOLeaderboardProps> = ({
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all ${activeTab === tab.id
-                                    ? 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm'
-                                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                                ? 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm'
+                                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                                 }`}
                         >
                             {tab.icon}
@@ -177,8 +181,8 @@ export const DAOLeaderboard: React.FC<DAOLeaderboardProps> = ({
                     <div
                         key={entry.rank}
                         className={`p-4 transition-colors ${entry.isCurrentUser
-                                ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500'
-                                : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                            ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500'
+                            : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
                             }`}
                     >
                         <div className="flex items-center gap-3">
@@ -216,10 +220,10 @@ export const DAOLeaderboard: React.FC<DAOLeaderboardProps> = ({
                                 </div>
                                 {entry.change !== undefined && (
                                     <div className={`text-xs font-medium ${entry.change > 0
-                                            ? 'text-green-600 dark:text-green-400'
-                                            : entry.change < 0
-                                                ? 'text-red-600 dark:text-red-400'
-                                                : 'text-gray-500'
+                                        ? 'text-green-600 dark:text-green-400'
+                                        : entry.change < 0
+                                            ? 'text-red-600 dark:text-red-400'
+                                            : 'text-gray-500'
                                         }`}>
                                         {entry.change > 0 ? '+' : ''}{entry.change}%
                                     </div>

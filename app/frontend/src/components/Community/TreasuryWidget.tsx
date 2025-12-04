@@ -1,33 +1,6 @@
-/**
- * Treasury Widget Component
- * Displays treasury balance, recent transactions, spending categories, and governance-controlled assets
- */
-
 import React, { useState, useEffect } from 'react';
 import { Wallet, TrendingDown, PieChart, ExternalLink, DollarSign, Activity } from 'lucide-react';
-
-interface Transaction {
-    id: string;
-    type: 'income' | 'expense';
-    amount: number;
-    description: string;
-    timestamp: Date;
-    txHash: string;
-}
-
-interface SpendingCategory {
-    name: string;
-    amount: number;
-    percentage: number;
-    color: string;
-}
-
-interface Asset {
-    symbol: string;
-    name: string;
-    balance: number;
-    valueUSD: number;
-}
+import { treasuryService, type TreasuryTransaction, type SpendingCategory, type TreasuryAsset } from '@/services/treasuryService';
 
 interface TreasuryWidgetProps {
     treasuryAddress?: string;
@@ -43,60 +16,46 @@ export const TreasuryWidget: React.FC<TreasuryWidgetProps> = ({
     const [treasuryData, setTreasuryData] = useState({
         balanceUSD: 0,
         balanceETH: 0,
-        recentTransactions: [] as Transaction[],
+        recentTransactions: [] as TreasuryTransaction[],
         spendingCategories: [] as SpendingCategory[],
-        assets: [] as Asset[]
+        assets: [] as TreasuryAsset[]
     });
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        // Mock data for demonstration - replace with actual API call
-        const mockData = {
-            balanceUSD: 1234567.89,
-            balanceETH: 456.78,
-            recentTransactions: [
-                {
-                    id: '1',
-                    type: 'expense' as const,
-                    amount: 5000,
-                    description: 'Development Grant',
-                    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-                    txHash: '0xabcd...1234'
-                },
-                {
-                    id: '2',
-                    type: 'income' as const,
-                    amount: 15000,
-                    description: 'Protocol Revenue',
-                    timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000),
-                    txHash: '0xefgh...5678'
-                },
-                {
-                    id: '3',
-                    type: 'expense' as const,
-                    amount: 3500,
-                    description: 'Marketing Campaign',
-                    timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000),
-                    txHash: '0xijkl...9012'
+        const fetchTreasuryData = async () => {
+            setLoading(true);
+            setError(null);
+
+            try {
+                // Fetch all treasury data in parallel
+                const [balanceRes, transactionsRes, categoriesRes] = await Promise.all([
+                    treasuryService.getBalance(treasuryAddress),
+                    treasuryService.getTransactions({ treasuryAddress, limit: 5 }),
+                    treasuryService.getSpendingCategories(treasuryAddress)
+                ]);
+
+                if (balanceRes.success && balanceRes.data) {
+                    setTreasuryData({
+                        balanceUSD: balanceRes.data.totalValueUSD,
+                        balanceETH: balanceRes.data.balanceETH,
+                        recentTransactions: transactionsRes.success ? transactionsRes.data : [],
+                        spendingCategories: categoriesRes.success ? categoriesRes.data : [],
+                        assets: balanceRes.data.assets
+                    });
+                } else {
+                    setError('Failed to load treasury data');
                 }
-            ],
-            spendingCategories: [
-                { name: 'Development', amount: 45000, percentage: 45, color: '#3b82f6' },
-                { name: 'Marketing', amount: 25000, percentage: 25, color: '#8b5cf6' },
-                { name: 'Operations', amount: 20000, percentage: 20, color: '#10b981' },
-                { name: 'Community', amount: 10000, percentage: 10, color: '#f59e0b' }
-            ],
-            assets: [
-                { symbol: 'ETH', name: 'Ethereum', balance: 456.78, valueUSD: 912345.67 },
-                { symbol: 'USDC', name: 'USD Coin', balance: 250000, valueUSD: 250000 },
-                { symbol: 'LDAO', name: 'LinkDAO Token', balance: 1000000, valueUSD: 72222.22 }
-            ]
+            } catch (err) {
+                console.error('Error fetching treasury data:', err);
+                setError('Failed to load treasury data');
+            } finally {
+                setLoading(false);
+            }
         };
 
-        setTimeout(() => {
-            setTreasuryData(mockData);
-            setLoading(false);
-        }, 500);
+        fetchTreasuryData();
     }, [treasuryAddress]);
 
     const formatUSD = (amount: number): string => {
@@ -105,7 +64,8 @@ export const TreasuryWidget: React.FC<TreasuryWidgetProps> = ({
         return `$${amount.toFixed(2)}`;
     };
 
-    const formatTimeAgo = (date: Date): string => {
+    const formatTimeAgo = (timestamp: string | Date): string => {
+        const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
         const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
         if (seconds < 60) return `${seconds}s ago`;
         const minutes = Math.floor(seconds / 60);
@@ -123,6 +83,22 @@ export const TreasuryWidget: React.FC<TreasuryWidgetProps> = ({
                     <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-32" />
                     <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded" />
                     <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded" />
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 ${className}`}>
+                <div className="text-center py-8">
+                    <p className="text-red-600 dark:text-red-400 mb-2">{error}</p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                        Retry
+                    </button>
                 </div>
             </div>
         );
@@ -204,8 +180,8 @@ export const TreasuryWidget: React.FC<TreasuryWidgetProps> = ({
                                 </div>
                             </div>
                             <div className={`font-semibold ${tx.type === 'income'
-                                    ? 'text-green-600 dark:text-green-400'
-                                    : 'text-red-600 dark:text-red-400'
+                                ? 'text-green-600 dark:text-green-400'
+                                : 'text-red-600 dark:text-red-400'
                                 }`}>
                                 {tx.type === 'income' ? '+' : '-'}{formatUSD(tx.amount)}
                             </div>

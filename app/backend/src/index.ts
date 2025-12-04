@@ -856,6 +856,10 @@ import customerExperienceRoutes from './routes/customerExperienceRoutes';
 // Import communication manager routes
 import communicationManagerRoutes from './routes/communicationManagerRoutes';
 
+// Import leaderboard and treasury routes
+import leaderboardRoutes from './routes/leaderboardRoutes';
+import treasuryRoutes from './routes/treasuryRoutes';
+
 // Register DEX, staking, and LDAO monitoring routes
 app.use('/api/dex', dexTradingRoutes);
 app.use('/api/staking', stakingRoutes);
@@ -865,6 +869,11 @@ process.stdout.write('✅ DEX, Staking, and LDAO monitoring routes enabled\n');
 
 // Use LDAO benefits routes
 app.use('/api/ldao', ldaoBenefitsRoutes);
+
+// Leaderboard and treasury routes
+app.use('/api/leaderboard', leaderboardRoutes);
+app.use('/api/treasury', treasuryRoutes);
+process.stdout.write('✅ Leaderboard and Treasury routes enabled\n');
 
 // Legacy authentication routes
 // app.use('/api/auth', createDefaultAuthRoutes());
