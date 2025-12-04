@@ -40,6 +40,16 @@ import GovernanceActivityPulse from '@/components/Community/GovernanceActivityPu
 import KeyboardShortcutsModal from '@/components/Community/KeyboardShortcutsModal';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
+// New Enhanced Components
+import EnhancedGovernanceCard from '@/components/Community/EnhancedGovernanceCard';
+import EnhancedTokenPriceWidget from '@/components/Community/EnhancedTokenPriceWidget';
+import OnChainIdentityBadge from '@/components/Community/OnChainIdentityBadge';
+import DAOLeaderboard from '@/components/Community/DAOLeaderboard';
+import TreasuryWidget from '@/components/Community/TreasuryWidget';
+import QuestsWidget from '@/components/Community/QuestsWidget';
+import CommunityHealthMetrics from '@/components/Community/CommunityHealthMetrics';
+import FloatingActionButton from '@/components/Community/FloatingActionButton';
+
 import {
   TrendingUp,
   Clock,
@@ -279,21 +289,21 @@ const CommunitiesPage: React.FC = () => {
             // Check both the initial communitiesData and the user's communities
             const adminRoles: Record<string, string> = {};
             const allCommunitiesToCheck = [...communitiesData, ...allUserCommunities];
-            
+
             // First, mark all created communities as admin (user is always admin of communities they created)
             createdCommunitiesResponse.communities.forEach(community => {
               if (community && community.id) {
                 adminRoles[community.id] = 'admin';
               }
             });
-            
+
             // Then check other communities for admin/moderator status
             allCommunitiesToCheck.forEach(community => {
               if (!community || !community.id) return;
-              
+
               // Skip if already marked as admin
               if (adminRoles[community.id]) return;
-              
+
               // Check if user is an admin/moderator of this community (based on moderators field)
               if (community.moderators && Array.isArray(community.moderators) &&
                 address && community.moderators.some(mod => mod.toLowerCase() === address.toLowerCase())) {
@@ -714,7 +724,10 @@ const CommunitiesPage: React.FC = () => {
             <meta name="keywords" content="DAO communities, decentralized communities, Web3, blockchain, governance, LinkDAO" />
           </Head>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-6 w-full px-0 sm:px-2 lg:px-4 mx-auto max-w-screen-2xl pt-0 lg:pt-6">
+          {/* Background gradient for visual polish */}
+          <div className="fixed inset-0 bg-gradient-to-br from-blue-50/30 via-purple-50/20 to-pink-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-gray-900 pointer-events-none" />
+
+          <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-6 w-full px-0 sm:px-2 lg:px-4 mx-auto max-w-screen-2xl pt-0 lg:pt-6">
             {/* Reddit-style Left Sidebar - Hidden on mobile */}
             <div className="hidden lg:block lg:col-span-3">
               <div className="sticky top-24 space-y-4">
@@ -725,9 +738,9 @@ const CommunitiesPage: React.FC = () => {
                   communities={communityList.filter(c => {
                     if (!c || !c.id) return false;
                     // Include if: in joinedCommunities, has admin role, or is creator
-                    return joinedCommunities.includes(c.id) || 
-                           userAdminRoles[c.id] || 
-                           (address && c.creatorAddress && c.creatorAddress.toLowerCase() === address.toLowerCase());
+                    return joinedCommunities.includes(c.id) ||
+                      userAdminRoles[c.id] ||
+                      (address && c.creatorAddress && c.creatorAddress.toLowerCase() === address.toLowerCase());
                   })}
                   maxDisplay={10}
                   onManageClick={() => router.push('/communities/manage')}
@@ -854,25 +867,25 @@ const CommunitiesPage: React.FC = () => {
                     {joinedCommunities.length > 0 ? 'Your Communities' : 'Suggested Communities'}
                   </h2>
                   <div className="flex flex-wrap gap-1">
-                    {joinedCommunities.length > 0 
+                    {joinedCommunities.length > 0
                       ? communityList.filter(c => joinedCommunities.includes(c.id)).slice(0, 6).map(c => (
-                          <button
-                            key={c.id}
-                            onClick={() => handleCommunitySelect(c)}
-                            className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded text-xs hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                          >
-                            {c.displayName || c.name}
-                          </button>
-                        ))
+                        <button
+                          key={c.id}
+                          onClick={() => handleCommunitySelect(c)}
+                          className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded text-xs hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                        >
+                          {c.displayName || c.name}
+                        </button>
+                      ))
                       : communityList.slice(0, 6).map(c => (
-                          <button
-                            key={c.id}
-                            onClick={() => handleCommunitySelect(c)}
-                            className="px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded text-xs hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-                          >
-                            {c.displayName || c.name}
-                          </button>
-                        ))
+                        <button
+                          key={c.id}
+                          onClick={() => handleCommunitySelect(c)}
+                          className="px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded text-xs hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                        >
+                          {c.displayName || c.name}
+                        </button>
+                      ))
                     }
                   </div>
                 </div>
@@ -899,16 +912,16 @@ const CommunitiesPage: React.FC = () => {
               {/* Enhanced Empty State with Error Handling */}
               {!loading && filteredPosts.length === 0 && (
                 <EmptyStates
-                  type={error ? 'no-posts' : 
-                       joinedCommunities.length === 0 ? 'not-joined' : 
-                       activeQuickFilters.length > 0 ? 'no-filter-results' : 
-                       'no-posts'}
-                  onAction={error ? () => { setError(null); fetchPosts(1, false); } : 
-                             joinedCommunities.length === 0 ? () => router.push('/communities') : 
-                             handleCreatePost}
-                  actionLabel={error ? 'Try Again' : 
-                              joinedCommunities.length === 0 ? 'Explore Communities' : 
-                              undefined}
+                  type={error ? 'no-posts' :
+                    joinedCommunities.length === 0 ? 'not-joined' :
+                      activeQuickFilters.length > 0 ? 'no-filter-results' :
+                        'no-posts'}
+                  onAction={error ? () => { setError(null); fetchPosts(1, false); } :
+                    joinedCommunities.length === 0 ? () => router.push('/communities') :
+                      handleCreatePost}
+                  actionLabel={error ? 'Try Again' :
+                    joinedCommunities.length === 0 ? 'Explore Communities' :
+                      undefined}
                   activeFilters={activeQuickFilters}
                 />
               )}
@@ -1003,20 +1016,34 @@ const CommunitiesPage: React.FC = () => {
                           </div>
 
                           <div className="flex-1 p-3">
-                            {/* Post Header - Reddit Style */}
-                            <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400 mb-1">
-                              <span className="font-semibold text-gray-900 dark:text-white">
+                            {/* Post Header - Enhanced with On-Chain Identity */}
+                            <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-xs text-gray-500 dark:text-gray-400 mb-2">
+                              <span className="font-semibold text-gray-900 dark:text-white hover:underline cursor-pointer">
                                 {community?.name || post.communityId || 'Unknown Community'}
                               </span>
                               <span>•</span>
-                              <span>Posted by u/{postAuthor}</span>
+                              <span>Posted by</span>
+                              <OnChainIdentityBadge
+                                address={post.authorAddress || '0x0000000000000000000000000000000000000000'}
+                                identityData={{
+                                  address: post.authorAddress || '0x0000000000000000000000000000000000000000',
+                                  ensName: post.authorEns,
+                                  reputationScore: 650,
+                                  votingPower: 1000,
+                                  xpBadges: [],
+                                  totalContributions: 25
+                                }}
+                                size="sm"
+                                showTooltip={true}
+                              />
                               <span>•</span>
                               <span>{new Date(postCreatedAt).toLocaleDateString()}</span>
                               {postIsStaked && (
                                 <>
                                   <span>•</span>
-                                  <span className="text-green-600 dark:text-green-400">
-                                    {postStakedTokens} 🪙
+                                  <span className="text-green-600 dark:text-green-400 flex items-center gap-1">
+                                    <Coins className="w-3 h-3" />
+                                    {postStakedTokens}
                                   </span>
                                 </>
                               )}
@@ -1103,10 +1130,43 @@ const CommunitiesPage: React.FC = () => {
               )}
             </div>
 
-            {/* Reddit-style Right Sidebar - Hidden on mobile */}
+            {/* Enhanced Right Sidebar - Hidden on mobile */}
             <div className="hidden lg:block lg:col-span-3">
               <div className="sticky top-24 space-y-4">
-                {/* Community Info Card - Reddit Style */}
+                {/* Token Price Widget */}
+                <EnhancedTokenPriceWidget
+                  tokenAddress="0xc9F690B45e33ca909bB9ab97836091673232611B"
+                  showBuySellButtons={true}
+                  compact={false}
+                />
+
+                {/* Quests Widget */}
+                <QuestsWidget
+                  userAddress={address}
+                  compact={false}
+                />
+
+                {/* DAO Leaderboard */}
+                <DAOLeaderboard
+                  communityId="global"
+                  maxEntries={5}
+                  currentUserAddress={address}
+                />
+
+                {/* Community Health Metrics */}
+                <CommunityHealthMetrics
+                  communityId="global"
+                  timeRange="week"
+                  compact={false}
+                />
+
+                {/* Treasury Widget */}
+                <TreasuryWidget
+                  treasuryAddress="0x074E3874CA62F8cB9be6DDCD23235d0Bb5a8A0b5"
+                  compact={false}
+                />
+
+                {/* Community Info Card */}
                 <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg shadow-sm p-4 text-white">
                   <h3 className="font-semibold text-sm mb-1">Join LinkDAO Communities</h3>
                   <p className="text-xs opacity-90 mb-3">
@@ -1118,68 +1178,6 @@ const CommunitiesPage: React.FC = () => {
                   >
                     Create Community
                   </button>
-                </div>
-
-                {/* Trending Today */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-                  <div className="p-3 border-b border-gray-200 dark:border-gray-700">
-                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
-                      Trending Today
-                    </h3>
-                  </div>
-                  <div className="p-2">
-                    {filteredPosts.slice(0, 4).map((post, index) => {
-                      if (!post || typeof post !== 'object') return null;
-
-                      const community = communityList.find(c => c.id === post.communityId);
-
-                      return (
-                        <div
-                          key={post.id || `trending-${index}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const communityId = community?.slug || community?.name || post.communityId || 'unknown';
-                            router.push(`/communities/${communityId}?post=${post.id}`);
-                          }}
-                          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer"
-                        >
-                          <div className="flex items-start space-x-2">
-                            <span className="text-xs font-bold text-gray-500 dark:text-gray-400 mt-0.5">
-                              {index + 1}
-                            </span>
-                            <div className="min-w-0">
-                              <div className="text-sm text-gray-900 dark:text-white font-medium truncate">
-                                {post.title || 'Untitled Post'}
-                              </div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                {community?.name || post.communityId || 'Unknown Community'}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    {filteredPosts.length === 0 && (
-                      <div className="p-2 text-center text-gray-500 dark:text-gray-400 text-sm">
-                        No trending posts today
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Governance Activity */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-                  <div className="p-3 border-b border-gray-200 dark:border-gray-700">
-                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
-                      Governance Activity
-                    </h3>
-                  </div>
-                  <div className="p-2">
-                    <GovernanceActivityPulse
-                      activeProposals={governanceProposals.length}
-                      showLabel={true}
-                    />
-                  </div>
                 </div>
               </div>
             </div>
@@ -1218,18 +1216,12 @@ const CommunitiesPage: React.FC = () => {
             isLoading={isCreatingCommunity}
           />
 
-          {/* Mobile Floating Action Button */}
-          {isMobile && (
-            <div className="fixed bottom-20 right-4 z-50">
-              <button
-                onClick={handleCreatePost}
-                className="w-14 h-14 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg flex items-center justify-center hover:from-blue-600 hover:to-purple-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                aria-label="Create Post"
-              >
-                <Plus className="w-6 h-6" />
-              </button>
-            </div>
-          )}
+          {/* Floating Action Button - Desktop and Mobile */}
+          <FloatingActionButton
+            onCreatePost={handleCreatePost}
+            onCreateProposal={() => router.push('/governance/create-proposal')}
+            onStakeTokens={() => router.push('/wallet?tab=stake')}
+          />
         </Layout>
       </VisualPolishIntegration>
     </ErrorBoundary>
