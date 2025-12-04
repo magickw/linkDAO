@@ -34,6 +34,32 @@ export class FeedController {
         feedSource = userAddress ? 'following' : 'all' // Default to following for authenticated users to see their feed, all for anonymous users
       } = req.query;
 
+      // If feedSource is 'trending', redirect to trending posts endpoint logic
+      if (feedSource === 'trending') {
+        try {
+          const trendingData = await feedService.getTrendingPosts({
+            page: Number(page),
+            limit: Number(limit),
+            timeRange: timeRange as string
+          });
+          res.json(apiResponse.success(trendingData, 'Trending posts retrieved successfully'));
+          return;
+        } catch (trendingError) {
+          console.error('[FEED CONTROLLER ERROR] Trending service error:', trendingError);
+          res.json(apiResponse.success({
+            posts: [],
+            pagination: {
+              page: Number(page),
+              limit: Number(limit),
+              total: 0,
+              totalPages: 0
+            },
+            message: 'Trending posts temporarily unavailable.'
+          }, 'Trending service temporarily unavailable'));
+          return;
+        }
+      }
+
       // If user is not authenticated and requests 'following' feed, return empty result
       if (!userAddress && feedSource === 'following') {
         res.json(apiResponse.success({

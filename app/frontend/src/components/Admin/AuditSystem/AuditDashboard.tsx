@@ -48,10 +48,13 @@ export const AuditDashboard: React.FC<AuditDashboardProps> = ({ className = '' }
         endDate: endDate.toISOString(),
         limit: 1000
       });
-      
-      setAuditActions(data.actions);
+
+      // Ensure we always set an array, even if data.actions is undefined
+      setAuditActions(Array.isArray(data.actions) ? data.actions : []);
     } catch (error) {
       console.error('Failed to fetch audit data:', error);
+      // Set empty array on error to prevent undefined errors
+      setAuditActions([]);
     } finally {
       setLoading(false);
     }

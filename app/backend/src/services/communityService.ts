@@ -268,6 +268,10 @@ export class CommunityService {
 
       const total = totalResult[0]?.count || 0;
 
+      // Platform-wide blockchain addresses
+      const PLATFORM_TREASURY_ADDRESS = '0x27a78A860445DFFD9073aFd7065dd421487c0F8A';
+      const PLATFORM_GOVERNANCE_TOKEN = '0xc9F690B45e33ca909bB9ab97836091673232611B';
+
       // Transform to expected format
       const transformedCommunities = communityList.map(item => ({
         id: item.id,
@@ -283,8 +287,8 @@ export class CommunityService {
         isPublic: item.isPublic,
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
-        treasuryAddress: item.treasuryAddress,
-        governanceToken: item.governanceToken,
+        treasuryAddress: PLATFORM_TREASURY_ADDRESS, // Use platform-wide address
+        governanceToken: PLATFORM_GOVERNANCE_TOKEN, // Use platform-wide token
         trendingScore: item.trendingScore ? Number(item.trendingScore) : 0,
         growthRate: item.growthRate7d ? Number(item.growthRate7d) : 0,
       }));
@@ -504,6 +508,10 @@ export class CommunityService {
 
       const stats = statsResult[0] || null;
 
+      // Platform-wide blockchain addresses
+      const PLATFORM_TREASURY_ADDRESS = '0x27a78A860445DFFD9073aFd7065dd421487c0F8A';
+      const PLATFORM_GOVERNANCE_TOKEN = '0xc9F690B45e33ca909bB9ab97836091673232611B';
+
       const communityData = {
         id: community.id,
         name: community.name,
@@ -519,8 +527,8 @@ export class CommunityService {
         isPublic: community.isPublic,
         moderators: this.safeJsonParse(community.moderators, []),
         creatorAddress: community.creatorAddress, // Add creatorAddress
-        treasuryAddress: community.treasuryAddress,
-        governanceToken: community.governanceToken,
+        treasuryAddress: PLATFORM_TREASURY_ADDRESS, // Use platform-wide address
+        governanceToken: PLATFORM_GOVERNANCE_TOKEN, // Use platform-wide token
         settings: this.safeJsonParse(community.settings, null),
         createdAt: community.createdAt,
         updatedAt: community.updatedAt,
@@ -640,6 +648,10 @@ export class CommunityService {
 
       const stats = statsResult[0] || null;
 
+      // Platform-wide blockchain addresses
+      const PLATFORM_TREASURY_ADDRESS = '0x27a78A860445DFFD9073aFd7065dd421487c0F8A';
+      const PLATFORM_GOVERNANCE_TOKEN = '0xc9F690B45e33ca909bB9ab97836091673232611B';
+
       const communityData = {
         id: community.id,
         name: community.name,
@@ -656,8 +668,8 @@ export class CommunityService {
         isPublic: community.isPublic,
         moderators: this.safeJsonParse(community.moderators, []),
         creatorAddress: community.creatorAddress, // Add creatorAddress
-        treasuryAddress: community.treasuryAddress,
-        governanceToken: community.governanceToken,
+        treasuryAddress: PLATFORM_TREASURY_ADDRESS, // Use platform-wide address
+        governanceToken: PLATFORM_GOVERNANCE_TOKEN, // Use platform-wide token
         settings: this.safeJsonParse(community.settings, null),
         createdAt: community.createdAt,
         updatedAt: community.updatedAt,
@@ -737,6 +749,10 @@ export class CommunityService {
         throw new Error('Community slug already exists');
       }
 
+      // Platform-wide blockchain addresses
+      const PLATFORM_TREASURY_ADDRESS = '0x27a78A860445DFFD9073aFd7065dd421487c0F8A';
+      const PLATFORM_GOVERNANCE_TOKEN = '0xc9F690B45e33ca909bB9ab97836091673232611B';
+
       // Prepare community data
       const communityData = {
         name: data.name,
@@ -751,8 +767,8 @@ export class CommunityService {
         banner: data.bannerUrl || null,
         creatorAddress: normalizedCreatorAddress, // Store normalized address
         moderators: JSON.stringify([normalizedCreatorAddress]),
-        treasuryAddress: data.governanceEnabled ? null : null, // Will be set later
-        governanceToken: data.governanceEnabled ? null : null, // Will be set later
+        treasuryAddress: PLATFORM_TREASURY_ADDRESS, // Use platform-wide treasury address
+        governanceToken: PLATFORM_GOVERNANCE_TOKEN, // Use platform-wide governance token
         settings: JSON.stringify({
           allowedPostTypes: [
             { id: 'discussion', name: 'Discussion', description: 'General discussion posts', enabled: true },
@@ -763,7 +779,7 @@ export class CommunityService {
           minimumReputation: 0,
           stakingRequirements: data.stakingRequired ? [{
             action: 'post',
-            tokenAddress: data.governanceToken || '',
+            tokenAddress: data.governanceToken || PLATFORM_GOVERNANCE_TOKEN,
             minimumAmount: data.minimumStake.toString(),
             lockDuration: 86400 // 24 hours
           }] : []
@@ -822,6 +838,8 @@ export class CommunityService {
         createdAt: newCommunity.createdAt,
         governanceEnabled: data.governanceEnabled,
         creatorAddress: normalizedCreatorAddress,
+        treasuryAddress: PLATFORM_TREASURY_ADDRESS, // Return platform address
+        governanceToken: PLATFORM_GOVERNANCE_TOKEN, // Return platform token
       };
     } catch (error) {
       safeLogger.error('Error creating community:', error);
@@ -939,6 +957,16 @@ export class CommunityService {
         updateFields.settings = JSON.stringify(sanitizedUpdateData.settings);
       }
 
+      // Ignore treasuryAddress and governanceToken updates - use platform-wide addresses
+      // This ensures all communities use the same treasury and governance token
+      if (sanitizedUpdateData.treasuryAddress !== undefined) {
+        // Silently ignore - we use platform-wide addresses
+      }
+      
+      if (sanitizedUpdateData.governanceToken !== undefined) {
+        // Silently ignore - we use platform-wide addresses
+      }
+
       // Update the community
       const updatedCommunity = await db
         .update(communities)
@@ -954,6 +982,10 @@ export class CommunityService {
       }
 
       const community = updatedCommunity[0];
+
+      // Platform-wide blockchain addresses
+      const PLATFORM_TREASURY_ADDRESS = '0x27a78A860445DFFD9073aFd7065dd421487c0F8A';
+      const PLATFORM_GOVERNANCE_TOKEN = '0xc9F690B45e33ca909bB9ab97836091673232611B';
 
       return {
         id: community.id,
@@ -971,6 +1003,8 @@ export class CommunityService {
         settings: this.safeJsonParse(community.settings, {}),
         createdAt: community.createdAt,
         updatedAt: community.updatedAt,
+        treasuryAddress: PLATFORM_TREASURY_ADDRESS, // Return platform address
+        governanceToken: PLATFORM_GOVERNANCE_TOKEN, // Return platform token
       };
     } catch (error) {
       safeLogger.error('Error updating community:', error);

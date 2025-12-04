@@ -2,7 +2,8 @@ import { Request, Response } from "express";
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { safeLogger } from '../utils/safeLogger';
 import { databaseService } from "../services/databaseService";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, and, or, ilike, desc, lt, gte, lte, sql } from 'drizzle-orm';
+import * as schema from '../db/schema';
 import { marketplaceUsers, sellerVerifications, marketplaceProducts, marketplaceOrders } from "../db/marketplaceSchema";
 import { users } from "../db/schema";
 
@@ -828,24 +829,22 @@ export class SellerController {
 
       let query = db.select({
         id: marketplaceProducts.id,
-        title: marketplaceProducts.title,
-        description: marketplaceProducts.description,
-        category: marketplaceProducts.category,
-        priceCrypto: marketplaceProducts.priceCrypto,
-        currency: marketplaceProducts.currency,
-        isPhysical: marketplaceProducts.isPhysical,
-        stock: marketplaceProducts.stock,
-        status: marketplaceProducts.status,
+        title: products.title,
+        description: products.description,
+        priceAmount: products.priceAmount,
+        priceCurrency: products.priceCurrency,
+        inventory: products.inventory,
+        status: products.status,
         createdAt: marketplaceProducts.createdAt,
         updatedAt: marketplaceProducts.updatedAt
       })
-      .from(marketplaceProducts)
-      .leftJoin(users, eq(marketplaceProducts.sellerId, users.id))
+      .from(products)
+      .leftJoin(users, eq(products.sellerId, users.id))
       .where(eq(users.walletAddress, user.walletAddress));
 
       // Apply filters
       if (status) {
-        query = query.where(eq(marketplaceProducts.status, status as string));
+        query = query.where(eq(products.status, status as string));
       }
       if (category) {
         query = query.where(eq(marketplaceProducts.category, category as string));
@@ -1132,10 +1131,11 @@ export class SellerController {
         category: marketplaceProducts.category,
         count: sql<number>`count(*)`
       })
-      .from(marketplaceProducts)
-      .leftJoin(users, eq(marketplaceProducts.sellerId, users.id))
+      .from(products)
+      .leftJoin(users, eq(products.sellerId, users.id))
       .where(eq(users.walletAddress, walletAddress))
-      .groupBy(marketplaceProducts.category)
+      .leftJoin(categories, eq(products.categoryId, categories.id))
+      .groupBy(categories.name)
       .orderBy(desc(sql<number>`count(*)`))
       .limit(5);
 

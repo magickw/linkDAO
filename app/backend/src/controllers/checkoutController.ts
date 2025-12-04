@@ -4,17 +4,31 @@ import { safeLogger } from '../utils/safeLogger';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
 import { apiResponse } from '../utils/apiResponse';
 import { cartService } from '../services/cartService';
-import { orderService } from '../services/orderService';
-import { stripePaymentService } from '../services/stripePaymentService';
+import { OrderService } from '../services/orderService';
+import { StripePaymentService } from '../services/stripePaymentService';
 import { db } from '../db';
 import { v4 as uuidv4 } from 'uuid';
 
 interface CartItem {
+    id: string;
+    cartId: string;
     productId: string;
     quantity: number;
-    price: number;
-    name: string;
-    sellerId: string;
+    priceAtTime: string;
+    currency: string;
+    metadata?: any;
+    createdAt: Date;
+    updatedAt: Date;
+    product?: {
+        id: string;
+        title: string;
+        description?: string;
+        priceAmount: string;
+        priceCurrency: string;
+        images?: string[];
+        sellerId: string;
+        status: string;
+    };
 }
 
 interface CheckoutSession {
@@ -163,18 +177,21 @@ export class CheckoutController {
             }
 
             // Calculate totals
-            const subtotal = cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const subtotal = cart.items.reduce((sum, item) => sum + (parseFloat(item.product?.priceAmount || item.priceAtTime) * item.quantity), 0);
             const shipping = this.calculateShipping(cart.items);
             const tax = this.calculateTax(subtotal, shipping);
             const platformFee = subtotal * 0.025;
             const total = subtotal + shipping + tax + platformFee;
 
-            safeLogger.info(`Processing checkout for user ${req.user.address}, total: $${total}, method: ${paymentMethod}`);
+            safeLogger.info(`Processing checkout for user ${req.user.address}, total: ${total}, method: ${paymentMethod}`);
+
+            // Initialize order service
+            const orderServiceInstance = new OrderService();
 
             // Create order
-            const order = await orderService.createOrder({
+            const order = await orderServiceInstance.createOrder({
                 buyerAddress: req.user.address,
-                sellerAddress: cart.items[0].sellerId, // Simplified - assumes single seller
+                sellerAddress: cart.items[0].product?.sellerId || '', // Simplified - assumes single seller
                 items: cart.items.map(item => ({
                     productId: item.productId,
                     quantity: item.quantity,
@@ -192,11 +209,14 @@ export class CheckoutController {
                 paymentMethod: paymentMethod === 'crypto' ? 'cryptocurrency' : 'credit_card'
             });
 
+            // Initialize payment service
+            const stripePaymentServiceInstance = new StripePaymentService();
+
             // Process payment based on method
             let paymentResult;
             if (paymentMethod === 'fiat') {
                 // Process Stripe payment
-                paymentResult = await stripePaymentService.createPaymentIntent({
+                paymentResult = await stripePaymentServiceInstance.createPaymentIntent({
                     amount: Math.round(total * 100), // Convert to cents
                     currency: 'usd',
                     orderId: order.id,

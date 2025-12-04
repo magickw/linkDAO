@@ -69,6 +69,8 @@ export function ModerationHistory() {
       });
     } catch (error) {
       console.error('Failed to load moderation history:', error);
+      // Set empty array on error to prevent undefined errors
+      setActions([]);
     } finally {
       setLoading(false);
     }

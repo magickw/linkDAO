@@ -4,6 +4,7 @@ import { Request, Response } from 'express';
 import { safeLogger } from '../utils/safeLogger';
 import { AuthenticationService } from '../services/authenticationService';
 import { AuthenticatedRequest } from '../middleware/authenticationMiddleware';
+import { UserProfileService } from '../services/userProfileService';
 import {
   AuthenticationRequest,
   RefreshTokenRequest,
@@ -301,7 +302,8 @@ export class AuthenticationController {
       }
 
       // Get full user profile with avatar from database
-      const userProfileService = new UserProfileService();
+      const userProfileServiceInstance = new UserProfileService();
+      const fullProfile = await userProfileServiceInstance.getProfileByAddress(req.user.walletAddress);
       const fullProfile = await userProfileService.getProfileByAddress(req.user.walletAddress);
       
       // Return user profile information from database

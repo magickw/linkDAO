@@ -49,7 +49,7 @@ class ProductionServerManager {
       gracefulShutdownTimeout: parseInt(process.env.GRACEFUL_SHUTDOWN_TIMEOUT || '30000'),
       cluster: {
         // Enable clustering by default on Render Pro (2 CPUs available)
-        enabled: process.env.CLUSTER_ENABLED === 'true' || isRenderPro,
+        enabled: (process.env.CLUSTER_ENABLED === 'true') || isRenderPro,
         workers: parseInt(process.env.CLUSTER_WORKERS || '0') || defaultWorkers
       }
     };
@@ -133,7 +133,7 @@ class ProductionServerManager {
       const { default: sellerListingRoutes } = await import('../routes/sellerListingRoutes');
       const { default: sellerImageUploadRoutes } = await import('../routes/sellerImageUploadRoutes');
       const { default: sellerVerificationRoutes } = await import('../routes/sellerVerificationRoutes');
-      const { default: sellerImageRoutes } = await import('../routes/sellerImageRoutes');
+      const { sellerImageRoutes } = await import('../routes/sellerImageRoutes');
       const { default: listingRoutes } = await import('../routes/marketplaceListingsRoutes');
       const { default: authRoutes } = await import('../routes/authRoutes'); // Changed from authenticationRoutes to authRoutes
       const { default: reputationRoutes } = await import('../routes/reputationRoutes');
@@ -156,7 +156,7 @@ class ProductionServerManager {
       const { default: tipRoutes } = await import('../routes/tipRoutes');
       const { default: notificationPreferencesRoutes } = await import('../routes/notificationPreferencesRoutes');
       const { default: ensRoutes } = await import('../routes/ensRoutes');
-      const { default: ipfsRoutes } = await import('../routes/ipfsRoutes');
+      const { ipfsRoutes } = await import('../routes/ipfsRoutes');
       const { default: moderationRoutes } = await import('../routes/moderationRoutes');
       const { default: viewRoutes } = await import('../routes/viewRoutes');
       const { default: shareRoutes } = await import('../routes/shareRoutes');

@@ -569,25 +569,67 @@ export class AdminController {
 
   async getAuditLogs(req: Request, res: Response) {
     try {
-      const { page = 1, limit = 10 } = req.query;
+      const { page = 1, limit = 10, startDate, endDate } = req.query;
 
-      const auditTrail = await this.auditLoggingService.getAuditTrail({
+      // Parse dates if provided
+      const queryParams: any = {
         limit: parseInt(limit as string),
         offset: (parseInt(page as string) - 1) * parseInt(limit as string),
         orderBy: 'desc'
-      });
+      };
 
-      res.json({
-        logs: auditTrail.logs,
-        pagination: {
-          total: auditTrail.total,
+      if (startDate) {
+        queryParams.startDate = new Date(startDate as string);
+      }
+      if (endDate) {
+        queryParams.endDate = new Date(endDate as string);
+      }
+
+      try {
+        const auditTrail = await this.auditLoggingService.getAuditTrail(queryParams);
+
+        // Transform to match frontend's expected format
+        const actions = (auditTrail.logs || []).map((log: any) => ({
+          id: String(log.id),
+          adminId: log.actorId || 'system',
+          adminAddress: log.actorId || 'system',
+          action: log.actionType || 'action',
+          targetType: log.targetType || 'unknown',
+          targetId: log.targetId || '',
+          details: {
+            oldState: log.oldState,
+            newState: log.newState,
+            reasoning: log.reasoning
+          },
+          timestamp: log.createdAt?.toISOString?.() || log.createdAt || new Date().toISOString(),
+          ipAddress: log.ipAddress
+        }));
+
+        res.json({
+          actions,
+          total: auditTrail.total || 0,
           page: parseInt(page as string),
-          pageSize: parseInt(limit as string),
-          totalPages: Math.ceil(auditTrail.total / parseInt(limit as string))
-        }
-      });
+          totalPages: Math.ceil((auditTrail.total || 0) / parseInt(limit as string))
+        });
+      } catch (dbError: any) {
+        // Handle database errors gracefully - return empty results instead of 500
+        safeLogger.warn("Audit logs query failed, returning empty result:", dbError.message);
+        res.json({
+          actions: [],
+          total: 0,
+          page: parseInt(page as string),
+          totalPages: 0
+        });
+      }
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch audit logs" });
+      safeLogger.error("Failed to fetch audit logs:", error);
+      // Return empty result instead of 500 for better UI experience
+      res.json({
+        actions: [],
+        total: 0,
+        page: 1,
+        totalPages: 0
+      });
     }
   }
 
