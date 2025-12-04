@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, memo, useCallback } from 'react';
 import { Community } from '../../models/Community';
 import { formatNumber, formatDate } from '../../utils/formatters';
 import { motion } from 'framer-motion';
+import { createPropsComparatorIgnoring } from '@/utils/performanceUtils';
 
 interface TrendingCommunity extends Community {
   trendingScore?: number;
@@ -311,4 +312,7 @@ export const CommunityCardEnhanced: React.FC<CommunityCardProps> = ({
   );
 };
 
-export default CommunityCardEnhanced;
+// Memoize the component, ignoring callback props that might change reference
+const communityCardComparator = createPropsComparatorIgnoring<CommunityCardProps>(['onSelect', 'onJoin']);
+
+export default memo(CommunityCardEnhanced, communityCardComparator);

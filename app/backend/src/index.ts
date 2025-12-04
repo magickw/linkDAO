@@ -859,6 +859,12 @@ import communicationManagerRoutes from './routes/communicationManagerRoutes';
 // Import leaderboard and treasury routes
 import leaderboardRoutes from './routes/leaderboardRoutes';
 import treasuryRoutes from './routes/treasuryRoutes';
+// Import post management routes
+import postManagementRoutes from './routes/postManagementRoutes';
+// Import announcement routes
+import announcementRoutes from './routes/announcementRoutes';
+// Import monthly update routes
+import monthlyUpdateRoutes from './routes/monthlyUpdateRoutes';
 
 // Register DEX, staking, and LDAO monitoring routes
 app.use('/api/dex', dexTradingRoutes);
@@ -873,7 +879,10 @@ app.use('/api/ldao', ldaoBenefitsRoutes);
 // Leaderboard and treasury routes
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/treasury', treasuryRoutes);
-process.stdout.write('✅ Leaderboard and Treasury routes enabled\n');
+app.use('/api/posts', postManagementRoutes);
+app.use('/api', announcementRoutes);
+app.use('/api', monthlyUpdateRoutes);
+process.stdout.write('✅ Leaderboard, Treasury, Post Management, Announcement, and Monthly Update routes enabled\n');
 
 // Legacy authentication routes
 // app.use('/api/auth', createDefaultAuthRoutes());

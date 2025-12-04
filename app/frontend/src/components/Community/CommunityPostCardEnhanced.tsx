@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, memo } from 'react';
 import { CommunityPost, Comment, CreateCommentInput } from '@/models/CommunityPost';
 import { EnhancedPost } from '@/types/feed';
 import { Community } from '@/models/Community';
@@ -19,6 +19,7 @@ import OptimizedImage from '../OptimizedImage';
 import { motion } from 'framer-motion';
 import { ldaoTokenService } from '@/services/web3/ldaoTokenService';
 import { processContent, shouldTruncateContent, getTruncatedContent } from '@/utils/contentParser';
+import { createPropsComparatorIgnoring } from '@/utils/performanceUtils';
 
 // Helper function to check if post is a community post
 const isCommunityPost = (post: EnhancedPost): boolean => {
@@ -717,3 +718,11 @@ export default function CommunityPostCardEnhanced({
     </motion.div>
   );
 }
+
+// Memoize the component for better list rendering performance
+// Ignores callback props that may change reference but don't affect rendering
+const postCardComparator = createPropsComparatorIgnoring<CommunityPostCardEnhancedProps>(
+  ['onVote', 'onReaction', 'onTip']
+);
+
+export default memo(CommunityPostCardEnhanced, postCardComparator);

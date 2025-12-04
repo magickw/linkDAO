@@ -49,6 +49,10 @@ import TreasuryWidget from '@/components/Community/TreasuryWidget';
 import QuestsWidget from '@/components/Community/QuestsWidget';
 import CommunityHealthMetrics from '@/components/Community/CommunityHealthMetrics';
 import FloatingActionButton from '@/components/Community/FloatingActionButton';
+import PinnedPostsSection from '@/components/Community/PinnedPostsSection';
+import AnnouncementBanner from '@/components/Community/AnnouncementBanner';
+import AnnouncementManager from '@/components/Community/AnnouncementManager';
+import { postManagementService } from '@/services/postManagementService';
 
 import {
   TrendingUp,
@@ -68,7 +72,8 @@ import {
   Coins,
   Shield,
   Vote,
-  Trophy
+  Trophy,
+  Pin
 } from 'lucide-react';
 import CommunityCardEnhanced from '@/components/Community/CommunityCardEnhanced';
 import MyCommunitiesCard from '@/components/Community/MyCommunitiesCard';
@@ -355,14 +360,14 @@ const CommunitiesPage: React.FC = () => {
       const { FeedService } = await import('../services/feedService');
 
       // Determine feed source based on user's community memberships
-      let feedSource = 'all'; // Default to all posts for unauthenticated users
+      let feedSource: 'following' | 'all' = 'all'; // Default to all posts for unauthenticated users
       if (isAuthenticated && address) {
         // If user has joined communities, show posts from those communities
         if (joinedCommunities.length > 0) {
           feedSource = 'following';
         } else {
-          // If authenticated but no joined communities, show trending posts to encourage discovery
-          feedSource = 'trending';
+          // If authenticated but no joined communities, show all posts (sorted by trending/hot)
+          feedSource = 'all';
         }
       }
 
@@ -372,7 +377,7 @@ const CommunitiesPage: React.FC = () => {
         feedSource,
         userAddress: address,
         // If user has joined communities, filter by those
-        communityIds: feedSource === 'following' ? joinedCommunities : undefined
+        communities: feedSource === 'following' ? joinedCommunities : undefined
       }, pageNum, 20);
 
       // Check if component is still mounted before updating state
@@ -804,6 +809,23 @@ const CommunitiesPage: React.FC = () => {
 
             {/* Reddit-style Center Feed - Full width on mobile */}
             <div className="col-span-1 lg:col-span-6">
+              {/* Announcement Banner */}
+              {joinedCommunities.length > 0 && (
+                <AnnouncementBanner communityId={joinedCommunities[0]} />
+              )}
+
+              {/* Community Health Metrics */}
+              {joinedCommunities.length > 0 && (
+                <CommunityHealthMetrics communityId={joinedCommunities[0]} />
+              )}
+
+              {/* Announcement Manager (Admin Only) */}
+              {joinedCommunities.length > 0 && userAdminRoles[joinedCommunities[0]] === 'admin' && (
+                <div className="mb-4">
+                  <AnnouncementManager communityId={joinedCommunities[0]} />
+                </div>
+              )}
+
               {/* Sort Tabs - Reddit Style */}
               <div className="bg-white dark:bg-gray-800 rounded-none lg:rounded-t-lg shadow-sm border-x-0 lg:border-x border-t-0 lg:border-t border-gray-200 dark:border-gray-700 border-b-0">
                 <div className="flex items-center justify-between p-3">
@@ -840,6 +862,32 @@ const CommunitiesPage: React.FC = () => {
                   </select>
                 </div>
               </div>
+
+              {/* Pinned Posts Section */}
+              {joinedCommunities.length > 0 && communityList.length > 0 && (
+                <PinnedPostsSection
+                  communityId={joinedCommunities[0]} // Show pinned posts for the first joined community (simplified for now)
+                  community={communityList.find(c => c.id === joinedCommunities[0]) || communityList[0]}
+                  userMembership={{
+                    id: `membership-${address}-${joinedCommunities[0]}`,
+                    communityId: joinedCommunities[0],
+                    userId: address || '',
+                    role: userAdminRoles[joinedCommunities[0]] ? 'admin' : 'member',
+                    joinedAt: new Date(),
+                    reputation: 0,
+                    contributions: 0,
+                    isActive: true,
+                    lastActivityAt: new Date()
+                  }}
+                  onVote={(postId, voteType, stakeAmount) => {
+                    const type = voteType === 'upvote' ? 'up' : 'down';
+                    const amount = stakeAmount ? parseFloat(stakeAmount) : 1;
+                    handleVote(postId, type, amount);
+                  }}
+                  onReaction={handleTokenReaction}
+                  onTip={async (postId, amount) => handleTip(postId, parseFloat(amount))}
+                />
+              )}
 
               {/* Create Post Card - Reddit Style */}
               <div className="bg-white dark:bg-gray-800 rounded-none lg:rounded-b-lg shadow-sm border-x-0 lg:border-x border-t-0 border-gray-200 dark:border-gray-700 mb-0 lg:mb-4">
@@ -1099,6 +1147,24 @@ const CommunitiesPage: React.FC = () => {
                                 >
                                   <Coins className="w-3 h-3" />
                                   <span>Web3</span>
+                                </button>
+                              )}
+                              {/* Pin Button for Admins */}
+                              {userAdminRoles[post.communityId] === 'admin' && (
+                                <button
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    if (confirm('Are you sure you want to pin this post?')) {
+                                      await postManagementService.pinPost(post.id, post.communityId);
+                                      // Refresh posts or update local state
+                                      // For now just alert
+                                      alert('Post pinned!');
+                                    }
+                                  }}
+                                  className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors text-gray-500 hover:text-green-600"
+                                  title="Pin Post"
+                                >
+                                  <Pin className="w-4 h-4" />
                                 </button>
                               )}
                             </div>

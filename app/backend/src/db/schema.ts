@@ -85,6 +85,10 @@ export const posts = pgTable("posts", {
   moderationStatus: varchar("moderation_status", { length: 24 }).default('active'),
   moderationWarning: text("moderation_warning"),
   riskScore: numeric("risk_score", { precision: 5, scale: 4 }).default('0'),
+  // Pin fields
+  isPinned: boolean("is_pinned").default(false),
+  pinnedAt: timestamp("pinned_at"),
+  pinnedBy: text("pinned_by"),
   upvotes: integer("upvotes").default(0),
   downvotes: integer("downvotes").default(0),
   createdAt: timestamp("created_at").defaultNow(),
@@ -1289,6 +1293,47 @@ export const communityStats = pgTable("community_stats", {
   trendingScoreIdx: index("idx_community_stats_trending_score").on(t.trendingScore),
   growthRate7dIdx: index("idx_community_stats_growth_rate_7d").on(t.growthRate7d),
   lastCalculatedAtIdx: index("idx_community_stats_last_calculated_at").on(t.lastCalculatedAt),
+}));
+
+// Announcements
+export const announcements = pgTable("announcements", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  communityId: uuid("community_id").references(() => communities.id, { onDelete: 'cascade' }).notNull(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  type: text("type").default('info').notNull(), // 'info', 'warning', 'success'
+  isActive: boolean("is_active").default(true).notNull(),
+  createdBy: text("created_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at"),
+}, (t) => ({
+  communityIdIdx: index("idx_announcements_community_id").on(t.communityId),
+  isActiveIdx: index("idx_announcements_is_active").on(t.isActive),
+}));
+
+// Monthly Updates - Creator community updates
+export const monthlyUpdates = pgTable("monthly_updates", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  communityId: uuid("community_id").references(() => communities.id, { onDelete: 'cascade' }).notNull(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  summary: text("summary"), // Short summary for preview
+  month: integer("month").notNull(), // 1-12
+  year: integer("year").notNull(),
+  highlights: jsonb("highlights").default([]), // Array of highlight items
+  metrics: jsonb("metrics").default({}), // Key metrics for the month
+  mediaCids: text("media_cids"), // JSON array of media IPFS CIDs
+  isPublished: boolean("is_published").default(false).notNull(),
+  publishedAt: timestamp("published_at"),
+  createdBy: text("created_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  communityIdIdx: index("idx_monthly_updates_community_id").on(t.communityId),
+  yearMonthIdx: index("idx_monthly_updates_year_month").on(t.year, t.month),
+  isPublishedIdx: index("idx_monthly_updates_is_published").on(t.isPublished),
+  publishedAtIdx: index("idx_monthly_updates_published_at").on(t.publishedAt),
+  uniqueMonthIdx: unique("idx_monthly_updates_unique_month").on(t.communityId, t.year, t.month),
 }));
 
 // Community governance proposals
