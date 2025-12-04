@@ -9,6 +9,10 @@ import DAOGovernanceEmbed from './DAOGovernanceEmbed';
 import { SmartRightSidebar } from './SmartRightSidebar';
 import enhancedUserService, { SuggestedUser } from '../services/enhancedUserService';
 import CommunityAvatar from './Community/CommunityAvatar';
+import { DAOLeaderboard } from './Community/DAOLeaderboard';
+import { TreasuryWidget } from './Community/TreasuryWidget';
+import { QuestsWidget } from './Community/QuestsWidget';
+import { CommunityHealthMetrics } from './Community/CommunityHealthMetrics';
 
 interface TrendingDAO {
   id: string;
@@ -88,16 +92,16 @@ function setCachedData<T>(key: string, data: T, ttl: number): void {
 const DashboardRightSidebar = memo(() => {
   const { navigationState } = useNavigation();
   const { activeView, activeCommunity } = navigationState;
-  
+
   // State for real user data
   const [suggestedUsers, setSuggestedUsers] = useState<SuggestedUser[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  
+
   // State for real governance data
   const [governanceProposals, setGovernanceProposals] = useState<Proposal[]>([]);
   const [loadingProposals, setLoadingProposals] = useState(false);
-  
+
   // State for real DAO data
   const [trendingDAOs, setTrendingDAOs] = useState<TrendingDAO[]>([]);
   const [loadingDAOs, setLoadingDAOs] = useState(false);
@@ -207,7 +211,7 @@ const DashboardRightSidebar = memo(() => {
   const contextualContent = useMemo(() => {
     const userId = getCurrentUserId();
     const isLoggedIn = !!userId;
-    
+
     if (activeView === 'community' && currentCommunity) {
       return {
         showCommunityInfo: true,
@@ -221,11 +225,11 @@ const DashboardRightSidebar = memo(() => {
         primaryActions: ['join', 'post', 'vote'] as const,
       };
     }
-    
+
     // Marketplace view removed as it's not supported in NavigationContext
-    
+
     // Governance view removed as it's not supported in NavigationContext
-    
+
     // Default feed view
     return {
       showCommunityInfo: false,
@@ -245,14 +249,14 @@ const DashboardRightSidebar = memo(() => {
     try {
       setLoadingSuggestions(true);
       setErrors(prev => ({ ...prev, users: undefined }));
-      
+
       const userId = getCurrentUserId();
-      
+
       if (!userId) {
         // Show contextual trending users for non-logged-in users
         const cacheKey = `trending-users-${contextualContent.recommendationType}`;
         let trending = getCachedData<SuggestedUser[]>(cacheKey);
-        
+
         if (!trending) {
           const trendingUsers = await enhancedUserService.getTrendingUsers(3);
           trending = trendingUsers.map(user => ({
@@ -267,7 +271,7 @@ const DashboardRightSidebar = memo(() => {
           }));
           setCachedData(cacheKey, trending, CACHE_TTL.USERS);
         }
-        
+
         setSuggestedUsers(trending);
         return;
       }
@@ -277,17 +281,17 @@ const DashboardRightSidebar = memo(() => {
       }
 
       setCurrentUserId(userId);
-      
+
       // Get personalized suggestions with caching
       const cacheKey = `suggestions-${userId}-${contextualContent.recommendationType}-${activeCommunity || 'none'}`;
       let suggestions = getCachedData<SuggestedUser[]>(cacheKey);
-      
+
       if (!suggestions) {
         const suggestionFilters = getPersonalizedFilters(contextualContent.recommendationType, activeCommunity);
         suggestions = await enhancedUserService.getSuggestedUsers(userId, suggestionFilters);
         setCachedData(cacheKey, suggestions, CACHE_TTL.USERS);
       }
-      
+
       setSuggestedUsers(suggestions);
     } catch (error) {
       console.error('Error loading personalized suggestions:', error);
@@ -308,10 +312,10 @@ const DashboardRightSidebar = memo(() => {
       try {
         setLoadingProposals(true);
         setErrors(prev => ({ ...prev, governance: undefined }));
-        
+
         let proposals: Proposal[] = [];
         const userId = getCurrentUserId();
-        
+
         if (activeView === 'community' && activeCommunity) {
           // Load community-specific proposals
           proposals = await governanceService.getCommunityProposals(activeCommunity);
@@ -327,7 +331,7 @@ const DashboardRightSidebar = memo(() => {
           // For non-logged-in users, show most popular/trending proposals
           proposals = await governanceService.getAllActiveProposals();
         }
-        
+
         // Sort and limit based on context
         const sortedProposals = sortProposalsByContext(proposals, contextualContent.recommendationType);
         setGovernanceProposals(sortedProposals.slice(0, 3));
@@ -348,30 +352,30 @@ const DashboardRightSidebar = memo(() => {
     try {
       setLoadingCommunities(true);
       setErrors(prev => ({ ...prev, communities: undefined }));
-      
+
       // Check cache for trending communities
       const cacheKey = 'trending-communities';
       let trendingCommunities = getCachedData<Community[]>(cacheKey);
-      
+
       if (!trendingCommunities) {
         trendingCommunities = await CommunityService.getTrendingCommunities(10);
         setCachedData(cacheKey, trendingCommunities, CACHE_TTL.COMMUNITIES);
       }
-      
+
       setCommunities(trendingCommunities);
-      
+
       // Load current community if viewing one
       if (activeCommunity) {
         const communityCacheKey = `community-${activeCommunity}`;
         let community = getCachedData<Community>(communityCacheKey);
-        
+
         if (!community) {
           community = await CommunityService.getCommunityById(activeCommunity);
           if (community) {
             setCachedData(communityCacheKey, community, CACHE_TTL.COMMUNITIES);
           }
         }
-        
+
         setCurrentCommunity(community);
       } else {
         setCurrentCommunity(null);
@@ -396,12 +400,12 @@ const DashboardRightSidebar = memo(() => {
       try {
         setLoadingDAOs(true);
         setErrors(prev => ({ ...prev, daos: undefined }));
-        
+
         // Get communities with governance tokens (DAOs)
         const allCommunities = await CommunityService.getAllCommunities({
           limit: 20
         });
-        
+
         const daoCommunitiesWithTreasury = await Promise.all(
           allCommunities
             .filter(c => c.governanceToken) // Only DAOs with governance tokens
@@ -426,7 +430,7 @@ const DashboardRightSidebar = memo(() => {
               }
             })
         );
-        
+
         setTrendingDAOs(daoCommunitiesWithTreasury);
       } catch (error) {
         console.error('Error loading trending DAOs:', error);
@@ -446,11 +450,11 @@ const DashboardRightSidebar = memo(() => {
       try {
         setLoadingAuctions(true);
         setErrors(prev => ({ ...prev, auctions: undefined }));
-        
+
         // TODO: Replace with real marketplace service when import is fixed
         // For now, simulate API call
         await new Promise(resolve => setTimeout(resolve, 1000));
-        
+
         // Mock auctions data - this will be replaced with real service call
         const mockAuctions: Auction[] = [
           {
@@ -480,7 +484,7 @@ const DashboardRightSidebar = memo(() => {
             images: ['https://via.placeholder.com/300x200']
           }
         ];
-        
+
         setActiveAuctions(mockAuctions);
       } catch (error) {
         console.error('Error loading active auctions:', error);
@@ -645,14 +649,14 @@ const DashboardRightSidebar = memo(() => {
   const formatTimeRemaining = (endTime: Date) => {
     const now = new Date();
     const diff = endTime.getTime() - now.getTime();
-    
+
     if (diff <= 0) {
       return 'Ended';
     }
-    
+
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
+
     if (hours > 0) {
       return `${hours}h ${minutes}m`;
     }
@@ -674,6 +678,31 @@ const DashboardRightSidebar = memo(() => {
         return renderRelatedCommunitiesWidget();
       case 'defi-markets':
         return renderDeFiMarketsWidget();
+      case 'dao-leaderboard':
+        return (
+          <DAOLeaderboard
+            maxEntries={10}
+            className="mb-6"
+          />
+        );
+      case 'treasury-info':
+        return (
+          <TreasuryWidget
+            className="mb-6"
+          />
+        );
+      case 'quests':
+        return (
+          <QuestsWidget
+            className="mb-6"
+          />
+        );
+      case 'health-metrics':
+        return (
+          <CommunityHealthMetrics
+            className="mb-6"
+          />
+        );
       default:
         return null;
     }
@@ -709,6 +738,26 @@ const DashboardRightSidebar = memo(() => {
     // Show DeFi markets for general engagement
     widgets.push('defi-markets');
 
+    // Show DAO Leaderboard in feed view
+    if (activeView === 'feed') {
+      widgets.push('dao-leaderboard');
+    }
+
+    // Show Treasury Info in feed view
+    if (activeView === 'feed') {
+      widgets.push('treasury-info');
+    }
+
+    // Show Quests Widget in feed view
+    if (activeView === 'feed') {
+      widgets.push('quests');
+    }
+
+    // Show Community Health Metrics in feed view
+    if (activeView === 'feed') {
+      widgets.push('health-metrics');
+    }
+
     return widgets;
   }, [activeView, contextualContent]);
 
@@ -717,37 +766,37 @@ const DashboardRightSidebar = memo(() => {
     if (!contextualContent.showCommunityInfo || !currentCommunity) return null;
 
     return (
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
-          <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
-            <h3 className="font-semibold text-gray-900 dark:text-white flex items-center">
-              <svg className="h-5 w-5 mr-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-              Community Info
-            </h3>
+      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
+        <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
+          <h3 className="font-semibold text-gray-900 dark:text-white flex items-center">
+            <svg className="h-5 w-5 mr-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            Community Info
+          </h3>
+        </div>
+        <div className="p-4">
+          <div className="flex items-center mb-4">
+            <CommunityAvatar
+              avatar={currentCommunity.avatar}
+              name={currentCommunity.displayName}
+              size="lg"
+            />
+            <div className="ml-3">
+              <h4 className="font-medium text-gray-900 dark:text-white">{currentCommunity.displayName}</h4>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{formatNumber(currentCommunity.memberCount)} members</p>
+            </div>
           </div>
-          <div className="p-4">
-            <div className="flex items-center mb-4">
-              <CommunityAvatar
-                avatar={currentCommunity.avatar}
-                name={currentCommunity.displayName}
-                size="lg"
-              />
-              <div className="ml-3">
-                <h4 className="font-medium text-gray-900 dark:text-white">{currentCommunity.displayName}</h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{formatNumber(currentCommunity.memberCount)} members</p>
-              </div>
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">{currentCommunity.description}</p>
-            <div className="flex flex-wrap gap-2">
-              {currentCommunity.tags.slice(0, 3).map((tag) => (
-                <span key={tag} className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full">
-                  #{tag}
-                </span>
-              ))}
-            </div>
+          <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">{currentCommunity.description}</p>
+          <div className="flex flex-wrap gap-2">
+            {currentCommunity.tags.slice(0, 3).map((tag) => (
+              <span key={tag} className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full">
+                #{tag}
+              </span>
+            ))}
           </div>
         </div>
+      </div>
     );
   }, [contextualContent.showCommunityInfo, currentCommunity, formatNumber]);
 
@@ -772,7 +821,7 @@ const DashboardRightSidebar = memo(() => {
           ) : errors.users ? (
             <div className="text-center py-4 text-sm text-red-500">
               <p>{errors.users}</p>
-              <button 
+              <button
                 onClick={() => retryLoad('users')}
                 className="mt-2 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 text-xs"
               >
@@ -785,8 +834,8 @@ const DashboardRightSidebar = memo(() => {
                 <div key={user.id} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="relative">
-                      <img 
-                        src={user.avatarCid ? `https://ipfs.io/ipfs/${user.avatarCid}` : '/default-avatar.png'} 
+                      <img
+                        src={user.avatarCid ? `https://ipfs.io/ipfs/${user.avatarCid}` : '/default-avatar.png'}
                         alt={user.handle}
                         className="w-10 h-10 rounded-full"
                       />
@@ -801,7 +850,7 @@ const DashboardRightSidebar = memo(() => {
                       </div>
                     </div>
                   </div>
-                  <button 
+                  <button
                     onClick={() => handleFollowUser(user.id)}
                     className="text-xs bg-primary-100 dark:bg-primary-900/30 hover:bg-primary-200 dark:hover:bg-primary-800/50 text-primary-800 dark:text-primary-200 px-3 py-1 rounded-full transition-colors"
                   >
@@ -840,7 +889,7 @@ const DashboardRightSidebar = memo(() => {
           ) : errors.auctions ? (
             <div className="text-center py-4 text-sm text-red-500">
               <p>{errors.auctions}</p>
-              <button 
+              <button
                 onClick={() => retryLoad('auctions')}
                 className="mt-2 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 text-xs"
               >
@@ -852,8 +901,8 @@ const DashboardRightSidebar = memo(() => {
               {activeAuctions.map((auction) => (
                 <div key={auction.id} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                   <div className="relative">
-                    <img 
-                      src={auction.images[0]} 
+                    <img
+                      src={auction.images[0]}
                       alt={auction.title}
                       className="w-full h-32 object-cover"
                     />
@@ -896,8 +945,8 @@ const DashboardRightSidebar = memo(() => {
               No active auctions
             </div>
           )}
-          <Link 
-            href="/marketplace/auctions" 
+          <Link
+            href="/marketplace/auctions"
             className="block mt-4 text-center text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
           >
             View All Auctions →
@@ -928,7 +977,7 @@ const DashboardRightSidebar = memo(() => {
           ) : errors.governance ? (
             <div className="text-center py-4 text-sm text-red-500">
               <p>{errors.governance}</p>
-              <button 
+              <button
                 onClick={() => retryLoad('governance')}
                 className="mt-2 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 text-xs"
               >
@@ -938,7 +987,7 @@ const DashboardRightSidebar = memo(() => {
           ) : governanceProposals.length > 0 ? (
             <div className="space-y-3">
               {governanceProposals.slice(0, 3).map((proposal) => (
-                <Link 
+                <Link
                   key={proposal.id}
                   href={`/governance/${proposal.id}`}
                   className="block p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
@@ -970,8 +1019,8 @@ const DashboardRightSidebar = memo(() => {
               No active proposals
             </div>
           )}
-          <Link 
-            href="/governance" 
+          <Link
+            href="/governance"
             className="block mt-4 text-center text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
           >
             View All Proposals →
@@ -1002,7 +1051,7 @@ const DashboardRightSidebar = memo(() => {
           ) : errors.communities ? (
             <div className="text-center py-4 text-sm text-red-500">
               <p>{errors.communities}</p>
-              <button 
+              <button
                 onClick={() => retryLoad('communities')}
                 className="mt-2 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 text-xs"
               >
@@ -1045,8 +1094,8 @@ const DashboardRightSidebar = memo(() => {
               No related communities
             </div>
           )}
-          <Link 
-            href="/communities" 
+          <Link
+            href="/communities"
             className="block mt-4 text-center text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
           >
             Explore All →
@@ -1060,38 +1109,38 @@ const DashboardRightSidebar = memo(() => {
     return (
       <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
         <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
-            <h3 className="font-semibold text-gray-900 dark:text-white flex items-center">
-              <svg className="h-5 w-5 mr-2 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              </svg>
-              DeFi Markets
-            </h3>
+          <h3 className="font-semibold text-gray-900 dark:text-white flex items-center">
+            <svg className="h-5 w-5 mr-2 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+            DeFi Markets
+          </h3>
+        </div>
+        <div className="p-4">
+          <DeFiChartEmbed
+            tokenSymbol="ETH"
+            tokenName="Ethereum"
+            className="mb-4"
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <button className="bg-gray-100/80 dark:bg-gray-700/50 hover:bg-gray-200/80 dark:hover:bg-gray-600/50 rounded-lg p-3 text-center transition-colors">
+              <div className="text-2xl mb-1">📈</div>
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Trade</span>
+            </button>
+            <button className="bg-gray-100/80 dark:bg-gray-700/50 hover:bg-gray-200/80 dark:hover:bg-gray-600/50 rounded-lg p-3 text-center transition-colors">
+              <div className="text-2xl mb-1">🏦</div>
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Lend</span>
+            </button>
+            <button className="bg-gray-100/80 dark:bg-gray-700/50 hover:bg-gray-200/80 dark:hover:bg-gray-600/50 rounded-lg p-3 text-center transition-colors">
+              <div className="text-2xl mb-1">🔐</div>
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Stake</span>
+            </button>
+            <button className="bg-gray-100/80 dark:bg-gray-700/50 hover:bg-gray-200/80 dark:hover:bg-gray-600/50 rounded-lg p-3 text-center transition-colors">
+              <div className="text-2xl mb-1">📊</div>
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Analyze</span>
+            </button>
           </div>
-          <div className="p-4">
-              <DeFiChartEmbed 
-                tokenSymbol="ETH" 
-                tokenName="Ethereum"
-                className="mb-4"
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <button className="bg-gray-100/80 dark:bg-gray-700/50 hover:bg-gray-200/80 dark:hover:bg-gray-600/50 rounded-lg p-3 text-center transition-colors">
-                  <div className="text-2xl mb-1">📈</div>
-                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Trade</span>
-                </button>
-                <button className="bg-gray-100/80 dark:bg-gray-700/50 hover:bg-gray-200/80 dark:hover:bg-gray-600/50 rounded-lg p-3 text-center transition-colors">
-                  <div className="text-2xl mb-1">🏦</div>
-                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Lend</span>
-                </button>
-                <button className="bg-gray-100/80 dark:bg-gray-700/50 hover:bg-gray-200/80 dark:hover:bg-gray-600/50 rounded-lg p-3 text-center transition-colors">
-                  <div className="text-2xl mb-1">🔐</div>
-                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Stake</span>
-                </button>
-                <button className="bg-gray-100/80 dark:bg-gray-700/50 hover:bg-gray-200/80 dark:hover:bg-gray-600/50 rounded-lg p-3 text-center transition-colors">
-                  <div className="text-2xl mb-1">📊</div>
-                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Analyze</span>
-                </button>
-              </div>
-            </div>
+        </div>
       </div>
     );
   }, []);
@@ -1099,7 +1148,7 @@ const DashboardRightSidebar = memo(() => {
   return (
     <div className="space-y-6">
       {/* Enhanced Smart Right Sidebar */}
-      <SmartRightSidebar 
+      <SmartRightSidebar
         context={activeView === 'community' ? 'community' : 'feed'}
         communityId={activeCommunity || undefined}
       />

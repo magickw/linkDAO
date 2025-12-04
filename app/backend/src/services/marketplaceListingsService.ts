@@ -1,7 +1,7 @@
 import { eq, desc, asc, and, gte, lte, like, count, sql } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
-import { marketplaceListings } from '../db/schema';
+import { products, users, categories } from '../db/schema';
 import {
   MarketplaceListing,
   CreateMarketplaceListingRequest,
@@ -15,6 +15,7 @@ import {
 export class MarketplaceListingsService {
   /**
    * Get paginated marketplace listings with filtering and sorting
+   * Now queries from the products table where seller listings are stored
    */
   async getListings(filters: MarketplaceListingFilters = {}): Promise<PaginatedMarketplaceListings> {
     try {
@@ -29,68 +30,125 @@ export class MarketplaceListingsService {
         isActive = true
       } = filters;
 
-      // Build where conditions
+      // Build where conditions - query from products table
       const conditions = [];
-      
-      if (isActive !== undefined) {
-        conditions.push(eq(marketplaceListings.isActive, isActive));
+
+      // Filter for active listings that are published
+      if (isActive !== undefined && isActive) {
+        conditions.push(eq(products.status, 'active'));
+        conditions.push(sql`${products.publishedAt} IS NOT NULL`);
       }
-      
+
       if (category) {
-        conditions.push(eq(marketplaceListings.category, category));
+        // Category filter - need to join with categories table if filtering by name
+        conditions.push(eq(products.categoryId, category));
       }
-      
+
       if (sellerAddress) {
-        conditions.push(eq(marketplaceListings.sellerAddress, sellerAddress));
+        // Need to find user by wallet address first, then filter by sellerId
+        const userResult = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.walletAddress, sellerAddress))
+          .limit(1);
+
+        if (userResult.length > 0) {
+          conditions.push(eq(products.sellerId, userResult[0].id));
+        } else {
+          // No user found with this address, return empty
+          return {
+            listings: [],
+            total: 0,
+            limit,
+            offset,
+            hasNext: false,
+            hasPrevious: false
+          };
+        }
       }
-      
+
       if (priceRange) {
         if (priceRange.min) {
-          conditions.push(gte(marketplaceListings.price, priceRange.min));
+          conditions.push(gte(products.priceAmount, priceRange.min.toString()));
         }
         if (priceRange.max) {
-          conditions.push(lte(marketplaceListings.price, priceRange.max));
+          conditions.push(lte(products.priceAmount, priceRange.max.toString()));
         }
       }
 
       const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
       // Build order by clause
-      const orderByClause = sortOrder === 'desc' 
-        ? desc(marketplaceListings[sortBy])
-        : asc(marketplaceListings[sortBy]);
+      const sortColumn = sortBy === 'price' ? products.priceAmount : products.createdAt;
+      const orderByClause = sortOrder === 'desc'
+        ? desc(sortColumn)
+        : asc(sortColumn);
 
       // Get total count
       const totalResult = await db
         .select({ count: count() })
-        .from(marketplaceListings)
+        .from(products)
         .where(whereClause);
-      
+
       const total = totalResult[0]?.count || 0;
 
-      // Get listings
+      // Get listings with seller info
       const listingsResult = await db
-        .select()
-        .from(marketplaceListings)
+        .select({
+          id: products.id,
+          sellerId: products.sellerId,
+          title: products.title,
+          description: products.description,
+          priceAmount: products.priceAmount,
+          priceCurrency: products.priceCurrency,
+          categoryId: products.categoryId,
+          images: products.images,
+          status: products.status,
+          createdAt: products.createdAt,
+          updatedAt: products.updatedAt,
+        })
+        .from(products)
         .where(whereClause)
         .orderBy(orderByClause)
         .limit(limit)
         .offset(offset);
 
-      // Transform results
-      const listings: MarketplaceListing[] = listingsResult.map(listing => ({
-        id: listing.id,
-        sellerAddress: listing.sellerAddress,
-        title: listing.title,
-        description: listing.description || undefined,
-        price: listing.price,
-        currency: listing.currency || 'ETH',
-        images: listing.images ? (Array.isArray(listing.images) ? listing.images : []) : undefined,
-        category: listing.category || undefined,
-        isActive: listing.isActive,
-        createdAt: listing.createdAt,
-        updatedAt: listing.updatedAt
-      }));
+      // Get seller addresses for each listing
+      const sellerIds = [...new Set(listingsResult.map(l => l.sellerId))];
+      let sellerAddressMap = new Map<string, string>();
+
+      if (sellerIds.length > 0) {
+        const sellerUsers = await db
+          .select({ id: users.id, walletAddress: users.walletAddress })
+          .from(users)
+          .where(sql`${users.id} IN (${sql.join(sellerIds.map(id => sql`${id}`), sql`, `)})`);
+
+        sellerAddressMap = new Map(sellerUsers.map(u => [u.id, u.walletAddress]));
+      }
+
+      // Transform results to match MarketplaceListing interface
+      const listings: MarketplaceListing[] = listingsResult.map(listing => {
+        let parsedImages: string[] = [];
+        try {
+          parsedImages = listing.images ? JSON.parse(listing.images) : [];
+        } catch {
+          parsedImages = [];
+        }
+
+        return {
+          id: listing.id,
+          sellerAddress: sellerAddressMap.get(listing.sellerId) || '',
+          title: listing.title,
+          description: listing.description || undefined,
+          price: listing.priceAmount || '0',
+          currency: listing.priceCurrency || 'ETH',
+          images: parsedImages,
+          category: listing.categoryId || undefined,
+          isActive: listing.status === 'active',
+          createdAt: listing.createdAt || new Date(),
+          updatedAt: listing.updatedAt || new Date()
+        };
+      });
 
       return {
         listings,
@@ -108,13 +166,26 @@ export class MarketplaceListingsService {
 
   /**
    * Get a single marketplace listing by ID
+   * Now queries from the products table
    */
   async getListingById(id: string): Promise<MarketplaceListing | null> {
     try {
       const result = await db
-        .select()
-        .from(marketplaceListings)
-        .where(eq(marketplaceListings.id, id))
+        .select({
+          id: products.id,
+          sellerId: products.sellerId,
+          title: products.title,
+          description: products.description,
+          priceAmount: products.priceAmount,
+          priceCurrency: products.priceCurrency,
+          categoryId: products.categoryId,
+          images: products.images,
+          status: products.status,
+          createdAt: products.createdAt,
+          updatedAt: products.updatedAt,
+        })
+        .from(products)
+        .where(eq(products.id, id))
         .limit(1);
 
       if (result.length === 0) {
@@ -122,18 +193,33 @@ export class MarketplaceListingsService {
       }
 
       const listing = result[0];
+
+      // Get seller address
+      const userResult = await db
+        .select({ walletAddress: users.walletAddress })
+        .from(users)
+        .where(eq(users.id, listing.sellerId))
+        .limit(1);
+
+      let parsedImages: string[] = [];
+      try {
+        parsedImages = listing.images ? JSON.parse(listing.images) : [];
+      } catch {
+        parsedImages = [];
+      }
+
       return {
         id: listing.id,
-        sellerAddress: listing.sellerAddress,
+        sellerAddress: userResult[0]?.walletAddress || '',
         title: listing.title,
         description: listing.description || undefined,
-        price: listing.price,
-        currency: listing.currency || 'ETH',
-        images: listing.images ? (Array.isArray(listing.images) ? listing.images : []) : undefined,
-        category: listing.category || undefined,
-        isActive: listing.isActive,
-        createdAt: listing.createdAt,
-        updatedAt: listing.updatedAt
+        price: listing.priceAmount || '0',
+        currency: listing.priceCurrency || 'ETH',
+        images: parsedImages,
+        category: listing.categoryId || undefined,
+        isActive: listing.status === 'active',
+        createdAt: listing.createdAt || new Date(),
+        updatedAt: listing.updatedAt || new Date()
       };
     } catch (error) {
       safeLogger.error('Error getting marketplace listing by ID:', error);
@@ -143,26 +229,43 @@ export class MarketplaceListingsService {
 
   /**
    * Create a new marketplace listing
+   * Now inserts into the products table for consistency with seller listings
    */
   async createListing(
-    sellerAddress: string, 
+    sellerAddress: string,
     listingData: CreateMarketplaceListingRequest
   ): Promise<MarketplaceListing> {
     try {
-      const insertData: MarketplaceListingInsert = {
-        sellerAddress,
-        title: listingData.title,
-        description: listingData.description,
-        price: listingData.price,
-        currency: listingData.currency || 'ETH',
-        images: listingData.images || [],
-        category: listingData.category,
-        isActive: true
-      };
+      // Get user by wallet address
+      const userResult = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.walletAddress, sellerAddress))
+        .limit(1);
 
+      if (userResult.length === 0) {
+        throw new Error('User not found for the given seller address');
+      }
+
+      const user = userResult[0];
+
+      // Insert into products table
       const result = await db
-        .insert(marketplaceListings)
-        .values(insertData)
+        .insert(products)
+        .values({
+          sellerId: user.id,
+          title: listingData.title,
+          description: listingData.description || '',
+          priceAmount: listingData.price.toString(),
+          priceCurrency: listingData.currency || 'ETH',
+          categoryId: listingData.category || '',
+          images: JSON.stringify(listingData.images || []),
+          metadata: JSON.stringify({}),
+          inventory: 1,
+          status: 'active',
+          listingStatus: 'active',
+          publishedAt: new Date(),
+        })
         .returning();
 
       if (result.length === 0) {
@@ -170,18 +273,25 @@ export class MarketplaceListingsService {
       }
 
       const listing = result[0];
+      let parsedImages: string[] = [];
+      try {
+        parsedImages = listing.images ? JSON.parse(listing.images) : [];
+      } catch {
+        parsedImages = [];
+      }
+
       return {
         id: listing.id,
-        sellerAddress: listing.sellerAddress,
+        sellerAddress: sellerAddress,
         title: listing.title,
         description: listing.description || undefined,
-        price: listing.price,
-        currency: listing.currency || 'ETH',
-        images: listing.images ? (Array.isArray(listing.images) ? listing.images : []) : undefined,
-        category: listing.category || undefined,
-        isActive: listing.isActive,
-        createdAt: listing.createdAt,
-        updatedAt: listing.updatedAt
+        price: listing.priceAmount || '0',
+        currency: listing.priceCurrency || 'ETH',
+        images: parsedImages,
+        category: listing.categoryId || undefined,
+        isActive: listing.status === 'active',
+        createdAt: listing.createdAt || new Date(),
+        updatedAt: listing.updatedAt || new Date()
       };
     } catch (error) {
       safeLogger.error('Error creating marketplace listing:', error);
@@ -191,6 +301,7 @@ export class MarketplaceListingsService {
 
   /**
    * Update an existing marketplace listing
+   * Now updates the products table
    */
   async updateListing(
     id: string,
@@ -208,22 +319,28 @@ export class MarketplaceListingsService {
         throw new Error('Unauthorized: Cannot update listing that does not belong to you');
       }
 
-      const updateValues: MarketplaceListingUpdate = {
-        ...updateData,
+      // Build update object for products table
+      const updateValues: any = {
         updatedAt: new Date()
       };
 
-      // Remove undefined values
-      Object.keys(updateValues).forEach(key => {
-        if (updateValues[key as keyof MarketplaceListingUpdate] === undefined) {
-          delete updateValues[key as keyof MarketplaceListingUpdate];
+      if (updateData.title !== undefined) updateValues.title = updateData.title;
+      if (updateData.description !== undefined) updateValues.description = updateData.description;
+      if (updateData.price !== undefined) updateValues.priceAmount = updateData.price.toString();
+      if (updateData.currency !== undefined) updateValues.priceCurrency = updateData.currency;
+      if (updateData.images !== undefined) updateValues.images = JSON.stringify(updateData.images);
+      if (updateData.category !== undefined) updateValues.categoryId = updateData.category;
+      if (updateData.isActive !== undefined) {
+        updateValues.status = updateData.isActive ? 'active' : 'inactive';
+        if (updateData.isActive) {
+          updateValues.publishedAt = new Date();
         }
-      });
+      }
 
       const result = await db
-        .update(marketplaceListings)
+        .update(products)
         .set(updateValues)
-        .where(eq(marketplaceListings.id, id))
+        .where(eq(products.id, id))
         .returning();
 
       if (result.length === 0) {
@@ -231,18 +348,25 @@ export class MarketplaceListingsService {
       }
 
       const listing = result[0];
+      let parsedImages: string[] = [];
+      try {
+        parsedImages = listing.images ? JSON.parse(listing.images) : [];
+      } catch {
+        parsedImages = [];
+      }
+
       return {
         id: listing.id,
-        sellerAddress: listing.sellerAddress,
+        sellerAddress: sellerAddress,
         title: listing.title,
         description: listing.description || undefined,
-        price: listing.price,
-        currency: listing.currency || 'ETH',
-        images: listing.images ? (Array.isArray(listing.images) ? listing.images : []) : undefined,
-        category: listing.category || undefined,
-        isActive: listing.isActive,
-        createdAt: listing.createdAt,
-        updatedAt: listing.updatedAt
+        price: listing.priceAmount || '0',
+        currency: listing.priceCurrency || 'ETH',
+        images: parsedImages,
+        category: listing.categoryId || undefined,
+        isActive: listing.status === 'active',
+        createdAt: listing.createdAt || new Date(),
+        updatedAt: listing.updatedAt || new Date()
       };
     } catch (error) {
       safeLogger.error('Error updating marketplace listing:', error);
@@ -251,7 +375,8 @@ export class MarketplaceListingsService {
   }
 
   /**
-   * Delete a marketplace listing (soft delete by setting isActive to false)
+   * Delete a marketplace listing (soft delete by setting status to inactive)
+   * Now updates the products table
    */
   async deleteListing(id: string, sellerAddress: string): Promise<boolean> {
     try {
@@ -266,12 +391,13 @@ export class MarketplaceListingsService {
       }
 
       const result = await db
-        .update(marketplaceListings)
-        .set({ 
-          isActive: false,
+        .update(products)
+        .set({
+          status: 'inactive',
+          listingStatus: 'inactive',
           updatedAt: new Date()
         })
-        .where(eq(marketplaceListings.id, id))
+        .where(eq(products.id, id))
         .returning();
 
       return result.length > 0;
@@ -283,44 +409,49 @@ export class MarketplaceListingsService {
 
   /**
    * Search listings by title or description
+   * Now searches the products table
    */
   async searchListings(
     searchTerm: string,
     filters: MarketplaceListingFilters = {}
   ): Promise<PaginatedMarketplaceListings> {
     try {
-      const searchFilters = {
-        ...filters,
-        // Add search condition to existing filters
-      };
-
-      // For now, use simple LIKE search. In production, consider full-text search
       const conditions = [];
-      
+
+      // Filter for active listings
       if (filters.isActive !== undefined) {
-        conditions.push(eq(marketplaceListings.isActive, filters.isActive));
+        conditions.push(eq(products.status, filters.isActive ? 'active' : 'inactive'));
       } else {
-        conditions.push(eq(marketplaceListings.isActive, true));
+        conditions.push(eq(products.status, 'active'));
       }
+      conditions.push(sql`${products.publishedAt} IS NOT NULL`);
 
       // Add search conditions
-      const searchCondition = sql`(${marketplaceListings.title} ILIKE ${`%${searchTerm}%`} OR ${marketplaceListings.description} ILIKE ${`%${searchTerm}%`})`;
+      const searchCondition = sql`(${products.title} ILIKE ${`%${searchTerm}%`} OR ${products.description} ILIKE ${`%${searchTerm}%`})`;
       conditions.push(searchCondition);
 
       if (filters.category) {
-        conditions.push(eq(marketplaceListings.category, filters.category));
+        conditions.push(eq(products.categoryId, filters.category));
       }
 
       if (filters.sellerAddress) {
-        conditions.push(eq(marketplaceListings.sellerAddress, filters.sellerAddress));
+        const userResult = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.walletAddress, filters.sellerAddress))
+          .limit(1);
+
+        if (userResult.length > 0) {
+          conditions.push(eq(products.sellerId, userResult[0].id));
+        }
       }
 
       if (filters.priceRange) {
         if (filters.priceRange.min) {
-          conditions.push(gte(marketplaceListings.price, filters.priceRange.min));
+          conditions.push(gte(products.priceAmount, filters.priceRange.min.toString()));
         }
         if (filters.priceRange.max) {
-          conditions.push(lte(marketplaceListings.price, filters.priceRange.max));
+          conditions.push(lte(products.priceAmount, filters.priceRange.max.toString()));
         }
       }
 
@@ -333,41 +464,76 @@ export class MarketplaceListingsService {
         sortOrder = 'desc'
       } = filters;
 
-      const orderByClause = sortOrder === 'desc' 
-        ? desc(marketplaceListings[sortBy])
-        : asc(marketplaceListings[sortBy]);
+      const sortColumn = sortBy === 'price' ? products.priceAmount : products.createdAt;
+      const orderByClause = sortOrder === 'desc'
+        ? desc(sortColumn)
+        : asc(sortColumn);
 
       // Get total count
       const totalResult = await db
         .select({ count: count() })
-        .from(marketplaceListings)
+        .from(products)
         .where(whereClause);
-      
+
       const total = totalResult[0]?.count || 0;
 
       // Get listings
       const listingsResult = await db
-        .select()
-        .from(marketplaceListings)
+        .select({
+          id: products.id,
+          sellerId: products.sellerId,
+          title: products.title,
+          description: products.description,
+          priceAmount: products.priceAmount,
+          priceCurrency: products.priceCurrency,
+          categoryId: products.categoryId,
+          images: products.images,
+          status: products.status,
+          createdAt: products.createdAt,
+          updatedAt: products.updatedAt,
+        })
+        .from(products)
         .where(whereClause)
         .orderBy(orderByClause)
         .limit(limit)
         .offset(offset);
 
+      // Get seller addresses
+      const sellerIds = [...new Set(listingsResult.map(l => l.sellerId))];
+      let sellerAddressMap = new Map<string, string>();
+
+      if (sellerIds.length > 0) {
+        const sellerUsers = await db
+          .select({ id: users.id, walletAddress: users.walletAddress })
+          .from(users)
+          .where(sql`${users.id} IN (${sql.join(sellerIds.map(id => sql`${id}`), sql`, `)})`);
+
+        sellerAddressMap = new Map(sellerUsers.map(u => [u.id, u.walletAddress]));
+      }
+
       // Transform results
-      const listings: MarketplaceListing[] = listingsResult.map(listing => ({
-        id: listing.id,
-        sellerAddress: listing.sellerAddress,
-        title: listing.title,
-        description: listing.description || undefined,
-        price: listing.price,
-        currency: listing.currency || 'ETH',
-        images: listing.images ? (Array.isArray(listing.images) ? listing.images : []) : undefined,
-        category: listing.category || undefined,
-        isActive: listing.isActive,
-        createdAt: listing.createdAt,
-        updatedAt: listing.updatedAt
-      }));
+      const listings: MarketplaceListing[] = listingsResult.map(listing => {
+        let parsedImages: string[] = [];
+        try {
+          parsedImages = listing.images ? JSON.parse(listing.images) : [];
+        } catch {
+          parsedImages = [];
+        }
+
+        return {
+          id: listing.id,
+          sellerAddress: sellerAddressMap.get(listing.sellerId) || '',
+          title: listing.title,
+          description: listing.description || undefined,
+          price: listing.priceAmount || '0',
+          currency: listing.priceCurrency || 'ETH',
+          images: parsedImages,
+          category: listing.categoryId || undefined,
+          isActive: listing.status === 'active',
+          createdAt: listing.createdAt || new Date(),
+          updatedAt: listing.updatedAt || new Date()
+        };
+      });
 
       return {
         listings,
@@ -385,24 +551,26 @@ export class MarketplaceListingsService {
 
   /**
    * Get categories with listing counts
+   * Now queries from the products table
    */
   async getCategories(): Promise<Array<{ category: string; count: number }>> {
     try {
       const result = await db
         .select({
-          category: marketplaceListings.category,
+          categoryId: products.categoryId,
           count: count()
         })
-        .from(marketplaceListings)
+        .from(products)
         .where(and(
-          eq(marketplaceListings.isActive, true),
-          sql`${marketplaceListings.category} IS NOT NULL`
+          eq(products.status, 'active'),
+          sql`${products.publishedAt} IS NOT NULL`,
+          sql`${products.categoryId} IS NOT NULL`
         ))
-        .groupBy(marketplaceListings.category)
+        .groupBy(products.categoryId)
         .orderBy(desc(count()));
 
       return result.map(row => ({
-        category: row.category || '',
+        category: row.categoryId || '',
         count: row.count
       }));
     } catch (error) {

@@ -736,7 +736,19 @@ const CommunitiesPage: React.FC = () => {
             {/* Reddit-style Left Sidebar - Hidden on mobile */}
             <div className="hidden lg:block lg:col-span-3">
               <div className="sticky top-24 space-y-4">
-
+                {/* Community Info Card */}
+                <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg shadow-sm p-4 text-white">
+                  <h3 className="font-semibold text-sm mb-1">Join LinkDAO Communities</h3>
+                  <p className="text-xs opacity-90 mb-3">
+                    Connect with like-minded individuals and participate in governance
+                  </p>
+                  <button
+                    onClick={handleCreateCommunityClick}
+                    className="w-full py-2 bg-white text-blue-600 rounded-full text-sm font-medium hover:bg-gray-100 transition-colors"
+                  >
+                    Create Community
+                  </button>
+                </div>
 
                 {/* My Communities Card */}
                 <MyCommunitiesCard
@@ -1232,19 +1244,7 @@ const CommunitiesPage: React.FC = () => {
                   compact={false}
                 />
 
-                {/* Community Info Card */}
-                <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg shadow-sm p-4 text-white">
-                  <h3 className="font-semibold text-sm mb-1">Join LinkDAO Communities</h3>
-                  <p className="text-xs opacity-90 mb-3">
-                    Connect with like-minded individuals and participate in governance
-                  </p>
-                  <button
-                    onClick={handleCreateCommunityClick}
-                    className="w-full py-2 bg-white text-blue-600 rounded-full text-sm font-medium hover:bg-gray-100 transition-colors"
-                  >
-                    Create Community
-                  </button>
-                </div>
+
               </div>
             </div>
           </div>

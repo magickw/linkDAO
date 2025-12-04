@@ -33,6 +33,7 @@ import CommunityAvatar from './Community/CommunityAvatar';
 import { EnhancedProposalCard } from './Governance/EnhancedProposalCard';
 import { useVotingPower } from '@/hooks/useGovernanceContract';
 import { Proposal } from '@/types/governance';
+import PinnedPostsSection from './Community/PinnedPostsSection';
 
 interface CommunityViewProps {
   communitySlug: string;
@@ -436,6 +437,30 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
             </div>
           </div>
         )}
+
+        {/* Pinned Posts Section */}
+        <PinnedPostsSection
+          communityId={communityData.id}
+          community={communityData}
+          userMembership={isJoined ? {
+            id: 'temp-membership-id',
+            userId: address || '',
+            communityId: communityData.id,
+            role: memberRole as any,
+            joinedAt: new Date(),
+            reputation: 0,
+            contributions: 0,
+            isActive: true,
+            lastActivityAt: new Date()
+          } : null}
+          onVote={(postId, voteType, stakeAmount) => handleVote(postId, voteType === 'upvote' ? 'up' : 'down')}
+          onReaction={async (postId, type, amount) => {
+            console.log('Reaction:', postId, type, amount);
+          }}
+          onTip={async (postId, amount, token) => {
+            console.log('Tip:', postId, amount, token);
+          }}
+        />
 
         {/* Reddit-style Posts Feed */}
         <div className="space-y-0">

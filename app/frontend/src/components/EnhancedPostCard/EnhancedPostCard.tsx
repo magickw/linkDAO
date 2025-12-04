@@ -19,6 +19,7 @@ import { EnhancedPostCardGlass, RippleEffect, VisualPolishClasses } from '../Vis
 import EnhancedCommentSystem from '../EnhancedCommentSystem';
 import { analyticsService } from '@/services/analyticsService';
 import { EnhancedPost as SharedEnhancedPost, AuthorProfile, Reaction, Tip } from '@/types/feed';
+import OnChainIdentityBadge from '../Community/OnChainIdentityBadge';
 
 // Use the shared EnhancedPost type with extended properties for component-specific needs
 export interface EnhancedPost extends Omit<SharedEnhancedPost, 'trendingStatus' | 'socialProof'> {
@@ -405,29 +406,24 @@ const EnhancedPostCard = React.memo(({
                     )}
                   </div>
 
-                  {/* Author Info */}
+                  {/* Author Info with On-Chain Identity */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <Link
-                        href={`/u/${post.author}`}
-                        className="font-bold text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 truncate"
-                        aria-label={`View profile of ${post.authorProfile.handle}`}
-                      >
-                        {post.authorProfile.handle}
-                      </Link>
+                    <OnChainIdentityBadge
+                      address={post.author}
+                      identityData={{
+                        address: post.author,
+                        ensName: post.authorProfile?.ensName,
+                        reputationScore: post.authorProfile?.reputationScore || 0,
+                        votingPower: post.authorProfile?.votingPower || 0,
+                        xpBadges: post.authorProfile?.xpBadges || [],
+                        totalContributions: post.authorProfile?.totalContributions || 0,
+                        memberSince: post.authorProfile?.memberSince
+                      }}
+                      size="md"
+                      showTooltip={true}
+                    />
 
-                      {post.authorProfile.verified && (
-                        <span
-                          className="text-blue-500 flex-shrink-0"
-                          title="Verified"
-                          aria-label="Verified user"
-                        >
-                          ✓
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 mt-1">
                       <span>{formatTimestamp(post.createdAt)}</span>
 
                       {post.communityName && (
