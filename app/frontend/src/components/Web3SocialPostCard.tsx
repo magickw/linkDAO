@@ -14,6 +14,7 @@ import OptimizedImage from '@/components/OptimizedImage';
 import EnhancedCommentSystem from '@/components/EnhancedCommentSystem';
 import PostModal from '@/components/PostModal';
 import { CommunityPostService } from '@/services/communityPostService';
+import { ldaoTokenService } from '@/services/web3/ldaoTokenService';
 import { generateAvatarPlaceholder, generateSVGPlaceholder } from '../utils/placeholderService';
 
 interface Reaction {
@@ -148,7 +149,15 @@ export default function Web3SocialPostCard({
     }
 
     try {
-      // In a real implementation, this would call the backend API
+      // Use real LDAO staking functionality
+      const stakeResult = await ldaoTokenService.stakeTokens(amount.toString(), 1); // Use tier 1 (30 days)
+      
+      if (!stakeResult.success) {
+        addToast(stakeResult.error || 'Failed to stake LDAO tokens', 'error');
+        return;
+      }
+
+      // Call the onReaction callback if provided
       if (onReaction) {
         await onReaction(post.id, reactionType, amount);
       }
@@ -169,7 +178,7 @@ export default function Web3SocialPostCard({
         return reaction;
       }));
 
-      addToast(`Successfully staked ${amount} $LNK on ${reactionType} reaction!`, 'success');
+      addToast(`Successfully staked ${amount} $LDAO on ${reactionType} reaction!`, 'success');
     } catch (error) {
       console.error('Error reacting:', error);
       addToast('Failed to react. Please try again.', 'error');

@@ -17,6 +17,7 @@ import CommunityGovernance from '../CommunityGovernance';
 import PostInteractionBar from '../PostInteractionBar';
 import OptimizedImage from '../OptimizedImage';
 import { motion } from 'framer-motion';
+import { ldaoTokenService } from '@/services/web3/ldaoTokenService';
 import { processContent, shouldTruncateContent, getTruncatedContent } from '@/utils/contentParser';
 
 // Helper function to check if post is a community post
@@ -263,6 +264,14 @@ export default function CommunityPostCardEnhanced({
     }
 
     try {
+      // Use real LDAO staking functionality
+      const stakeResult = await ldaoTokenService.stakeTokens(amount.toString(), 1); // Use tier 1 (30 days)
+      
+      if (!stakeResult.success) {
+        addToast(stakeResult.error || 'Failed to stake LDAO tokens', 'error');
+        return;
+      }
+
       if (onReaction) {
         await onReaction(post.id, reactionType, amount);
       }
@@ -282,7 +291,7 @@ export default function CommunityPostCardEnhanced({
         return reaction;
       }));
 
-      addToast(`Successfully staked ${amount} $LNK on ${reactionType} reaction!`, 'success');
+      addToast(`Successfully staked ${amount} $LDAO on ${reactionType} reaction!`, 'success');
     } catch (error) {
       console.error('Error reacting:', error);
       addToast('Failed to react. Please try again.', 'error');
@@ -587,7 +596,7 @@ export default function CommunityPostCardEnhanced({
                             <span>{reaction.emoji}</span>
                             <span>{reaction.label}</span>
                           </span>
-                          <span className="font-medium">{reaction.userStaked} $LNK</span>
+                          <span className="font-medium">{reaction.userStaked} $LDAO</span>
                         </div>
                       ))}
                     </div>

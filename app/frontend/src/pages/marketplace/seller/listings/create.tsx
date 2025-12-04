@@ -110,7 +110,7 @@ const CreateListingPage: React.FC = () => {
     itemType: 'DIGITAL',
     condition: 'new',
     price: '',
-    currency: 'USDC', // Default to USDC for stable pricing
+    currency: 'USD', // Default to USD for stable pricing
     listingType: 'FIXED_PRICE',
     duration: 86400,
     royalty: 0,
@@ -917,26 +917,24 @@ const CreateListingPage: React.FC = () => {
                             } text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2 disabled:opacity-50`}
                         />
 
-                        {formData.itemType === 'DIGITAL' && (
-                          <label className="flex items-center gap-2 text-white/80">
+                        <label className="flex items-center gap-2 text-white/80">
                             <input
                               type="checkbox"
                               checked={formData.unlimitedQuantity}
                               onChange={(e) => handleFormChange('unlimitedQuantity', e.target.checked)}
                               className="rounded border-white/20 bg-white/10 text-indigo-500 focus:ring-indigo-400"
                             />
-                            Unlimited quantity (digital license)
+                            Unlimited quantity
                           </label>
-                        )}
                       </div>
 
                       {fieldErrors.quantity && (
                         <p className="text-red-400 text-sm">{fieldErrors.quantity}</p>
                       )}
 
-                      {formData.itemType === 'DIGITAL' && !formData.unlimitedQuantity && (
+                      {!formData.unlimitedQuantity && (
                         <p className="text-xs text-white/60">
-                          For digital goods, consider if you're selling limited licenses or unlimited access
+                          Specify the number of items available for sale. Check "Unlimited quantity" for digital products or services with unlimited availability.
                         </p>
                       )}
                     </div>
@@ -982,7 +980,7 @@ const CreateListingPage: React.FC = () => {
                   {/* Price */}
                   <div>
                     <label className="block text-sm font-medium text-white/90 mb-2">
-                      Price * (ETH)
+                      Price * (USD)
                     </label>
                     <div className="space-y-2">
                       <input

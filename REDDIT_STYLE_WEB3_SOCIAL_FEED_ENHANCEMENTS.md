@@ -19,7 +19,7 @@ The enhanced social feed combines the familiar Reddit-style interface with Web3-
 
 #### Main Feed
 - **Reddit-Style Post Cards**: Vertical list with upvote/downvote arrows
-- **Tokenized Voting**: Microtransactions for upvotes/downvotes (0.01 $LNK for upvote, 0.005 $LNK for downvote)
+- **Tokenized Voting**: Microtransactions for upvotes/downvotes (0.01 $LDAO for upvote, 0.005 $LDAO for downvote)
 - **Post Type Indicators**: Visual badges for different post types (Proposal, DeFi, NFT, Analysis)
 - **Compact Metadata**: Title, DAO tag, author, timestamp
 - **Social Actions**: Comments, share, save, and tipping functionality
@@ -59,12 +59,12 @@ The enhanced social feed combines the familiar Reddit-style interface with Web3-
 ### 3. Voting & Ranking Mechanism
 
 #### Tokenized Upvotes
-- Upvote = microtransaction in platform token (0.01 $LNK)
+- Upvote = microtransaction in platform token (0.01 $LDAO)
 - Author receives rewards pooled from upvotes
 - Visual feedback for successful transactions
 
 #### Downvotes with Skin-in-the-Game
-- Downvoter stakes reputation or tokens (0.005 $LNK)
+- Downvoter stakes reputation or tokens (0.005 $LDAO)
 - Slashed if flagged as abuse by community
 - Encourages responsible voting
 
@@ -164,7 +164,7 @@ The enhanced social feed combines the familiar Reddit-style interface with Web3-
 
 1. **Alice connects wallet** → Auto-generated profile with reputation score
 2. **Alice posts analysis** in /dao/defi-traders with specialized post type
-3. **Bob upvotes** → Spends 0.01 $LNK, Alice receives reward
+3. **Bob upvotes** → Spends 0.01 $LDAO, Alice receives reward
 4. **Alice's post rises in Hot** → Increased visibility and engagement
 5. **Treasury auto-rewards Alice** → Weekly creator pool payout based on post performance
 6. **DAO moderators downvote spam** → Using staked reputation to maintain quality

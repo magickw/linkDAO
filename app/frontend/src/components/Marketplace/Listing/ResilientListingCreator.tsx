@@ -16,6 +16,7 @@ interface ProductData {
   tags: string[];
   images: string[];
   quantity: number;
+  unlimitedQuantity: boolean;
   escrowEnabled: boolean;
   shippingCost: string;
   estimatedDelivery: string;
@@ -55,12 +56,13 @@ export const ResilientListingCreator: React.FC<ResilientListingCreatorProps> = (
     title: '',
     description: '',
     price: '',
-    currency: 'ETH',
+    currency: 'USD',
     category: 'electronics',
     condition: 'new',
     tags: [],
     images: [],
     quantity: 1,
+    unlimitedQuantity: false,
     escrowEnabled: true,
     shippingCost: '0',
     estimatedDelivery: '3-5 days'
@@ -125,7 +127,7 @@ export const ResilientListingCreator: React.FC<ResilientListingCreatorProps> = (
     if (!formData.description.trim()) return 'Product description is required';
     if (formData.description.length < 10) return 'Description must be at least 10 characters';
     if (!formData.price || parseFloat(formData.price) <= 0) return 'Valid price is required';
-    if (formData.quantity < 1) return 'Quantity must be at least 1';
+    if (!formData.unlimitedQuantity && formData.quantity < 1) return 'Quantity must be at least 1';
     return null;
   };
 
@@ -149,7 +151,7 @@ export const ResilientListingCreator: React.FC<ResilientListingCreatorProps> = (
         sellerWalletAddress: address,
         tokenAddress: '0x0000000000000000000000000000000000000000',
         price: formData.price,
-        quantity: formData.quantity,
+        quantity: formData.unlimitedQuantity ? 999999 : formData.quantity,
         itemType: 'PHYSICAL',
         listingType: 'FIXED_PRICE',
         metadataURI: JSON.stringify({
@@ -232,12 +234,13 @@ export const ResilientListingCreator: React.FC<ResilientListingCreatorProps> = (
           title: '',
           description: '',
           price: '',
-          currency: 'ETH',
+          currency: 'USD',
           category: 'electronics',
           condition: 'new',
           tags: [],
           images: [],
           quantity: 1,
+          unlimitedQuantity: false,
           escrowEnabled: true,
           shippingCost: '0',
           estimatedDelivery: '3-5 days'
@@ -496,14 +499,29 @@ export const ResilientListingCreator: React.FC<ResilientListingCreatorProps> = (
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Quantity
               </label>
-              <input
-                type="number"
-                min="1"
-                value={formData.quantity}
-                onChange={(e) => handleInputChange('quantity', parseInt(e.target.value) || 1)}
-                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                disabled={isSubmitting}
-              />
+              <div className="flex items-center space-x-3">
+                <input
+                  type="number"
+                  min="1"
+                  value={formData.quantity}
+                  onChange={(e) => handleInputChange('quantity', parseInt(e.target.value) || 1)}
+                  disabled={formData.unlimitedQuantity || isSubmitting}
+                  className="flex-1 p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+                />
+                <label className="flex items-center text-gray-700 whitespace-nowrap">
+                  <input
+                    type="checkbox"
+                    checked={formData.unlimitedQuantity}
+                    onChange={(e) => handleInputChange('unlimitedQuantity', e.target.checked)}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
+                    disabled={isSubmitting}
+                  />
+                  Unlimited
+                </label>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Specify the number of items available for sale. Check "Unlimited" for digital products or services with unlimited availability.
+              </p>
             </div>
 
             <div>

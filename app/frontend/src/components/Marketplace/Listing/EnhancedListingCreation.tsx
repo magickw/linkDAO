@@ -36,6 +36,7 @@ interface ListingFormData {
   shippingCost: string;
   estimatedDelivery: string;
   quantity: number;
+  unlimitedQuantity: boolean;
   // Auction-specific fields
   listingType: 'FIXED_PRICE' | 'AUCTION';
   auctionDuration?: number; // in hours
@@ -61,7 +62,7 @@ export const EnhancedListingCreation: React.FC = () => {
     title: '',
     description: '',
     price: '',
-    currency: 'ETH',
+    currency: 'USD',
     category: 'electronics',
     condition: 'new',
     tags: [],
@@ -69,6 +70,7 @@ export const EnhancedListingCreation: React.FC = () => {
     shippingCost: '0',
     estimatedDelivery: '3-5 days',
     quantity: 1,
+    unlimitedQuantity: false,
     listingType: 'FIXED_PRICE',
     auctionDuration: 72, // 3 days default
     reservePrice: '',
@@ -235,7 +237,7 @@ export const EnhancedListingCreation: React.FC = () => {
         sellerWalletAddress: address,
         tokenAddress: '0x0000000000000000000000000000000000000000', // For native token
         price: formData.price,
-        quantity: formData.quantity,
+        quantity: formData.unlimitedQuantity ? 999999 : formData.quantity,
         itemType: 'DIGITAL', // Default to digital for now
         listingType: formData.listingType,
         metadataURI: formData.title,
@@ -322,14 +324,29 @@ export const EnhancedListingCreation: React.FC = () => {
 
         <div>
           <label className="block text-white font-medium mb-2">Quantity</label>
-          <input
-            type="number"
-            min="1"
-            value={formData.quantity}
-            onChange={(e) => handleInputChange('quantity', parseInt(e.target.value) || 1)}
-            className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+          <div className="flex items-center space-x-3">
+            <input
+              type="number"
+              min="1"
+              value={formData.quantity}
+              onChange={(e) => handleInputChange('quantity', parseInt(e.target.value) || 1)}
+              disabled={formData.unlimitedQuantity}
+              className="flex-1 bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            />
+            <label className="flex items-center text-white/80 whitespace-nowrap">
+              <input
+                type="checkbox"
+                checked={formData.unlimitedQuantity}
+                onChange={(e) => handleInputChange('unlimitedQuantity', e.target.checked)}
+                className="rounded border-white/20 bg-white/10 text-blue-500 focus:ring-blue-500 mr-2"
+              />
+              Unlimited
+            </label>
+          </div>
           {errors.quantity && <p className="text-red-400 text-sm mt-1">{errors.quantity}</p>}
+          <p className="text-xs text-white/60 mt-1">
+            Specify the number of items available for sale. Check "Unlimited" for digital products or services with unlimited availability.
+          </p>
         </div>
       </div>
 

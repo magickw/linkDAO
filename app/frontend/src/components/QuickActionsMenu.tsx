@@ -16,11 +16,11 @@ export default function QuickActionsMenu({
   if (!isOpen) return null;
 
   const actions = [
-    { id: 'hot', emoji: '🔥', label: 'Hot Take (1 $LNK)' },
-    { id: 'diamond', emoji: '💎', label: 'Diamond Hands (1 $LNK)' },
-    { id: 'bullish', emoji: '🚀', label: 'Bullish (1 $LNK)' },
-    { id: 'governance', emoji: '⚖️', label: 'Governance (1 $LNK)' },
-    { id: 'art', emoji: '🎨', label: 'Art Appreciation (1 $LNK)' },
+    { id: 'hot', emoji: '🔥', label: 'Hot Take (1 $LDAO)' },
+    { id: 'diamond', emoji: '💎', label: 'Diamond Hands (1 $LDAO)' },
+    { id: 'bullish', emoji: '🚀', label: 'Bullish (1 $LDAO)' },
+    { id: 'governance', emoji: '⚖️', label: 'Governance (1 $LDAO)' },
+    { id: 'art', emoji: '🎨', label: 'Art Appreciation (1 $LDAO)' },
     { id: 'tip', emoji: '💸', label: 'Quick Tip (1 USDC)' },
     { id: 'share', emoji: '📤', label: 'Share Post' },
     { id: 'save', emoji: '💾', label: 'Save Post' },

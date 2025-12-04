@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useWeb3 } from '@/context/Web3Context';
 import { useToast } from '@/context/ToastContext';
+import { ldaoTokenService } from '@/services/web3/ldaoTokenService';
 
 interface Reaction {
   type: 'hot' | 'diamond' | 'bullish' | 'governance' | 'art' | 'like' | 'love' | 'laugh' | 'angry' | 'sad';
@@ -101,14 +102,22 @@ export default function EnhancedReactionSystem({
     }
   };
 
-  // Handle staked reaction (for community posts)
-  const handleStakedReaction = async (reactionType: string, amount: number) => {
+  // Handle reaction with staking
+  const handleReactionWithStake = async (reactionType: string, amount: number) => {
     if (!isConnected) {
       addToast('Please connect your wallet to react', 'error');
       return;
     }
 
     try {
+      // Use real LDAO staking functionality
+      const stakeResult = await ldaoTokenService.stakeTokens(amount.toString(), 1); // Use tier 1 (30 days)
+      
+      if (!stakeResult.success) {
+        addToast(stakeResult.error || 'Failed to stake LDAO tokens', 'error');
+        return;
+      }
+
       if (onReaction) {
         await onReaction(postId, reactionType, amount);
       }
@@ -128,7 +137,7 @@ export default function EnhancedReactionSystem({
         return reaction;
       }));
 
-      addToast(`Successfully staked ${amount} $LNK on ${reactionType} reaction!`, 'success');
+      addToast(`Successfully staked ${amount} $LDAO on ${reactionType} reaction!`, 'success');
       setShowStakeModal(null);
       setStakeAmount('1');
     } catch (error) {
