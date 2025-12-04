@@ -16,7 +16,9 @@ export class BlockchainEventService {
   private eventListeners: Map<string, any> = new Map();
 
   constructor() {
-    this.provider = new ethers.JsonRpcProvider(process.env.RPC_URL || 'http://localhost:8545');
+    // Use the Sepolia testnet RPC URL for production
+    const rpcUrl = process.env.RPC_URL || 'https://eth-sepolia.g.alchemy.com/v2/5qxkwSO4d_0qE4wjQPIrp';
+    this.provider = new ethers.JsonRpcProvider(rpcUrl);
     this.initializeContracts();
   }
 

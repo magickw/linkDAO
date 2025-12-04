@@ -198,8 +198,22 @@ async function createListing(sellerAddress, listingData) {
   `;
   
   const fallback = () => {
+    // Ensure user exists in memory storage
+    let user = memoryStorage.users.find(u => u.wallet_address === sellerAddress);
+    if (!user) {
+      user = {
+        id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        wallet_address: sellerAddress,
+        handle: null,
+        profile_cid: null,
+        created_at: new Date().toISOString()
+      };
+      memoryStorage.users.push(user);
+    }
+    
     const listing = {
       id: `listing_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      seller_id: user.id,
       seller_address: sellerAddress,
       title: listingData.title,
       description: listingData.description,

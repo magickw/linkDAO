@@ -29,7 +29,7 @@ export class OrderService {
 
   constructor() {
     this.enhancedEscrowService = new EnhancedEscrowService(
-      process.env.RPC_URL || 'http://localhost:8545',
+      process.env.RPC_URL || 'https://eth-sepolia.g.alchemy.com/v2/5qxkwSO4d_0qE4wjQPIrp',
       process.env.ENHANCED_ESCROW_CONTRACT_ADDRESS || '',
       process.env.MARKETPLACE_CONTRACT_ADDRESS || ''
     );

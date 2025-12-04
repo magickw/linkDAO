@@ -37,12 +37,12 @@ const EditPostPage: React.FC = () => {
       setIsLoading(true);
       const postData: any = await PostService.getPostById(id as string);
       setPost(postData);
-      
+
       // Populate form fields with existing post data
       setTitle(postData.title || '');
-      setContent(postData.contentCid || '');
+      setContent(postData.content || '');
       setSelectedCommunity(postData.communityId || '');
-      
+
       // Parse tags if they exist
       if (Array.isArray(postData.tags)) {
         setTags(postData.tags);

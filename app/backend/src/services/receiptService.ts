@@ -46,7 +46,7 @@ export class ReceiptService {
 
   constructor() {
     this.databaseService = new DatabaseService();
-    this.provider = new ethers.JsonRpcProvider(process.env.RPC_URL || 'http://localhost:8545');
+    this.provider = new ethers.JsonRpcProvider(process.env.RPC_URL || 'https://eth-sepolia.g.alchemy.com/v2/5qxkwSO4d_0qE4wjQPIrp');
   }
 
   /**

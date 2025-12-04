@@ -126,7 +126,7 @@ export class PaymentValidationService {
     this.databaseService = new DatabaseService();
     this.userProfileService = new UserProfileService();
     this.exchangeRateService = new ExchangeRateService();
-    this.provider = new ethers.JsonRpcProvider(process.env.RPC_URL || 'http://localhost:8545');
+    this.provider = new ethers.JsonRpcProvider(process.env.RPC_URL || 'https://eth-sepolia.g.alchemy.com/v2/5qxkwSO4d_0qE4wjQPIrp');
   }
 
   /**
