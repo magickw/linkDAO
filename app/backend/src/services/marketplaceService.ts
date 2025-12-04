@@ -14,7 +14,6 @@ import {
 } from '../models/Marketplace';
 import { databaseService } from './databaseService'; // Import the singleton instance
 import { UserProfileService } from './userProfileService';
-import { listings } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 
@@ -81,64 +80,8 @@ export class BlockchainMarketplaceService {
   }
 
   async getListingById(id: string): Promise<MarketplaceListing | null> {
-    // First try to get listing by UUID directly
-    let dbListing = await databaseService.getListingById(id);
-    
-    // If not found and ID looks like a product ID, try to find by productId field
-    if (!dbListing && (id.startsWith('prod_') || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))) {
-      const db = databaseService.getDatabase();
-      const [listing] = await db
-        .select()
-        .from(listings)
-        .where(eq(listings.productId, id))
-        .limit(1);
-      dbListing = listing;
-    }
-    
-    // Also check if the ID might be in the marketplaceListings table (newer schema)
-    if (!dbListing) {
-      try {
-        // Try to get from marketplaceListings table
-        const { db } = await import('../db');
-        const { marketplaceListings } = await import('../db/schema');
-        
-        const [marketplaceListing] = await db
-          .select()
-          .from(marketplaceListings)
-          .where(eq(marketplaceListings.id, id))
-          .limit(1);
-        
-        if (marketplaceListing) {
-          // Convert marketplaceListing to the expected format
-          const now = new Date().toISOString();
-          return {
-            id: marketplaceListing.id,
-            sellerWalletAddress: marketplaceListing.sellerAddress,
-            tokenAddress: '', // Not applicable for marketplaceListings
-            price: marketplaceListing.price.toString(),
-            quantity: 1, // Default quantity
-            itemType: 'DIGITAL', // Default type
-            listingType: 'FIXED_PRICE', // Default type
-            status: marketplaceListing.isActive ? 'ACTIVE' : 'CANCELLED',
-            startTime: marketplaceListing.createdAt?.toISOString() || now,
-            endTime: undefined,
-            highestBid: undefined,
-            highestBidderWalletAddress: undefined,
-            metadataURI: '', // Not applicable
-            isEscrowed: false,
-            nftStandard: undefined,
-            tokenId: undefined,
-            reservePrice: undefined,
-            minIncrement: undefined,
-            reserveMet: false,
-            createdAt: marketplaceListing.createdAt?.toISOString() || now,
-            updatedAt: marketplaceListing.updatedAt?.toISOString() || now
-          };
-        }
-      } catch (error) {
-        safeLogger.warn('Failed to check marketplaceListings table:', error);
-      }
-    }
+    // Get product by ID from the products table
+    let dbListing = await databaseService.getProductById(id);
     
     if (!dbListing) return null;
     
@@ -146,27 +89,38 @@ export class BlockchainMarketplaceService {
     const seller = await userProfileService.getProfileById(dbListing.sellerId || '');
     if (!seller) return null;
     
+    // Parse metadata to extract enhanced information
+    let parsedMetadata = {};
+    try {
+      if (dbListing.metadata) {
+        parsedMetadata = JSON.parse(dbListing.metadata);
+      }
+    } catch (e) {
+      // If parsing fails, use the raw metadata
+      parsedMetadata = { title: dbListing.title || 'Untitled' };
+    }
+    
     const now = new Date().toISOString();
     const listing: MarketplaceListing = {
       id: dbListing.id,
       sellerWalletAddress: seller.walletAddress,
-      tokenAddress: dbListing.tokenAddress,
-      price: dbListing.price,
-      quantity: dbListing.quantity,
-      itemType: dbListing.itemType as 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE',
-      listingType: dbListing.listingType as 'FIXED_PRICE' | 'AUCTION',
+      tokenAddress: '', // Not applicable for product listings
+      price: dbListing.priceAmount?.toString() || '0',
+      quantity: dbListing.inventory || 0,
+      itemType: 'PHYSICAL', // Default to physical for product listings
+      listingType: 'FIXED_PRICE', // Default to fixed price for product listings
       status: (dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED') || 'ACTIVE',
-      startTime: dbListing.startTime?.toISOString() || now,
-      endTime: dbListing.endTime ? dbListing.endTime.toISOString() : undefined,
-      highestBid: dbListing.highestBid?.toString(),
-      highestBidderWalletAddress: dbListing.highestBidder || undefined,
-      metadataURI: dbListing.metadataURI,
-      isEscrowed: dbListing.isEscrowed || false,
-      nftStandard: dbListing.nftStandard as 'ERC721' | 'ERC1155' | undefined,
-      tokenId: dbListing.tokenId || undefined,
-      reservePrice: dbListing.reservePrice?.toString(),
-      minIncrement: dbListing.minIncrement?.toString(),
-      reserveMet: dbListing.reserveMet || false,
+      startTime: dbListing.publishedAt?.toISOString() || now,
+      endTime: undefined, // Not applicable for product listings
+      highestBid: undefined, // Not applicable for fixed price listings
+      highestBidderWalletAddress: undefined, // Not applicable for fixed price listings
+      metadataURI: dbListing.metadata || '{}',
+      isEscrowed: false, // Default to false for product listings
+      nftStandard: undefined, // Not applicable for regular product listings
+      tokenId: undefined, // Not applicable for regular product listings
+      reservePrice: undefined, // Not applicable for fixed price listings
+      minIncrement: undefined, // Not applicable for fixed price listings
+      reserveMet: false, // Not applicable for fixed price listings
       createdAt: dbListing.createdAt?.toISOString() || now,
       updatedAt: dbListing.updatedAt?.toISOString() || now
     };
@@ -178,31 +132,43 @@ export class BlockchainMarketplaceService {
     const sellerUser = await userProfileService.getProfileByAddress(sellerAddress);
     if (!sellerUser) return [];
     
-    const dbListings = await databaseService.getListingsBySeller(sellerUser.id);
+    // Use the correct database service method that queries the products table
+    const dbListings = await databaseService.getProductsBySeller(sellerUser.id);
     
     const now = new Date().toISOString();
     const listings: MarketplaceListing[] = [];
     for (const dbListing of dbListings) {
+      // Parse metadata to extract enhanced information
+      let parsedMetadata = {};
+      try {
+        if (dbListing.metadata) {
+          parsedMetadata = JSON.parse(dbListing.metadata);
+        }
+      } catch (e) {
+        // If parsing fails, use the raw metadata
+        parsedMetadata = { title: dbListing.title || 'Untitled' };
+      }
+      
       const listing: MarketplaceListing = {
         id: dbListing.id,
         sellerWalletAddress: sellerAddress,
-        tokenAddress: dbListing.tokenAddress,
-        price: dbListing.price,
-        quantity: dbListing.quantity,
-        itemType: dbListing.itemType as 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE',
-        listingType: dbListing.listingType as 'FIXED_PRICE' | 'AUCTION',
+        tokenAddress: '', // Not applicable for product listings
+        price: dbListing.priceAmount?.toString() || '0',
+        quantity: dbListing.inventory || 0,
+        itemType: 'PHYSICAL', // Default to physical for product listings
+        listingType: 'FIXED_PRICE', // Default to fixed price for product listings
         status: (dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED') || 'ACTIVE',
-        startTime: dbListing.startTime?.toISOString() || now,
-        endTime: dbListing.endTime ? dbListing.endTime.toISOString() : undefined,
-        highestBid: dbListing.highestBid?.toString(),
-        highestBidderWalletAddress: dbListing.highestBidder || undefined,
-        metadataURI: dbListing.metadataURI,
-        isEscrowed: dbListing.isEscrowed || false,
-        nftStandard: dbListing.nftStandard as 'ERC721' | 'ERC1155' | undefined,
-        tokenId: dbListing.tokenId || undefined,
-        reservePrice: dbListing.reservePrice?.toString(),
-        minIncrement: dbListing.minIncrement?.toString(),
-        reserveMet: dbListing.reserveMet || false,
+        startTime: dbListing.publishedAt?.toISOString() || now,
+        endTime: undefined, // Not applicable for product listings
+        highestBid: undefined, // Not applicable for fixed price listings
+        highestBidderWalletAddress: undefined, // Not applicable for fixed price listings
+        metadataURI: dbListing.metadata || '{}',
+        isEscrowed: false, // Default to false for product listings
+        nftStandard: undefined, // Not applicable for regular product listings
+        tokenId: undefined, // Not applicable for regular product listings
+        reservePrice: undefined, // Not applicable for fixed price listings
+        minIncrement: undefined, // Not applicable for fixed price listings
+        reserveMet: false, // Not applicable for fixed price listings
         createdAt: dbListing.createdAt?.toISOString() || now,
         updatedAt: dbListing.updatedAt?.toISOString() || now
       };
@@ -213,7 +179,7 @@ export class BlockchainMarketplaceService {
   }
 
   async getAllListings(): Promise<MarketplaceListing[]> {
-    const dbListings = await databaseService.getAllListings();
+    const dbListings = await databaseService.getAllProducts();
     
     const now = new Date().toISOString();
     const listings: MarketplaceListing[] = [];
@@ -222,26 +188,37 @@ export class BlockchainMarketplaceService {
       const seller = await userProfileService.getProfileById(dbListing.sellerId || '');
       if (!seller) continue;
       
+      // Parse metadata to extract enhanced information
+      let parsedMetadata = {};
+      try {
+        if (dbListing.metadata) {
+          parsedMetadata = JSON.parse(dbListing.metadata);
+        }
+      } catch (e) {
+        // If parsing fails, use the raw metadata
+        parsedMetadata = { title: dbListing.title || 'Untitled' };
+      }
+      
       const listing: MarketplaceListing = {
         id: dbListing.id,
         sellerWalletAddress: seller.walletAddress,
-        tokenAddress: dbListing.tokenAddress,
-        price: dbListing.price,
-        quantity: dbListing.quantity,
-        itemType: dbListing.itemType as 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE',
-        listingType: dbListing.listingType as 'FIXED_PRICE' | 'AUCTION',
+        tokenAddress: '', // Not applicable for product listings
+        price: dbListing.priceAmount?.toString() || '0',
+        quantity: dbListing.inventory || 0,
+        itemType: 'PHYSICAL', // Default to physical for product listings
+        listingType: 'FIXED_PRICE', // Default to fixed price for product listings
         status: (dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED') || 'ACTIVE',
-        startTime: dbListing.startTime?.toISOString() || now,
-        endTime: dbListing.endTime ? dbListing.endTime.toISOString() : undefined,
-        highestBid: dbListing.highestBid?.toString(),
-        highestBidderWalletAddress: dbListing.highestBidder || undefined,
-        metadataURI: dbListing.metadataURI,
-        isEscrowed: dbListing.isEscrowed || false,
-        nftStandard: dbListing.nftStandard as 'ERC721' | 'ERC1155' | undefined,
-        tokenId: dbListing.tokenId || undefined,
-        reservePrice: dbListing.reservePrice?.toString(),
-        minIncrement: dbListing.minIncrement?.toString(),
-        reserveMet: dbListing.reserveMet || false,
+        startTime: dbListing.publishedAt?.toISOString() || now,
+        endTime: undefined, // Not applicable for product listings
+        highestBid: undefined, // Not applicable for fixed price listings
+        highestBidderWalletAddress: undefined, // Not applicable for fixed price listings
+        metadataURI: dbListing.metadata || '{}',
+        isEscrowed: false, // Default to false for product listings
+        nftStandard: undefined, // Not applicable for regular product listings
+        tokenId: undefined, // Not applicable for regular product listings
+        reservePrice: undefined, // Not applicable for fixed price listings
+        minIncrement: undefined, // Not applicable for fixed price listings
+        reserveMet: false, // Not applicable for fixed price listings
         createdAt: dbListing.createdAt?.toISOString() || now,
         updatedAt: dbListing.updatedAt?.toISOString() || now
       };
@@ -252,7 +229,7 @@ export class BlockchainMarketplaceService {
   }
 
   async getActiveListings(): Promise<MarketplaceListing[]> {
-    const dbListings = await databaseService.getActiveListings();
+    const dbListings = await databaseService.getActiveProducts();
     
     const now = new Date().toISOString();
     const listings: MarketplaceListing[] = [];
@@ -261,26 +238,37 @@ export class BlockchainMarketplaceService {
       const seller = await userProfileService.getProfileById(dbListing.sellerId || '');
       if (!seller) continue;
       
+      // Parse metadata to extract enhanced information
+      let parsedMetadata = {};
+      try {
+        if (dbListing.metadata) {
+          parsedMetadata = JSON.parse(dbListing.metadata);
+        }
+      } catch (e) {
+        // If parsing fails, use the raw metadata
+        parsedMetadata = { title: dbListing.title || 'Untitled' };
+      }
+      
       const listing: MarketplaceListing = {
         id: dbListing.id,
         sellerWalletAddress: seller.walletAddress,
-        tokenAddress: dbListing.tokenAddress,
-        price: dbListing.price,
-        quantity: dbListing.quantity,
-        itemType: dbListing.itemType as 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE',
-        listingType: dbListing.listingType as 'FIXED_PRICE' | 'AUCTION',
+        tokenAddress: '', // Not applicable for product listings
+        price: dbListing.priceAmount?.toString() || '0',
+        quantity: dbListing.inventory || 0,
+        itemType: 'PHYSICAL', // Default to physical for product listings
+        listingType: 'FIXED_PRICE', // Default to fixed price for product listings
         status: (dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED') || 'ACTIVE',
-        startTime: dbListing.startTime?.toISOString() || now,
-        endTime: dbListing.endTime ? dbListing.endTime.toISOString() : undefined,
-        highestBid: dbListing.highestBid?.toString(),
-        highestBidderWalletAddress: dbListing.highestBidder || undefined,
-        metadataURI: dbListing.metadataURI,
-        isEscrowed: dbListing.isEscrowed || false,
-        nftStandard: dbListing.nftStandard as 'ERC721' | 'ERC1155' | undefined,
-        tokenId: dbListing.tokenId || undefined,
-        reservePrice: dbListing.reservePrice?.toString(),
-        minIncrement: dbListing.minIncrement?.toString(),
-        reserveMet: dbListing.reserveMet || false,
+        startTime: dbListing.publishedAt?.toISOString() || now,
+        endTime: undefined, // Not applicable for product listings
+        highestBid: undefined, // Not applicable for fixed price listings
+        highestBidderWalletAddress: undefined, // Not applicable for fixed price listings
+        metadataURI: dbListing.metadata || '{}',
+        isEscrowed: false, // Default to false for product listings
+        nftStandard: undefined, // Not applicable for regular product listings
+        tokenId: undefined, // Not applicable for regular product listings
+        reservePrice: undefined, // Not applicable for fixed price listings
+        minIncrement: undefined, // Not applicable for fixed price listings
+        reserveMet: false, // Not applicable for fixed price listings
         createdAt: dbListing.createdAt?.toISOString() || now,
         updatedAt: dbListing.updatedAt?.toISOString() || now
       };
@@ -295,7 +283,7 @@ export class BlockchainMarketplaceService {
     if (input.price !== undefined) updates.price = input.price;
     if (input.quantity !== undefined) updates.quantity = input.quantity;
     
-    const dbListing = await databaseService.updateListing(parseInt(id), updates);
+    const dbListing = await databaseService.updateListing(id, updates);
     if (!dbListing) return null;
     
     // Get seller address
@@ -331,7 +319,7 @@ export class BlockchainMarketplaceService {
   }
 
   async cancelListing(id: string): Promise<boolean> {
-    const dbListing = await databaseService.cancelListing(parseInt(id));
+    const dbListing = await databaseService.cancelListing(id);
     return dbListing !== null;
   }
 
