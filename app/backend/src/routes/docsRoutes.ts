@@ -47,11 +47,19 @@ router.get('/:slug', (req, res) => {
     }
 
     if (!fileFound || !filePath) {
-      return res.status(404).json({
-        success: false,
-        error: `Documentation not found for: ${sanitizedSlug}`,
-        slug: sanitizedSlug,
-        triedPaths: possiblePaths // Include this for debugging purposes
+      // If file not found, return a helpful message instead of 500 error
+      console.warn(`Documentation file not found for slug: ${sanitizedSlug}`);
+      console.warn(`Tried paths:`, possiblePaths);
+
+      return res.json({
+        success: true,
+        content: `# ${sanitizedSlug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}\n\nThis documentation is currently being updated. Please check back soon.\n\nIn the meantime, you can:\n- Visit our [GitHub repository](https://github.com/linkdao) for the latest information\n- Join our community Discord for support\n- Check out our other documentation pages\n\n---\n\n*Note: This is a placeholder message. The documentation file could not be found at the expected location.*`,
+        title: sanitizedSlug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+        lastUpdated: new Date().toISOString(),
+        wordCount: 50,
+        estimatedReadingTime: 1,
+        fileSize: 0,
+        isPlaceholder: true
       });
     }
 
@@ -75,14 +83,26 @@ router.get('/:slug', (req, res) => {
       lastUpdated: stats.mtime.toISOString(),
       wordCount,
       estimatedReadingTime,
-      fileSize: stats.size
+      fileSize: stats.size,
+      isPlaceholder: false
     });
   } catch (error) {
     console.error('Error fetching documentation:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch documentation',
-      details: error instanceof Error ? error.message : 'Unknown error'
+
+    // Return fallback content instead of 500 error
+    const { slug } = req.params;
+    const sanitizedSlug = slug?.replace(/\.\./g, '').replace(/\//g, '') || 'unknown';
+
+    res.json({
+      success: true,
+      content: `# ${sanitizedSlug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}\n\nWe're experiencing technical difficulties loading this documentation page.\n\nPlease try again later or contact support if the issue persists.\n\n---\n\n*Error: ${error instanceof Error ? error.message : 'Unknown error'}*`,
+      title: sanitizedSlug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+      lastUpdated: new Date().toISOString(),
+      wordCount: 30,
+      estimatedReadingTime: 1,
+      fileSize: 0,
+      isPlaceholder: true,
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });

@@ -826,11 +826,6 @@ const CommunitiesPage: React.FC = () => {
                 <AnnouncementBanner communityId={joinedCommunities[0]} />
               )}
 
-              {/* Community Health Metrics */}
-              {joinedCommunities.length > 0 && (
-                <CommunityHealthMetrics communityId={joinedCommunities[0]} />
-              )}
-
               {/* Announcement Manager (Admin Only) */}
               {joinedCommunities.length > 0 && userAdminRoles[joinedCommunities[0]] === 'admin' && (
                 <div className="mb-4">
