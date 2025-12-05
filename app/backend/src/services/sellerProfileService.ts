@@ -23,17 +23,15 @@ export class SellerProfileService {
         throw new Error('Invalid wallet address format');
       }
 
-      const result = await db
+      const [seller] = await db
         .select()
         .from(sellers)
-        .where(eq(sellers.walletAddress, walletAddress))
+        .where(eq(sellers.walletAddress, walletAddress.toLowerCase()))
         .limit(1);
 
-      if (result.length === 0) {
+      if (!seller) {
         return null;
       }
-
-      const seller = result[0];
 
       return this.mapSellerToProfile(seller);
     } catch (error) {

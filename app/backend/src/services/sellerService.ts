@@ -106,14 +106,14 @@ class SellerService {
 
   async getSellerProfile(walletAddress: string): Promise<SellerProfileData | null> {
     try {
-      const seller = await db
+      const [seller] = await db
         .select()
         .from(sellers)
-        .where(eq(sellers.walletAddress, walletAddress))
+        .where(eq(sellers.walletAddress, walletAddress.toLowerCase()))
         .limit(1);
 
-      if (seller.length === 0) {
-        return null;
+      if (!seller) {
+        throw new Error('Seller not found');
       }
 
       const sellerData = seller[0];

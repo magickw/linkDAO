@@ -112,14 +112,14 @@ class SellerDashboardService {
       const [seller] = await tx
         .select({ id: sellers.id })
         .from(sellers)
-        .where(eq(sellers.walletAddress, walletAddress))
+        .where(eq(sellers.walletAddress, walletAddress.toLowerCase()))
         .limit(1);
 
       // Get user UUID for orders queries (orders.sellerId references users.id which is UUID)
       const [user] = await tx
         .select({ id: users.id })
         .from(users)
-        .where(eq(users.walletAddress, walletAddress))
+        .where(eq(users.walletAddress, walletAddress.toLowerCase()))
         .limit(1);
 
       if (!seller) {
@@ -228,7 +228,7 @@ class SellerDashboardService {
           available: sql<string>`COALESCE(SUM(CASE WHEN ${sellerTransactions.transactionType} = 'sale' THEN ${sellerTransactions.amount} ELSE 0 END), 0)`,
         })
         .from(sellerTransactions)
-        .where(eq(sellerTransactions.sellerWalletAddress, walletAddress));
+        .where(eq(sellerTransactions.sellerWalletAddress, walletAddress.toLowerCase()));
 
       // OPTIMIZED: Simple count query with index on (userAddress, read)
       const [unreadCount] = await tx
@@ -236,7 +236,7 @@ class SellerDashboardService {
         .from(notifications)
         .where(
           and(
-            eq(notifications.userAddress, walletAddress),
+            eq(notifications.userAddress, walletAddress.toLowerCase()),
             eq(notifications.read, false)
           )
         )
@@ -404,14 +404,14 @@ class SellerDashboardService {
       const [seller] = await tx
         .select({ id: sellers.id })
         .from(sellers)
-        .where(eq(sellers.walletAddress, walletAddress))
+        .where(eq(sellers.walletAddress, walletAddress.toLowerCase()))
         .limit(1);
 
       // Get user UUID for orders queries (orders.sellerId references users.id which is UUID)
       const [user] = await tx
         .select({ id: users.id })
         .from(users)
-        .where(eq(users.walletAddress, walletAddress))
+        .where(eq(users.walletAddress, walletAddress.toLowerCase()))
         .limit(1);
 
       if (!seller) {

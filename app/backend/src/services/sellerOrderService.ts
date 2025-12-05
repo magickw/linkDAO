@@ -60,7 +60,7 @@ class SellerOrderService {
   ): Promise<{ orders: OrderWithBuyer[]; total: number; page: number; pageSize: number }> {
     // Verify seller exists and get seller ID
     const seller = await db.query.sellers.findFirst({
-      where: eq(sellers.walletAddress, walletAddress),
+      where: eq(sellers.walletAddress, walletAddress.toLowerCase()),
     });
 
     if (!seller) {

@@ -535,7 +535,7 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
       </div>
 
       {/* Right Sidebar - Community Info */}
-      <div className={`col-span-12 ${isMobile ? 'order-2 mb-6' : 'lg:col-span-3'}`}>
+      <div className="hidden lg:block lg:col-span-3">
         <div className="sticky top-6 space-y-4">
           {/* Reddit-style About Community */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3">

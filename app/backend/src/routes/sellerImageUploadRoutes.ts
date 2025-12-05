@@ -33,7 +33,7 @@ router.put(
 
       // Check if seller exists
       const seller = await db.query.sellers.findFirst({
-        where: eq(sellers.walletAddress, walletAddress),
+        where: eq(sellers.walletAddress, walletAddress.toLowerCase()),
       });
 
       if (!seller) {
@@ -145,11 +145,11 @@ router.put(
       await db
         .update(sellers)
         .set(updateData)
-        .where(eq(sellers.walletAddress, walletAddress));
+        .where(eq(sellers.walletAddress, walletAddress.toLowerCase()));
 
       // Fetch updated profile
       const updatedSeller = await db.query.sellers.findFirst({
-        where: eq(sellers.walletAddress, walletAddress),
+        where: eq(sellers.walletAddress, walletAddress.toLowerCase()),
       });
 
       return successResponse(res, {

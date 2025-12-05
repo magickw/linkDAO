@@ -32,7 +32,7 @@ export default function CommunityPage() {
   const generateSEOMetadata = () => {
     const communityName = communityData?.displayName || community;
     const communityDescription = communityData?.description || `Join the ${communityName} community on LinkDAO`;
-    
+
     return {
       title: `${communityName} - LinkDAO Community`,
       description: communityDescription,
@@ -57,7 +57,7 @@ export default function CommunityPage() {
   // Generate structured data for SEO
   const generateStructuredData = () => {
     if (!communityData) return null;
-    
+
     return {
       '@context': 'https://schema.org',
       '@type': 'Organization',
@@ -75,7 +75,7 @@ export default function CommunityPage() {
   const structuredData = generateStructuredData();
 
   return (
-    <Layout title={seo.title} fullWidth={isMobile}>
+    <Layout title={seo.title} fullWidth={true}>
       <Head>
         <title>{seo.title}</title>
         <meta name="description" content={seo.description} />
@@ -101,14 +101,12 @@ export default function CommunityPage() {
           />
         )}
       </Head>
-      <div className="px-4 py-6 sm:px-0">
-        <ErrorBoundary>
-          <CommunityView 
-            communitySlug={community as string} 
-            highlightedPostId={post as string}
-          />
-        </ErrorBoundary>
-      </div>
+      <ErrorBoundary>
+        <CommunityView
+          communitySlug={community as string}
+          highlightedPostId={post as string}
+        />
+      </ErrorBoundary>
     </Layout>
   );
 }

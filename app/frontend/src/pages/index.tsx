@@ -187,6 +187,20 @@ export default function Home() {
     }
   }, [wsConnected, address, wsSubscribed, subscribe, on, off, addToast, debouncedRefresh]);
 
+  // Fix navigation issue after wallet connection
+  useEffect(() => {
+    if (isConnected && address && mounted) {
+      // Force router to be ready after wallet connection
+      // This fixes the issue where links don't work after connecting wallet
+      const timer = setTimeout(() => {
+        // Trigger a small state update to ensure router is responsive
+        setFeedRefreshKey(prev => prev);
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isConnected, address, mounted]);
+
   // Handle post creation with useCallback and mount check
   const handlePostSubmit = useCallback(async (postData: CreatePostInput) => {
     if (!isConnected || !address) {
@@ -944,7 +958,7 @@ export default function Home() {
         type="website"
         noIndex={true}
       />
-      <Layout title="LinkDAO - Home">
+      <Layout title="LinkDAO - Home" fullWidth={true} key={`home-${isConnected ? address : 'disconnected'}`}>
         {/* Skip to content link for accessibility */}
         <a
           href="#main-feed-content"
