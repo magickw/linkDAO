@@ -242,7 +242,7 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
   }
 
   return (
-    <div className={`grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-6 max-w-screen-2xl mx-auto px-0 sm:px-2 lg:px-4 ${className}`}>
+    <div className={`relative grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-6 w-full px-0 sm:px-2 lg:px-4 mx-auto max-w-screen-2xl pt-0 lg:pt-6 ${className}`}>
       {/* Left Sidebar - Navigation - Hidden on mobile */}
       <div className="hidden lg:block lg:col-span-3">
         <div className="sticky top-24 space-y-4">

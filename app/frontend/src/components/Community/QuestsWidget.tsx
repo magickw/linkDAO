@@ -34,66 +34,29 @@ export const QuestsWidget: React.FC<QuestsWidgetProps> = ({
     const [totalRewardsEarned, setTotalRewardsEarned] = useState(0);
 
     useEffect(() => {
-        // Mock data for demonstration - replace with actual API call
-        const mockQuests: Quest[] = [
-            {
-                id: '1',
-                title: 'Daily Poster',
-                description: 'Create a post today',
-                reward: 10,
-                progress: 0,
-                target: 1,
-                completed: false,
-                expiresAt: new Date(Date.now() + 12 * 60 * 60 * 1000),
-                icon: 'post'
-            },
-            {
-                id: '2',
-                title: 'Active Commenter',
-                description: 'Leave 3 comments',
-                reward: 15,
-                progress: 1,
-                target: 3,
-                completed: false,
-                icon: 'comment'
-            },
-            {
-                id: '3',
-                title: 'Governance Participant',
-                description: 'Vote on a proposal',
-                reward: 25,
-                progress: 0,
-                target: 1,
-                completed: false,
-                icon: 'vote'
-            },
-            {
-                id: '4',
-                title: 'Token Staker',
-                description: 'Stake 100 LDAO tokens',
-                reward: 50,
-                progress: 45,
-                target: 100,
-                completed: false,
-                icon: 'stake'
-            },
-            {
-                id: '5',
-                title: 'Community Builder',
-                description: 'Invite a new member',
-                reward: 30,
-                progress: 0,
-                target: 1,
-                completed: false,
-                icon: 'invite'
-            }
-        ];
+        // TODO: Replace with actual quests API call
+        // For now, show empty state indicating no quests available
+        const fetchQuests = async () => {
+            try {
+                // Real API integration would go here
+                // const response = await fetch(`/api/users/${userAddress}/quests`);
+                // const data = await response.json();
+                // setQuests(data.quests);
+                // setTotalRewardsEarned(data.totalRewardsEarned);
 
-        setTimeout(() => {
-            setQuests(mockQuests);
-            setTotalRewardsEarned(125);
-            setLoading(false);
-        }, 500);
+                // No mock data - show empty state
+                setQuests([]);
+                setTotalRewardsEarned(0);
+            } catch (error) {
+                console.error('Error fetching quests:', error);
+                setQuests([]);
+                setTotalRewardsEarned(0);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchQuests();
     }, [userAddress]);
 
     const getQuestIcon = (icon: Quest['icon']) => {
@@ -158,6 +121,36 @@ export const QuestsWidget: React.FC<QuestsWidgetProps> = ({
                     {totalRewardsEarned} LDAO
                 </div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">Earned this week</div>
+            </div>
+        );
+    }
+
+    // Empty state when no quests available
+    if (quests.length === 0) {
+        return (
+            <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm ${className}`}>
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-2">
+                        <Target className="w-5 h-5 text-purple-500" />
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                            Daily Quests
+                        </h3>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        Complete quests to earn LDAO rewards
+                    </p>
+                </div>
+                <div className="p-8 text-center">
+                    <div className="text-gray-400 dark:text-gray-500 mb-3">
+                        <Gift className="w-10 h-10 mx-auto opacity-50" />
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                        No quests available
+                    </p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                        Check back later for new quests
+                    </p>
+                </div>
             </div>
         );
     }

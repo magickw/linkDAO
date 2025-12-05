@@ -36,23 +36,26 @@ export const EnhancedTokenPriceWidget: React.FC<EnhancedTokenPriceWidgetProps> =
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Mock data for demonstration - replace with actual API call
-        const mockData: TokenData = {
-            symbol: 'LDAO',
-            name: 'LinkDAO Token',
-            price: 1.23,
-            change24h: 5.67,
-            volume24h: 1234567,
-            marketCap: 45678900,
-            liquidity: 2345678,
-            priceHistory: [1.15, 1.18, 1.16, 1.20, 1.22, 1.19, 1.21, 1.23, 1.25, 1.23],
-            contractAddress: tokenAddress
+        // TODO: Replace with actual token price API call
+        // For now, show empty state indicating no data available
+        const fetchTokenData = async () => {
+            try {
+                // Real API integration would go here
+                // const response = await fetch(`/api/tokens/${tokenAddress}/price`);
+                // const data = await response.json();
+                // setTokenData(data);
+
+                // No mock data - show empty state
+                setTokenData(null);
+            } catch (error) {
+                console.error('Error fetching token data:', error);
+                setTokenData(null);
+            } finally {
+                setLoading(false);
+            }
         };
 
-        setTimeout(() => {
-            setTokenData(mockData);
-            setLoading(false);
-        }, 500);
+        fetchTokenData();
     }, [tokenAddress]);
 
     const formatPrice = (price: number): string => {
@@ -89,7 +92,58 @@ export const EnhancedTokenPriceWidget: React.FC<EnhancedTokenPriceWidgetProps> =
     }
 
     if (!tokenData) {
-        return null;
+        return (
+            <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm ${className}`}>
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        LinkDAO Token
+                    </h3>
+                    <div className="text-lg font-semibold text-gray-900 dark:text-white mt-1">
+                        LDAO
+                    </div>
+                </div>
+                <div className="p-6 text-center">
+                    <div className="text-gray-400 dark:text-gray-500 mb-2">
+                        <TrendingUp className="w-8 h-8 mx-auto opacity-50" />
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Token price data unavailable
+                    </p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                        Connect to view live market data
+                    </p>
+                </div>
+                {showBuySellButtons && (
+                    <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+                        <div className="grid grid-cols-2 gap-2">
+                            <a
+                                href={getUniswapBuyUrl()}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 rounded-lg transition-all shadow-sm hover:shadow"
+                            >
+                                <DollarSign className="w-4 h-4" />
+                                Buy on Uniswap
+                                <ExternalLink className="w-3 h-3" />
+                            </a>
+                            <a
+                                href={getUniswapSellUrl()}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 rounded-lg transition-all shadow-sm hover:shadow"
+                            >
+                                <Activity className="w-4 h-4" />
+                                Sell on Uniswap
+                                <ExternalLink className="w-3 h-3" />
+                            </a>
+                        </div>
+                        <div className="mt-2 text-xs text-center text-gray-500 dark:text-gray-400">
+                            Powered by Uniswap V3
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
     }
 
     const isPositiveChange = tokenData.change24h >= 0;

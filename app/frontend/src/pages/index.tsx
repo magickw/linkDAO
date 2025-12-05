@@ -953,7 +953,7 @@ export default function Home() {
           Skip to feed content
         </a>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-6 w-full px-0 sm:px-2 lg:px-4 mx-auto max-w-screen-2xl pt-0 lg:pt-6 bg-gray-50 dark:bg-gray-900">
+        <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-6 w-full px-0 sm:px-2 lg:px-4 mx-auto max-w-screen-2xl pt-0 lg:pt-6">
           {/* Left Sidebar - Navigation - hidden on mobile for home page since we have the burger menu */}
           <div className="hidden lg:block lg:col-span-3">
             <div className="sticky top-24">

@@ -33,46 +33,26 @@ export const CommunityHealthMetrics: React.FC<CommunityHealthMetricsProps> = ({
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Mock data for demonstration - replace with actual API call
-        const mockMetrics: Metric[] = [
-            {
-                label: 'New Posts',
-                value: 142,
-                change: 12.5,
-                trend: [120, 125, 130, 135, 138, 140, 142],
-                icon: <MessageSquare className="w-4 h-4" />,
-                color: 'text-blue-600'
-            },
-            {
-                label: 'New Members',
-                value: 89,
-                change: 8.3,
-                trend: [75, 78, 80, 82, 85, 87, 89],
-                icon: <Users className="w-4 h-4" />,
-                color: 'text-green-600'
-            },
-            {
-                label: 'Voting Participation',
-                value: 67,
-                change: -3.2,
-                trend: [72, 71, 70, 69, 68, 67, 67],
-                icon: <Vote className="w-4 h-4" />,
-                color: 'text-purple-600'
-            },
-            {
-                label: 'Token Staking Rate',
-                value: 45,
-                change: 5.7,
-                trend: [40, 41, 42, 43, 44, 44, 45],
-                icon: <Coins className="w-4 h-4" />,
-                color: 'text-orange-600'
-            }
-        ];
+        // TODO: Replace with actual community health API call
+        // For now, show empty state indicating no data available
+        const fetchMetrics = async () => {
+            try {
+                // Real API integration would go here
+                // const response = await fetch(`/api/communities/${communityId}/health?range=${timeRange}`);
+                // const data = await response.json();
+                // setMetrics(data.metrics);
 
-        setTimeout(() => {
-            setMetrics(mockMetrics);
-            setLoading(false);
-        }, 500);
+                // No mock data - show empty state
+                setMetrics([]);
+            } catch (error) {
+                console.error('Error fetching community health metrics:', error);
+                setMetrics([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchMetrics();
     }, [communityId, timeRange]);
 
     const formatValue = (label: string, value: number): string => {
@@ -98,6 +78,18 @@ export const CommunityHealthMetrics: React.FC<CommunityHealthMetricsProps> = ({
     }
 
     if (compact) {
+        if (metrics.length === 0) {
+            return (
+                <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 ${className}`}>
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                        Community Health
+                    </h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                        No health data available
+                    </p>
+                </div>
+            );
+        }
         return (
             <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 ${className}`}>
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
@@ -120,6 +112,30 @@ export const CommunityHealthMetrics: React.FC<CommunityHealthMetricsProps> = ({
                             </div>
                         </div>
                     ))}
+                </div>
+            </div>
+        );
+    }
+
+    // Empty state when no metrics available
+    if (metrics.length === 0) {
+        return (
+            <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm ${className}`}>
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        Community Health
+                    </h3>
+                </div>
+                <div className="p-8 text-center">
+                    <div className="text-gray-400 dark:text-gray-500 mb-3">
+                        <TrendingUp className="w-10 h-10 mx-auto opacity-50" />
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                        No health metrics available
+                    </p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                        Community activity data will appear here
+                    </p>
                 </div>
             </div>
         );
