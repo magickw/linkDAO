@@ -211,13 +211,8 @@ export class TreasuryService {
      */
     async getSpendingCategories(treasuryAddress?: string): Promise<SpendingCategory[]> {
         // This would require analyzing transaction data and categorizing
-        // For now, return mock data
-        return [
-            { name: 'Development', amount: 45000, percentage: 45, color: '#3b82f6' },
-            { name: 'Marketing', amount: 25000, percentage: 25, color: '#8b5cf6' },
-            { name: 'Operations', amount: 20000, percentage: 20, color: '#10b981' },
-            { name: 'Community', amount: 10000, percentage: 10, color: '#f59e0b' },
-        ];
+        // Return empty array until real categorization is implemented
+        return [];
     }
 
     /**
@@ -232,69 +227,14 @@ export class TreasuryService {
 
     private getMockTreasuryBalance(): TreasuryBalance {
         return {
-            totalValueUSD: 1234567.89,
-            balanceETH: 456.78,
-            assets: [
-                {
-                    symbol: 'ETH',
-                    name: 'Ethereum',
-                    balance: 456.78,
-                    valueUSD: 912345.67,
-                },
-                {
-                    symbol: 'USDC',
-                    name: 'USD Coin',
-                    balance: 250000,
-                    valueUSD: 250000,
-                    contractAddress: '0xA0b86a33E6441c8C06DD2b7c94b7E0e8c0c8c8c8',
-                },
-                {
-                    symbol: 'LDAO',
-                    name: 'LinkDAO Token',
-                    balance: 144444.44,
-                    valueUSD: 72222.22,
-                    contractAddress: this.LDAO_TOKEN_ADDRESS,
-                },
-            ],
+            totalValueUSD: 0,
+            balanceETH: 0,
+            assets: [],
         };
     }
 
     private getMockTransactions(): TreasuryTransaction[] {
-        return [
-            {
-                id: '1',
-                type: 'expense',
-                amount: 5,
-                amountUSD: 5000,
-                description: 'Development Grant',
-                timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-                txHash: '0xabcd...1234',
-                from: this.TREASURY_ADDRESS,
-                to: '0x1234...5678',
-            },
-            {
-                id: '2',
-                type: 'income',
-                amount: 15,
-                amountUSD: 15000,
-                description: 'Protocol Revenue',
-                timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000),
-                txHash: '0xefgh...5678',
-                from: '0x9876...5432',
-                to: this.TREASURY_ADDRESS,
-            },
-            {
-                id: '3',
-                type: 'expense',
-                amount: 3.5,
-                amountUSD: 3500,
-                description: 'Marketing Campaign',
-                timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000),
-                txHash: '0xijkl...9012',
-                from: this.TREASURY_ADDRESS,
-                to: '0x2345...6789',
-            },
-        ];
+        return [];
     }
 }
 

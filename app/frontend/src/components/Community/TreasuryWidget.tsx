@@ -169,86 +169,96 @@ export const TreasuryWidget: React.FC<TreasuryWidgetProps> = ({
                     </h4>
                 </div>
                 <div className="space-y-2">
-                    {treasuryData.recentTransactions.map((tx) => (
-                        <div key={tx.id} className="flex items-center justify-between text-sm">
-                            <div className="flex-1 min-w-0">
-                                <div className="font-medium text-gray-900 dark:text-white truncate">
-                                    {tx.description}
+                    {treasuryData.recentTransactions.length > 0 ? (
+                        treasuryData.recentTransactions.map((tx) => (
+                            <div key={tx.id} className="flex items-center justify-between text-sm">
+                                <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-gray-900 dark:text-white truncate">
+                                        {tx.description}
+                                    </div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                        {formatTimeAgo(tx.timestamp)}
+                                    </div>
                                 </div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">
-                                    {formatTimeAgo(tx.timestamp)}
+                                <div className={`font-semibold ${tx.type === 'income'
+                                    ? 'text-green-600 dark:text-green-400'
+                                    : 'text-red-600 dark:text-red-400'
+                                    }`}>
+                                    {tx.type === 'income' ? '+' : '-'}{formatUSD(tx.amount)}
                                 </div>
                             </div>
-                            <div className={`font-semibold ${tx.type === 'income'
-                                ? 'text-green-600 dark:text-green-400'
-                                : 'text-red-600 dark:text-red-400'
-                                }`}>
-                                {tx.type === 'income' ? '+' : '-'}{formatUSD(tx.amount)}
-                            </div>
+                        ))
+                    ) : (
+                        <div className="text-sm text-gray-500 dark:text-gray-400 text-center py-2">
+                            No recent transactions
                         </div>
-                    ))}
+                    )}
                 </div>
             </div>
 
             {/* Spending Categories */}
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-center gap-2 mb-3">
-                    <PieChart className="w-4 h-4 text-gray-500" />
-                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
-                        Spending Categories
-                    </h4>
-                </div>
-                <div className="space-y-2">
-                    {treasuryData.spendingCategories.map((category) => (
-                        <div key={category.name}>
-                            <div className="flex items-center justify-between text-sm mb-1">
-                                <span className="text-gray-700 dark:text-gray-300">{category.name}</span>
-                                <span className="font-semibold text-gray-900 dark:text-white">
-                                    {category.percentage}%
-                                </span>
+            {treasuryData.spendingCategories.length > 0 && (
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-2 mb-3">
+                        <PieChart className="w-4 h-4 text-gray-500" />
+                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                            Spending Categories
+                        </h4>
+                    </div>
+                    <div className="space-y-2">
+                        {treasuryData.spendingCategories.map((category) => (
+                            <div key={category.name}>
+                                <div className="flex items-center justify-between text-sm mb-1">
+                                    <span className="text-gray-700 dark:text-gray-300">{category.name}</span>
+                                    <span className="font-semibold text-gray-900 dark:text-white">
+                                        {category.percentage}%
+                                    </span>
+                                </div>
+                                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                    <div
+                                        className="h-full rounded-full transition-all"
+                                        style={{
+                                            width: `${category.percentage}%`,
+                                            backgroundColor: category.color
+                                        }}
+                                    />
+                                </div>
                             </div>
-                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                <div
-                                    className="h-full rounded-full transition-all"
-                                    style={{
-                                        width: `${category.percentage}%`,
-                                        backgroundColor: category.color
-                                    }}
-                                />
-                            </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Governance Assets */}
-            <div className="p-4">
-                <div className="flex items-center gap-2 mb-3">
-                    <DollarSign className="w-4 h-4 text-gray-500" />
-                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
-                        Governance-Controlled Assets
-                    </h4>
-                </div>
-                <div className="space-y-2">
-                    {treasuryData.assets.map((asset) => (
-                        <div key={asset.symbol} className="flex items-center justify-between text-sm">
-                            <div>
-                                <div className="font-medium text-gray-900 dark:text-white">
-                                    {asset.balance.toLocaleString()} {asset.symbol}
+            {treasuryData.assets.length > 0 && (
+                <div className="p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                        <DollarSign className="w-4 h-4 text-gray-500" />
+                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                            Governance-Controlled Assets
+                        </h4>
+                    </div>
+                    <div className="space-y-2">
+                        {treasuryData.assets.map((asset) => (
+                            <div key={asset.symbol} className="flex items-center justify-between text-sm">
+                                <div>
+                                    <div className="font-medium text-gray-900 dark:text-white">
+                                        {asset.balance.toLocaleString()} {asset.symbol}
+                                    </div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                        {asset.name}
+                                    </div>
                                 </div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">
-                                    {asset.name}
+                                <div className="text-right">
+                                    <div className="font-semibold text-gray-900 dark:text-white">
+                                        {formatUSD(asset.valueUSD)}
+                                    </div>
                                 </div>
                             </div>
-                            <div className="text-right">
-                                <div className="font-semibold text-gray-900 dark:text-white">
-                                    {formatUSD(asset.valueUSD)}
-                                </div>
-                            </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Footer */}
             <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
