@@ -120,8 +120,17 @@ router.post('/seller/listings', csrfProtection,
       safeLogger.error('Error creating listing:', error);
 
       if (error instanceof Error) {
-        if (error.message.includes('not found')) {
-          return notFoundResponse(res, 'Seller not found');
+        // Handle specific error cases
+        if (error.message.includes('User not found')) {
+          return notFoundResponse(res, 'User account not found');
+        }
+        if (error.message.includes('Seller profile not found')) {
+          return errorResponse(res, 'SELLER_NOT_FOUND', error.message, 400);
+        }
+        if (error.message.includes('Category not found')) {
+          return validationErrorResponse(res, [
+            { field: 'categoryId', message: error.message }
+          ]);
         }
         if (error.message.includes('invalid')) {
           return validationErrorResponse(res, [

@@ -89,6 +89,7 @@ interface JoinCommunityData {
 interface CreateCommunityPostData {
   communityId: string;
   authorAddress: string;
+  title?: string;
   content: string;
   mediaUrls: string[];
   tags: string[];
@@ -962,7 +963,7 @@ export class CommunityService {
       if (sanitizedUpdateData.treasuryAddress !== undefined) {
         // Silently ignore - we use platform-wide addresses
       }
-      
+
       if (sanitizedUpdateData.governanceToken !== undefined) {
         // Silently ignore - we use platform-wide addresses
       }
@@ -1542,7 +1543,7 @@ export class CommunityService {
 
   // Create community post
   async createCommunityPost(data: CreateCommunityPostData) {
-    const { communityId, authorAddress, content, mediaUrls, tags, pollData } = data;
+    const { communityId, authorAddress, title, content, mediaUrls, tags, pollData } = data;
     // Normalize author address to lowercase for consistent comparisons
     const normalizedAuthorAddress = authorAddress.toLowerCase();
 
@@ -1585,7 +1586,7 @@ export class CommunityService {
             updatedAt: new Date()
           })
           .returning();
-        
+
         if (newUser.length === 0) {
           throw new Error('Failed to create user');
         }
@@ -1598,6 +1599,7 @@ export class CommunityService {
         .values({
           communityId,
           authorId: userResult[0].id,
+          title: title || null,
           content: sanitizeInput(content),
           contentCid: `local-${Date.now()}`, // Temporary CID for local content
           mediaCids: mediaUrls ? JSON.stringify(mediaUrls) : null,
@@ -5505,7 +5507,7 @@ export class CommunityService {
     timeRange: string;
   }) {
     const { page, limit, sort, timeRange } = options;
-    
+
     try {
       const offset = (page - 1) * limit;
       const timeFilter = this.buildTimeFilter(timeRange);

@@ -391,13 +391,13 @@ export class CommunityController {
       }
 
       const { id } = req.params;
-      const { content, mediaUrls = [], tags = [], pollData } = req.body;
+      const { title, content, mediaUrls = [], tags = [], pollData } = req.body;
 
       // Perform AI moderation before creating post
       try {
         const moderationResult = await aiModerationService.moderateContent({
           type: 'post',
-          content,
+          content: title ? `${title}\n\n${content}` : content,
           authorAddress: userAddress,
           communityId: id,
           context: {
@@ -408,16 +408,17 @@ export class CommunityController {
 
         // If content is not approved, return moderation result
         if (!moderationResult.isApproved) {
-          return res.status(403).json(createErrorResponse('CONTENT_REJECTED',
-            `Content not approved: ${moderationResult.reasoning}`, 403, {
+          res.status(403).json(createErrorResponse('CONTENT_REJECTED',
+            `Content not approved: ${moderationResult.reasoning}`, {
             moderationResult,
             suggestedActions: await aiModerationService.getSuggestedActions({
               type: 'post',
-              content,
+              content: title ? `${title}\n\n${content}` : content,
               authorAddress: userAddress,
               communityId: id
             }, moderationResult)
           }));
+          return;
         }
 
         // Log successful moderation
@@ -436,6 +437,7 @@ export class CommunityController {
       const post = await communityService.createCommunityPost({
         communityId: id,
         authorAddress: userAddress,
+        title,
         content,
         mediaUrls,
         tags,

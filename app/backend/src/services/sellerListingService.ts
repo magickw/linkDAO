@@ -1,6 +1,6 @@
 import { db } from '../db';
-import { sellers, products, users } from '../db/schema';
-import { eq, and, desc, asc } from 'drizzle-orm';
+import { sellers, products, users, categories } from '../db/schema';
+import { eq, and, desc, asc, or } from 'drizzle-orm';
 
 /**
  * Listing Query Options
@@ -239,6 +239,56 @@ class SellerListingService {
       throw new Error('Seller profile not found. Please complete seller onboarding first.');
     }
 
+    // Resolve category ID - it might be a UUID or a slug
+    let resolvedCategoryId = data.categoryId;
+
+    // Check if categoryId is a valid UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(data.categoryId)) {
+      // Not a UUID, try to look up by slug or name
+      let category = await db.query.categories.findFirst({
+        where: or(
+          eq(categories.slug, data.categoryId),
+          eq(categories.name, data.categoryId)
+        ),
+      });
+
+      // If category doesn't exist, create it dynamically
+      if (!category) {
+        // Create default category names based on slug
+        const categoryNames: Record<string, string> = {
+          'art': 'Art & Collectibles',
+          'music': 'Music & Audio',
+          'gaming': 'Gaming & Virtual Worlds',
+          'photography': 'Photography',
+          'domain': 'Domain Names',
+          'utility': 'Utility & Access',
+          'sports': 'Sports & Recreation',
+          'memes': 'Memes & Fun',
+          'fashion': 'Fashion & Wearables',
+          'electronics': 'Electronics',
+          'books': 'Books & Media',
+          'services': 'Services',
+          'other': 'Other',
+        };
+
+        const categoryName = categoryNames[data.categoryId] || data.categoryId.charAt(0).toUpperCase() + data.categoryId.slice(1);
+
+        const [newCategory] = await db.insert(categories).values({
+          name: categoryName,
+          slug: data.categoryId,
+          description: `${categoryName} marketplace category`,
+          path: JSON.stringify([categoryName]),
+          isActive: true,
+          sortOrder: 0,
+        }).returning();
+
+        category = newCategory;
+      }
+
+      resolvedCategoryId = category.id;
+    }
+
     // Set initial status to active for all sellers (seller approval handles verification)
     const initialStatus = 'active';
     const initialListingStatus = 'active';
@@ -250,7 +300,7 @@ class SellerListingService {
       description: data.description,
       priceAmount: data.price.toString(),
       priceCurrency: data.currency || 'USD',
-      categoryId: data.categoryId,
+      categoryId: resolvedCategoryId,
       images: JSON.stringify(data.images || []),
       metadata: JSON.stringify(data.metadata || {}),
       inventory: data.inventory || 0,

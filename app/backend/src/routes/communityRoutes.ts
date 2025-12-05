@@ -193,6 +193,7 @@ router.post('/:id/posts', csrfProtection,
       id: { type: 'string', required: true }
     },
     body: {
+      title: { type: 'string', optional: true, maxLength: 200 },
       content: { type: 'string', required: true, minLength: 1, maxLength: 5000 },
       mediaUrls: { type: 'array', optional: true },
       tags: { type: 'array', optional: true },
@@ -963,9 +964,9 @@ router.get('/feed',
       if (!userAddress) {
         return res.status(401).json({ error: 'Authentication required' });
       }
-      
+
       const { page = 1, limit = 20, sort = 'new', timeRange = 'all' } = req.query;
-      
+
       const { communityService } = await import('../services/communityService');
       const result = await communityService.getFollowedCommunitiesPosts({
         userAddress,
@@ -974,7 +975,7 @@ router.get('/feed',
         sort: String(sort),
         timeRange: String(timeRange)
       });
-      
+
       res.json(result);
     } catch (error) {
       console.error('Error fetching community feed:', error);
