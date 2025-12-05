@@ -1,133 +1,88 @@
 import { Router } from 'express';
-import { validateRequest } from '../middleware/validationMiddleware';
+import fs from 'fs';
+import path from 'path';
 
 const router = Router();
 
-// Documentation endpoints
-const docs = {
-  introduction: {
-    title: "Introduction to LinkDAO",
-    content: "# Introduction to LinkDAO\n\nLinkDAO is a decentralized autonomous organization that enables community governance and token-based economics.",
-    lastUpdated: new Date().toISOString()
-  },
-  "quick-start": {
-    title: "Quick Start Guide",
-    content: "# Quick Start Guide\n\nGet started with LinkDAO in just a few simple steps:\n\n1. Connect your wallet\n2. Get LDAO tokens\n3. Start participating in governance",
-    lastUpdated: new Date().toISOString()
-  },
-  installation: {
-    title: "Installation Guide",
-    content: "# Installation Guide\n\nLearn how to install and configure the LinkDAO platform for development or production use.",
-    lastUpdated: new Date().toISOString()
-  },
-  "wallet-setup": {
-    title: "Wallet Setup",
-    content: "# Wallet Setup Guide\n\nConfigure your Web3 wallet to interact with the LinkDAO platform securely.",
-    lastUpdated: new Date().toISOString()
-  },
-  "technical-whitepaper": {
-    title: "Technical Whitepaper",
-    content: "# Technical Whitepaper\n\nDeep dive into the technical architecture, smart contracts, and economic models of LinkDAO.",
-    lastUpdated: new Date().toISOString()
-  },
-  "api-reference": {
-    title: "API Reference",
-    content: "# API Reference\n\nComplete documentation of all available API endpoints, parameters, and response formats.",
-    lastUpdated: new Date().toISOString()
-  },
-  "smart-contracts": {
-    title: "Smart Contracts",
-    content: "# Smart Contracts\n\nTechnical details about LinkDAO's smart contract architecture and implementation.",
-    lastUpdated: new Date().toISOString()
-  },
-  security: {
-    title: "Security",
-    content: "# Security\n\nSecurity best practices, audit reports, and vulnerability disclosure policy.",
-    lastUpdated: new Date().toISOString()
-  },
-  architecture: {
-    title: "Architecture",
-    content: "# Architecture\n\nSystem architecture overview, component interactions, and design patterns.",
-    lastUpdated: new Date().toISOString()
-  },
-  contributing: {
-    title: "Contributing",
-    content: "# Contributing\n\nHow to contribute to the LinkDAO project, including guidelines and processes.",
-    lastUpdated: new Date().toISOString()
-  },
-  deployment: {
-    title: "Deployment Guide",
-    content: "# Deployment Guide\n\nStep-by-step instructions for deploying LinkDAO in various environments.",
-    lastUpdated: new Date().toISOString()
-  },
-  sdk: {
-    title: "SDK Documentation",
-    content: "# SDK Documentation\n\nDeveloper SDK documentation with examples and integration guides.",
-    lastUpdated: new Date().toISOString()
-  },
-  integrations: {
-    title: "Integrations",
-    content: "# Integrations\n\nThird-party integrations and how to connect external services with LinkDAO.",
-    lastUpdated: new Date().toISOString()
-  },
-  "governance-guide": {
-    title: "Governance Guide",
-    content: "# Governance Guide\n\nLearn how LinkDAO governance works and how to participate in decision-making.",
-    lastUpdated: new Date().toISOString()
-  },
-  "ldao-token-guide": {
-    title: "LDAO Token Guide",
-    content: "# LDAO Token Guide\n\nEverything you need to know about the LDAO token - acquisition, staking, governance, and platform benefits.",
-    lastUpdated: new Date().toISOString()
-  },
-  communities: {
-    title: "Communities Guide",
-    content: "# Communities Guide\n\nHow to create and manage communities within the LinkDAO ecosystem.",
-    lastUpdated: new Date().toISOString()
-  },
-  "reputation-system": {
-    title: "Reputation System",
-    content: "# Reputation System\n\nUnderstanding LinkDAO's reputation mechanics and how to build your reputation.",
-    lastUpdated: new Date().toISOString()
-  },
-  "token-economics": {
-    title: "Token Economics",
-    content: "# Token Economics\n\nDetailed information about LDAO token economics, supply, distribution, and utility.",
-    lastUpdated: new Date().toISOString()
-  },
-  "governance-mechanisms": {
-    title: "Governance Mechanisms",
-    content: "# Governance Mechanisms\n\nDeep dive into LinkDAO's governance mechanisms and voting systems.",
-    lastUpdated: new Date().toISOString()
-  }
-};
-
-// Generic docs endpoint handler
-router.get('/:slug', validateRequest({
-  params: {
-    slug: { type: 'string', required: true }
-  }
-}), (req, res) => {
+// Generic docs endpoint handler - reads actual markdown files
+router.get('/:slug', (req, res) => {
   try {
     const { slug } = req.params;
-    const doc = docs[slug as keyof typeof docs];
-    
-    if (!doc) {
+
+    // Security: Prevent directory traversal
+    const sanitizedSlug = slug.replace(/\.\./g, '').replace(/\//g, '');
+
+    // Special case: technical-whitepaper maps to TECHNICAL_WHITEPAPER.md
+    let filename = `${sanitizedSlug}.md`;
+    if (sanitizedSlug === 'technical-whitepaper') {
+      filename = 'TECHNICAL_WHITEPAPER.md';
+    }
+
+    // Build file path - look for docs in frontend/public/docs
+    const possiblePaths = [
+      // Standard relative path from backend to frontend docs
+      path.join(__dirname, '../../../frontend/public/docs', filename),
+      // Alternative path when running from project root
+      path.join(process.cwd(), 'app', 'frontend', 'public', 'docs', filename),
+      // Path when backend and docs are deployed together
+      path.join(__dirname, '../../public/docs', filename),
+      // Direct path resolution
+      path.resolve(__dirname, '../../../frontend/public/docs', filename),
+      path.resolve(process.cwd(), 'app/frontend/public/docs', filename),
+      path.resolve('./app/frontend/public/docs', filename),
+      // In case docs are copied to backend
+      path.join(__dirname, '../public/docs', filename),
+      path.join(__dirname, '../../docs', filename)
+    ];
+
+    let filePath: string | null = null;
+    let fileFound = false;
+
+    for (const possiblePath of possiblePaths) {
+      if (fs.existsSync(possiblePath)) {
+        filePath = possiblePath;
+        fileFound = true;
+        break;
+      }
+    }
+
+    if (!fileFound || !filePath) {
       return res.status(404).json({
         success: false,
-        error: `Documentation not found for: ${slug}`
+        error: `Documentation not found for: ${sanitizedSlug}`,
+        slug: sanitizedSlug,
+        triedPaths: possiblePaths // Include this for debugging purposes
       });
     }
 
+    // Read file content
+    const fileContent = fs.readFileSync(filePath, 'utf8');
+
+    // Get file stats for metadata
+    const stats = fs.statSync(filePath);
+    const wordCount = fileContent.split(/\s+/).length;
+    const estimatedReadingTime = Math.ceil(wordCount / 200); // 200 words per minute
+
+    // Extract title from markdown content (first H1)
+    const titleMatch = fileContent.match(/^#\s+(.+)$/m);
+    const title = titleMatch ? titleMatch[1] : sanitizedSlug;
+
+    // Return content with metadata (matching the format expected by frontend)
     res.json({
       success: true,
-      data: doc
+      content: fileContent,
+      title: title,
+      lastUpdated: stats.mtime.toISOString(),
+      wordCount,
+      estimatedReadingTime,
+      fileSize: stats.size
     });
   } catch (error) {
     console.error('Error fetching documentation:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch documentation'
+      error: 'Failed to fetch documentation',
+      details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
@@ -135,11 +90,51 @@ router.get('/:slug', validateRequest({
 // Docs list endpoint
 router.get('/', (req, res) => {
   try {
-    const docList = Object.keys(docs).map(slug => ({
-      slug,
-      title: docs[slug].title,
-      lastUpdated: docs[slug].lastUpdated
-    }));
+    // Try to read the docs directory
+    const possibleDocsPaths = [
+      path.join(__dirname, '../../../frontend/public/docs'),
+      path.join(process.cwd(), 'app', 'frontend', 'public', 'docs'),
+      path.resolve(__dirname, '../../../frontend/public/docs'),
+      path.resolve(process.cwd(), 'app/frontend/public/docs')
+    ];
+
+    let docsPath: string | null = null;
+    for (const possiblePath of possibleDocsPaths) {
+      if (fs.existsSync(possiblePath)) {
+        docsPath = possiblePath;
+        break;
+      }
+    }
+
+    if (!docsPath) {
+      return res.json({
+        success: true,
+        data: []
+      });
+    }
+
+    // Read all markdown files in the docs directory
+    const files = fs.readdirSync(docsPath).filter(file => file.endsWith('.md'));
+
+    const docList = files.map(file => {
+      const filePath = path.join(docsPath!, file);
+      const stats = fs.statSync(filePath);
+      const content = fs.readFileSync(filePath, 'utf8');
+      const titleMatch = content.match(/^#\s+(.+)$/m);
+      const title = titleMatch ? titleMatch[1] : file.replace('.md', '');
+
+      // Convert filename to slug
+      let slug = file.replace('.md', '');
+      if (file === 'TECHNICAL_WHITEPAPER.md') {
+        slug = 'technical-whitepaper';
+      }
+
+      return {
+        slug,
+        title,
+        lastUpdated: stats.mtime.toISOString()
+      };
+    });
 
     res.json({
       success: true,

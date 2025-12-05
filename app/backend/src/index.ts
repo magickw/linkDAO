@@ -462,8 +462,8 @@ import reputationRoutes from './routes/reputationRoutes';
 import advancedReputationRoutes from './routes/advancedReputationRoutes';
 // Import onboarding routes
 import onboardingRoutes from './routes/onboardingRoutes';
-// Import API documentation routes
-import apiDocsRoutes from './routes/apiDocsRoutes';
+// Import documentation routes
+import { docsRoutes } from './routes/docsRoutes';
 import trackingRoutes from './routes/trackingRoutes';
 
 // Reputation routes
@@ -492,7 +492,7 @@ app.use('/api/track', trackingRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/metrics', metricsRoutes);
 // API documentation routes
-app.use('/api/docs', apiDocsRoutes);
+app.use('/api/docs', docsRoutes);
 // Onboarding routes for user preferences
 app.use('/api/onboarding', onboardingRoutes);
 // Enhanced fiat payment routes

@@ -87,9 +87,12 @@ class SellerListingService {
     walletAddress: string,
     options: ListingQueryOptions = {}
   ): Promise<{ listings: ProductListing[]; total: number; page: number; pageSize: number }> {
+    // Normalize wallet address to lowercase for case-insensitive comparison
+    const normalizedAddress = walletAddress.toLowerCase();
+
     // Verify seller exists and get seller ID
     const seller = await db.query.sellers.findFirst({
-      where: eq(sellers.walletAddress, walletAddress),
+      where: eq(sellers.walletAddress, normalizedAddress),
     });
 
     if (!seller) {
@@ -98,7 +101,7 @@ class SellerListingService {
 
     // Get user ID for seller
     const user = await db.query.users.findFirst({
-      where: eq(users.walletAddress, walletAddress),
+      where: eq(users.walletAddress, normalizedAddress),
     });
 
     if (!user) {
@@ -215,9 +218,12 @@ class SellerListingService {
    * Create a new listing
    */
   async createListing(data: CreateListingData): Promise<ProductListing> {
+    // Normalize wallet address to lowercase for case-insensitive comparison
+    const normalizedAddress = data.walletAddress.toLowerCase();
+
     // Get user ID for seller
     const user = await db.query.users.findFirst({
-      where: eq(users.walletAddress, data.walletAddress),
+      where: eq(users.walletAddress, normalizedAddress),
     });
 
     if (!user) {
@@ -226,7 +232,7 @@ class SellerListingService {
 
     // Verify seller profile exists
     const seller = await db.query.sellers.findFirst({
-      where: eq(sellers.walletAddress, data.walletAddress),
+      where: eq(sellers.walletAddress, normalizedAddress),
     });
 
     if (!seller) {
