@@ -497,36 +497,80 @@ export class UnifiedMarketplaceService {
       }
 
       const result = await response.json();
-      if (result.success && result.listing) {
+      console.log('[MarketplaceService] getListingById raw result:', result);
+
+      // Handle both { success: true, data: {...} } and { success: true, listing: {...} } formats
+      const listing = result.data || result.listing;
+
+      if (result.success && listing) {
+        console.log('[MarketplaceService] Processing listing:', listing);
+
+        // Get price - handle both `price` and `priceAmount` field names
+        const priceValue = listing.price ?? listing.priceAmount ?? 0;
+        const priceNum = typeof priceValue === 'string' ? parseFloat(priceValue) : priceValue;
+
+        // Get currency - handle both `currency` and `priceCurrency` field names
+        const currency = listing.currency || listing.priceCurrency || 'USD';
+
+        // Get images - handle both array and JSON string formats
+        let imageUrls: string[] = [];
+        if (listing.images) {
+          if (Array.isArray(listing.images)) {
+            imageUrls = listing.images;
+          } else if (typeof listing.images === 'string') {
+            try {
+              imageUrls = JSON.parse(listing.images);
+            } catch {
+              imageUrls = [];
+            }
+          }
+        }
+
         // Transform the listing data to match the Product interface
-        const listing = result.listing;
         return {
           id: listing.id,
           sellerId: listing.sellerId,
-          title: listing.title,
-          description: listing.description,
-          priceAmount: listing.priceAmount || 0,
-          priceCurrency: listing.priceCurrency || 'USD',
-          categoryId: listing.categoryId || '',
-          images: listing.images || [],
+          title: listing.title || 'Unnamed Item',
+          description: listing.description || '',
+          priceAmount: priceNum,
+          priceCurrency: currency,
+          categoryId: listing.categoryId || listing.category?.id || '',
+          images: imageUrls,
           metadata: listing.metadata || {},
-          inventory: listing.inventory || 0,
+          inventory: listing.inventory ?? listing.quantity ?? 0,
           status: listing.status || 'active',
-          tags: listing.tags || [],
+          tags: Array.isArray(listing.tags) ? listing.tags : [],
           shipping: listing.shipping,
           nft: listing.nft,
           views: listing.views || 0,
           favorites: listing.favorites || 0,
-          listingStatus: listing.listingStatus || 'active',
+          listingStatus: listing.listingStatus || listing.status || 'active',
           publishedAt: listing.publishedAt,
           createdAt: listing.createdAt,
           updatedAt: listing.updatedAt,
-          seller: listing.seller,
-          category: listing.category,
-          trust: listing.trust
+          seller: listing.seller || {
+            id: listing.sellerId,
+            walletAddress: listing.sellerId,
+            rating: 4.5,
+            reputation: 0,
+            verified: true,
+            daoApproved: false,
+            isOnline: true
+          },
+          category: listing.category || {
+            id: listing.categoryId || 'unknown',
+            name: listing.categoryId || 'General',
+            slug: listing.categoryId || 'general'
+          },
+          trust: listing.trust || {
+            verified: true,
+            escrowProtected: true,
+            onChainCertified: false,
+            safetyScore: 85
+          }
         } as Product;
       } else {
-        console.warn('Listing API returned unexpected format, using fallback data.');
+        console.warn('[MarketplaceService] Listing API returned unexpected format:', result);
         return this.createFallbackProduct(id);
       }
     } catch (error) {

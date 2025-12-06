@@ -136,7 +136,7 @@ const MarketplaceContent: React.FC = () => {
 
       // Check cache first for better performance
       const cacheKey = `listings-${pageNum}-${JSON.stringify({ sortBy: 'createdAt', sortOrder: 'desc' })}`;
-      const cachedData = await productCache.get(cacheKey);
+      const cachedData = await productCache.get(cacheKey) as MarketplaceListing[] | null;
 
       console.log('Cache check:', { cacheKey, cachedData, hasCachedData: !!cachedData, isArray: Array.isArray(cachedData), length: cachedData?.length });
 
@@ -162,100 +162,102 @@ const MarketplaceContent: React.FC = () => {
 
       if (Array.isArray(data) && data.length > 0) {
         console.log('Processing listings data:', data.length, 'items');
+        console.log('First listing sample:', data[0]);
 
         // Transform backend data to frontend format
+        // API returns: { id, sellerId, title, description, price, currency, images, inventory, status, seller, trust, ... }
         const transformedListings = data.map((listing: any) => {
-          // Parse enhanced metadata if available
-          let enhancedData: {
-            title?: string;
-            description?: string;
-            images?: string[];
-            category?: string;
-            tags?: string[];
-            condition?: string;
-            escrowEnabled?: boolean;
-          } = {};
-
-          try {
-            if (listing.enhancedData) {
-              enhancedData = listing.enhancedData;
-            } else if (listing.metadata_uri) {
-              // Try to parse metadata_uri as JSON
-              const parsed = JSON.parse(listing.metadata_uri);
-              enhancedData = {
-                title: parsed.title || listing.metadataURI || 'Unnamed Item',
-                description: parsed.description || '',
-                images: parsed.images || [],
-                category: parsed.category || 'general',
-                tags: parsed.tags || [],
-                condition: parsed.condition || 'new',
-                escrowEnabled: parsed.escrowEnabled || false
-              };
+          // Get images - handle both array and JSON string formats
+          let imageUrls: string[] = [];
+          if (listing.images) {
+            if (Array.isArray(listing.images)) {
+              imageUrls = listing.images;
+            } else if (typeof listing.images === 'string') {
+              try {
+                imageUrls = JSON.parse(listing.images);
+              } catch {
+                imageUrls = [];
+              }
             }
-          } catch (e) {
-            console.log('Failed to parse metadata for listing', listing.id);
-            enhancedData = {
-              title: listing.metadataURI || listing.title || 'Unnamed Item',
-              description: listing.description || '',
-              images: [],
-              category: 'general',
-              tags: [],
-              condition: 'new',
-              escrowEnabled: false
-            };
           }
+
+          // Get price value
+          const priceValue = listing.price ?? listing.priceAmount ?? 0;
+          const priceNum = typeof priceValue === 'string' ? parseFloat(priceValue) : priceValue;
+          const currency = listing.currency || listing.priceCurrency || 'USD';
+
+          // Calculate display prices
+          const ethPrice = 2400;
+          let cryptoValue: string;
+          let fiatValue: string;
+
+          if (currency === 'USD' || currency === 'USDC' || currency === 'USDT') {
+            cryptoValue = (priceNum / ethPrice).toFixed(6);
+            fiatValue = priceNum.toFixed(2);
+          } else if (currency === 'ETH') {
+            cryptoValue = priceNum.toString();
+            fiatValue = (priceNum * ethPrice).toFixed(2);
+          } else {
+            cryptoValue = (priceNum / ethPrice).toFixed(6);
+            fiatValue = priceNum.toFixed(2);
+          }
+
+          // Get seller info
+          const sellerAddress = listing.sellerId || listing.sellerWalletAddress || listing.seller?.walletAddress || '';
+          const sellerInfo = listing.seller || {};
 
           return {
             id: listing.id.toString(),
-            sellerWalletAddress: listing.sellerWalletAddress || listing.seller_wallet_address || '0x1234567890123456789012345678901234567890',
-            tokenAddress: listing.tokenAddress || listing.token_address || '0x0000000000000000000000000000000000000000',
-            price: listing.price || '0.1',
-            quantity: listing.quantity || 1,
-            itemType: listing.itemType || listing.item_type || 'DIGITAL',
-            listingType: listing.listingType || listing.listing_type || 'FIXED_PRICE',
-            status: listing.status || 'ACTIVE',
-            startTime: listing.startTime || listing.start_time || listing.createdAt || listing.created_at || new Date().toISOString(),
-            endTime: listing.endTime || listing.end_time || undefined,
-            highestBid: listing.highestBid || listing.highest_bid || undefined,
-            metadataURI: enhancedData.title || listing.metadataURI || listing.metadata_uri || 'Unnamed Item',
-            isEscrowed: listing.isEscrowed || listing.is_escrowed || false,
-            createdAt: listing.createdAt || listing.created_at || new Date().toISOString(),
-            updatedAt: listing.updatedAt || listing.updated_at || new Date().toISOString(),
+            sellerWalletAddress: sellerAddress,
+            tokenAddress: listing.tokenAddress || '0x0000000000000000000000000000000000000000',
+            price: priceNum.toString(),
+            quantity: listing.inventory ?? listing.quantity ?? 1,
+            itemType: listing.itemType || 'DIGITAL',
+            listingType: listing.listingType || 'FIXED_PRICE',
+            status: listing.status || 'active',
+            startTime: listing.createdAt || new Date().toISOString(),
+            endTime: listing.endTime || undefined,
+            highestBid: listing.highestBid || undefined,
+            metadataURI: listing.title || 'Unnamed Item',
+            isEscrowed: listing.trust?.escrowProtected || false,
+            createdAt: listing.createdAt || new Date().toISOString(),
+            updatedAt: listing.updatedAt || new Date().toISOString(),
             // Auction-specific fields
             reservePrice: listing.reservePrice,
             minIncrement: listing.minIncrement,
             reserveMet: listing.reserveMet,
             // Enhanced fields for better display
             enhancedData: {
-              title: enhancedData.title || 'Unnamed Item',
-              description: enhancedData.description || '',
-              images: enhancedData.images || [],
+              title: listing.title || 'Unnamed Item',
+              description: listing.description || '',
+              images: imageUrls,
               price: {
-                crypto: listing.price || '0.1',
+                crypto: cryptoValue,
                 cryptoSymbol: 'ETH',
-                fiat: ((parseFloat(listing.price || '0.1')) * 2400).toFixed(2), // Rough ETH to USD conversion
+                fiat: fiatValue,
                 fiatSymbol: 'USD'
               },
               seller: {
-                id: listing.sellerWalletAddress || listing.seller_wallet_address,
-                name: 'Verified Seller',
-                rating: 4.8,
-                verified: true,
-                daoApproved: true,
-                walletAddress: listing.sellerWalletAddress || listing.seller_wallet_address
+                id: sellerInfo.id || sellerAddress,
+                name: sellerInfo.displayName || sellerInfo.storeName ||
+                      (sellerAddress ? `Seller ${sellerAddress.substring(0, 8)}...` : 'Unknown Seller'),
+                rating: sellerInfo.rating || 4.5,
+                verified: sellerInfo.verified ?? true,
+                daoApproved: sellerInfo.daoApproved ?? false,
+                walletAddress: sellerAddress
               },
               trust: {
-                verified: true,
-                escrowProtected: enhancedData.escrowEnabled || false,
-                onChainCertified: true,
-                safetyScore: 95
+                verified: listing.trust?.verified ?? true,
+                escrowProtected: listing.trust?.escrowProtected ?? true,
+                onChainCertified: listing.trust?.onChainCertified ?? false,
+                safetyScore: listing.trust?.safetyScore ?? 85
               },
-              category: enhancedData.category || 'general',
-              tags: enhancedData.tags || [],
-              views: Math.floor(Math.random() * 1000) + 100,
-              favorites: Math.floor(Math.random() * 50) + 10,
-              condition: enhancedData.condition || 'new',
-              escrowEnabled: enhancedData.escrowEnabled || false
+              category: listing.category?.name || listing.category?.slug || listing.categoryId || 'general',
+              tags: Array.isArray(listing.tags) ? listing.tags : [],
+              views: listing.views || 0,
+              favorites: listing.favorites || 0,
+              condition: listing.metadata?.condition || 'new',
+              escrowEnabled: listing.trust?.escrowProtected ?? true
             }
           };
         });
@@ -683,33 +685,40 @@ const MarketplaceContent: React.FC = () => {
                     >
                       <AnimatePresence mode="popLayout">
                         {filteredAndSortedListings.map((listing) => {
+                          // Use enhancedData from transformation (set in fetchListings)
+                          const enhanced = listing.enhancedData;
+
                           // Transform listing to product format for ProductCard
                           const product = {
                             id: listing.id,
-                            title: listing.metadataURI || 'Unnamed Item',
-                            description: '',
-                            images: [formatImageUrl(listing.metadataURI, 400, 300)],
+                            title: enhanced?.title || listing.metadataURI || 'Unnamed Item',
+                            description: enhanced?.description || '',
+                            images: enhanced?.images && enhanced.images.length > 0
+                              ? enhanced.images
+                              : [getFallbackImage('product')],
                             price: {
-                              amount: listing.price,
-                              currency: 'ETH',
-                              usdEquivalent: (parseFloat(listing.price) * 2400).toFixed(2),
+                              amount: enhanced?.price?.fiat || listing.price || '0',
+                              currency: 'USD',
+                              usdEquivalent: enhanced?.price?.fiat || '0',
                             },
                             seller: {
-                              id: listing.sellerWalletAddress,
-                              name: formatAddress(listing.sellerWalletAddress),
-                              avatar: listing.sellerWalletAddress,
-                              verified: true,
-                              reputation: 4.8,
-                              daoApproved: true,
+                              id: enhanced?.seller?.walletAddress || listing.sellerWalletAddress,
+                              name: enhanced?.seller?.name || formatAddress(listing.sellerWalletAddress),
+                              avatar: enhanced?.seller?.walletAddress || listing.sellerWalletAddress,
+                              verified: enhanced?.seller?.verified ?? true,
+                              reputation: enhanced?.seller?.rating ?? 4.8,
+                              daoApproved: enhanced?.seller?.daoApproved ?? false,
                             },
                             trust: {
-                              verified: true,
-                              escrowProtected: listing.isEscrowed,
-                              onChainCertified: true,
+                              verified: enhanced?.trust?.verified ?? true,
+                              escrowProtected: enhanced?.trust?.escrowProtected ?? listing.isEscrowed ?? true,
+                              onChainCertified: enhanced?.trust?.onChainCertified ?? false,
                             },
-                            category: listing.itemType.toLowerCase(),
-                            inventory: listing.quantity,
-                            condition: 'new' as 'new' | 'used' | 'refurbished' | undefined,
+                            category: enhanced?.category || listing.itemType?.toLowerCase() || 'general',
+                            inventory: listing.quantity ?? 1,
+                            condition: (enhanced?.condition as 'new' | 'used' | 'refurbished') || 'new',
+                            views: enhanced?.views ?? 0,
+                            favorites: enhanced?.favorites ?? 0,
                           };
 
                           return (
@@ -725,30 +734,30 @@ const MarketplaceContent: React.FC = () => {
                                 product={product}
                                 variant="grid"
                                 onAddToCart={(id) => {
-                                  // Add to cart logic
+                                  // Add to cart logic using enhanced data
                                   const cartProduct = {
                                     id: listing.id,
-                                    title: listing.metadataURI || 'Unnamed Item',
-                                    description: '',
-                                    image: formatImageUrl(listing.metadataURI, 400, 300) || '',
+                                    title: enhanced?.title || listing.metadataURI || 'Unnamed Item',
+                                    description: enhanced?.description || '',
+                                    image: enhanced?.images?.[0] || getFallbackImage('product'),
                                     price: {
-                                      crypto: listing.price,
-                                      cryptoSymbol: 'ETH',
-                                      fiat: (parseFloat(listing.price) * 2400).toFixed(2),
-                                      fiatSymbol: 'USD',
+                                      crypto: enhanced?.price?.crypto || '0',
+                                      cryptoSymbol: enhanced?.price?.cryptoSymbol || 'ETH',
+                                      fiat: enhanced?.price?.fiat || '0',
+                                      fiatSymbol: enhanced?.price?.fiatSymbol || 'USD',
                                     },
                                     seller: {
-                                      id: listing.sellerWalletAddress,
-                                      name: formatAddress(listing.sellerWalletAddress),
+                                      id: enhanced?.seller?.walletAddress || listing.sellerWalletAddress,
+                                      name: enhanced?.seller?.name || formatAddress(listing.sellerWalletAddress),
                                       avatar: '',
-                                      verified: true,
-                                      daoApproved: true,
-                                      escrowSupported: true,
+                                      verified: enhanced?.seller?.verified ?? true,
+                                      daoApproved: enhanced?.seller?.daoApproved ?? false,
+                                      escrowSupported: enhanced?.trust?.escrowProtected ?? true,
                                     },
-                                    category: listing.itemType.toLowerCase(),
+                                    category: enhanced?.category || listing.itemType?.toLowerCase() || 'general',
                                     isDigital: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT',
                                     isNFT: listing.itemType === 'NFT',
-                                    inventory: listing.quantity,
+                                    inventory: listing.quantity ?? 1,
                                     shipping: {
                                       cost: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT' ? '0' : '0.001',
                                       freeShipping: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT',
@@ -756,9 +765,9 @@ const MarketplaceContent: React.FC = () => {
                                       regions: ['US', 'CA', 'EU'],
                                     },
                                     trust: {
-                                      escrowProtected: true,
-                                      onChainCertified: true,
-                                      safetyScore: 95,
+                                      escrowProtected: enhanced?.trust?.escrowProtected ?? true,
+                                      onChainCertified: enhanced?.trust?.onChainCertified ?? false,
+                                      safetyScore: enhanced?.trust?.safetyScore ?? 85,
                                     },
                                   };
                                   cart.actions.addItem(cartProduct);
