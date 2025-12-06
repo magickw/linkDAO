@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateUser } from '../middleware/authMiddleware';
+import { authMiddleware } from '../middleware/authMiddleware';
 
 const router = express.Router();
 
@@ -70,7 +70,7 @@ router.get('/comparison', (req, res) => {
 /**
  * Process a unified checkout
  */
-router.post('/checkout', authenticateUser, (req, res) => {
+router.post('/checkout', authMiddleware, (req, res) => {
   // Mock successful response
   const { paymentMethodDetails, amount } = req.body;
 
