@@ -4,13 +4,13 @@
  */
 
 import React, { useState } from 'react';
-import { 
-  Star, 
-  Shield, 
-  CheckCircle, 
-  Vote, 
-  Heart, 
-  Share2, 
+import {
+  Star,
+  Shield,
+  CheckCircle,
+  Vote,
+  Heart,
+  Share2,
   ShoppingCart,
   ChevronRight,
   Truck,
@@ -35,6 +35,7 @@ interface ProductDetailPageProps {
       cryptoSymbol: string;
       fiat: string;
       fiatSymbol: string;
+      primary?: 'crypto' | 'fiat';
     };
     seller: {
       id: string;
@@ -82,7 +83,7 @@ interface ProductDetailPageProps {
   onOrderComplete?: (orderData: any) => void;
 }
 
-const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ 
+const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   product,
   onAddToCart,
   onBuyNow,
@@ -159,16 +160,16 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
           {/* Product Images */}
           <div className="w-full lg:w-1/2">
             <GlassPanel variant="secondary" className="p-4 mb-4">
-              <img 
-                src={selectedImage} 
-                alt={product.title} 
+              <img
+                src={selectedImage}
+                alt={product.title}
                 className="w-full h-96 object-contain"
               />
             </GlassPanel>
-            
+
             <div className="grid grid-cols-4 gap-2">
               {product.media.map((media, index) => (
-                <GlassPanel 
+                <GlassPanel
                   key={index}
                   variant="secondary"
                   className={`p-2 cursor-pointer border-2 ${selectedImage === media.url ? 'border-blue-500' : 'border-transparent'}`}
@@ -179,7 +180,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
               ))}
             </div>
           </div>
-          
+
           {/* Product Info */}
           <div className="w-full lg:w-1/2">
             <GlassPanel variant="secondary" className="p-6">
@@ -191,10 +192,10 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                 <ChevronRight size={16} />
                 <span>{product.title}</span>
               </div>
-              
+
               {/* Title and Badges */}
               <h1 className="text-3xl font-bold text-white mb-2">{product.title}</h1>
-              
+
               <div className="flex flex-wrap gap-2 mb-4">
                 {product.trust.verified && (
                   <AnimatedProductBadge variant="success" size="sm">
@@ -221,7 +222,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                   </AnimatedProductBadge>
                 )}
               </div>
-              
+
               {/* Tags */}
               {product.tags && product.tags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-4">
@@ -232,15 +233,15 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                   ))}
                 </div>
               )}
-              
+
               {/* Rating */}
               <div className="flex items-center mb-4">
                 <div className="flex">
                   {[...Array(5)].map((_, i) => (
-                    <Star 
-                      key={i} 
-                      size={20} 
-                      className={i < Math.floor(product.reviews.average) ? 'fill-yellow-400 text-yellow-400' : 'text-white/30'} 
+                    <Star
+                      key={i}
+                      size={20}
+                      className={i < Math.floor(product.reviews.average) ? 'fill-yellow-400 text-yellow-400' : 'text-white/30'}
                     />
                   ))}
                 </div>
@@ -248,7 +249,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                 <span className="mx-2 text-white/40">|</span>
                 <span className="text-sm text-white/70">{product.reviews.count} reviews</span>
               </div>
-              
+
               {/* Price */}
               <div className="mb-6">
                 <DualPricing
@@ -256,16 +257,17 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                   cryptoSymbol={product.price.cryptoSymbol}
                   fiatPrice={product.price.fiat}
                   fiatSymbol={product.price.fiatSymbol}
+                  defaultPrimary={product.price.primary || 'crypto'}
                   size="lg"
                   layout="vertical"
                 />
               </div>
-              
+
               {/* Description */}
               <div className="mb-6">
                 <p className="text-white/80">{product.longDescription || product.description}</p>
               </div>
-              
+
               {/* Specifications */}
               <div className="mb-6">
                 <h3 className="font-medium text-white mb-3">Specifications</h3>
@@ -278,7 +280,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                   ))}
                 </div>
               </div>
-              
+
               {/* Quantity Selector */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-white mb-2">Quantity</label>
@@ -290,8 +292,8 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                   >
                     -
                   </Button>
-                  <input 
-                    type="number" 
+                  <input
+                    type="number"
                     value={quantity}
                     onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
                     className="w-16 text-center bg-white/10 border-y border-white/20 py-1 text-white"
@@ -310,10 +312,10 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                   )}
                 </div>
               </div>
-              
+
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                <Button 
+                <Button
                   variant="primary"
                   size="md"
                   onClick={handleBuyNow}
@@ -334,7 +336,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                     </>
                   )}
                 </Button>
-                <Button 
+                <Button
                   variant="outline"
                   size="md"
                   onClick={handleAddToCart}
@@ -344,28 +346,28 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                   <ShoppingCart size={20} className="mr-2" />
                   Add to Cart
                 </Button>
-                <Button 
+                <Button
                   variant="ghost"
                   size="md"
                   onClick={handleAddToWishlist}
                 >
                   <Heart size={20} className="text-white" />
                 </Button>
-                <Button 
+                <Button
                   variant="ghost"
                   size="md"
                   onClick={handleAskSeller}
                 >
                   <MessageCircle size={20} className="text-white" />
                 </Button>
-                <Button 
+                <Button
                   variant="ghost"
                   size="md"
                 >
                   <Share2 size={20} className="text-white" />
                 </Button>
               </div>
-              
+
               {/* Ask Seller Button */}
               <div className="mb-6">
                 <Button
@@ -378,7 +380,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                   Ask Seller a Question
                 </Button>
               </div>
-              
+
               {/* Trust Signals */}
               <div className="border-t border-white/20 pt-6">
                 <h3 className="font-medium text-white mb-3">Trust & Safety</h3>
@@ -411,15 +413,15 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                   )}
                 </div>
               </div>
-              
+
               {/* Seller Info */}
               <div className="border-t border-white/20 pt-6 mt-6">
                 <h3 className="font-medium text-white mb-3">Seller Information</h3>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <img 
-                      src={product.seller.avatar} 
-                      alt={product.seller.name} 
+                    <img
+                      src={product.seller.avatar}
+                      alt={product.seller.name}
                       className="w-12 h-12 rounded-full mr-3"
                     />
                     <div>
@@ -427,10 +429,10 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                       <div className="flex items-center">
                         <div className="flex">
                           {[...Array(5)].map((_, i) => (
-                            <Star 
-                              key={i} 
-                              size={16} 
-                              className={i < Math.floor(product.seller.reputation) ? 'fill-yellow-400 text-yellow-400' : 'text-white/30'} 
+                            <Star
+                              key={i}
+                              size={16}
+                              className={i < Math.floor(product.seller.reputation) ? 'fill-yellow-400 text-yellow-400' : 'text-white/30'}
                             />
                           ))}
                         </div>
@@ -440,14 +442,14 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                     </div>
                   </div>
                   <div className="flex space-x-2">
-                    <Button 
+                    <Button
                       variant="outline"
                       size="sm"
                       onClick={handleViewSellerProfile}
                     >
                       View Profile
                     </Button>
-                    <Button 
+                    <Button
                       variant="primary"
                       size="sm"
                       onClick={handleContactSeller}

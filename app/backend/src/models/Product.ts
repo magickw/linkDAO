@@ -53,12 +53,12 @@ export interface ProductMetadata {
   };
   certifications?: string[]; // e.g., ['CE', 'FCC', 'RoHS']
   customAttributes?: Record<string, any>;
-  
+
   // Blockchain integration fields
   blockchainListingId?: string;
   publishedToBlockchain?: boolean;
   blockchainPublishedAt?: string;
-  
+
   // Listing optimization fields
   searchVector?: string;
   imageIpfsHashes?: string[];
@@ -70,7 +70,7 @@ export interface ProductMetadata {
   publishedAt?: Date;
   lastIndexed?: Date;
   listingStatus?: 'draft' | 'active' | 'published' | 'inactive' | 'suspended';
-  
+
   // Blockchain activity tracking
   lastBidAmount?: string;
   totalBids?: number;
@@ -84,7 +84,7 @@ export interface ProductMetadata {
   escrowId?: string;
   escrowCreatedAt?: string;
   isEscrowed?: boolean;
-  
+
   // Price conversion data
   fiatEquivalents?: Record<string, string>;
   priceLastUpdated?: Date;
@@ -135,9 +135,24 @@ export interface NFTMetadata {
 
 export type ProductStatus = 'active' | 'inactive' | 'sold_out' | 'suspended' | 'draft';
 
+export interface ProductSeller {
+  id: string;
+  walletAddress: string;
+  displayName?: string;
+  storeName?: string;
+  avatar?: string;
+  verified: boolean;
+  daoApproved: boolean;
+  rating: number;
+  totalSales: number;
+  memberSince: Date;
+  reputation: number;
+}
+
 export interface Product {
   id: string;
   sellerId: string;
+  seller?: ProductSeller;
   title: string;
   description: string;
   price: {

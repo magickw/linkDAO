@@ -26,7 +26,7 @@ const ProductDetailPageRoute: React.FC = () => {
         try {
           setLoading(true);
           setError(null);
-          
+
           // First try to fetch from marketplace service
           let productData = null;
           try {
@@ -34,7 +34,7 @@ const ProductDetailPageRoute: React.FC = () => {
           } catch (serviceError) {
             console.warn('Marketplace service unavailable, trying mock API:', serviceError);
           }
-          
+
           if (productData) {
             // Get the price - handle both `price` and `priceAmount` fields
             const priceValue = productData.price ?? productData.priceAmount ?? 0;
@@ -51,6 +51,7 @@ const ProductDetailPageRoute: React.FC = () => {
             let cryptoSymbol: string;
             let fiatValue: string;
             let fiatSymbol: string;
+            let primaryCurrency: 'crypto' | 'fiat' = 'crypto';
 
             if (currency === 'USD' || currency === 'USDC' || currency === 'USDT') {
               // Price is in USD-based currency
@@ -58,18 +59,21 @@ const ProductDetailPageRoute: React.FC = () => {
               cryptoSymbol = 'ETH';
               fiatValue = priceNum.toFixed(2);
               fiatSymbol = 'USD';
+              primaryCurrency = 'fiat';
             } else if (currency === 'ETH') {
               // Price is in ETH
               cryptoValue = priceNum.toString();
               cryptoSymbol = 'ETH';
               fiatValue = (priceNum * ethPrice).toFixed(2);
               fiatSymbol = 'USD';
+              primaryCurrency = 'crypto';
             } else {
               // Other currencies - treat as fiat
               cryptoValue = (priceNum / ethPrice).toFixed(6);
               cryptoSymbol = 'ETH';
               fiatValue = priceNum.toFixed(2);
               fiatSymbol = currency;
+              primaryCurrency = 'fiat';
             }
 
             // Parse images - handle both array and JSON string formats
@@ -99,18 +103,19 @@ const ProductDetailPageRoute: React.FC = () => {
                 crypto: cryptoValue,
                 cryptoSymbol: cryptoSymbol,
                 fiat: fiatValue,
-                fiatSymbol: fiatSymbol
+                fiatSymbol: fiatSymbol,
+                primary: primaryCurrency
               },
               seller: {
                 id: productData.seller?.id || productData.sellerId || '',
                 name: productData.seller?.displayName || productData.seller?.storeName ||
-                      (productData.sellerId ? `Seller ${productData.sellerId.substring(0, 8)}...` : 'Unknown Seller'),
-                avatar: productData.seller?.profileImageUrl || '/images/default-avatar.png',
+                  (productData.sellerId ? `Seller ${productData.sellerId.substring(0, 8)}...` : 'Unknown Seller'),
+                avatar: productData.seller?.avatar || productData.seller?.profileImageUrl || '/images/default-avatar.png',
                 verified: productData.seller?.verified || false,
                 reputation: productData.seller?.reputation || 0,
                 daoApproved: productData.seller?.daoApproved || false,
                 totalSales: productData.seller?.totalSales || 0,
-                memberSince: productData.seller?.createdAt || '2023-01-01',
+                memberSince: productData.seller?.memberSince || productData.seller?.createdAt || '2023-01-01',
                 responseTime: '< 24 hours' // Default value
               },
               trust: {
@@ -121,7 +126,7 @@ const ProductDetailPageRoute: React.FC = () => {
               specifications: productData.metadata?.specifications || productData.specifications || {},
               category: productData.category?.name || productData.categoryId || 'General',
               tags: Array.isArray(productData.tags) ? productData.tags :
-                    (typeof productData.tags === 'string' ? JSON.parse(productData.tags || '[]') : []),
+                (typeof productData.tags === 'string' ? JSON.parse(productData.tags || '[]') : []),
               inventory: inventory,
               shipping: {
                 freeShipping: productData.shipping?.free || false,
@@ -146,7 +151,7 @@ const ProductDetailPageRoute: React.FC = () => {
                 }
               ]
             };
-            
+
             setProduct(transformedProduct);
           } else {
             // Try mock API endpoint as fallback
@@ -162,7 +167,7 @@ const ProductDetailPageRoute: React.FC = () => {
             } catch (apiError) {
               console.warn('Mock API unavailable, using static mock data:', apiError);
             }
-            
+
             // Use static mock data as final fallback
             const mockProduct = mockProducts.find(p => p.id === productId);
             if (mockProduct) {
@@ -211,13 +216,13 @@ const ProductDetailPageRoute: React.FC = () => {
             <h2 className="text-2xl font-semibold text-white mb-2">Error Loading Product</h2>
             <p className="text-white/70 mb-6">{error}</p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <button 
+              <button
                 onClick={() => router.reload()}
                 className="px-6 py-3 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors border border-white/30"
               >
                 Try Again
               </button>
-              <button 
+              <button
                 onClick={() => router.push('/marketplace')}
                 className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
               >
@@ -237,7 +242,7 @@ const ProductDetailPageRoute: React.FC = () => {
           <div className="text-center bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20 max-w-md w-full mx-4">
             <h2 className="text-2xl font-semibold text-white mb-2">Product Not Found</h2>
             <p className="text-white/70 mb-6">The requested product could not be found.</p>
-            <button 
+            <button
               onClick={() => router.push('/marketplace')}
               className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
             >
@@ -275,7 +280,7 @@ const ProductDetailPageRoute: React.FC = () => {
           }
         }}
       />
-      
+
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Back button */}
@@ -287,78 +292,97 @@ const ProductDetailPageRoute: React.FC = () => {
               ← Back to Marketplace
             </button>
           </div>
-          
+
           <ProductDetailPage
             product={product}
-            onAddToCart={(productId, quantity) => {
-              console.log('Add to cart:', { productId, quantity });
-              
-              // Transform product data for cart service
-              const cartItem = {
-                id: product.id,
-                title: product.title,
-                description: product.description,
-                image: product.media[0]?.url || '',
-                price: product.price,
-                seller: {
-                  id: product.seller.id,
-                  name: product.seller.name,
-                  avatar: product.seller.avatar,
-                  verified: product.seller.verified,
-                  daoApproved: product.seller.daoApproved,
-                  escrowSupported: product.trust.escrowProtected
-                },
-                category: product.category,
-                isDigital: product.isNFT || false,
-                isNFT: product.isNFT || false,
-                inventory: product.inventory || 0,
-                shipping: product.shipping,
-                trust: product.trust
-              };
-              
-              // Add to cart
-              cartService.addItemSync(cartItem, quantity);
-              
-              // Show confirmation
-              if (typeof window !== 'undefined') {
-                alert(`Added ${quantity} ${product.title} to your cart!`);
+            onAddToCart={async (productId, quantity) => {
+              try {
+                console.log('Add to cart:', { productId, quantity });
+                setLoading(true);
+
+                // Transform product data for cart service
+                const cartItem = {
+                  id: product.id,
+                  title: product.title,
+                  description: product.description,
+                  image: product.media[0]?.url || '',
+                  price: product.price,
+                  seller: {
+                    id: product.seller.id,
+                    name: product.seller.name,
+                    avatar: product.seller.avatar,
+                    verified: product.seller.verified,
+                    daoApproved: product.seller.daoApproved,
+                    escrowSupported: product.trust.escrowProtected
+                  },
+                  category: product.category,
+                  isDigital: product.isNFT || false,
+                  isNFT: product.isNFT || false,
+                  inventory: product.inventory || 0,
+                  shipping: product.shipping,
+                  trust: product.trust
+                };
+
+                // Add to cart
+                await cartService.addItem(cartItem, quantity);
+
+                // Show confirmation
+                if (typeof window !== 'undefined') {
+                  alert(`Added ${quantity} ${product.title} to your cart!`);
+                }
+              } catch (err) {
+                console.error('Failed to add to cart:', err);
+                if (typeof window !== 'undefined') {
+                  alert('Failed to add item to cart. Please try again.');
+                }
+              } finally {
+                setLoading(false);
               }
             }}
             onBuyNow={async (productId, quantity) => {
-              console.log('Buy now:', { productId, quantity });
-              
-              // Transform product data for cart service
-              const cartItem = {
-                id: product.id,
-                title: product.title,
-                description: product.description,
-                image: product.media[0]?.url || '',
-                price: product.price,
-                seller: {
-                  id: product.seller.id,
-                  name: product.seller.name,
-                  avatar: product.seller.avatar,
-                  verified: product.seller.verified,
-                  daoApproved: product.seller.daoApproved,
-                  escrowSupported: product.trust.escrowProtected
-                },
-                category: product.category,
-                isDigital: product.isNFT || false,
-                isNFT: product.isNFT || false,
-                inventory: product.inventory || 0,
-                shipping: product.shipping,
-                trust: product.trust
-              };
-              
-              // Add to cart first
-              cartService.addItemSync(cartItem, quantity);
-              
-              // Redirect to checkout page
-              router.push(`/marketplace/checkout?product=${productId}&quantity=${quantity}`);
+              try {
+                console.log('Buy now:', { productId, quantity });
+                setLoading(true);
+
+                // Transform product data for cart service
+                const cartItem = {
+                  id: product.id,
+                  title: product.title,
+                  description: product.description,
+                  image: product.media[0]?.url || '',
+                  price: product.price,
+                  seller: {
+                    id: product.seller.id,
+                    name: product.seller.name,
+                    avatar: product.seller.avatar,
+                    verified: product.seller.verified,
+                    daoApproved: product.seller.daoApproved,
+                    escrowSupported: product.trust.escrowProtected
+                  },
+                  category: product.category,
+                  isDigital: product.isNFT || false,
+                  isNFT: product.isNFT || false,
+                  inventory: product.inventory || 0,
+                  shipping: product.shipping,
+                  trust: product.trust
+                };
+
+                // Add to cart first
+                await cartService.addItem(cartItem, quantity);
+
+                // Redirect to checkout page
+                router.push(`/marketplace/checkout?product=${productId}&quantity=${quantity}`);
+              } catch (err) {
+                console.error('Failed to buy now:', err);
+                if (typeof window !== 'undefined') {
+                  alert('Failed to process buy now request. Please try again.');
+                }
+                setLoading(false);
+              }
             }}
             onAddToWishlist={(productId) => {
               console.log('Add to wishlist:', productId);
-              
+
               // Check if already in wishlist
               if (wishlistService.isInWishlist(productId)) {
                 if (typeof window !== 'undefined') {
@@ -366,7 +390,7 @@ const ProductDetailPageRoute: React.FC = () => {
                 }
                 return;
               }
-              
+
               // Transform product data for wishlist service
               const wishlistItem = {
                 id: product.id,
@@ -384,10 +408,10 @@ const ProductDetailPageRoute: React.FC = () => {
                 isNFT: product.isNFT || false,
                 inventory: product.inventory || 0
               };
-              
+
               // Add to wishlist
               wishlistService.addItem(wishlistItem);
-              
+
               // Show confirmation
               if (typeof window !== 'undefined') {
                 alert(`Added ${product.title} to your wishlist!`);
@@ -395,13 +419,13 @@ const ProductDetailPageRoute: React.FC = () => {
             }}
             onContactSeller={(sellerId) => {
               console.log('Contact seller:', sellerId);
-              
+
               // Redirect to messaging page with seller pre-selected
               router.push(`/messages?to=${encodeURIComponent(sellerId)}`);
             }}
             onViewSellerProfile={(sellerId) => {
               console.log('View seller profile:', sellerId);
-              
+
               // Redirect to seller profile page
               router.push(`/marketplace/seller/store/${encodeURIComponent(sellerId)}`);
             }}

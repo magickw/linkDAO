@@ -38,6 +38,22 @@ const CheckoutPage: React.FC = () => {
     setCompletedOrderId(null);
   };
 
+  // Handle direct buy loading state
+  const isDirectBuy = router.query.product && state.items.length === 0;
+
+  if (isDirectBuy) {
+    return (
+      <Layout title="Checkout - LinkDAO Marketplace">
+        <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+            <h2 className="text-xl font-semibold text-white">Preparing your checkout...</h2>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   // Empty cart state
   if (state.items.length === 0 && currentView === 'checkout') {
     return (

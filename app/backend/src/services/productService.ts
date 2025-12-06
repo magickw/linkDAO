@@ -1,7 +1,7 @@
-import { 
-  CreateProductInput, 
-  UpdateProductInput, 
-  Product, 
+import {
+  CreateProductInput,
+  UpdateProductInput,
+  Product,
   ProductCategory,
   CreateCategoryInput,
   UpdateCategoryInput,
@@ -36,9 +36,9 @@ export class ProductService {
   // Category Management
   async createCategory(input: CreateCategoryInput): Promise<ProductCategory> {
     this.validateCategoryInput(input);
-    
+
     const db = this.databaseService.getDatabase();
-    
+
     // Build category path
     let path = [input.name];
     if (input.parentId) {
@@ -65,7 +65,7 @@ export class ProductService {
   async getCategoryById(id: string): Promise<ProductCategory | null> {
     const db = this.databaseService.getDatabase();
     const result = await db.select().from(schema.categories).where(eq(schema.categories.id, id));
-    
+
     if (!result[0]) return null;
     return this.mapCategoryFromDb(result[0]);
   }
@@ -73,7 +73,7 @@ export class ProductService {
   async getCategoryBySlug(slug: string): Promise<ProductCategory | null> {
     const db = this.databaseService.getDatabase();
     const result = await db.select().from(schema.categories).where(eq(schema.categories.slug, slug));
-    
+
     if (!result[0]) return null;
     return this.mapCategoryFromDb(result[0]);
   }
@@ -83,26 +83,26 @@ export class ProductService {
     const result = await db.select().from(schema.categories)
       .where(eq(schema.categories.isActive, true))
       .orderBy(asc(schema.categories.sortOrder), asc(schema.categories.name));
-    
+
     return result.map((cat: any) => this.mapCategoryFromDb(cat));
   }
 
   async getCategoriesByParent(parentId: string | null): Promise<ProductCategory[]> {
     const db = this.databaseService.getDatabase();
-    const condition = parentId 
+    const condition = parentId
       ? eq(schema.categories.parentId, parentId)
       : isNull(schema.categories.parentId);
-    
+
     const result = await db.select().from(schema.categories)
       .where(and(condition, eq(schema.categories.isActive, true)))
       .orderBy(asc(schema.categories.sortOrder), asc(schema.categories.name));
-    
+
     return result.map((cat: any) => this.mapCategoryFromDb(cat));
   }
 
   async updateCategory(id: string, input: UpdateCategoryInput): Promise<ProductCategory | null> {
     const db = this.databaseService.getDatabase();
-    
+
     const updates: any = { updatedAt: new Date() };
     if (input.name !== undefined) updates.name = input.name;
     if (input.slug !== undefined) updates.slug = input.slug;
@@ -142,12 +142,12 @@ export class ProductService {
 
   async deleteCategory(id: string): Promise<boolean> {
     const db = this.databaseService.getDatabase();
-    
+
     // Check if category has products
     const productCount = await db.select({ count: sql<number>`count(*)` })
       .from(schema.products)
       .where(eq(schema.products.categoryId, id));
-    
+
     if (productCount[0].count > 0) {
       throw new ValidationError('Cannot delete category with existing products', 'id');
     }
@@ -156,7 +156,7 @@ export class ProductService {
     const childCount = await db.select({ count: sql<number>`count(*)` })
       .from(schema.categories)
       .where(eq(schema.categories.parentId, id));
-    
+
     if (childCount[0].count > 0) {
       throw new ValidationError('Cannot delete category with child categories', 'id');
     }
@@ -171,7 +171,7 @@ export class ProductService {
   // Product Management
   async createProduct(input: CreateProductInput): Promise<Product> {
     this.validateProductInput(input);
-    
+
     const db = this.databaseService.getDatabase();
 
     // Verify category exists
@@ -214,12 +214,14 @@ export class ProductService {
     const result = await db.select()
       .from(schema.products)
       .leftJoin(schema.categories, eq(schema.products.categoryId, schema.categories.id))
+      .leftJoin(schema.users, eq(schema.products.sellerId, schema.users.id))
+      .leftJoin(schema.sellers, eq(schema.users.walletAddress, schema.sellers.walletAddress))
       .where(eq(schema.products.id, id));
-    
+
     if (!result[0]) return null;
-    
-    const { products: product, categories: category } = result[0];
-    return await this.mapProductFromDb(product, category);
+
+    const { products: product, categories: category, users: user, sellers: seller } = result[0];
+    return await this.mapProductFromDb(product, category, user, seller);
   }
 
   async getProductsBySeller(sellerId: string, filters?: Partial<ProductSearchFilters>): Promise<Product[]> {
@@ -234,10 +236,10 @@ export class ProductService {
     pagination: PaginationOptions = { page: 1, limit: 20 }
   ): Promise<ProductSearchResult> {
     const db = this.databaseService.getDatabase();
-    
+
     // Build where conditions
     const conditions = [];
-    
+
     if (filters.query) {
       conditions.push(
         or(
@@ -246,40 +248,40 @@ export class ProductService {
         )
       );
     }
-    
+
     if (filters.categoryId) {
       conditions.push(eq(schema.products.categoryId, filters.categoryId));
     }
-    
+
     if (filters.sellerId) {
       conditions.push(eq(schema.products.sellerId, filters.sellerId));
     }
-    
+
     if (filters.priceMin) {
       conditions.push(gte(schema.products.priceAmount, filters.priceMin));
     }
-    
+
     if (filters.priceMax) {
       conditions.push(lte(schema.products.priceAmount, filters.priceMax));
     }
-    
+
     if (filters.currency) {
       conditions.push(eq(schema.products.priceCurrency, filters.currency));
     }
-    
+
     if (filters.status && filters.status.length > 0) {
       conditions.push(inArray(schema.products.status, filters.status));
     } else {
       // Default to active products only
       conditions.push(eq(schema.products.status, 'active'));
     }
-    
+
     if (filters.inStock) {
       conditions.push(gte(schema.products.inventory, 1));
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-    
+
     // Build order by
     let orderByColumn;
     switch (sort.field) {
@@ -304,31 +306,33 @@ export class ProductService {
       default:
         orderByColumn = schema.products.createdAt;
     }
-    
+
     const orderBy = sort.direction === 'desc' ? desc(orderByColumn) : asc(orderByColumn);
-    
+
     // Get total count
     const totalResult = await db.select({ count: sql<number>`count(*)` })
       .from(schema.products)
       .where(whereClause);
-    
+
     const total = totalResult[0].count;
-    
+
     // Get products with pagination
     const offset = (pagination.page - 1) * pagination.limit;
     const result = await db.select()
       .from(schema.products)
       .leftJoin(schema.categories, eq(schema.products.categoryId, schema.categories.id))
+      .leftJoin(schema.users, eq(schema.products.sellerId, schema.users.id))
+      .leftJoin(schema.sellers, eq(schema.users.walletAddress, schema.sellers.walletAddress))
       .where(whereClause)
       .orderBy(orderBy)
       .limit(pagination.limit)
       .offset(offset);
-    
+
     const products = await Promise.all(result.map(async (row: any) => {
-      const { products: product, categories: category } = row;
-      return await this.mapProductFromDb(product, category);
+      const { products: product, categories: category, users: user, sellers: seller } = row;
+      return await this.mapProductFromDb(product, category, user, seller);
     }));
-    
+
     return {
       products,
       total,
@@ -342,7 +346,7 @@ export class ProductService {
 
   async updateProduct(id: string, input: UpdateProductInput): Promise<Product | null> {
     const db = this.databaseService.getDatabase();
-    
+
     const updates: any = { updatedAt: new Date() };
     if (input.title !== undefined) updates.title = input.title;
     if (input.description !== undefined) updates.description = input.description;
@@ -372,7 +376,7 @@ export class ProductService {
     if (input.inventory !== undefined) updates.inventory = input.inventory;
     if (input.tags !== undefined) {
       updates.tags = JSON.stringify(input.tags);
-      
+
       // Update product tags table
       await db.delete(schema.productTags).where(eq(schema.productTags.productId, id));
       if (input.tags.length > 0) {
@@ -392,16 +396,16 @@ export class ProductService {
       .returning();
 
     if (!result[0]) return null;
-    
+
     return this.getProductById(id);
   }
 
   async deleteProduct(id: string): Promise<boolean> {
     const db = this.databaseService.getDatabase();
-    
+
     // Delete associated tags first
     await db.delete(schema.productTags).where(eq(schema.productTags.productId, id));
-    
+
     // Delete the product
     const result = await db.delete(schema.products)
       .where(eq(schema.products.id, id))
@@ -433,7 +437,7 @@ export class ProductService {
 
         // Upload to IPFS
         const ipfsHash = await this.metadataService.uploadToIPFS(file.buffer);
-        
+
         results.push({
           success: true,
           ipfsHash,
@@ -504,7 +508,7 @@ export class ProductService {
         if (!categoryId) {
           // Try to find category by name
           const categories = await this.getAllCategories();
-          const category = categories.find(cat => 
+          const category = categories.find(cat =>
             cat.name.toLowerCase() === row.category.toLowerCase()
           );
           if (category) {
@@ -640,7 +644,7 @@ export class ProductService {
     };
   }
 
-  private async mapProductFromDb(dbProduct: any, dbCategory?: any): Promise<Product> {
+  private async mapProductFromDb(dbProduct: any, dbCategory?: any, dbUser?: any, dbSeller?: any): Promise<Product> {
     const category = dbCategory ? this.mapCategoryFromDb(dbCategory) : {
       id: dbProduct.categoryId,
       name: 'Unknown',
@@ -652,12 +656,35 @@ export class ProductService {
       updatedAt: new Date(),
     };
 
+    // Map seller data if available
+    let seller = undefined;
+    if (dbUser) {
+      seller = {
+        id: dbUser.id,
+        walletAddress: dbUser.walletAddress,
+        displayName: dbUser.displayName || dbSeller?.storeName || 'Unknown Seller',
+        storeName: dbSeller?.storeName,
+        avatar: dbSeller?.profileImageCdn || dbUser.avatarCid,
+        verified: dbSeller?.isVerified || false,
+        daoApproved: dbSeller?.daoApproved || false,
+        rating: 0, // Placeholder, would fetch from reputation/reviews
+        totalSales: 0, // Placeholder, would fetch from stats
+        memberSince: dbUser.createdAt,
+        reputation: 0 // Placeholder
+      };
+
+      // Add additional details if we have them from join
+      if (dbSeller) {
+        seller.verified = dbSeller.isVerified || false;
+      }
+    }
+
     // Parse price metadata if it exists
     let priceData: any = {
       amount: dbProduct.priceAmount,
       currency: dbProduct.priceCurrency,
     };
-    
+
     // If we don't have fiat equivalents, try to generate them
     if (!priceData.usdEquivalent) {
       try {
@@ -666,7 +693,7 @@ export class ProductService {
           priceData.amount,
           priceData.currency
         );
-        
+
         priceData = {
           ...priceData,
           usdEquivalent: fiatEquivalents.USD,
@@ -683,6 +710,7 @@ export class ProductService {
     return {
       id: dbProduct.id,
       sellerId: dbProduct.sellerId,
+      seller,
       title: dbProduct.title,
       description: dbProduct.description,
       price: priceData,

@@ -49,6 +49,8 @@ interface DualPricingProps {
   className?: string;
   /** Callback for price updates */
   onPriceUpdate?: (newPrice: string, currency: string) => void;
+  /** Default primary display mode */
+  defaultPrimary?: 'crypto' | 'fiat';
 }
 
 export const DualPricing: React.FC<DualPricingProps> = ({
@@ -69,8 +71,9 @@ export const DualPricing: React.FC<DualPricingProps> = ({
   showLoading = true,
   className = '',
   onPriceUpdate,
+  defaultPrimary = 'crypto',
 }) => {
-  const [primaryDisplay, setPrimaryDisplay] = useState<'crypto' | 'fiat'>('crypto');
+  const [primaryDisplay, setPrimaryDisplay] = useState<'crypto' | 'fiat'>(defaultPrimary);
   const [currentCurrency, setCurrentCurrency] = useState(fiatSymbol);
   const [isConverting, setIsConverting] = useState(false);
   const [convertedPrices, setConvertedPrices] = useState<Record<string, string>>({});
