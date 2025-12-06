@@ -673,7 +673,7 @@ export class ProductService {
       seller = {
         id: dbUser.id,
         walletAddress: dbUser.walletAddress,
-        displayName: dbUser.displayName || dbSeller?.storeName || 'Unknown Seller',
+        displayName: dbSeller?.storeName || dbUser.displayName || 'Unknown Seller',
         storeName: dbSeller?.storeName,
         avatar: dbSeller?.profileImageCdn || dbUser.avatarCid,
         verified: dbSeller?.isVerified || false,

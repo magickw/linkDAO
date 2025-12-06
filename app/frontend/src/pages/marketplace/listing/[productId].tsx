@@ -98,7 +98,19 @@ const ProductDetailPageRoute: React.FC = () => {
             }
 
             // Get inventory - handle both `inventory` and `quantity` fields
-            const inventory = productData.inventory ?? productData.quantity ?? 0;
+            const rawInventory = productData.inventory ?? productData.quantity ?? 0;
+            const inventory = typeof rawInventory === 'string' ? parseInt(rawInventory, 10) : Number(rawInventory);
+
+            console.log('ProductDetail Debug:', {
+              id: productData.id,
+              rawPrice: productData.price,
+              parsedPrice: {
+                crypto: cryptoValue,
+                fiat: fiatValue,
+              },
+              inventory: inventory,
+              rawInventory: rawInventory
+            });
 
             // Transform the product data to match the ProductDetailPage component interface
             const transformedProduct = {
@@ -115,7 +127,7 @@ const ProductDetailPageRoute: React.FC = () => {
               },
               seller: {
                 id: productData.seller?.id || productData.sellerId || '',
-                name: productData.seller?.displayName || productData.seller?.storeName ||
+                name: productData.seller?.storeName || productData.seller?.displayName ||
                   (productData.sellerId ? `Seller ${productData.sellerId.substring(0, 8)}...` : 'Unknown Seller'),
                 avatar: productData.seller?.avatar || productData.seller?.profileImageUrl || '/images/default-avatar.png',
                 verified: productData.seller?.verified || false,
@@ -134,7 +146,7 @@ const ProductDetailPageRoute: React.FC = () => {
               category: productData.category?.name || productData.categoryId || 'General',
               tags: Array.isArray(productData.tags) ? productData.tags :
                 (typeof productData.tags === 'string' ? JSON.parse(productData.tags || '[]') : []),
-              inventory: inventory,
+              inventory: !isNaN(inventory) ? inventory : 0,
               shipping: {
                 freeShipping: productData.shipping?.free || false,
                 estimatedDays: productData.shipping?.estimatedDays || '3-5 business days',

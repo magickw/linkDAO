@@ -484,9 +484,12 @@ class CartService {
       // Update quantity
       newItems = [...currentState.items];
       const item = newItems[itemIndex];
+      // Allow user to adjust quantity even if inventory is lower than current quantity (e.g. if inventory changed externally)
+      // But don't allow increasing beyond inventory unless current quantity is already higher (legacy data)
+      const maxAllowed = Math.max(item.inventory, item.quantity);
       newItems[itemIndex] = {
         ...item,
-        quantity: Math.min(quantity, item.inventory)
+        quantity: Math.min(quantity, maxAllowed)
       };
     }
 
@@ -527,9 +530,10 @@ class CartService {
     } else {
       newItems = [...currentState.items];
       const item = newItems[itemIndex];
+      const maxAllowed = Math.max(item.inventory, item.quantity);
       newItems[itemIndex] = {
         ...item,
-        quantity: Math.min(quantity, item.inventory)
+        quantity: Math.min(quantity, maxAllowed)
       };
     }
 
