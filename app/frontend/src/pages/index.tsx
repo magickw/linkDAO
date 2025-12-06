@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, lazy, Suspense, useRef, useCallback } from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
 import { useWeb3 } from '@/context/Web3Context';
 import { useNavigation } from '@/context/NavigationContext';
@@ -66,6 +67,7 @@ export default function Home() {
   const { createPost, isLoading: isCreatingPost } = useCreatePost();
   const { profile } = useProfile(address);
   const { navigationState, openModal, closeModal } = useNavigation();
+  const router = useRouter();
 
   const [mounted, setMounted] = useState(false);
   const [hasNewPosts, setHasNewPosts] = useState(false);
@@ -188,18 +190,35 @@ export default function Home() {
   }, [wsConnected, address, wsSubscribed, subscribe, on, off, addToast, debouncedRefresh]);
 
   // Fix navigation issue after wallet connection
-  useEffect(() => {
-    if (isConnected && address && mounted) {
-      // Force router to be ready after wallet connection
-      // This fixes the issue where links don't work after connecting wallet
-      const timer = setTimeout(() => {
-        // Trigger a small state update to ensure router is responsive
-        setFeedRefreshKey(prev => prev);
-      }, 100);
+  // Track previous connection state to detect when connection happens
+  const prevConnectedRef = useRef(false);
 
-      return () => clearTimeout(timer);
+  useEffect(() => {
+    const wasConnected = prevConnectedRef.current;
+    prevConnectedRef.current = isConnected;
+
+    // Only act when wallet just connected (transition from disconnected to connected)
+    if (isConnected && address && mounted && !wasConnected) {
+      console.log('🔄 Wallet just connected, refreshing router state...');
+
+      // Use multiple strategies to ensure router stays responsive:
+      // 1. Prefetch current path to refresh router internal state
+      // 2. Use RAF to ensure we're in sync with React's render cycle
+      requestAnimationFrame(() => {
+        router.prefetch(router.asPath).catch(() => {
+          // Ignore prefetch errors
+        });
+
+        // Also prefetch common navigation targets
+        const commonRoutes = ['/marketplace', '/communities', '/governance', '/profile'];
+        commonRoutes.forEach(route => {
+          router.prefetch(route).catch(() => {});
+        });
+
+        console.log('🔄 Router state refreshed after wallet connection');
+      });
     }
-  }, [isConnected, address, mounted]);
+  }, [isConnected, address, mounted, router]);
 
   // Handle post creation with useCallback and mount check
   const handlePostSubmit = useCallback(async (postData: CreatePostInput) => {

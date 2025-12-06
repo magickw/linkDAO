@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { useAccount, useDisconnect } from 'wagmi';
+import { useRouter } from 'next/router';
 import { authService, KYCStatus } from '@/services/authService';
 import { enhancedAuthService } from '@/services/enhancedAuthService';
 import { sessionManager } from '@/services/sessionManager';
@@ -74,6 +75,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { disconnect } = useDisconnect();
   const { validateSession } = useSessionValidation();
   const { addToast } = useToast();
+  const router = useRouter();
+
+  // Track if we just completed authentication to trigger router refresh
+  const justAuthenticatedRef = useRef(false);
 
   // Store session data - must be defined before checkStoredSession
   const storeSession = useCallback((token: string, userData: AuthUser) => {
@@ -305,6 +310,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     handleWalletConnectionChange();
   }, [isConnected, address, user, isLoading, checkStoredSession, lastAuthTime]);
+
+  // Fix navigation issue after wallet connection by refreshing router state
+  // This ensures Next.js Link components work correctly after authentication
+  useEffect(() => {
+    if (justAuthenticatedRef.current && user && accessToken) {
+      justAuthenticatedRef.current = false;
+
+      // Use requestAnimationFrame to ensure React has finished rendering
+      // before we attempt to fix the router state
+      requestAnimationFrame(() => {
+        // Force Next.js router to recognize the new state
+        // This fixes the issue where links don't work after wallet connection
+        router.prefetch(router.asPath).catch(() => {
+          // Ignore prefetch errors - this is just to refresh router state
+        });
+
+        console.log('🔄 Router state refreshed after authentication');
+      });
+    }
+  }, [user, accessToken, router]);
 
   // Load KYC status
   const loadKYCStatus = async () => {
@@ -585,6 +610,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         storeSession(result.token, result.user);
         await loadKYCStatus();
         console.log('✅ Authentication successful for address:', walletAddress);
+
+        // Mark that we just authenticated to trigger router refresh
+        justAuthenticatedRef.current = true;
 
         // Show success notification
         addToast('Successfully authenticated!', 'success', 3000);
