@@ -143,8 +143,24 @@ const AdvancedRichTextEditor: React.FC<AdvancedRichTextEditorProps> = ({
       // Upload file to IPFS
       const result = await ipfsUploadService.uploadFile(selectedFile);
 
+      console.log('[RichTextEditor] Upload result:', result);
+
+      // Use the gateway URL from the result, with fallbacks
+      let imageUrl = result.url;
+
+      // If the URL uses ipfs.io, try to use a more reliable gateway
+      if (imageUrl.includes('ipfs.io')) {
+        // Extract the CID and use Pinata gateway which is more reliable
+        const cidMatch = imageUrl.match(/\/ipfs\/([^/]+)/);
+        if (cidMatch && cidMatch[1]) {
+          imageUrl = `https://gateway.pinata.cloud/ipfs/${cidMatch[1]}`;
+        }
+      }
+
+      console.log('[RichTextEditor] Using image URL:', imageUrl);
+
       // Insert image into editor
-      editor.chain().focus().setImage({ src: result.url }).run();
+      editor.chain().focus().setImage({ src: imageUrl }).run();
 
       // Close dialog and reset
       setShowImageDialog(false);

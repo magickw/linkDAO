@@ -13,13 +13,17 @@ export const sanitizeConfig = {
     'ul', 'ol', 'li',
     'blockquote', 'code', 'pre',
     'a', 'img',
-    'div', 'span'
+    'div', 'span',
+    'iframe' // for YouTube embeds
   ],
   allowedAttributes: {
-    '*': ['className'],
+    '*': ['class', 'className', 'style'],
     'a': ['href', 'target', 'rel'],
-    'img': ['src', 'alt', 'width', 'height']
-  }
+    'img': ['src', 'alt', 'width', 'height', 'class', 'loading'],
+    'iframe': ['src', 'width', 'height', 'frameborder', 'allow', 'allowfullscreen']
+  },
+  allowedSchemes: ['http', 'https', 'data', 'ipfs'],
+  allowedSchemesAppliedToAttributes: ['href', 'src']
 };
 
 // Custom markdown components with Tailwind styling

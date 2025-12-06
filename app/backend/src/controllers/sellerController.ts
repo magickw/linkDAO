@@ -829,22 +829,23 @@ export class SellerController {
 
       let query = db.select({
         id: marketplaceProducts.id,
-        title: products.title,
-        description: products.description,
-        priceAmount: products.priceAmount,
-        priceCurrency: products.priceCurrency,
-        inventory: products.inventory,
-        status: products.status,
+        title: marketplaceProducts.title,
+        description: marketplaceProducts.description,
+        priceCrypto: marketplaceProducts.priceCrypto,
+        currency: marketplaceProducts.currency,
+        stock: marketplaceProducts.stock,
+        status: marketplaceProducts.status,
         createdAt: marketplaceProducts.createdAt,
-        updatedAt: marketplaceProducts.updatedAt
+        updatedAt: marketplaceProducts.updatedAt,
+        mainCategory: marketplaceProducts.mainCategory
       })
-        .from(products)
-        .leftJoin(users, eq(products.sellerId, users.id))
+        .from(marketplaceProducts)
+        .leftJoin(users, eq(marketplaceProducts.sellerId, users.id))
         .where(eq(users.walletAddress, user.walletAddress));
 
       // Apply filters
       if (status) {
-        query = query.where(eq(products.status, status as string));
+        query = query.where(eq(marketplaceProducts.status, status as string));
       }
       if (category) {
         query = query.where(eq(marketplaceProducts.mainCategory, category as string));

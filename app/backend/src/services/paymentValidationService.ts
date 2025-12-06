@@ -126,7 +126,7 @@ export class PaymentValidationService {
     this.databaseService = new DatabaseService();
     this.userProfileService = new UserProfileService();
     this.exchangeRateService = new ExchangeRateService();
-    this.provider = new ethers.JsonRpcProvider(process.env.RPC_URL || 'https://eth-sepolia.g.alchemy.com/v2/5qxkwSO4d_0qE4wjQPIrp');
+    this.provider = new ethers.JsonRpcProvider(process.env.RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com');
   }
 
   /**
@@ -204,14 +204,14 @@ export class PaymentValidationService {
           this.provider
         );
         balance = await tokenContract.balanceOf(userAddress);
-        
+
         // Check native token balance for gas
         gasBalance = await this.provider.getBalance(userAddress);
       }
 
       const requiredAmountBigInt = ethers.parseUnits(requiredAmount, token.decimals);
       const balanceFormatted = ethers.formatUnits(balance, token.decimals);
-      
+
       const balanceInfo: BalanceInfo = {
         tokenAddress,
         tokenSymbol: token.symbol,
@@ -236,7 +236,7 @@ export class PaymentValidationService {
 
       // Check if balance is sufficient (with buffer for gas if needed)
       let hasSufficientBalance = balance >= requiredAmountBigInt;
-      
+
       // For native tokens, ensure enough left for gas
       if (tokenAddress === '0x0000000000000000000000000000000000000000') {
         const gasReserve = ethers.parseUnits(this.MIN_BALANCES.ETH, token.decimals);
@@ -398,7 +398,7 @@ export class PaymentValidationService {
 
       if (!balanceCheck.hasSufficientBalance) {
         result.errors.push(`Insufficient ${token.symbol} balance. Required: ${request.amount}, Available: ${balanceCheck.balance.balanceFormatted}`);
-        
+
         // Generate alternatives
         result.suggestedAlternatives = await this.getPaymentAlternatives(request, 'insufficient_balance');
       }
@@ -517,7 +517,7 @@ export class PaymentValidationService {
 
       if (!balanceCheck.hasSufficientBalance) {
         result.errors.push(`Insufficient ${token.symbol} balance for escrow. Required: ${request.amount}, Available: ${balanceCheck.balance.balanceFormatted}`);
-        
+
         // Generate alternatives
         result.suggestedAlternatives = await this.getPaymentAlternatives(request, 'insufficient_balance');
       }
@@ -535,13 +535,13 @@ export class PaymentValidationService {
 
   private async estimateCryptoFees(request: PaymentValidationRequest): Promise<PaymentFees> {
     const details = request.paymentDetails as CryptoPaymentDetails;
-    
+
     // Estimate gas fees
     let gasFee = 0;
     try {
       const gasPrice = await this.provider.getFeeData();
       const gasLimit = details.tokenAddress === '0x0000000000000000000000000000000000000000' ? 21000 : 65000;
-      
+
       if (gasPrice.gasPrice) {
         const gasCost = gasPrice.gasPrice * BigInt(gasLimit);
         gasFee = parseFloat(ethers.formatEther(gasCost));
@@ -564,9 +564,9 @@ export class PaymentValidationService {
 
   private async estimateFiatFees(request: PaymentValidationRequest): Promise<PaymentFees> {
     const details = request.paymentDetails as FiatPaymentDetails;
-    
+
     let processingFee = 0;
-    
+
     // Provider-specific fees
     switch (details.provider) {
       case 'stripe':
@@ -599,10 +599,10 @@ export class PaymentValidationService {
 
   private async estimateEscrowFees(request: PaymentValidationRequest): Promise<PaymentFees> {
     const cryptoFees = await this.estimateCryptoFees(request);
-    
+
     // Escrow adds additional fees for security and dispute resolution
     const escrowFee = request.amount * 0.01; // 1% escrow fee
-    
+
     return {
       ...cryptoFees,
       processingFee: escrowFee,

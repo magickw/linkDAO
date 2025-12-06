@@ -65,7 +65,7 @@ export class IPFSService {
       apiUrl = 'http://localhost:5001';
     }
 
-    this.gatewayUrl = process.env.IPFS_GATEWAY_URL || 'https://ipfs.io/ipfs';
+    this.gatewayUrl = process.env.IPFS_GATEWAY_URL || 'https://gateway.pinata.cloud/ipfs';
     this.defaultPinning = process.env.IPFS_DEFAULT_PINNING !== 'false' && !this.isMemoryConstrained; // Disable pinning in constrained environments
 
     // IPFS client not used - we use Pinata REST API directly

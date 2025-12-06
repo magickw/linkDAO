@@ -467,9 +467,9 @@ function CommunityPostCardEnhanced({
                 </h3>
               )
             )}
-            <div className="text-gray-900 dark:text-white leading-relaxed">
+            <div className="text-gray-900 dark:text-white leading-relaxed prose prose-sm dark:prose-invert max-w-none">
 
-              {processContent(getTruncatedContent(post.content, 10000, isExpanded), 'text')}
+              {processContent(getTruncatedContent(post.content, 10000, isExpanded), 'html')}
             </div>
             
             {shouldTruncateContent(post.content, 10000, isExpanded) && (

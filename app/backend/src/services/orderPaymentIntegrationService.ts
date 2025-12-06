@@ -111,13 +111,13 @@ export class OrderPaymentIntegrationService {
     this.notificationService = new NotificationService();
     this.paymentValidationService = new PaymentValidationService();
     this.enhancedEscrowService = new EnhancedEscrowService(
-      process.env.RPC_URL || 'https://eth-sepolia.g.alchemy.com/v2/5qxkwSO4d_0qE4wjQPIrp',
+      process.env.RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com',
       process.env.ENHANCED_ESCROW_CONTRACT_ADDRESS || '',
       process.env.MARKETPLACE_CONTRACT_ADDRESS || ''
     );
     this.enhancedFiatPaymentService = new EnhancedFiatPaymentService();
     this.receiptService = new ReceiptService();
-    this.provider = new ethers.JsonRpcProvider(process.env.RPC_URL || 'https://eth-sepolia.g.alchemy.com/v2/5qxkwSO4d_0qE4wjQPIrp');
+    this.provider = new ethers.JsonRpcProvider(process.env.RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com');
   }
 
   /**
@@ -342,7 +342,7 @@ export class OrderPaymentIntegrationService {
 
       // Get all payment transactions for this order
       const transactions = await this.getPaymentTransactionsByOrderId(orderId);
-      
+
       // Get all receipts for this order
       const receipts = await this.getPaymentReceiptsByOrderId(orderId);
 
@@ -400,14 +400,14 @@ export class OrderPaymentIntegrationService {
       const checkTransaction = async () => {
         try {
           const receipt = await this.provider.getTransactionReceipt(transactionHash);
-          
+
           if (receipt) {
             const status = receipt.status === 1 ? PaymentTransactionStatus.CONFIRMED : PaymentTransactionStatus.FAILED;
-            
+
             // Find the payment transaction
             const transactions = await this.getPaymentTransactionsByOrderId(orderId);
             const transaction = transactions.find(t => t.transactionHash === transactionHash);
-            
+
             if (transaction) {
               await this.updatePaymentTransactionStatus(transaction.id, status, {
                 blockNumber: receipt.blockNumber,
@@ -464,7 +464,7 @@ export class OrderPaymentIntegrationService {
         unitPrice: transaction.amount,
         totalPrice: transaction.amount
       }];
-      
+
       // Format items for receipt
       const receiptItems = orderItems.map(item => ({
         id: item.id.toString(),

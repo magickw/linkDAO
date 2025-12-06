@@ -1,9 +1,9 @@
 import { DatabaseService } from './databaseService';
 import { safeLogger } from '../utils/safeLogger';
 import { ethers } from 'ethers';
-import { 
-  PaymentReceipt, 
-  LDAOPurchaseReceipt, 
+import {
+  PaymentReceipt,
+  LDAOPurchaseReceipt,
   MarketplaceReceipt,
   ReceiptType,
   ReceiptStatus
@@ -46,7 +46,7 @@ export class ReceiptService {
 
   constructor() {
     this.databaseService = new DatabaseService();
-    this.provider = new ethers.JsonRpcProvider(process.env.RPC_URL || 'https://eth-sepolia.g.alchemy.com/v2/5qxkwSO4d_0qE4wjQPIrp');
+    this.provider = new ethers.JsonRpcProvider(process.env.RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com');
   }
 
   /**
@@ -55,7 +55,7 @@ export class ReceiptService {
   async generateMarketplaceReceipt(receiptData: Omit<ReceiptData, 'id' | 'purchaseType'>): Promise<MarketplaceReceipt> {
     try {
       const receiptId = `mkt_rcpt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
+
       const marketplaceReceipt: MarketplaceReceipt = {
         id: receiptId,
         type: ReceiptType.MARKETPLACE,
@@ -96,7 +96,7 @@ export class ReceiptService {
   async generateLDAOPurchaseReceipt(receiptData: Omit<ReceiptData, 'id' | 'purchaseType' | 'items' | 'sellerAddress' | 'sellerName'>): Promise<LDAOPurchaseReceipt> {
     try {
       const receiptId = `ldao_rcpt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
+
       const ldaoReceipt: LDAOPurchaseReceipt = {
         id: receiptId,
         type: ReceiptType.LDAO_TOKEN,
@@ -178,11 +178,11 @@ export class ReceiptService {
   async updateReceiptStatus(receiptId: string, status: ReceiptStatus, metadata?: any): Promise<boolean> {
     try {
       const success = await this.databaseService.updateReceiptStatus(receiptId, status, metadata);
-      
+
       if (success) {
         safeLogger.info(`✅ Receipt ${receiptId} status updated to ${status}`);
       }
-      
+
       return success;
     } catch (error) {
       safeLogger.error('Error updating receipt status:', error);
