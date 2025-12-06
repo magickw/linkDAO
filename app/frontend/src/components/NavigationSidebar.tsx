@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAccount } from 'wagmi';
 import { useProfile } from '@/hooks/useProfile';
-import { 
+import {
   CommunityIconList,
   EnhancedUserCard,
   NavigationBreadcrumbs,
@@ -48,7 +48,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
   const { address } = useAccount();
   const { isMobile } = useMobileOptimization();
   const { profile } = useProfile(address);
-  const { 
+  const {
     walletData,
     isLoading: isWalletLoading
   } = useWalletData({
@@ -56,17 +56,17 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
     refreshInterval: 300000 // Refresh every 5 minutes
   });
   const { userPreferences, updateUserPreferences, toggleFavoriteCommunity, setSidebarCollapsed } = useNavigation(); // Add user preferences and setSidebarCollapsed
-  
+
   // Replace direct service calls with React Query
-  const { 
-    data: communities = [], 
-    isLoading: isCommunitiesLoading, 
-    error 
+  const {
+    data: communities = [],
+    isLoading: isCommunitiesLoading,
+    error
   } = useQuery({
     queryKey: ['userCommunities', address],
     queryFn: async () => {
       if (!address) return [];
-      
+
       try {
         // Get user's memberships with fallback for network errors
         let rawMemberships: CommunityMembership[] = [];
@@ -81,21 +81,21 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
           // Continue with empty memberships instead of crashing
           rawMemberships = [];
         }
-        
+
         // Defensive: ensure array
         const memberships: CommunityMembership[] = Array.isArray(rawMemberships) ? rawMemberships : [];
         const roleByCommunityId = new Map<string, CommunityRole>(memberships.map(m => [m.communityId, m.role]));
-        
+
         // Get community details for each membership
-        const communityPromises = memberships.map(membership => 
+        const communityPromises = memberships.map(membership =>
           CommunityService.getCommunityById(membership.communityId)
         );
-        
+
         const communityResults = await Promise.allSettled(communityPromises);
         const validCommunities = communityResults
           .filter((r): r is PromiseFulfilledResult<CommunityModel> => r.status === 'fulfilled' && r.value !== null && r.value !== undefined)
           .map(r => r.value);
-        
+
         // Transform to expected format with membership info
         return validCommunities.map((community) => ({
           id: community.id,
@@ -119,12 +119,12 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
   });
 
   // const { getCommunityUnreadCount } = useNotifications();
-  
-  const { 
-    navigationState, 
+
+  const {
+    navigationState,
     navigateToFeed,
     navigateToCommunity,
-    toggleSidebar 
+    toggleSidebar
   } = useNavigation();
 
   // Enhanced navigation hook
@@ -238,7 +238,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                     user={enhancedUser}
                     address={address}
                     profile={enhancedUser}
-                    onClick={() => {/* Handle profile click */}}
+                    onClick={() => {/* Handle profile click */ }}
                   />
                 ) : address ? (
                   /* Display connected wallet profile */
@@ -265,8 +265,8 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                               {(profile as any)?.handle
                                 ? (profile as any).handle.charAt(0).toUpperCase()
                                 : (profile as any)?.ens
-                                ? (profile as any).ens.charAt(0).toUpperCase()
-                                : address.slice(2, 4).toUpperCase()}
+                                  ? (profile as any).ens.charAt(0).toUpperCase()
+                                  : address.slice(2, 4).toUpperCase()}
                             </div>
                           )}
                         </div>
@@ -346,7 +346,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                 )}
               </div>
             </div>
-            
+
             {/* Activity Card */}
             <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
               <div className="p-4">
@@ -362,18 +362,17 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                         className="w-full flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer"
                       >
                         <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${
-                            indicator.type === 'notification' ? 'bg-blue-500' :
-                            indicator.type === 'transaction' ? 'bg-green-500' :
-                            indicator.type === 'community' ? 'bg-purple-500' :
-                            'bg-orange-500'
-                          }`}></div>
+                          <div className={`w-2 h-2 rounded-full ${indicator.type === 'notification' ? 'bg-blue-500' :
+                              indicator.type === 'transaction' ? 'bg-green-500' :
+                                indicator.type === 'community' ? 'bg-purple-500' :
+                                  'bg-orange-500'
+                            }`}></div>
                           <span className="text-sm text-gray-900 dark:text-white font-medium capitalize">
                             {indicator.type === 'notification' ? 'Notifications' :
-                             indicator.type === 'transaction' ? 'Transactions' :
-                             indicator.type === 'community' ? 'Community' :
-                             indicator.type === 'governance' ? 'Governance' :
-                             indicator.type}
+                              indicator.type === 'transaction' ? 'Transactions' :
+                                indicator.type === 'community' ? 'Community' :
+                                  indicator.type === 'governance' ? 'Governance' :
+                                    indicator.type}
                           </span>
                         </div>
                         <span className="text-sm font-bold text-white bg-primary-600 dark:bg-primary-500 px-2 py-1 rounded-full">
@@ -409,12 +408,6 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                 {/* Search */}
                 <Link
                   href="/search"
-                  onClick={() => {
-                    // Force navigation to ensure page refresh on first visit
-                    if (typeof window !== 'undefined') {
-                      window.location.href = '/search';
-                    }
-                  }}
                   className="group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gradient-to-r dark:hover:from-gray-700/50 dark:hover:to-gray-600/50 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm"
                 >
                   <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -423,7 +416,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                   <span>Search & Discovery</span>
                 </Link>
 
-                {/* Communities */}
+                {/* Communities
                 <button
                   onClick={() => setShowDiscoveryModal(true)}
                   className="group w-full flex items-center justify-start gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 text-left hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gradient-to-r dark:hover:from-gray-700/50 dark:hover:to-gray-600/50 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm"
@@ -433,7 +426,18 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                   </svg>
                   <span className="text-left">Discover Communities</span>
                 </button>
-                
+                */}
+                {/* Replaced Modal button with direct link per standard navigation expectations */}
+                <Link
+                  href="/communities"
+                  className="group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gradient-to-r dark:hover:from-gray-700/50 dark:hover:to-gray-600/50 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm"
+                >
+                  <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  <span>Communities</span>
+                </Link>
+
                 {/* Wallet-to-Wallet Messaging */}
                 {/* <Link
                   href="/messaging"
@@ -449,30 +453,17 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                 {/* Governance */}
                 <Link
                   href="/governance"
-                  onClick={() => {
-                    // Force navigation to ensure page refresh on first visit
-                    if (typeof window !== 'undefined') {
-                      window.location.href = '/governance';
-                    }
-                  }}
                   className="group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gradient-to-r dark:hover:from-purple-900/30 dark:hover:to-pink-900/30 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm relative"
                 >
                   <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                   </svg>
                   <span>Governance</span>
-                  {/* Governance notification count will be loaded from real data */}
                 </Link>
 
                 {/* Marketplace */}
                 <Link
                   href="/marketplace"
-                  onClick={() => {
-                    // Force navigation to ensure page refresh on first visit
-                    if (typeof window !== 'undefined') {
-                      window.location.href = '/marketplace';
-                    }
-                  }}
                   className="group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gradient-to-r dark:hover:from-green-900/30 dark:hover:to-emerald-900/30 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm"
                 >
                   <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -484,12 +475,6 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                 {/* LDAO Dashboard */}
                 <Link
                   href="/ldao-dashboard"
-                  onClick={() => {
-                    // Force navigation to ensure page refresh on first visit
-                    if (typeof window !== 'undefined') {
-                      window.location.href = '/ldao-dashboard';
-                    }
-                  }}
                   className="group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gradient-to-r dark:hover:from-purple-900/30 dark:hover:to-pink-900/30 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm"
                 >
                   <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -517,7 +502,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                     </button>
                   </div>
                 </div>
-                
+
                 <CommunityIconList
                   communities={enhancedCommunities}
                   onCommunitySelect={handleCommunitySelectWithContext}
@@ -532,7 +517,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                       <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Trending Communities
                       </h3>
-                      <button 
+                      <button
                         onClick={() => setShowDiscoveryModal(true)}
                         className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
                       >
@@ -582,15 +567,15 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
           <>
             {/* Sidebar Toggle Button */}
             <div className="flex justify-end p-2">
-                <button
-                    onClick={() => updateUserPreferences({ sidebarCollapsed: !userPreferences.sidebarCollapsed })}
-                    className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-                    title={userPreferences.sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-                >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={userPreferences.sidebarCollapsed ? "M4 6h16M4 12h16m-7 6h7" : "M4 6h16M4 12h16M4 18h16"} />
-                    </svg>
-                </button>
+              <button
+                onClick={() => updateUserPreferences({ sidebarCollapsed: !userPreferences.sidebarCollapsed })}
+                className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                title={userPreferences.sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={userPreferences.sidebarCollapsed ? "M4 6h16M4 12h16m-7 6h7" : "M4 6h16M4 12h16M4 18h16"} />
+                </svg>
+              </button>
             </div>
             {/* Collapsed User Profile Card */}
             <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
@@ -602,8 +587,8 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                       {(profile as any)?.handle
                         ? (profile as any).handle.charAt(0).toUpperCase()
                         : (profile as any)?.ens
-                        ? (profile as any).ens.charAt(0).toUpperCase()
-                        : address.slice(2, 4).toUpperCase()}
+                          ? (profile as any).ens.charAt(0).toUpperCase()
+                          : address.slice(2, 4).toUpperCase()}
                     </div>
                     {/* Online status indicator */}
                     <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
@@ -620,17 +605,17 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
 
             {/* Collapsed Navigation Items */}
             <div className="space-y-2">
-            <Link
-              href="/communities"
-              className="block w-full p-2 rounded-lg transition-colors text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700"
-              title="Communities"
-            >
-              <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            </Link>
-            
-            {/* <Link
+              <Link
+                href="/communities"
+                className="block w-full p-2 rounded-lg transition-colors text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700"
+                title="Communities"
+              >
+                <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </Link>
+
+              {/* <Link
               href="/messaging"
               className="block w-full p-2 rounded-lg transition-colors text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700 relative"
               title="Messages"
@@ -639,55 +624,54 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
               {/* Message notification indicator will be loaded from real data */}
-            {/* </Link> */}
+              {/* </Link> */}
 
-            {/* Collapsed joined communities with favorites */}
-            {enhancedCommunities.filter(c => c.isJoined).slice(0, 5).map((community) => (
-              <button
-                key={community.id}
-                onClick={() => handleCommunitySelectWithContext(community.id)}
-                className={`w-full p-2 rounded-lg transition-colors relative ${
-                  navigationState.activeCommunity === community.id
-                    ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
-                    : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700'
-                }`}
-                title={community.displayName}
-              >
-                <span className="text-lg">{community.icon || community.avatar}</span>
-                {community.unreadCount && community.unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-primary-500 rounded-full"></span>
-                )}
-                {userPreferences.favoriteCommunities.includes(community.id) && (
-                  <span className="absolute -bottom-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full"></span>
-                )}
-              </button>
-            ))}
-            
-            {/* Activity Indicators in Collapsed Mode */}
-            {activityIndicators.length > 0 && (
-              <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex flex-col space-y-1">
-                  {activityIndicators.slice(0, 2).map((indicator) => (
-                    <button
-                      key={indicator.id}
-                      onClick={() => handleActivityIndicatorClick(indicator)}
-                      className="w-full p-2 rounded-lg transition-colors text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700 relative"
-                      title={`${indicator.type} - ${indicator.count} items`}
-                    >
-                      <span className="text-lg">
-                        {indicator.type === 'notification' && '🔔'}
-                        {indicator.type === 'transaction' && '💰'}
-                        {indicator.type === 'community' && '👥'}
-                        {indicator.type === 'governance' && '🗳️'}
-                      </span>
-                      {indicator.count > 0 && (
-                        <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                      )}
-                    </button>
-                  ))}
+              {/* Collapsed joined communities with favorites */}
+              {enhancedCommunities.filter(c => c.isJoined).slice(0, 5).map((community) => (
+                <button
+                  key={community.id}
+                  onClick={() => handleCommunitySelectWithContext(community.id)}
+                  className={`w-full p-2 rounded-lg transition-colors relative ${navigationState.activeCommunity === community.id
+                      ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
+                      : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700'
+                    }`}
+                  title={community.displayName}
+                >
+                  <span className="text-lg">{community.icon || community.avatar}</span>
+                  {community.unreadCount && community.unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 w-2 h-2 bg-primary-500 rounded-full"></span>
+                  )}
+                  {userPreferences.favoriteCommunities.includes(community.id) && (
+                    <span className="absolute -bottom-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full"></span>
+                  )}
+                </button>
+              ))}
+
+              {/* Activity Indicators in Collapsed Mode */}
+              {activityIndicators.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex flex-col space-y-1">
+                    {activityIndicators.slice(0, 2).map((indicator) => (
+                      <button
+                        key={indicator.id}
+                        onClick={() => handleActivityIndicatorClick(indicator)}
+                        className="w-full p-2 rounded-lg transition-colors text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700 relative"
+                        title={`${indicator.type} - ${indicator.count} items`}
+                      >
+                        <span className="text-lg">
+                          {indicator.type === 'notification' && '🔔'}
+                          {indicator.type === 'transaction' && '💰'}
+                          {indicator.type === 'community' && '👥'}
+                          {indicator.type === 'governance' && '🗳️'}
+                        </span>
+                        {indicator.count > 0 && (
+                          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
             </div>
           </>
         )}

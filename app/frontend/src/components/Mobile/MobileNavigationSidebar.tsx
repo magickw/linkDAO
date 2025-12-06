@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 import { useMobileAccessibility } from '@/hooks/useMobileAccessibility';
 import { QuickFilterPanel } from '@/components/Navigation/QuickFilterPanel';
@@ -7,6 +8,7 @@ import { CommunityIconList } from '@/components/Navigation/CommunityIconList';
 import { EnhancedUserCard } from '@/components/Navigation/EnhancedUserCard';
 import { ActivityIndicators } from '@/components/Navigation/ActivityIndicators';
 import { UserProfile } from '@/models/UserProfile';
+
 interface Community {
   id: string;
   name: string;
@@ -185,8 +187,9 @@ export const MobileNavigationSidebar: React.FC<MobileNavigationSidebarProps> = (
 
               {/* Additional Navigation Items */}
               <div className="p-4 space-y-2">
-                <button
-                  onClick={() => window.location.href = '/bookmarks'}
+                <Link
+                  href="/bookmarks"
+                  onClick={onClose}
                   className={`
                     w-full flex items-center space-x-3 p-3 rounded-lg text-left
                     text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800
@@ -197,10 +200,11 @@ export const MobileNavigationSidebar: React.FC<MobileNavigationSidebarProps> = (
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                   </svg>
                   <span>Bookmarks</span>
-                </button>
+                </Link>
 
-                <button
-                  onClick={() => window.location.href = '/analytics'}
+                <Link
+                  href="/analytics"
+                  onClick={onClose}
                   className={`
                     w-full flex items-center space-x-3 p-3 rounded-lg text-left
                     text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800
@@ -211,10 +215,11 @@ export const MobileNavigationSidebar: React.FC<MobileNavigationSidebarProps> = (
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
                   <span>Analytics</span>
-                </button>
+                </Link>
 
-                <button
-                  onClick={() => window.location.href = '/settings'}
+                <Link
+                  href="/settings"
+                  onClick={onClose}
                   className={`
                     w-full flex items-center space-x-3 p-3 rounded-lg text-left
                     text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800
@@ -226,12 +231,12 @@ export const MobileNavigationSidebar: React.FC<MobileNavigationSidebarProps> = (
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                   <span>Settings</span>
-                </button>
+                </Link>
               </div>
             </div>
 
             {/* Footer */}
-            <div 
+            <div
               className="p-4 border-t border-gray-200 dark:border-gray-700"
               style={{ paddingBottom: safeAreaInsets.bottom + 16 }}
             >

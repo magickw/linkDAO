@@ -465,9 +465,13 @@ import onboardingRoutes from './routes/onboardingRoutes';
 // Import documentation routes
 import { docsRoutes } from './routes/docsRoutes';
 import trackingRoutes from './routes/trackingRoutes';
+import hybridPaymentRoutes from './routes/hybridPaymentRoutes';
 
 // Reputation routes
 app.use('/marketplace/reputation', reputationRoutes);
+
+// Register hybrid payment routes
+app.use('/api/hybrid-payment', hybridPaymentRoutes);
 
 // Add API reputation routes for frontend compatibility
 app.use('/api/reputation', reputationRoutes);

@@ -31,6 +31,14 @@ class AuthService {
   private readonly MAX_AUTH_DELAY: number = 30000; // Cap max delay at 30 seconds (increased from 5s)
   private readonly MAX_AUTH_ATTEMPTS: number = 3; // Maximum total attempts before giving up
 
+  // Session expiration tracking
+  private sessionExpiresAt: number | null = null;
+  private expirationCheckInterval: NodeJS.Timeout | null = null;
+  private lastActivityTime: number = Date.now();
+  private readonly INACTIVITY_TIMEOUT_MS: number = 4 * 60 * 60 * 1000; // 4 hours inactivity timeout
+  private readonly SESSION_CHECK_INTERVAL_MS: number = 60 * 1000; // Check every minute
+  private onSessionExpiredCallback: (() => void) | null = null;
+
   constructor() {
     // Use centralized environment config to ensure correct backend port
     this.baseUrl = ENV_CONFIG.BACKEND_URL || 'http://localhost:10000';
@@ -42,7 +50,165 @@ class AuthService {
         localStorage.getItem('token') ||
         localStorage.getItem('authToken') ||
         localStorage.getItem('auth_token') || '';
+
+      // Load session expiration time
+      const storedExpiresAt = localStorage.getItem('linkdao_session_expires_at');
+      if (storedExpiresAt) {
+        this.sessionExpiresAt = parseInt(storedExpiresAt);
+      }
+
+      // Load last activity time
+      const storedActivityTime = localStorage.getItem('linkdao_last_activity');
+      if (storedActivityTime) {
+        this.lastActivityTime = parseInt(storedActivityTime);
+      }
+
+      // Start session monitoring if we have a token
+      if (this.token) {
+        this.startSessionMonitoring();
+      }
+
+      // Track user activity for inactivity timeout
+      this.setupActivityTracking();
     }
+  }
+
+  /**
+   * Set callback for session expiration events
+   */
+  public onSessionExpired(callback: () => void): void {
+    this.onSessionExpiredCallback = callback;
+  }
+
+  /**
+   * Setup activity tracking for inactivity timeout
+   */
+  private setupActivityTracking(): void {
+    if (typeof window === 'undefined') return;
+
+    const updateActivity = () => {
+      this.lastActivityTime = Date.now();
+      localStorage.setItem('linkdao_last_activity', this.lastActivityTime.toString());
+    };
+
+    // Track user activity events
+    ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'].forEach(event => {
+      window.addEventListener(event, updateActivity, { passive: true });
+    });
+  }
+
+  /**
+   * Start monitoring session expiration
+   */
+  private startSessionMonitoring(): void {
+    if (typeof window === 'undefined') return;
+
+    // Clear any existing interval
+    if (this.expirationCheckInterval) {
+      clearInterval(this.expirationCheckInterval);
+    }
+
+    // Check session validity periodically
+    this.expirationCheckInterval = setInterval(() => {
+      this.checkSessionValidity();
+    }, this.SESSION_CHECK_INTERVAL_MS);
+
+    // Also check immediately
+    this.checkSessionValidity();
+  }
+
+  /**
+   * Stop session monitoring
+   */
+  private stopSessionMonitoring(): void {
+    if (this.expirationCheckInterval) {
+      clearInterval(this.expirationCheckInterval);
+      this.expirationCheckInterval = null;
+    }
+  }
+
+  /**
+   * Check if session is still valid
+   */
+  private checkSessionValidity(): void {
+    const now = Date.now();
+
+    // Check if session has expired based on server expiration time
+    if (this.sessionExpiresAt && now >= this.sessionExpiresAt) {
+      console.log('Session expired based on server expiration time');
+      this.handleSessionExpired('Session has expired. Please sign in again.');
+      return;
+    }
+
+    // Check for inactivity timeout
+    const inactiveTime = now - this.lastActivityTime;
+    if (inactiveTime >= this.INACTIVITY_TIMEOUT_MS) {
+      console.log('Session expired due to inactivity');
+      this.handleSessionExpired('Session expired due to inactivity. Please sign in again.');
+      return;
+    }
+
+    // Check max session age (7 days)
+    const storedTimestamp = localStorage.getItem('linkdao_signature_timestamp') ||
+      localStorage.getItem('signature_timestamp');
+    if (storedTimestamp) {
+      const sessionAge = now - parseInt(storedTimestamp);
+      const MAX_SESSION_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+      if (sessionAge >= MAX_SESSION_AGE_MS) {
+        console.log('Session expired due to max age policy (7 days)');
+        this.handleSessionExpired('Session expired. Please sign in again for security.');
+        return;
+      }
+    }
+  }
+
+  /**
+   * Handle session expiration
+   */
+  private handleSessionExpired(message: string): void {
+    console.warn(message);
+    this.stopSessionMonitoring();
+    this.clearToken();
+
+    // Clear all session data
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('linkdao_access_token');
+      localStorage.removeItem('token');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('linkdao_wallet_address');
+      localStorage.removeItem('wallet_address');
+      localStorage.removeItem('linkdao_signature_timestamp');
+      localStorage.removeItem('signature_timestamp');
+      localStorage.removeItem('linkdao_user_data');
+      localStorage.removeItem('user_data');
+      localStorage.removeItem('linkdao_refresh_token');
+      localStorage.removeItem('linkdao_session_expires_at');
+      localStorage.removeItem('linkdao_last_activity');
+    }
+
+    // Notify callback if registered
+    if (this.onSessionExpiredCallback) {
+      this.onSessionExpiredCallback();
+    }
+  }
+
+  /**
+   * Get remaining session time in milliseconds
+   */
+  public getSessionTimeRemaining(): number | null {
+    if (!this.sessionExpiresAt) return null;
+    const remaining = this.sessionExpiresAt - Date.now();
+    return remaining > 0 ? remaining : 0;
+  }
+
+  /**
+   * Check if session is about to expire (within 5 minutes)
+   */
+  public isSessionExpiringSoon(): boolean {
+    const remaining = this.getSessionTimeRemaining();
+    if (remaining === null) return false;
+    return remaining < 5 * 60 * 1000; // Less than 5 minutes
   }
 
   /**
@@ -156,17 +322,39 @@ class AuthService {
           localStorage.getItem('signature_timestamp');
         const storedUserData = localStorage.getItem('linkdao_user_data') ||
           localStorage.getItem('user_data');
+        const storedExpiresAt = localStorage.getItem('linkdao_session_expires_at');
+        const storedLastActivity = localStorage.getItem('linkdao_last_activity');
 
         // Case-insensitive address comparison for session validation
         if (storedToken && storedAddress?.toLowerCase() === address.toLowerCase() && storedTimestamp && storedUserData) {
           const timestamp = parseInt(storedTimestamp);
           const now = Date.now();
-          const TOKEN_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours
 
-          if (now - timestamp < TOKEN_EXPIRY_TIME) {
+          // Check multiple expiration conditions
+          const MAX_SESSION_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days max session age
+          const INACTIVITY_TIMEOUT_MS = 4 * 60 * 60 * 1000; // 4 hours inactivity
+
+          const sessionAge = now - timestamp;
+          const lastActivity = storedLastActivity ? parseInt(storedLastActivity) : timestamp;
+          const inactiveTime = now - lastActivity;
+          const serverExpiry = storedExpiresAt ? parseInt(storedExpiresAt) : null;
+
+          // Session is valid if:
+          // 1. Session age is less than max (7 days)
+          // 2. Inactivity time is less than timeout (4 hours)
+          // 3. Server expiry hasn't passed (if set)
+          const isSessionAgeValid = sessionAge < MAX_SESSION_AGE_MS;
+          const isActivityValid = inactiveTime < INACTIVITY_TIMEOUT_MS;
+          const isServerExpiryValid = !serverExpiry || now < serverExpiry;
+
+          if (isSessionAgeValid && isActivityValid && isServerExpiryValid) {
             try {
               const userData = JSON.parse(storedUserData);
               this.setToken(storedToken);
+              this.sessionExpiresAt = serverExpiry;
+              this.lastActivityTime = now;
+              localStorage.setItem('linkdao_last_activity', now.toString());
+              this.startSessionMonitoring();
               console.log('✅ Restored session from localStorage for address:', address);
               return {
                 success: true,
@@ -177,12 +365,22 @@ class AuthService {
               console.warn('Failed to parse stored user data, proceeding with new authentication');
             }
           } else {
-            console.log('⏰ Stored session expired, clearing and requesting new signature');
+            // Log which condition failed
+            if (!isSessionAgeValid) {
+              console.log('⏰ Session expired due to max age policy (7 days)');
+            } else if (!isActivityValid) {
+              console.log('⏰ Session expired due to inactivity (4 hours)');
+            } else if (!isServerExpiryValid) {
+              console.log('⏰ Session expired based on server expiry');
+            }
+
             // Clear expired session
             localStorage.removeItem('linkdao_access_token');
             localStorage.removeItem('linkdao_wallet_address');
             localStorage.removeItem('linkdao_signature_timestamp');
             localStorage.removeItem('linkdao_user_data');
+            localStorage.removeItem('linkdao_session_expires_at');
+            localStorage.removeItem('linkdao_last_activity');
             localStorage.removeItem('token');
             localStorage.removeItem('authToken');
             localStorage.removeItem('auth_token');
@@ -394,6 +592,26 @@ class AuthService {
             localStorage.setItem('signature_timestamp', Date.now().toString());
             localStorage.setItem('linkdao_user_data', JSON.stringify(userData));
             localStorage.setItem('user_data', JSON.stringify(userData));
+
+            // Store session expiration time from server response
+            const expiresAtStr = data.expiresAt || data.data?.expiresAt;
+            if (expiresAtStr) {
+              const expiresAt = new Date(expiresAtStr).getTime();
+              this.sessionExpiresAt = expiresAt;
+              localStorage.setItem('linkdao_session_expires_at', expiresAt.toString());
+            } else {
+              // Default to 24 hours if server doesn't provide expiration
+              const defaultExpiry = Date.now() + 24 * 60 * 60 * 1000;
+              this.sessionExpiresAt = defaultExpiry;
+              localStorage.setItem('linkdao_session_expires_at', defaultExpiry.toString());
+            }
+
+            // Initialize activity tracking
+            this.lastActivityTime = Date.now();
+            localStorage.setItem('linkdao_last_activity', this.lastActivityTime.toString());
+
+            // Start session monitoring
+            this.startSessionMonitoring();
           }
 
           // Reset authentication attempt tracking on success
@@ -782,9 +1000,15 @@ class AuthService {
    * Logout user
    */
   async logout(): Promise<void> {
+    // Stop session monitoring
+    this.stopSessionMonitoring();
+
     // Capture token and clear immediately to avoid UI blocking on network errors
     const token = this.token;
     this.clearToken();
+
+    // Clear session expiration tracking
+    this.sessionExpiresAt = null;
 
     // Clear all stored session data with multiple keys
     if (typeof window !== 'undefined') {
@@ -799,6 +1023,8 @@ class AuthService {
       localStorage.removeItem('linkdao_user_data');
       localStorage.removeItem('user_data');
       localStorage.removeItem('linkdao_refresh_token');
+      localStorage.removeItem('linkdao_session_expires_at');
+      localStorage.removeItem('linkdao_last_activity');
     }
 
     if (token) {

@@ -35,12 +35,12 @@ export const NotificationCenter: React.FC = () => {
     loadNotifications();
     loadStats();
     loadUnreadCount();
-    
+
     // Set up periodic refresh
     const interval = setInterval(() => {
       loadUnreadCount();
     }, 30000); // Refresh every 30 seconds
-    
+
     return () => clearInterval(interval);
   }, []);
 
@@ -48,7 +48,7 @@ export const NotificationCenter: React.FC = () => {
     try {
       setLoading(true);
       const data = await adminService.getAdminNotifications({ limit: 20 });
-      setNotifications(data.notifications);
+      setNotifications(data.notifications || []);
     } catch (error) {
       console.error('Failed to load notifications:', error);
     } finally {
@@ -77,7 +77,7 @@ export const NotificationCenter: React.FC = () => {
   const markAsRead = async (notificationId: string) => {
     try {
       await adminService.markNotificationAsRead(notificationId);
-      setNotifications(notifications.map(n => 
+      setNotifications(notifications.map(n =>
         n.id === notificationId ? { ...n, read: true } : n
       ));
       loadUnreadCount();
@@ -150,7 +150,7 @@ export const NotificationCenter: React.FC = () => {
               {unreadCount} unread
             </span>
           )}
-          <Button 
+          <Button
             onClick={markAllAsRead}
             variant="outline"
             disabled={unreadCount === 0}
@@ -171,7 +171,7 @@ export const NotificationCenter: React.FC = () => {
               <div className="text-2xl font-bold">{stats.total}</div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-medium">Unread</CardTitle>
@@ -180,7 +180,7 @@ export const NotificationCenter: React.FC = () => {
               <div className="text-2xl font-bold">{stats.unread}</div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-medium">Categories</CardTitle>
@@ -207,7 +207,7 @@ export const NotificationCenter: React.FC = () => {
           <CardTitle>Recent Notifications</CardTitle>
         </CardHeader>
         <CardContent>
-          {notifications.length === 0 ? (
+          {notifications?.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <Bell className="w-12 h-12 mx-auto mb-4 text-gray-300" />
               <p>No notifications yet</p>
@@ -216,11 +216,10 @@ export const NotificationCenter: React.FC = () => {
           ) : (
             <div className="space-y-4">
               {notifications.map((notification) => (
-                <div 
+                <div
                   key={notification.id}
-                  className={`p-4 rounded-lg border-l-4 ${getPriorityColor(notification.priority)} ${
-                    !notification.read ? 'ring-2 ring-blue-200' : ''
-                  }`}
+                  className={`p-4 rounded-lg border-l-4 ${getPriorityColor(notification.priority)} ${!notification.read ? 'ring-2 ring-blue-200' : ''
+                    }`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-3 flex-1">

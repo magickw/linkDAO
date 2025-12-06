@@ -48,8 +48,10 @@ export class AuthenticationService {
   private db: ReturnType<typeof drizzle>;
   private jwtSecret: string;
   private sessionExpiryHours: number = 24;
-  private refreshExpiryDays: number = 30;
+  private refreshExpiryDays: number = 7; // Reduced from 30 days for security
   private nonceExpiryMinutes: number = 10;
+  private maxSessionAgeDays: number = 7; // Force re-authentication after 7 days regardless of activity
+  private inactivityTimeoutHours: number = 4; // Session expires after 4 hours of inactivity
 
   constructor(connectionString: string, jwtSecret: string) {
     const sql = postgres(connectionString, { ssl: 'require' });
@@ -192,6 +194,7 @@ export class AuthenticationService {
 
   /**
    * Validate session token and return session info with user data
+   * Includes inactivity timeout and max session age checks
    */
   async validateSession(sessionToken: string): Promise<SessionInfo | null> {
     try {
@@ -212,6 +215,29 @@ export class AuthenticationService {
       }
 
       const session = sessions[0];
+      const now = new Date();
+
+      // Check inactivity timeout (4 hours of no activity)
+      const inactivityThreshold = new Date(now.getTime() - this.inactivityTimeoutHours * 60 * 60 * 1000);
+      if (session.lastUsedAt < inactivityThreshold) {
+        safeLogger.info('Session expired due to inactivity:', session.walletAddress);
+        await this.db
+          .update(authSessions)
+          .set({ isActive: false })
+          .where(eq(authSessions.id, session.id));
+        return null;
+      }
+
+      // Check max session age (7 days from creation)
+      const maxAgeThreshold = new Date(now.getTime() - this.maxSessionAgeDays * 24 * 60 * 60 * 1000);
+      if (session.createdAt < maxAgeThreshold) {
+        safeLogger.info('Session expired due to max age policy:', session.walletAddress);
+        await this.db
+          .update(authSessions)
+          .set({ isActive: false })
+          .where(eq(authSessions.id, session.id));
+        return null;
+      }
 
       // Fetch user information including role
       const userRecords = await this.db
@@ -222,7 +248,7 @@ export class AuthenticationService {
 
       const user = userRecords[0] || null;
 
-      // Update last used timestamp
+      // Update last used timestamp (sliding window)
       await this.db
         .update(authSessions)
         .set({ lastUsedAt: new Date() })
@@ -241,7 +267,7 @@ export class AuthenticationService {
         handle: user?.handle,
         email: user?.email,
         kycStatus: (user as any)?.kycStatus || 'none',
-        isActive: user?.isActive ?? true,
+        isActiveUser: user?.isActive ?? true,
         isSuspended: user?.isSuspended ?? false,
       };
     } catch (error) {
