@@ -851,7 +851,15 @@ export class UnifiedMarketplaceService {
 
       const result = await response.json().catch(() => ({ success: false }));
       if (result && result.success) {
-        return result.data || [];
+        // Handle both array and paginated response formats
+        // API returns: { success: true, data: { listings: [...], total, ... } }
+        const data = result.data;
+        if (Array.isArray(data)) {
+          return data;
+        } else if (data && Array.isArray(data.listings)) {
+          return data.listings;
+        }
+        return [];
       } else {
         console.warn('Marketplace listings response indicated failure:', result?.message);
         return [];

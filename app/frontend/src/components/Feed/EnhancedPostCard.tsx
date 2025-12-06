@@ -264,7 +264,7 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
       if (onUpvote) {
         await onUpvote(post.id);
         safeAddToast('Post upvoted successfully!', 'success');
-        
+
         // Invalidate feed cache to reflect updated vote counts
         await invalidateFeedCache();
       }
@@ -278,7 +278,7 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
       if (onDownvote) {
         await onDownvote(post.id);
         safeAddToast('Post downvoted successfully!', 'success');
-        
+
         // Invalidate feed cache to reflect updated vote counts
         await invalidateFeedCache();
       }
@@ -288,7 +288,9 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
   };
 
   const copyToClipboard = async () => {
-    const url = `${window.location.origin}/post/${post.id}`;
+    const url = post.communityId
+      ? `${window.location.origin}/communities/${post.communityId}/post/${post.id}`
+      : `${window.location.origin}/post/${post.id}`;
     await navigator.clipboard.writeText(url);
     handleShare();
   };
@@ -529,7 +531,7 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
             <span>↑</span>
             <span>{post.upvotes || 0}</span>
           </button>
-          
+
           <button
             onClick={handleDownvote}
             className="flex items-center space-x-1 text-gray-500 hover:text-red-600 transition-colors"

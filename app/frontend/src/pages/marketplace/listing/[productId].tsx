@@ -36,38 +36,93 @@ const ProductDetailPageRoute: React.FC = () => {
           }
           
           if (productData) {
+            // Get the price - handle both `price` and `priceAmount` fields
+            const priceValue = productData.price ?? productData.priceAmount ?? 0;
+            const priceNum = typeof priceValue === 'string' ? parseFloat(priceValue) : priceValue;
+
+            // Get currency - default to USD if not specified
+            const currency = productData.currency || productData.priceCurrency || 'USD';
+
+            // Calculate crypto/fiat values based on currency
+            // If price is in USD, show USD as fiat and calculate ETH equivalent
+            // If price is in ETH, show ETH as crypto and calculate USD equivalent
+            const ethPrice = 2400; // Rough ETH price for conversion
+            let cryptoValue: string;
+            let cryptoSymbol: string;
+            let fiatValue: string;
+            let fiatSymbol: string;
+
+            if (currency === 'USD' || currency === 'USDC' || currency === 'USDT') {
+              // Price is in USD-based currency
+              cryptoValue = (priceNum / ethPrice).toFixed(6);
+              cryptoSymbol = 'ETH';
+              fiatValue = priceNum.toFixed(2);
+              fiatSymbol = 'USD';
+            } else if (currency === 'ETH') {
+              // Price is in ETH
+              cryptoValue = priceNum.toString();
+              cryptoSymbol = 'ETH';
+              fiatValue = (priceNum * ethPrice).toFixed(2);
+              fiatSymbol = 'USD';
+            } else {
+              // Other currencies - treat as fiat
+              cryptoValue = (priceNum / ethPrice).toFixed(6);
+              cryptoSymbol = 'ETH';
+              fiatValue = priceNum.toFixed(2);
+              fiatSymbol = currency;
+            }
+
+            // Parse images - handle both array and JSON string formats
+            let imageUrls: string[] = [];
+            if (productData.images) {
+              if (Array.isArray(productData.images)) {
+                imageUrls = productData.images;
+              } else if (typeof productData.images === 'string') {
+                try {
+                  imageUrls = JSON.parse(productData.images);
+                } catch {
+                  imageUrls = [];
+                }
+              }
+            }
+
+            // Get inventory - handle both `inventory` and `quantity` fields
+            const inventory = productData.inventory ?? productData.quantity ?? 0;
+
             // Transform the product data to match the ProductDetailPage component interface
             const transformedProduct = {
               id: productData.id,
-              title: productData.title,
-              description: productData.description,
-              longDescription: productData.description,
+              title: productData.title || 'Untitled Product',
+              description: productData.description || '',
+              longDescription: productData.description || '',
               price: {
-                crypto: productData.priceAmount.toString(),
-                cryptoSymbol: 'ETH',
-                fiat: (productData.priceAmount * 2400).toFixed(2), // Rough conversion
-                fiatSymbol: 'USD'
+                crypto: cryptoValue,
+                cryptoSymbol: cryptoSymbol,
+                fiat: fiatValue,
+                fiatSymbol: fiatSymbol
               },
               seller: {
-                id: productData.seller?.id || productData.sellerId,
-                name: productData.seller?.displayName || productData.seller?.storeName || 'Unknown Seller',
+                id: productData.seller?.id || productData.sellerId || '',
+                name: productData.seller?.displayName || productData.seller?.storeName ||
+                      (productData.sellerId ? `Seller ${productData.sellerId.substring(0, 8)}...` : 'Unknown Seller'),
                 avatar: productData.seller?.profileImageUrl || '/images/default-avatar.png',
                 verified: productData.seller?.verified || false,
                 reputation: productData.seller?.reputation || 0,
                 daoApproved: productData.seller?.daoApproved || false,
-                totalSales: 0, // Not available in current data structure
-                memberSince: '2023-01-01', // Default value
+                totalSales: productData.seller?.totalSales || 0,
+                memberSince: productData.seller?.createdAt || '2023-01-01',
                 responseTime: '< 24 hours' // Default value
               },
               trust: {
                 verified: productData.trust?.verified || false,
-                escrowProtected: productData.trust?.escrowProtected || false,
+                escrowProtected: productData.trust?.escrowProtected || productData.metadata?.escrowEnabled || false,
                 onChainCertified: productData.trust?.onChainCertified || false
               },
-              specifications: productData.metadata?.specifications || {},
-              category: productData.category?.name || 'General',
-              tags: productData.tags || [],
-              inventory: productData.inventory || 0,
+              specifications: productData.metadata?.specifications || productData.specifications || {},
+              category: productData.category?.name || productData.categoryId || 'General',
+              tags: Array.isArray(productData.tags) ? productData.tags :
+                    (typeof productData.tags === 'string' ? JSON.parse(productData.tags || '[]') : []),
+              inventory: inventory,
               shipping: {
                 freeShipping: productData.shipping?.free || false,
                 estimatedDays: productData.shipping?.estimatedDays || '3-5 business days',
@@ -75,19 +130,19 @@ const ProductDetailPageRoute: React.FC = () => {
               },
               reviews: {
                 average: productData.seller?.rating || 0,
-                count: 0 // Not available in current data structure
+                count: productData.seller?.totalReviews || 0
               },
-              media: productData.images?.map((url: string) => ({
+              media: imageUrls.length > 0 ? imageUrls.map((url: string) => ({
                 type: 'image' as const,
                 url,
                 thumbnail: url,
-                alt: productData.title
-              })) || [
+                alt: productData.title || 'Product image'
+              })) : [
                 {
                   type: 'image' as const,
                   url: 'https://placehold.co/600x400/667eea/ffffff?text=Product',
                   thumbnail: 'https://placehold.co/150x150/667eea/ffffff?text=Product',
-                  alt: productData.title
+                  alt: productData.title || 'Product'
                 }
               ]
             };
