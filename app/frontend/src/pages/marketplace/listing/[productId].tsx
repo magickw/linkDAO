@@ -37,11 +37,18 @@ const ProductDetailPageRoute: React.FC = () => {
 
           if (productData) {
             // Get the price - handle both `price` and `priceAmount` fields
-            const priceValue = productData.price ?? productData.priceAmount ?? 0;
-            const priceNum = typeof priceValue === 'string' ? parseFloat(priceValue) : priceValue;
+            // Handle case where price is an object { amount: number, ... }
+            const rawPrice = productData.price;
+            const priceValue = (rawPrice && typeof rawPrice === 'object' && 'amount' in rawPrice)
+              ? rawPrice.amount
+              : (rawPrice ?? productData.priceAmount ?? 0);
+
+            const priceNum = typeof priceValue === 'string' ? parseFloat(priceValue) : Number(priceValue);
 
             // Get currency - default to USD if not specified
-            const currency = productData.currency || productData.priceCurrency || 'USD';
+            const currency = (rawPrice && typeof rawPrice === 'object' && 'currency' in rawPrice)
+              ? rawPrice.currency
+              : (productData.currency || productData.priceCurrency || 'USD');
 
             // Calculate crypto/fiat values based on currency
             // If price is in USD, show USD as fiat and calculate ETH equivalent
@@ -152,7 +159,13 @@ const ProductDetailPageRoute: React.FC = () => {
               ]
             };
 
+
             setProduct(transformedProduct);
+
+            // Increment view count
+            marketplaceService.incrementProductViews(productId as string).catch(console.error);
+
+
           } else {
             // Try mock API endpoint as fallback
             try {

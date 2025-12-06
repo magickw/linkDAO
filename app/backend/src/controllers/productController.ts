@@ -2,8 +2,8 @@ import { Request, Response } from 'express';
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { ProductService } from '../services/productService';
 import { SearchService, AdvancedSearchFilters } from '../services/searchService';
-import { 
-  CreateProductInput, 
+import {
+  CreateProductInput,
   UpdateProductInput,
   CreateCategoryInput,
   UpdateCategoryInput,
@@ -43,11 +43,11 @@ export class ProductController {
   async createCategory(req: Request, res: Response): Promise<Response> {
     try {
       const input: CreateCategoryInput = req.body;
-      
+
       if (!input.name || !input.slug) {
         throw new ValidationError('Name and slug are required');
       }
-      
+
       const category = await productService.createCategory(input);
       return res.status(201).json(category);
     } catch (error: any) {
@@ -62,11 +62,11 @@ export class ProductController {
     try {
       const { id } = req.params;
       const category = await productService.getCategoryById(id);
-      
+
       if (!category) {
         throw new NotFoundError('Category not found');
       }
-      
+
       return res.json(category);
     } catch (error: any) {
       if (error instanceof AppError) {
@@ -80,11 +80,11 @@ export class ProductController {
     try {
       const { slug } = req.params;
       const category = await productService.getCategoryBySlug(slug);
-      
+
       if (!category) {
         throw new NotFoundError('Category not found');
       }
-      
+
       return res.json(category);
     } catch (error: any) {
       if (error instanceof AppError) {
@@ -117,13 +117,13 @@ export class ProductController {
     try {
       const { id } = req.params;
       const input: UpdateCategoryInput = req.body;
-      
+
       const category = await productService.updateCategory(id, input);
-      
+
       if (!category) {
         throw new NotFoundError('Category not found');
       }
-      
+
       return res.json(category);
     } catch (error: any) {
       if (error instanceof AppError) {
@@ -136,13 +136,13 @@ export class ProductController {
   async deleteCategory(req: Request, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
-      
+
       const success = await productService.deleteCategory(id);
-      
+
       if (!success) {
         throw new NotFoundError('Category not found');
       }
-      
+
       return res.status(204).send();
     } catch (error: any) {
       if (error instanceof AppError) {
@@ -156,12 +156,12 @@ export class ProductController {
   async createProduct(req: Request, res: Response): Promise<Response> {
     try {
       const input: CreateProductInput = req.body;
-      
+
       // Validate required fields
       if (!input.sellerId || !input.title || !input.description || !input.price || !input.categoryId) {
         throw new ValidationError('Missing required fields');
       }
-      
+
       const product = await productService.createProduct(input);
       return res.status(201).json(product);
     } catch (error: any) {
@@ -176,11 +176,11 @@ export class ProductController {
     try {
       const { id } = req.params;
       const product = await productService.getProductById(id);
-      
+
       if (!product) {
         throw new NotFoundError('Product not found');
       }
-      
+
       return res.json(product);
     } catch (error: any) {
       if (error instanceof AppError) {
@@ -190,11 +190,23 @@ export class ProductController {
     }
   }
 
+  async incrementViews(req: Request, res: Response): Promise<Response> {
+    try {
+      const { id } = req.params;
+      const success = await productService.incrementViews(id);
+      return res.json({ success });
+    } catch (error: any) {
+      console.error('Error incrementing views:', error);
+      return res.json({ success: false });
+    }
+  }
+
   async getProductsBySeller(req: Request, res: Response): Promise<Response> {
+
     try {
       const { sellerId } = req.params;
       const filters = req.query as Partial<ProductSearchFilters>;
-      
+
       const products = await productService.getProductsBySeller(sellerId, filters);
       return res.json(products);
     } catch (error: any) {
@@ -319,13 +331,13 @@ export class ProductController {
   async compareProducts(req: Request, res: Response): Promise<Response> {
     try {
       const productIds = req.query.productIds as string;
-      
+
       if (!productIds) {
         throw new ValidationError('Product IDs are required');
       }
 
       const ids = productIds.split(',').map(id => id.trim());
-      
+
       if (ids.length < 2 || ids.length > 5) {
         throw new ValidationError('Can compare between 2 and 5 products');
       }
@@ -369,14 +381,14 @@ export class ProductController {
   async getSearchAnalytics(req: Request, res: Response): Promise<Response> {
     try {
       const { startDate, endDate } = req.query;
-      
+
       if (!startDate || !endDate) {
         throw new ValidationError('Start date and end date are required');
       }
-      
+
       const start = new Date(startDate as string);
       const end = new Date(endDate as string);
-      
+
       if (isNaN(start.getTime()) || isNaN(end.getTime())) {
         throw new ValidationError('Invalid date format');
       }
@@ -386,7 +398,7 @@ export class ProductController {
       }
 
       const filters = req.query.filters ? JSON.parse(req.query.filters as string) : undefined;
-      
+
       const analytics = await searchService.getSearchAnalytics(start, end, filters);
       return res.json(analytics);
     } catch (error: any) {
@@ -417,13 +429,13 @@ export class ProductController {
     try {
       const { id } = req.params;
       const input: UpdateProductInput = req.body;
-      
+
       const product = await productService.updateProduct(id, input);
-      
+
       if (!product) {
         throw new NotFoundError('Product not found');
       }
-      
+
       return res.json(product);
     } catch (error: any) {
       if (error instanceof AppError) {
@@ -436,13 +448,13 @@ export class ProductController {
   async deleteProduct(req: Request, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
-      
+
       const success = await productService.deleteProduct(id);
-      
+
       if (!success) {
         throw new NotFoundError('Product not found');
       }
-      
+
       return res.status(204).send();
     } catch (error: any) {
       if (error instanceof AppError) {
@@ -479,15 +491,15 @@ export class ProductController {
   async bulkUploadProducts(req: Request, res: Response): Promise<Response> {
     try {
       const upload: BulkProductUpload = req.body;
-      
+
       if (!upload.products || !Array.isArray(upload.products) || upload.products.length === 0) {
         throw new ValidationError('No products provided');
       }
-      
+
       if (!upload.defaultSellerId) {
         throw new ValidationError('Default seller ID is required');
       }
-      
+
       const result = await productService.bulkUploadProducts(upload);
       return res.json(result);
     } catch (error: any) {
@@ -505,7 +517,7 @@ export class ProductController {
       }
 
       const { defaultSellerId, categoryMappings } = req.body;
-      
+
       if (!defaultSellerId) {
         throw new ValidationError('Default seller ID is required');
       }
@@ -513,7 +525,7 @@ export class ProductController {
       // Parse CSV
       const csvData: CSVProductRow[] = [];
       const stream = Readable.from(req.file.buffer.toString());
-      
+
       return new Promise((resolve, reject) => {
         stream
           .pipe(csv())
@@ -524,13 +536,13 @@ export class ProductController {
             try {
               const parsedCategoryMappings = categoryMappings ? JSON.parse(categoryMappings) : {};
               const products = await productService.parseCSVProducts(csvData, defaultSellerId, parsedCategoryMappings);
-              
+
               const bulkUpload: BulkProductUpload = {
                 products,
                 categoryMappings: parsedCategoryMappings,
                 defaultSellerId,
               };
-              
+
               const result = await productService.bulkUploadProducts(bulkUpload);
               resolve(res.json(result));
             } catch (error: any) {
@@ -554,24 +566,24 @@ export class ProductController {
     try {
       const { id } = req.params;
       const { startDate, endDate } = req.query;
-      
+
       if (!startDate || !endDate) {
         throw new ValidationError('Start date and end date are required');
       }
-      
+
       const start = new Date(startDate as string);
       const end = new Date(endDate as string);
-      
+
       if (isNaN(start.getTime()) || isNaN(end.getTime())) {
         throw new ValidationError('Invalid date format');
       }
-      
+
       const analytics = await productService.getProductAnalytics(id, start, end);
-      
+
       if (!analytics) {
         throw new NotFoundError('Product not found');
       }
-      
+
       return res.json(analytics);
     } catch (error: any) {
       if (error instanceof AppError) {

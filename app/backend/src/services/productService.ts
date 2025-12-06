@@ -414,7 +414,18 @@ export class ProductService {
     return result.length > 0;
   }
 
-  // Image Upload
+  async incrementViews(id: string): Promise<boolean> {
+    const db = this.databaseService.getDatabase();
+
+    // We increment by 1 safely using SQL
+    const result = await db.update(schema.products)
+      .set({ views: sql`${schema.products.views} + 1` })
+      .where(eq(schema.products.id, id))
+      .returning({ id: schema.products.id });
+
+    return result.length > 0;
+  }
+
   async uploadProductImages(files: Array<{ buffer: Buffer; originalName: string; mimeType: string }>): Promise<BulkImageUploadResult> {
     const results: ImageUploadResult[] = [];
     let totalUploaded = 0;

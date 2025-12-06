@@ -356,12 +356,13 @@ class CartService {
     let newItems: CartItem[];
 
     if (existingItemIndex >= 0) {
-      // Update quantity of existing item
+      // Update quantity of existing item and refresh product details
       newItems = [...currentState.items];
       const existingItem = newItems[existingItemIndex];
       const newQuantity = Math.min(existingItem.quantity + quantity, product.inventory);
       newItems[existingItemIndex] = {
         ...existingItem,
+        ...product, // Refresh product details (price, etc.)
         quantity: newQuantity
       };
     } else {
@@ -406,6 +407,7 @@ class CartService {
       const newQuantity = Math.min(existingItem.quantity + quantity, product.inventory);
       newItems[existingItemIndex] = {
         ...existingItem,
+        ...product, // Refresh product details
         quantity: newQuantity
       };
     } else {
