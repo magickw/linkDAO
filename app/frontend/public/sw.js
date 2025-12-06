@@ -370,9 +370,11 @@ async function networkFirst(request, cacheName) {
   // EXCLUDE community API requests from coalescing to prevent response blocking
   const url = new URL(request.url);
   const isCommunityAPI = url.pathname.includes('/communities/');
+  // EXCLUDE marketplace API requests from coalescing to prevent stale data issues
+  const isMarketplaceAPI = url.pathname.includes('/marketplace/');
   // EXCLUDE blockchain API requests from coalescing as they may have different parameters
   const isBlockchainAPI = url.hostname.includes('etherscan.io') || url.hostname.includes('basescan.org') || url.hostname.includes('bscscan.com');
-  if (pendingRequests.has(requestKey) && !isCriticalRequest(request) && !isCommunityAPI && !isBlockchainAPI) {
+  if (pendingRequests.has(requestKey) && !isCriticalRequest(request) && !isCommunityAPI && !isMarketplaceAPI && !isBlockchainAPI) {
     console.log('Request already pending, coalescing:', requestKey);
     try {
       const sharedPromise = pendingRequests.get(requestKey);
@@ -1373,6 +1375,7 @@ function isCriticalRequest(request) {
     url.pathname.startsWith('/api/users') ||
     url.pathname.includes('/feed') ||
     url.pathname.includes('/communities/') || // Don't coalesce community requests as they may have different responses
+    url.pathname.includes('/marketplace/') || // Don't coalesce marketplace requests to ensure fresh data
     url.pathname.includes('/conversations') || // Don't coalesce conversation requests as they may have different responses
     url.searchParams.has('timestamp') ||
     url.searchParams.has('nonce') ||

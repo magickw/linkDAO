@@ -840,32 +840,45 @@ export class UnifiedMarketplaceService {
         });
       }
 
+      console.log('[MarketplaceService] Fetching listings from:', `${this.baseUrl}/api/marketplace/listings?${params.toString()}`);
+
       const response = await fetch(`${this.baseUrl}/api/marketplace/listings?${params.toString()}`, {
-        signal: this.createTimeoutSignal(10000)
+        signal: this.createTimeoutSignal(10000),
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
       });
 
       if (!response.ok) {
-        console.warn('Marketplace listings request was not ok:', response.status, response.statusText);
+        console.warn('[MarketplaceService] Listings request was not ok:', response.status, response.statusText);
         return [];
       }
 
       const result = await response.json().catch(() => ({ success: false }));
+      console.log('[MarketplaceService] Raw API result:', result);
+
       if (result && result.success) {
         // Handle both array and paginated response formats
         // API returns: { success: true, data: { listings: [...], total, ... } }
         const data = result.data;
+        console.log('[MarketplaceService] Extracted data:', data);
+
         if (Array.isArray(data)) {
+          console.log('[MarketplaceService] Data is array, returning directly:', data.length, 'items');
           return data;
         } else if (data && Array.isArray(data.listings)) {
+          console.log('[MarketplaceService] Data has listings array, returning:', data.listings.length, 'items');
           return data.listings;
         }
+        console.log('[MarketplaceService] No valid listings array found in data');
         return [];
       } else {
-        console.warn('Marketplace listings response indicated failure:', result?.message);
+        console.warn('[MarketplaceService] Response indicated failure:', result?.message);
         return [];
       }
     } catch (error) {
-      console.error('Error fetching marketplace listings:', error);
+      console.error('[MarketplaceService] Error fetching listings:', error);
       return [];
     }
   }

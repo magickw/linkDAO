@@ -138,9 +138,12 @@ const MarketplaceContent: React.FC = () => {
       const cacheKey = `listings-${pageNum}-${JSON.stringify({ sortBy: 'createdAt', sortOrder: 'desc' })}`;
       const cachedData = await productCache.get(cacheKey);
 
-      if (cachedData && !append) {
-        console.log('Using cached listings data');
-        setListings(Array.isArray(cachedData) ? cachedData : []);
+      console.log('Cache check:', { cacheKey, cachedData, hasCachedData: !!cachedData, isArray: Array.isArray(cachedData), length: cachedData?.length });
+
+      // Only use cache if it has valid data with actual items
+      if (cachedData && !append && Array.isArray(cachedData) && cachedData.length > 0) {
+        console.log('Using cached listings data:', cachedData.length, 'items');
+        setListings(cachedData);
         setLoading(false);
         return;
       }
@@ -154,6 +157,8 @@ const MarketplaceContent: React.FC = () => {
         sortBy: 'createdAt',
         sortOrder: 'desc'
       });
+
+      console.log('Raw data from getMarketplaceListings:', data, 'isArray:', Array.isArray(data), 'length:', data?.length);
 
       if (Array.isArray(data) && data.length > 0) {
         console.log('Processing listings data:', data.length, 'items');
