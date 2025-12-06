@@ -95,10 +95,10 @@ class IPFSUploadService {
     const data = await response.json();
 
     // Map backend response to UploadResult
-    // Backend returns: { success: true, data: { ipfsHash: '...', ... } }
+    // Backend returns: { success: true, data: { ipfsHash: '...', gatewayUrl: '...', ... } }
     return {
       cid: data.data.ipfsHash,
-      url: data.data.url || `https://ipfs.io/ipfs/${data.data.ipfsHash}`,
+      url: data.data.gatewayUrl || data.data.url || `https://gateway.pinata.cloud/ipfs/${data.data.ipfsHash}`,
       size: data.data.size || file.size,
       type: data.data.mimeType || file.type
     };

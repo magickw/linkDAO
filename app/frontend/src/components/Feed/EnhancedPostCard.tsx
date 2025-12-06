@@ -1,5 +1,5 @@
 // Mock EnhancedPostCard component for testing
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useWeb3 } from '../../context/Web3Context';
 import { useToast } from '../../context/ToastContext';
 import { useCacheInvalidation } from '../../hooks/useCacheInvalidation';
@@ -11,6 +11,7 @@ import OptimizedImage from '../OptimizedImage';
 import { ModerationWarning, ReportContentButton } from '../Moderation';
 import { IPFSContentService } from '../../services/ipfsContentService';
 import { getDisplayName, getUserAddress } from '../../utils/userDisplay';
+import DOMPurify from 'dompurify';
 
 interface EnhancedPostCardProps {
   post: any;
@@ -383,7 +384,16 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
             </div>
           </div>
         ) : content ? (
-          <p className="text-gray-900 dark:text-gray-100 whitespace-pre-wrap">{content}</p>
+          <div
+            className="prose prose-sm dark:prose-invert max-w-none text-gray-900 dark:text-gray-100"
+            dangerouslySetInnerHTML={{
+              __html: DOMPurify.sanitize(content, {
+                ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'b', 'i', 'u', 'a', 'img', 'ul', 'ol', 'li', 'blockquote', 'code', 'pre', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'span', 'div'],
+                ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'target', 'rel', 'style'],
+                ALLOW_DATA_ATTR: false,
+              })
+            }}
+          />
         ) : (
           <p className="text-gray-500 dark:text-gray-400 italic">No content available</p>
         )}

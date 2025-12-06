@@ -5,23 +5,23 @@ import { databaseService } from "../services/databaseService";
 import { eq, and, or, ilike, desc, lt, gte, lte, sql } from 'drizzle-orm';
 import * as schema from '../db/schema';
 import { marketplaceUsers, sellerVerifications, marketplaceProducts, marketplaceOrders } from "../db/marketplaceSchema";
-import { users } from "../db/schema";
+import { users, products, categories } from "../db/schema";
 
 export class SellerController {
   // Get seller applications
   async getSellerApplications(req: Request, res: Response) {
     try {
       const { status, businessType, submittedAfter, page = 1, limit = 10 } = req.query;
-      
+
       const db = databaseService.getDatabase();
-      
+
       if (!db) {
-        return res.status(503).json({ 
+        return res.status(503).json({
           error: "Database service unavailable",
           message: "The database is currently not accessible. Please try again later."
         });
       }
-      
+
       try {
         // Get marketplace users with seller role
         const sellers = await db.select({
@@ -35,19 +35,19 @@ export class SellerController {
           reputationScore: sellerVerifications.reputationScore,
           totalVolume: sellerVerifications.totalVolume
         })
-        .from(marketplaceUsers)
-        .leftJoin(sellerVerifications, eq(marketplaceUsers.userId, sellerVerifications.userId))
-        .where(eq(marketplaceUsers.role, 'seller'))
-        .orderBy(desc(marketplaceUsers.createdAt))
-        .limit(parseInt(limit as string))
-        .offset((parseInt(page as string) - 1) * parseInt(limit as string));
-        
+          .from(marketplaceUsers)
+          .leftJoin(sellerVerifications, eq(marketplaceUsers.userId, sellerVerifications.userId))
+          .where(eq(marketplaceUsers.role, 'seller'))
+          .orderBy(desc(marketplaceUsers.createdAt))
+          .limit(parseInt(limit as string))
+          .offset((parseInt(page as string) - 1) * parseInt(limit as string));
+
         // Get total count
         const totalCountResult = await db.select({ count: sql<number>`count(*)` })
           .from(marketplaceUsers)
           .where(eq(marketplaceUsers.role, 'seller'));
         const totalCount = totalCountResult[0]?.count || 0;
-        
+
         res.json({
           applications: sellers,
           total: totalCount,
@@ -59,12 +59,12 @@ export class SellerController {
         if (dbError.code === '42P01') {
           // Relation does not exist - table not created
           safeLogger.error("Marketplace tables do not exist:", dbError);
-          return res.status(500).json({ 
+          return res.status(500).json({
             error: "Database schema not initialized",
             message: "The marketplace tables have not been created. Please run database migrations."
           });
         } else if (dbError.code === 'ECONNREFUSED') {
-          return res.status(503).json({ 
+          return res.status(503).json({
             error: "Database connection failed",
             message: "Unable to connect to the database. Please try again later."
           });
@@ -74,7 +74,7 @@ export class SellerController {
       }
     } catch (error) {
       safeLogger.error("Error fetching seller applications:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: "Failed to fetch seller applications",
         message: error instanceof Error ? error.message : "Unknown error occurred"
       });
@@ -85,9 +85,9 @@ export class SellerController {
   async getSellerApplication(req: Request, res: Response) {
     try {
       const { applicationId } = req.params;
-      
+
       const db = databaseService.getDatabase();
-      
+
       // Get marketplace user with seller verification details
       const sellers = await db.select({
         id: marketplaceUsers.userId,
@@ -106,14 +106,14 @@ export class SellerController {
         successfulTransactions: sellerVerifications.successfulTransactions,
         disputeRate: sellerVerifications.disputeRate
       })
-      .from(marketplaceUsers)
-      .leftJoin(sellerVerifications, eq(marketplaceUsers.userId, sellerVerifications.userId))
-      .where(eq(marketplaceUsers.userId, applicationId));
-      
+        .from(marketplaceUsers)
+        .leftJoin(sellerVerifications, eq(marketplaceUsers.userId, sellerVerifications.userId))
+        .where(eq(marketplaceUsers.userId, applicationId));
+
       if (sellers.length === 0) {
         return res.status(404).json({ error: "Seller application not found" });
       }
-      
+
       res.json(sellers[0]);
     } catch (error) {
       safeLogger.error("Error fetching seller application:", error);
@@ -190,9 +190,9 @@ export class SellerController {
         kycVerified: marketplaceUsers.kycVerified,
         createdAt: marketplaceUsers.createdAt
       })
-      .from(sellerVerifications)
-      .leftJoin(marketplaceUsers, eq(sellerVerifications.userId, marketplaceUsers.userId))
-      .where(eq(sellerVerifications.userId, applicationId));
+        .from(sellerVerifications)
+        .leftJoin(marketplaceUsers, eq(sellerVerifications.userId, marketplaceUsers.userId))
+        .where(eq(sellerVerifications.userId, applicationId));
 
       if (!seller) {
         return res.status(404).json({ error: "Seller not found" });
@@ -213,10 +213,10 @@ export class SellerController {
 
       const overallScore = Math.round(
         (factors.account_age * 0.2 +
-         factors.kyc_verification * 0.3 +
-         factors.transaction_history * 0.2 +
-         factors.dispute_rate * 0.2 +
-         factors.volume_score * 0.1)
+          factors.kyc_verification * 0.3 +
+          factors.transaction_history * 0.2 +
+          factors.dispute_rate * 0.2 +
+          factors.volume_score * 0.1)
       );
 
       const notes = [];
@@ -267,12 +267,12 @@ export class SellerController {
         createdAt: marketplaceUsers.createdAt,
         updatedAt: sellerVerifications.updatedAt
       })
-      .from(marketplaceUsers)
-      .leftJoin(sellerVerifications, eq(marketplaceUsers.userId, sellerVerifications.userId))
-      .where(eq(marketplaceUsers.role, 'seller'))
-      .orderBy(desc(sellerVerifications.totalVolume))
-      .limit(parseInt(limit as string))
-      .offset((parseInt(page as string) - 1) * parseInt(limit as string));
+        .from(marketplaceUsers)
+        .leftJoin(sellerVerifications, eq(marketplaceUsers.userId, sellerVerifications.userId))
+        .where(eq(marketplaceUsers.role, 'seller'))
+        .orderBy(desc(sellerVerifications.totalVolume))
+        .limit(parseInt(limit as string))
+        .offset((parseInt(page as string) - 1) * parseInt(limit as string));
 
       // Calculate performance status for each seller
       const sellersWithPerformance = sellers.map(seller => {
@@ -593,7 +593,7 @@ export class SellerController {
           .returning();
 
         const userId = newUser?.id || user.id;
-        
+
         await db.insert(marketplaceUsers)
           .values({
             userId,
@@ -610,7 +610,7 @@ export class SellerController {
           sellerId: marketplaceUser?.users?.id || user.id,
           title: listingData.title,
           description: listingData.description,
-          category: listingData.category,
+          mainCategory: listingData.category,
           priceCrypto: listingData.priceCrypto.toString(),
           currency: listingData.currency || 'USDC',
           isPhysical: listingData.isPhysical || false,
@@ -628,7 +628,7 @@ export class SellerController {
           id: newListing.id,
           title: newListing.title,
           description: newListing.description,
-          category: newListing.category,
+          category: newListing.mainCategory,
           priceCrypto: parseFloat(newListing.priceCrypto),
           currency: newListing.currency,
           isPhysical: newListing.isPhysical,
@@ -665,7 +665,7 @@ export class SellerController {
       const updateData: any = { updatedAt: new Date() };
       if (updates.title) updateData.title = updates.title;
       if (updates.description) updateData.description = updates.description;
-      if (updates.category) updateData.category = updates.category;
+      if (updates.category) updateData.mainCategory = updates.category;
       if (updates.priceCrypto) updateData.priceCrypto = updates.priceCrypto.toString();
       if (updates.currency) updateData.currency = updates.currency;
       if (updates.isPhysical !== undefined) updateData.isPhysical = updates.isPhysical;
@@ -684,7 +684,7 @@ export class SellerController {
           id: updatedListing.id,
           title: updatedListing.title,
           description: updatedListing.description,
-          category: updatedListing.category,
+          category: updatedListing.mainCategory,
           priceCrypto: parseFloat(updatedListing.priceCrypto),
           currency: updatedListing.currency,
           isPhysical: updatedListing.isPhysical,
@@ -737,7 +737,7 @@ export class SellerController {
 
       // Get basic stats
       const stats = await this.getSellerStatsInternal(user.walletAddress);
-      
+
       // Get recent listings
       const recentListings = await db.select({
         id: marketplaceProducts.id,
@@ -747,11 +747,11 @@ export class SellerController {
         currency: marketplaceProducts.currency,
         createdAt: marketplaceProducts.createdAt
       })
-      .from(marketplaceProducts)
-      .leftJoin(users, eq(marketplaceProducts.sellerId, users.id))
-      .where(eq(users.walletAddress, user.walletAddress))
-      .orderBy(desc(marketplaceProducts.createdAt))
-      .limit(5);
+        .from(marketplaceProducts)
+        .leftJoin(users, eq(marketplaceProducts.sellerId, users.id))
+        .where(eq(users.walletAddress, user.walletAddress))
+        .orderBy(desc(marketplaceProducts.createdAt))
+        .limit(5);
 
       const dashboardData: any = {
         stats,
@@ -789,7 +789,7 @@ export class SellerController {
 
       // Use the existing seller service
       const { sellerService } = await import('../services/sellerService');
-      
+
       try {
         const updatedProfile = await sellerService.updateSellerProfile(user.walletAddress, updates);
         res.json({ success: true, data: updatedProfile });
@@ -815,15 +815,15 @@ export class SellerController {
   async getMyListings(req: Request, res: Response) {
     try {
       const user = (req as any).user;
-      const { 
-        status, 
-        category, 
-        page = 1, 
-        limit = 20, 
-        sortBy = 'created_at', 
-        sortOrder = 'desc' 
+      const {
+        status,
+        category,
+        page = 1,
+        limit = 20,
+        sortBy = 'created_at',
+        sortOrder = 'desc'
       } = req.query;
-      
+
       const db = databaseService.getDatabase();
       const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
 
@@ -838,24 +838,24 @@ export class SellerController {
         createdAt: marketplaceProducts.createdAt,
         updatedAt: marketplaceProducts.updatedAt
       })
-      .from(products)
-      .leftJoin(users, eq(products.sellerId, users.id))
-      .where(eq(users.walletAddress, user.walletAddress));
+        .from(products)
+        .leftJoin(users, eq(products.sellerId, users.id))
+        .where(eq(users.walletAddress, user.walletAddress));
 
       // Apply filters
       if (status) {
         query = query.where(eq(products.status, status as string));
       }
       if (category) {
-        query = query.where(eq(marketplaceProducts.category, category as string));
+        query = query.where(eq(marketplaceProducts.mainCategory, category as string));
       }
 
       // Apply sorting
-      const sortColumn = sortBy === 'price' ? marketplaceProducts.priceCrypto : 
-                        sortBy === 'title' ? marketplaceProducts.title :
-                        sortBy === 'updated_at' ? marketplaceProducts.updatedAt :
-                        marketplaceProducts.createdAt;
-      
+      const sortColumn = sortBy === 'price' ? marketplaceProducts.priceCrypto :
+        sortBy === 'title' ? marketplaceProducts.title :
+          sortBy === 'updated_at' ? marketplaceProducts.updatedAt :
+            marketplaceProducts.createdAt;
+
       query = sortOrder === 'asc' ? query.orderBy(sortColumn) : query.orderBy(desc(sortColumn));
 
       const listings = await query.limit(parseInt(limit as string)).offset(offset);
@@ -865,7 +865,7 @@ export class SellerController {
         .from(marketplaceProducts)
         .leftJoin(users, eq(marketplaceProducts.sellerId, users.id))
         .where(eq(users.walletAddress, user.walletAddress));
-      
+
       const total = totalResult[0]?.count || 0;
 
       res.json({
@@ -893,14 +893,14 @@ export class SellerController {
   async getMyOrders(req: Request, res: Response) {
     try {
       const user = (req as any).user;
-      const { 
-        status, 
-        page = 1, 
-        limit = 20, 
-        sortBy = 'created_at', 
-        sortOrder = 'desc' 
+      const {
+        status,
+        page = 1,
+        limit = 20,
+        sortBy = 'created_at',
+        sortOrder = 'desc'
       } = req.query;
-      
+
       const db = databaseService.getDatabase();
       const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
 
@@ -915,10 +915,10 @@ export class SellerController {
         createdAt: marketplaceOrders.createdAt,
         updatedAt: marketplaceOrders.updatedAt
       })
-      .from(marketplaceOrders)
-      .leftJoin(marketplaceProducts, eq(marketplaceOrders.productId, marketplaceProducts.id))
-      .leftJoin(users, eq(marketplaceProducts.sellerId, users.id))
-      .where(eq(users.walletAddress, user.walletAddress));
+        .from(marketplaceOrders)
+        .leftJoin(marketplaceProducts, eq(marketplaceOrders.productId, marketplaceProducts.id))
+        .leftJoin(users, eq(marketplaceProducts.sellerId, users.id))
+        .where(eq(users.walletAddress, user.walletAddress));
 
       // Apply filters
       if (status) {
@@ -927,9 +927,9 @@ export class SellerController {
 
       // Apply sorting
       const sortColumn = sortBy === 'amount' ? marketplaceOrders.amount :
-                        sortBy === 'updated_at' ? marketplaceOrders.updatedAt :
-                        marketplaceOrders.createdAt;
-      
+        sortBy === 'updated_at' ? marketplaceOrders.updatedAt :
+          marketplaceOrders.createdAt;
+
       query = sortOrder === 'asc' ? query.orderBy(sortColumn) : query.orderBy(desc(sortColumn));
 
       const orders = await query.limit(parseInt(limit as string)).offset(offset);
@@ -940,7 +940,7 @@ export class SellerController {
         .leftJoin(marketplaceProducts, eq(marketplaceOrders.productId, marketplaceProducts.id))
         .leftJoin(users, eq(marketplaceProducts.sellerId, users.id))
         .where(eq(users.walletAddress, user.walletAddress));
-      
+
       const total = totalResult[0]?.count || 0;
 
       res.json({
@@ -1004,9 +1004,9 @@ export class SellerController {
     try {
       const { walletAddress } = req.params;
       const { sellerService } = await import('../services/sellerService');
-      
+
       const profile = await sellerService.getSellerProfile(walletAddress);
-      
+
       if (!profile) {
         return res.status(404).json({ success: false, error: "Seller profile not found" });
       }
@@ -1022,7 +1022,7 @@ export class SellerController {
   async createProfile(req: Request, res: Response) {
     try {
       const { walletAddress, businessName, email, description } = req.body;
-      
+
       if (!walletAddress || !businessName || !email) {
         return res.status(400).json({
           success: false,
@@ -1031,11 +1031,11 @@ export class SellerController {
       }
 
       const { sellerService } = await import('../services/sellerService');
-      
+
       const profile = await sellerService.createSellerProfile({
         walletAddress,
-        businessName,
-        email,
+        storeName: businessName,
+
         description: description || ''
       });
 
@@ -1047,13 +1047,13 @@ export class SellerController {
   }
 
   // Update seller profile
-  async updateProfile(req: Request, res: Response) {
+  async updateSellerProfileByAddress(req: Request, res: Response) {
     try {
       const { walletAddress } = req.params;
       const updateData = req.body;
-      
+
       const { sellerService } = await import('../services/sellerService');
-      
+
       const profile = await sellerService.updateSellerProfile(walletAddress, updateData);
 
       res.json({ success: true, data: profile });
@@ -1081,7 +1081,7 @@ export class SellerController {
       const user = (req as any).user;
       const { verificationType, verificationData } = req.body;
       const { sellerService } = await import('../services/sellerService');
-      
+
       const result = await sellerService.verifySellerProfile(user.walletAddress, verificationType);
       res.json({ success: true, data: result });
     } catch (error) {
@@ -1127,19 +1127,19 @@ export class SellerController {
   private async getTopCategoriesInternal(walletAddress: string) {
     try {
       const db = databaseService.getDatabase();
-      const categories = await db.select({
-        category: marketplaceProducts.category,
+      const topCategories = await db.select({
+        category: marketplaceProducts.mainCategory,
         count: sql<number>`count(*)`
       })
-      .from(products)
-      .leftJoin(users, eq(products.sellerId, users.id))
-      .where(eq(users.walletAddress, walletAddress))
-      .leftJoin(categories, eq(products.categoryId, categories.id))
-      .groupBy(categories.name)
-      .orderBy(desc(sql<number>`count(*)`))
-      .limit(5);
+        .from(products)
+        .leftJoin(users, eq(products.sellerId, users.id))
+        .where(eq(users.walletAddress, walletAddress))
+        .leftJoin(categories, eq(products.categoryId, categories.id))
+        .groupBy(categories.name)
+        .orderBy(desc(sql<number>`count(*)`))
+        .limit(5);
 
-      return categories.map(cat => ({
+      return topCategories.map(cat => ({
         category: cat.category || 'Uncategorized',
         count: cat.count
       }));
@@ -1158,14 +1158,14 @@ export class SellerController {
         priceCrypto: marketplaceProducts.priceCrypto,
         currency: marketplaceProducts.currency
       })
-      .from(marketplaceProducts)
-      .leftJoin(users, eq(marketplaceProducts.sellerId, users.id))
-      .where(and(
-        eq(users.walletAddress, walletAddress),
-        eq(marketplaceProducts.status, 'active')
-      ))
-      .orderBy(desc(marketplaceProducts.createdAt))
-      .limit(5);
+        .from(marketplaceProducts)
+        .leftJoin(users, eq(marketplaceProducts.sellerId, users.id))
+        .where(and(
+          eq(users.walletAddress, walletAddress),
+          eq(marketplaceProducts.status, 'active')
+        ))
+        .orderBy(desc(marketplaceProducts.createdAt))
+        .limit(5);
 
       return products.map(product => ({
         ...product,
@@ -1181,7 +1181,7 @@ export class SellerController {
   private generateMockTrend(period: string) {
     const days = period === '7d' ? 7 : period === '30d' ? 30 : period === '90d' ? 90 : 365;
     const trend = [];
-    
+
     for (let i = days; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
@@ -1191,7 +1191,7 @@ export class SellerController {
         revenue: Math.floor(Math.random() * 1000)
       });
     }
-    
+
     return trend;
   }
 }
