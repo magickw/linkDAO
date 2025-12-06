@@ -147,6 +147,77 @@ export function transformSellerListingToUnified(
   const transformedFields: string[] = [];
 
   try {
+    // Handle both old format and new backend format
+    // Backend may return: { categoryId, inventory, shipping (JSON), ... }
+    // instead of: { category, quantity, shippingOptions, ... }
+    const backendListing = sellerListing as any;
+
+    // Parse shipping from JSON if it's a string (backend format)
+    let shippingOptions = {
+      free: false,
+      cost: 0,
+      estimatedDays: 5,
+      international: false,
+    };
+    if (backendListing.shippingOptions) {
+      shippingOptions = backendListing.shippingOptions;
+    } else if (backendListing.shipping) {
+      if (typeof backendListing.shipping === 'string') {
+        try {
+          const parsed = JSON.parse(backendListing.shipping);
+          shippingOptions = {
+            free: parsed.free ?? false,
+            cost: parsed.cost ?? 0,
+            estimatedDays: parsed.estimatedDays ?? 5,
+            international: parsed.international ?? false,
+          };
+        } catch {
+          // Keep default
+        }
+      } else if (typeof backendListing.shipping === 'object') {
+        shippingOptions = {
+          free: backendListing.shipping.free ?? false,
+          cost: backendListing.shipping.cost ?? 0,
+          estimatedDays: backendListing.shipping.estimatedDays ?? 5,
+          international: backendListing.shipping.international ?? false,
+        };
+      }
+    }
+
+    // Parse specifications from metadata if available
+    let specifications: any[] = [];
+    if (backendListing.specifications) {
+      specifications = backendListing.specifications;
+    } else if (backendListing.metadata) {
+      const metadata = typeof backendListing.metadata === 'string'
+        ? JSON.parse(backendListing.metadata)
+        : backendListing.metadata;
+      if (metadata?.specifications) {
+        specifications = metadata.specifications;
+      }
+    }
+
+    // Get quantity from either quantity or inventory field
+    const quantity = backendListing.quantity ?? backendListing.inventory ?? 0;
+
+    // Get category from either category or categoryId
+    const category = backendListing.category || backendListing.categoryId || '';
+
+    // Get price - handle both number and string
+    const price = typeof backendListing.price === 'string'
+      ? parseFloat(backendListing.price)
+      : (backendListing.price ?? 0);
+
+    // Get images - handle both array and JSON string
+    let images = backendListing.images || [];
+    if (typeof images === 'string') {
+      try {
+        images = JSON.parse(images);
+      } catch {
+        images = [];
+      }
+    }
+
     const unified: UnifiedSellerListing = {
       // Core identification
       id: sellerListing.id,
@@ -156,64 +227,66 @@ export function transformSellerListingToUnified(
       // Basic listing information
       title: sellerListing.title,
       description: sellerListing.description,
-      category: sellerListing.category,
-      subcategory: sellerListing.subcategory,
-      tags: sellerListing.tags,
+      category: category,
+      subcategory: backendListing.subcategory || '',
+      tags: Array.isArray(backendListing.tags)
+        ? backendListing.tags
+        : (typeof backendListing.tags === 'string' ? JSON.parse(backendListing.tags || '[]') : []),
 
       // Pricing information
-      price: sellerListing.price,
-      currency: sellerListing.currency as any,
-      displayPrice: formatPrice(sellerListing.price, sellerListing.currency),
-      displayCurrency: formatCurrency(sellerListing.currency),
+      price: price,
+      currency: (backendListing.currency || backendListing.priceCurrency || 'USD') as any,
+      displayPrice: formatPrice(price, backendListing.currency || backendListing.priceCurrency || 'USD'),
+      displayCurrency: formatCurrency(backendListing.currency || backendListing.priceCurrency || 'USD'),
 
       // Inventory and availability
-      quantity: sellerListing.quantity,
-      condition: sellerListing.condition,
-      availability: sellerListing.status === 'active' ? 'available' : 'out_of_stock',
+      quantity: quantity,
+      condition: backendListing.condition || 'new',
+      availability: backendListing.status === 'active' ? 'available' : 'out_of_stock',
 
       // Media and presentation
-      images: sellerListing.images,
-      thumbnailUrl: sellerListing.images[0] || '',
-      featuredImage: sellerListing.images[0],
+      images: images,
+      thumbnailUrl: images[0] || '',
+      featuredImage: images[0],
 
       // Status and lifecycle
-      status: sellerListing.status,
-      listingType: sellerListing.saleType as any,
+      status: backendListing.status || 'draft',
+      listingType: (backendListing.saleType || backendListing.listingType || 'buy_now') as any,
       saleType: 'physical', // Default assumption
 
       // Engagement metrics
-      views: sellerListing.views,
-      favorites: sellerListing.favorites,
-      likes: sellerListing.favorites, // Map favorites to likes
-      questions: sellerListing.questions,
+      views: backendListing.views || 0,
+      favorites: backendListing.favorites || 0,
+      likes: backendListing.favorites || 0, // Map favorites to likes
+      questions: backendListing.questions || 0,
 
       // Blockchain and escrow
-      isEscrowProtected: sellerListing.escrowEnabled,
-      isEscrowed: sellerListing.escrowEnabled,
-      escrowEnabled: sellerListing.escrowEnabled,
+      isEscrowProtected: backendListing.escrowEnabled ?? false,
+      isEscrowed: backendListing.escrowEnabled ?? false,
+      escrowEnabled: backendListing.escrowEnabled ?? false,
 
       // Shipping and fulfillment
-      shippingOptions: {
-        free: sellerListing.shippingOptions.free,
-        cost: sellerListing.shippingOptions.cost,
-        estimatedDays: sellerListing.shippingOptions.estimatedDays,
-        international: sellerListing.shippingOptions.international,
-      },
+      shippingOptions: shippingOptions,
 
       // Additional metadata
-      specifications: sellerListing.specifications,
+      specifications: specifications,
       metadata: {
-        specifications: sellerListing.specifications,
-        condition: sellerListing.condition,
+        specifications: specifications,
+        condition: backendListing.condition || 'new',
       },
 
       // Timestamps
-      createdAt: sellerListing.createdAt,
-      updatedAt: sellerListing.updatedAt,
+      createdAt: backendListing.createdAt || new Date(),
+      updatedAt: backendListing.updatedAt || new Date(),
     };
 
     transformedFields.push('likes'); // Mapped from favorites
-    warnings.push('Mapped favorites to likes for consistency');
+    if (backendListing.inventory !== undefined) {
+      transformedFields.push('quantity'); // Mapped from inventory
+    }
+    if (backendListing.categoryId !== undefined) {
+      transformedFields.push('category'); // Mapped from categoryId
+    }
 
     return {
       data: unified,

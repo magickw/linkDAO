@@ -12,11 +12,12 @@ export class DEXTradingController {
 
   constructor() {
     // Initialize with default Ethereum mainnet configuration
+    // Initialize with Sepolia configuration
     this.uniswapV3Service = new UniswapV3Service(
-      process.env.ETHEREUM_RPC_URL || 'https://eth-mainnet.alchemyapi.io/v2/your-api-key',
-      1 // Ethereum mainnet
+      process.env.RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com',
+      parseInt(process.env.CHAIN_ID || '11155111') // Sepolia
     );
-    
+
     // Initialize multi-chain service
     this.multiChainService = new MultiChainDEXService();
   }
@@ -482,7 +483,7 @@ export class DEXTradingController {
       };
 
       const priceComparisons = await this.multiChainService.compareChainPrices(swapParams, chainIds);
-      
+
       // Convert Map to object for JSON response
       const comparisons: any = {};
       for (const [chainId, quote] of priceComparisons) {

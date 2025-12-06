@@ -272,6 +272,7 @@ export interface CreateListingInput {
   currency?: string;
   inventory?: number;
   tags?: string[];
+  images?: string[]; // Array of IPFS URLs for product images
   metadata?: any;
   shipping?: any;
   nft?: any;

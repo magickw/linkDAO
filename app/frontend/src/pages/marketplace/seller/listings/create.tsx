@@ -6,6 +6,7 @@ import { marketplaceService, type MarketplaceListing } from '@/services/marketpl
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { Button } from '@/design-system/components/Button';
 import Layout from '@/components/Layout';
+import { ipfsUploadService } from '@/services/ipfsUploadService';
 import {
   Upload,
   X,
@@ -429,6 +430,30 @@ const CreateListingPage: React.FC = () => {
       if (!formData.price || parseFloat(formData.price) <= 0) throw new Error('Valid price is required');
       if (images.length === 0) throw new Error('At least one image is required');
 
+      // Upload images to IPFS first
+      addToast('Uploading images...', 'info');
+      const uploadedImageUrls: string[] = [];
+
+      for (let i = 0; i < images.length; i++) {
+        try {
+          const result = await ipfsUploadService.uploadFile(images[i]);
+          uploadedImageUrls.push(result.url);
+          console.log(`[CREATE] Uploaded image ${i + 1}/${images.length}:`, result.url);
+        } catch (uploadError) {
+          console.error(`[CREATE] Failed to upload image ${i + 1}:`, uploadError);
+          throw new Error(`Failed to upload image ${i + 1}. Please try again.`);
+        }
+      }
+
+      // Reorder images so primary image is first
+      if (primaryImageIndex > 0 && primaryImageIndex < uploadedImageUrls.length) {
+        const primaryImage = uploadedImageUrls[primaryImageIndex];
+        uploadedImageUrls.splice(primaryImageIndex, 1);
+        uploadedImageUrls.unshift(primaryImage);
+      }
+
+      console.log('[CREATE] All images uploaded:', uploadedImageUrls);
+
       // Prepare data in the format expected by the backend
       const listingData = {
         walletAddress: address,
@@ -439,13 +464,14 @@ const CreateListingPage: React.FC = () => {
         currency: formData.currency,
         inventory: formData.unlimitedQuantity ? 999999 : formData.quantity,
         tags: formData.tags,
+        images: uploadedImageUrls, // Include uploaded image URLs
         metadata: {
           itemType: formData.itemType,
           condition: formData.condition,
           listingType: formData.listingType,
           escrowEnabled: formData.escrowEnabled,
           royalty: formData.royalty,
-          primaryImageIndex: primaryImageIndex,
+          primaryImageIndex: 0, // Primary is now always first after reordering
           seoTitle: formData.seoTitle || formData.title,
           seoDescription: formData.seoDescription || formData.description.substring(0, 160)
         }

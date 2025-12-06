@@ -212,13 +212,19 @@ export class UnifiedSellerService {
       }
 
       // Fetch from API using the proper endpoint without authentication (public listings access)
-      const response = await unifiedSellerAPIClient.request<SellerListing[]>(
+      const response = await unifiedSellerAPIClient.request<{ listings: SellerListing[]; total: number; page: number; pageSize: number } | SellerListing[]>(
         unifiedSellerAPIClient['endpoints'].getListings(walletAddress),
         undefined,
         false // requireAuth = false for public access
       );
 
-      if (!response || !Array.isArray(response)) {
+      // Handle both array response and paginated response format
+      let listingsArray: SellerListing[];
+      if (Array.isArray(response)) {
+        listingsArray = response;
+      } else if (response && 'listings' in response && Array.isArray(response.listings)) {
+        listingsArray = response.listings;
+      } else {
         this.listingsCache.set(walletAddress, { data: [], timestamp: Date.now() });
         return [];
       }
@@ -227,7 +233,7 @@ export class UnifiedSellerService {
       const unifiedListings: UnifiedSellerListing[] = [];
       const transformationWarnings: string[] = [];
 
-      for (const listing of response) {
+      for (const listing of listingsArray) {
         try {
           const transformResult = transformSellerListingToUnified(listing, this.transformationOptions);
           

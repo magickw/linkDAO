@@ -546,7 +546,15 @@ export class UnifiedSellerAPIClient {
     const url = status
       ? `${this.endpoints.getListings(walletAddress)}?status=${status}`
       : this.endpoints.getListings(walletAddress);
-    return await this.request<SellerListing[]>(url);
+    const response = await this.request<{ listings: SellerListing[]; total: number } | SellerListing[]>(url);
+
+    // Handle both array response and paginated response format
+    if (Array.isArray(response)) {
+      return response;
+    } else if (response && 'listings' in response && Array.isArray(response.listings)) {
+      return response.listings;
+    }
+    return [];
   }
 
   async createListing(listingData: Partial<SellerListing>): Promise<SellerListing> {

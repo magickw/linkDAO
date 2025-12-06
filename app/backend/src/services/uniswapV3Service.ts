@@ -15,9 +15,9 @@ export class UniswapV3Service implements IUniswapV3Service {
 
   constructor(
     rpcUrl: string,
-    chainId: number = 1,
-    quoterAddress: string = '0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6',
-    routerAddress: string = '0xE592427A0AEce92De3Edee1F18E0157C05861564'
+    chainId: number = 11155111,
+    quoterAddress: string = '0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3', // Sepolia Quoter V2
+    routerAddress: string = '0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E'  // Sepolia SwapRouter02
   ) {
     this.provider = new ethers.JsonRpcProvider(rpcUrl);
     this.chainId = chainId;
@@ -85,9 +85,6 @@ export class UniswapV3Service implements IUniswapV3Service {
         tokenOutInstance,
         TradeType.EXACT_INPUT,
         {
-          recipient: params.recipient || ethers.ZeroAddress,
-          slippageTolerance: new Percent(Math.floor(slippageTolerance * 100), 10000),
-          deadline: Math.floor(Date.now() / 1000) + 60 * 20, // 20 minutes
           recipient: params.recipient || ethers.ZeroAddress,
           slippageTolerance: new Percent(Math.floor(slippageTolerance * 100), 10000),
           deadline: Math.floor(Date.now() / 1000) + 60 * 20, // 20 minutes
