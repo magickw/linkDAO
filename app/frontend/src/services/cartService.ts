@@ -85,6 +85,9 @@ class CartService {
   private baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
   private isAuthenticated = false;
   private authToken: string | null = null;
+  private isSyncing = false;
+  private lastSyncTime = 0;
+  private syncCooldown = 5000; // 5 seconds cooldown between syncs
 
   private constructor() {
     // Check for authentication on initialization
@@ -748,6 +751,15 @@ class CartService {
   }
 
   private async syncCartWithBackend(): Promise<void> {
+    // Prevent duplicate syncs with cooldown
+    const now = Date.now();
+    if (this.isSyncing || (now - this.lastSyncTime) < this.syncCooldown) {
+      return;
+    }
+
+    this.isSyncing = true;
+    this.lastSyncTime = now;
+
     try {
       const localState = this.getCartStateSync();
       const backendState = await this.getCartFromBackend();
@@ -769,19 +781,45 @@ class CartService {
       }
     } catch (error) {
       console.warn('Failed to sync cart with backend:', error);
+    } finally {
+      this.isSyncing = false;
     }
   }
 
   private mergeCartItems(localItems: CartItem[], backendItems: CartItem[]): CartItem[] {
     const merged = [...localItems];
+    const processedIds = new Set<string>();
 
+    // First, add all local items and mark their IDs
+    merged.forEach(item => processedIds.add(item.id));
+
+    // Then add backend items that don't exist locally
     backendItems.forEach(backendItem => {
       const existingIndex = merged.findIndex(item => item.id === backendItem.id);
       if (existingIndex >= 0) {
-        // Use the higher quantity
-        merged[existingIndex].quantity = Math.max(merged[existingIndex].quantity, backendItem.quantity);
+        // Item exists in both - use the most recent one based on addedAt timestamp
+        const localItem = merged[existingIndex];
+        const localTime = new Date(localItem.addedAt).getTime();
+        const backendTime = new Date(backendItem.addedAt).getTime();
+        
+        if (backendTime > localTime) {
+          // Backend item is more recent, use its data but keep local quantity if higher
+          merged[existingIndex] = {
+            ...backendItem,
+            quantity: Math.max(localItem.quantity, backendItem.quantity)
+          };
+        } else {
+          // Local item is more recent, keep it but update with backend price if different
+          merged[existingIndex] = {
+            ...localItem,
+            price: backendItem.price // Always use latest price from backend
+          };
+        }
+        processedIds.add(backendItem.id);
       } else {
+        // Item only exists in backend, add it
         merged.push(backendItem);
+        processedIds.add(backendItem.id);
       }
     });
 
@@ -846,10 +884,17 @@ class CartService {
 
       window.addEventListener('storage', handleStorageChange);
 
-      // Also check periodically in case of same-tab changes
+      // Check less frequently and only if auth status might have changed
+      let lastKnownToken = this.authToken;
       setInterval(() => {
-        this.checkAuthStatus();
-      }, 5000);
+        const currentToken = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token') || sessionStorage.getItem('token') || sessionStorage.getItem('authToken');
+        
+        // Only check auth status if token actually changed
+        if (currentToken !== lastKnownToken) {
+          lastKnownToken = currentToken;
+          this.checkAuthStatus();
+        }
+      }, 10000); // Increased to 10 seconds and only check if token changed
     }
   }
 }

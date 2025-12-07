@@ -250,10 +250,9 @@ export class FeedService {
           finalFollowingFilter,
           moderationFilter, // Add moderation filter
           isNull(posts.parentId), // Only show top-level posts, not comments
-          // EXCLUDE COMMUNITY POSTS: Home feed should only show quick posts
-          // Community posts have communityId or dao set
-          isNull(posts.communityId),
-          isNull(posts.dao)
+          // Only exclude community posts when no specific communities are being filtered
+          // If communities filter is applied, show those community posts
+          filterCommunities.length > 0 ? sql`1=1` : and(isNull(posts.communityId), isNull(posts.dao))
         ));
 
       console.log('📊 [BACKEND FEED] Regular posts query result:', {
@@ -565,9 +564,8 @@ export class FeedService {
           finalFollowingFilter,
           moderationFilter, // Include moderation filter in count
           isNull(posts.parentId), // Only count top-level posts
-          // EXCLUDE COMMUNITY POSTS from count as well
-          isNull(posts.communityId),
-          isNull(posts.dao)
+          // Only exclude community posts when no specific communities are being filtered
+          filterCommunities.length > 0 ? sql`1=1` : and(isNull(posts.communityId), isNull(posts.dao))
         ));
 
       const totalQuickCount = await db

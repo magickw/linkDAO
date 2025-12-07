@@ -393,10 +393,26 @@ export class CartService {
       // Get or create backend cart
       const backendCart = await this.getOrCreateCart(user);
 
-      // Add local cart items to backend cart
+      // Get existing items in backend cart to avoid duplicates
+      const existingItems = await db
+        .select()
+        .from(cartItems)
+        .where(eq(cartItems.cartId, backendCart.id));
+
+      const existingItemsMap = new Map(existingItems.map(item => [item.productId, item]));
+
+      // Sync local cart items to backend cart
       for (const localItem of localCartItems) {
         try {
-          await this.addItem(user, localItem);
+          const existingItem = existingItemsMap.get(localItem.productId);
+          
+          if (existingItem) {
+            // Update existing item instead of adding duplicate
+            await this.updateItem(user, existingItem.id, { quantity: localItem.quantity });
+          } else {
+            // Add new item if it doesn't exist
+            await this.addItem(user, localItem);
+          }
         } catch (error) {
           safeLogger.warn(`Failed to sync item ${localItem.productId}:`, error);
           // Continue with other items even if one fails

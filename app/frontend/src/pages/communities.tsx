@@ -661,29 +661,31 @@ const CommunitiesPage: React.FC = () => {
 
 
   // Show posts from followed communities and recently visited communities
-  // Defensive programming to handle cases where post data might be malformed
+  // The backend already filters by communities when joinedCommunities are passed via the API
+  // This filter is a fallback for edge cases where post data might be inconsistent
   const filteredPosts = posts.filter(post => {
     // Ensure post is a valid object
     if (!post || typeof post !== 'object') return false;
 
-    // If user has joined communities, prioritize posts from those communities
+    // If user has joined communities, verify posts belong to those communities
+    // This is mainly a safety check as backend should already filter by communities
     if (joinedCommunities.length > 0) {
-      // Only show posts from joined communities
-      return joinedCommunities.includes(post.communityId);
+      const postCommunityId = post.communityId || post.dao;
+      // Show posts from joined communities
+      if (postCommunityId && joinedCommunities.includes(postCommunityId)) {
+        return true;
+      }
+      // Also show posts without communityId (quick posts / general posts) if they came through
+      // This ensures we don't accidentally hide posts that the backend returned
+      if (!postCommunityId) {
+        return true;
+      }
+      return false;
     }
 
-    // For users who haven't joined any communities, show trending/popular posts
-    // to encourage community discovery
-    if (typeof post.upvotes === 'number' && post.upvotes > 10) return true;
-
-    // Also show recent posts (within last 24 hours) to show activity
-    if (post.createdAt) {
-      const postDate = new Date(post.createdAt);
-      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      if (postDate > oneDayAgo) return true;
-    }
-
-    return false;
+    // For users who haven't joined any communities, show all posts
+    // (trending/popular posts for discovery)
+    return true;
   });
 
   // Defensive: normalize communities to array for rendering and filter out invalid entries
