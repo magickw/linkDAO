@@ -359,7 +359,10 @@ class CartService {
       // Update quantity of existing item and refresh product details
       newItems = [...currentState.items];
       const existingItem = newItems[existingItemIndex];
-      const newQuantity = Math.min(existingItem.quantity + quantity, product.inventory);
+      const existingQty = typeof existingItem.quantity === 'string' ? parseInt(existingItem.quantity, 10) : existingItem.quantity;
+      const addQty = typeof quantity === 'string' ? parseInt(quantity as any, 10) : quantity;
+
+      const newQuantity = Math.min(existingQty + addQty, product.inventory);
       newItems[existingItemIndex] = {
         ...existingItem,
         ...product, // Refresh product details (price, etc.)
@@ -369,7 +372,7 @@ class CartService {
       // Add new item
       const newItem: CartItem = {
         ...product,
-        quantity: Math.min(quantity, product.inventory),
+        quantity: Math.min(typeof quantity === 'string' ? parseInt(quantity as any, 10) : quantity, product.inventory),
         addedAt: new Date()
       };
       newItems = [...currentState.items, newItem];
@@ -404,7 +407,10 @@ class CartService {
     if (existingItemIndex >= 0) {
       newItems = [...currentState.items];
       const existingItem = newItems[existingItemIndex];
-      const newQuantity = Math.min(existingItem.quantity + quantity, product.inventory);
+      const existingQty = typeof existingItem.quantity === 'string' ? parseInt(existingItem.quantity, 10) : existingItem.quantity;
+      const addQty = typeof quantity === 'string' ? parseInt(quantity as any, 10) : quantity;
+
+      const newQuantity = Math.min(existingQty + addQty, product.inventory);
       newItems[existingItemIndex] = {
         ...existingItem,
         ...product, // Refresh product details
@@ -413,7 +419,7 @@ class CartService {
     } else {
       const newItem: CartItem = {
         ...product,
-        quantity: Math.min(quantity, product.inventory),
+        quantity: Math.min(typeof quantity === 'string' ? parseInt(quantity as any, 10) : quantity, product.inventory),
         addedAt: new Date()
       };
       newItems = [...currentState.items, newItem];

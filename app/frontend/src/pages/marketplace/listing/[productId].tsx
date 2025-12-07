@@ -39,9 +39,18 @@ const ProductDetailPageRoute: React.FC = () => {
             // Get the price - handle both `price` and `priceAmount` fields
             // Handle case where price is an object { amount: number, ... }
             const rawPrice = productData.price;
-            const priceValue = (rawPrice && typeof rawPrice === 'object' && 'amount' in rawPrice)
-              ? rawPrice.amount
-              : (rawPrice ?? productData.priceAmount ?? 0);
+            // Robust price parsing to handle object, string, number, or fallback
+            let priceAmount: any = 0;
+            if (rawPrice && typeof rawPrice === 'object' && 'amount' in rawPrice) {
+              priceAmount = rawPrice.amount;
+            } else if (typeof rawPrice === 'string') {
+              priceAmount = rawPrice;
+            } else if (typeof rawPrice === 'number') {
+              priceAmount = rawPrice;
+            } else {
+              priceAmount = productData.priceAmount || 0;
+            }
+            const priceValue = parseFloat(String(priceAmount)) || 0;
 
             const priceNum = typeof priceValue === 'string' ? parseFloat(priceValue) : Number(priceValue);
 
