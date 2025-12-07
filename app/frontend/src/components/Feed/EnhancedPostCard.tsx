@@ -289,8 +289,8 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
 
   const copyToClipboard = async () => {
     const url = post.communityId
-      ? `${window.location.origin}/communities/${post.communityId}/post/${post.id}`
-      : `${window.location.origin}/post/${post.id}`;
+      ? `${window.location.origin}/communities/${post.communityId}/posts/${post.id}`
+      : `${window.location.origin}/posts/${post.id}`;
     await navigator.clipboard.writeText(url);
     handleShare();
   };

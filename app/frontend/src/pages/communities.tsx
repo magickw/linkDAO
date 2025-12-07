@@ -618,7 +618,7 @@ const CommunitiesPage: React.FC = () => {
     const post = posts.find(p => p.id === postId);
     if (post) {
       const community = communityList.find(c => c.id === post.communityId);
-      router.push(`/communities/${community?.slug || community?.name || post.communityId}?post=${postId}`);
+      router.push(`/communities/${community?.slug || community?.name || post.communityId}/posts/${postId}`);
     }
   };
   const handleShare = (postId: string) => {
@@ -629,7 +629,7 @@ const CommunitiesPage: React.FC = () => {
     const post = posts.find(p => p.id === postId);
     if (post) {
       const community = communityList.find(c => c.id === post.communityId);
-      router.push(`/communities/${community?.slug || community?.name || post.communityId}?post=${postId}`);
+      router.push(`/communities/${community?.slug || community?.name || post.communityId}/posts/${postId}`);
     }
   };
 
@@ -915,37 +915,6 @@ const CommunitiesPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Show user's joined communities or suggested communities */}
-              {!loading && (
-                <div className="mb-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3">
-                  <h2 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">
-                    {joinedCommunities.length > 0 ? 'Your Communities' : 'Suggested Communities'}
-                  </h2>
-                  <div className="flex flex-wrap gap-1">
-                    {joinedCommunities.length > 0
-                      ? communityList.filter(c => joinedCommunities.includes(c.id)).slice(0, 6).map(c => (
-                        <button
-                          key={c.id}
-                          onClick={() => handleCommunitySelect(c)}
-                          className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded text-xs hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                        >
-                          {c.displayName || c.name}
-                        </button>
-                      ))
-                      : communityList.slice(0, 6).map(c => (
-                        <button
-                          key={c.id}
-                          onClick={() => handleCommunitySelect(c)}
-                          className="px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded text-xs hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-                        >
-                          {c.displayName || c.name}
-                        </button>
-                      ))
-                    }
-                  </div>
-                </div>
-              )}
-
               {/* Enhanced Loading State */}
               {loading && (
                 <div className="space-y-4">
@@ -1015,8 +984,8 @@ const CommunitiesPage: React.FC = () => {
                     >
                       <div
                         onClick={() => {
-                          const communityId = community?.slug || community?.name || post.communityId || 'unknown';
-                          router.push(`/communities/${communityId}?post=${postId}`);
+                          const communitySlug = community?.slug || community?.name || post.communityId || 'unknown';
+                          router.push(`/communities/${communitySlug}/posts/${postId}`);
                         }}
                         onMouseEnter={(e) => {
                           if (hoverTimeout) clearTimeout(hoverTimeout);
@@ -1071,11 +1040,17 @@ const CommunitiesPage: React.FC = () => {
                           </div>
 
                           <div className="flex-1 p-3">
-                            {/* Post Header - Enhanced with On-Chain Identity */}
+                            {/* Post Header */}
                             <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-xs text-gray-500 dark:text-gray-400 mb-2">
-                              <span className="font-semibold text-gray-900 dark:text-white hover:underline cursor-pointer">
-                                {community?.name || post.communityId || 'Unknown Community'}
-                              </span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCommunitySelect(community || { id: post.communityId, slug: post.communityId });
+                                }}
+                                className="font-semibold text-gray-900 dark:text-white hover:underline hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                              >
+                                {community?.displayName || community?.name || 'Unknown Community'}
+                              </button>
                               <span>•</span>
                               <span>Posted by</span>
                               <OnChainIdentityBadge

@@ -10,8 +10,8 @@ export const usePostNavigation = () => {
     try {
       const baseUrl = window.location.origin;
       const postUrl = communityId
-        ? `${baseUrl}/communities/${communityId}?post=${postId}`
-        : `${baseUrl}/communities/?post=${postId}`;
+        ? `${baseUrl}/communities/${communityId}/posts/${postId}`
+        : `${baseUrl}/posts/${postId}`;
 
       if (navigator.share) {
         // Use native sharing if available
@@ -37,8 +37,8 @@ export const usePostNavigation = () => {
   const getPostUrl = useCallback((postId: string, communityId?: string) => {
     const baseUrl = window.location.origin;
     return communityId
-      ? `${baseUrl}/communities/${communityId}?post=${postId}`
-      : `${baseUrl}/communities/?post=${postId}`;
+      ? `${baseUrl}/communities/${communityId}/posts/${postId}`
+      : `${baseUrl}/posts/${postId}`;
   }, []);
 
   return {

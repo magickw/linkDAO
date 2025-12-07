@@ -185,7 +185,7 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
 
   const navigateToPost = (postId: string, communityId?: string) => {
     if (communityId) {
-      router.push(`/communities/${communityId}?post=${postId}`);
+      router.push(`/communities/${communityId}/posts/${postId}`);
     } else {
       // If no community ID, we can't navigate to a specific post without context
       // This would be an error case in the new routing structure

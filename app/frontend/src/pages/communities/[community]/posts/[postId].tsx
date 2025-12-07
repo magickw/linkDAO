@@ -52,7 +52,7 @@ export default function CommunityPostPage() {
 
         const title = post.title || `Post by ${post.author?.slice(0, 8)}...`;
         const description = post.content?.substring(0, 200) || 'Check out this post on LinkDAO';
-        const url = `https://linkdao.io/communities/${community}/post/${postId}`;
+        const url = `https://linkdao.io/communities/${community}/posts/${postId}`;
 
         return (
             <Head>
