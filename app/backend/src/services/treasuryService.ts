@@ -238,4 +238,15 @@ export class TreasuryService {
     }
 }
 
-export const treasuryService = new TreasuryService();
+// Singleton pattern with lazy initialization
+let treasuryServiceInstance: TreasuryService | null = null;
+
+export const getTreasuryService = (): TreasuryService => {
+  if (!treasuryServiceInstance) {
+    treasuryServiceInstance = new TreasuryService();
+  }
+  return treasuryServiceInstance;
+};
+
+// For backward compatibility
+export const treasuryService = getTreasuryService();

@@ -577,4 +577,15 @@ export class BlockchainIntegrationService {
 }
 
 // Singleton instance
-export const blockchainService = new BlockchainIntegrationService();
+// Singleton pattern with lazy initialization
+let blockchainServiceInstance: BlockchainIntegrationService | null = null;
+
+export const getBlockchainService = (): BlockchainIntegrationService => {
+  if (!blockchainServiceInstance) {
+    blockchainServiceInstance = new BlockchainIntegrationService();
+  }
+  return blockchainServiceInstance;
+};
+
+// For backward compatibility
+export const blockchainService = getBlockchainService();

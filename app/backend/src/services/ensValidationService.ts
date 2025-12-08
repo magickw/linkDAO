@@ -445,4 +445,15 @@ class ENSValidationService {
   }
 }
 
-export const ensValidationService = new ENSValidationService();
+// Singleton pattern with lazy initialization
+let ensValidationServiceInstance: ENSValidationService | null = null;
+
+export const getEnsValidationService = (): ENSValidationService => {
+  if (!ensValidationServiceInstance) {
+    ensValidationServiceInstance = new ENSValidationService();
+  }
+  return ensValidationServiceInstance;
+};
+
+// For backward compatibility
+export const ensValidationService = getEnsValidationService();

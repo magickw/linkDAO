@@ -9,20 +9,71 @@ const databaseService = new DatabaseService();
 const notificationService = new NotificationService();
 
 export class BlockchainEventService {
-  private provider: ethers.JsonRpcProvider;
+  private provider: ethers.JsonRpcProvider | null = null;
   private escrowContract: ethers.Contract | null = null;
   private marketplaceContract: ethers.Contract | null = null;
   private ldaoContract: ethers.Contract | null = null;
   private eventListeners: Map<string, any> = new Map();
+  private initialized: boolean = false;
+  private initializationAttempted: boolean = false;
 
   constructor() {
-    // Use the Sepolia testnet RPC URL for production
-    const rpcUrl = process.env.RPC_URL || 'https://eth-sepolia.g.alchemy.com/v2/5qxkwSO4d_0qE4wjQPIrp';
-    this.provider = new ethers.JsonRpcProvider(rpcUrl);
-    this.initializeContracts();
+    // Lazy initialization - don't connect on startup
+    // Provider will be initialized on first use
+  }
+
+  /**
+   * Initialize the provider and contracts lazily
+   * Returns true if initialization succeeded, false otherwise
+   */
+  private async ensureInitialized(): Promise<boolean> {
+    if (this.initialized) return true;
+    if (this.initializationAttempted) return false;
+
+    this.initializationAttempted = true;
+
+    try {
+      const rpcUrl = process.env.RPC_URL || 'https://mainnet.base.org';
+
+      // Create provider with timeout options to fail faster
+      this.provider = new ethers.JsonRpcProvider(rpcUrl, undefined, {
+        staticNetwork: true, // Prevents network detection retries
+      });
+
+      // Test the connection with a timeout
+      const timeoutPromise = new Promise<null>((_, reject) => {
+        setTimeout(() => reject(new Error('RPC connection timeout')), 5000);
+      });
+
+      const networkPromise = this.provider.getNetwork();
+      await Promise.race([networkPromise, timeoutPromise]);
+
+      // Initialize contracts only if provider is working
+      this.initializeContracts();
+
+      this.initialized = true;
+      safeLogger.info('BlockchainEventService initialized successfully');
+      return true;
+    } catch (error) {
+      safeLogger.warn('BlockchainEventService initialization failed - blockchain event features will be disabled:', error instanceof Error ? error.message : 'Unknown error');
+      this.provider = null;
+      this.escrowContract = null;
+      this.marketplaceContract = null;
+      this.ldaoContract = null;
+      return false;
+    }
+  }
+
+  /**
+   * Check if the service is available
+   */
+  async isAvailable(): Promise<boolean> {
+    return await this.ensureInitialized();
   }
 
   private initializeContracts(): void {
+    if (!this.provider) return;
+
     try {
       const escrowAddress = process.env.ENHANCED_ESCROW_CONTRACT_ADDRESS;
       const marketplaceAddress = process.env.MARKETPLACE_CONTRACT_ADDRESS;
@@ -73,7 +124,8 @@ export class BlockchainEventService {
    */
   async monitorOrderEvents(orderId: string, escrowId: string): Promise<void> {
     try {
-      if (!this.escrowContract) {
+      // Check if blockchain service is available
+      if (!await this.ensureInitialized() || !this.escrowContract) {
         safeLogger.warn('Escrow contract not initialized, skipping event monitoring');
         return;
       }
@@ -134,7 +186,8 @@ export class BlockchainEventService {
    */
   async getOrderEvents(orderId: string, escrowId: string, fromBlock: number = 0): Promise<BlockchainEvent[]> {
     try {
-      if (!this.escrowContract) return [];
+      // Check if blockchain service is available
+      if (!await this.ensureInitialized() || !this.escrowContract || !this.provider) return [];
 
       const events: BlockchainEvent[] = [];
       const currentBlock = await this.provider.getBlockNumber();
@@ -175,7 +228,8 @@ export class BlockchainEventService {
    */
   async syncEvents(): Promise<void> {
     try {
-      if (!this.escrowContract) return;
+      // Check if blockchain service is available
+      if (!await this.ensureInitialized() || !this.escrowContract || !this.provider) return;
 
       const lastSyncedBlock = await databaseService.getLastSyncedBlock();
       const currentBlock = await this.provider.getBlockNumber();
@@ -532,6 +586,12 @@ export class BlockchainEventService {
    */
   async startGlobalMonitoring(): Promise<void> {
     try {
+      // Check if blockchain service is available
+      if (!await this.ensureInitialized()) {
+        safeLogger.warn('BlockchainEventService not initialized, skipping global monitoring');
+        return;
+      }
+
       if (this.ldaoContract) {
         this.ldaoContract.on('Transfer', async (from, to, value, event) => {
           try {
