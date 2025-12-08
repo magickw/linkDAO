@@ -80,6 +80,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Track if we just completed authentication to trigger router refresh
   const justAuthenticatedRef = useRef(false);
 
+  // Track disconnect debounce to prevent false disconnection during state transitions
+  const disconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isDisconnectingRef = useRef(false);
+
   // Store session data - must be defined before checkStoredSession
   const storeSession = useCallback((token: string, userData: AuthUser) => {
     try {
@@ -270,13 +274,55 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []); // Empty dependency array - only run once on mount
 
   // Handle wallet connection changes with enhanced session persistence
+  // IMPORTANT: Uses debounce to prevent false disconnection during state transitions
   useEffect(() => {
     const handleWalletConnectionChange = async () => {
+      // Clear any pending disconnect timeout if wallet is now connected
+      if (isConnected && disconnectTimeoutRef.current) {
+        clearTimeout(disconnectTimeoutRef.current);
+        disconnectTimeoutRef.current = null;
+        isDisconnectingRef.current = false;
+        console.log('🔗 Wallet reconnected, cancelling pending logout');
+      }
+
       // Only logout if wallet is disconnected and we have a user
-      if (!isConnected && user) {
-        console.log('🔗 Wallet disconnected, logging out user');
-        handleLogout();
+      // Use a debounce to prevent false disconnects during state transitions
+      if (!isConnected && user && !isDisconnectingRef.current) {
+        // Don't immediately logout - wait to confirm it's a real disconnect
+        isDisconnectingRef.current = true;
+        console.log('🔗 Wallet appears disconnected, waiting to confirm...');
+
+        // Clear any existing timeout
+        if (disconnectTimeoutRef.current) {
+          clearTimeout(disconnectTimeoutRef.current);
+        }
+
+        // Wait 1.5 seconds to confirm it's a real disconnect, not a state transition
+        disconnectTimeoutRef.current = setTimeout(() => {
+          // Double-check that wallet is still disconnected before logging out
+          // We check isConnected again via the closure, but also check localStorage as backup
+          const storedAddress = localStorage.getItem('linkdao_wallet_address');
+          const storedToken = localStorage.getItem('linkdao_access_token');
+
+          // If we still have stored credentials, the disconnect might be temporary
+          if (storedToken && storedAddress) {
+            console.log('🔗 Stored session exists, checking if wallet reconnected...');
+            // Don't logout if we have a valid stored session - let the next render cycle handle it
+            isDisconnectingRef.current = false;
+            return;
+          }
+
+          console.log('🔗 Wallet disconnected confirmed, logging out user');
+          handleLogout();
+          isDisconnectingRef.current = false;
+        }, 1500);
+
         return;
+      }
+
+      // Reset disconnecting flag if connected
+      if (isConnected) {
+        isDisconnectingRef.current = false;
       }
 
       // If wallet is connected but no user, try to restore session (with cooldown)
@@ -309,6 +355,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     handleWalletConnectionChange();
+
+    // Cleanup timeout on unmount
+    return () => {
+      if (disconnectTimeoutRef.current) {
+        clearTimeout(disconnectTimeoutRef.current);
+      }
+    };
   }, [isConnected, address, user, isLoading, checkStoredSession, lastAuthTime]);
 
   // Fix navigation issue after wallet connection by refreshing router state

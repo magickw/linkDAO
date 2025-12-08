@@ -219,8 +219,15 @@ const EnhancedPostCard = React.memo(({
   }, [post.trendingStatus, post.engagementScore, post.createdAt, post.reactions, post.comments, post.shares]);
 
   // Format timestamp - memoized
-  const formatTimestamp = useCallback((date: Date) => {
+  const formatTimestamp = useCallback((dateInput: Date | string) => {
     const now = new Date();
+    const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
+
+    // Handle invalid dates
+    if (isNaN(date.getTime())) {
+      return 'recently';
+    }
+
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
     if (diffInSeconds < 60) {

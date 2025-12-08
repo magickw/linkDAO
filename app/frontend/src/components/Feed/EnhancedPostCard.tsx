@@ -163,10 +163,29 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
     fetchContent();
   }, [post.contentCid, post.id, post.mediaCids, post.content]);
 
-  const formatTimestamp = (date: Date) => {
+  const formatTimestamp = (dateInput: Date | string) => {
     const now = new Date();
+    const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
+
+    // Handle invalid dates
+    if (isNaN(date.getTime())) {
+      return 'recently';
+    }
+
     const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    return `${diffInHours}h ago`;
+
+    if (diffInHours < 1) {
+      const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+      return diffInMinutes <= 1 ? 'just now' : `${diffInMinutes}m ago`;
+    }
+    if (diffInHours < 24) {
+      return `${diffInHours}h ago`;
+    }
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 30) {
+      return `${diffInDays}d ago`;
+    }
+    return date.toLocaleDateString();
   };
 
   const handleLike = async () => {

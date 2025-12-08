@@ -56,23 +56,27 @@ const NavigationFixer: React.FC = () => {
   const prevConnectedRef = useRef(false);
   const prevAuthenticatedRef = useRef(false);
   const navigationFixApplied = useRef(false);
+  const lastFixTimeRef = useRef(0);
 
-  // Fix navigation when user connects wallet or authenticates
+  // Fix navigation when user authenticates (not just connects)
+  // We only apply the fix when authentication is successful to avoid fixing during logout
   useEffect(() => {
-    const wasConnected = prevConnectedRef.current;
     const wasAuthenticated = prevAuthenticatedRef.current;
-
-    prevConnectedRef.current = isConnected;
     prevAuthenticatedRef.current = isAuthenticated;
+    prevConnectedRef.current = isConnected;
 
-    // Detect when wallet just connected OR when authentication just completed
-    const justConnected = isConnected && !wasConnected;
-    const justAuthenticated = isAuthenticated && !wasAuthenticated;
+    // Only apply fix when authentication just completed (not on disconnect/logout)
+    const justAuthenticated = isAuthenticated && !wasAuthenticated && isConnected && user;
 
-    if ((justConnected || justAuthenticated) && !navigationFixApplied.current) {
+    // Prevent applying fix too frequently (within 3 seconds)
+    const now = Date.now();
+    const timeSinceLastFix = now - lastFixTimeRef.current;
+
+    if (justAuthenticated && !navigationFixApplied.current && timeSinceLastFix > 3000) {
       navigationFixApplied.current = true;
+      lastFixTimeRef.current = now;
 
-      console.log('🔧 Applying navigation fix after', justAuthenticated ? 'authentication' : 'wallet connection');
+      console.log('🔧 Applying navigation fix after authentication');
 
       // Strategy 1: Use requestAnimationFrame to wait for React render cycle
       requestAnimationFrame(() => {
@@ -87,6 +91,13 @@ const NavigationFixer: React.FC = () => {
 
         // Strategy 4: Add a small delay and then dispatch a dummy event to "wake up" event handlers
         setTimeout(() => {
+          // Only proceed if user is still authenticated
+          if (!isAuthenticated) {
+            console.log('🔧 Navigation fix cancelled - user no longer authenticated');
+            navigationFixApplied.current = false;
+            return;
+          }
+
           // Dispatch a benign event to ensure React's event system is responsive
           window.dispatchEvent(new CustomEvent('navigation-fix-applied'));
 
@@ -103,10 +114,16 @@ const NavigationFixer: React.FC = () => {
           setTimeout(() => {
             navigationFixApplied.current = false;
           }, 5000);
-        }, 100);
+        }, 200); // Increased delay to 200ms to ensure auth state is stable
       });
     }
-  }, [isConnected, isAuthenticated, router]);
+
+    // Reset flag on logout
+    if (!isAuthenticated && wasAuthenticated) {
+      navigationFixApplied.current = false;
+      console.log('🔧 Navigation fix reset due to logout');
+    }
+  }, [isConnected, isAuthenticated, user, router]);
 
   // Also fix navigation when route changes to ensure consistent behavior
   useEffect(() => {

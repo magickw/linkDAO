@@ -7,6 +7,7 @@ import { authService } from './authService';
 
 export interface CartItem {
   id: string;
+  cartItemId?: string; // Backend cart item ID for updates/deletes
   title: string;
   description: string;
   image: string;
@@ -455,7 +456,14 @@ class CartService {
     // If authenticated, also call backend API
     if (this.isAuthenticated) {
       try {
-        await this.removeItemFromBackend(itemId);
+        // Find the item to get its cartItemId for backend operations
+        const item = currentState.items.find(item => item.id === itemId);
+        if (item?.cartItemId) {
+          await this.removeItemFromBackend(item.cartItemId);
+        } else {
+          // If no cartItemId, this might be a local-only item, skip backend update
+          console.warn('No cartItemId found for item, skipping backend removal');
+        }
       } catch (error) {
         console.warn('Failed to remove item from backend cart:', error);
       }
@@ -514,10 +522,15 @@ class CartService {
     // If authenticated, also call backend API
     if (this.isAuthenticated) {
       try {
+        // Find the item to get its cartItemId for backend operations
+        const item = currentState.items.find(item => item.id === itemId);
         if (quantity <= 0) {
           await this.removeItemFromBackend(itemId);
+        } else if (item?.cartItemId) {
+          await this.updateItemQuantityInBackend(item.cartItemId, quantity);
         } else {
-          await this.updateItemQuantityInBackend(itemId, quantity);
+          // If no cartItemId, this might be a local-only item, skip backend update
+          console.warn('No cartItemId found for item, skipping backend update');
         }
       } catch (error) {
         console.warn('Failed to update item quantity in backend cart:', error);
@@ -829,6 +842,7 @@ class CartService {
   private transformBackendCartToState(backendCart: any): CartState {
     const items: CartItem[] = backendCart.items?.map((item: any) => ({
       id: item.productId || item.id,
+      cartItemId: item.id, // Store the actual cart item ID for backend operations
       title: item.product?.title || item.title || 'Unknown Product',
       description: item.product?.description || item.description || '',
       image: item.product?.images?.[0] || item.image || '',
