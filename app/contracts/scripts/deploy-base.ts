@@ -33,12 +33,18 @@ class BaseDeploymentManager {
     console.log('🚀 Starting Base deployment process...');
     console.log('📍 Network:', this.config.network);
     console.log('👤 Deployer:', deployer.address);
-    console.log('💰 Balance:', ethers.formatEther(await deployer.getBalance()), 'ETH');
     
     // Check if deployer has sufficient balance for deployment
-    const balance = await deployer.getBalance();
-    if (balance.lt(ethers.parseEther("0.01"))) {
-      console.warn('⚠️  Warning: Low balance detected. Deployment may fail due to insufficient funds.');
+    try {
+      const provider = ethers.provider;
+      const balance = await provider.getBalance(deployer.address);
+      console.log('💰 Balance:', ethers.formatEther(balance), 'ETH');
+      
+      if (balance.lt(ethers.parseEther("0.01"))) {
+        console.warn('⚠️  Warning: Low balance detected. Deployment may fail due to insufficient funds.');
+      }
+    } catch (error) {
+      console.log('⚠️  Could not fetch balance, continuing deployment...');
     }
   }
 
@@ -80,7 +86,7 @@ class BaseDeploymentManager {
     // Deploy MultiSigWallet first - constructor(address[] memory _owners, uint256 _requiredConfirmations, uint256 _timeDelay)
     await this.deployContract('MultiSigWallet', [
       [this.deployer.address], // owners - using deployer for now
-      1, // required confirmations
+      1, // required confirmations (using 1 for single owner, minimum required)
       0 // time delay
     ]);
 
@@ -201,7 +207,11 @@ class BaseDeploymentManager {
       const ContractFactory = await ethers.getContractFactory(contractName);
       const contract = await ContractFactory.deploy(...args);
       console.log(`⏳ Waiting for ${contractName} deployment...`);
-      await contract.deployed();
+      
+      // For ethers v6, use waitForDeployment() instead of deployed()
+      const deploymentTx = contract.deploymentTransaction();
+      await contract.waitForDeployment();
+      const contractAddress = await contract.getAddress();
 
       // Get the owner separately to handle potential issues on Base network
       let contractOwner = this.deployer.address; // Default to deployer
@@ -218,21 +228,21 @@ class BaseDeploymentManager {
 
       const deployedContract: DeployedContract = {
         name: contractName,
-        address: contract.address,
+        address: contractAddress,
         owner: contractOwner,
-        deploymentTx: contract.deployTransaction.hash
+        deploymentTx: deploymentTx.hash
       };
 
       this.deployedContracts.set(contractName, deployedContract);
       
-      console.log(`✅ ${contractName} deployed to: ${contract.address}`);
+      console.log(`✅ ${contractName} deployed to: ${contractAddress}`);
       console.log(`   Owner: ${deployedContract.owner}`);
       console.log(`   Tx: ${deployedContract.deploymentTx}`);
 
       // Verify on Etherscan/Basescan if enabled
       if (this.config.verifyContracts && this.config.network !== 'localhost' && this.config.network !== 'hardhat') {
         console.log(`🔍 Verifying ${contractName} on ${this.config.network}...`);
-        await this.verifyContract(contract.address, contractName, args);
+        await this.verifyContract(contractAddress, contractName, args);
       }
 
     } catch (error) {

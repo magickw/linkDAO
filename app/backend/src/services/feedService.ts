@@ -98,26 +98,34 @@ export class FeedService {
     let followingFilter = sql`1=1`;
     let quickPostFollowingFilter = sql`1=1`; // Separate filter for quick posts
     if (feedSource === 'following' && userAddress) {
-      // Get the user ID from address
+      // FIXED: Use transaction to prevent connection leaks
       const normalizedAddress = userAddress.toLowerCase();
 
       console.log('🔍 [BACKEND FEED] Building following filter for user:', normalizedAddress);
 
-      user = await db.select({ id: users.id })
-        .from(users)
-        .where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`)
-        .limit(1);
+      // Single transaction for user lookup and following list
+      const [userData, followingList] = await db.transaction(async (tx) => {
+        const userResult = await tx.select({ id: users.id })
+          .from(users)
+          .where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`)
+          .limit(1);
 
+        let followingResult = [];
+        if (userResult.length > 0) {
+          followingResult = await tx.select({ followingId: follows.followingId })
+            .from(follows)
+            .where(eq(follows.followerId, userResult[0].id));
+        }
+
+        return [userResult, followingResult];
+      });
+
+      user = userData;
       console.log('🔍 [BACKEND FEED] User lookup result:', user);
 
       if (user.length > 0) {
         const userId = user[0].id;
         console.log('✅ [BACKEND FEED] Found user ID:', userId);
-
-        // Get list of users the current user is following
-        const followingList = await db.select({ followingId: follows.followingId })
-          .from(follows)
-          .where(eq(follows.followerId, userId));
 
         console.log('🔍 [BACKEND FEED] Following list query result:', followingList);
 
@@ -1101,18 +1109,22 @@ export class FeedService {
     const { postId, fromAddress, amount, tokenType, message } = data;
 
     try {
-      // Get from user ID - use case-insensitive matching
+      // FIXED: Use transaction to prevent connection leaks
       const normalizedAddress = fromAddress.toLowerCase();
-      const fromUser = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
-      if (fromUser.length === 0) {
-        throw new Error('From user not found');
-      }
+      
+      const [fromUser, post] = await db.transaction(async (tx) => {
+        const userResult = await tx.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
+        if (userResult.length === 0) {
+          throw new Error('From user not found');
+        }
 
-      // Get post to find the author
-      const post = await db.select().from(posts).where(eq(posts.id, parseInt(postId))).limit(1);
-      if (post.length === 0) {
-        throw new Error('Post not found');
-      }
+        const postResult = await tx.select().from(posts).where(eq(posts.id, parseInt(postId))).limit(1);
+        if (postResult.length === 0) {
+          throw new Error('Post not found');
+        }
+
+        return [userResult, postResult];
+      });
 
       const tip = await db
         .insert(tips)

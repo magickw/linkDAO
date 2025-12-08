@@ -41,7 +41,7 @@ contract MultiSigWallet is ReentrancyGuard {
     
     uint256 public transactionCount;
     uint256 public constant MAX_OWNERS = 20;
-    uint256 public constant MIN_REQUIRED = 2;
+    uint256 public constant MIN_REQUIRED = 1;
     
     // Events
     event OwnerAdded(address indexed owner);

@@ -92,14 +92,23 @@ export class BlockchainIntegrationService {
     this.initializationAttempted = true;
 
     try {
-      // Create provider with timeout options to fail faster
+      // Check if RPC_URL is localhost or invalid
+      if (!RPC_URL || RPC_URL.includes('127.0.0.1') || RPC_URL.includes('localhost')) {
+        safeLogger.warn('BlockchainIntegrationService: localhost RPC detected, disabling blockchain features');
+        return false;
+      }
+
+      // Create provider with timeout and circuit breaker to prevent infinite retries
       this.provider = new ethers.JsonRpcProvider(RPC_URL, undefined, {
-        staticNetwork: true, // Prevents network detection retries
+        staticNetwork: true,
+        batchMaxCount: 1, // Reduce batch size
+        batchMaxSize: 10240, // Reduce batch size
+        polling: false, // Disable polling to reduce connections
       });
 
-      // Test the connection with a timeout
+      // Set up circuit breaker - fail fast on connection issues
       const timeoutPromise = new Promise<null>((_, reject) => {
-        setTimeout(() => reject(new Error('RPC connection timeout')), 5000);
+        setTimeout(() => reject(new Error('RPC connection timeout after 3 seconds')), 3000);
       });
 
       const networkPromise = this.provider.getNetwork();
@@ -115,7 +124,18 @@ export class BlockchainIntegrationService {
       safeLogger.info('BlockchainIntegrationService initialized successfully');
       return true;
     } catch (error) {
-      safeLogger.warn('BlockchainIntegrationService initialization failed - blockchain features will be disabled:', error instanceof Error ? error.message : 'Unknown error');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      safeLogger.warn('BlockchainIntegrationService initialization failed - blockchain features will be disabled:', errorMessage);
+      
+      // Clean up to prevent memory leaks
+      if (this.provider) {
+        try {
+          (this.provider as any).destroy?.();
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+      }
+      
       this.provider = null;
       this.ldaoToken = null;
       this.governance = null;

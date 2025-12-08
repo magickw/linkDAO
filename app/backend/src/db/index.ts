@@ -44,10 +44,10 @@ if (connectionString) {
       db = global._dbInstance;
       safeLogger.debug('🔄 Reusing existing database connection (Development)');
     } else {
-      // Optimized postgres client configuration with advanced pooling
-      const maxConnections = process.env.DB_MAX_CONNECTIONS
-        ? parseInt(process.env.DB_MAX_CONNECTIONS)
-        : (isRenderFree ? 2 : (isRenderPro ? 5 : 20));
+      // Restored Pro tier database pool configuration
+      const maxConnections = process.env.DB_POOL_MAX
+        ? parseInt(process.env.DB_POOL_MAX)
+        : (isRenderFree ? 2 : (isRenderPro ? 25 : 15)); // Pro tier: 25, Standard: 15, Free: 2
 
       const clientConfig = {
         prepare: false, // Disable prefetch as it's not supported in production environments

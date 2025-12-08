@@ -51,15 +51,18 @@ export class CacheService {
   constructor() {
     // Check if Redis is disabled or if we're in a memory-critical environment
     const isMemoryCritical = process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 512;
+    const isEmergencyMode = process.env.EMERGENCY_MODE === 'true';
     
     // Default to enabled unless explicitly disabled
     const redisEnabled = process.env.REDIS_ENABLED;
 
-    if (redisEnabled === 'false' || redisEnabled === '0' || isMemoryCritical) {
+    if (redisEnabled === 'false' || redisEnabled === '0' || isMemoryCritical || isEmergencyMode) {
       this.useRedis = false;
       if (!CacheService.loggedInit) {
         if (isMemoryCritical) {
           safeLogger.warn('Redis functionality is disabled due to memory-critical environment (<512MB)');
+        } else if (isEmergencyMode) {
+          safeLogger.warn('Redis functionality is disabled due to emergency mode');
         } else {
           safeLogger.warn('Redis functionality is disabled via REDIS_ENABLED environment variable');
         }

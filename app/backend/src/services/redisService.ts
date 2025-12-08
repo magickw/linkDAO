@@ -9,7 +9,9 @@ export class RedisService {
   private isConnected: boolean = false;
   private useRedis: boolean = true; // Flag to enable/disable Redis functionality
   private reconnectAttempts: number = 0;
-  private maxReconnectAttempts: number = 3; // Reduced from 5 to prevent excessive retries
+  private maxReconnectAttempts: number = 2; // Further reduced to prevent excessive retries
+  private reconnectDelay: number = 1000; // Start with 1 second delay
+  private maxReconnectDelay: number = 5000; // Cap at 5 seconds instead of 30
   private connectionPromise: Promise<void> | null = null;
   private static instance: RedisService | null = null;
 
@@ -24,13 +26,16 @@ export class RedisService {
   private constructor() {
     // Check if Redis is disabled or if we're in a memory-critical environment
     const isMemoryCritical = process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 512;
+    const isEmergencyMode = process.env.EMERGENCY_MODE === 'true';
     
     // Default to enabled unless explicitly disabled
     const redisEnabled = process.env.REDIS_ENABLED;
-    if (redisEnabled === 'false' || redisEnabled === '0' || isMemoryCritical) {
+    if (redisEnabled === 'false' || redisEnabled === '0' || isMemoryCritical || isEmergencyMode) {
       this.useRedis = false;
       if (isMemoryCritical) {
         safeLogger.warn('Redis functionality is disabled due to memory-critical environment (<512MB)');
+      } else if (isEmergencyMode) {
+        safeLogger.warn('Redis functionality is disabled due to emergency mode');
       } else {
         safeLogger.warn('Redis functionality is disabled via REDIS_ENABLED environment variable');
       }
@@ -62,8 +67,8 @@ export class RedisService {
             return false; // Stop reconnecting
           }
           
-          // Calculate delay with exponential backoff: 1s, 2s, 4s, 8s, 16s...
-          const delay = Math.min(Math.pow(2, attempts - 1) * 1000, 30000); // Cap at 30 seconds
+          // Calculate delay with faster backoff: 1s, 2s, 4s (max 5s)
+          const delay = Math.min(Math.pow(2, attempts - 1) * this.reconnectDelay, this.maxReconnectDelay);
           safeLogger.warn(`Redis reconnection attempt ${attempts}/${this.maxReconnectAttempts}, next attempt in ${delay}ms`, {
             attempts,
             delay,

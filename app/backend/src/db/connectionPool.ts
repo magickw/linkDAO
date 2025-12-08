@@ -30,11 +30,11 @@ export class DatabaseConnectionPool {
     const dbUrl = new URL(connectionString);
 
     this.config = {
-      // OPTIMIZED: Pool configuration for high-load scenarios
+      // RESTORED: Proper Pro tier pool configuration for optimal performance
       // Pro tier (4GB RAM): 25 connections, Standard (2GB): 15 connections, Free (512MB): 5 connections
       max: parseInt(process.env.DB_POOL_MAX ||
         (process.env.RENDER_SERVICE_TYPE === 'pro' ? '25' :
-        (process.env.RENDER_SERVICE_TYPE === 'standard' ? '15' : '15'))), // Increased for pro tier
+        (process.env.RENDER_SERVICE_TYPE === 'standard' ? '15' : '5'))), // Restored Pro tier limits
       idle_timeout: parseInt(process.env.DB_IDLE_TIMEOUT || '30'), // Reduced idle timeout for faster cleanup
       connect_timeout: parseInt(process.env.DB_CONNECT_TIMEOUT || '10'), // Reduced connect timeout
       prepare: false, // Disable prepared statements for better compatibility
