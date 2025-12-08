@@ -702,7 +702,10 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
             {activeTab === 'listings' && (
               <GlassPanel className="p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xl font-semibold text-white">My Listings</h3>
+                  <div>
+                    <h3 className="text-xl font-semibold text-white">My Listings</h3>
+                    <p className="text-gray-400 text-sm mt-1">Manage your product listings and edit their details</p>
+                  </div>
                   <div className="flex gap-3">
                     <Button
                       onClick={() => fetchListings()}
@@ -731,11 +734,11 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                 ) : (listings as UnifiedSellerListing[]).length > 0 ? (
                   <div className="space-y-4">
                     {(listings as UnifiedSellerListing[]).map((listing: UnifiedSellerListing) => (
-                      <div key={listing.id} className="bg-gray-800 rounded-lg p-4">
+                      <div key={listing.id} className="bg-gray-800 rounded-lg p-4 hover:bg-gray-750 transition-colors duration-200 border border-gray-700 hover:border-gray-600">
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
                             <h4 className="text-white font-medium mb-1">{listing.title}</h4>
-                            <p className="text-gray-300 text-sm mb-2">{listing.description}</p>
+                            <p className="text-gray-300 text-sm mb-2 line-clamp-2">{listing.description}</p>
                             <div className="flex items-center gap-4 text-sm">
                               <span className="text-green-400 font-medium">
                                 {typeof listing.price === 'string' ? listing.price : listing.price.toString()} {listing.currency || 'ETH'}
@@ -751,17 +754,26 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                               </span>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <div className="text-right text-sm text-gray-400">
+                          <div className="flex items-center gap-3">
+                            <div className="text-right text-sm text-gray-400 mr-2">
                               <div>Views: {listing.views || 0}</div>
                               <div>Likes: {listing.favorites || 0}</div>
                             </div>
                             <Button
+                              onClick={() => router.push(`/marketplace/seller/listings/edit/${listing.id}`)}
+                              variant="primary"
+                              size="sm"
+                              className="font-semibold px-3 py-2"
+                            >
+                              ✏️ Edit
+                            </Button>
+                            <Button
                               onClick={() => router.push(`/marketplace/listing/${listing.id}`)}
                               variant="outline"
                               size="sm"
+                              className="px-3 py-2"
                             >
-                              View
+                              👁️ View
                             </Button>
                           </div>
                         </div>
