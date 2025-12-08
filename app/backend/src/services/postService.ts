@@ -162,7 +162,8 @@ export class PostService {
           mediaCids.length > 0 ? mediaCids : undefined,
           input.tags && input.tags.length > 0 ? input.tags : undefined,
           input.onchainRef,
-          input.content  // Pass the actual content as fallback
+          input.content,  // Pass the actual content as fallback
+          input.title     // Pass the title field
         );
 
         // Update post with moderation metadata
@@ -195,6 +196,7 @@ export class PostService {
         id: dbPost.id.toString(),
         author: input.author,
         parentId: input.parentId || null,
+        title: input.title || '', // Include title from input
         contentCid,
         mediaCids,
         tags: input.tags || [],
@@ -294,10 +296,12 @@ export class PostService {
         id: dbPost.id.toString(),
         author,
         parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
+        title: dbPost.title || '', // Include title field
         content: dbPost.content,
         contentCid: dbPost.contentCid,
         mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
         tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
+        communityId: dbPost.communityId || null, // Include communityId for proper redirects
         createdAt,
         onchainRef: dbPost.onchainRef || ''
       };

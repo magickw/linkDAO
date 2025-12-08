@@ -887,6 +887,51 @@ export class UnifiedMarketplaceService {
     }
   }
 
+  async updateListing(id: string, input: Partial<CreateListingInput>): Promise<MarketplaceListing> {
+    console.log('[MarketplaceService] updateListing called with:', id, input);
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      // Get authentication data directly from localStorage (consistent with authService)
+      if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('linkdao_access_token') ||
+          localStorage.getItem('token') ||
+          localStorage.getItem('authToken');
+        const walletAddress = localStorage.getItem('linkdao_wallet_address') ||
+          localStorage.getItem('wallet_address');
+
+        // Add Authorization header with Bearer token (required for CSRF bypass)
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        // Add wallet authentication if available
+        if (walletAddress) {
+          headers['X-Wallet-Address'] = walletAddress;
+        }
+      }
+
+      const response = await fetch(`${this.baseUrl}/api/marketplace/seller/listings/${id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(input),
+        signal: this.createTimeoutSignal(10000)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error updating listing:', error);
+      throw error;
+    }
+  }
+
   async getMarketplaceListings(filters?: any): Promise<MarketplaceListing[]> {
     try {
       const params = new URLSearchParams();

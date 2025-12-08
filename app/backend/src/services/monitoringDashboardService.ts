@@ -1,3 +1,4 @@
+import * as os from 'os';
 import { healthMonitoringService, SystemHealth } from './healthMonitoringService';
 import { logger } from '../utils/logger';
 
@@ -227,6 +228,7 @@ export class MonitoringDashboardService {
     try {
       const health = await healthMonitoringService.performHealthCheck();
       const systemMetrics = healthMonitoringService.getMetrics();
+      const totalSystemMemory = os.totalmem();
       
       const metrics: DashboardMetrics = {
         timestamp: new Date().toISOString(),
@@ -246,7 +248,7 @@ export class MonitoringDashboardService {
           memory: {
             used: health.metrics.memory.heapUsed,
             total: health.metrics.memory.heapTotal,
-            usage: Math.round((health.metrics.memory.heapUsed / health.metrics.memory.heapTotal) * 100)
+            usage: Math.round((health.metrics.memory.rss / totalSystemMemory) * 100)
           },
           cpu: {
             user: health.metrics.cpu?.user || 0,

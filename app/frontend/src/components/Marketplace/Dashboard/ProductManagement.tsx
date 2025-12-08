@@ -168,14 +168,15 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({ address })
               <PauseIcon className="h-4 w-4" />
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => console.log('Edit', product.id)}
-            className="text-blue-500 hover:bg-blue-500/10"
-          >
-            <PencilIcon className="h-4 w-4" />
-          </Button>
+          <Link href={`/marketplace/seller/listings/edit/${product.id}`} passHref>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-blue-500 hover:bg-blue-500/10"
+            >
+              <PencilIcon className="h-4 w-4" />
+            </Button>
+          </Link>
           <Button
             variant="ghost"
             size="sm"

@@ -1,0 +1,1427 @@
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useAccount } from 'wagmi';
+import { useRouter } from 'next/router';
+import { useToast } from '@/context/ToastContext';
+import { marketplaceService, type MarketplaceListing } from '@/services/marketplaceService';
+import { GlassPanel } from '@/design-system/components/GlassPanel';
+import { Button } from '@/design-system/components/Button';
+import Layout from '@/components/Layout';
+import { ipfsUploadService } from '@/services/ipfsUploadService';
+import {
+  Upload,
+  X,
+  Image as ImageIcon,
+  Info,
+  Eye,
+  Shield,
+  ChevronLeft,
+  ChevronRight,
+  Star,
+  Check,
+  AlertCircle,
+  Lock,
+  Shuffle,
+  Save
+} from 'lucide-react';
+
+// Enhanced form data structure
+interface EnhancedFormData {
+  // Basic Info
+  title: string;
+  description: string;
+  category: string;
+  tags: string[];
+
+  // SEO Metadata
+  seoTitle: string;
+  seoDescription: string;
+
+  // Item Details
+  itemType: 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE';
+  condition: string;
+
+  // Pricing
+  price: string;
+  currency: 'USDC' | 'USDT' | 'ETH' | 'USD';
+  listingType: 'FIXED_PRICE' | 'AUCTION';
+  duration: number;
+  royalty: number;
+
+  // Quantity & Inventory
+  quantity: number;
+  unlimitedQuantity: boolean;
+
+  // Security & Trust
+  escrowEnabled: boolean;
+
+  // Blockchain
+  tokenAddress: string;
+}
+
+// Available categories
+const CATEGORIES = [
+  { value: 'art', label: '🎨 Art & Collectibles' },
+  { value: 'music', label: '🎵 Music & Audio' },
+  { value: 'gaming', label: '🎮 Gaming & Virtual Worlds' },
+  { value: 'photography', label: '📸 Photography' },
+  { value: 'domain', label: '🌐 Domain Names' },
+  { value: 'utility', label: '⚡ Utility & Access' },
+  { value: 'sports', label: '⚽ Sports & Recreation' },
+  { value: 'memes', label: '😄 Memes & Fun' },
+  { value: 'fashion', label: '👕 Fashion & Wearables' },
+  { value: 'electronics', label: '📱 Electronics' },
+  { value: 'books', label: '📚 Books & Media' },
+  { value: 'services', label: '🛠️ Services' },
+  { value: 'other', label: '📦 Other' }
+];
+
+// Popular tags
+const POPULAR_TAGS = [
+  'rare', 'limited-edition', 'handmade', 'vintage', 'premium',
+  'exclusive', 'collectible', 'digital-art', 'gaming', 'music',
+  'photography', 'utility', 'access-token', 'membership'
+];
+
+// Step definitions
+type FormStep = 'basic' | 'details' | 'pricing' | 'images' | 'review';
+
+const STEP_TITLES = {
+  basic: 'Basic Information',
+  details: 'Item Details',
+  pricing: 'Pricing & Terms',
+  images: 'Images & Media',
+  review: 'Review & Publish'
+};
+
+const STEP_ORDER: FormStep[] = ['basic', 'details', 'pricing', 'images', 'review'];
+
+const EditListingPage: React.FC = () => {
+  const { address, isConnected } = useAccount();
+  const { addToast } = useToast();
+  const router = useRouter();
+  const { id } = router.query;
+
+  // Enhanced form state
+  const [currentStep, setCurrentStep] = useState<FormStep>('basic');
+  const [formData, setFormData] = useState<EnhancedFormData>({
+    title: '',
+    description: '',
+    category: '',
+    tags: [],
+    seoTitle: '',
+    seoDescription: '',
+    itemType: 'DIGITAL',
+    condition: 'new',
+    price: '',
+    currency: 'USD', // Default to USD for stable pricing
+    listingType: 'FIXED_PRICE',
+    duration: 86400,
+    royalty: 0,
+    quantity: 1,
+    unlimitedQuantity: false,
+    escrowEnabled: true,
+    tokenAddress: ''
+  });
+
+  // Image management
+  const [images, setImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [existingImages, setExistingImages] = useState<string[]>([]);
+  const [primaryImageIndex, setPrimaryImageIndex] = useState(0);
+  const [dragActive, setDragActive] = useState(false);
+
+  // UI state
+  const [loading, setLoading] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [ethPrice, setEthPrice] = useState<number>(2400); // Mock ETH price
+  const [newTag, setNewTag] = useState('');
+  const [initialLoading, setInitialLoading] = useState(true);
+
+  // State for field-specific errors
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  // Load existing listing data
+  useEffect(() => {
+    const loadListingData = async () => {
+      if (!id || typeof id !== 'string') return;
+      
+      try {
+        setInitialLoading(true);
+        // Fetch the listing data from the API
+        console.log('Loading listing data for ID:', id);
+        
+        const listing = await marketplaceService.getProductById(id);
+        
+        if (!listing) {
+          throw new Error('Listing not found');
+        }
+        
+        // Transform listing data to form data
+        const metadata: any = listing.metadata || {};
+        const transformedData: EnhancedFormData = {
+          title: listing.title,
+          description: listing.description,
+          category: listing.categoryId,
+          tags: listing.tags || [],
+          seoTitle: metadata.seoTitle || '',
+          seoDescription: metadata.seoDescription || '',
+          itemType: (metadata.itemType && ['PHYSICAL', 'DIGITAL', 'NFT', 'SERVICE'].includes(metadata.itemType)) 
+            ? metadata.itemType
+            : 'DIGITAL',
+          condition: metadata.condition || 'new',
+          price: listing.priceAmount.toString(),
+          currency: (listing.priceCurrency as 'USDC' | 'USDT' | 'ETH' | 'USD') || 'USD',
+          listingType: (metadata.listingType && ['FIXED_PRICE', 'AUCTION'].includes(metadata.listingType)) 
+            ? metadata.listingType
+            : 'FIXED_PRICE',
+          duration: metadata.duration || 86400,
+          royalty: metadata.royalty || 0,
+          quantity: listing.inventory,
+          unlimitedQuantity: listing.inventory >= 999999,
+          escrowEnabled: metadata.escrowEnabled ?? true,
+          tokenAddress: metadata.tokenAddress || ''
+        };
+        
+        setFormData(transformedData);
+        setExistingImages(listing.images || []);
+        setPrimaryImageIndex(0);
+      } catch (error) {
+        console.error('Error loading listing data:', error);
+        addToast('Failed to load listing data: ' + (error instanceof Error ? error.message : 'Unknown error'), 'error');
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    if (id) {
+      loadListingData();
+    }
+  }, [id, addToast]);
+
+  // Real-time validation
+  const validateField = (field: keyof EnhancedFormData, value: any) => {
+    let error = '';
+
+    switch (field) {
+      case 'title':
+        if (!value.trim()) {
+          error = 'Product title is required';
+        } else if (value.length < 5) {
+          error = 'Title must be at least 5 characters';
+        } else if (value.length > 100) {
+          error = 'Title must be less than 100 characters';
+        }
+        break;
+
+      case 'description':
+        if (!value.trim()) {
+          error = 'Product description is required';
+        } else if (value.length < 20) {
+          error = 'Description must be at least 20 characters';
+        } else if (value.length > 2000) {
+          error = 'Description must be less than 2000 characters';
+        }
+        break;
+
+      case 'category':
+        if (!value) {
+          error = 'Please select a category';
+        }
+        break;
+
+      case 'price':
+        if (!value) {
+          error = 'Price is required';
+        } else {
+          const price = parseFloat(value);
+          if (isNaN(price) || price <= 0) {
+            error = 'Please enter a valid price';
+          }
+        }
+        break;
+
+      case 'quantity':
+        if (!formData.unlimitedQuantity && (value < 1)) {
+          error = 'Quantity must be at least 1';
+        }
+        break;
+    }
+
+    setFieldErrors(prev => ({
+      ...prev,
+      [field]: error
+    }));
+  };
+
+  // Enhanced form validation
+  const validateForm = (): { isValid: boolean; errors: Record<string, string> } => {
+    const errors: Record<string, string> = {};
+
+    // Basic info validation
+    if (!formData.title.trim()) {
+      errors.title = 'Product title is required';
+    } else if (formData.title.length < 5) {
+      errors.title = 'Title must be at least 5 characters';
+    } else if (formData.title.length > 100) {
+      errors.title = 'Title must be less than 100 characters';
+    }
+
+    if (!formData.description.trim()) {
+      errors.description = 'Product description is required';
+    } else if (formData.description.length < 20) {
+      errors.description = 'Description must be at least 20 characters';
+    } else if (formData.description.length > 2000) {
+      errors.description = 'Description must be less than 2000 characters';
+    }
+
+    if (!formData.category) {
+      errors.category = 'Please select a category';
+    }
+
+    // Item details validation
+    if (!formData.condition) {
+      errors.condition = 'Please select a condition';
+    }
+
+    // Pricing validation
+    if (!formData.price) {
+      errors.price = 'Price is required';
+    } else {
+      const price = parseFloat(formData.price);
+      if (isNaN(price) || price <= 0) {
+        errors.price = 'Please enter a valid price';
+      }
+    }
+
+    // Quantity validation
+    if (!formData.unlimitedQuantity && formData.quantity < 1) {
+      errors.quantity = 'Quantity must be at least 1';
+    }
+
+    // Images validation
+    const totalImages = existingImages.length + images.length;
+    if (totalImages === 0) {
+      errors.images = 'At least one image is required';
+    } else if (totalImages > 10) {
+      errors.images = 'Maximum 10 images allowed';
+    }
+
+    return {
+      isValid: Object.keys(errors).length === 0,
+      errors
+    };
+  };
+
+  // Form validation by step
+  const validateStep = (step: FormStep): boolean => {
+    const { isValid, errors } = validateForm();
+
+    switch (step) {
+      case 'basic':
+        return !errors.title && !errors.description && !errors.category;
+      case 'details':
+        return !errors.condition && !errors.quantity;
+      case 'pricing':
+        return !errors.price;
+      case 'images':
+        return !errors.images;
+      case 'review':
+        return isValid;
+      default:
+        return false;
+    }
+  };
+
+  // Enhanced form handlers with real-time validation
+  const handleFormChange = (field: keyof EnhancedFormData, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    validateField(field, value);
+  };
+
+  const handleAddTag = (tag: string) => {
+    if (tag && !formData.tags.includes(tag) && formData.tags.length < 10) {
+      handleFormChange('tags', [...formData.tags, tag]);
+      setNewTag('');
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    handleFormChange('tags', formData.tags.filter(tag => tag !== tagToRemove));
+  };
+
+  // Handle drag and drop events
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFiles(Array.from(e.dataTransfer.files));
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      handleFiles(Array.from(e.target.files));
+    }
+  };
+
+  const handleFiles = (files: File[]) => {
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+
+    if (imageFiles.length === 0) {
+      addToast('Please select valid image files', 'error');
+      return;
+    }
+
+    const remainingSlots = 10 - (existingImages.length + images.length);
+    const filesToAdd = imageFiles.slice(0, remainingSlots);
+
+    if (filesToAdd.length < imageFiles.length) {
+      addToast(`Only ${remainingSlots} more images can be added (max 10 total)`, 'warning');
+    }
+
+    setImages(prev => [...prev, ...filesToAdd]);
+
+    filesToAdd.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (e.target?.result) {
+          setImagePreviews(prev => [...prev, e.target!.result as string]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeImage = (index: number) => {
+    // Check if it's an existing image or a newly uploaded one
+    if (index < existingImages.length) {
+      // Removing existing image
+      const newExistingImages = [...existingImages];
+      newExistingImages.splice(index, 1);
+      setExistingImages(newExistingImages);
+    } else {
+      // Removing newly uploaded image
+      const adjustedIndex = index - existingImages.length;
+      const newImages = [...images];
+      const newPreviews = [...imagePreviews];
+      
+      newImages.splice(adjustedIndex, 1);
+      newPreviews.splice(adjustedIndex, 1);
+      
+      setImages(newImages);
+      setImagePreviews(newPreviews);
+      
+      // Adjust primary image index if needed
+      if (primaryImageIndex > adjustedIndex) {
+        setPrimaryImageIndex(primaryImageIndex - 1);
+      } else if (primaryImageIndex === adjustedIndex) {
+        setPrimaryImageIndex(0);
+      }
+    }
+  };
+
+  const setAsPrimary = (index: number) => {
+    setPrimaryImageIndex(index);
+  };
+
+  const moveImage = (fromIndex: number, toIndex: number) => {
+    // Combine existing and new images for manipulation
+    const allImages = [...existingImages, ...imagePreviews];
+    const newImages = [...images];
+    const newPreviews = [...imagePreviews];
+    const newExistingImages = [...existingImages];
+
+    const [movedImage] = allImages.splice(fromIndex, 1);
+    allImages.splice(toIndex, 0, movedImage);
+
+    // Update state based on whether moved items were existing or new images
+    if (fromIndex < existingImages.length && toIndex < existingImages.length) {
+      // Moving existing images among themselves
+      const [moved] = newExistingImages.splice(fromIndex, 1);
+      newExistingImages.splice(toIndex, 0, moved);
+      setExistingImages(newExistingImages);
+    } else if (fromIndex >= existingImages.length && toIndex >= existingImages.length) {
+      // Moving new images among themselves
+      const adjustedFrom = fromIndex - existingImages.length;
+      const adjustedTo = toIndex - existingImages.length;
+      const [movedImageFile] = newImages.splice(adjustedFrom, 1);
+      const [movedPreview] = newPreviews.splice(adjustedFrom, 1);
+      
+      newImages.splice(adjustedTo, 0, movedImageFile);
+      newPreviews.splice(adjustedTo, 0, movedPreview);
+      
+      setImages(newImages);
+      setImagePreviews(newPreviews);
+    } else {
+      // Moving between existing and new images - more complex case
+      // For simplicity, we'll just update the arrays appropriately
+      setExistingImages(allImages.filter((_, i) => i < newExistingImages.length));
+      setImagePreviews(allImages.slice(newExistingImages.length));
+    }
+
+    // Update primary image index
+    if (primaryImageIndex === fromIndex) {
+      setPrimaryImageIndex(toIndex);
+    } else if (primaryImageIndex === toIndex) {
+      setPrimaryImageIndex(fromIndex > toIndex ? primaryImageIndex + 1 : primaryImageIndex - 1);
+    }
+  };
+
+
+
+  // Step navigation
+  const currentStepIndex = STEP_ORDER.indexOf(currentStep);
+  const canGoNext = validateStep(currentStep);
+  const canGoPrev = currentStepIndex > 0;
+
+  const goToStep = (step: FormStep) => {
+    setCurrentStep(step);
+  };
+
+  const goNext = () => {
+    if (canGoNext && currentStepIndex < STEP_ORDER.length - 1) {
+      setCurrentStep(STEP_ORDER[currentStepIndex + 1]);
+    }
+  };
+
+  const goPrev = () => {
+    if (canGoPrev) {
+      setCurrentStep(STEP_ORDER[currentStepIndex - 1]);
+    }
+  };
+
+
+
+  // Form submission
+  const handleSubmit = async () => {
+    if (!isConnected || !address) {
+      addToast('Please connect your wallet first', 'error');
+      return;
+    }
+
+    if (!id || typeof id !== 'string') {
+      addToast('Invalid listing ID', 'error');
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // Validate required fields
+      if (!formData.title) throw new Error('Title is required');
+      if (!formData.description) throw new Error('Description is required');
+      if (!formData.price || parseFloat(formData.price) <= 0) throw new Error('Valid price is required');
+
+      // Upload new images to IPFS first
+      const uploadedImageUrls: string[] = [...existingImages];
+      
+      for (let i = 0; i < images.length; i++) {
+        try {
+          const result = await ipfsUploadService.uploadFile(images[i]);
+          uploadedImageUrls.push(result.url);
+          console.log(`[EDIT] Uploaded image ${i + 1}/${images.length}:`, result.url);
+        } catch (uploadError) {
+          console.error(`[EDIT] Failed to upload image ${i + 1}:`, uploadError);
+          throw new Error(`Failed to upload image ${i + 1}. Please try again.`);
+        }
+      }
+
+      // Reorder images so primary image is first
+      if (primaryImageIndex > 0 && primaryImageIndex < uploadedImageUrls.length) {
+        const primaryImage = uploadedImageUrls[primaryImageIndex];
+        uploadedImageUrls.splice(primaryImageIndex, 1);
+        uploadedImageUrls.unshift(primaryImage);
+      }
+
+      console.log('[EDIT] All images processed:', uploadedImageUrls);
+
+      // Prepare data in the format expected by the backend
+      const listingData = {
+        title: formData.title,
+        description: formData.description,
+        price: formData.price,
+        categoryId: formData.category,
+        currency: formData.currency,
+        inventory: formData.unlimitedQuantity ? 999999 : formData.quantity,
+        tags: formData.tags,
+        images: uploadedImageUrls, // Include all image URLs
+        metadata: {
+          itemType: formData.itemType,
+          condition: formData.condition,
+          listingType: formData.listingType,
+          escrowEnabled: formData.escrowEnabled,
+          royalty: formData.royalty,
+          primaryImageIndex: 0, // Primary is now always first after reordering
+          seoTitle: formData.seoTitle || formData.title,
+          seoDescription: formData.seoDescription || formData.description.substring(0, 160)
+        }
+      };
+
+      console.log('[EDIT] About to call marketplaceService.updateListing');
+      console.log('[EDIT] marketplaceService:', marketplaceService);
+      console.log('[EDIT] marketplaceService.updateListing:', marketplaceService.updateListing);
+      console.log('[EDIT] listingData:', listingData);
+
+      // Call the real update listing API
+      await marketplaceService.updateListing(id, listingData);
+      
+      addToast('🎉 Listing updated successfully!', 'success');
+      router.push('/marketplace/seller/dashboard');
+    } catch (error: any) {
+      console.error('[EDIT] Error caught:', error);
+      console.error('[EDIT] Error message:', error?.message);
+      addToast(error.message || 'Failed to update listing', 'error');
+      console.error('Error updating listing:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Helper components
+  const StepIndicator = () => (
+    <div className="flex items-center justify-center mb-8">
+      {STEP_ORDER.map((step, index) => {
+        const isActive = step === currentStep;
+        const isCompleted = STEP_ORDER.indexOf(currentStep) > index;
+        const isAccessible = index <= STEP_ORDER.indexOf(currentStep);
+
+        return (
+          <React.Fragment key={step}>
+            <div
+              className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-medium cursor-pointer transition-all ${isActive
+                  ? 'bg-indigo-500 text-white'
+                  : isCompleted
+                    ? 'bg-green-500 text-white'
+                    : isAccessible
+                      ? 'bg-white/20 text-white hover:bg-white/30'
+                      : 'bg-white/10 text-white/50 cursor-not-allowed'
+                }`}
+              onClick={() => isAccessible && goToStep(step)}
+            >
+              {isCompleted ? <Check size={16} /> : index + 1}
+            </div>
+            {index < STEP_ORDER.length - 1 && (
+              <div className={`w-12 h-0.5 mx-2 ${isCompleted ? 'bg-green-500' : 'bg-white/20'
+                }`} />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+
+  const PriceDisplay = ({ amount, currency }: { amount: string; currency: string }) => {
+    // Only show conversion for ETH currency
+    if (currency === 'ETH' && amount) {
+      const usdValue = parseFloat(amount || '0') * ethPrice;
+      return (
+        <p className="text-sm text-green-400 mt-1">
+          ≈ ${usdValue.toFixed(2)} USD
+        </p>
+      );
+    }
+    
+    // For USD or other currencies, don't show conversion
+    return null;
+  };
+
+  const ItemTypeCard = ({ type, selected, onClick, disabled }: {
+    type: 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE';
+    selected: boolean;
+    onClick: () => void;
+    disabled?: boolean;
+  }) => {
+    const typeInfo = {
+      PHYSICAL: { icon: '📦', label: 'Physical Goods', desc: 'Tangible items that require shipping' },
+      DIGITAL: { icon: '💻', label: 'Digital Goods', desc: 'Downloadable files, software, ebooks' },
+      NFT: { icon: '🎨', label: 'NFT', desc: 'Non-fungible tokens, digital collectibles' },
+      SERVICE: { icon: '🛠️', label: 'Service', desc: 'Consultation, development, design work' }
+    };
+
+    const info = typeInfo[type];
+
+    return (
+      <div
+        className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${selected
+            ? 'border-indigo-400 bg-indigo-500/20'
+            : 'border-white/20 bg-white/5 hover:border-white/40'
+          } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+        onClick={!disabled ? onClick : undefined}
+      >
+        <div className="text-2xl mb-2">{info.icon}</div>
+        <h3 className="font-medium text-white mb-1">{info.label}</h3>
+        <p className="text-sm text-white/70">{info.desc}</p>
+      </div>
+    );
+  };
+
+  if (!isConnected) {
+    return (
+      <Layout title="Edit Listing - LinkDAO Marketplace" fullWidth={true}>
+        <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+            <GlassPanel variant="primary" className="text-center py-12">
+              <Lock className="mx-auto h-12 w-12 text-white/60 mb-4" />
+              <h2 className="text-2xl font-semibold text-white mb-4">Connect Your Wallet</h2>
+              <p className="text-white/80">Please connect your wallet to edit a listing.</p>
+            </GlassPanel>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (initialLoading) {
+    return (
+      <Layout title="Edit Listing - LinkDAO Marketplace" fullWidth={true}>
+        <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+            <GlassPanel variant="primary" className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+              <h2 className="text-2xl font-semibold text-white mb-4">Loading Listing Data</h2>
+              <p className="text-white/80">Please wait while we load your listing information...</p>
+            </GlassPanel>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  return (
+    <Layout title="Edit Listing - LinkDAO Marketplace" fullWidth={true}>
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          {/* Header */}
+          <div className="mb-8">
+            <button
+              onClick={() => router.back()}
+              className="flex items-center text-white/80 hover:text-white mb-4 transition-colors"
+            >
+              <ChevronLeft className="mr-2" size={20} />
+              Back to Dashboard
+            </button>
+            <h1 className="text-3xl font-bold text-white">Edit Product Listing</h1>
+            <p className="text-white/70 mt-2">Update your product details, pricing, and media</p>
+          </div>
+
+          {/* Progress indicator */}
+          <GlassPanel className="mb-8">
+            <StepIndicator />
+            
+            <div className="text-center mb-6">
+              <h2 className="text-xl font-semibold text-white">
+                {STEP_TITLES[currentStep]}
+              </h2>
+            </div>
+          </GlassPanel>
+
+          {/* Form content */}
+          <GlassPanel className="mb-8">
+            {/* Basic Information Step */}
+            {currentStep === 'basic' && (
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Product Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.title}
+                    onChange={(e) => handleFormChange('title', e.target.value)}
+                    className={`w-full px-4 py-3 bg-white/10 border ${
+                      fieldErrors.title ? 'border-red-500' : 'border-white/20'
+                    } rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                    placeholder="Enter a descriptive title for your product"
+                  />
+                  {fieldErrors.title && (
+                    <p className="mt-1 text-sm text-red-400">{fieldErrors.title}</p>
+                  )}
+                  <p className="mt-1 text-xs text-white/60">
+                    Create a clear, descriptive title that includes relevant keywords
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Description *
+                  </label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => handleFormChange('description', e.target.value)}
+                    rows={6}
+                    className={`w-full px-4 py-3 bg-white/10 border ${
+                      fieldErrors.description ? 'border-red-500' : 'border-white/20'
+                    } rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                    placeholder="Describe your product in detail..."
+                  />
+                  {fieldErrors.description && (
+                    <p className="mt-1 text-sm text-red-400">{fieldErrors.description}</p>
+                  )}
+                  <div className="flex justify-between mt-1">
+                    <p className="text-xs text-white/60">
+                      Include key features, specifications, and benefits
+                    </p>
+                    <p className="text-xs text-white/60">
+                      {formData.description.length}/2000
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Category *
+                  </label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => handleFormChange('category', e.target.value)}
+                    className={`w-full px-4 py-3 bg-white/10 border ${
+                      fieldErrors.category ? 'border-red-500' : 'border-white/20'
+                    } rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                  >
+                    <option value="">Select a category</option>
+                    {CATEGORIES.map((cat) => (
+                      <option key={cat.value} value={cat.value} className="bg-gray-800">
+                        {cat.label}
+                      </option>
+                    ))}
+                  </select>
+                  {fieldErrors.category && (
+                    <p className="mt-1 text-sm text-red-400">{fieldErrors.category}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Tags
+                  </label>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {formData.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-indigo-500/20 text-indigo-300"
+                      >
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTag(tag)}
+                          className="ml-2 text-indigo-400 hover:text-white"
+                        >
+                          <X size={14} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex">
+                    <input
+                      type="text"
+                      value={newTag}
+                      onChange={(e) => setNewTag(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag(newTag.trim()))}
+                      className="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-l-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      placeholder="Add a tag and press Enter"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleAddTag(newTag.trim())}
+                      className="px-4 bg-indigo-600 text-white rounded-r-lg hover:bg-indigo-700 transition-colors"
+                    >
+                      Add
+                    </button>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {POPULAR_TAGS.filter(tag => !formData.tags.includes(tag)).slice(0, 5).map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => {
+                          if (!formData.tags.includes(tag)) {
+                            handleFormChange('tags', [...formData.tags, tag]);
+                          }
+                        }}
+                        className="text-xs px-2 py-1 bg-white/10 text-white/70 rounded hover:bg-white/20 transition-colors"
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Item Details Step */}
+            {currentStep === 'details' && (
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-white mb-4">
+                    Item Type
+                  </label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {(['PHYSICAL', 'DIGITAL', 'NFT', 'SERVICE'] as const).map((type) => (
+                      <ItemTypeCard
+                        key={type}
+                        type={type}
+                        selected={formData.itemType === type}
+                        onClick={() => handleFormChange('itemType', type)}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Condition
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { value: 'new', label: 'New' },
+                      { value: 'like-new', label: 'Like New' },
+                      { value: 'good', label: 'Good' },
+                      { value: 'fair', label: 'Fair' },
+                      { value: 'poor', label: 'Poor' },
+                      { value: 'used', label: 'Used' }
+                    ].map((condition) => (
+                      <button
+                        key={condition.value}
+                        type="button"
+                        className={`py-3 px-4 rounded-lg border transition-all ${
+                          formData.condition === condition.value
+                            ? 'border-indigo-400 bg-indigo-500/20 text-white'
+                            : 'border-white/20 bg-white/5 text-white hover:border-white/40'
+                        }`}
+                        onClick={() => handleFormChange('condition', condition.value)}
+                      >
+                        {condition.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    SEO Title
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.seoTitle}
+                    onChange={(e) => handleFormChange('seoTitle', e.target.value)}
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="SEO title for search engines (optional)"
+                    maxLength={60}
+                  />
+                  <div className="flex justify-between mt-1">
+                    <p className="text-xs text-white/60">
+                      Optimize for search engines (60 character limit)
+                    </p>
+                    <p className="text-xs text-white/60">
+                      {formData.seoTitle.length}/60
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    SEO Description
+                  </label>
+                  <textarea
+                    value={formData.seoDescription}
+                    onChange={(e) => handleFormChange('seoDescription', e.target.value)}
+                    rows={3}
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="SEO description for search engines (optional)"
+                    maxLength={160}
+                  />
+                  <div className="flex justify-between mt-1">
+                    <p className="text-xs text-white/60">
+                      Brief description for search results (160 character limit)
+                    </p>
+                    <p className="text-xs text-white/60">
+                      {formData.seoDescription.length}/160
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Pricing Step */}
+            {currentStep === 'pricing' && (
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Price *
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={formData.currency}
+                      onChange={(e) => handleFormChange('currency', e.target.value as any)}
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 w-20 px-2 py-1 bg-white/10 border border-white/20 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="USD" className="bg-gray-800">USD</option>
+                      <option value="USDC" className="bg-gray-800">USDC</option>
+                      <option value="USDT" className="bg-gray-800">USDT</option>
+                      <option value="ETH" className="bg-gray-800">ETH</option>
+                    </select>
+                    <input
+                      type="number"
+                      value={formData.price}
+                      onChange={(e) => handleFormChange('price', e.target.value)}
+                      step="0.01"
+                      min="0"
+                      className={`w-full pl-16 pr-4 py-3 bg-white/10 border ${
+                        fieldErrors.price ? 'border-red-500' : 'border-white/20'
+                      } rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  {fieldErrors.price && (
+                    <p className="mt-1 text-sm text-red-400">{fieldErrors.price}</p>
+                  )}
+                  <PriceDisplay amount={formData.price} currency={formData.currency} />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Quantity *
+                  </label>
+                  <div className="flex items-center space-x-4">
+                    <div className="flex-1">
+                      <input
+                        type="number"
+                        value={formData.unlimitedQuantity ? '' : formData.quantity}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value) || 0;
+                          handleFormChange('quantity', value);
+                        }}
+                        min="1"
+                        disabled={formData.unlimitedQuantity}
+                        className={`w-full px-4 py-3 bg-white/10 border ${
+                          fieldErrors.quantity ? 'border-red-500' : 'border-white/20'
+                        } rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                          formData.unlimitedQuantity ? 'opacity-50' : ''
+                        }`}
+                        placeholder="Enter quantity"
+                      />
+                      {fieldErrors.quantity && (
+                        <p className="mt-1 text-sm text-red-400">{fieldErrors.quantity}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="unlimited"
+                        checked={formData.unlimitedQuantity}
+                        onChange={(e) => handleFormChange('unlimitedQuantity', e.target.checked)}
+                        className="h-5 w-5 text-indigo-600 rounded focus:ring-indigo-500"
+                      />
+                      <label htmlFor="unlimited" className="ml-2 text-white">
+                        Unlimited
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Listing Type
+                    </label>
+                    <div className="space-y-3">
+                      <button
+                        type="button"
+                        className={`w-full py-3 px-4 rounded-lg border transition-all ${
+                          formData.listingType === 'FIXED_PRICE'
+                            ? 'border-indigo-400 bg-indigo-500/20 text-white'
+                            : 'border-white/20 bg-white/5 text-white hover:border-white/40'
+                        }`}
+                        onClick={() => handleFormChange('listingType', 'FIXED_PRICE')}
+                      >
+                        Fixed Price
+                      </button>
+                      <button
+                        type="button"
+                        className={`w-full py-3 px-4 rounded-lg border transition-all ${
+                          formData.listingType === 'AUCTION'
+                            ? 'border-indigo-400 bg-indigo-500/20 text-white'
+                            : 'border-white/20 bg-white/5 text-white hover:border-white/40'
+                        }`}
+                        onClick={() => handleFormChange('listingType', 'AUCTION')}
+                      >
+                        Auction
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Royalty (%)
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.royalty}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 0;
+                        handleFormChange('royalty', Math.min(Math.max(value, 0), 100));
+                      }}
+                      min="0"
+                      max="100"
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      placeholder="0"
+                    />
+                    <p className="mt-1 text-xs text-white/60">
+                      Percentage for secondary sales (0-100%)
+                    </p>
+                  </div>
+                </div>
+
+                {formData.listingType === 'AUCTION' && (
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Auction Duration
+                    </label>
+                    <select
+                      value={formData.duration}
+                      onChange={(e) => handleFormChange('duration', parseInt(e.target.value))}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value={3600} className="bg-gray-800">1 Hour</option>
+                      <option value={21600} className="bg-gray-800">6 Hours</option>
+                      <option value={86400} className="bg-gray-800">1 Day</option>
+                      <option value={172800} className="bg-gray-800">2 Days</option>
+                      <option value={604800} className="bg-gray-800">1 Week</option>
+                    </select>
+                  </div>
+                )}
+
+                <div>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={formData.escrowEnabled}
+                      onChange={(e) => handleFormChange('escrowEnabled', e.target.checked)}
+                      className="h-5 w-5 text-indigo-600 rounded focus:ring-indigo-500"
+                    />
+                    <span className="ml-2 text-white flex items-center">
+                      Enable Escrow Protection
+                      <Shield className="ml-2 text-green-400" size={16} />
+                    </span>
+                  </label>
+                  <p className="mt-1 text-xs text-white/60 ml-7">
+                    Protect both buyer and seller with our escrow service
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Images Step */}
+            {currentStep === 'images' && (
+              <div className="space-y-6">
+                <div
+                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                    dragActive
+                      ? 'border-indigo-500 bg-indigo-500/10'
+                      : 'border-white/20 hover:border-white/40'
+                  }`}
+                  onDragEnter={handleDrag}
+                  onDragOver={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDrop={handleDrop}
+                >
+                  <Upload className="mx-auto h-12 w-12 text-white/60 mb-4" />
+                  <h3 className="text-lg font-medium text-white mb-2">
+                    Drag and drop images here
+                  </h3>
+                  <p className="text-white/60 mb-4">
+                    or click to browse files
+                  </p>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleChange}
+                    className="hidden"
+                    id="file-upload"
+                  />
+                  <label
+                    htmlFor="file-upload"
+                    className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg cursor-pointer hover:bg-indigo-700 transition-colors"
+                  >
+                    <ImageIcon className="mr-2" size={16} />
+                    Select Images
+                  </label>
+                  <p className="mt-2 text-xs text-white/60">
+                    PNG, JPG, GIF up to 10MB each
+                  </p>
+                </div>
+
+                {(existingImages.length > 0 || imagePreviews.length > 0) && (
+                  <div>
+                    <h3 className="text-lg font-medium text-white mb-4">Uploaded Images</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      {/* Existing images */}
+                      {existingImages.map((preview, index) => (
+                        <div
+                          key={`existing-${index}`}
+                          className={`relative group rounded-lg overflow-hidden border-2 ${
+                            primaryImageIndex === index
+                              ? 'border-indigo-500 ring-2 ring-indigo-500/50'
+                              : 'border-white/20'
+                          }`}
+                        >
+                          <img
+                            src={preview}
+                            alt={`Product ${index + 1}`}
+                            className="w-full h-32 object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <div className="flex space-x-2">
+                              <button
+                                type="button"
+                                onClick={() => setAsPrimary(index)}
+                                className="p-1 bg-white/20 rounded hover:bg-white/30 text-white"
+                                title="Set as primary image"
+                              >
+                                <Star size={16} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removeImage(index)}
+                                className="p-1 bg-red-500/80 rounded hover:bg-red-500 text-white"
+                                title="Remove image"
+                              >
+                                <X size={16} />
+                              </button>
+                            </div>
+                          </div>
+                          {primaryImageIndex === index && (
+                            <div className="absolute top-2 left-2 bg-indigo-500 text-white text-xs px-2 py-1 rounded">
+                              Primary
+                            </div>
+                          )}
+                        </div>
+                      ))}
+
+                      {/* Newly uploaded images */}
+                      {imagePreviews.map((preview, index) => {
+                        const adjustedIndex = index + existingImages.length;
+                        return (
+                          <div
+                            key={`new-${index}`}
+                            className={`relative group rounded-lg overflow-hidden border-2 ${
+                              primaryImageIndex === adjustedIndex
+                                ? 'border-indigo-500 ring-2 ring-indigo-500/50'
+                                : 'border-white/20'
+                            }`}
+                          >
+                            <img
+                              src={preview}
+                              alt={`New product ${index + 1}`}
+                              className="w-full h-32 object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <div className="flex space-x-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setAsPrimary(adjustedIndex)}
+                                  className="p-1 bg-white/20 rounded hover:bg-white/30 text-white"
+                                  title="Set as primary image"
+                                >
+                                  <Star size={16} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => removeImage(adjustedIndex)}
+                                  className="p-1 bg-red-500/80 rounded hover:bg-red-500 text-white"
+                                  title="Remove image"
+                                >
+                                  <X size={16} />
+                                </button>
+                              </div>
+                            </div>
+                            {primaryImageIndex === adjustedIndex && (
+                              <div className="absolute top-2 left-2 bg-indigo-500 text-white text-xs px-2 py-1 rounded">
+                                Primary
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-4">
+                  <div className="flex items-start">
+                    <Info className="text-blue-400 mt-0.5 mr-3 flex-shrink-0" size={16} />
+                    <div>
+                      <h4 className="text-blue-300 font-medium">Image Guidelines</h4>
+                      <ul className="mt-1 text-sm text-blue-200/80 list-disc pl-5 space-y-1">
+                        <li>Use high-quality images (minimum 800x600 pixels)</li>
+                        <li>Show your product from multiple angles</li>
+                        <li>Ensure good lighting and focus</li>
+                        <li>The first image will be used as the primary display image</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Review Step */}
+            {currentStep === 'review' && (
+              <div className="space-y-6">
+                <div className="bg-white/5 rounded-lg p-6">
+                  <h3 className="text-lg font-medium text-white mb-4">Product Preview</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="md:col-span-1">
+                      <div className="bg-gray-200 border-2 border-dashed rounded-xl w-full h-48" />
+                    </div>
+                    
+                    <div className="md:col-span-2">
+                      <h2 className="text-xl font-bold text-white">{formData.title || 'Product Title'}</h2>
+                      
+                      <div className="flex items-center mt-2">
+                        <div className="flex text-yellow-400">
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} size={16} fill="currentColor" />
+                          ))}
+                        </div>
+                        <span className="ml-2 text-sm text-white/70">(0 reviews)</span>
+                      </div>
+                      
+                      <div className="mt-4">
+                        <span className="text-2xl font-bold text-white">
+                          {formData.currency} {formData.price || '0.00'}
+                        </span>
+                      </div>
+                      
+                      <p className="mt-4 text-white/80 line-clamp-3">
+                        {formData.description || 'Product description will appear here...'}
+                      </p>
+                      
+                      <div className="mt-6 flex flex-wrap gap-2">
+                        {formData.tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="px-3 py-1 bg-indigo-500/20 text-indigo-300 rounded-full text-sm"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-white/5 rounded-lg p-6">
+                  <h3 className="text-lg font-medium text-white mb-4">Listing Details</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="text-sm font-medium text-white/70">Category</h4>
+                      <p className="text-white">
+                        {CATEGORIES.find(c => c.value === formData.category)?.label || 'Not specified'}
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-sm font-medium text-white/70">Condition</h4>
+                      <p className="text-white capitalize">{formData.condition || 'Not specified'}</p>
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-sm font-medium text-white/70">Item Type</h4>
+                      <p className="text-white">{formData.itemType || 'Not specified'}</p>
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-sm font-medium text-white/70">Inventory</h4>
+                      <p className="text-white">
+                        {formData.unlimitedQuantity ? 'Unlimited' : formData.quantity}
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-sm font-medium text-white/70">Escrow Protection</h4>
+                      <p className="text-white">
+                        {formData.escrowEnabled ? 'Enabled' : 'Disabled'}
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-sm font-medium text-white/70">Royalty</h4>
+                      <p className="text-white">{formData.royalty}%</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center p-4 bg-yellow-900/30 border border-yellow-500/30 rounded-lg">
+                  <AlertCircle className="text-yellow-400 mr-3 flex-shrink-0" size={20} />
+                  <p className="text-yellow-200 text-sm">
+                    By clicking "Save Changes", you confirm that all information is accurate and you agree to our 
+                    seller terms and conditions.
+                  </p>
+                </div>
+              </div>
+            )}
+          </GlassPanel>
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-between">
+            <Button
+              variant="secondary"
+              onClick={goPrev}
+              disabled={!canGoPrev}
+              className="flex items-center"
+            >
+              <ChevronLeft className="mr-2" size={16} />
+              Previous
+            </Button>
+            
+            {currentStep === 'review' ? (
+              <Button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="flex items-center bg-green-600 hover:bg-green-700"
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2" size={16} />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+            ) : (
+              <Button
+                onClick={goNext}
+                disabled={!canGoNext}
+                className="flex items-center"
+              >
+                Next
+                <ChevronRight className="ml-2" size={16} />
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    </Layout>
+  );
+};
+
+export default EditListingPage;
