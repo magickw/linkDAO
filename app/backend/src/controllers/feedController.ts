@@ -76,12 +76,21 @@ export class FeedController {
       }
 
       try {
+        // Normalize communities to always be an array
+        // Express sends single query param as string, multiple as array
+        let normalizedCommunities: string[] = [];
+        if (Array.isArray(communities)) {
+          normalizedCommunities = communities as string[];
+        } else if (typeof communities === 'string' && communities.length > 0) {
+          normalizedCommunities = [communities];
+        }
+
         const feedData = await feedService.getEnhancedFeed({
           userAddress: userAddress || null, // Pass null for anonymous users
           page: Number(page),
           limit: Number(limit),
           sort: sort as string,
-          communities: Array.isArray(communities) ? communities as string[] : [],
+          communities: normalizedCommunities,
           timeRange: timeRange as string,
           feedSource: feedSource as 'following' | 'all'
         });

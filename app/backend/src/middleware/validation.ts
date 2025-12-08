@@ -106,7 +106,14 @@ function validateField(key: string, value: any, rule: ValidationRule, location: 
       break;
 
     case 'array':
-      if (!Array.isArray(value)) {
+      // For query parameters, a single value comes as a string, not an array
+      // Convert single values to arrays for consistency
+      if (location === 'query' && typeof value === 'string') {
+        // This is fine - single query param values are strings
+        // The controller will handle converting to array if needed
+        break;
+      }
+      if (!Array.isArray(value) && value !== undefined) {
         return `${location}.${key} must be an array`;
       }
       break;
