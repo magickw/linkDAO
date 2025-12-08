@@ -959,7 +959,12 @@ const CommunitiesPage: React.FC = () => {
                   if (!post || typeof post !== 'object') return null;
 
                   const postCommunityId = post.communityId || '';
-                  const community = communityList.find(c => c.id === postCommunityId);
+                  const community = communityList.find(c => c.id === postCommunityId) || {
+                    id: postCommunityId,
+                    name: postCommunityId,
+                    displayName: postCommunityId,
+                    slug: postCommunityId
+                  };
                   const postId = post.id || `post-${Math.random()}`;
 
                   return (
@@ -995,7 +1000,17 @@ const CommunitiesPage: React.FC = () => {
                         <CommunityPostCardEnhanced
                           post={post}
                           community={community}
-                          userMembership={userMemberships[post.communityId || ''] || null}
+                          userMembership={joinedCommunities.includes(postCommunityId) ? {
+                            id: `membership-${address}-${postCommunityId}`,
+                            communityId: postCommunityId,
+                            userId: address || '',
+                            role: userAdminRoles[postCommunityId] ? 'admin' : 'member',
+                            joinedAt: new Date(),
+                            reputation: 0,
+                            contributions: 0,
+                            isActive: true,
+                            lastActivityAt: new Date()
+                          } : null}
                           onVote={(postId, voteType, stakeAmount) => handleVote(postId, voteType === 'upvote' ? 'up' : 'down', stakeAmount ? parseInt(stakeAmount) : 1)}
                           onReaction={async (postId, reactionType, amount) => {
                             // Handle reaction logic here

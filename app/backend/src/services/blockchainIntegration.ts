@@ -69,16 +69,66 @@ export interface VotingPowerCheck {
 }
 
 export class BlockchainIntegrationService {
-  private provider: ethers.JsonRpcProvider;
-  private ldaoToken: ethers.Contract;
-  private governance: ethers.Contract;
-  private reputation: ethers.Contract;
+  private provider: ethers.JsonRpcProvider | null = null;
+  private ldaoToken: ethers.Contract | null = null;
+  private governance: ethers.Contract | null = null;
+  private reputation: ethers.Contract | null = null;
+  private initialized: boolean = false;
+  private initializationAttempted: boolean = false;
 
   constructor() {
-    this.provider = new ethers.JsonRpcProvider(RPC_URL);
-    this.ldaoToken = new ethers.Contract(LDAO_TOKEN_ADDRESS, ERC20_ABI, this.provider);
-    this.governance = new ethers.Contract(GOVERNANCE_ADDRESS, GOVERNANCE_ABI, this.provider);
-    this.reputation = new ethers.Contract(REPUTATION_ADDRESS, REPUTATION_ABI, this.provider);
+    // Lazy initialization - don't connect immediately
+    // Provider will be initialized on first use
+  }
+
+  /**
+   * Initialize the provider and contracts lazily
+   * Returns true if initialization succeeded, false otherwise
+   */
+  private async ensureInitialized(): Promise<boolean> {
+    if (this.initialized) return true;
+    if (this.initializationAttempted) return false;
+
+    this.initializationAttempted = true;
+
+    try {
+      // Create provider with timeout options to fail faster
+      this.provider = new ethers.JsonRpcProvider(RPC_URL, undefined, {
+        staticNetwork: true, // Prevents network detection retries
+      });
+
+      // Test the connection with a timeout
+      const timeoutPromise = new Promise<null>((_, reject) => {
+        setTimeout(() => reject(new Error('RPC connection timeout')), 5000);
+      });
+
+      const networkPromise = this.provider.getNetwork();
+
+      await Promise.race([networkPromise, timeoutPromise]);
+
+      // Initialize contracts only if provider is working
+      this.ldaoToken = new ethers.Contract(LDAO_TOKEN_ADDRESS, ERC20_ABI, this.provider);
+      this.governance = new ethers.Contract(GOVERNANCE_ADDRESS, GOVERNANCE_ABI, this.provider);
+      this.reputation = new ethers.Contract(REPUTATION_ADDRESS, REPUTATION_ABI, this.provider);
+
+      this.initialized = true;
+      safeLogger.info('BlockchainIntegrationService initialized successfully');
+      return true;
+    } catch (error) {
+      safeLogger.warn('BlockchainIntegrationService initialization failed - blockchain features will be disabled:', error instanceof Error ? error.message : 'Unknown error');
+      this.provider = null;
+      this.ldaoToken = null;
+      this.governance = null;
+      this.reputation = null;
+      return false;
+    }
+  }
+
+  /**
+   * Check if the service is available
+   */
+  async isAvailable(): Promise<boolean> {
+    return await this.ensureInitialized();
   }
 
   /**
@@ -90,16 +140,33 @@ export class BlockchainIntegrationService {
     tokenAddress?: string
   ): Promise<TokenBalanceCheck> {
     try {
+      // Check if blockchain service is available
+      if (!await this.ensureInitialized() || !this.provider) {
+        return {
+          hasBalance: false,
+          balance: '0',
+          minimumRequired: minimumBalance,
+        };
+      }
+
       const token = tokenAddress
         ? new ethers.Contract(tokenAddress, ERC20_ABI, this.provider)
         : this.ldaoToken;
+
+      if (!token) {
+        return {
+          hasBalance: false,
+          balance: '0',
+          minimumRequired: minimumBalance,
+        };
+      }
 
       const balance = await token.balanceOf(userAddress);
       const balanceFormatted = ethers.formatEther(balance);
       const minimumBN = ethers.parseEther(minimumBalance);
 
       return {
-        hasBalance: balance.gte(minimumBN),
+        hasBalance: balance >= minimumBN,
         balance: balanceFormatted,
         minimumRequired: minimumBalance,
       };
@@ -122,6 +189,15 @@ export class BlockchainIntegrationService {
     tokenId?: string
   ): Promise<NFTOwnershipCheck> {
     try {
+      // Check if blockchain service is available
+      if (!await this.ensureInitialized() || !this.provider) {
+        return {
+          ownsNFT: false,
+          tokenIds: [],
+          balance: 0,
+        };
+      }
+
       const nftContract = new ethers.Contract(nftAddress, ERC721_ABI, this.provider);
 
       // Check specific token ID
@@ -187,16 +263,33 @@ export class BlockchainIntegrationService {
     tokenAddress?: string
   ): Promise<StakingCheck> {
     try {
+      // Check if blockchain service is available
+      if (!await this.ensureInitialized() || !this.provider) {
+        return {
+          hasStaked: false,
+          stakedAmount: '0',
+          minimumRequired: minimumStaked,
+        };
+      }
+
       const token = tokenAddress
         ? new ethers.Contract(tokenAddress, ERC20_ABI, this.provider)
         : this.ldaoToken;
+
+      if (!token) {
+        return {
+          hasStaked: false,
+          stakedAmount: '0',
+          minimumRequired: minimumStaked,
+        };
+      }
 
       const staked = await token.totalStaked(userAddress);
       const stakedFormatted = ethers.formatEther(staked);
       const minimumBN = ethers.parseEther(minimumStaked);
 
       return {
-        hasStaked: staked.gte(minimumBN),
+        hasStaked: staked >= minimumBN,
         stakedAmount: stakedFormatted,
         minimumRequired: minimumStaked,
       };
@@ -219,16 +312,33 @@ export class BlockchainIntegrationService {
     tokenAddress?: string
   ): Promise<VotingPowerCheck> {
     try {
+      // Check if blockchain service is available
+      if (!await this.ensureInitialized() || !this.provider) {
+        return {
+          hasVotingPower: false,
+          votingPower: '0',
+          minimumRequired: minimumPower,
+        };
+      }
+
       const token = tokenAddress
         ? new ethers.Contract(tokenAddress, ERC20_ABI, this.provider)
         : this.ldaoToken;
+
+      if (!token) {
+        return {
+          hasVotingPower: false,
+          votingPower: '0',
+          minimumRequired: minimumPower,
+        };
+      }
 
       const power = await token.votingPower(userAddress);
       const powerFormatted = ethers.formatEther(power);
       const minimumBN = ethers.parseEther(minimumPower);
 
       return {
-        hasVotingPower: power.gte(minimumBN),
+        hasVotingPower: power >= minimumBN,
         votingPower: powerFormatted,
         minimumRequired: minimumPower,
       };
@@ -247,8 +357,13 @@ export class BlockchainIntegrationService {
    */
   async getUserReputation(userAddress: string): Promise<number> {
     try {
+      // Check if blockchain service is available
+      if (!await this.ensureInitialized() || !this.reputation) {
+        return 0;
+      }
+
       const reputation = await this.reputation.getUserReputation(userAddress);
-      return reputation.toNumber();
+      return Number(reputation);
     } catch (error) {
       safeLogger.error('Error getting user reputation:', error);
       return 0;
@@ -263,6 +378,14 @@ export class BlockchainIntegrationService {
     stateName: string;
   }> {
     try {
+      // Check if blockchain service is available
+      if (!await this.ensureInitialized() || !this.governance) {
+        return {
+          state: -1,
+          stateName: 'Unavailable',
+        };
+      }
+
       const state = await this.governance.state(proposalId);
 
       const stateNames = [
@@ -294,6 +417,11 @@ export class BlockchainIntegrationService {
    */
   async getProposalInfo(proposalId: string): Promise<any> {
     try {
+      // Check if blockchain service is available
+      if (!await this.ensureInitialized() || !this.governance) {
+        return null;
+      }
+
       const info = await this.governance.getProposalInfo(proposalId);
 
       return {
@@ -301,8 +429,8 @@ export class BlockchainIntegrationService {
         proposer: info.proposer,
         title: info.title,
         description: info.description,
-        startBlock: info.startBlock.toNumber(),
-        endBlock: info.endBlock.toNumber(),
+        startBlock: Number(info.startBlock),
+        endBlock: Number(info.endBlock),
         forVotes: ethers.formatEther(info.forVotes),
         againstVotes: ethers.formatEther(info.againstVotes),
         abstainVotes: ethers.formatEther(info.abstainVotes),
@@ -324,6 +452,15 @@ export class BlockchainIntegrationService {
     tokens: Array<{ address: string; balance: string }>;
   }> {
     try {
+      // Check if blockchain service is available
+      if (!await this.ensureInitialized() || !this.provider || !this.ldaoToken) {
+        return {
+          eth: '0',
+          ldao: '0',
+          tokens: [],
+        };
+      }
+
       // Get ETH balance
       const ethBalance = await this.provider.getBalance(treasuryAddress);
       const ethFormatted = ethers.formatEther(ethBalance);
@@ -359,14 +496,20 @@ export class BlockchainIntegrationService {
     const results = new Map<string, boolean>();
 
     try {
+      // Check if blockchain service is available
+      if (!await this.ensureInitialized() || !this.ldaoToken) {
+        userAddresses.forEach(addr => results.set(addr, false));
+        return results;
+      }
+
       const minimumBN = ethers.parseEther(minimumBalance);
 
       // Check balances in parallel
       const checks = await Promise.all(
         userAddresses.map(async (address) => {
           try {
-            const balance = await this.ldaoToken.balanceOf(address);
-            return { address, hasBalance: balance.gte(minimumBN) };
+            const balance = await this.ldaoToken!.balanceOf(address);
+            return { address, hasBalance: balance >= minimumBN };
           } catch (error) {
             return { address, hasBalance: false };
           }
@@ -388,6 +531,10 @@ export class BlockchainIntegrationService {
    */
   async getCurrentBlock(): Promise<number> {
     try {
+      // Check if blockchain service is available
+      if (!await this.ensureInitialized() || !this.provider) {
+        return 0;
+      }
       return await this.provider.getBlockNumber();
     } catch (error) {
       safeLogger.error('Error getting current block:', error);
@@ -405,6 +552,11 @@ export class BlockchainIntegrationService {
     to?: string;
   }> {
     try {
+      // Check if blockchain service is available
+      if (!await this.ensureInitialized() || !this.provider) {
+        return { confirmed: false };
+      }
+
       const receipt = await this.provider.getTransactionReceipt(txHash);
 
       if (!receipt) {
@@ -415,7 +567,7 @@ export class BlockchainIntegrationService {
         confirmed: receipt.status === 1,
         blockNumber: receipt.blockNumber,
         from: receipt.from,
-        to: receipt.to,
+        to: receipt.to ?? undefined,
       };
     } catch (error) {
       safeLogger.error('Error verifying transaction:', error);

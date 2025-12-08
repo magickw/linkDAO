@@ -415,8 +415,25 @@ function CommunityPostCardEnhanced({
           {/* Post Header */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+              {/* Community Name */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Navigate to community page
+                  const communitySlug = community.slug || community.name || community.id || 'unknown';
+                  window.location.href = `/communities/${communitySlug}`;
+                }}
+                className="font-medium text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                {community.displayName || community.name || 'Unknown Community'}
+              </button>
+              <span>•</span>
+              {/* Author */}
               <span className="font-medium text-gray-900 dark:text-white">
-                u/{post.author ? `${post.author.slice(0, 6)}...${post.author.slice(-4)}` : 'Unknown'}
+                u/{post.author || post.walletAddress || post.authorAddress ? 
+                  `${(post.author || post.walletAddress || post.authorAddress)?.slice(0, 6)}...${(post.author || post.walletAddress || post.authorAddress)?.slice(-4)}` : 
+                  'Unknown'
+                }
               </span>
               <span>•</span>
               <span>{formatTimestamp(post.createdAt)}</span>
@@ -454,12 +471,12 @@ function CommunityPostCardEnhanced({
           {/* Post Content */}
           <div className="mb-4">
             {/* Post Title */}
-            {post.title && post.title.trim() !== '' ? (
+            {(post.title && post.title.trim() !== '') ? (
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 leading-tight">
                 {post.title}
               </h3>
             ) : (
-              // Fallback to first line of content as title if no explicit title
+              // Only show fallback if there's actual content
               post.content && post.content.trim() !== '' && (
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 leading-tight">
                   {post.content.split('\n')[0].substring(0, 100)}

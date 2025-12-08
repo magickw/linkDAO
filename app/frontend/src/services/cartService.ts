@@ -308,17 +308,38 @@ class CartService {
     let itemCount = 0;
 
     items.forEach(item => {
-      const itemCrypto = parseFloat(item.price.crypto) * item.quantity;
-      const itemFiat = parseFloat(item.price.fiat) * item.quantity;
+      // Defensive parsing - handle cases where price might be malformed
+      const cryptoPrice = item.price?.crypto;
+      const fiatPrice = item.price?.fiat;
 
-      subtotalCrypto += itemCrypto;
-      subtotalFiat += itemFiat;
-      itemCount += item.quantity;
+      // Parse crypto price
+      let itemCrypto = 0;
+      if (typeof cryptoPrice === 'number') {
+        itemCrypto = cryptoPrice;
+      } else if (typeof cryptoPrice === 'string') {
+        itemCrypto = parseFloat(cryptoPrice) || 0;
+      }
+
+      // Parse fiat price
+      let itemFiat = 0;
+      if (typeof fiatPrice === 'number') {
+        itemFiat = fiatPrice;
+      } else if (typeof fiatPrice === 'string') {
+        itemFiat = parseFloat(fiatPrice) || 0;
+      }
+
+      // Parse quantity (could be string from localStorage)
+      const qty = typeof item.quantity === 'string' ? parseInt(item.quantity, 10) : (item.quantity || 1);
+
+      subtotalCrypto += itemCrypto * qty;
+      subtotalFiat += itemFiat * qty;
+      itemCount += qty;
 
       // Add shipping costs for physical items
-      if (!item.isDigital && !item.shipping.freeShipping) {
-        shippingCrypto += parseFloat(item.shipping.cost);
-        shippingFiat += parseFloat(item.shipping.cost) * 2400; // Rough ETH to USD conversion
+      if (!item.isDigital && item.shipping && !item.shipping.freeShipping) {
+        const shippingCost = parseFloat(String(item.shipping.cost)) || 0;
+        shippingCrypto += shippingCost;
+        shippingFiat += shippingCost * 2400; // Rough ETH to USD conversion
       }
     });
 
@@ -840,44 +861,89 @@ class CartService {
   }
 
   private transformBackendCartToState(backendCart: any): CartState {
-    const items: CartItem[] = backendCart.items?.map((item: any) => ({
-      id: item.productId || item.id,
-      cartItemId: item.id, // Store the actual cart item ID for backend operations
-      title: item.product?.title || item.title || 'Unknown Product',
-      description: item.product?.description || item.description || '',
-      image: item.product?.images?.[0] || item.image || '',
-      price: {
-        crypto: item.product?.cryptoPrice || item.cryptoPrice || '0',
-        cryptoSymbol: item.product?.cryptoCurrency || item.cryptoCurrency || 'ETH',
-        fiat: item.product?.fiatPrice || item.fiatPrice || '0',
-        fiatSymbol: item.product?.fiatCurrency || item.fiatCurrency || 'USD',
-      },
-      seller: {
-        id: item.product?.seller?.id || item.sellerId || '',
-        name: item.product?.seller?.displayName || item.sellerName || 'Unknown Seller',
-        avatar: item.product?.seller?.profileImageUrl || item.sellerAvatar || '',
-        verified: item.product?.seller?.verified || false,
-        daoApproved: item.product?.seller?.daoApproved || false,
-        escrowSupported: true,
-      },
-      category: item.product?.category || item.category || 'general',
-      isDigital: item.product?.isDigital || item.isDigital || false,
-      isNFT: item.product?.isNFT || item.isNFT || false,
-      inventory: item.product?.inventory || item.inventory || 0,
-      quantity: item.quantity || 1,
-      shipping: {
-        cost: item.product?.shipping?.cost || '0',
-        freeShipping: item.product?.shipping?.free || false,
-        estimatedDays: item.product?.shipping?.estimatedDays || '3-5',
-        regions: item.product?.shipping?.regions || [],
-      },
-      trust: {
-        escrowProtected: item.product?.trust?.escrowProtected || false,
-        onChainCertified: item.product?.trust?.onChainCertified || false,
-        safetyScore: item.product?.trust?.safetyScore || 0,
-      },
-      addedAt: new Date(item.addedAt || Date.now()),
-    })) || [];
+    const ethPrice = 2400; // Rough ETH price for conversion
+
+    const items: CartItem[] = backendCart.items?.map((item: any) => {
+      // Get the product data - could be nested under 'product' or at item level
+      const product = item.product || item;
+
+      // Parse price - handle multiple possible formats
+      // Backend might send: priceAmount, price (as number/string/object), fiatPrice, etc.
+      let priceAmount = 0;
+      let currency = 'USD';
+
+      // Try different price field names
+      if (product.priceAmount !== undefined) {
+        priceAmount = parseFloat(String(product.priceAmount)) || 0;
+        currency = product.priceCurrency || 'USD';
+      } else if (product.price !== undefined) {
+        if (typeof product.price === 'object' && product.price.amount !== undefined) {
+          priceAmount = parseFloat(String(product.price.amount)) || 0;
+          currency = product.price.currency || 'USD';
+        } else {
+          priceAmount = parseFloat(String(product.price)) || 0;
+          currency = product.currency || product.priceCurrency || 'USD';
+        }
+      } else if (product.fiatPrice !== undefined) {
+        priceAmount = parseFloat(String(product.fiatPrice)) || 0;
+        currency = product.fiatCurrency || 'USD';
+      } else if (item.priceAmount !== undefined) {
+        priceAmount = parseFloat(String(item.priceAmount)) || 0;
+        currency = item.priceCurrency || 'USD';
+      }
+
+      // Calculate crypto/fiat values based on currency
+      let cryptoValue: string;
+      let fiatValue: string;
+
+      if (currency === 'ETH') {
+        cryptoValue = priceAmount.toString();
+        fiatValue = (priceAmount * ethPrice).toFixed(2);
+      } else {
+        // USD or other fiat currency
+        cryptoValue = (priceAmount / ethPrice).toFixed(6);
+        fiatValue = priceAmount.toFixed(2);
+      }
+
+      return {
+        id: item.productId || product.id || item.id,
+        cartItemId: item.id, // Store the actual cart item ID for backend operations
+        title: product.title || item.title || 'Unknown Product',
+        description: product.description || item.description || '',
+        image: (Array.isArray(product.images) ? product.images[0] : product.image) || item.image || '',
+        price: {
+          crypto: cryptoValue,
+          cryptoSymbol: 'ETH',
+          fiat: fiatValue,
+          fiatSymbol: currency === 'ETH' ? 'USD' : currency,
+        },
+        seller: {
+          id: product.seller?.id || product.sellerId || item.sellerId || '',
+          name: product.seller?.displayName || product.seller?.storeName || item.sellerName || 'Unknown Seller',
+          avatar: product.seller?.profileImageUrl || product.seller?.avatar || item.sellerAvatar || '',
+          verified: product.seller?.verified || false,
+          daoApproved: product.seller?.daoApproved || false,
+          escrowSupported: true,
+        },
+        category: product.category?.name || product.category || item.category || 'general',
+        isDigital: product.isDigital || item.isDigital || false,
+        isNFT: product.isNFT || item.isNFT || false,
+        inventory: parseInt(String(product.inventory || product.quantity || item.inventory || 0), 10),
+        quantity: parseInt(String(item.quantity || 1), 10),
+        shipping: {
+          cost: product.shipping?.cost || '0',
+          freeShipping: product.shipping?.free || product.shipping?.freeShipping || false,
+          estimatedDays: product.shipping?.estimatedDays || '3-5',
+          regions: product.shipping?.regions || [],
+        },
+        trust: {
+          escrowProtected: product.trust?.escrowProtected || product.metadata?.escrowEnabled || false,
+          onChainCertified: product.trust?.onChainCertified || false,
+          safetyScore: product.trust?.safetyScore || 0,
+        },
+        addedAt: new Date(item.addedAt || item.createdAt || Date.now()),
+      };
+    }) || [];
 
     return {
       items,
