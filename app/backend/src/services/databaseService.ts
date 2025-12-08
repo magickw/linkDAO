@@ -3,8 +3,8 @@ import { safeLogger } from '../utils/safeLogger';
 import * as schema from "../db/schema";
 import { eq, and, or, ilike, desc, lt, gte, lte, sql } from "drizzle-orm";
 import { ValidationHelper, ValidationError } from "../models/validation";
-import postgres from 'postgres';
-import dotenv from "dotenv";
+import * as postgres from 'postgres';
+import * as dotenv from "dotenv";
 import { db as databaseInstance } from '../db/index';
 
 dotenv.config();
@@ -114,7 +114,6 @@ export class DatabaseService {
   // Post operations
   async createPost(authorId: string, contentCid: string, parentId?: number, mediaCids?: string[], tags?: string[], onchainRef?: string, content?: string, title?: string) {
     try {
-      try {
       const result = await this.db.insert(schema.posts).values({
         authorId,
         contentCid,
@@ -640,7 +639,7 @@ export class DatabaseService {
     }
   }
 
-  async acceptOffer(offerId: number) {
+  async acceptOffer(offerId: string) {
     try {
       const result = await this.db.update(schema.offers).set({ accepted: true }).where(eq(schema.offers.id, offerId)).returning();
       return result[0] || null;
@@ -669,7 +668,7 @@ export class DatabaseService {
     }
   }
 
-  async getEscrowById(id: number) {
+  async getEscrowById(id: string) {
     try {
       const result = await this.db.select().from(schema.escrows).where(eq(schema.escrows.id, id));
       return result[0] || null;
@@ -690,7 +689,7 @@ export class DatabaseService {
     }
   }
 
-  async updateEscrow(id: number, updates: Partial<typeof schema.escrows.$inferInsert>) {
+  async updateEscrow(id: string, updates: Partial<typeof schema.escrows.$inferInsert>) {
     try {
       const result = await this.db.update(schema.escrows).set(updates).where(eq(schema.escrows.id, id)).returning();
       return result[0] || null;
@@ -700,7 +699,7 @@ export class DatabaseService {
     }
   }
 
-  async confirmDelivery(escrowId: number, deliveryInfo: string) {
+  async confirmDelivery(escrowId: string, deliveryInfo: string) {
     try {
       const result = await this.db.update(schema.escrows).set({
         deliveryInfo,
@@ -732,7 +731,7 @@ export class DatabaseService {
     }
   }
 
-  async getOrderById(id: number) {
+  async getOrderById(id: string) {
     try {
       const result = await this.db.select().from(schema.orders).where(eq(schema.orders.id, id));
       return result[0] || null;
@@ -753,7 +752,7 @@ export class DatabaseService {
     }
   }
 
-  async updateOrder(id: number, updates: Partial<typeof schema.orders.$inferInsert>) {
+  async updateOrder(id: string, updates: Partial<typeof schema.orders.$inferInsert>) {
     try {
       const result = await this.db.update(schema.orders).set(updates).where(eq(schema.orders.id, id)).returning();
       return result[0] || null;
@@ -853,7 +852,7 @@ export class DatabaseService {
   }
 
   // AI Moderation operations
-  async createAIModeration(objectType: string, objectId: number, aiAnalysis?: string) {
+  async createAIModeration(objectType: string, objectId: string, aiAnalysis?: string) {
     try {
       const result = await this.db.insert(schema.aiModeration).values({
         objectType,
@@ -868,7 +867,7 @@ export class DatabaseService {
     }
   }
 
-  async getAIModerationByObject(objectType: string, objectId: number) {
+  async getAIModerationByObject(objectType: string, objectId: string) {
     try {
       const result = await this.db.select().from(schema.aiModeration).where(
         and(
@@ -883,7 +882,7 @@ export class DatabaseService {
     }
   }
 
-  async updateAIModeration(id: number, updates: Partial<typeof schema.aiModeration.$inferInsert>) {
+  async updateAIModeration(id: string, updates: Partial<typeof schema.aiModeration.$inferInsert>) {
     try {
       const result = await this.db.update(schema.aiModeration).set(updates).where(eq(schema.aiModeration.id, id)).returning();
       return result[0] || null;
@@ -2226,7 +2225,7 @@ export class DatabaseService {
     }
   }
 
-  async getAdminNotifications(adminId: string, limit: number = 50, offset: number = 0) {
+  async getAdminNotifications(adminId: string, limit: number = 50, offset: number = 0): Promise<any[]> {
     try {
       return await this.db
         .select()
@@ -2241,7 +2240,7 @@ export class DatabaseService {
     }
   }
 
-  async markAdminNotificationAsRead(notificationId: string) {
+  async markAdminNotificationAsRead(notificationId: string): Promise<boolean> {
     try {
       const [updated] = await this.db.update(schema.admin_notifications)
         .set({ read: true })
@@ -2255,7 +2254,7 @@ export class DatabaseService {
     }
   }
 
-  async markAllAdminNotificationsAsRead(adminId: string) {
+  async markAllAdminNotificationsAsRead(adminId: string): Promise<boolean> {
     try {
       const updated = await this.db.update(schema.admin_notifications)
         .set({ read: true })
@@ -2273,7 +2272,7 @@ export class DatabaseService {
     }
   }
 
-  async getAdminUnreadNotificationCount(adminId: string) {
+  async getAdminUnreadNotificationCount(adminId: string): Promise<number> {
     try {
       const result = await this.db
         .select({ count: sql<number>`count(*)` })
@@ -2292,7 +2291,7 @@ export class DatabaseService {
     }
   }
 
-  async getAdminsWithRole(role: string) {
+  async getAdminsWithRole(role: string): Promise<any[]> {
     try {
       // This would need to be implemented based on your admin user structure
       // For now, returning an empty array
@@ -2303,7 +2302,7 @@ export class DatabaseService {
     }
   }
 
-  async getAdminsWithPermission(permission: string) {
+  async getAdminsWithPermission(permission: string): Promise<any[]> {
     try {
       // This would need to be implemented based on your admin user structure
       // For now, returning an empty array
@@ -2314,7 +2313,7 @@ export class DatabaseService {
     }
   }
 
-  async getAdminNotificationPreferences(adminId: string) {
+  async getAdminNotificationPreferences(adminId: string): Promise<any> {
     try {
       const result = await this.db
         .select()
@@ -2344,7 +2343,7 @@ export class DatabaseService {
     }
   }
 
-  async getAdminPushTokens(adminId: string) {
+  async getAdminPushTokens(adminId: string): Promise<string[]> {
     try {
       const tokens = await this.db
         .select({ token: schema.pushTokens.token })
@@ -2358,7 +2357,7 @@ export class DatabaseService {
     }
   }
 
-  async deleteOldAdminNotifications(cutoffDate: Date) {
+  async deleteOldAdminNotifications(cutoffDate: Date): Promise<any> {
     try {
       const deleted = await this.db.delete(schema.admin_notifications)
         .where(lt(schema.admin_notifications.createdAt, cutoffDate));
@@ -2370,7 +2369,7 @@ export class DatabaseService {
     }
   }
 
-  async getAdminNotificationStats(adminId: string) {
+  async getAdminNotificationStats(adminId: string): Promise<any> {
     try {
       // Get total count
       const totalCountResult = await this.db

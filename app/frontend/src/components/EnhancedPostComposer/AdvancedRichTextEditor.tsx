@@ -19,6 +19,9 @@ import {
   Code
 } from 'lucide-react';
 
+// Import the unified image service for Cloudinary uploads
+import { unifiedImageService } from '@/services/unifiedImageService';
+
 interface AdvancedRichTextEditorProps {
   value: string;
   onChange: (value: string) => void;
@@ -137,37 +140,20 @@ const AdvancedRichTextEditor: React.FC<AdvancedRichTextEditorProps> = ({
     setUploadProgress(0);
 
     try {
-      // Import the IPFS upload service
-      const { ipfsUploadService } = await import('@/services/ipfsUploadService');
+      // Use unifiedImageService for Cloudinary upload instead of IPFS
+      const result = await unifiedImageService.uploadImage(selectedFile, 'post');
+      
+      console.log('[RichTextEditor] Cloudinary upload result:', result);
 
-      // Upload file to IPFS
-      const result = await ipfsUploadService.uploadFile(selectedFile);
-
-      console.log('[RichTextEditor] Upload result:', result);
-
-      // Use the gateway URL from the result, with fallbacks
-      let imageUrl = result.url;
-
-      // If the URL uses ipfs.io, try to use a more reliable gateway
-      if (imageUrl.includes('ipfs.io')) {
-        // Extract the CID and use Pinata gateway which is more reliable
-        const cidMatch = imageUrl.match(/\/ipfs\/([^/]+)/);
-        if (cidMatch && cidMatch[1]) {
-          imageUrl = `https://gateway.pinata.cloud/ipfs/${cidMatch[1]}`;
-        }
-      }
-
-      console.log('[RichTextEditor] Using image URL:', imageUrl);
-
-      // Insert image into editor
-      editor.chain().focus().setImage({ src: imageUrl }).run();
+      // Insert image into editor using the Cloudinary URL
+      editor.chain().focus().setImage({ src: result.url }).run();
 
       // Close dialog and reset
       setShowImageDialog(false);
       resetImageDialog();
     } catch (error) {
-      console.error('Error uploading image:', error);
-      setUploadError(error instanceof Error ? error.message : 'Failed to upload image');
+      console.error('Error uploading image to Cloudinary:', error);
+      setUploadError(error instanceof Error ? error.message : 'Failed to upload image to Cloudinary');
     } finally {
       setIsUploading(false);
       setUploadProgress(0);

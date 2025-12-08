@@ -7,9 +7,9 @@ declare var setTimeout: (callback: (...args: any[]) => void, ms: number, ...args
 
 import { drizzle } from "drizzle-orm/postgres-js";
 import { safeLogger } from '../utils/safeLogger';
-import postgres from "postgres";
+import * as postgres from "postgres";
 import * as schema from "./schema";
-import dotenv from "dotenv";
+import * as dotenv from "dotenv";
 import { initializeMonitor, getMonitor } from './connectionPoolMonitor';
 
 // Add type definitions for Node.js timer functions
