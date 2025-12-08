@@ -125,7 +125,7 @@ export class SearchService {
 
   constructor() {
     this.databaseService = new DatabaseService();
-    this.redisService = new RedisService();
+    this.redisService = RedisService.getInstance();
   }
 
   /**
@@ -1539,6 +1539,19 @@ export class SearchService {
   }
 
   private async mapProductFromDb(product: any, category: any): Promise<Product> {
+    // Get seller review stats
+    let sellerRating = 0;
+    if (product.sellerId) {
+      try {
+        // Import review service dynamically to avoid circular dependencies
+        const { reviewService } = await import('./reviewService');
+        const reviewStats = await reviewService.getReviewStats(product.sellerId);
+        sellerRating = reviewStats.averageRating;
+      } catch (error) {
+        safeLogger.warn('Failed to fetch seller review stats:', error);
+      }
+    }
+
     // Parse price metadata if it exists
     let priceData = product.price;
     if (typeof product.price === 'string') {
@@ -1575,7 +1588,11 @@ export class SearchService {
     return {
       ...product,
       price: priceData,
-      category: category?.name || 'Uncategorized'
+      category: category?.name || 'Uncategorized',
+      seller: product.seller ? {
+        ...product.seller,
+        rating: sellerRating
+      } : undefined
     } as Product;
   }
 

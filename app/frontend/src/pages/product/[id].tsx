@@ -30,6 +30,23 @@ const ProductPage: React.FC = () => {
           }
           
           if (productData) {
+            // Fetch seller review stats
+            let reviewStats = { totalReviews: 0, averageRating: 0 };
+            try {
+              const sellerId = productData.seller?.id || productData.sellerId;
+              if (sellerId) {
+                const response = await fetch(`/api/users/${sellerId}/reviews/stats`);
+                if (response.ok) {
+                  const result = await response.json();
+                  if (result.success && result.data) {
+                    reviewStats = result.data;
+                  }
+                }
+              }
+            } catch (reviewError) {
+              console.warn('Failed to fetch review stats:', reviewError);
+            }
+            
             // Transform the product data to match the ProductDetailPage component interface
             const transformedProduct = {
               id: productData.id,
@@ -68,8 +85,8 @@ const ProductPage: React.FC = () => {
                 cost: productData.shipping?.cost
               },
               reviews: {
-                average: productData.seller?.rating || 0,
-                count: 0 // Not available in current data structure
+                average: reviewStats.averageRating || productData.seller?.rating || 0,
+                count: reviewStats.totalReviews || 0
               },
               media: productData.images?.map((url: string) => ({
                 type: 'image' as const,

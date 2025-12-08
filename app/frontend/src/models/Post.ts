@@ -75,7 +75,6 @@ export function convertBackendPostToPost(backendPost: any): Post {
     onchainRef: backendPost.onchainRef || '',
     stakedValue: parseFloat(backendPost.stakedValue || backendPost.staked_value || 0),
     reputationScore: parseInt(backendPost.reputationScore || backendPost.reputation_score || 0),
-    dao: backendPost.communityId || backendPost.dao || '', // Map communityId/dao for backward compatibility
 
     // Engagement data (will be populated by services)
     reactions: [] as Reaction[],
@@ -93,7 +92,7 @@ export function convertBackendPostToPost(backendPost: any): Post {
     trendingStatus: backendPost.trendingScore > 0 ? 'trending' : null,
     trendingScore: backendPost.trendingScore || 0,
     isBookmarked: false,
-    communityId: backendPost.communityId || backendPost.dao, // Support both field names
+    communityId: backendPost.communityId || '',
     contentType: detectContentType(backendPost),
 
     // Add author profile information including avatar

@@ -656,6 +656,19 @@ export class ProductService {
   }
 
   private async mapProductFromDb(dbProduct: any, dbCategory?: any, dbUser?: any, dbSeller?: any): Promise<Product> {
+    // Get seller review stats if we have a seller
+    let sellerRating = 0;
+    if (dbUser?.id) {
+      try {
+        // Import review service dynamically to avoid circular dependencies
+        const { reviewService } = await import('./reviewService');
+        const reviewStats = await reviewService.getReviewStats(dbUser.id);
+        sellerRating = reviewStats.averageRating;
+      } catch (error) {
+        safeLogger.warn('Failed to fetch seller review stats:', error);
+      }
+    }
+
     const category = dbCategory ? this.mapCategoryFromDb(dbCategory) : {
       id: dbProduct.categoryId,
       name: 'Unknown',
@@ -678,7 +691,7 @@ export class ProductService {
         avatar: dbSeller?.profileImageCdn || dbUser.avatarCid,
         verified: dbSeller?.isVerified || false,
         daoApproved: dbSeller?.daoApproved || false,
-        rating: 0, // Placeholder, would fetch from reputation/reviews
+        rating: sellerRating, // Use the fetched rating
         totalSales: 0, // Placeholder, would fetch from stats
         memberSince: dbUser.createdAt,
         reputation: 0 // Placeholder

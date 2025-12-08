@@ -11,8 +11,8 @@ interface PostInteractionBarProps {
     title?: string;
     contentCid: string;
     author: string;
-    dao?: string;
     communityId?: string;
+    communityName?: string;
     commentCount?: number;
     stakedValue?: number;
   };

@@ -220,7 +220,6 @@ export default function PostModal({
                 title: post.title,
                 contentCid: post.contentCid,
                 author: post.author,
-                dao: post.dao,
                 communityId: post.communityId,
                 commentCount: post.commentCount,
                 stakedValue: post.stakedValue,

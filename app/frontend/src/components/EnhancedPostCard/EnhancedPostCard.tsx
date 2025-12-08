@@ -596,7 +596,8 @@ const EnhancedPostCard = React.memo(({
                   title: post.title,
                   contentCid: post.contentCid, // Use contentCid field instead of content
                   author: post.author,
-                  dao: post.communityName || 'general',
+                  communityId: post.communityId,
+                  communityName: post.communityName || 'general',
                   commentCount: post.comments,
                   stakedValue: post.reactions.reduce((sum, r) => sum + r.totalAmount, 0)
                 }}

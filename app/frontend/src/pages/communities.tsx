@@ -52,6 +52,7 @@ import FloatingActionButton from '@/components/Community/FloatingActionButton';
 import PinnedPostsSection from '@/components/Community/PinnedPostsSection';
 import AnnouncementBanner from '@/components/Community/AnnouncementBanner';
 import AnnouncementManager from '@/components/Community/AnnouncementManager';
+import CommunityPostCardEnhanced from '@/components/Community/CommunityPostCardEnhanced';
 import { postManagementService } from '@/services/postManagementService';
 
 import {
@@ -670,7 +671,7 @@ const CommunitiesPage: React.FC = () => {
     // If user has joined communities, verify posts belong to those communities
     // This is mainly a safety check as backend should already filter by communities
     if (joinedCommunities.length > 0) {
-      const postCommunityId = post.communityId || post.dao;
+      const postCommunityId = post.communityId;
       // Show posts from joined communities
       if (postCommunityId && joinedCommunities.includes(postCommunityId)) {
         return true;
@@ -957,21 +958,9 @@ const CommunitiesPage: React.FC = () => {
                   // Defensive checks for post data
                   if (!post || typeof post !== 'object') return null;
 
-                  const community = communityList.find(c => c.id === post.communityId);
-                  const stakingInfo = stakingData[post.communityId];
-
-                  // Ensure required post properties exist
+                  const postCommunityId = post.communityId || '';
+                  const community = communityList.find(c => c.id === postCommunityId);
                   const postId = post.id || `post-${Math.random()}`;
-                  const postTitle = post.title || 'Untitled Post';
-                  const postContent = post.content || '';
-                  const postAuthor = post.authorName || 'Unknown Author';
-                  const postUpvotes = typeof post.upvotes === 'number' ? post.upvotes : 0;
-                  const postDownvotes = typeof post.downvotes === 'number' ? post.downvotes : 0;
-                  const postComments = typeof post.commentCount === 'number' ? post.commentCount : 0;
-                  const postTags = Array.isArray(post.tags) ? post.tags : [];
-                  const postCreatedAt = post.createdAt || new Date().toISOString();
-                  const postIsStaked = !!post.isStaked;
-                  const postStakedTokens = typeof post.stakedTokens === 'number' ? post.stakedTokens : 0;
 
                   return (
                     <Web3SwipeGestureHandler
@@ -985,10 +974,6 @@ const CommunitiesPage: React.FC = () => {
                       userBalance={userBalance}
                     >
                       <div
-                        onClick={() => {
-                          const communitySlug = community?.slug || community?.name || post.communityId || 'unknown';
-                          router.push(`/communities/${communitySlug}/posts/${postId}`);
-                        }}
                         onMouseEnter={(e) => {
                           if (hoverTimeout) clearTimeout(hoverTimeout);
                           const timeout = setTimeout(() => {
@@ -1006,154 +991,21 @@ const CommunitiesPage: React.FC = () => {
                             setHoverPosition({ x: e.clientX, y: e.clientY });
                           }
                         }}
-                        className="bg-white dark:bg-gray-800 rounded-none border-x border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-all cursor-pointer first:rounded-t-lg last:rounded-b-lg first:border-t last:border-b group"
                       >
-                        <div className="flex">
-                          {/* Reddit-style Vote Section */}
-                          <div className="flex flex-col items-center p-2 bg-gray-50 dark:bg-gray-700/50 min-w-[48px]">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleVote(postId, 'up', 1);
-                              }}
-                              className="p-1 text-gray-400 hover:text-orange-500 rounded transition-colors"
-                            >
-                              <ArrowUp className="w-5 h-5" />
-                            </button>
-                            <span className="text-xs font-bold text-gray-900 dark:text-white py-0.5">
-                              {postUpvotes - postDownvotes}
-                            </span>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleVote(postId, 'down', 1);
-                              }}
-                              className="p-1 text-gray-400 hover:text-blue-500 rounded transition-colors"
-                            >
-                              <ArrowDown className="w-5 h-5" />
-                            </button>
-
-                            {/* Staking Indicator */}
-                            {postIsStaked && (
-                              <div className="mt-1">
-                                <div className="w-2 h-2 bg-green-500 rounded-full" title="On-chain verified" />
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="flex-1 p-3">
-                            {/* Post Header */}
-                            <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-xs text-gray-500 dark:text-gray-400 mb-2">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleCommunitySelect(community || { id: post.communityId, slug: post.communityId });
-                                }}
-                                className="font-semibold text-gray-900 dark:text-white hover:underline hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                              >
-                                {community?.displayName || community?.name || 'Unknown Community'}
-                              </button>
-                              <span>•</span>
-                              <span>Posted by</span>
-                              <OnChainIdentityBadge
-                                address={post.authorAddress || '0x0000000000000000000000000000000000000000'}
-                                identityData={{
-                                  address: post.authorAddress || '0x0000000000000000000000000000000000000000',
-                                  ensName: post.authorEns,
-                                  reputationScore: 650,
-                                  votingPower: 1000,
-                                  xpBadges: [],
-                                  totalContributions: 25
-                                }}
-                                size="sm"
-                                showTooltip={true}
-                              />
-                              <span>•</span>
-                              <span>{new Date(postCreatedAt).toLocaleDateString()}</span>
-                              {postIsStaked && (
-                                <>
-                                  <span>•</span>
-                                  <span className="text-green-600 dark:text-green-400 flex items-center gap-1">
-                                    <Coins className="w-3 h-3" />
-                                    {postStakedTokens}
-                                  </span>
-                                </>
-                              )}
-                            </div>
-
-                            <h3 className="text-base font-medium text-gray-900 dark:text-white mb-1 hover:text-blue-600 dark:hover:text-blue-400">
-                              {postTitle}
-                            </h3>
-
-                            <p className="text-gray-700 dark:text-gray-300 text-sm mb-2 line-clamp-2">
-                              {postContent}
-                            </p>
-
-                            {/* Tags - Reddit Style */}
-                            <div className="flex flex-wrap gap-1 mb-2">
-                              {postTags.slice(0, 4).map(tag => (
-                                <span
-                                  key={tag}
-                                  className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer transition-colors"
-                                >
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
-
-                            {/* Action Bar - Reddit Style */}
-                            <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                              <button
-                                onClick={(e) => e.stopPropagation()}
-                                className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
-                              >
-                                <MessageCircle className="w-4 h-4" />
-                                <span>{postComments}</span>
-                              </button>
-                              <button
-                                onClick={(e) => e.stopPropagation()}
-                                className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
-                              >
-                                <Share className="w-4 h-4" />
-                                <span>Share</span>
-                              </button>
-                              <button
-                                onClick={(e) => e.stopPropagation()}
-                                className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
-                              >
-                                <Bookmark className="w-4 h-4" />
-                                <span>Save</span>
-                              </button>
-                              {walletConnected && (
-                                <button
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="flex items-center space-x-1 px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs rounded-full hover:from-blue-600 hover:to-purple-700 transition-all"
-                                >
-                                  <Coins className="w-3 h-3" />
-                                  <span>Web3</span>
-                                </button>
-                              )}
-                              {/* Pin Button for Admins */}
-                              {userAdminRoles[post.communityId] === 'admin' && (
-                                <button
-                                  onClick={async (e) => {
-                                    e.stopPropagation();
-                                    if (confirm('Are you sure you want to pin this post?')) {
-                                      await postManagementService.pinPost(post.id, post.communityId);
-                                      // Refresh posts or update local state
-                                      // For now just alert
-                                      alert('Post pinned!');
-                                    }
-                                  }}
-                                  className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors text-gray-500 hover:text-green-600"
-                                  title="Pin Post"
-                                >
-                                  <Pin className="w-4 h-4" />
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
+                        <CommunityPostCardEnhanced
+                          post={post}
+                          community={community}
+                          userMembership={userMemberships[post.communityId || ''] || null}
+                          onVote={(postId, voteType, stakeAmount) => handleVote(postId, voteType === 'upvote' ? 'up' : 'down', stakeAmount ? parseInt(stakeAmount) : 1)}
+                          onReaction={async (postId, reactionType, amount) => {
+                            // Handle reaction logic here
+                            console.log('Reaction:', postId, reactionType, amount);
+                          }}
+                          onTip={async (postId, amount, token) => {
+                            // Handle tip logic here
+                            console.log('Tip:', postId, amount, token);
+                          }}
+                        />
                       </div>
                     </Web3SwipeGestureHandler>
                   );

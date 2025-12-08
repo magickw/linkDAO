@@ -315,7 +315,7 @@ export default function Profile() {
         title: post.title,
         content: post.contentCid,
         tags: post.tags ? post.tags.join(',') : '',
-        dao: post.communityId || ''
+        communityId: post.communityId || ''
       }
     });
   };
@@ -1768,7 +1768,7 @@ export default function Profile() {
                         <Link key={post.id} href={post.communityId ? `/communities/${post.communityId}` : `/profile?user=${post.author}`}>
                           <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                             <div className="flex justify-between items-start">
-                              <Link href={post.communityId || post.dao ? `/communities/${post.communityId || post.dao}` : `/profile?user=${post.author}`} className="flex-grow">
+                              <Link href={post.communityId ? `/communities/${post.communityId}` : `/profile?user=${post.author}`} className="flex-grow">
                                 <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                                   {post.title || 'Untitled Post'}
                                 </h4>

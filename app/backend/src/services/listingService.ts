@@ -97,7 +97,7 @@ export class ProductListingService {
         this.blockchainMarketplaceService = new BlockchainMarketplaceService();
         this.imageStorageService = ImageStorageService;
         this.databaseService = new DatabaseService();
-        this.redisService = new RedisService();
+        this.redisService = RedisService.getInstance();
     }
 
     /**
@@ -785,7 +785,7 @@ export class ProductListingService {
                 .where(like(schema.products.metadata, `%"blockchainListingId":"${blockchainListingId}"%`));
 
             if (result.length > 0) {
-                return this.mapProductFromDb(result[0]);
+                return await this.mapProductFromDb(result[0]);
             }
         } catch (error) {
             safeLogger.error('Error finding product by blockchain listing ID:', error);
@@ -830,8 +830,20 @@ export class ProductListingService {
     /**
      * Map product from database with enhanced fields
      */
-    private mapProductFromDb(dbProduct: any, dbCategory?: any): Product {
-        // Create the product object directly instead of calling private method
+    private async mapProductFromDb(dbProduct: any, dbCategory?: any): Promise<Product> {
+        // Get seller review stats
+        let sellerRating = 0;
+        if (dbProduct.sellerId) {
+          try {
+            // Import review service dynamically to avoid circular dependencies
+            const { reviewService } = await import('./reviewService');
+            const reviewStats = await reviewService.getReviewStats(dbProduct.sellerId);
+            sellerRating = reviewStats.averageRating;
+          } catch (error) {
+            safeLogger.warn('Failed to fetch seller review stats:', error);
+          }
+        }
+
         const category = dbCategory ? this.mapCategoryFromDb(dbCategory) : {
             id: dbProduct.categoryId,
             name: 'Unknown',

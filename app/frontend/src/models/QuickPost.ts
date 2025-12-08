@@ -83,8 +83,7 @@ export function convertBackendQuickPostToQuickPost(backendPost: any): QuickPost 
     onchainRef: backendPost.onchainRef || '',
     stakedValue: parseFloat(backendPost.stakedValue || backendPost.staked_value || 0),
     reputationScore: parseInt(backendPost.reputationScore || backendPost.reputation_score || 0),
-    dao: backendPost.dao || '', // Optional for quickPosts
-    
+
     // Engagement data (will be populated by services)
     reactions: [] as Reaction[],
     tips: [] as Tip[],
@@ -101,7 +100,7 @@ export function convertBackendQuickPostToQuickPost(backendPost: any): QuickPost 
     trendingStatus: backendPost.trendingScore > 0 ? 'trending' : null,
     trendingScore: backendPost.trendingScore || 0,
     isBookmarked: false,
-    communityId: backendPost.dao || backendPost.communityId,
+    communityId: backendPost.communityId || '',
     contentType: detectContentType(backendPost),
     
     // Add author profile information including avatar

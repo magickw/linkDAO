@@ -40,7 +40,7 @@ export interface AuthorProfile {
 }
 
 // Standardized post interface that matches backend schema
-// This can be either a regular Post (with title/dao) or QuickPost (without title/dao)
+// This can be either a regular Post (with title/community) or QuickPost (without title/community)
 export interface EnhancedPost {
   id: string;
   author: string;
@@ -58,7 +58,6 @@ export interface EnhancedPost {
   onchainRef: string;
   stakedValue: number;
   reputationScore: number;
-  dao?: string; // Optional for quickPosts
 
   // Engagement data
   reactions: Reaction[];
