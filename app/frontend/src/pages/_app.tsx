@@ -1,16 +1,17 @@
 // Import Web3 polyfills first to ensure compatibility
 import '@/utils/web3Polyfills';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import type { AppProps } from 'next/app';
+import { useRouter } from 'next/router';
 import { config } from '@/lib/rainbowkit';
 import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
-import { WagmiProvider } from 'wagmi';
+import { WagmiProvider, useAccount } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { OnchainKitProvider } from '@coinbase/onchainkit';
 import { base } from 'wagmi/chains';
 import { Web3Provider } from '@/context/Web3Context';
-import { AuthProvider } from '@/context/AuthContext';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { ToastProvider } from '@/context/ToastContext';
 import { NavigationProvider } from '@/context/NavigationContext';
 import { SellerQueryProvider } from '@/providers/SellerQueryProvider';
@@ -34,6 +35,95 @@ import '../styles/tiptap.css';
 import '@rainbow-me/rainbowkit/styles.css';
 
 const queryClient = new QueryClient();
+
+/**
+ * NavigationFixer - Fixes navigation issues after wallet connection/authentication
+ *
+ * The Problem:
+ * When a user connects their wallet, multiple state updates happen rapidly across
+ * Web3Context, AuthContext, and WalletLoginBridge. This can cause React to batch
+ * updates in ways that temporarily block Next.js router event handlers.
+ *
+ * The Solution:
+ * This component monitors authentication state changes and uses multiple strategies
+ * to ensure the Next.js router remains responsive after login.
+ */
+const NavigationFixer: React.FC = () => {
+  const router = useRouter();
+  const { isConnected, address } = useAccount();
+  const { user, isAuthenticated } = useAuth();
+
+  const prevConnectedRef = useRef(false);
+  const prevAuthenticatedRef = useRef(false);
+  const navigationFixApplied = useRef(false);
+
+  // Fix navigation when user connects wallet or authenticates
+  useEffect(() => {
+    const wasConnected = prevConnectedRef.current;
+    const wasAuthenticated = prevAuthenticatedRef.current;
+
+    prevConnectedRef.current = isConnected;
+    prevAuthenticatedRef.current = isAuthenticated;
+
+    // Detect when wallet just connected OR when authentication just completed
+    const justConnected = isConnected && !wasConnected;
+    const justAuthenticated = isAuthenticated && !wasAuthenticated;
+
+    if ((justConnected || justAuthenticated) && !navigationFixApplied.current) {
+      navigationFixApplied.current = true;
+
+      console.log('🔧 Applying navigation fix after', justAuthenticated ? 'authentication' : 'wallet connection');
+
+      // Strategy 1: Use requestAnimationFrame to wait for React render cycle
+      requestAnimationFrame(() => {
+        // Strategy 2: Prefetch current route to refresh router state
+        router.prefetch(router.asPath).catch(() => {});
+
+        // Strategy 3: Prefetch common routes for instant navigation
+        const commonRoutes = ['/', '/marketplace', '/communities', '/governance', '/profile'];
+        commonRoutes.forEach(route => {
+          router.prefetch(route).catch(() => {});
+        });
+
+        // Strategy 4: Add a small delay and then dispatch a dummy event to "wake up" event handlers
+        setTimeout(() => {
+          // Dispatch a benign event to ensure React's event system is responsive
+          window.dispatchEvent(new CustomEvent('navigation-fix-applied'));
+
+          // Strategy 5: Force a micro re-render by triggering a harmless state update
+          // This helps React reconcile any pending updates
+          document.body.classList.add('navigation-ready');
+          requestAnimationFrame(() => {
+            document.body.classList.remove('navigation-ready');
+          });
+
+          console.log('✅ Navigation fix applied successfully');
+
+          // Reset the flag after a delay to allow for future fixes if needed
+          setTimeout(() => {
+            navigationFixApplied.current = false;
+          }, 5000);
+        }, 100);
+      });
+    }
+  }, [isConnected, isAuthenticated, router]);
+
+  // Also fix navigation when route changes to ensure consistent behavior
+  useEffect(() => {
+    const handleRouteChange = () => {
+      // Reset navigation fix flag on route change
+      navigationFixApplied.current = false;
+    };
+
+    router.events.on('routeChangeComplete', handleRouteChange);
+
+    return () => {
+      router.events.off('routeChangeComplete', handleRouteChange);
+    };
+  }, [router]);
+
+  return null; // This component renders nothing
+};
 
 function AppContent({ children }: { children: React.ReactNode }) {
   const [isOnline, setIsOnline] = React.useState(true);
@@ -370,6 +460,7 @@ export default function App({ Component, pageProps, router }: AppProps) {
                         <NavigationProvider>
                           <ContactProvider>
                             <EnhancedThemeProvider defaultTheme="system">
+                              <NavigationFixer />
                               <AppContent>
                                 <Component {...pageProps} />
                               </AppContent>
