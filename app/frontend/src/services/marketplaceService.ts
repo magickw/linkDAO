@@ -478,7 +478,7 @@ export class UnifiedMarketplaceService {
   async incrementProductViews(id: string): Promise<boolean> {
     try {
       // Use fire-and-forget approach or check success
-      const response = await fetch(`${this.baseUrl}/api/products/${id}/view`, {
+      const response = await fetch(`${this.baseUrl}/api/marketplace/listings/${id}/view`, {
         method: 'POST',
         signal: this.createTimeoutSignal(5000)
       });

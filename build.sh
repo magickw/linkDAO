@@ -1,7 +1,10 @@
 #!/bin/bash
 
-# Install dependencies for the frontend workspace
-npm install --workspace=frontend
+# Change to the frontend directory
+cd app/frontend || exit
+
+# Install dependencies
+npm install --legacy-peer-deps
 
 # Build the Next.js application
-npm run build --workspace=frontend
+npm run build
