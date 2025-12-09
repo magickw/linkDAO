@@ -107,9 +107,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { addToast } = useToast();
   const router = useRouter();
 
-  // Track if we just completed authentication to trigger router refresh
-  const justAuthenticatedRef = useRef(false);
-
   // Track disconnect debounce to prevent false disconnection during state transitions
   const disconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isDisconnectingRef = useRef(false);
@@ -416,39 +413,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [isConnected, address, user, isLoading, checkStoredSession, lastAuthTime]);
 
-  // Fix navigation issue after wallet connection by refreshing router state
-  // This ensures Next.js Link components work correctly after authentication
-  useEffect(() => {
-    if (justAuthenticatedRef.current && user && accessToken) {
-      justAuthenticatedRef.current = false;
-
-      // Use requestIdleCallback if available, otherwise requestAnimationFrame
-      // This ensures we don't block the main thread during auth
-      const scheduleIdle = (typeof window !== 'undefined' && window.requestIdleCallback)
-        ? window.requestIdleCallback
-        : (cb: () => void) => requestAnimationFrame(cb);
-
-      scheduleIdle(() => {
-        // Force Next.js router to recognize the new state
-        // This fixes the issue where links don't work after wallet connection
-        router.prefetch(router.asPath).catch(() => {
-          // Ignore prefetch errors - this is just to refresh router state
-        });
-
-        // Prefetch common routes to ensure they're responsive
-        const commonRoutes = ['/marketplace', '/communities', '/governance', '/profile'];
-        commonRoutes.forEach(route => {
-          router.prefetch(route).catch(() => {});
-        });
-
-        // Dispatch event to notify other components that navigation should be ready
-        window.dispatchEvent(new CustomEvent('auth-navigation-ready'));
-
-        console.log('🔄 Router state refreshed after authentication');
-      });
-    }
-  }, [user, accessToken, router]);
-
   // Load KYC status
   const loadKYCStatus = async () => {
     if (authService.isAuthenticated()) {
@@ -581,160 +545,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [storeSession, validateSession]);
 
-  // Login with wallet authentication (legacy method for compatibility)
+  // Login with wallet authentication
   const login = async (walletAddress: string, connector: any, status: string): Promise<{ success: boolean; error?: string }> => {
     console.log('🔐 Login called for address:', walletAddress);
 
-    // Check if auth is already in progress
     if (isAuthLocked()) {
       console.log('⏳ Auth lock active, skipping login attempt');
-      return { success: true }; // Return success to prevent error loops
+      return { success: false, error: 'Authentication in progress' };
     }
 
-    // Check authentication cooldown to prevent rapid retry loops
     const now = Date.now();
     if (now - lastAuthTime < AUTH_COOLDOWN) {
-      console.log(`⏳ Authentication cooldown active, skipping attempt (${AUTH_COOLDOWN - (now - lastAuthTime)}ms remaining)`);
-      return { success: true }; // Return success to prevent error loops
+      console.log(`⏳ Authentication cooldown active, skipping attempt`);
+      return { success: false, error: 'Authentication cooldown active' };
     }
     setLastAuthTime(now);
 
-    // Normalize address to lowercase for case-insensitive comparisons
-    const normalizedAddress = walletAddress.toLowerCase();
-
-    // Check if already authenticated for this address (case-insensitive) - BEFORE acquiring lock
-    if (user && user.address?.toLowerCase() === normalizedAddress && accessToken) {
-      console.log('✅ Already authenticated for address:', walletAddress);
-      return { success: true };
-    }
-
-    // Try to acquire auth lock
     if (!acquireAuthLock()) {
-      console.log('⏳ Could not acquire auth lock for login, another auth process is running');
-      return { success: true }; // Return success to prevent error loops
+      console.log('⏳ Could not acquire auth lock for login');
+      return { success: false, error: 'Authentication in progress' };
     }
 
     try {
-      // Double-check authentication state after acquiring lock
-      if (user && user.address?.toLowerCase() === normalizedAddress && accessToken) {
-        console.log('✅ Already authenticated for address (after lock):', walletAddress);
-        return { success: true };
-      }
-
-      // First check the stored session in localStorage with proper validation
-      const storedToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-      const storedAddress = localStorage.getItem(STORAGE_KEYS.WALLET_ADDRESS);
-      const storedTimestamp = localStorage.getItem(STORAGE_KEYS.SIGNATURE_TIMESTAMP);
-      const storedUserData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
-
-      if (storedToken && storedAddress?.toLowerCase() === normalizedAddress && storedTimestamp && storedUserData) {
-        const timestamp = parseInt(storedTimestamp);
-        const now = Date.now();
-        const TOKEN_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours
-
-        if (now - timestamp < TOKEN_EXPIRY_TIME) {
-          try {
-            const userData = JSON.parse(storedUserData);
-            setUser(userData);
-            setAccessToken(storedToken);
-            await loadKYCStatus();
-            console.log('✅ Using existing valid session from localStorage for:', walletAddress);
-            return { success: true };
-          } catch (parseError) {
-            console.warn('Failed to parse stored user data, proceeding with new authentication');
-          }
-        } else {
-          console.log('⏰ Stored session expired, clearing and requesting new signature');
-          // Clear expired session
-          Object.values(STORAGE_KEYS).forEach(key => {
-            try {
-              localStorage.removeItem(key);
-            } catch (error) {
-              console.warn(`Failed to remove ${key} from localStorage:`, error);
-            }
-          });
-        }
-      }
-
-      // Check if authService already has a token for this address (case-insensitive)
-      if (authService.isAuthenticated()) {
-        try {
-          const currentUser = await authService.getCurrentUser();
-          if (currentUser && currentUser.address?.toLowerCase() === normalizedAddress) {
-            const token = authService.getToken();
-            if (token) {
-              setUser(currentUser);
-              setAccessToken(token);
-              // Store in localStorage for persistence across page refreshes
-              storeSession(token, currentUser);
-              await loadKYCStatus();
-              console.log('✅ Using existing valid session from authService for:', walletAddress);
-              return { success: true };
-            }
-          }
-        } catch (error) {
-          console.warn('Failed to validate existing authService session:', error);
-        }
-      }
-
-      // Check enhancedAuthService as fallback (case-insensitive)
-      const sessionStatus = enhancedAuthService.getSessionStatus();
-      if (sessionStatus.isAuthenticated && sessionStatus.address?.toLowerCase() === normalizedAddress) {
-        try {
-          const currentUser = await enhancedAuthService.getCurrentUser();
-          if (currentUser && currentUser.address?.toLowerCase() === normalizedAddress) {
-            const token = enhancedAuthService.getToken();
-            if (token) {
-              setUser(currentUser);
-              setAccessToken(token);
-              // Store in localStorage for persistence across page refreshes
-              storeSession(token, currentUser);
-              await loadKYCStatus();
-              console.log('✅ Using existing valid session from enhancedAuthService for:', walletAddress);
-              return { success: true };
-            }
-          }
-        } catch (error) {
-          console.warn('Failed to validate existing enhancedAuthService session:', error);
-        }
-      }
-
-      // Check validateSession as final check before requesting signature
-      const sessionValidation = await validateSession(walletAddress);
-      if (sessionValidation.isValid && sessionValidation.token) {
-        console.log('✅ Using existing valid session from validateSession for:', walletAddress);
-        // Try to get user data from storage or fetch from backend
-        const storedUserData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
-        if (storedUserData) {
-          try {
-            const userData = JSON.parse(storedUserData);
-            setUser(userData);
-            setAccessToken(sessionValidation.token);
-            await loadKYCStatus();
-            return { success: true };
-          } catch (error) {
-            console.warn('Failed to parse stored user data:', error);
-          }
-        }
-
-        // Try to fetch user from backend
-        try {
-          const currentUser = await authService.getCurrentUser();
-          if (currentUser && currentUser.address?.toLowerCase() === normalizedAddress) {
-            setUser(currentUser);
-            setAccessToken(sessionValidation.token);
-            storeSession(sessionValidation.token, currentUser);
-            await loadKYCStatus();
-            return { success: true };
-          }
-        } catch (error) {
-          console.warn('Failed to fetch user from backend:', error);
-        }
-      }
-
-      // Only proceed with wallet signature if no valid session exists
-      console.log('📝 No valid session found for address:', walletAddress, 'requesting wallet signature...');
-
       setIsLoading(true);
 
       const result = await authService.authenticateWallet(walletAddress, connector, status);
@@ -742,17 +574,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (result.success && result.user && result.token) {
         setUser(result.user);
         setAccessToken(result.token);
-        // Store session for persistence
         storeSession(result.token, result.user);
         await loadKYCStatus();
         console.log('✅ Authentication successful for address:', walletAddress);
-
-        // Mark that we just authenticated to trigger router refresh
-        justAuthenticatedRef.current = true;
-
-        // Show success notification
         addToast('Successfully authenticated!', 'success', 3000);
-
         return { success: true };
       } else {
         console.log('❌ Authentication failed for address:', walletAddress, 'error:', result.error);
@@ -760,34 +585,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error: any) {
       console.error('Login failed for address:', walletAddress, error);
-
-      // Provide more specific error messages based on error type
-      let errorMessage = 'Login failed';
-      let toastType: 'error' | 'warning' | 'info' = 'error';
-
-      if (error.message) {
-        if (error.message.includes('403')) {
-          errorMessage = 'Authentication blocked. Please try again later.';
-          toastType = 'warning';
-        } else if (error.message.includes('401')) {
-          errorMessage = 'Authentication failed. Please check your wallet connection.';
-        } else if (error.message.includes('429')) {
-          errorMessage = 'Too many authentication attempts. Please wait a moment and try again.';
-          toastType = 'info';
-        } else if (error.message.includes('Network error') || error.message.includes('fetch')) {
-          errorMessage = 'Network connection issue. Some features may be limited.';
-          toastType = 'warning';
-        } else {
-          errorMessage = error.message;
-        }
-      }
-
-      // Show user-friendly notification
-      addToast(errorMessage, toastType, 5000);
-
-      return { success: false, error: errorMessage };
+      addToast(error.message || 'Login failed', 'error', 5000);
+      return { success: false, error: error.message || 'Login failed' };
     } finally {
       setIsLoading(false);
+      releaseAuthLock();
     }
   };
 

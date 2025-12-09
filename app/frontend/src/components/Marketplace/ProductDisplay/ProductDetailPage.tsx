@@ -69,6 +69,7 @@ interface ProductDetailPageProps {
       average: number;
       count: number;
     };
+    views?: number;
     media: Array<{
       type: 'image' | 'video' | '3d' | 'ar';
       url: string;
@@ -230,7 +231,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                 </div>
               )}
 
-              {/* Rating */}
+              {/* Rating and Views */}
               <div className="flex items-center mb-4">
                 <div className="flex">
                   {[...Array(5)].map((_, i) => (
@@ -244,6 +245,12 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                 <span className="ml-2 text-sm font-medium text-white">{product.reviews.average}</span>
                 <span className="mx-2 text-white/40">|</span>
                 <span className="text-sm text-white/70">{product.reviews.count} reviews</span>
+                {product.views !== undefined && (
+                  <>
+                    <span className="mx-2 text-white/40">|</span>
+                    <span className="text-sm text-white/70">{product.views} views</span>
+                  </>
+                )}
               </div>
 
               {/* Price */}

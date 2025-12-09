@@ -1,12 +1,12 @@
 /**
  * WalletLoginBridge - Automatic authentication bridge for wallet connections
- * Triggers authentication flow when a user connects their wallet (including Base wallet)
+ * Triggers authentication flow when a user connects their wallet.
+ * This component is simplified to delegate all authentication logic to AuthContext.
  */
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useAccount } from 'wagmi';
-import { useAuth, isAuthLocked } from '@/context/AuthContext';
-import { authService } from '@/services/authService';
+import { useAuth } from '@/context/AuthContext';
 
 interface WalletLoginBridgeProps {
   autoLogin?: boolean;
@@ -15,393 +15,84 @@ interface WalletLoginBridgeProps {
   skipIfAuthenticated?: boolean;
 }
 
-// Global flag to prevent multiple WalletLoginBridge instances from running simultaneously
-let isGlobalAuthInProgress = false;
-
-// Simple global state tracking to prevent conflicts with other auth systems
-let currentAuthAddress: string | null = null;
-let currentAuthInProgress = false;
-
 export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
   autoLogin = true,
   onLoginSuccess,
   onLoginError,
-  skipIfAuthenticated = true
+  skipIfAuthenticated = true,
 }) => {
   const { address, isConnected, connector, status } = useAccount();
   const { user, isAuthenticated, isLoading: isAuthLoading, login } = useAuth();
-
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const lastAddressRef = useRef<string | undefined>();
-  const hasTriedLoginRef = useRef(false);
-  const loginAttemptTimestampRef = useRef<number>(0);
-
-  // Prevent page refresh loops by tracking failed attempts
-  const [failedAttempts, setFailedAttempts] = useState(0);
-  const maxFailedAttempts = 1; // Maximum failed attempts before stopping (reduced from 2 to prevent excessive retries)
-  const failedAttemptCooldown = 300000; // 5 minutes cooldown after failed attempts (increased from 60s)
-  const [isInitialLoad, setIsInitialLoad] = useState(true); // Track if this is the initial page load
-  
-  // Add a cooldown period to prevent rapid retries
-  const AUTH_COOLDOWN_MS = 2000;
-
-  // Simple notification function (will be enhanced when ToastProvider is available)
-  const notify = (message: string, type: 'info' | 'success' | 'warning' | 'error') => {
-    console.log(`[${type.toUpperCase()}] ${message}`);
-    // Could also use browser notifications here if needed
-  };
+  const hasAttemptedLoginRef = useRef(false);
 
   useEffect(() => {
-    // Check if wallet connection has changed
-    const addressChanged = lastAddressRef.current !== address;
-    lastAddressRef.current = address;
+    // Conditions for triggering auto-login
+    const shouldAttemptLogin =
+      autoLogin &&
+      isConnected &&
+      address &&
+      !isAuthenticated &&
+      !isAuthLoading &&
+      !hasAttemptedLoginRef.current;
 
-    // CRITICAL: Wait for auth initialization to complete before attempting login
-    // This prevents signature prompts when a valid session already exists
-    if (isAuthLoading) {
-      console.log('⏳ Waiting for auth initialization to complete...');
+    if (!shouldAttemptLogin) {
       return;
     }
 
-    // Skip if conditions not met
-    if (!autoLogin || !isConnected || !address || isLoggingIn || status !== 'connected' || !connector) {
-      return;
-    }
+    const handleAutoLogin = async () => {
+      hasAttemptedLoginRef.current = true;
+      console.log(`🔐 Triggering auto-login for wallet: ${address}`);
 
-    // Skip if user is already authenticated and we should skip
-    if (skipIfAuthenticated && isAuthenticated) {
-      console.log('📝 Skipping auto-login: user already authenticated');
-      // Reset the login attempt flag when user is authenticated
-      hasTriedLoginRef.current = false;
-      return;
-    }
+      try {
+        const result = await login(address, connector, status);
 
-    // Skip if we already tried login for this address (prevent endless loops)
-    if (hasTriedLoginRef.current && !addressChanged) {
-      console.log('📝 Skipping auto-login: already attempted for this address');
-      return;
-    }
-
-    // Skip if we already tried login for this address recently (cooldown)
-    const now = Date.now();
-    if (!addressChanged && (now - loginAttemptTimestampRef.current < AUTH_COOLDOWN_MS)) {
-      console.log('📝 Skipping auto-login: cooldown period active');
-      return;
-    }
-
-    // Quick session check to prevent signature prompts
-    if (authService.hasPotentialSession()) {
-      console.log('✅ Potential session detected, skipping auto-login to avoid signature prompt');
-      return;
-    }
-
-    // Check for existing valid session BEFORE attempting login
-    // Enhanced session validation with multiple fallback checks
-    const storedToken = localStorage.getItem('linkdao_access_token') ||
-                       localStorage.getItem('token') ||
-                       localStorage.getItem('authToken') ||
-                       localStorage.getItem('auth_token');
-    const storedAddress = localStorage.getItem('linkdao_wallet_address') ||
-                         localStorage.getItem('wallet_address');
-    const storedTimestamp = localStorage.getItem('linkdao_signature_timestamp') ||
-                           localStorage.getItem('signature_timestamp');
-    const storedUserData = localStorage.getItem('linkdao_user_data') ||
-                          localStorage.getItem('user_data');
-    
-    if (storedToken && storedAddress === address && storedTimestamp && storedUserData) {
-      const timestamp = parseInt(storedTimestamp);
-      const now = Date.now();
-      const TOKEN_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours
-
-      if (now - timestamp < TOKEN_EXPIRY_TIME) {
-        console.log('✅ Valid session exists in localStorage');
-        hasTriedLoginRef.current = false;
-
-        // Trust the AuthContext initialization to handle session restoration
-        // Do NOT call login() here as it can trigger unnecessary signature requests
-        // The AuthContext useEffect (lines 154-245) will restore the session from localStorage
-
-        return;
-      } else {
-        console.log('⏰ Stored session expired, clearing expired session');
-        // Clear expired session
-        const storageKeys = [
-          'linkdao_access_token',
-          'linkdao_wallet_address',
-          'linkdao_signature_timestamp',
-          'linkdao_user_data'
-        ];
-        storageKeys.forEach(key => localStorage.removeItem(key));
-      }
-    }
-
-    let timer: NodeJS.Timeout | null = null;
-    
-    // Only attempt login once per address change
-    if (!hasTriedLoginRef.current || addressChanged) {
-      // Add a longer delay on initial page load to prevent immediate signature prompts
-      const delay = isInitialLoad ? 2000 : 500; // 2 seconds on first load, 500ms otherwise
-      
-      timer = setTimeout(() => {
-        console.log('🚀 Triggering auto-login for:', address);
-        setIsInitialLoad(false); // Mark initial load as complete
-        handleAutoLogin();
-      }, delay);
-    }
-    
-    // Cleanup function to prevent memory leaks - always returned
-    return () => {
-      if (timer) {
-        clearTimeout(timer);
-      }
-    };
-  }, [address, isConnected, isAuthenticated, isAuthLoading, autoLogin, skipIfAuthenticated, isLoggingIn, status, connector, isInitialLoad]);
-
-  const handleAutoLogin = async () => {
-    // Check global auth lock from AuthContext
-    if (isAuthLocked()) {
-      console.log('📝 Skipping auto-login: AuthContext has auth lock active');
-      return;
-    }
-
-    // Check global auth flag to prevent duplicate authentication
-    if (isGlobalAuthInProgress) {
-      console.log('📝 Skipping auto-login: global authentication in progress');
-      return;
-    }
-    
-    // Check if another auth system is already processing for this address
-    if (currentAuthInProgress && currentAuthAddress === address) {
-      console.log('📝 Skipping auto-login: another authentication system is already processing for this address');
-      return;
-    }
-    
-    // Enhanced connector validation to prevent errors
-    if (!address || isLoggingIn || !connector || status !== 'connected' || failedAttempts >= maxFailedAttempts) {
-      console.log('📝 Skipping auto-login: invalid state', {
-        hasAddress: !!address,
-        isLoggingIn,
-        hasConnector: !!connector,
-        status,
-        failedAttempts,
-        maxFailedAttempts
-      });
-      return;
-    }
-    
-    // Additional connector readiness check
-    if (connector && typeof connector.getChainId !== 'function') {
-      console.log('📝 Skipping auto-login: connector not fully initialized', {
-        connectorName: connector.name,
-        hasGetChainId: typeof connector.getChainId === 'function',
-        connectorReady: connector.ready
-      });
-      return;
-    }
-
-    try {
-      isGlobalAuthInProgress = true;
-      currentAuthInProgress = true;
-      currentAuthAddress = address;
-      setIsLoggingIn(true);
-      hasTriedLoginRef.current = true;
-      
-      // Set the attempt timestamp to prevent rapid retries
-      loginAttemptTimestampRef.current = Date.now();
-
-      console.log(`🔐 Attempting automatic login for wallet: ${address} via ${connector?.name || 'Unknown'}`);
-
-      // Add delay to ensure connector is fully initialized
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Double-check connector readiness after delay
-      if (!connector || typeof connector.getChainId !== 'function') {
-        console.log('📝 Connector not ready after delay, skipping authentication');
-        return;
-      }
-
-      // Check auth lock again after delay to prevent race conditions
-      if (isAuthLocked()) {
-        console.log('📝 Skipping auto-login: AuthContext has auth lock active after delay');
-        return;
-      }
-
-      // First check if we already have a valid session to avoid unnecessary signature prompts
-      // Use the same logic as authService.getToken() to find the token
-      const storedToken = localStorage.getItem('linkdao_access_token') ||
-                         localStorage.getItem('token') ||
-                         localStorage.getItem('authToken') ||
-                         localStorage.getItem('auth_token');
-      const storedAddress = localStorage.getItem('linkdao_wallet_address') ||
-                           localStorage.getItem('wallet_address');
-      const storedTimestamp = localStorage.getItem('linkdao_signature_timestamp') ||
-                             localStorage.getItem('signature_timestamp');
-      const storedUserData = localStorage.getItem('linkdao_user_data') ||
-                            localStorage.getItem('user_data');
-
-      console.log('🔍 Session validation check:', {
-        hasStoredToken: !!storedToken,
-        storedAddress,
-        currentAddress: address,
-        addressesMatch: storedAddress === address,
-        hasStoredTimestamp: !!storedTimestamp,
-        hasStoredUserData: !!storedUserData,
-        tokenPreview: storedToken ? storedToken.substring(0, 20) + '...' : 'none'
-      });
-
-      if (storedToken && storedAddress === address && storedTimestamp && storedUserData) {
-        const timestamp = parseInt(storedTimestamp);
-        const now = Date.now();
-        const TOKEN_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours
-
-        if (now - timestamp < TOKEN_EXPIRY_TIME) {
-          console.log('✅ Found valid stored session in handleAutoLogin, trusting AuthContext to restore it');
-          // Reset failed attempts on successful session detection
-          setFailedAttempts(0);
-          hasTriedLoginRef.current = false;
-
-          // Do NOT call login() here - let AuthContext handle session restoration
-          // Calling login() can trigger a signature request if services aren't fully synced
-
-          const walletName = connector?.name || 'Wallet';
-          console.log(`✅ Session already exists for ${walletName}, no action needed`);
-
+        if (result.success) {
+          console.log(`✅ Auto-login successful for ${address}`);
           if (onLoginSuccess) {
             onLoginSuccess({ address });
           }
-
-          return;
-        }
-      }
-
-      // Check auth lock again right before calling login to prevent race conditions
-      if (isAuthLocked()) {
-        console.log('📝 Skipping login call: AuthContext has auth lock active after delay');
-        return;
-      }
-
-      let result;
-      try {
-        result = await login(address, connector, status);
-        console.log('🔍 Login result:', result);
-      } catch (loginError) {
-        console.error('💥 Login threw an exception:', loginError);
-        const errorMessage = loginError instanceof Error ? loginError.message : 'Login failed';
-        
-        // Stop retrying on connector errors to prevent endless loops
-        if (errorMessage.includes('getChainId') || errorMessage.includes('connector')) {
-          console.log('📝 Stopping auto-login due to connector error');
-          hasTriedLoginRef.current = true;
-          return;
-        }
-        
-        result = { success: false, error: errorMessage };
-      }
-
-      if (result.success) {
-        const walletName = connector?.name || 'Wallet';
-        console.log(`✅ Login successful for ${walletName}!`);
-        setFailedAttempts(0); // Reset failed attempts on success
-        
-        if (onLoginSuccess) {
-          onLoginSuccess({ address });
-        }
-      } else {
-        const errorMessage = result.error || 'Authentication failed';
-        console.error('❌ Auto-login failed:', errorMessage);
-        
-        // Increment failed attempts for certain types of errors
-        if (errorMessage.includes('Connector not connected') || errorMessage.includes('Failed to sign') || errorMessage.includes('Authentication failed') || errorMessage.includes('getChainId')) {
-          setFailedAttempts(prev => prev + 1);
-        }
-        
-        // Stop retrying on authentication failures to prevent endless loops
-        // Add a longer cooldown for connector-related errors
-        if (errorMessage.includes('getChainId') || errorMessage.includes('connector')) {
-          console.log('📝 Extended cooldown for connector errors - will not retry for 5 minutes');
-          loginAttemptTimestampRef.current = Date.now() + 300000; // 5 minutes
-        }
-        hasTriedLoginRef.current = true;
-        
-        // Increment failed attempts for certain types of errors
-        if (errorMessage.includes('Connector not connected') || errorMessage.includes('Failed to sign') || errorMessage.includes('Authentication failed')) {
-          setFailedAttempts(prev => prev + 1);
-        }
-        
-        // Don't show error notifications for connector issues to prevent spam
-        if (!errorMessage.includes('Connector not connected')) {
+        } else {
+          console.error(`❌ Auto-login failed for ${address}:`, result.error);
           if (onLoginError) {
-            onLoginError(errorMessage);
+            onLoginError(result.error || 'Authentication failed');
           }
         }
-      }
-    } catch (error) {
-      console.error('💥 Auto-login error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Login failed';
-      
-      // Stop retrying on errors to prevent endless loops
-      hasTriedLoginRef.current = true;
-      
-      // Increment failed attempts for connector errors
-      if (errorMessage.includes('Connector not connected') || errorMessage.includes('Failed to sign') || errorMessage.includes('Authentication failed')) {
-        setFailedAttempts(prev => prev + 1);
-      }
-      
-      // Don't show error notifications for connector issues
-      if (!errorMessage.includes('Connector not connected')) {
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        console.error('💥 Auto-login threw an exception:', errorMessage);
         if (onLoginError) {
           onLoginError(errorMessage);
         }
       }
-    } finally {
-      setIsLoggingIn(false);
-      isGlobalAuthInProgress = false; // Reset the global flag
-      currentAuthInProgress = false;
-      currentAuthAddress = null;
-    }
-  };
-
-  // Reset attempt flag when wallet disconnects or connector changes
-  useEffect(() => {
-    if (!isConnected || !connector) {
-      hasTriedLoginRef.current = false;
-      setFailedAttempts(0);
-    }
-  }, [isConnected, connector]);
-
-  // Monitor authentication status and reset login attempt when authenticated
-  useEffect(() => {
-    if (isAuthenticated && user && user.address === address) {
-      // User is now authenticated for the current address, reset the login attempt flag
-      // This prevents repeated login attempts for the same session
-      if (hasTriedLoginRef.current) {
-        hasTriedLoginRef.current = false;
-        console.log('User authenticated successfully, resetting login attempt flag');
-      }
-    }
-  }, [isAuthenticated, user, address]);
-
-  useEffect(() => {
-    if (failedAttempts >= maxFailedAttempts) {
-      console.log('Max failed login attempts reached, stopping auto-login');
-      hasTriedLoginRef.current = true; // Prevent further attempts
-    }
-  }, [failedAttempts]);
-
-  // Cleanup function to reset global flag when component unmounts
-  useEffect(() => {
-    return () => {
-      if (hasTriedLoginRef.current) {
-        isGlobalAuthInProgress = false;
-        if (currentAuthAddress === address) {
-          currentAuthInProgress = false;
-          currentAuthAddress = null;
-        }
-      }
     };
+
+    handleAutoLogin();
+
+  }, [
+    address,
+    isConnected,
+    isAuthenticated,
+    isAuthLoading,
+    autoLogin,
+    login,
+    connector,
+    status,
+    onLoginSuccess,
+    onLoginError,
+  ]);
+
+  // Reset login attempt flag if the connected address changes
+  useEffect(() => {
+    hasAttemptedLoginRef.current = false;
   }, [address]);
 
-  // This component doesn't render anything visible
+  // Reset login attempt flag if user disconnects
+  useEffect(() => {
+    if (!isConnected) {
+      hasAttemptedLoginRef.current = false;
+    }
+  }, [isConnected]);
+
   return null;
 };
 

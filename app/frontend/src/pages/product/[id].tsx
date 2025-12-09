@@ -47,6 +47,10 @@ const ProductPage: React.FC = () => {
               console.warn('Failed to fetch review stats:', reviewError);
             }
             
+            // Get inventory - handle both `inventory` and `quantity` fields
+            const rawInventory = productData.inventory ?? productData.quantity ?? 0;
+            const inventory = typeof rawInventory === 'string' ? parseInt(rawInventory, 10) : Number(rawInventory);
+
             // Transform the product data to match the ProductDetailPage component interface
             const transformedProduct = {
               id: productData.id,
@@ -78,7 +82,8 @@ const ProductPage: React.FC = () => {
               specifications: productData.metadata?.specifications || {},
               category: productData.category?.name || 'General',
               tags: productData.tags || [],
-              inventory: productData.inventory || 0,
+              inventory: !isNaN(inventory) ? inventory : 0,
+              views: productData.views || 0, // Add views from product data
               shipping: {
                 freeShipping: productData.shipping?.free || false,
                 estimatedDays: productData.shipping?.estimatedDays || '3-5 business days',
@@ -104,6 +109,9 @@ const ProductPage: React.FC = () => {
             };
             
             setProduct(transformedProduct);
+
+            // Increment view count
+            marketplaceService.incrementProductViews(id as string).catch(console.error);
           } else {
             // Try mock API endpoint as fallback
             try {
