@@ -24,8 +24,10 @@
     "axios": "^1.13.2",
     "chart.js": "^4.5.0",
     "cloudinary": "^2.8.0",
+    "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "ethers": "^6.15.0",
+    "express": "^5.2.1",
     "ipfs-http-client": "^60.0.1",
     "jsonwebtoken": "^9.0.2",
     "node-fetch": "^3.3.2",
@@ -35,10 +37,5 @@
     "react-dom": "^19.1.1",
     "uuid": "^10.0.0",
     "ws": "^8.18.3"
-  },
-  "overrides": {
-    "playwright": "npm:@empty@1.0.0",
-    "playwright-core": "npm:@empty@1.0.0",
-    "@playwright/test": "npm:@empty@1.0.0"
   }
 }

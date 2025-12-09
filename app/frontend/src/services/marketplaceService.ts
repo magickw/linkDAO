@@ -960,10 +960,10 @@ export class UnifiedMarketplaceService {
       const result = await response.json().catch(() => ({ success: false }));
       console.log('[MarketplaceService] Raw API result:', result);
 
-      if (result && result.success) {
+      if (result && (result.success || result.data)) {
         // Handle both array and paginated response formats
         // API returns: { success: true, data: { listings: [...], total, ... } }
-        const data = result.data;
+        const data = result.data || result;
         console.log('[MarketplaceService] Extracted data:', data);
 
         if (Array.isArray(data)) {
@@ -972,6 +972,10 @@ export class UnifiedMarketplaceService {
         } else if (data && Array.isArray(data.listings)) {
           console.log('[MarketplaceService] Data has listings array, returning:', data.listings.length, 'items');
           return data.listings;
+        } else if (data && data.data && Array.isArray(data.data.listings)) {
+          // Handle nested data structure
+          console.log('[MarketplaceService] Data has nested listings array, returning:', data.data.listings.length, 'items');
+          return data.data.listings;
         }
         console.log('[MarketplaceService] No valid listings array found in data');
         return [];

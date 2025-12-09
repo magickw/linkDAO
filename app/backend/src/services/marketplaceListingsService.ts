@@ -34,9 +34,11 @@ export class MarketplaceListingsService {
       const conditions = [];
 
       // Filter for active listings that are published
-      if (isActive !== undefined && isActive) {
+      // Only apply filters if isActive is explicitly set to true
+      if (isActive === true) {
         conditions.push(eq(products.status, 'active'));
-        // conditions.push(sql`${products.publishedAt} IS NOT NULL`); // Relaxed check to allow legacy data
+        // Also check that the product has been published (not draft)
+        conditions.push(sql`${products.publishedAt} IS NOT NULL`);
       }
 
       if (category) {
@@ -419,12 +421,15 @@ export class MarketplaceListingsService {
       const conditions = [];
 
       // Filter for active listings
-      if (filters.isActive !== undefined) {
-        conditions.push(eq(products.status, filters.isActive ? 'active' : 'inactive'));
-      } else {
+      // Only apply filters if isActive is explicitly set
+      if (filters.isActive === true) {
         conditions.push(eq(products.status, 'active'));
+        // Also check that the product has been published (not draft)
+        conditions.push(sql`${products.publishedAt} IS NOT NULL`);
+      } else if (filters.isActive === false) {
+        conditions.push(eq(products.status, 'inactive'));
       }
-      // conditions.push(sql`${products.publishedAt} IS NOT NULL`); // Relaxed check to allow legacy data
+      // For undefined isActive, don't filter by status to show all listings
 
       // Add search conditions
       const searchCondition = sql`(${products.title} ILIKE ${`%${searchTerm}%`} OR ${products.description} ILIKE ${`%${searchTerm}%`})`;
@@ -562,7 +567,6 @@ export class MarketplaceListingsService {
         })
         .from(products)
         .where(and(
-          eq(products.status, 'active'),
           eq(products.status, 'active'),
           // sql`${products.publishedAt} IS NOT NULL`, // Relaxed check
           sql`${products.categoryId} IS NOT NULL`

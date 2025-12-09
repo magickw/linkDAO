@@ -397,7 +397,6 @@ const MarketplaceContent: React.FC = () => {
       const query = debouncedSearchTerm.toLowerCase();
       result = result.filter(listing =>
         listing.metadataURI?.toLowerCase().includes(query) ||
-        listing.metadataURI?.toLowerCase().includes(query) ||
         listing.sellerWalletAddress?.toLowerCase().includes(query)
       );
     }

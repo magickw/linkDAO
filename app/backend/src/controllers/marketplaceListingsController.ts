@@ -121,16 +121,23 @@ export class MarketplaceListingsController {
         specifications: {}
       }));
 
+      // Return the response in the format expected by the frontend
       const response = {
-        listings: mappedListings,
-        total: result.total,
-        limit: result.limit,
-        offset: result.offset,
-        hasNext: result.hasNext,
-        hasPrevious: result.hasPrevious
+        success: true,
+        data: {
+          listings: mappedListings,
+          pagination: {
+            page: Math.floor(result.offset / result.limit) + 1,
+            limit: result.limit,
+            total: result.total,
+            totalPages: Math.ceil(result.total / result.limit),
+            hasNext: result.hasNext,
+            hasPrev: result.hasPrevious
+          }
+        }
       };
 
-      res.json(createSuccessResponse(response));
+      res.json(response);
     } catch (error) {
       safeLogger.error('Error in getListings:', error);
       res.status(500).json(createErrorResponse(
