@@ -5,7 +5,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { useAccount } from 'wagmi';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth, isAuthLocked } from '@/context/AuthContext';
 import { authService } from '@/services/authService';
 
 interface WalletLoginBridgeProps {
@@ -158,6 +158,12 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
   }, [address, isConnected, isAuthenticated, isAuthLoading, autoLogin, skipIfAuthenticated, isLoggingIn, status, connector, isInitialLoad]);
 
   const handleAutoLogin = async () => {
+    // Check global auth lock from AuthContext
+    if (isAuthLocked()) {
+      console.log('📝 Skipping auto-login: AuthContext has auth lock active');
+      return;
+    }
+
     // Check global auth flag to prevent duplicate authentication
     if (isGlobalAuthInProgress) {
       console.log('📝 Skipping auto-login: global authentication in progress');
@@ -214,6 +220,12 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
         return;
       }
 
+      // Check auth lock again after delay to prevent race conditions
+      if (isAuthLocked()) {
+        console.log('📝 Skipping auto-login: AuthContext has auth lock active after delay');
+        return;
+      }
+
       // First check if we already have a valid session to avoid unnecessary signature prompts
       // Use the same logic as authService.getToken() to find the token
       const storedToken = localStorage.getItem('linkdao_access_token') ||
@@ -260,6 +272,12 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
 
           return;
         }
+      }
+
+      // Check auth lock again right before calling login to prevent race conditions
+      if (isAuthLocked()) {
+        console.log('📝 Skipping login call: AuthContext has auth lock active after delay');
+        return;
       }
 
       let result;

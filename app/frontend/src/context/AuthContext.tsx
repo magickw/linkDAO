@@ -9,6 +9,36 @@ import { UserRole, Permission } from '@/types/auth';
 import { useSessionValidation } from '@/hooks/useSessionValidation';
 import { useToast } from '@/context/ToastContext';
 
+// Global authentication lock to prevent concurrent auth processes
+let globalAuthLock = false;
+let globalAuthLockTimestamp = 0;
+const AUTH_LOCK_TIMEOUT = 10000; // 10 seconds max lock time
+
+// Helper to acquire auth lock
+const acquireAuthLock = (): boolean => {
+  const now = Date.now();
+  // Release stale lock
+  if (globalAuthLock && now - globalAuthLockTimestamp > AUTH_LOCK_TIMEOUT) {
+    console.log('🔓 Releasing stale auth lock');
+    globalAuthLock = false;
+  }
+  if (globalAuthLock) {
+    return false;
+  }
+  globalAuthLock = true;
+  globalAuthLockTimestamp = now;
+  return true;
+};
+
+// Helper to release auth lock
+const releaseAuthLock = () => {
+  globalAuthLock = false;
+  globalAuthLockTimestamp = 0;
+};
+
+// Export for use by WalletLoginBridge
+export const isAuthLocked = () => globalAuthLock;
+
 interface AuthContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
@@ -178,6 +208,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       initAuthRef.current = true;
 
+      // Try to acquire global auth lock
+      if (!acquireAuthLock()) {
+        console.log('⏳ Auth initialization skipped - another auth process is running');
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
 
       try {
@@ -267,6 +304,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.error('Error during auth initialization:', error);
       } finally {
         setIsLoading(false);
+        releaseAuthLock();
       }
     };
 
@@ -325,17 +363,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isDisconnectingRef.current = false;
       }
 
-      // If wallet is connected but no user, try to restore session (with cooldown)
+      // If wallet is connected but no user, try to restore session (with cooldown and lock)
       if (isConnected && address && !user && !isLoading) {
         const now = Date.now();
         if (now - lastAuthTime >= AUTH_COOLDOWN) {
-          console.log('🔗 Wallet connected, checking for existing session...');
-          setLastAuthTime(now); // Update cooldown timer to prevent infinite loop
-          const hasValidSession = await checkStoredSession();
-          if (hasValidSession) {
-            console.log('✅ Restored session without requiring signature');
-          } else {
-            console.log('🔐 No valid session found, signature will be required when needed');
+          // Check if auth is already in progress using the helper function
+          if (isAuthLocked()) {
+            console.log('⏳ Auth lock active, skipping session check');
+            return;
+          }
+          // Try to acquire lock before checking session
+          if (!acquireAuthLock()) {
+            console.log('⏳ Could not acquire auth lock, skipping session check');
+            return;
+          }
+          try {
+            console.log('🔗 Wallet connected, checking for existing session...');
+            setLastAuthTime(now); // Update cooldown timer to prevent infinite loop
+            const hasValidSession = await checkStoredSession();
+            if (hasValidSession) {
+              console.log('✅ Restored session without requiring signature');
+            } else {
+              console.log('🔐 No valid session found, signature will be required when needed');
+            }
+          } finally {
+            releaseAuthLock();
           }
         } else {
           console.log('⏳ Wallet connection change cooldown active, skipping session check');
@@ -533,6 +585,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (walletAddress: string, connector: any, status: string): Promise<{ success: boolean; error?: string }> => {
     console.log('🔐 Login called for address:', walletAddress);
 
+    // Check if auth is already in progress
+    if (isAuthLocked()) {
+      console.log('⏳ Auth lock active, skipping login attempt');
+      return { success: true }; // Return success to prevent error loops
+    }
+
     // Check authentication cooldown to prevent rapid retry loops
     const now = Date.now();
     if (now - lastAuthTime < AUTH_COOLDOWN) {
@@ -544,10 +602,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Normalize address to lowercase for case-insensitive comparisons
     const normalizedAddress = walletAddress.toLowerCase();
 
+    // Check if already authenticated for this address (case-insensitive) - BEFORE acquiring lock
+    if (user && user.address?.toLowerCase() === normalizedAddress && accessToken) {
+      console.log('✅ Already authenticated for address:', walletAddress);
+      return { success: true };
+    }
+
+    // Try to acquire auth lock
+    if (!acquireAuthLock()) {
+      console.log('⏳ Could not acquire auth lock for login, another auth process is running');
+      return { success: true }; // Return success to prevent error loops
+    }
+
     try {
-      // Check if already authenticated for this address (case-insensitive)
+      // Double-check authentication state after acquiring lock
       if (user && user.address?.toLowerCase() === normalizedAddress && accessToken) {
-        console.log('✅ Already authenticated for address:', walletAddress);
+        console.log('✅ Already authenticated for address (after lock):', walletAddress);
         return { success: true };
       }
 
