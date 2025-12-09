@@ -579,6 +579,28 @@ export class MarketplaceListingsService {
       throw new Error('Failed to retrieve categories');
     }
   }
+
+  /**
+   * Increment view count for a marketplace listing
+   */
+  async incrementViews(id: string): Promise<boolean> {
+    try {
+      // Increment the views column in the products table
+      const result = await db
+        .update(products)
+        .set({
+          views: sql`${products.views} + 1`,
+          updatedAt: new Date()
+        })
+        .where(eq(products.id, id))
+        .returning();
+
+      return result.length > 0;
+    } catch (error) {
+      safeLogger.error('Error incrementing views for marketplace listing:', error);
+      return false;
+    }
+  }
 }
 
 // Export singleton instance

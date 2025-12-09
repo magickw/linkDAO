@@ -480,4 +480,42 @@ export class MarketplaceListingsController {
       ));
     }
   };
+
+  /**
+   * POST /marketplace/listings/:id/view
+   * Track a view for a marketplace listing
+   */
+  trackView = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params;
+
+      if (!id) {
+        res.status(400).json(createErrorResponse(
+          'INVALID_LISTING_ID',
+          'Listing ID is required'
+        ));
+        return;
+      }
+
+      // Increment view count for the listing
+      const success = await this.listingsService.incrementViews(id);
+      
+      if (!success) {
+        res.status(404).json(createErrorResponse(
+          'LISTING_NOT_FOUND',
+          'Marketplace listing not found'
+        ));
+        return;
+      }
+
+      res.json(createSuccessResponse({ message: 'View tracked successfully' }));
+    } catch (error) {
+      safeLogger.error('Error in trackView:', error);
+      res.status(500).json(createErrorResponse(
+        'VIEW_TRACK_ERROR',
+        'Failed to track view for marketplace listing',
+        error instanceof Error ? error.message : 'Unknown error'
+      ));
+    }
+  };
 }

@@ -92,4 +92,11 @@ router.put('/listings/:id', csrfProtection,  controller.updateListing);
  */
 router.delete('/listings/:id', csrfProtection,  controller.deleteListing);
 
+/**
+ * @route POST /marketplace/listings/:id/view
+ * @desc Track a view for a marketplace listing
+ * @param {string} id - Listing ID
+ */
+router.post('/listings/:id/view', controller.trackView);
+
 export default router;
