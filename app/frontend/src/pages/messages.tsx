@@ -7,7 +7,7 @@ import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { Button } from '@/design-system/components/Button';
 import { messagingService } from '@/services/messagingService';
 import { marketplaceService } from '@/services/marketplaceService';
-import { useWallet } from '@/context/WalletContext';
+import { useWeb3 } from '@/context/Web3Context';
 
 interface Message {
   id: string;
@@ -34,7 +34,13 @@ interface Conversation {
 const MessagesPage: React.FC = () => {
   const router = useRouter();
   const { to } = router.query;
-  const { account } = useWallet();
+  const { address: account } = useWeb3();
+  
+  // Helper function to generate conversation ID (same logic as messaging service)
+  const getConversationId = (addr1: string, addr2: string): string => {
+    const [a1, a2] = [addr1.toLowerCase(), addr2.toLowerCase()].sort();
+    return `${a1}_${a2}`;
+  };
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -93,8 +99,10 @@ const MessagesPage: React.FC = () => {
         
         // If a specific recipient was passed in the query, set them as active
         if (to && account) {
-          // Find or create conversation with the specified user
-          const conversationId = messagingService.getConversationId(account, to as string);
+          // Create conversation ID using the same logic as the messaging service
+          const [addr1, addr2] = [account.toLowerCase(), (to as string).toLowerCase()].sort();
+          const conversationId = `${addr1}_${addr2}`;
+          
           const targetConversation = transformedConversations.find(c => c.id === conversationId);
           
           if (targetConversation) {
@@ -198,7 +206,14 @@ const MessagesPage: React.FC = () => {
 
   const handleConversationSelect = (conversation: Conversation) => {
     setActiveConversation(conversation);
-    router.push(`/messages?to=${conversation.participants.find(p => p !== account)}`, undefined, { shallow: true });
+    
+    // Get the other participant's address
+    const otherParticipant = conversation.participants.find(p => p !== account);
+    if (otherParticipant && account) {
+      // Generate conversation ID using our helper
+      const conversationId = getConversationId(account, otherParticipant);
+      router.push(`/messages?to=${otherParticipant}`, undefined, { shallow: true });
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
