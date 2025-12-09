@@ -52,20 +52,21 @@ export const productionConfig = {
     }
   },
 
-  // Database connection pool optimization
+  // Database connection pool optimization (optimized for better resource management)
   database: {
     maxConnections: process.env.RENDER_SERVICE_TYPE === 'free' ? 2 :
-                    (process.env.RENDER_SERVICE_TYPE === 'pro' ? 25 : // Pro tier: 25 connections
-                    (process.env.RENDER_SERVICE_TYPE === 'standard' ? 15 : 10)),
+                    (process.env.RENDER_SERVICE_TYPE === 'pro' ? 20 : // Pro tier: reduced from 25 to 20 connections
+                    (process.env.RENDER_SERVICE_TYPE === 'standard' ? 12 : // Standard tier: reduced from 15 to 12
+                    8)), // Default: reduced from 10 to 8
     minConnections: process.env.RENDER_SERVICE_TYPE === 'free' ? 1 :
-                    (process.env.RENDER_SERVICE_TYPE === 'pro' ? 5 : // Pro tier: maintain 5 minimum
-                    (process.env.RENDER_SERVICE_TYPE === 'standard' ? 5 : 2)),
+                    (process.env.RENDER_SERVICE_TYPE === 'pro' ? 3 : // Pro tier: reduced from 5 to 3 minimum
+                    (process.env.RENDER_SERVICE_TYPE === 'standard' ? 3 : 2)),
     idleTimeoutMillis: process.env.RENDER_SERVICE_TYPE === 'free' ? 20000 :
-                       (process.env.RENDER_SERVICE_TYPE === 'pro' ? 60000 : // Pro tier: keep connections longer
-                       (process.env.RENDER_SERVICE_TYPE === 'standard' ? 60000 : 30000)),
+                       (process.env.RENDER_SERVICE_TYPE === 'pro' ? 45000 : // Pro tier: reduced from 60000 to 45000
+                       (process.env.RENDER_SERVICE_TYPE === 'standard' ? 45000 : 30000)),
     connectionTimeoutMillis: process.env.RENDER_SERVICE_TYPE === 'free' ? 5000 :
-                             (process.env.RENDER_SERVICE_TYPE === 'pro' ? 10000 : // Pro tier: more patient
-                             (process.env.RENDER_SERVICE_TYPE === 'standard' ? 5000 : 10000))
+                             (process.env.RENDER_SERVICE_TYPE === 'pro' ? 5000 : // Pro tier: reduced from 10000 to 5000
+                             (process.env.RENDER_SERVICE_TYPE === 'standard' ? 3000 : 5000))
   },
 
   // Memory management

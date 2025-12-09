@@ -540,10 +540,11 @@ export class ConnectionPoolOptimizer {
     const memoryGB = require('os').totalmem() / (1024 * 1024 * 1024);
 
     // Calculate optimal pool size based on system resources
+    // Reduced pool size to prevent excessive connections
     const maxConnections = Math.min(
-      Math.max(cpuCount * 2, 10), // At least 10, scale with CPU
-      Math.floor(memoryGB * 5), // Scale with memory
-      50 // Cap at 50 for safety
+      Math.max(cpuCount, 5), // Reduced from 2x CPU to 1x CPU, at least 5
+      Math.floor(memoryGB * 3), // Reduced from 5x to 3x memory scaling
+      30 // Reduced cap from 50 to 30 for safety
     );
 
     const minConnections = Math.max(2, Math.floor(maxConnections * 0.2));
@@ -553,17 +554,17 @@ export class ConnectionPoolOptimizer {
       max: maxConnections,
       min: minConnections,
       
-      // Timeouts
-      connectionTimeoutMillis: 10000, // 10 seconds
-      idleTimeoutMillis: 30000, // 30 seconds
+      // Timeouts (optimized for better connection management)
+      connectionTimeoutMillis: 5000, // Reduced to 5 seconds for faster failure detection
+      idleTimeoutMillis: 60000, // Increased to 60 seconds to keep connections longer
       
       // Keep alive
       keepAlive: true,
       keepAliveInitialDelayMillis: 10000,
       
-      // Query timeout
-      statement_timeout: 30000, // 30 seconds
-      query_timeout: 30000, // 30 seconds
+      // Query timeout (optimized for better resource management)
+      statement_timeout: 20000, // Reduced to 20 seconds
+      query_timeout: 25000, // Reduced to 25 seconds
       
       // Application name for monitoring
       application_name: 'marketplace-api-optimized',

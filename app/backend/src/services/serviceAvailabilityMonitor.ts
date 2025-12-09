@@ -14,10 +14,10 @@ export class ServiceAvailabilityMonitor {
     this.isMonitoring = true;
     console.log('🔍 Service availability monitor started');
     
-    // Check every 30 seconds
+    // Check every 60 seconds (reduced from 30 seconds to decrease CPU usage)
     this.checkInterval = setInterval(() => {
       this.performHealthCheck();
-    }, 30000);
+    }, 60000);
     
     // Initial check
     this.performHealthCheck();

@@ -755,11 +755,11 @@ export const enhancedGeneralRateLimit = enhancedRateLimitingService.createRateLi
 
 export const enhancedAuthRateLimit = enhancedRateLimitingService.createRateLimit({
   windowMs: 60 * 1000,
-  maxRequests: 50, // Increased from 10 to 50 for development
-  burstLimit: 10, // Increased from 3 to 10 for development
+  maxRequests: 20, // Reduced from 50 to 20 for stricter security
+  burstLimit: 5, // Reduced from 10 to 5 for stricter security
   burstWindowMs: 1000,
-  alertThreshold: 70,
-  blockDuration: 300000, // 5 minutes (reduced from 10 minutes)
+  alertThreshold: 80, // Increased threshold for alerts
+  blockDuration: 600000, // Increased from 5 to 10 minutes for stricter lockout
   message: 'Too many authentication attempts, please try again later.',
   keyGenerator: (req: Request) => {
     const ip = req.get('X-Forwarded-For')?.split(',')[0]?.trim() || req.ip || 'unknown';

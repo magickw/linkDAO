@@ -96,9 +96,10 @@ export const generalRateLimit = rateLimit({
 });
 
 // Authentication endpoint rate limiting (stricter)
+// Enhanced with more aggressive rate limiting and account lockout mechanisms
 export const authRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // 10 authentication attempts per window
+  max: 5, // Reduced from 10 to 5 authentication attempts per window for stricter security
   message: {
     success: false,
     error: {

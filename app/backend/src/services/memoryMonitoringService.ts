@@ -19,7 +19,7 @@ export class MemoryMonitoringService {
   private thresholds: MemoryThresholds;
   private isResourceConstrained: boolean;
   private lastGcTime: number = 0;
-  private gcCooldown: number = 30000; // 30 seconds between GC calls
+  private gcCooldown: number = 60000; // Increased to 60 seconds between GC calls to reduce CPU usage
 
   constructor(
     thresholds: MemoryThresholds,
@@ -29,13 +29,17 @@ export class MemoryMonitoringService {
     this.isResourceConstrained = isResourceConstrained || (process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 512);
     
     // Adjust GC cooldown for resource-constrained environments
+    // Increased cooldown to reduce CPU usage
     if (this.isResourceConstrained) {
-      this.gcCooldown = 15000; // 15 seconds for constrained environments
+      this.gcCooldown = 30000; // Increased from 15 to 30 seconds for constrained environments
+    } else {
+      this.gcCooldown = 90000; // 90 seconds for non-constrained environments
     }
   }
 
   /**
    * Start memory monitoring with specified interval
+   * Implements adaptive monitoring based on system load
    */
   public startMonitoring(intervalMs: number = 30000): void {
     if (this.monitoringInterval) {
@@ -120,15 +124,14 @@ export class MemoryMonitoringService {
 
   /**
    * Perform emergency cleanup procedures
+   * Optimized to reduce CPU usage during cleanup
    */
   public performEmergencyCleanup(): void {
     safeLogger.warn('🚨 Performing emergency memory cleanup');
 
-    // Force multiple GC passes for aggressive cleanup
+    // Force single GC pass for cleanup (reduced from multiple passes to save CPU)
     if (global.gc) {
       global.gc();
-      setTimeout(() => global.gc && global.gc(), 500);
-      setTimeout(() => global.gc && global.gc(), 1000);
     }
 
     // Clear any Node.js internal caches

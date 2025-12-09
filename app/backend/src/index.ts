@@ -244,39 +244,38 @@ console.log('   isSevereResourceConstrained:', isSevereResourceConstrained);
 const dbConfig = productionConfig.database;
 // Optimize connection pool sizes based on available resources
 // Render Pro: 4GB RAM, 2 CPU - can handle significantly more connections
+// Optimized database connection pool configuration
 const maxConnections = isMemoryCritical ? 1 :
   (isRenderFree ? dbConfig.maxConnections :
-    (isRenderPro ? 20 : // Increased from 5 to 20 for Pro plan
-      (isRenderStandard ? 10 :
-        (process.env.RENDER ? 3 : 20))));
+    (isRenderPro ? 15 : // Reduced from 20 to 15 for better resource management
+      (isRenderStandard ? 8 : // Reduced from 10 to 8
+        (process.env.RENDER ? 3 : 15))));
 const minConnections = isMemoryCritical ? 1 :
   (isRenderFree ? dbConfig.minConnections :
-    (isRenderPro ? 5 : // Increased from 2 to 5 for Pro plan
-      (isRenderStandard ? 3 :
-        (process.env.RENDER ? 1 : 5))));
+    (isRenderPro ? 3 : // Reduced from 5 to 3 for better resource management
+      (isRenderStandard ? 2 : // Reduced from 3 to 2
+        (process.env.RENDER ? 1 : 3))));
 
 // Initialize optimized database pool
 const dbPool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: maxConnections,
   min: minConnections,
-  // Increase timeouts for better performance with more resources
-  // Render Pro can handle longer-running queries
+  // Optimized timeouts for better resource management
   idleTimeoutMillis: isRenderFree ? dbConfig.idleTimeoutMillis :
-    (isRenderPro ? 60000 : // Increased from 30000 to 60000
-      (isRenderStandard ? 60000 : 60000)),
+    (isRenderPro ? 45000 : // Reduced from 60000 to 45000
+      (isRenderStandard ? 45000 : 45000)),
   connectionTimeoutMillis: isRenderFree ? dbConfig.connectionTimeoutMillis :
-    (isRenderPro ? 5000 : // Increased from 3000 to 5000
-      (isRenderStandard ? 5000 : 2000)),
+    (isRenderPro ? 3000 : // Reduced from 5000 to 3000
+      (isRenderStandard ? 3000 : 2000)),
   // Add connection cleanup and resource management
   allowExitOnIdle: true,
   keepAlive: true,
   keepAliveInitialDelayMillis: 10000,
-  // Relax statement timeouts for better performance with more resources
-  // Render Pro can handle much longer queries
-  statement_timeout: isResourceConstrained ? 30000 : (isRenderPro ? 120000 : 90000),
-  // Relax query timeouts for better performance with more resources
-  query_timeout: isResourceConstrained ? 25000 : (isRenderPro ? 115000 : 85000),
+  // Optimized statement timeouts for better resource management
+  statement_timeout: isResourceConstrained ? 20000 : (isRenderPro ? 60000 : 45000),
+  // Optimized query timeouts for better resource management
+  query_timeout: isResourceConstrained ? 20000 : (isRenderPro ? 55000 : 40000),
 });
 
 // Add database pool event handlers for monitoring and cleanup
@@ -310,8 +309,11 @@ dbPool.on('remove', (client) => {
   console.log(`📊 Database connection removed (active: ${dbPool.totalCount}/${maxConnections})`);
 });
 
-// Add periodic connection pool health check
+// Add periodic connection pool health check (reduced frequency to decrease CPU usage)
 if (process.env.RENDER || isResourceConstrained) {
+  // Adaptive monitoring interval based on environment
+  const poolMonitoringInterval = isRenderStandard ? 60000 : 120000; // 1-2 minutes
+    
   setInterval(() => {
     const poolStats = {
       total: dbPool.totalCount,
@@ -332,7 +334,7 @@ if (process.env.RENDER || isResourceConstrained) {
         global.gc();
       }
     }
-  }, isRenderStandard ? 30000 : 60000); // Check more frequently for Standard tier
+  }, poolMonitoringInterval);
 }
 
 // Initialize memory monitoring service - can be disabled via env var
