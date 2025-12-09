@@ -78,6 +78,7 @@ interface SellerAPIEndpoints {
 
   // Listings endpoints
   getListings: (walletAddress: string) => string;
+  getListingById: (listingId: string) => string;
   createListing: () => string;
   updateListing: (listingId: string) => string;
   deleteListing: (listingId: string) => string;
@@ -171,6 +172,7 @@ export class UnifiedSellerAPIClient {
 
     // Listings endpoints
     getListings: (walletAddress: string) => `${this.baseURL}/listings/${walletAddress}`,
+    getListingById: (listingId: string) => `${this.baseURL}/listings/detail/${listingId}`,
     createListing: () => `${this.baseURL}/listings`,
     updateListing: (listingId: string) => `${this.baseURL}/listings/${listingId}`,
     deleteListing: (listingId: string) => `${this.baseURL}/listings/${listingId}`,
@@ -577,6 +579,9 @@ export class UnifiedSellerAPIClient {
     });
   }
 
+  async getListingById(listingId: string): Promise<SellerListing> {
+    return await this.request<SellerListing>(this.endpoints.getListingById(listingId));
+  }
   // Orders API methods
   async getOrders(walletAddress: string, status?: string): Promise<SellerOrder[]> {
     const url = status

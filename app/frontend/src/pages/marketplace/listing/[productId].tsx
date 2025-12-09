@@ -110,6 +110,36 @@ const ProductDetailPageRoute: React.FC = () => {
             const rawInventory = productData.inventory ?? productData.quantity ?? 0;
             const inventory = typeof rawInventory === 'string' ? parseInt(rawInventory, 10) : Number(rawInventory);
 
+            // Determine category name - try to get from API, fallback to ID if it's not a UUID
+            let categoryName = 'General';
+            if (productData.category?.name) {
+              categoryName = productData.category.name;
+            } else if (typeof productData.categoryId === 'string') {
+              // Check if the category ID is a UUID (contains hyphens) - if so, try to fetch category name
+              if (productData.categoryId.includes('-')) {
+                try {
+                  // Try to fetch the category name from API
+                  const categoryResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/marketplace/listings/categories/${productData.categoryId}`);
+                  if (categoryResponse.ok) {
+                    const categoryResult = await categoryResponse.json();
+                    if (categoryResult.success && categoryResult.data?.name) {
+                      categoryName = categoryResult.data.name;
+                    } else {
+                      categoryName = productData.categoryId; // fallback to ID if API doesn't return name
+                    }
+                  } else {
+                    categoryName = productData.categoryId; // fallback to ID if API fails
+                  }
+                } catch (categoryError) {
+                  console.warn('Failed to fetch category name, using ID:', categoryError);
+                  categoryName = productData.categoryId; // fallback to ID
+                }
+              } else {
+                // If it's not a UUID, it might already be a name
+                categoryName = productData.categoryId;
+              }
+            }
+
             console.log('ProductDetail Debug:', {
               id: productData.id,
               rawPrice: productData.price,
@@ -118,8 +148,64 @@ const ProductDetailPageRoute: React.FC = () => {
                 fiat: fiatValue,
               },
               inventory: inventory,
-              rawInventory: rawInventory
+              rawInventory: rawInventory,
+              category: { id: productData.categoryId, name: categoryName }
             });
+
+            // Enhance seller information by fetching full profile if needed
+            let enhancedSeller = {
+              id: productData.seller?.id || productData.sellerId || '',
+              name: productData.seller?.storeName || productData.seller?.displayName || productData.seller?.name || 'Unknown Seller',
+              avatar: productData.seller?.avatar || productData.seller?.profileImageUrl || productData.seller?.profileImageCdn || '',
+              verified: productData.seller?.verified || false,
+              reputation: productData.seller?.reputation || productData.seller?.rating || 0,
+              daoApproved: productData.seller?.daoApproved || false,
+              totalSales: productData.seller?.totalSales || 0,
+              memberSince: productData.seller?.memberSince || productData.seller?.createdAt || '2023-01-01',
+              responseTime: '< 24 hours' // Default value
+            };
+
+            // If we have a seller ID but incomplete seller information, try to get the full profile
+            if (productData.sellerId && (!enhancedSeller.name || enhancedSeller.name === 'Unknown Seller' || enhancedSeller.avatar === '')) {
+              try {
+                const { sellerService } = await import('@/services/sellerService');
+                const sellerProfile = await sellerService.getSellerProfile(productData.sellerId);
+                
+                if (sellerProfile) {
+                  enhancedSeller = {
+                    ...enhancedSeller,
+                    name: sellerProfile.storeName || enhancedSeller.name,
+                    avatar: sellerProfile.profileImageCdn || sellerProfile.profileImageUrl || enhancedSeller.avatar || 
+                      `https://api.dicebear.com/7.x/identicon/svg?seed=${productData.sellerId}&backgroundColor=b6e3f4`,
+                    verified: sellerProfile.isVerified || enhancedSeller.verified,
+                    reputation: sellerProfile.daoReputation?.governanceParticipation || enhancedSeller.reputation,
+                    daoApproved: sellerProfile.daoApproved || enhancedSeller.daoApproved,
+                    totalSales: sellerProfile.totalSales || enhancedSeller.totalSales,
+                    memberSince: sellerProfile.joinedDate || sellerProfile.createdAt || enhancedSeller.memberSince
+                  };
+                }
+              } catch (sellerError) {
+                console.warn('Failed to fetch enhanced seller profile:', sellerError);
+                
+                // Use fallback if we don't have name or avatar
+                if (!enhancedSeller.name || enhancedSeller.name === 'Unknown Seller') {
+                  enhancedSeller.name = `Seller ${productData.sellerId.substring(0, 6)}...`;
+                }
+                if (!enhancedSeller.avatar) {
+                  enhancedSeller.avatar = `https://api.dicebear.com/7.x/identicon/svg?seed=${productData.sellerId}&backgroundColor=b6e3f4`;
+                }
+              }
+            } else if (!enhancedSeller.name || enhancedSeller.name === 'Unknown Seller') {
+              // Fallback for seller name
+              enhancedSeller.name = productData.sellerId ? `Seller ${productData.sellerId.substring(0, 6)}...` : 'Unknown Seller';
+            }
+            
+            if (!enhancedSeller.avatar) {
+              // Use DiceBear avatar based on sellerId if available, otherwise default
+              enhancedSeller.avatar = productData.sellerId ? 
+                `https://api.dicebear.com/7.x/identicon/svg?seed=${productData.sellerId}&backgroundColor=b6e3f4` : 
+                '/images/default-avatar.png';
+            }
 
             // Transform the product data to match the ProductDetailPage component interface
             const transformedProduct = {
@@ -134,25 +220,14 @@ const ProductDetailPageRoute: React.FC = () => {
                 fiatSymbol: fiatSymbol,
                 primary: primaryCurrency
               },
-              seller: {
-                id: productData.seller?.id || productData.sellerId || '',
-                name: productData.seller?.storeName || productData.seller?.displayName ||
-                  (productData.sellerId ? `Seller ${productData.sellerId.substring(0, 8)}...` : 'Unknown Seller'),
-                avatar: productData.seller?.avatar || productData.seller?.profileImageUrl || '/images/default-avatar.png',
-                verified: productData.seller?.verified || false,
-                reputation: productData.seller?.reputation || 0,
-                daoApproved: productData.seller?.daoApproved || false,
-                totalSales: productData.seller?.totalSales || 0,
-                memberSince: productData.seller?.memberSince || productData.seller?.createdAt || '2023-01-01',
-                responseTime: '< 24 hours' // Default value
-              },
+              seller: enhancedSeller,
               trust: {
                 verified: productData.trust?.verified || false,
                 escrowProtected: productData.trust?.escrowProtected || productData.metadata?.escrowEnabled || false,
                 onChainCertified: productData.trust?.onChainCertified || false
               },
               specifications: productData.metadata?.specifications || productData.specifications || {},
-              category: productData.category?.name || productData.categoryId || 'General',
+              category: categoryName,
               tags: Array.isArray(productData.tags) ? productData.tags :
                 (typeof productData.tags === 'string' ? JSON.parse(productData.tags || '[]') : []),
               inventory: !isNaN(inventory) ? inventory : 0,

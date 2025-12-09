@@ -150,38 +150,36 @@ const EditListingPage: React.FC = () => {
         // Fetch the listing data from the API
         console.log('Loading listing data for ID:', id);
         
-        const listing = await marketplaceService.getProductById(id);
+        // Import seller service dynamically to avoid circular dependencies
+        const { sellerService } = await import('@/services/sellerService');
+        const listing = await sellerService.getListingById(id);
         
         if (!listing) {
           throw new Error('Listing not found');
         }
         
         // Transform listing data to form data
-        const metadata: any = listing.metadata || {};
+        // Note: SellerListing doesn't have a metadata field, so we'll use an empty object
+        const metadata: any = {};
         const transformedData: EnhancedFormData = {
           title: listing.title,
           description: listing.description,
-          category: listing.categoryId,
+          category: listing.category,
           tags: listing.tags || [],
-          seoTitle: metadata.seoTitle || '',
-          seoDescription: metadata.seoDescription || '',
-          itemType: (metadata.itemType && ['PHYSICAL', 'DIGITAL', 'NFT', 'SERVICE'].includes(metadata.itemType)) 
-            ? metadata.itemType
-            : 'DIGITAL',
-          condition: metadata.condition || 'new',
-          price: listing.priceAmount.toString(),
-          currency: (listing.priceCurrency as 'USDC' | 'USDT' | 'ETH' | 'USD') || 'USD',
-          listingType: (metadata.listingType && ['FIXED_PRICE', 'AUCTION'].includes(metadata.listingType)) 
-            ? metadata.listingType
-            : 'FIXED_PRICE',
-          duration: metadata.duration || 86400,
-          royalty: metadata.royalty || 0,
-          quantity: listing.inventory,
-          unlimitedQuantity: listing.inventory >= 999999,
-          escrowEnabled: metadata.escrowEnabled ?? true,
-          tokenAddress: metadata.tokenAddress || ''
-        };
-        
+          seoTitle: '',
+          seoDescription: '',
+          itemType: 'DIGITAL', // Default value since SellerListing doesn't have this field
+          condition: listing.condition,
+          price: listing.price.toString(),
+          currency: (listing.currency as 'USDC' | 'USDT' | 'ETH' | 'USD') || 'USD',
+          listingType: 'FIXED_PRICE', // Default value since SellerListing doesn't have this field
+          duration: 86400, // Default value since SellerListing doesn't have this field
+          royalty: 0, // Default value since SellerListing doesn't have this field
+          quantity: listing.quantity,
+          unlimitedQuantity: listing.quantity >= 999999,
+          escrowEnabled: listing.escrowEnabled,
+          tokenAddress: '' // Default value since SellerListing doesn't have this field
+        };        
         setFormData(transformedData);
         setExistingImages(listing.images || []);
         setPrimaryImageIndex(0);
@@ -197,7 +195,6 @@ const EditListingPage: React.FC = () => {
       loadListingData();
     }
   }, [id, addToast]);
-
   // Real-time validation
   const validateField = (field: keyof EnhancedFormData, value: any) => {
     let error = '';
@@ -551,32 +548,21 @@ const EditListingPage: React.FC = () => {
       const listingData = {
         title: formData.title,
         description: formData.description,
-        price: formData.price,
-        categoryId: formData.category,
+        price: parseFloat(formData.price),
+        category: formData.category,
         currency: formData.currency,
-        inventory: formData.unlimitedQuantity ? 999999 : formData.quantity,
+        quantity: formData.unlimitedQuantity ? 999999 : formData.quantity,
         tags: formData.tags,
         images: uploadedImageUrls, // Include all image URLs
-        metadata: {
-          itemType: formData.itemType,
-          condition: formData.condition,
-          listingType: formData.listingType,
-          escrowEnabled: formData.escrowEnabled,
-          royalty: formData.royalty,
-          primaryImageIndex: 0, // Primary is now always first after reordering
-          seoTitle: formData.seoTitle || formData.title,
-          seoDescription: formData.seoDescription || formData.description.substring(0, 160)
-        }
-      };
-
-      console.log('[EDIT] About to call marketplaceService.updateListing');
-      console.log('[EDIT] marketplaceService:', marketplaceService);
-      console.log('[EDIT] marketplaceService.updateListing:', marketplaceService.updateListing);
+        condition: formData.condition as 'new' | 'used' | 'refurbished',
+        escrowEnabled: formData.escrowEnabled,        // Note: Some fields are not part of the SellerListing interface but may be used by the backend
+      };      console.log('[EDIT] About to call sellerService.updateListing');
       console.log('[EDIT] listingData:', listingData);
 
+      // Import seller service dynamically to avoid circular dependencies
+      const { sellerService } = await import('@/services/sellerService');
       // Call the real update listing API
-      await marketplaceService.updateListing(id, listingData);
-      
+      await sellerService.updateListing(id, listingData);      
       addToast('🎉 Listing updated successfully!', 'success');
       router.push('/marketplace/seller/dashboard');
     } catch (error: any) {

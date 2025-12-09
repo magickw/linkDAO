@@ -513,6 +513,10 @@ class SellerService {
     await unifiedSellerAPIClient.deleteListing(listingId);
   }
 
+  async getListingById(listingId: string): Promise<SellerListing> {
+    console.log(`Fetching listing by ID: ${listingId}`);
+    return await unifiedSellerAPIClient.getListingById(listingId);
+  }
   // Analytics - Using Unified API Client
   async getAnalytics(walletAddress: string, period: string = '30d'): Promise<SellerAnalytics> {
     try {

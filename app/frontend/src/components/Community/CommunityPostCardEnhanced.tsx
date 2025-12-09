@@ -472,13 +472,29 @@ function CommunityPostCardEnhanced({
           <div className="mb-4">
             {/* Post Title */}
             {(post.title && post.title.trim() !== '') ? (
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 leading-tight">
+              <h3
+                className="text-lg font-semibold text-gray-900 dark:text-white mb-2 leading-tight cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 hover:underline"
+                onClick={() => {
+                  // Navigate to the specific post page within the community
+                  const communitySlug = community.slug || community.name || community.id || 'unknown';
+                  const postPath = `/communities/${communitySlug}/posts/${post.id}`;
+                  window.location.href = postPath;
+                }}
+              >
                 {post.title}
               </h3>
             ) : (
               // Only show fallback if there's actual content
               post.content && post.content.trim() !== '' && (
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 leading-tight">
+                <h3
+                  className="text-lg font-semibold text-gray-900 dark:text-white mb-2 leading-tight cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 hover:underline"
+                  onClick={() => {
+                    // Navigate to the specific post page within the community
+                    const communitySlug = community.slug || community.name || community.id || 'unknown';
+                    const postPath = `/communities/${communitySlug}/posts/${post.id}`;
+                    window.location.href = postPath;
+                  }}
+                >
                   {post.content.split('\n')[0].substring(0, 100)}
                   {post.content.split('\n')[0].length > 100 ? '...' : ''}
                 </h3>
