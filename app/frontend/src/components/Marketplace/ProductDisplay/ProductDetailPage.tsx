@@ -16,7 +16,8 @@ import {
   Truck,
   RotateCcw,
   ShieldCheck,
-  MessageCircle
+  MessageCircle,
+  X
 } from 'lucide-react';
 import { useRouter } from 'next/router';
 import { GlassPanel } from '../../../design-system/components/GlassPanel';
@@ -95,6 +96,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(product.media[0]?.url || '');
   const [isBuying, setIsBuying] = useState(false);
+  const [showMessageModal, setShowMessageModal] = useState(false);
   const router = useRouter();
 
   const handleAddToCart = () => {
@@ -134,8 +136,8 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
     if (onContactSeller) {
       onContactSeller(product.seller.id);
     } else {
-      // Navigate to support contact page with seller ID
-      router.push(`/support/contact?seller=${product.seller.id}`);
+      // Open messaging modal to communicate with seller
+      setShowMessageModal(true);
     }
   };
 
@@ -352,7 +354,6 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                 >
                   <Heart size={20} className="text-white" />
                 </Button>
-
                 <Button
                   variant="ghost"
                   size="md"
@@ -449,6 +450,58 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
           </div>
         </div>
       </div>
+      
+      {/* Messaging Modal */}
+      {showMessageModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-gray-800 rounded-xl w-full max-w-md">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-white">Message {product.seller.name}</h3>
+                <button 
+                  onClick={() => setShowMessageModal(false)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+              
+              <div className="mb-4">
+                <p className="text-gray-300 text-sm mb-2">
+                  Send a direct message to the seller about this product
+                </p>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Your message
+                  </label>
+                  <textarea
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows={4}
+                    placeholder={`Hi ${product.seller.name}, I'm interested in "${product.title}"...`}
+                  />
+                </div>
+                
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={() => setShowMessageModal(false)}
+                    className="px-4 py-2 text-gray-300 hover:text-white transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                  >
+                    Send Message
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

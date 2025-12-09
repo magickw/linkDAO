@@ -627,24 +627,138 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
           {/* Tab Content */}
           <div className="space-y-6">
             {activeTab === 'overview' && (
-              <GlassPanel className="p-6 text-center">
-                <div className="py-12">
-                  <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full mx-auto mb-4 flex items-center justify-center">
-                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
+              <GlassPanel className="p-6">
+                {/* Check if user has listings */}
+                {(listings && (listings as UnifiedSellerListing[]).length > 0) || (dashboard?.listings?.summary?.active || 0) > 0 ? (
+                  <div className="space-y-6">
+                    {/* Quick Stats Overview */}
+                    <div>
+                      <h3 className="text-xl font-semibold text-white mb-4">Dashboard Overview</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="bg-gray-800 rounded-lg p-4">
+                          <p className="text-gray-400 text-sm">Active Listings</p>
+                          <p className="text-2xl font-bold text-white">{dashboard?.listings?.summary?.active || (listings as UnifiedSellerListing[])?.length || 0}</p>
+                        </div>
+                        <div className="bg-gray-800 rounded-lg p-4">
+                          <p className="text-gray-400 text-sm">Total Listings</p>
+                          <p className="text-2xl font-bold text-white">{dashboard?.listings?.summary?.total || (listings as UnifiedSellerListing[])?.length || 0}</p>
+                        </div>
+                        <div className="bg-gray-800 rounded-lg p-4">
+                          <p className="text-gray-400 text-sm">Pending Orders</p>
+                          <p className="text-2xl font-bold text-white">{dashboard?.orders?.summary?.pending || 0}</p>
+                        </div>
+                        <div className="bg-gray-800 rounded-lg p-4">
+                          <p className="text-gray-400 text-sm">Total Earnings</p>
+                          <p className="text-2xl font-bold text-white">{formatCurrency(stats?.balance?.totalEarnings || 0)}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Recent Listings */}
+                    <div>
+                      <div className="flex justify-between items-center mb-4">
+                        <h4 className="text-lg font-semibold text-white">Recent Listings</h4>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setActiveTab('listings')}
+                        >
+                          View All
+                        </Button>
+                      </div>
+                      <div className="space-y-3">
+                        {(listings as UnifiedSellerListing[])?.slice(0, 3).map((listing: UnifiedSellerListing) => (
+                          <div key={listing.id} className="bg-gray-800 rounded-lg p-4 flex items-center justify-between">
+                            <div className="flex-1">
+                              <h5 className="text-white font-medium">{listing.title}</h5>
+                              <div className="flex items-center gap-3 mt-1">
+                                <span className="text-green-400 text-sm">
+                                  {typeof listing.price === 'string' ? listing.price : listing.price.toString()} {listing.currency || 'ETH'}
+                                </span>
+                                <span className={`px-2 py-0.5 rounded text-xs ${
+                                  listing.status === 'active' ? 'bg-green-600 text-white' :
+                                  listing.status === 'sold' ? 'bg-blue-600 text-white' :
+                                  'bg-gray-600 text-white'
+                                }`}>
+                                  {listing.status?.toUpperCase()}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-right text-sm text-gray-400">
+                              <div>{listing.views || 0} views</div>
+                              <div>{listing.favorites || 0} likes</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Quick Actions */}
+                    <div>
+                      <h4 className="text-lg font-semibold text-white mb-4">Quick Actions</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <Button
+                          variant="outline"
+                          onClick={() => router.push('/marketplace/seller/listings/create')}
+                          className="flex flex-col items-center py-4"
+                        >
+                          <svg className="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                          </svg>
+                          New Listing
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => setActiveTab('orders')}
+                          className="flex flex-col items-center py-4"
+                        >
+                          <svg className="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                          </svg>
+                          View Orders
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => setActiveTab('analytics')}
+                          className="flex flex-col items-center py-4"
+                        >
+                          <svg className="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                          </svg>
+                          Analytics
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => setActiveTab('messaging')}
+                          className="flex flex-col items-center py-4"
+                        >
+                          <svg className="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                          Messages
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                  <h3 className="text-xl font-semibold text-white mb-2">Welcome to Your Dashboard</h3>
-                  <p className="text-gray-300 mb-6">
-                    Start by creating your first listing to begin selling on the marketplace
-                  </p>
-                  <Button
-                    onClick={() => router.push('/marketplace/seller/listings/create')}
-                    variant="primary"
-                  >
-                    Create Your First Listing
-                  </Button>
-                </div>
+                ) : (
+                  <div className="py-12 text-center">
+                    <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+                      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-xl font-semibold text-white mb-2">Welcome to Your Dashboard</h3>
+                    <p className="text-gray-300 mb-6">
+                      Start by creating your first listing to begin selling on the marketplace
+                    </p>
+                    <Button
+                      onClick={() => router.push('/marketplace/seller/listings/create')}
+                      variant="primary"
+                    >
+                      Create Your First Listing
+                    </Button>
+                  </div>
+                )}
               </GlassPanel>
             )}
 
