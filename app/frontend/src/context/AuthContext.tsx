@@ -370,14 +370,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (justAuthenticatedRef.current && user && accessToken) {
       justAuthenticatedRef.current = false;
 
-      // Use requestAnimationFrame to ensure React has finished rendering
-      // before we attempt to fix the router state
-      requestAnimationFrame(() => {
+      // Use requestIdleCallback if available, otherwise requestAnimationFrame
+      // This ensures we don't block the main thread during auth
+      const scheduleIdle = (typeof window !== 'undefined' && window.requestIdleCallback)
+        ? window.requestIdleCallback
+        : (cb: () => void) => requestAnimationFrame(cb);
+
+      scheduleIdle(() => {
         // Force Next.js router to recognize the new state
         // This fixes the issue where links don't work after wallet connection
         router.prefetch(router.asPath).catch(() => {
           // Ignore prefetch errors - this is just to refresh router state
         });
+
+        // Prefetch common routes to ensure they're responsive
+        const commonRoutes = ['/marketplace', '/communities', '/governance', '/profile'];
+        commonRoutes.forEach(route => {
+          router.prefetch(route).catch(() => {});
+        });
+
+        // Dispatch event to notify other components that navigation should be ready
+        window.dispatchEvent(new CustomEvent('auth-navigation-ready'));
 
         console.log('🔄 Router state refreshed after authentication');
       });

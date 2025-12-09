@@ -134,7 +134,8 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
     if (onContactSeller) {
       onContactSeller(product.seller.id);
     } else {
-      console.log('Contacting seller:', product.seller.id);
+      // Navigate to support contact page with seller ID
+      router.push(`/support/contact?seller=${product.seller.id}`);
     }
   };
 
@@ -144,13 +145,6 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
     } else {
       console.log('Viewing seller profile:', product.seller.id);
     }
-  };
-
-  const handleAskSeller = () => {
-    // In a real implementation, this would create or navigate to a conversation with the seller
-    console.log('Asking seller:', product.seller.id);
-    // For now, we'll just navigate to the messaging page
-    router.push('/messages');
   };
 
   return (
@@ -358,31 +352,12 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                 >
                   <Heart size={20} className="text-white" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="md"
-                  onClick={handleAskSeller}
-                >
-                  <MessageCircle size={20} className="text-white" />
-                </Button>
+
                 <Button
                   variant="ghost"
                   size="md"
                 >
                   <Share2 size={20} className="text-white" />
-                </Button>
-              </div>
-
-              {/* Ask Seller Button */}
-              <div className="mb-6">
-                <Button
-                  variant="outline"
-                  size="md"
-                  onClick={handleAskSeller}
-                  className="w-full flex items-center justify-center gap-2"
-                >
-                  <MessageCircle size={20} />
-                  Ask Seller a Question
                 </Button>
               </div>
 

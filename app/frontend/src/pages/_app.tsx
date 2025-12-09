@@ -51,79 +51,119 @@ const queryClient = new QueryClient();
 const NavigationFixer: React.FC = () => {
   const router = useRouter();
   const { isConnected, address } = useAccount();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
   const prevConnectedRef = useRef(false);
   const prevAuthenticatedRef = useRef(false);
   const navigationFixApplied = useRef(false);
   const lastFixTimeRef = useRef(0);
+  const fixIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Apply navigation fix - extracted to a separate function to avoid async issues in useEffect
+  const applyNavigationFix = useCallback(() => {
+    // Prefetch current route to refresh router state
+    router.prefetch(router.asPath).catch(() => {});
+
+    // Prefetch common routes for instant navigation
+    const commonRoutes = ['/', '/marketplace', '/communities', '/governance', '/profile'];
+    commonRoutes.forEach(route => {
+      router.prefetch(route).catch(() => {});
+    });
+
+    // Dispatch a benign event to ensure React's event system is responsive
+    window.dispatchEvent(new CustomEvent('navigation-fix-applied'));
+
+    // Force a micro re-render by triggering a harmless state update
+    document.body.classList.add('navigation-ready');
+    requestAnimationFrame(() => {
+      document.body.classList.remove('navigation-ready');
+    });
+
+    console.log('✅ Navigation fix applied successfully');
+  }, [router]);
 
   // Fix navigation when user authenticates (not just connects)
-  // We only apply the fix when authentication is successful to avoid fixing during logout
   useEffect(() => {
     const wasAuthenticated = prevAuthenticatedRef.current;
     prevAuthenticatedRef.current = isAuthenticated;
     prevConnectedRef.current = isConnected;
 
     // Only apply fix when authentication just completed (not on disconnect/logout)
+    // Also apply when auth loading completes with an authenticated user
     const justAuthenticated = isAuthenticated && !wasAuthenticated && isConnected && user;
+    const authJustLoaded = !isAuthLoading && isAuthenticated && user && !navigationFixApplied.current;
 
-    // Prevent applying fix too frequently (within 3 seconds)
+    // Prevent applying fix too frequently (within 2 seconds - reduced from 3)
     const now = Date.now();
     const timeSinceLastFix = now - lastFixTimeRef.current;
 
-    if (justAuthenticated && !navigationFixApplied.current && timeSinceLastFix > 3000) {
+    if ((justAuthenticated || authJustLoaded) && timeSinceLastFix > 2000) {
       navigationFixApplied.current = true;
       lastFixTimeRef.current = now;
 
       console.log('🔧 Applying navigation fix after authentication');
 
-      // Strategy 1: Use requestAnimationFrame to wait for React render cycle
-      requestAnimationFrame(() => {
-        // Strategy 2: Prefetch current route to refresh router state
-        router.prefetch(router.asPath).catch(() => {});
+      // Clear any existing interval
+      if (fixIntervalRef.current) {
+        clearInterval(fixIntervalRef.current);
+      }
 
-        // Strategy 3: Prefetch common routes for instant navigation
-        const commonRoutes = ['/', '/marketplace', '/communities', '/governance', '/profile'];
-        commonRoutes.forEach(route => {
-          router.prefetch(route).catch(() => {});
-        });
+      // Strategy 1: Apply fix immediately using requestIdleCallback if available, else requestAnimationFrame
+      const scheduleIdle = window.requestIdleCallback || ((cb: () => void) => setTimeout(cb, 1));
 
-        // Strategy 4: Add a small delay and then dispatch a dummy event to "wake up" event handlers
-        setTimeout(() => {
-          // Only proceed if user is still authenticated
-          if (!isAuthenticated) {
-            console.log('🔧 Navigation fix cancelled - user no longer authenticated');
-            navigationFixApplied.current = false;
-            return;
+      scheduleIdle(() => {
+        if (!isAuthenticated) {
+          console.log('🔧 Navigation fix cancelled - user no longer authenticated');
+          navigationFixApplied.current = false;
+          return;
+        }
+        applyNavigationFix();
+      });
+
+      // Strategy 2: Apply fix again after a short delay to catch any late state updates
+      setTimeout(() => {
+        if (isAuthenticated) {
+          applyNavigationFix();
+        }
+      }, 100);
+
+      // Strategy 3: Apply periodic fixes for the next 2 seconds to ensure navigation works
+      let fixCount = 0;
+      fixIntervalRef.current = setInterval(() => {
+        fixCount++;
+        if (fixCount >= 4 || !isAuthenticated) {
+          if (fixIntervalRef.current) {
+            clearInterval(fixIntervalRef.current);
+            fixIntervalRef.current = null;
           }
-
-          // Dispatch a benign event to ensure React's event system is responsive
-          window.dispatchEvent(new CustomEvent('navigation-fix-applied'));
-
-          // Strategy 5: Force a micro re-render by triggering a harmless state update
-          // This helps React reconcile any pending updates
-          document.body.classList.add('navigation-ready');
-          requestAnimationFrame(() => {
-            document.body.classList.remove('navigation-ready');
-          });
-
-          console.log('✅ Navigation fix applied successfully');
-
-          // Reset the flag after a delay to allow for future fixes if needed
+          // Reset the flag after fixes are complete
           setTimeout(() => {
             navigationFixApplied.current = false;
-          }, 5000);
-        }, 200); // Increased delay to 200ms to ensure auth state is stable
-      });
+          }, 3000);
+          return;
+        }
+        applyNavigationFix();
+      }, 500);
     }
 
     // Reset flag on logout
     if (!isAuthenticated && wasAuthenticated) {
       navigationFixApplied.current = false;
+      if (fixIntervalRef.current) {
+        clearInterval(fixIntervalRef.current);
+        fixIntervalRef.current = null;
+      }
       console.log('🔧 Navigation fix reset due to logout');
     }
-  }, [isConnected, isAuthenticated, user, router]);
+
+    // Cleanup
+    return () => {
+      if (fixIntervalRef.current) {
+        clearInterval(fixIntervalRef.current);
+        fixIntervalRef.current = null;
+      }
+    };
+  }, [isConnected, isAuthenticated, isAuthLoading, user, applyNavigationFix]);
 
   // Also fix navigation when route changes to ensure consistent behavior
   useEffect(() => {
