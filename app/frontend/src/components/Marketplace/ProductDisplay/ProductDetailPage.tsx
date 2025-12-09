@@ -289,6 +289,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                     variant="outline"
                     size="sm"
                     onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                    disabled={product.inventory === 0}
                   >
                     -
                   </Button>
@@ -297,17 +298,21 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                     value={quantity}
                     onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
                     className="w-16 text-center bg-white/10 border-y border-white/20 py-1 text-white"
+                    min="1"
+                    max={product.inventory && product.inventory < 999999 ? product.inventory : undefined}
+                    disabled={product.inventory >= 999999} // Disable input for unlimited items
                   />
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setQuantity(q => q + 1)}
+                    onClick={() => setQuantity(q => product.inventory && product.inventory < 999999 ? Math.min(product.inventory, q + 1) : q + 1)}
+                    disabled={product.inventory === 0 || (product.inventory && product.inventory < 999999 && quantity >= product.inventory)}
                   >
                     +
                   </Button>
-                  {product.inventory && (
+                  {product.inventory !== undefined && product.inventory !== null && (
                     <span className="ml-4 text-sm text-white/70">
-                      {product.inventory} in stock
+                      {product.inventory >= 999999 ? 'Unlimited' : `${product.inventory} in stock`}
                     </span>
                   )}
                 </div>

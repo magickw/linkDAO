@@ -510,7 +510,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                           <span>Availability</span>
                         </div>
                         <div className={`font-medium ${product.inventory > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          {product.inventory > 0 ? `${product.inventory} in stock` : 'Out of stock'}
+                          {product.inventory >= 999999 ? 'Unlimited' : (product.inventory > 0 ? `${product.inventory} in stock` : 'Out of stock')}
                         </div>
                       </div>
                     )}
@@ -656,9 +656,9 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                         </button>
                         <span className="px-4 py-2 text-white">{selectedQuantity}</span>
                         <button
-                          onClick={() => setSelectedQuantity(Math.min(product.inventory || 10, selectedQuantity + 1))}
+                          onClick={() => setSelectedQuantity(Math.min(product.inventory && product.inventory < 999999 ? product.inventory : 10, selectedQuantity + 1))}
                           className="px-3 py-2 text-white hover:bg-white/10 transition-colors"
-                          disabled={product.inventory === 0}
+                          disabled={product.inventory === 0 || (product.inventory && product.inventory < 999999 && selectedQuantity >= product.inventory)}
                         >
                           +
                         </button>

@@ -581,6 +581,16 @@ function CommunityPostCardEnhanced({
             {/* Enhanced Post Interactions */}
             {userMembership && (
               <div className="mt-4">
+                {/* View Counter for Members */}
+                <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400 mb-3">
+                  <div className="flex items-center space-x-1" aria-label="View count">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    <span>{(post.views || post.viewCount || 0).toLocaleString()} views</span>
+                  </div>
+                </div>
                 <PostInteractionBar
                   post={{
                     id: post.id,
@@ -607,7 +617,13 @@ function CommunityPostCardEnhanced({
             {/* Analytics Section */}
             {showAnalytics && (
               <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
-                <div className="grid grid-cols-2 gap-3 text-center">
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div className="bg-white dark:bg-gray-700 p-2 rounded text-center">
+                    <p className="text-lg font-bold text-gray-900 dark:text-white">
+                      {(post.views || post.viewCount || 0).toLocaleString()}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Views</p>
+                  </div>
                   <div className="bg-white dark:bg-gray-700 p-2 rounded text-center">
                     <p className="text-lg font-bold text-gray-900 dark:text-white">
                       {reactions.reduce((sum, r) => sum + r.totalStaked, 0)}
@@ -644,6 +660,15 @@ function CommunityPostCardEnhanced({
           {!userMembership && (
             <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 pt-4 border-t border-gray-200/50 dark:border-gray-700/50">
               <div className="flex items-center space-x-4">
+                {/* View Counter */}
+                <div className="flex items-center space-x-1" aria-label="View count">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  <span>{(post.views || post.viewCount || 0).toLocaleString()}</span>
+                </div>
+
                 <button
                   onClick={toggleComments}
                   className="flex items-center space-x-1 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200"

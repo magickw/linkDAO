@@ -143,7 +143,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <span className="text-white/80">Quantity Available</span>
-                      <span className="text-white">{listing.quantity}</span>
+                      <span className="text-white">{listing.quantity >= 999999 ? 'Unlimited' : listing.quantity}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-white/80">Listing Type</span>

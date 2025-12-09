@@ -182,6 +182,8 @@ const EditListingPage: React.FC = () => {
         };        
         setFormData(transformedData);
         setExistingImages(listing.images || []);
+        // Set primary image index to 0 by default (first image)
+        // In a future enhancement, we could store which image is primary in the backend
         setPrimaryImageIndex(0);
       } catch (error) {
         console.error('Error loading listing data:', error);
@@ -408,6 +410,14 @@ const EditListingPage: React.FC = () => {
       const newExistingImages = [...existingImages];
       newExistingImages.splice(index, 1);
       setExistingImages(newExistingImages);
+      
+      // Adjust primary image index if needed
+      if (primaryImageIndex > index) {
+        setPrimaryImageIndex(primaryImageIndex - 1);
+      } else if (primaryImageIndex === index) {
+        // If we're removing the primary image, set the first image as primary (if any exist)
+        setPrimaryImageIndex(existingImages.length > 0 || imagePreviews.length > 0 ? 0 : -1);
+      }
     } else {
       // Removing newly uploaded image
       const adjustedIndex = index - existingImages.length;
@@ -421,10 +431,11 @@ const EditListingPage: React.FC = () => {
       setImagePreviews(newPreviews);
       
       // Adjust primary image index if needed
-      if (primaryImageIndex > adjustedIndex) {
+      if (primaryImageIndex > index) {
         setPrimaryImageIndex(primaryImageIndex - 1);
-      } else if (primaryImageIndex === adjustedIndex) {
-        setPrimaryImageIndex(0);
+      } else if (primaryImageIndex === index) {
+        // If we're removing the primary image, set the first image as primary (if any exist)
+        setPrimaryImageIndex(existingImages.length > 0 || newPreviews.length > 0 ? 0 : -1);
       }
     }
   };
@@ -436,46 +447,36 @@ const EditListingPage: React.FC = () => {
   const moveImage = (fromIndex: number, toIndex: number) => {
     // Combine existing and new images for manipulation
     const allImages = [...existingImages, ...imagePreviews];
-    const newImages = [...images];
-    const newPreviews = [...imagePreviews];
-    const newExistingImages = [...existingImages];
-
+    const allImageFiles = [...Array(existingImages.length).fill(null), ...images];
+    
+    // Remove the moved item and insert it at the new position
     const [movedImage] = allImages.splice(fromIndex, 1);
     allImages.splice(toIndex, 0, movedImage);
+    
+    const [movedImageFile] = allImageFiles.splice(fromIndex, 1);
+    allImageFiles.splice(toIndex, 0, movedImageFile);
 
-    // Update state based on whether moved items were existing or new images
-    if (fromIndex < existingImages.length && toIndex < existingImages.length) {
-      // Moving existing images among themselves
-      const [moved] = newExistingImages.splice(fromIndex, 1);
-      newExistingImages.splice(toIndex, 0, moved);
-      setExistingImages(newExistingImages);
-    } else if (fromIndex >= existingImages.length && toIndex >= existingImages.length) {
-      // Moving new images among themselves
-      const adjustedFrom = fromIndex - existingImages.length;
-      const adjustedTo = toIndex - existingImages.length;
-      const [movedImageFile] = newImages.splice(adjustedFrom, 1);
-      const [movedPreview] = newPreviews.splice(adjustedFrom, 1);
-      
-      newImages.splice(adjustedTo, 0, movedImageFile);
-      newPreviews.splice(adjustedTo, 0, movedPreview);
-      
-      setImages(newImages);
-      setImagePreviews(newPreviews);
-    } else {
-      // Moving between existing and new images - more complex case
-      // For simplicity, we'll just update the arrays appropriately
-      setExistingImages(allImages.filter((_, i) => i < newExistingImages.length));
-      setImagePreviews(allImages.slice(newExistingImages.length));
-    }
+    // Split back into existing images and new image previews/files
+    const newExistingImages = allImages.slice(0, existingImages.length);
+    const newImagePreviews = allImages.slice(existingImages.length);
+    const newImages = allImageFiles.slice(existingImages.length).filter(file => file !== null) as File[];
+
+    // Update state
+    setExistingImages(newExistingImages);
+    setImagePreviews(newImagePreviews);
+    setImages(newImages);
 
     // Update primary image index
     if (primaryImageIndex === fromIndex) {
       setPrimaryImageIndex(toIndex);
     } else if (primaryImageIndex === toIndex) {
       setPrimaryImageIndex(fromIndex > toIndex ? primaryImageIndex + 1 : primaryImageIndex - 1);
+    } else if (fromIndex < primaryImageIndex && toIndex >= primaryImageIndex) {
+      setPrimaryImageIndex(primaryImageIndex - 1);
+    } else if (fromIndex > primaryImageIndex && toIndex <= primaryImageIndex) {
+      setPrimaryImageIndex(primaryImageIndex + 1);
     }
   };
-
 
 
   // Step navigation
@@ -536,12 +537,17 @@ const EditListingPage: React.FC = () => {
       }
 
       // Reorder images so primary image is first
-      if (primaryImageIndex > 0 && primaryImageIndex < uploadedImageUrls.length) {
+      // The primaryImageIndex refers to the position in the combined array of existing + new images
+      // We need to make sure we're working with the correct index in the uploadedImageUrls array
+      // Only reorder if there are images and the primary index is valid
+      if (uploadedImageUrls.length > 0 && primaryImageIndex >= 0 && primaryImageIndex < uploadedImageUrls.length) {
+        // Get the primary image
         const primaryImage = uploadedImageUrls[primaryImageIndex];
+        // Remove it from its current position
         uploadedImageUrls.splice(primaryImageIndex, 1);
+        // Add it to the beginning
         uploadedImageUrls.unshift(primaryImage);
       }
-
       console.log('[EDIT] All images processed:', uploadedImageUrls);
 
       // Prepare data in the format expected by the backend

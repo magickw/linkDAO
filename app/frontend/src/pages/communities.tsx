@@ -351,49 +351,59 @@ const CommunitiesPage: React.FC = () => {
   }, [address, isConnected, isAuthenticated]);
 
   // Load posts from backend API with pagination
+  // This fetches posts ONLY from communities the user has joined/created
   const fetchPosts = async (pageNum: number = 1, append: boolean = false) => {
     try {
       if (!isMounted.current) return;
       if (pageNum === 1) setLoading(true);
       else setLoadingMore(true);
 
-      // Use FeedService to get enhanced feed which supports both public and authenticated views
-      const { FeedService } = await import('../services/feedService');
+      // Import CommunityPostService for fetching community-specific posts
+      const { CommunityPostService } = await import('../services/communityPostService');
 
-      // Determine feed source based on user's community memberships
-      let feedSource: 'following' | 'all' = 'all'; // Default to all posts for unauthenticated users
-      if (isAuthenticated && address) {
-        // If user has joined communities, show posts from those communities
-        if (joinedCommunities.length > 0) {
-          feedSource = 'following';
+      // If user is authenticated and has joined communities, fetch the aggregated feed
+      if (isAuthenticated && joinedCommunities.length > 0) {
+        // Map frontend sort values to backend expected values
+        const sortMapping: Record<string, string> = {
+          'hot': 'hot',
+          'new': 'new',
+          'top': 'top',
+          'rising': 'rising'
+        };
+        const backendSort = sortMapping[sortBy] || 'new';
+
+        // Use the efficient aggregated feed endpoint
+        const result = await CommunityPostService.getFollowedCommunitiesFeed(
+          pageNum,
+          20,
+          backendSort,
+          timeFilter
+        );
+
+        // Check if component is still mounted before updating state
+        if (!isMounted.current) return;
+
+        const newPosts = result.posts || [];
+
+        if (append) {
+          setPosts(prev => [...prev, ...newPosts]);
         } else {
-          // If authenticated but no joined communities, show all posts (sorted by trending/hot)
-          feedSource = 'all';
+          setPosts(newPosts);
         }
-      }
 
-      const response = await FeedService.getEnhancedFeed({
-        sortBy,
-        timeRange: timeFilter,
-        feedSource,
-        userAddress: address,
-        // If user has joined communities, filter by those
-        communities: feedSource === 'following' ? joinedCommunities : undefined
-      }, pageNum, 20);
+        const hasMorePosts = result.pagination ?
+          result.pagination.page < result.pagination.totalPages :
+          false;
 
-      // Check if component is still mounted before updating state
-      if (!isMounted.current) return;
-
-      const newPosts = response.posts || [];
-
-      if (append) {
-        setPosts(prev => [...prev, ...newPosts]);
+        setHasMore(hasMorePosts);
+        setPage(pageNum);
       } else {
-        setPosts(newPosts);
+        // No joined communities - show empty state
+        if (!isMounted.current) return;
+        setPosts([]);
+        setHasMore(false);
+        setPage(pageNum);
       }
-
-      setHasMore(response.hasMore);
-      setPage(pageNum);
     } catch (error) {
       console.error('Failed to fetch community posts:', error);
       if (!isMounted.current) return;
@@ -661,31 +671,11 @@ const CommunitiesPage: React.FC = () => {
 
 
 
-  // Show posts from followed communities and recently visited communities
-  // The backend already filters by communities when joinedCommunities are passed via the API
-  // This filter is a fallback for edge cases where post data might be inconsistent
+  // Show posts from communities - all posts are now fetched directly from communities
+  // No additional filtering needed since we're using CommunityPostService.getCommunityPosts
   const filteredPosts = posts.filter(post => {
     // Ensure post is a valid object
     if (!post || typeof post !== 'object') return false;
-
-    // If user has joined communities, verify posts belong to those communities
-    // This is mainly a safety check as backend should already filter by communities
-    if (joinedCommunities.length > 0) {
-      const postCommunityId = post.communityId;
-      // Show posts from joined communities
-      if (postCommunityId && joinedCommunities.includes(postCommunityId)) {
-        return true;
-      }
-      // Also show posts without communityId (quick posts / general posts) if they came through
-      // This ensures we don't accidentally hide posts that the backend returned
-      if (!postCommunityId) {
-        return true;
-      }
-      return false;
-    }
-
-    // For users who haven't joined any communities, show all posts
-    // (trending/popular posts for discovery)
     return true;
   });
 
@@ -958,13 +948,37 @@ const CommunitiesPage: React.FC = () => {
                   // Defensive checks for post data
                   if (!post || typeof post !== 'object') return null;
 
-                  const postCommunityId = post.communityId || '';
-                  const community = communityList.find(c => c.id === postCommunityId) || {
-                    id: postCommunityId,
-                    name: postCommunityId,
-                    displayName: postCommunityId,
-                    slug: postCommunityId
+                  const postCommunityId = post.communityId || post.dao || '';
+
+                  // Use embedded community data from the post (returned by getFollowedCommunitiesFeed)
+                  // Falls back to looking up from communityList if not embedded
+                  const embeddedCommunity = post.community;
+                  const foundCommunity = communityList.find(c => c.id === postCommunityId);
+
+                  // Create a properly typed community object with all required fields
+                  const community: Community = foundCommunity || {
+                    id: embeddedCommunity?.id || postCommunityId || 'unknown',
+                    name: embeddedCommunity?.name || postCommunityId || 'Unknown Community',
+                    displayName: embeddedCommunity?.displayName || embeddedCommunity?.name || postCommunityId || 'Unknown Community',
+                    slug: embeddedCommunity?.slug || postCommunityId || 'unknown',
+                    avatar: embeddedCommunity?.avatar || undefined,
+                    description: '',
+                    rules: [],
+                    memberCount: 0,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                    isPublic: true,
+                    moderators: [],
+                    tags: [],
+                    category: 'General',
+                    settings: {
+                      allowedPostTypes: [],
+                      requireApproval: false,
+                      minimumReputation: 0,
+                      stakingRequirements: []
+                    }
                   };
+
                   const postId = post.id || `post-${Math.random()}`;
 
                   return (

@@ -262,6 +262,46 @@ export class CommunityPostService {
     }
   }
 
+  /**
+   * Get aggregated feed from all communities the user has joined
+   * This is more efficient than fetching from each community individually
+   */
+  static async getFollowedCommunitiesFeed(
+    page: number = 1,
+    limit: number = 20,
+    sort: string = 'new',
+    timeRange: string = 'all'
+  ): Promise<{ posts: CommunityPost[]; pagination: any }> {
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        sort,
+        timeRange
+      });
+
+      const authHeaders = authService.getAuthHeaders();
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/feed?${params}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders
+        }
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: response.statusText }));
+        throw new Error(error.error || `Failed to fetch followed communities feed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.data || result;
+    } catch (error) {
+      console.error('Error fetching followed communities feed:', error);
+      throw error;
+    }
+  }
+
   static async addReaction(
     communityId: string,
     postId: string,

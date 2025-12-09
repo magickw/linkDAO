@@ -5,17 +5,19 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { EnhancedPost } from '../../types/feed';
-import { EnhancedPostCard } from '../Feed/EnhancedPostCard';
+import { CommunityPostCardEnhanced } from './CommunityPostCardEnhanced';
 import { PostComposer } from '../Feed/PostComposer';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { InfiniteScroll } from '../ui/InfiniteScroll';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { CommunityPostService } from '../../services/communityPostService';
 import { CommunityOfflineCacheService } from '../../services/communityOfflineCacheService';
+import { Community } from '../../models/Community';
 
 interface CommunityPostListProps {
   communityId: string;
   communitySlug: string;
+  community?: Community;
   canPost: boolean;
   canModerate: boolean;
   sort: 'hot' | 'new' | 'top';
@@ -33,6 +35,7 @@ interface PostFilters {
 export const CommunityPostList: React.FC<CommunityPostListProps> = ({
   communityId,
   communitySlug,
+  community,
   canPost,
   canModerate,
   sort,
@@ -387,29 +390,48 @@ export const CommunityPostList: React.FC<CommunityPostListProps> = ({
           loading={loadingMore}
         >
           <div className="posts-list">
-            {posts.map(post => (
-              <EnhancedPostCard
-                key={post.id}
-                post={post}
-                onLike={async (postId) => {
-                  // Handle like
-                  console.log('Like:', postId);
-                }}
-                onComment={async (postId) => {
-                  // Handle comment
-                  console.log('Comment:', postId);
-                }}
-                onShare={async (postId) => {
-                  // Handle share
-                  console.log('Share:', postId);
-                }}
-                onTip={async (postId, amount, token, message) => {
-                  // Handle tip
-                  console.log('Tip:', postId, amount, token, message);
-                }}
-              />
+            {posts.map(post => {
+              // Create a fallback community object if not provided
+              const postCommunity: Community = community || {
+                id: communityId,
+                name: communitySlug,
+                displayName: communitySlug,
+                slug: communitySlug,
+                description: '',
+                rules: [],
+                memberCount: 0,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                isPublic: true,
+                moderators: [],
+                tags: [],
+                category: 'General',
+                settings: {
+                  allowedPostTypes: [],
+                  requireApproval: false,
+                  minimumReputation: 0,
+                  stakingRequirements: []
+                }
+              };
 
-            ))}
+              return (
+                <CommunityPostCardEnhanced
+                  key={post.id}
+                  post={post}
+                  community={postCommunity}
+                  userMembership={null}
+                  onVote={(postId, voteType, stakeAmount) => {
+                    console.log('Vote:', postId, voteType, stakeAmount);
+                  }}
+                  onReaction={async (postId, reactionType, amount) => {
+                    console.log('Reaction:', postId, reactionType, amount);
+                  }}
+                  onTip={async (postId, amount, token) => {
+                    console.log('Tip:', postId, amount, token);
+                  }}
+                />
+              );
+            })}
           </div>
         </InfiniteScroll>
       )}
