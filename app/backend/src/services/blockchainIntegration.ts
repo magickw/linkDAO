@@ -98,8 +98,11 @@ export class BlockchainIntegrationService {
         return false;
       }
 
-      // Create provider with timeout and circuit breaker to prevent infinite retries
-      this.provider = new ethers.JsonRpcProvider(RPC_URL, undefined, {
+      // Create provider with explicit network config and timeout
+      this.provider = new ethers.JsonRpcProvider(RPC_URL, {
+        chainId: 84532, // Base Sepolia
+        name: 'base-sepolia'
+      }, {
         staticNetwork: true,
         batchMaxCount: 1, // Reduce batch size
         batchMaxSize: 10240, // Reduce batch size
@@ -553,6 +556,7 @@ export class BlockchainIntegrationService {
     try {
       // Check if blockchain service is available
       if (!await this.ensureInitialized() || !this.provider) {
+        safeLogger.debug('Blockchain service not available, returning 0 for current block');
         return 0;
       }
       return await this.provider.getBlockNumber();
@@ -574,6 +578,7 @@ export class BlockchainIntegrationService {
     try {
       // Check if blockchain service is available
       if (!await this.ensureInitialized() || !this.provider) {
+        safeLogger.debug('Blockchain service not available, returning unconfirmed for transaction:', txHash);
         return { confirmed: false };
       }
 

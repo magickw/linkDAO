@@ -52,7 +52,7 @@ export const getChainRpcUrl = (chainId: number) => {
     case arbitrum.id:
       return process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL || 'https://arbitrum.llamarpc.com';
     case sepolia.id:
-      return process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || 'https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161';
+      return process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || 'https://sepolia.drpc.org';
     default:
       return 'https://eth.llamarpc.com';
   }

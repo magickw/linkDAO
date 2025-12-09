@@ -35,12 +35,16 @@ interface SpendingCategory {
 
 export class TreasuryService {
     private provider: ethers.JsonRpcProvider;
-    private readonly SEPOLIA_RPC = process.env.SEPOLIA_RPC_URL || 'https://sepolia.infura.io/v3/YOUR-PROJECT-ID';
+    private readonly BASE_SEPOLIA_RPC = process.env.BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org';
     private readonly TREASURY_ADDRESS = '0x074E3874CA62F8cB9be6DDCD23235d0Bb5a8A0b5'; // EnhancedLDAOTreasury
     private readonly LDAO_TOKEN_ADDRESS = '0xc9F690B45e33ca909bB9ab97836091673232611B';
 
     constructor() {
-        this.provider = new ethers.JsonRpcProvider(this.SEPOLIA_RPC);
+        // Use Base Sepolia RPC instead of Infura
+        this.provider = new ethers.JsonRpcProvider(this.BASE_SEPOLIA_RPC, {
+            chainId: 84532,
+            name: 'base-sepolia'
+        });
     }
 
     /**

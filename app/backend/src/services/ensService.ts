@@ -42,20 +42,34 @@ export class ENSService {
   private initializeProvider(): ethers.Provider {
     try {
       // Try to use environment-specific RPC URL first
-      const rpcUrl = process.env.ETHEREUM_RPC_URL || process.env.INFURA_URL;
+      const rpcUrl = process.env.ETHEREUM_SEPOLIA_RPC_URL || process.env.ETHEREUM_RPC_URL || 'https://sepolia.drpc.org';
       if (rpcUrl) {
-        return new ethers.JsonRpcProvider(rpcUrl);
+        // For Sepolia testnet
+        if (rpcUrl.includes('sepolia')) {
+          return new ethers.JsonRpcProvider(rpcUrl, {
+            chainId: 11155111,
+            name: 'sepolia'
+          });
+        }
+        // For mainnet
+        return new ethers.JsonRpcProvider(rpcUrl, {
+          chainId: 1,
+          name: 'mainnet'
+        });
       }
 
-      // Fallback to public providers
+      // Fallback to public providers without Infura
       return ethers.getDefaultProvider('mainnet', {
-        infura: process.env.INFURA_PROJECT_ID,
         alchemy: process.env.ALCHEMY_API_KEY,
         etherscan: process.env.ETHERSCAN_API_KEY,
       });
     } catch (error) {
       safeLogger.warn('Failed to initialize custom provider, using default:', error);
-      return ethers.getDefaultProvider('mainnet');
+      // Use drpc.org as fallback without requiring API keys
+      return new ethers.JsonRpcProvider('https://eth.drpc.org', {
+        chainId: 1,
+        name: 'mainnet'
+      });
     }
   }
 

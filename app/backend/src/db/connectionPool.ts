@@ -40,7 +40,6 @@ export class DatabaseConnectionPool {
       prepare: false, // Disable prepared statements for better compatibility
       max_lifetime: 300, // 5 minutes max connection lifetime
       transform: postgres.camel, // Transform to camelCase
-      types: postgres.types, // Enable type parsing
     };
 
     try {

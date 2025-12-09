@@ -16,10 +16,43 @@ export class BlockchainEventService {
   private eventListeners: Map<string, any> = new Map();
   private initialized: boolean = false;
   private initializationAttempted: boolean = false;
+  private retryCount: number = 0;
+  private maxRetries: number = 5;
+  private retryDelay: number = 5000; // Start with 5 seconds
+  private circuitBreakerOpen: boolean = false;
+  private circuitBreakerTimeout: number = 30000; // 30 seconds
+  private lastFailureTime: number | null = null;
 
   constructor() {
     // Lazy initialization - don't connect on startup
     // Provider will be initialized on first use
+  }
+
+  /**
+   * Check if circuit breaker is currently open
+   */
+  private isCircuitBreakerOpen(): boolean {
+    if (!this.circuitBreakerOpen || !this.lastFailureTime) return false;
+    
+    // Check if enough time has passed to close the circuit breaker
+    const now = Date.now();
+    if (now - this.lastFailureTime > this.circuitBreakerTimeout) {
+      this.circuitBreakerOpen = false;
+      this.lastFailureTime = null;
+      safeLogger.info('Circuit breaker closed - attempting to reconnect to blockchain');
+      return false;
+    }
+    
+    return true;
+  }
+
+  /**
+   * Open the circuit breaker
+   */
+  private openCircuitBreaker(): void {
+    this.circuitBreakerOpen = true;
+    this.lastFailureTime = Date.now();
+    safeLogger.warn('Circuit breaker opened - blockchain connection temporarily disabled');
   }
 
   /**
@@ -28,38 +61,89 @@ export class BlockchainEventService {
    */
   private async ensureInitialized(): Promise<boolean> {
     if (this.initialized) return true;
-    if (this.initializationAttempted) return false;
+    
+    // Check if circuit breaker is open
+    if (this.isCircuitBreakerOpen()) {
+      return false;
+    }
+    
+    if (this.initializationAttempted) {
+      // If we've already tried and failed, check if we should retry
+      if (this.retryCount >= this.maxRetries) {
+        return false;
+      }
+    }
 
     this.initializationAttempted = true;
 
     try {
-      const rpcUrl = process.env.RPC_URL || 'https://mainnet.base.org';
+      const rpcUrl = process.env.BASE_SEPOLIA_RPC_URL || process.env.RPC_URL || 
+                    process.env.ETHEREUM_SEPOLIA_RPC_URL || 'https://sepolia.base.org';
+      
+      // Validate that we have a proper RPC URL
+      if (!rpcUrl || rpcUrl.includes('your-api-key') || rpcUrl.includes('YOUR_API_KEY')) {
+        throw new Error('Invalid RPC URL configuration - API key not set');
+      }
 
-      // Create provider with timeout options to fail faster
-      this.provider = new ethers.JsonRpcProvider(rpcUrl, undefined, {
+      // Create provider with explicit network config to prevent detection issues
+      this.provider = new ethers.JsonRpcProvider(rpcUrl, {
+        chainId: 84532, // Base Sepolia
+        name: 'base-sepolia'
+      }, {
         staticNetwork: true, // Prevents network detection retries
+        batchMaxCount: 1, // Reduce batching to avoid timeouts
       });
 
-      // Test the connection with a timeout
+      // Test the connection with a timeout - try a simple call to verify connection
       const timeoutPromise = new Promise<null>((_, reject) => {
-        setTimeout(() => reject(new Error('RPC connection timeout')), 5000);
+        setTimeout(() => reject(new Error('RPC connection timeout after 10 seconds')), 10000);
       });
 
-      const networkPromise = this.provider.getNetwork();
+      // Try to get network information or a simple call to check connectivity
+      const networkPromise = Promise.race([
+        this.provider.getNetwork(),
+        this.provider.getBlockNumber()  // Alternative check that doesn't require network detection
+      ]);
+      
       await Promise.race([networkPromise, timeoutPromise]);
 
       // Initialize contracts only if provider is working
       this.initializeContracts();
 
       this.initialized = true;
+      this.retryCount = 0; // Reset retry count on success
       safeLogger.info('BlockchainEventService initialized successfully');
       return true;
     } catch (error) {
-      safeLogger.warn('BlockchainEventService initialization failed - blockchain event features will be disabled:', error instanceof Error ? error.message : 'Unknown error');
-      this.provider = null;
+      this.retryCount++;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      safeLogger.warn(`BlockchainEventService initialization attempt ${this.retryCount}/${this.maxRetries} failed:`, errorMessage);
+      
+      // Close provider to free resources
+      if (this.provider) {
+        try {
+          (this.provider as any).destroy?.();
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+        this.provider = null;
+      }
+      
+      // If we've reached max retries, open the circuit breaker
+      if (this.retryCount >= this.maxRetries) {
+        this.openCircuitBreaker();
+      } else {
+        // Add a delay before next retry using exponential backoff
+        const delay = this.retryDelay * Math.pow(2, this.retryCount - 1); // 5s, 10s, 20s, 40s, 80s
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+      
+      // Clean up contracts
       this.escrowContract = null;
       this.marketplaceContract = null;
       this.ldaoContract = null;
+      
       return false;
     }
   }
@@ -69,6 +153,24 @@ export class BlockchainEventService {
    */
   async isAvailable(): Promise<boolean> {
     return await this.ensureInitialized();
+  }
+
+  /**
+   * Get current block number with proper error handling
+   */
+  async getCurrentBlock(): Promise<number> {
+    try {
+      if (!await this.ensureInitialized() || !this.provider) {
+        safeLogger.debug('Blockchain service not available, returning 0 for current block');
+        return 0;
+      }
+      
+      const blockNumber = await this.provider.getBlockNumber();
+      return blockNumber;
+    } catch (error) {
+      safeLogger.error('Error getting current block:', error);
+      return 0;
+    }
   }
 
   private initializeContracts(): void {
@@ -126,7 +228,7 @@ export class BlockchainEventService {
     try {
       // Check if blockchain service is available
       if (!await this.ensureInitialized() || !this.escrowContract) {
-        safeLogger.warn('Escrow contract not initialized, skipping event monitoring');
+        safeLogger.debug('Escrow contract not initialized, skipping event monitoring for order:', orderId);
         return;
       }
 
@@ -144,6 +246,12 @@ export class BlockchainEventService {
         EvidenceSubmitted: this.handleEvidenceSubmitted.bind(this, orderId),
         VoteCast: this.handleVoteCast.bind(this, orderId)
       };
+
+      // Remove any existing listeners for this order first to prevent duplicates
+      Object.keys(escrowEventHandlers).forEach(eventName => {
+        const filter = this.escrowContract!.filters[eventName](escrowId);
+        this.escrowContract!.removeAllListeners(filter);
+      });
 
       // Set up event listeners
       Object.entries(escrowEventHandlers).forEach(([eventName, handler]) => {
@@ -170,11 +278,15 @@ export class BlockchainEventService {
       if (handlers && this.escrowContract) {
         // Remove all event listeners for this order
         Object.keys(handlers).forEach(eventName => {
-          this.escrowContract!.removeAllListeners(eventName);
+          // Use the specific filter to avoid removing all listeners for the event type
+          const filter = this.escrowContract!.filters[eventName]();
+          this.escrowContract!.removeAllListeners(filter);
         });
 
         this.eventListeners.delete(listenerKey);
         safeLogger.info(`Stopped monitoring blockchain events for order ${orderId}`);
+      } else {
+        safeLogger.debug(`No active monitoring found for order ${orderId}`);
       }
     } catch (error) {
       safeLogger.error('Error stopping blockchain event monitoring:', error);
@@ -187,7 +299,10 @@ export class BlockchainEventService {
   async getOrderEvents(orderId: string, escrowId: string, fromBlock: number = 0): Promise<BlockchainEvent[]> {
     try {
       // Check if blockchain service is available
-      if (!await this.ensureInitialized() || !this.escrowContract || !this.provider) return [];
+      if (!await this.ensureInitialized() || !this.escrowContract || !this.provider) {
+        safeLogger.debug('Blockchain service not available, returning empty events for order:', orderId);
+        return [];
+      }
 
       const events: BlockchainEvent[] = [];
       const currentBlock = await this.provider.getBlockNumber();
@@ -229,12 +344,15 @@ export class BlockchainEventService {
   async syncEvents(): Promise<void> {
     try {
       // Check if blockchain service is available
-      if (!await this.ensureInitialized() || !this.escrowContract || !this.provider) return;
+      if (!await this.ensureInitialized() || !this.escrowContract || !this.provider) {
+        safeLogger.debug('Blockchain service not available, skipping event sync');
+        return;
+      }
 
       const lastSyncedBlock = await databaseService.getLastSyncedBlock();
-      const currentBlock = await this.provider.getBlockNumber();
+      const currentBlock = await this.getCurrentBlock(); // Use the new method that handles errors gracefully
 
-      if (lastSyncedBlock >= currentBlock) return;
+      if (currentBlock === 0 || lastSyncedBlock >= currentBlock) return;
 
       safeLogger.info(`Syncing events from block ${lastSyncedBlock} to ${currentBlock}`);
 
@@ -554,12 +672,12 @@ export class BlockchainEventService {
    * Start periodic event synchronization
    */
   startEventSync(): void {
-    // Sync events every 30 seconds
+    // Sync events every 60 seconds (reduced frequency to reduce load)
     setInterval(() => {
       this.syncEvents().catch(error => {
         safeLogger.error('Error in periodic event sync:', error);
       });
-    }, 30000);
+    }, 60000);
 
     safeLogger.info('Started periodic blockchain event synchronization');
   }
@@ -585,50 +703,78 @@ export class BlockchainEventService {
    * Start global monitoring for LDAO token events
    */
   async startGlobalMonitoring(): Promise<void> {
-    try {
-      // Check if blockchain service is available
-      if (!await this.ensureInitialized()) {
-        safeLogger.warn('BlockchainEventService not initialized, skipping global monitoring');
-        return;
+    // Set up a periodic check to attempt reconnection if the circuit breaker was opened
+    setInterval(async () => {
+      if (this.circuitBreakerOpen && this.isCircuitBreakerOpen()) {
+        // Try to reinitialize
+        const success = await this.ensureInitialized();
+        if (success) {
+          safeLogger.info('BlockchainEventService reconnected successfully');
+        }
       }
+    }, 60000); // Check every minute if we can reconnect
 
-      if (this.ldaoContract) {
-        this.ldaoContract.on('Transfer', async (from, to, value, event) => {
-          try {
-            const amount = ethers.formatEther(value);
+    // Start monitoring with proper error handling
+    const attemptMonitoring = async () => {
+      try {
+        // Check if blockchain service is available
+        if (!await this.ensureInitialized()) {
+          safeLogger.warn('BlockchainEventService not initialized, will retry global monitoring later');
+          return;
+        }
 
-            // Track for sender
-            await trackingService.trackTransaction({
-              userId: from,
-              txHash: event.transactionHash,
-              eventType: 'LDAO_TRANSFER_SENT',
-              amount,
-              token: 'LDAO',
-              blockNumber: event.blockNumber,
-              status: 'confirmed'
-            });
+        // Only set up listeners if we have a working contract
+        if (this.ldaoContract && this.provider) {
+          // Remove any existing listeners to prevent duplicates
+          this.ldaoContract.removeAllListeners('Transfer');
+          
+          this.ldaoContract.on('Transfer', async (from, to, value, event) => {
+            try {
+              const amount = ethers.formatEther(value);
 
-            // Track for receiver
-            await trackingService.trackTransaction({
-              userId: to,
-              txHash: event.transactionHash,
-              eventType: 'LDAO_TRANSFER_RECEIVED',
-              amount,
-              token: 'LDAO',
-              blockNumber: event.blockNumber,
-              status: 'confirmed'
-            });
+              // Track for sender
+              await trackingService.trackTransaction({
+                userId: from,
+                txHash: event.transactionHash,
+                eventType: 'LDAO_TRANSFER_SENT',
+                amount,
+                token: 'LDAO',
+                blockNumber: event.blockNumber,
+                status: 'confirmed'
+              });
 
-            safeLogger.info(`Tracked LDAO Transfer: ${from} -> ${to} (${amount} LDAO)`);
-          } catch (error) {
-            safeLogger.error('Error handling LDAO Transfer event:', error);
-          }
-        });
-        safeLogger.info('Started global monitoring for LDAO events');
+              // Track for receiver
+              await trackingService.trackTransaction({
+                userId: to,
+                txHash: event.transactionHash,
+                eventType: 'LDAO_TRANSFER_RECEIVED',
+                amount,
+                token: 'LDAO',
+                blockNumber: event.blockNumber,
+                status: 'confirmed'
+              });
+
+              safeLogger.info(`Tracked LDAO Transfer: ${from} -> ${to} (${amount} LDAO)`);
+            } catch (error) {
+              safeLogger.error('Error handling LDAO Transfer event:', error);
+            }
+          });
+          safeLogger.info('Started global monitoring for LDAO events');
+        }
+      } catch (error) {
+        safeLogger.error('Error in global monitoring attempt:', error);
       }
-    } catch (error) {
-      safeLogger.error('Error starting global monitoring:', error);
-    }
+    };
+
+    // Try initial setup
+    await attemptMonitoring();
+
+    // Set up periodic reconnection attempts if needed
+    setInterval(async () => {
+      if (!this.initialized) {
+        await attemptMonitoring();
+      }
+    }, 30000); // Retry every 30 seconds if not initialized
   }
 }
 

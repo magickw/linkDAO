@@ -191,10 +191,15 @@ async function initializeServices() {
   return { cacheService, cacheWarmingService };
 }
 
-// Start blockchain event monitoring
-blockchainEventService.startGlobalMonitoring().catch(err => {
-  console.error('Failed to start blockchain event monitoring:', err);
-});
+// Start blockchain event monitoring in the background without blocking startup
+setTimeout(async () => {
+  try {
+    await blockchainEventService.startGlobalMonitoring();
+    console.log('✅ Blockchain event monitoring started');
+  } catch (err) {
+    console.warn('⚠️ Blockchain event monitoring failed to start (this is OK if blockchain is temporarily unavailable):', err);
+  }
+}, 2000); // Slight delay to allow other services to initialize first
 
 // Validate security configuration on startup
 try {
@@ -1210,9 +1215,17 @@ httpServer.listen(PORT, () => {
   console.log(`MakeRange Health check: http://localhost:${PORT}/health`);
   console.log(`📡 API ready: http://localhost:${PORT}/`);
 
-  // Initialize services asynchronously without blocking
-  setImmediate(() => {
-    initializeServices().then(async ({ cacheService, cacheWarmingService }) => {
+        // Initialize services asynchronously without blocking
+      setImmediate(async () => {
+        // Handle blockchain service separately to avoid blocking other services
+        try {
+          await blockchainEventService.startGlobalMonitoring();
+          console.log('✅ Blockchain event monitoring started');
+        } catch (err) {
+          console.warn('⚠️ Blockchain event monitoring failed to start (this is OK if blockchain is temporarily unavailable):', err);
+        }
+        
+        initializeServices().then(async ({ cacheService, cacheWarmingService }) => {
       // Initialize performance monitoring integration (disabled for now - requires Redis)
       // try {
       //   const { createPerformanceMonitoringIntegration } = await import('./services/performanceMonitoringIntegration');
@@ -1392,6 +1405,14 @@ const gracefulShutdown = async (signal: string) => {
     }
 
     console.log('📊 Stopping monitoring services...');
+
+    // Stop blockchain event monitoring service
+    try {
+      blockchainEventService.stopAllMonitoring();
+      console.log('✅ Blockchain event monitoring service stopped');
+    } catch (error) {
+      console.warn('⚠️ Error stopping blockchain event monitoring service:', error);
+    }
 
     // Stop memory monitoring service
     try {

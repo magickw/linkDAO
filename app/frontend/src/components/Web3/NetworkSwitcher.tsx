@@ -10,6 +10,13 @@ interface NetworkSwitcherProps {
 
 const SUPPORTED_NETWORKS = [
   {
+    id: baseSepolia.id,
+    name: 'Base Sepolia',
+    shortName: 'SEP',
+    color: 'bg-blue-300',
+    isTestnet: true
+  },
+  {
     id: mainnet.id,
     name: 'Ethereum',
     shortName: 'ETH',
