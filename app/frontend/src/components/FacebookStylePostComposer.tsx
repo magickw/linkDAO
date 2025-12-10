@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { ipfsUploadService } from '@/services/ipfsUploadService';
 import { CreatePostInput } from '@/models/Post';
 import { Camera, Image, Link as LinkIcon, Smile, MapPin, Video, X, AlertCircle } from 'lucide-react';
+import VideoEmbed from './VideoEmbed';
+import { extractVideoUrls } from '@/utils/videoUtils';
 
 interface FacebookStylePostComposerProps {
   onSubmit: (postData: CreatePostInput) => Promise<void>;
@@ -64,12 +66,20 @@ const FacebookStylePostComposer = React.memo(({
     setIsExpanded(true);
   }, []);
 
-  // Extract hashtags from content
-  const extractHashtags = useCallback((text: string): string[] => {
-    const hashtagRegex = /#[\w]+/g;
-    const matches = text.match(hashtagRegex);
-    return matches ? matches.map(tag => tag.substring(1)) : [];
+  // Extract video URLs from content
+  const extractVideoLinks = useCallback((text: string) => {
+    return extractVideoUrls(text);
   }, []);
+
+  // Memoize video embeds
+  const videoEmbeds = useMemo(() => {
+    const videoInfos = extractVideoLinks(content);
+    return videoInfos.map((videoInfo, index) => (
+      <div key={index} className="mt-3">
+        <VideoEmbed url={videoInfo.url} width={560} height={315} />
+      </div>
+    ));
+  }, [content, extractVideoLinks]);
 
   // ... (imports)
 
@@ -257,50 +267,58 @@ const FacebookStylePostComposer = React.memo(({
 
   // Memoized file previews
   const filePreviews = useMemo(() => {
-    if (previews.length === 0) return null;
+    if (previews.length === 0 && videoEmbeds.length === 0) return null;
 
     return (
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        {previews.map((preview, index) => {
-          const file = selectedFiles[index];
-          const isVideo = file?.type.startsWith('video/');
-          const fileSize = file ? ipfsUploadService.formatFileSize(file.size) : '';
-          const fileSizePercent = file ? (file.size / maxFileSize) * 100 : 0;
-          const sizeColor = fileSizePercent > 90 ? 'text-red-500' : fileSizePercent > 70 ? 'text-yellow-500' : 'text-green-500';
+      <div className="mt-3 space-y-3">
+        {/* Video Embeds */}
+        {videoEmbeds}
+        
+        {/* File Previews */}
+        {previews.length > 0 && (
+          <div className="grid grid-cols-2 gap-2">
+            {previews.map((preview, index) => {
+              const file = selectedFiles[index];
+              const isVideo = file?.type.startsWith('video/');
+              const fileSize = file ? ipfsUploadService.formatFileSize(file.size) : '';
+              const fileSizePercent = file ? (file.size / maxFileSize) * 100 : 0;
+              const sizeColor = fileSizePercent > 90 ? 'text-red-500' : fileSizePercent > 70 ? 'text-yellow-500' : 'text-green-500';
 
-          return (
-            <div key={index} className="relative group">
-              {isVideo ? (
-                <video
-                  src={preview}
-                  className="w-full h-32 object-cover rounded-lg"
-                  controls
-                />
-              ) : (
-                <img
-                  src={preview}
-                  alt={`Preview ${index + 1}`}
-                  className="w-full h-32 object-cover rounded-lg"
-                />
-              )}
-              {/* File info overlay */}
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 rounded-b-lg">
-                <div className="text-white text-xs truncate">{file?.name}</div>
-                <div className={`text-xs font-medium ${sizeColor}`}>{fileSize}</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => removeFile(index)}
-                className="absolute top-2 right-2 w-6 h-6 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white hover:bg-opacity-70 transition-all"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          );
-        })}
+              return (
+                <div key={index} className="relative group">
+                  {isVideo ? (
+                    <video
+                      src={preview}
+                      className="w-full h-32 object-cover rounded-lg"
+                      controls
+                    />
+                  ) : (
+                    <img
+                      src={preview}
+                      alt={`Preview ${index + 1}`}
+                      className="w-full h-32 object-cover rounded-lg"
+                    />
+                  )}
+                  {/* File info overlay */}
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 rounded-b-lg">
+                    <div className="text-white text-xs truncate">{file?.name}</div>
+                    <div className={`text-xs font-medium ${sizeColor}`}>{fileSize}</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeFile(index)}
+                    className="absolute top-2 right-2 w-6 h-6 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white hover:bg-opacity-70 transition-all"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     );
-  }, [previews, selectedFiles, removeFile]);
+  }, [previews, selectedFiles, removeFile, videoEmbeds]);
 
   return (
     <div className={`group rounded-xl shadow-sm hover:shadow-md border border-gray-200 dark:border-gray-700 ${className} bg-white dark:bg-gray-800 transition-all duration-300 focus-within:ring-2 focus-within:ring-primary-500/20 focus-within:border-primary-500/50`}>
@@ -472,8 +490,11 @@ const FacebookStylePostComposer = React.memo(({
                 <button
                   type="button"
                   onClick={() => videoInputRef.current?.click()}
-                  className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-all"
-                  title="Add Video"
+                  className={`p-2 rounded-lg transition-all ${showLinkInput
+                    ? 'text-purple-600 bg-purple-50 dark:bg-purple-900/20'
+                    : 'text-gray-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20'
+                    }`}
+                  title="Add Video (YouTube, Vimeo, TikTok, Instagram, Twitter, Facebook)"
                   disabled={isLoading}
                 >
                   <Video className="w-5 h-5" />
