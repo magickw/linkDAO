@@ -168,10 +168,16 @@ const EnhancedFeedView = React.memo(({
   }, [currentSort, currentTimeRange, address]);
 
   // Refresh the feed when user address changes (e.g., when wallet connects/disconnects)
+  // Added debouncing to prevent excessive refreshes during wallet connection
   useEffect(() => {
     if (address) {
-      // Refresh the feed when user connects their wallet
-      setRefreshKey(prev => prev + 1);
+      // Add a delay to ensure wallet connection is fully established
+      const timeoutId = setTimeout(() => {
+        // Refresh the feed when user connects their wallet
+        setRefreshKey(prev => prev + 1);
+      }, 1000); // 1 second delay
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [address]);
 

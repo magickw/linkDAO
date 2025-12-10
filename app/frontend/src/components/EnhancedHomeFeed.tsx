@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   MessageCircle,
@@ -37,16 +37,39 @@ export default function EnhancedHomeFeed({
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
   const LIMIT = 10;
   const { addToast } = useToast();
+
+  // Refs to prevent concurrent requests
+  const fetchRequestRef = useRef<string | null>(null);
+  const lastFetchTimeRef = useRef<number>(0);
+  const FETCH_DEBOUNCE_DELAY = 1000; // 1 second between requests
 
   const { ref: loadMoreRef, inView } = useInView({
     threshold: 0.1,
     triggerOnce: false,
   });
 
-  // Fetch posts function
+  // Fetch posts function with debouncing and concurrency control
   const fetchPosts = useCallback(async (pageNum: number, isRefresh: boolean = false) => {
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetchTimeRef.current;
+    const requestKey = `${activeTab}-${userProfile?.walletAddress || userProfile?.address || 'anonymous'}-${pageNum}`;
+
+    // Prevent concurrent requests and add debouncing
+    if (isLoading || 
+        (fetchRequestRef.current === requestKey) ||
+        (timeSinceLastFetch < FETCH_DEBOUNCE_DELAY && !isRefresh)) {
+      console.log('[FEED] Skipping fetch - request in progress or debounced');
+      return;
+    }
+
+    // Set request tracking
+    fetchRequestRef.current = requestKey;
+    lastFetchTimeRef.current = now;
+    setIsLoading(true);
+
     try {
       const filter: FeedFilter = {
         feedSource: activeTab,
@@ -83,8 +106,11 @@ export default function EnhancedHomeFeed({
     } catch (error) {
       console.error('Error fetching posts:', error);
       addToast('Failed to load feed', 'error');
+    } finally {
+      setIsLoading(false);
+      fetchRequestRef.current = null;
     }
-  }, [activeTab, userProfile, addToast]);
+  }, [activeTab, userProfile, addToast, isLoading]);
 
   // Initial load and refresh on tab/profile change
   useEffect(() => {
@@ -98,14 +124,14 @@ export default function EnhancedHomeFeed({
     }
   }, [externalRefreshKey, fetchPosts]);
 
-  // Load more posts function
+  // Load more posts function with concurrency control
   const loadMorePosts = useCallback(async () => {
-    if (loadingMore || !hasMore) return;
+    if (loadingMore || !hasMore || isLoading) return;
 
     setLoadingMore(true);
     await fetchPosts(page, false);
     setLoadingMore(false);
-  }, [loadingMore, hasMore, fetchPosts, page]);
+  }, [loadingMore, hasMore, fetchPosts, page, isLoading]);
 
   // Infinite scroll
   useEffect(() => {

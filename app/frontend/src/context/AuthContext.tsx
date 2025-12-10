@@ -14,6 +14,10 @@ let globalAuthLock = false;
 let globalAuthLockTimestamp = 0;
 const AUTH_LOCK_TIMEOUT = 10000; // 10 seconds max lock time
 
+// Global authentication debounce tracking
+let lastGlobalAuthAttempt = 0;
+const GLOBAL_AUTH_DEBOUNCE = 3000; // 3 seconds between auth attempts globally
+
 // Helper to acquire auth lock
 const acquireAuthLock = (): boolean => {
   const now = Date.now();
@@ -555,11 +559,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const now = Date.now();
+    
+    // Check local cooldown
     if (now - lastAuthTime < AUTH_COOLDOWN) {
       console.log(`⏳ Authentication cooldown active, skipping attempt`);
       return { success: false, error: 'Authentication cooldown active' };
     }
+    
+    // Check global debounce
+    if (now - lastGlobalAuthAttempt < GLOBAL_AUTH_DEBOUNCE) {
+      console.log(`⏳ Global authentication debounce active, skipping attempt`);
+      return { success: false, error: 'Please wait before trying to authenticate again' };
+    }
+    
     setLastAuthTime(now);
+    lastGlobalAuthAttempt = now;
 
     if (!acquireAuthLock()) {
       console.log('⏳ Could not acquire auth lock for login');
