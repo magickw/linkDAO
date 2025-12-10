@@ -72,8 +72,8 @@ const CORS_CONFIGS = {
     allowedOrigins: [
       'https://www.linkdao.io',
       'https://linkdao.io',
-      'https://linkdao.vercel.app',
-      'https://linkdao-*.vercel.app', // Vercel preview deployments
+      'https://api.linkdao.io', // Add api.linkdao.io as an allowed origin
+      'https://linkdao.vercel.app', // Vercel preview deployments
       'https://*.vercel.app',
       'https://api.linkdao.io', // Add Render backend origin
       'https://linkdao-backend.onrender.com', // Render backend
@@ -480,6 +480,7 @@ export const productionCorsMiddleware = cors({
     const allowedOrigins = [
       'https://www.linkdao.io',
       'https://linkdao.io',
+      'https://api.linkdao.io', // Add api.linkdao.io as an allowed origin
       'https://linkdao.vercel.app',
       'https://app.linkdao.io',
       'https://marketplace.linkdao.io',

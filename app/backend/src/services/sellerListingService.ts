@@ -14,6 +14,45 @@ interface ListingQueryOptions {
 }
 
 /**
+ * Shipping Configuration
+ */
+interface ShippingConfiguration {
+  // Shipping methods
+  methods: {
+    standard?: {
+      enabled: boolean;
+      cost: number;
+      estimatedDays: string;
+    };
+    express?: {
+      enabled: boolean;
+      cost: number;
+      estimatedDays: string;
+    };
+    international?: {
+      enabled: boolean;
+      cost: number;
+      estimatedDays: string;
+      regions: string[];
+    };
+  };
+  // Shipping policies
+  processingTime: number; // in days
+  freeShippingThreshold?: number; // order value for free shipping
+  returnsAccepted: boolean;
+  returnWindow?: number; // in days
+  // Package details
+  packageDetails: {
+    weight: number; // in lbs
+    dimensions: {
+      length: number;
+      width: number;
+      height: number;
+    };
+  };
+}
+
+/**
  * Listing Data for Creation
  */
 interface CreateListingData {
@@ -27,7 +66,7 @@ interface CreateListingData {
   images?: string[];
   tags?: string[];
   metadata?: any;
-  shipping?: any;
+  shipping?: ShippingConfiguration;
   nft?: any;
 }
 
@@ -45,7 +84,7 @@ interface UpdateListingData {
   images?: string[];
   tags?: string[];
   metadata?: any;
-  shipping?: any;
+  shipping?: ShippingConfiguration;
   nft?: any;
 }
 
@@ -215,6 +254,85 @@ class SellerListingService {
   }
 
   /**
+   * Validate shipping configuration
+   */
+  private validateShippingConfig(shipping?: ShippingConfiguration): void {
+    if (!shipping) return;
+
+    // Validate shipping methods
+    if (shipping.methods) {
+      if (shipping.methods.standard && shipping.methods.standard.enabled) {
+        if (typeof shipping.methods.standard.cost !== 'number' || shipping.methods.standard.cost < 0) {
+          throw new Error('Standard shipping cost must be a valid positive number');
+        }
+        if (!shipping.methods.standard.estimatedDays) {
+          throw new Error('Standard shipping estimated days is required');
+        }
+      }
+
+      if (shipping.methods.express && shipping.methods.express.enabled) {
+        if (typeof shipping.methods.express.cost !== 'number' || shipping.methods.express.cost < 0) {
+          throw new Error('Express shipping cost must be a valid positive number');
+        }
+        if (!shipping.methods.express.estimatedDays) {
+          throw new Error('Express shipping estimated days is required');
+        }
+      }
+
+      if (shipping.methods.international && shipping.methods.international.enabled) {
+        if (typeof shipping.methods.international.cost !== 'number' || shipping.methods.international.cost < 0) {
+          throw new Error('International shipping cost must be a valid positive number');
+        }
+        if (!shipping.methods.international.estimatedDays) {
+          throw new Error('International shipping estimated days is required');
+        }
+        if (!Array.isArray(shipping.methods.international.regions) || shipping.methods.international.regions.length === 0) {
+          throw new Error('International shipping regions are required when international shipping is enabled');
+        }
+      }
+    }
+
+    // Validate processing time
+    if (typeof shipping.processingTime !== 'number' || shipping.processingTime < 0 || shipping.processingTime > 30) {
+      throw new Error('Processing time must be between 0 and 30 days');
+    }
+
+    // Validate free shipping threshold
+    if (shipping.freeShippingThreshold !== undefined) {
+      if (typeof shipping.freeShippingThreshold !== 'number' || shipping.freeShippingThreshold < 0) {
+        throw new Error('Free shipping threshold must be a valid positive number');
+      }
+    }
+
+    // Validate return window
+    if (shipping.returnsAccepted && shipping.returnWindow !== undefined) {
+      if (typeof shipping.returnWindow !== 'number' || shipping.returnWindow < 1 || shipping.returnWindow > 365) {
+        throw new Error('Return window must be between 1 and 365 days');
+      }
+    }
+
+    // Validate package details
+    if (!shipping.packageDetails) {
+      throw new Error('Package details are required');
+    }
+
+    if (typeof shipping.packageDetails.weight !== 'number' || shipping.packageDetails.weight <= 0 || shipping.packageDetails.weight > 150) {
+      throw new Error('Package weight must be between 0 and 150 lbs');
+    }
+
+    if (!shipping.packageDetails.dimensions) {
+      throw new Error('Package dimensions are required');
+    }
+
+    const { length, width, height } = shipping.packageDetails.dimensions;
+    if (typeof length !== 'number' || length <= 0 || length > 108 ||
+        typeof width !== 'number' || width <= 0 || width > 108 ||
+        typeof height !== 'number' || height <= 0 || height > 108) {
+      throw new Error('Package dimensions must be between 0 and 108 inches');
+    }
+  }
+
+  /**
    * Create a new listing
    */
   async createListing(data: CreateListingData): Promise<ProductListing> {
@@ -237,6 +355,11 @@ class SellerListingService {
 
     if (!seller) {
       throw new Error('Seller profile not found. Please complete seller onboarding first.');
+    }
+
+    // Validate shipping configuration if provided
+    if (data.shipping) {
+      this.validateShippingConfig(data.shipping);
     }
 
     // Resolve category ID - it might be a UUID or a slug

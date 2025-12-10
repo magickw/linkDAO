@@ -7,6 +7,7 @@ import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { Button } from '@/design-system/components/Button';
 import Layout from '@/components/Layout';
 import { ipfsUploadService } from '@/services/ipfsUploadService';
+import ShippingConfigurationForm, { type ShippingConfiguration } from '@/components/Marketplace/Seller/ShippingConfigurationForm';
 import {
   Upload,
   X,
@@ -53,6 +54,9 @@ interface EnhancedFormData {
   // Security & Trust
   escrowEnabled: boolean;
 
+  // Shipping
+  shipping?: ShippingConfiguration;
+
   // Blockchain
   tokenAddress: string;
 }
@@ -82,17 +86,18 @@ const POPULAR_TAGS = [
 ];
 
 // Step definitions
-type FormStep = 'basic' | 'details' | 'pricing' | 'images' | 'review';
+type FormStep = 'basic' | 'details' | 'pricing' | 'shipping' | 'images' | 'review';
 
 const STEP_TITLES = {
   basic: 'Basic Information',
   details: 'Item Details',
   pricing: 'Pricing & Terms',
+  shipping: 'Shipping Configuration',
   images: 'Images & Media',
   review: 'Review & Publish'
 };
 
-const STEP_ORDER: FormStep[] = ['basic', 'details', 'pricing', 'images', 'review'];
+const STEP_ORDER: FormStep[] = ['basic', 'details', 'pricing', 'shipping', 'images', 'review'];
 
 const CreateListingPage: React.FC = () => {
   const { address, isConnected } = useAccount();
@@ -268,9 +273,74 @@ const CreateListingPage: React.FC = () => {
     };
   };
 
+  // Shipping validation
+  const validateShipping = (): { isValid: boolean; errors: Record<string, string> } => {
+    const errors: Record<string, string> = {};
+
+    // Skip validation for non-physical items
+    if (formData.itemType !== 'PHYSICAL') {
+      return { isValid: true, errors: {} };
+    }
+
+    if (!formData.shipping) {
+      errors.shipping = 'Shipping configuration is required for physical items';
+      return { isValid: false, errors };
+    }
+
+    // Validate shipping methods
+    const enabledMethods = Object.entries(formData.shipping.methods)
+      .filter(([_, method]) => method?.enabled);
+
+    if (enabledMethods.length === 0) {
+      errors.shipping = 'At least one shipping method must be enabled';
+    }
+
+    // Validate each enabled method
+    enabledMethods.forEach(([methodType, method]) => {
+      if (!method?.cost || method.cost < 0) {
+        errors[`${methodType}Cost`] = 'Shipping cost must be a valid positive number';
+      }
+      if (!method?.estimatedDays) {
+        errors[`${methodType}Days`] = 'Estimated delivery time is required';
+      }
+    });
+
+    // Validate international shipping regions
+    if (formData.shipping.methods.international?.enabled) {
+      if (!formData.shipping.methods.international.regions || formData.shipping.methods.international.regions.length === 0) {
+        errors.internationalRegions = 'At least one shipping region must be selected for international shipping';
+      }
+    }
+
+    // Validate processing time
+    if (formData.shipping.processingTime < 0 || formData.shipping.processingTime > 30) {
+      errors.processingTime = 'Processing time must be between 0 and 30 days';
+    }
+
+    // Validate package details
+    if (!formData.shipping.packageDetails) {
+      errors.packageDetails = 'Package details are required';
+    } else {
+      if (formData.shipping.packageDetails.weight <= 0 || formData.shipping.packageDetails.weight > 150) {
+        errors.weight = 'Package weight must be between 0 and 150 lbs';
+      }
+
+      const { length, width, height } = formData.shipping.packageDetails.dimensions;
+      if (length <= 0 || length > 108 || width <= 0 || width > 108 || height <= 0 || height > 108) {
+        errors.dimensions = 'Package dimensions must be between 0 and 108 inches';
+      }
+    }
+
+    return {
+      isValid: Object.keys(errors).length === 0,
+      errors
+    };
+  };
+
   // Form validation by step
   const validateStep = (step: FormStep): boolean => {
     const { isValid, errors } = validateForm();
+    const { isValid: shippingValid, errors: shippingErrors } = validateShipping();
 
     switch (step) {
       case 'basic':
@@ -279,10 +349,12 @@ const CreateListingPage: React.FC = () => {
         return !errors.condition && !errors.quantity;
       case 'pricing':
         return !errors.price;
+      case 'shipping':
+        return shippingValid;
       case 'images':
         return !errors.images;
       case 'review':
-        return isValid;
+        return isValid && shippingValid;
       default:
         return false;
     }
@@ -430,6 +502,15 @@ const CreateListingPage: React.FC = () => {
       if (!formData.price || parseFloat(formData.price) <= 0) throw new Error('Valid price is required');
       if (images.length === 0) throw new Error('At least one image is required');
 
+      // Validate shipping for physical items
+      if (formData.itemType === 'PHYSICAL') {
+        const { isValid: shippingValid, errors: shippingErrors } = validateShipping();
+        if (!shippingValid) {
+          const firstError = Object.values(shippingErrors)[0];
+          throw new Error(firstError || 'Shipping configuration is required for physical items');
+        }
+      }
+
       // Upload images to IPFS first
       addToast('Uploading images...', 'info');
       const uploadedImageUrls: string[] = [];
@@ -465,6 +546,7 @@ const CreateListingPage: React.FC = () => {
         inventory: formData.unlimitedQuantity ? 999999 : formData.quantity,
         tags: formData.tags,
         images: uploadedImageUrls, // Include uploaded image URLs
+        shipping: formData.itemType === 'PHYSICAL' ? formData.shipping : undefined,
         metadata: {
           itemType: formData.itemType,
           condition: formData.condition,
@@ -1094,6 +1176,21 @@ const CreateListingPage: React.FC = () => {
                       <Shield className="h-5 w-5 text-green-400 mt-1" />
                     </div>
                   </div>
+                </div>
+              )}
+
+              {currentStep === 'shipping' && (
+                <div className="space-y-6">
+                  <h2 className="text-xl font-semibold text-white mb-6">
+                    {STEP_TITLES.shipping}
+                  </h2>
+
+                  <ShippingConfigurationForm
+                    value={formData.shipping}
+                    onChange={(shipping) => handleFormChange('shipping', shipping)}
+                    itemType={formData.itemType}
+                    errors={fieldErrors}
+                  />
                 </div>
               )}
 

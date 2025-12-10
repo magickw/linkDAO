@@ -18,6 +18,7 @@ export const ultimateCorsMiddleware = (req: Request, res: Response, next: NextFu
   const allowedOrigins = [
     'https://www.linkdao.io',
     'https://linkdao.io',
+    'https://api.linkdao.io', // Add api.linkdao.io as an allowed origin
     'https://linkdao.vercel.app',
     'http://localhost:3000',
     'http://localhost:3001',

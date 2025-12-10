@@ -390,21 +390,15 @@ export class UnifiedMarketplaceService {
   private primaryBaseUrl = this.getPrimaryBaseUrl();
   private fallbackBaseUrl = this.getFallbackBaseUrl();
   private currentBaseUrl = this.primaryBaseUrl; // Start with primary
+  
+  // Add baseUrl property for consistency
+  private get baseUrl(): string {
+    return this.currentBaseUrl;
+  }
 
   private getPrimaryBaseUrl(): string {
-    if (typeof window !== 'undefined') {
-      // Client-side - check for environment variables first, then fallback
-      const envUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
-      if (envUrl) {
-        return envUrl;
-      }
-      
-      // If no environment variable is set, default to localhost for development
-      return 'http://localhost:10000';
-    }
-    
-    // Server-side (SSR) - use environment variables
-    return process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
+    // Use the API_BASE_URL from config which respects environment variables
+    return API_BASE_URL;
   }
 
   private getFallbackBaseUrl(): string {
@@ -476,8 +470,10 @@ export class UnifiedMarketplaceService {
 
   async getProductById(id: string): Promise<Product | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/marketplace/listings/${id}`, {
-        signal: this.createTimeoutSignal(10000)
+      const response = await this.makeApiRequest(`/api/marketplace/listings/${id}`, {
+        headers: {
+          'Content-Type': 'application/json',
+        }
       });
 
       if (!response.ok) {
@@ -499,10 +495,12 @@ export class UnifiedMarketplaceService {
 
   async incrementProductViews(id: string): Promise<boolean> {
     try {
-      // Use fire-and-forget approach or check success
-      const response = await fetch(`${this.baseUrl}/api/marketplace/listings/${id}/view`, {
+      // Use the makeApiRequest method for consistency
+      const response = await this.makeApiRequest(`/api/marketplace/listings/${id}/view`, {
         method: 'POST',
-        signal: this.createTimeoutSignal(5000)
+        headers: {
+          'Content-Type': 'application/json',
+        }
       });
       return response.ok;
     } catch (error) {
@@ -510,6 +508,7 @@ export class UnifiedMarketplaceService {
       return false;
     }
   }
+
   async getListingById(id: string): Promise<Product | null> {
     try {
       const response = await this.makeApiRequest(`/api/marketplace/listings/${id}`, {
@@ -723,10 +722,8 @@ export class UnifiedMarketplaceService {
         }
       });
 
-      const response = await fetch(`${this.baseUrl}/api/marketplace/search?${params.toString()}`, {
-        signal: this.createTimeoutSignal(10000)
-      });
-
+      const response = await this.makeApiRequest(`/api/marketplace/search?${params.toString()}`);
+      
       if (!response.ok) {
         throw new Error('Failed to search products');
       }
@@ -750,10 +747,8 @@ export class UnifiedMarketplaceService {
         limit: limit.toString()
       });
 
-      const response = await fetch(`${this.baseUrl}/api/marketplace/search-suggestions?${params.toString()}`, {
-        signal: this.createTimeoutSignal(5000)
-      });
-
+      const response = await this.makeApiRequest(`/api/marketplace/search-suggestions?${params.toString()}`);
+      
       if (!response.ok) {
         throw new Error('Failed to get search suggestions');
       }
@@ -783,10 +778,15 @@ export class UnifiedMarketplaceService {
         sortBy: 'ending_soon'
       };
 
-      const response = await fetch(`${this.baseUrl}/api/marketplace/auctions/active?${new URLSearchParams(filters as any).toString()}`, {
-        signal: this.createTimeoutSignal(10000)
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          params.append(key, value.toString());
+        }
       });
 
+      const response = await this.makeApiRequest(`/api/marketplace/auctions/active?${params.toString()}`);
+      
       if (!response.ok) {
         throw new Error('Failed to fetch active auctions');
       }
@@ -805,7 +805,7 @@ export class UnifiedMarketplaceService {
 
   async placeBid(auctionId: string, bidAmount: number, bidderAddress: string): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/marketplace/auctions/${auctionId}/bid`, {
+      const response = await this.makeApiRequest(`/api/marketplace/auctions/${auctionId}/bid`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -813,8 +813,7 @@ export class UnifiedMarketplaceService {
         body: JSON.stringify({
           amount: bidAmount,
           bidderAddress
-        }),
-        signal: this.createTimeoutSignal(10000)
+        })
       });
 
       if (!response.ok) {
@@ -834,6 +833,7 @@ export class UnifiedMarketplaceService {
     data: any;
   }) => void): Promise<() => void> {
     try {
+      // Use the current base URL for EventSource
       const eventSource = new EventSource(`${this.baseUrl}/api/marketplace/auctions/${auctionId}/stream`);
 
       eventSource.onmessage = (event) => {
@@ -1237,10 +1237,7 @@ export class UnifiedMarketplaceService {
 
   async healthCheck(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/marketplace/health`, {
-        signal: this.createTimeoutSignal(10000)
-      });
-
+      const response = await this.makeApiRequest(`/api/marketplace/health`);
       return response.ok;
     } catch (error) {
       console.error('Health check failed:', error);
@@ -1312,11 +1309,10 @@ export class UnifiedMarketplaceService {
 
   async approveEscrow(escrowId: string, userAddress: string): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/escrow/${escrowId}/approve`, {
+      const response = await this.makeApiRequest(`/escrow/${escrowId}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userAddress }),
-        signal: this.createTimeoutSignal(15000)
+        body: JSON.stringify({ userAddress })
       });
 
       if (!response.ok) {
@@ -1331,11 +1327,10 @@ export class UnifiedMarketplaceService {
 
   async openDispute(escrowId: string, userAddress: string, reason: string): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/escrow/${escrowId}/dispute`, {
+      const response = await this.makeApiRequest(`/escrow/${escrowId}/dispute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userAddress, reason }),
-        signal: this.createTimeoutSignal(15000)
+        body: JSON.stringify({ userAddress, reason })
       });
 
       if (!response.ok) {
@@ -1354,11 +1349,10 @@ export class UnifiedMarketplaceService {
 
   async makeOffer(listingId: string, buyerAddress: string, offerAmount: string): Promise<Offer> {
     try {
-      const response = await fetch(`${this.baseUrl}/listings/${listingId}/offers`, {
+      const response = await this.makeApiRequest(`/listings/${listingId}/offers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ buyerAddress, offerAmount }),
-        signal: this.createTimeoutSignal(15000)
+        body: JSON.stringify({ buyerAddress, offerAmount })
       });
 
       if (!response.ok) {
@@ -1376,11 +1370,10 @@ export class UnifiedMarketplaceService {
 
   async respondToOffer(offerId: string, action: 'accept' | 'reject', sellerAddress: string): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/offers/${offerId}/${action}`, {
+      const response = await this.makeApiRequest(`/offers/${offerId}/${action}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sellerAddress }),
-        signal: this.createTimeoutSignal(15000)
+        body: JSON.stringify({ sellerAddress })
       });
 
       if (!response.ok) {
@@ -1399,11 +1392,10 @@ export class UnifiedMarketplaceService {
 
   async createOrder(orderData: CreateOrderRequest): Promise<any> {
     try {
-      const response = await fetch(`${this.baseUrl}/orders`, {
+      const response = await this.makeApiRequest(`/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData),
-        signal: this.createTimeoutSignal(30000)
+        body: JSON.stringify(orderData)
       });
 
       if (!response.ok) {
@@ -1421,11 +1413,10 @@ export class UnifiedMarketplaceService {
 
   async createEscrowForOrder(orderId: string, escrowData: any): Promise<any> {
     try {
-      const response = await fetch(`${this.baseUrl}/orders/${orderId}/escrow`, {
+      const response = await this.makeApiRequest(`/orders/${orderId}/escrow`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(escrowData),
-        signal: this.createTimeoutSignal(30000)
+        body: JSON.stringify(escrowData)
       });
 
       if (!response.ok) {
@@ -1443,10 +1434,8 @@ export class UnifiedMarketplaceService {
 
   async getTrackingInfo(orderId: string): Promise<TrackingInfo> {
     try {
-      const response = await fetch(`${this.baseUrl}/orders/${orderId}/tracking`, {
-        signal: this.createTimeoutSignal(10000)
-      });
-
+      const response = await this.makeApiRequest(`/orders/${orderId}/tracking`);
+      
       if (!response.ok) {
         const error = await response.json().catch(() => ({ message: 'Failed to get tracking info' }));
         throw new Error(error.message || 'Failed to get tracking info');
@@ -1462,11 +1451,10 @@ export class UnifiedMarketplaceService {
 
   async updateTrackingInfo(orderId: string, trackingData: Partial<TrackingInfo>): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/orders/${orderId}/tracking`, {
+      const response = await this.makeApiRequest(`/orders/${orderId}/tracking`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(trackingData),
-        signal: this.createTimeoutSignal(15000)
+        body: JSON.stringify(trackingData)
       });
 
       if (!response.ok) {
@@ -1486,9 +1474,7 @@ export class UnifiedMarketplaceService {
   async getListingsBySeller(sellerAddress: string): Promise<MarketplaceListing[]> {
     try {
       const params = new URLSearchParams({ sellerWalletAddress: sellerAddress });
-      const response = await fetch(`${this.baseUrl}/listings?${params}`, {
-        signal: this.createTimeoutSignal(10000)
-      });
+      const response = await this.makeApiRequest(`/listings?${params}`);
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({ message: 'Failed to fetch seller listings' }));
@@ -1505,11 +1491,10 @@ export class UnifiedMarketplaceService {
 
   async cancelListing(listingId: string, sellerAddress: string): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/listings/${listingId}/cancel`, {
+      const response = await this.makeApiRequest(`/listings/${listingId}/cancel`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sellerAddress }),
-        signal: this.createTimeoutSignal(15000)
+        body: JSON.stringify({ sellerAddress })
       });
 
       if (!response.ok) {
@@ -1524,11 +1509,10 @@ export class UnifiedMarketplaceService {
 
   async bulkUpdateListings(updates: Array<{ listingId: string; updates: Partial<MarketplaceListing> }>): Promise<{ success: number; failed: number; errors: string[] }> {
     try {
-      const response = await fetch(`${this.baseUrl}/listings/bulk-update`, {
+      const response = await this.makeApiRequest(`/listings/bulk-update`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ updates }),
-        signal: this.createTimeoutSignal(30000)
+        body: JSON.stringify({ updates })
       });
 
       if (!response.ok) {
