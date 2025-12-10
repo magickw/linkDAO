@@ -44,14 +44,18 @@ if (connectionString) {
       db = global._dbInstance;
       safeLogger.debug('🔄 Reusing existing database connection (Development)');
     } else {
-      // Restored Pro tier database pool configuration
+      // Restored Pro tier database pool configuration with improved settings
       const maxConnections = process.env.DB_POOL_MAX
         ? parseInt(process.env.DB_POOL_MAX)
         : (isRenderFree ? 2 : (isRenderPro ? 25 : 15)); // Pro tier: 25, Standard: 15, Free: 2
+      
+      // Calculate min connections based on max connections for better resource management
+      const minConnections = Math.max(1, Math.floor(maxConnections * 0.2)); // 20% of max connections
 
       const clientConfig = {
         prepare: false, // Disable prefetch as it's not supported in production environments
         max: maxConnections,
+        min: minConnections, // Add minimum connection count
         idle_timeout: isRenderFree ? 20 : (isRenderPro ? 30 : 60), // Seconds
         connect_timeout: isRenderFree ? 10 : (isRenderPro ? 5 : 3), // Increased timeout for better reliability
         max_lifetime: 60 * 30, // 30 minutes max connection lifetime to prevent stale connections
@@ -64,11 +68,6 @@ if (connectionString) {
         // Add resource management options
         transform: {
           undefined: null, // Transform undefined to null to prevent issues
-        },
-
-        // Add connection cleanup
-        onnotice: isResourceConstrained ? undefined : (notice: any) => {
-          safeLogger.debug('Database notice:', notice);
         },
 
         // Reduce memory usage by limiting result set processing
@@ -89,6 +88,9 @@ if (connectionString) {
         retry_backoff: true,
         retry_max: 3,
         retry_delay: 1000, // 1 second initial delay
+        
+        // Add connection validation
+        debug: process.env.NODE_ENV !== 'production' ? console.log : false,
       };
 
       client = postgres(connectionString, clientConfig);
@@ -101,7 +103,7 @@ if (connectionString) {
       }
 
       const tierInfo = isRenderFree ? 'Free' : (isRenderPro ? 'Pro' : 'Standard');
-      safeLogger.info(`✅ Database connection established successfully (${tierInfo} tier optimized, max: ${maxConnections})`);
+      safeLogger.info(`✅ Database connection established successfully (${tierInfo} tier optimized, max: ${maxConnections}, min: ${minConnections})`);
 
       // Initialize connection pool monitor
       const monitor = initializeMonitor(maxConnections, {

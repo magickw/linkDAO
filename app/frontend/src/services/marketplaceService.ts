@@ -402,8 +402,12 @@ export class UnifiedMarketplaceService {
   }
 
   private getFallbackBaseUrl(): string {
-    // Fallback to localhost for development when primary fails
-    return 'http://localhost:10000';
+    // Only use localhost fallback in development mode
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      return 'http://localhost:10000';
+    }
+    // In production, don't fallback to localhost due to CSP restrictions
+    return this.primaryBaseUrl;
   }
 
   constructor() {
@@ -956,8 +960,20 @@ export class UnifiedMarketplaceService {
     // First try the primary URL
     let response = await this.attemptApiRequest(`${this.primaryBaseUrl}${endpoint}`, options);
     
-    // If primary fails and it's different from fallback, try fallback
-    if (!response.ok && this.primaryBaseUrl !== this.fallbackBaseUrl) {
+    // If primary fails with 503 (service unavailable), implement backoff strategy
+    if (response.status === 503) {
+      console.log(`[MarketplaceService] Primary API returned 503, implementing backoff strategy`);
+      
+      // Wait 15 seconds before retrying (shorter than service worker for faster recovery)
+      await new Promise(resolve => setTimeout(resolve, 15000));
+      
+      // Retry the request
+      response = await this.attemptApiRequest(`${this.primaryBaseUrl}${endpoint}`, options);
+    }
+    
+    // If primary still fails and we're in development, try fallback
+    if (!response.ok && this.primaryBaseUrl !== this.fallbackBaseUrl && 
+        typeof window !== 'undefined' && window.location.hostname === 'localhost') {
       console.log(`[MarketplaceService] Primary API failed, trying fallback: ${this.fallbackBaseUrl}${endpoint}`);
       response = await this.attemptApiRequest(`${this.fallbackBaseUrl}${endpoint}`, options);
       
@@ -979,6 +995,13 @@ export class UnifiedMarketplaceService {
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
 
     try {
+      // Check if we're trying to connect to localhost in production
+      if (url.startsWith('http://localhost') && 
+          typeof window !== 'undefined' && 
+          window.location.hostname !== 'localhost') {
+        throw new Error('Cannot connect to localhost in production due to CSP restrictions');
+      }
+
       const response = await fetch(url, {
         ...options,
         signal: controller.signal,
@@ -997,6 +1020,12 @@ export class UnifiedMarketplaceService {
       return response;
     } catch (error) {
       clearTimeout(timeoutId);
+      
+      // Handle localhost connection errors specifically
+      if (url.startsWith('http://localhost') && error instanceof Error && error.message.includes('CSP')) {
+        console.warn('[MarketplaceService] Localhost connection blocked by CSP in production');
+      }
+      
       throw error;
     }
   }
@@ -1021,6 +1050,20 @@ export class UnifiedMarketplaceService {
 
       if (!response.ok) {
         console.warn('[MarketplaceService] Listings request was not ok:', response.status, response.statusText);
+        
+        // Handle 503 Service Unavailable specifically
+        if (response.status === 503) {
+          console.warn('[MarketplaceService] Service temporarily unavailable (503). Please try again later.');
+          // Show user-friendly message
+          if (typeof window !== 'undefined' && window.dispatchEvent) {
+            window.dispatchEvent(new CustomEvent('marketplace-service-unavailable', {
+              detail: {
+                message: 'Marketplace service is temporarily unavailable. Please try again in a few minutes.'
+              }
+            }));
+          }
+        }
+        
         // Try to get error details from response
         try {
           const errorData = await response.json();
@@ -1076,6 +1119,62 @@ export class UnifiedMarketplaceService {
       
       // Return empty array as fallback
       return [];
+    }
+  }
+
+  /**
+   * Check marketplace service health
+   */
+  async checkHealth(): Promise<{ healthy: boolean; message?: string }> {
+    try {
+      const response = await this.makeApiRequest('/api/marketplace/health');
+      
+      if (!response.ok) {
+        return { healthy: false, message: 'Marketplace service unavailable' };
+      }
+      
+      const result = await response.json();
+      return { 
+        healthy: result.success && result.status === 'healthy',
+        message: result.message || 'Service status checked'
+      };
+    } catch (error) {
+      console.error('[MarketplaceService] Health check failed:', error);
+      return { healthy: false, message: 'Health check failed' };
+    }
+  }
+
+  /**
+   * Get marketplace statistics
+   */
+  async getStats(): Promise<any> {
+    try {
+      const response = await this.makeApiRequest('/api/marketplace/stats');
+      
+      if (!response.ok) {
+        console.warn('[MarketplaceService] Stats request failed:', response.status);
+        return {
+          totalListings: 0,
+          totalCategories: 0,
+          categories: [],
+          message: 'Marketplace service temporarily unavailable'
+        };
+      }
+      
+      const result = await response.json();
+      return result.data || {
+        totalListings: 0,
+        totalCategories: 0,
+        categories: []
+      };
+    } catch (error) {
+      console.error('[MarketplaceService] Stats fetch failed:', error);
+      return {
+        totalListings: 0,
+        totalCategories: 0,
+        categories: [],
+        message: 'Failed to fetch marketplace statistics'
+      };
     }
   }
 

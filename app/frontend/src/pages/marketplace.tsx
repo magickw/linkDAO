@@ -71,6 +71,7 @@ const MarketplaceContent: React.FC = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [serviceUnavailable, setServiceUnavailable] = useState(false); // Add this state
   const ITEMS_PER_PAGE = 24;
   const [selectedListing, setSelectedListing] = useState<MarketplaceListing | null>(null);
   const [showBidModal, setShowBidModal] = useState(false);
@@ -325,6 +326,20 @@ const MarketplaceContent: React.FC = () => {
     };
   }, []);
 
+  // Add effect to handle service unavailable events
+  useEffect(() => {
+    const handleServiceUnavailable = (event: CustomEvent) => {
+      setServiceUnavailable(true);
+      addToast(event.detail.message || 'Marketplace service is temporarily unavailable. Please try again later.', 'error');
+    };
+
+    window.addEventListener('marketplace-service-unavailable', handleServiceUnavailable as EventListener);
+
+    return () => {
+      window.removeEventListener('marketplace-service-unavailable', handleServiceUnavailable as EventListener);
+    };
+  }, [addToast]);
+
   const handleLoadMore = useCallback(async () => {
     if (!loadingMore && hasMore) {
       const nextPage = page + 1;
@@ -474,19 +489,31 @@ const MarketplaceContent: React.FC = () => {
       : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-3';
 
   return (
-    <Layout title="Marketplace - LinkDAO" fullWidth={true}>
-      {/* Breadcrumb Navigation */}
-      <div className="bg-white/10 backdrop-blur-sm border-b border-white/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <MarketplaceBreadcrumbs
-            items={breadcrumbItems}
-            className="text-white/80"
-            preserveFilters={true}
-          />
-        </div>
-      </div>
-
+    <Layout>
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+        {/* Service Unavailable Banner */}
+        {serviceUnavailable && (
+          <div className="bg-red-500/90 backdrop-blur-sm text-white p-4 text-center">
+            <div className="container mx-auto">
+              <p className="font-medium">Marketplace service is temporarily unavailable</p>
+              <p className="text-sm opacity-90 mt-1">
+                We're experiencing technical difficulties. Please try again in a few minutes.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Breadcrumb Navigation */}
+        <div className="bg-white/10 backdrop-blur-sm border-b border-white/20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <MarketplaceBreadcrumbs
+              items={breadcrumbItems}
+              className="text-white/80"
+              preserveFilters={true}
+            />
+          </div>
+        </div>
+
         <div ref={browseSectionRef} className="max-w-screen-2xl mx-auto px-2 sm:px-4 lg:px-6 py-8 space-y-6">
 
           {/* Token Acquisition Section */}
@@ -950,16 +977,16 @@ const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () =
     } finally {
       setLoading(false);
     }
-  }, [address, addToast, marketplaceService, service]);
+  }, [address, addToast]);
 
   useEffect(() => {
     let mounted = true;
-    const fetchListings = async () => {
+    const fetchData = async () => {
       if (address) {
         await fetchMyListings();
       }
     };
-    fetchListings();
+    fetchData();
     return () => { mounted = false; };
   }, [address, fetchMyListings]);
 

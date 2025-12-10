@@ -70,7 +70,7 @@ const SERVICE_ENDPOINTS = {
 const isDevelopment = self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1';
 
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
-const MAX_REQUESTS_PER_MINUTE = isDevelopment ? 1000 : 300; // Increased to 300 for production to handle marketplace APIs
+const MAX_REQUESTS_PER_MINUTE = isDevelopment ? 1000 : 400; // Increased to 400 for production to better handle marketplace APIs
 const BACKOFF_MULTIPLIER = isDevelopment ? 1.2 : 1.5; // Lower backoff in development and production
 const MAX_BACKOFF_TIME = isDevelopment ? 5000 : 30000; // Reduced max backoff to 30s in production
 
@@ -338,6 +338,8 @@ async function networkFirst(request, cacheName) {
     const isCartRequest = url.pathname.includes('/api/cart');
     // Apply reduced base backoff time for seller dashboard requests
     const isSellerRequest = url.pathname.includes('/api/marketplace/seller') || url.pathname.includes('/dashboard/');
+    // Apply moderate backoff time for general marketplace requests
+    const isMarketplaceRequest = url.pathname.includes('/api/marketplace') && !isSellerRequest;
     let baseBackoffTime;
 
     if (isCommunityRequest) {
@@ -346,6 +348,8 @@ async function networkFirst(request, cacheName) {
       baseBackoffTime = 5000; // 5s for cart API to enable faster recovery
     } else if (isSellerRequest) {
       baseBackoffTime = 10000; // 10s for seller dashboard to enable faster recovery
+    } else if (isMarketplaceRequest) {
+      baseBackoffTime = 15000; // 15s for marketplace requests to enable moderate recovery
     } else {
       baseBackoffTime = 30000; // 30s for others
     }
@@ -625,6 +629,7 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
         // For seller dashboard requests, reduce backoff time
         const url = new URL(request.url);
         const isSellerRequest = url.pathname.includes('/api/marketplace/seller') || url.pathname.includes('/dashboard/');
+        const isMarketplaceRequest = url.pathname.includes('/api/marketplace');
 
         // Track failure with exponential backoff for service unavailable errors
         const failureInfo = failedRequests.get(requestKey) || { attempts: 0, lastFailure: 0 };
@@ -642,6 +647,17 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
               console.log('Cleared seller request failure info for faster retry');
             }
           }, 5000); // Clear after 5 seconds for seller requests
+        }
+        // For general marketplace requests, use moderate backoff
+        else if (isMarketplaceRequest) {
+          console.log('Marketplace request 503 error, using moderate backoff');
+          // Clear failure info after moderate period for marketplace requests
+          setTimeout(() => {
+            if (failedRequests.get(requestKey)?.attempts <= 2) {
+              failedRequests.delete(requestKey);
+              console.log('Cleared marketplace request failure info for faster retry');
+            }
+          }, 15000); // Clear after 15 seconds for marketplace requests
         }
       }
       // Handle community API errors with specific backoff
@@ -752,6 +768,25 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
       failureInfo.attempts += 1;
       failureInfo.lastFailure = Date.now();
       failedRequests.set(requestKey, failureInfo);
+    }
+    // Handle marketplace API failures with more specific backoff
+    else if (url.pathname.includes('/api/marketplace')) {
+      console.warn('Marketplace API failed:', error.message, requestKey);
+      // Track failure with exponential backoff for marketplace requests
+      const failureInfo = failedRequests.get(requestKey) || { attempts: 0, lastFailure: 0 };
+      failureInfo.attempts += 1;
+      failureInfo.lastFailure = Date.now();
+      failedRequests.set(requestKey, failureInfo);
+
+      // For marketplace requests, don't aggressively backoff on network errors
+      console.log('Marketplace request network error, using moderate backoff');
+      // Reduce backoff time for marketplace requests by clearing failure info after moderate period
+      setTimeout(() => {
+        if (failedRequests.get(requestKey)?.attempts <= 2) {
+          failedRequests.delete(requestKey);
+          console.log('Cleared marketplace request failure info for faster retry');
+        }
+      }, 15000); // Clear after 15 seconds for marketplace requests
     }
     // Handle seller dashboard failures with more specific backoff
     else if (url.pathname.includes('/api/marketplace/seller') || url.pathname.includes('/dashboard/')) {

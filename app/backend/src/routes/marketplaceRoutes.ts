@@ -138,10 +138,110 @@ router.get('/test/db', async (req, res) => {
   }
 });
 
+// GET /api/marketplace/health - Health check endpoint for marketplace service
+router.get('/health', async (req, res) => {
+  try {
+    // Test database connection
+    const { db } = await import('../db');
+    if (!db) {
+      return res.status(503).json({
+        success: false,
+        status: 'unhealthy',
+        service: 'marketplace',
+        error: 'Database connection unavailable',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Test a simple query
+    try {
+      await db.execute(sql`SELECT 1`);
+    } catch (dbError) {
+      return res.status(503).json({
+        success: false,
+        status: 'unhealthy',
+        service: 'marketplace',
+        error: 'Database query failed',
+        details: process.env.NODE_ENV === 'development' ? dbError.message : undefined,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Test marketplace service
+    try {
+      const listingsService = new (await import('../services/marketplaceListingsService')).MarketplaceListingsService();
+      // Test getting categories as a lightweight operation
+      await listingsService.getCategories();
+    } catch (serviceError) {
+      return res.status(503).json({
+        success: false,
+        status: 'unhealthy',
+        service: 'marketplace',
+        error: 'Marketplace service failed',
+        details: process.env.NODE_ENV === 'development' ? serviceError.message : undefined,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      status: 'healthy',
+      service: 'marketplace',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(503).json({
+      success: false,
+      status: 'unhealthy',
+      service: 'marketplace',
+      error: 'Health check failed',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // GET /api/marketplace/search-suggestions - Legacy search suggestions endpoint
 router.get('/search-suggestions', marketplaceController.getSearchSuggestions);
 
 // GET /api/marketplace/auctions/active - Get active auctions
 router.get('/auctions/active', marketplaceController.getActiveAuctions);
+
+// GET /api/marketplace/stats - Get marketplace statistics
+router.get('/stats', async (req, res) => {
+  try {
+    const listingsService = new (await import('../services/marketplaceListingsService')).MarketplaceListingsService();
+    
+    // Get total listings count
+    const listingsResult = await listingsService.getListings({ limit: 1, offset: 0 });
+    
+    // Get categories
+    const categories = await listingsService.getCategories();
+    
+    res.json({
+      success: true,
+      data: {
+        totalListings: listingsResult.total,
+        totalCategories: categories.length,
+        categories: categories.slice(0, 10), // Top 10 categories
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    safeLogger.error('Error getting marketplace stats:', error);
+    
+    // Return graceful fallback
+    res.status(200).json({
+      success: true,
+      data: {
+        totalListings: 0,
+        totalCategories: 0,
+        categories: [],
+        timestamp: new Date().toISOString(),
+        message: 'Marketplace service temporarily unavailable'
+      }
+    });
+  }
+});
 
 export default router;

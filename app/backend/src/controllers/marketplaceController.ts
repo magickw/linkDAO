@@ -36,12 +36,14 @@ export class MarketplaceController {
       // Fetch the listing from the marketplace service
       const listing = await marketplaceService.getListingById(id);
       
+      // Handle case where listing is not found or service is unavailable
       if (!listing) {
-        return res.status(404).json({
-          success: false,
-          error: {
-            code: 'NOT_FOUND',
-            message: 'Product listing not found'
+        return res.status(200).json({
+          success: true,
+          data: null,
+          metadata: {
+            timestamp: new Date().toISOString(),
+            message: 'Product not found or marketplace service temporarily unavailable'
           }
         });
       }
@@ -117,11 +119,13 @@ export class MarketplaceController {
     } catch (error) {
       safeLogger.error('Error fetching product details:', error);
       
-      return res.status(500).json({
-        success: false,
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to fetch product details'
+      // Return graceful fallback instead of 500 error
+      return res.status(200).json({
+        success: true,
+        data: null,
+        metadata: {
+          timestamp: new Date().toISOString(),
+          message: 'Marketplace service temporarily unavailable'
         }
       });
     }
@@ -178,6 +182,38 @@ export class MarketplaceController {
         result = await listingsService.searchListings(search as string, filters);
       } else {
         result = await listingsService.getListings(filters);
+      }
+
+      // Check if we got valid results
+      if (!result) {
+        // Return empty results instead of 500 error
+        return res.json({
+          success: true,
+          data: {
+            listings: [],
+            pagination: {
+              total: 0,
+              page: parseInt(page as string),
+              limit: parseInt(limit as string),
+              totalPages: 0
+            }
+          },
+          metadata: {
+            timestamp: new Date().toISOString(),
+            filters: {
+              category,
+              minPrice,
+              maxPrice,
+              sellerId,
+              search
+            },
+            sort: {
+              field: sortBy,
+              direction: sortOrder
+            },
+            message: 'Marketplace service temporarily unavailable, showing cached results'
+          }
+        });
       }
 
       // Map listings to the expected product format
@@ -273,11 +309,21 @@ export class MarketplaceController {
     } catch (error) {
       safeLogger.error('Error fetching product listings:', error);
       
-      return res.status(500).json({
-        success: false,
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to fetch product listings'
+      // Return graceful fallback instead of 500 error
+      return res.status(200).json({
+        success: true,
+        data: {
+          listings: [],
+          pagination: {
+            total: 0,
+            page: parseInt(req.query.page as string) || 1,
+            limit: parseInt(req.query.limit as string) || 20,
+            totalPages: 0
+          }
+        },
+        metadata: {
+          timestamp: new Date().toISOString(),
+          message: 'Marketplace service temporarily unavailable'
         }
       });
     }

@@ -7,6 +7,7 @@ import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { Button } from '@/design-system/components/Button';
 import Layout from '@/components/Layout';
 import { ipfsUploadService } from '@/services/ipfsUploadService';
+import ShippingConfigurationForm, { type ShippingConfiguration } from '@/components/Marketplace/Seller/ShippingConfigurationForm';
 import {
   Upload,
   X,
@@ -54,6 +55,9 @@ interface EnhancedFormData {
   // Security & Trust
   escrowEnabled: boolean;
 
+  // Shipping
+  shipping?: ShippingConfiguration;
+
   // Blockchain
   tokenAddress: string;
 }
@@ -83,17 +87,18 @@ const POPULAR_TAGS = [
 ];
 
 // Step definitions
-type FormStep = 'basic' | 'details' | 'pricing' | 'images' | 'review';
+type FormStep = 'basic' | 'details' | 'pricing' | 'shipping' | 'images' | 'review';
 
 const STEP_TITLES = {
   basic: 'Basic Information',
   details: 'Item Details',
   pricing: 'Pricing & Terms',
+  shipping: 'Shipping Configuration',
   images: 'Images & Media',
   review: 'Review & Publish'
 };
 
-const STEP_ORDER: FormStep[] = ['basic', 'details', 'pricing', 'images', 'review'];
+const STEP_ORDER: FormStep[] = ['basic', 'details', 'pricing', 'shipping', 'images', 'review'];
 
 const EditListingPage: React.FC = () => {
   const { address, isConnected } = useAccount();
@@ -178,6 +183,7 @@ const EditListingPage: React.FC = () => {
           quantity: listing.quantity,
           unlimitedQuantity: listing.quantity >= 999999,
           escrowEnabled: listing.escrowEnabled,
+          shipping: listing.shipping, // Load existing shipping configuration
           tokenAddress: '' // Default value since SellerListing doesn't have this field
         };        
         setFormData(transformedData);
@@ -311,9 +317,74 @@ const EditListingPage: React.FC = () => {
     };
   };
 
+  // Shipping validation
+  const validateShipping = (): { isValid: boolean; errors: Record<string, string> } => {
+    const errors: Record<string, string> = {};
+
+    // Skip validation for non-physical items
+    if (formData.itemType !== 'PHYSICAL') {
+      return { isValid: true, errors: {} };
+    }
+
+    if (!formData.shipping) {
+      errors.shipping = 'Shipping configuration is required for physical items';
+      return { isValid: false, errors };
+    }
+
+    // Validate shipping methods
+    const enabledMethods = Object.entries(formData.shipping.methods)
+      .filter(([_, method]) => method?.enabled);
+
+    if (enabledMethods.length === 0) {
+      errors.shipping = 'At least one shipping method must be enabled';
+    }
+
+    // Validate each enabled method
+    enabledMethods.forEach(([methodType, method]) => {
+      if (!method?.cost || method.cost < 0) {
+        errors[`${methodType}Cost`] = 'Shipping cost must be a valid positive number';
+      }
+      if (!method?.estimatedDays) {
+        errors[`${methodType}Days`] = 'Estimated delivery time is required';
+      }
+    });
+
+    // Validate international shipping regions
+    if (formData.shipping.methods.international?.enabled) {
+      if (!formData.shipping.methods.international.regions || formData.shipping.methods.international.regions.length === 0) {
+        errors.internationalRegions = 'At least one shipping region must be selected for international shipping';
+      }
+    }
+
+    // Validate processing time
+    if (formData.shipping.processingTime < 0 || formData.shipping.processingTime > 30) {
+      errors.processingTime = 'Processing time must be between 0 and 30 days';
+    }
+
+    // Validate package details
+    if (!formData.shipping.packageDetails) {
+      errors.packageDetails = 'Package details are required';
+    } else {
+      if (formData.shipping.packageDetails.weight <= 0 || formData.shipping.packageDetails.weight > 150) {
+        errors.weight = 'Package weight must be between 0 and 150 lbs';
+      }
+
+      const { length, width, height } = formData.shipping.packageDetails.dimensions;
+      if (length <= 0 || length > 108 || width <= 0 || width > 108 || height <= 0 || height > 108) {
+        errors.dimensions = 'Package dimensions must be between 0 and 108 inches';
+      }
+    }
+
+    return {
+      isValid: Object.keys(errors).length === 0,
+      errors
+    };
+  };
+
   // Form validation by step
   const validateStep = (step: FormStep): boolean => {
     const { isValid, errors } = validateForm();
+    const { isValid: shippingValid, errors: shippingErrors } = validateShipping();
 
     switch (step) {
       case 'basic':
@@ -322,10 +393,12 @@ const EditListingPage: React.FC = () => {
         return !errors.condition && !errors.quantity;
       case 'pricing':
         return !errors.price;
+      case 'shipping':
+        return shippingValid;
       case 'images':
         return !errors.images;
       case 'review':
-        return isValid;
+        return isValid && shippingValid;
       default:
         return false;
     }
@@ -522,6 +595,15 @@ const EditListingPage: React.FC = () => {
       if (!formData.description) throw new Error('Description is required');
       if (!formData.price || parseFloat(formData.price) <= 0) throw new Error('Valid price is required');
 
+      // Validate shipping for physical items
+      if (formData.itemType === 'PHYSICAL') {
+        const { isValid: shippingValid, errors: shippingErrors } = validateShipping();
+        if (!shippingValid) {
+          const firstError = Object.values(shippingErrors)[0];
+          throw new Error(firstError || 'Shipping configuration is required for physical items');
+        }
+      }
+
       // Upload new images to IPFS first
       const uploadedImageUrls: string[] = [...existingImages];
       
@@ -561,7 +643,9 @@ const EditListingPage: React.FC = () => {
         tags: formData.tags,
         images: uploadedImageUrls, // Include all image URLs
         condition: formData.condition as 'new' | 'used' | 'refurbished',
-        escrowEnabled: formData.escrowEnabled,        // Note: Some fields are not part of the SellerListing interface but may be used by the backend
+        escrowEnabled: formData.escrowEnabled,
+        shipping: formData.itemType === 'PHYSICAL' ? formData.shipping : undefined,
+        // Note: Some fields are not part of the SellerListing interface but may be used by the backend
       };      console.log('[EDIT] About to call sellerService.updateListing');
       console.log('[EDIT] listingData:', listingData);
 
@@ -1112,6 +1196,18 @@ const EditListingPage: React.FC = () => {
                     Protect both buyer and seller with our escrow service
                   </p>
                 </div>
+              </div>
+            )}
+
+            {/* Shipping Step */}
+            {currentStep === 'shipping' && (
+              <div className="space-y-6">
+                <ShippingConfigurationForm
+                  value={formData.shipping}
+                  onChange={(shipping) => handleFormChange('shipping', shipping)}
+                  itemType={formData.itemType}
+                  errors={fieldErrors}
+                />
               </div>
             )}
 
