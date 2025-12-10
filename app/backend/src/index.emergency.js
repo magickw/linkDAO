@@ -1,52 +1,103 @@
-
-// EMERGENCY MEMORY-OPTIMIZED INDEX
 const express = require('express');
-const compression = require('compression');
-const helmet = require('helmet');
+const cors = require('cors');
 
 const app = express();
+const PORT = process.env.PORT || 10000;
 
-// Essential middleware only
-app.use(helmet());
-app.use(compression({ level: 6 }));
-app.use(express.json({ limit: '1mb' }));
+// Very permissive CORS
+app.use(cors({
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['*'],
+  exposedHeaders: ['*']
+}));
 
-// Memory monitoring
-const memoryMonitor = setInterval(() => {
-  const usage = process.memoryUsage();
-  const heapUsedMB = usage.heapUsed / 1024 / 1024;
-  const heapTotalMB = usage.heapTotal / 1024 / 1024;
-  const percent = (heapUsedMB / heapTotalMB) * 100;
-  
-  if (percent > 90) {
-    console.error(`🚨 CRITICAL MEMORY: ${percent.toFixed(1)}%`);
-    if (global.gc) global.gc();
-  }
-}, 5000);
+app.use(express.json());
 
-// Essential health check only
-app.get('/health', (req, res) => {
-  const usage = process.memoryUsage();
-  res.json({
-    status: 'ok',
-    memory: {
-      heapUsed: Math.round(usage.heapUsed / 1024 / 1024),
-      heapTotal: Math.round(usage.heapTotal / 1024 / 1024),
-      rss: Math.round(usage.rss / 1024 / 1024)
-    },
-    uptime: process.uptime()
+// Basic routes
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'LinkDAO Backend API - Emergency Deployment', 
+    version: '1.0.0',
+    environment: process.env.NODE_ENV || 'development',
+    timestamp: new Date().toISOString(),
+    status: 'healthy'
   });
 });
 
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('Shutting down gracefully...');
-  clearInterval(memoryMonitor);
-  process.exit(0);
+app.get('/ping', (req, res) => {
+  res.json({ pong: true, timestamp: new Date().toISOString() });
 });
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`🚀 Emergency server running on port ${PORT}`);
-  console.log(`Memory: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    environment: process.env.NODE_ENV || 'development'
+  });
 });
+
+// Mock API endpoints
+app.get('/api/posts/feed', (req, res) => {
+  res.json({
+    success: true,
+    data: [],
+    message: 'Feed endpoint working - emergency deployment'
+  });
+});
+
+app.get('/api/marketplace/listings', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      listings: [],
+      total: 0,
+      limit: parseInt(req.query.limit) || 20,
+      offset: parseInt(req.query.offset) || 0,
+      hasNext: false,
+      hasPrevious: false
+    },
+    message: 'Marketplace endpoint working - emergency deployment'
+  });
+});
+
+// Catch all API routes
+app.use('/api/*', (req, res) => {
+  res.json({
+    success: true,
+    message: `API endpoint ${req.method} ${req.originalUrl} - emergency deployment`,
+    data: null
+  });
+});
+
+// Error handler
+app.use((error, req, res, next) => {
+  console.error('Error:', error);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: error.message,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({
+    error: 'Not Found',
+    message: `Route ${req.method} ${req.originalUrl} not found`,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`🚀 Emergency LinkDAO Backend running on port ${PORT}`);
+  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🌐 Health check: http://localhost:${PORT}/health`);
+  console.log(`📡 API ready: http://localhost:${PORT}/`);
+});
+
+module.exports = app;
