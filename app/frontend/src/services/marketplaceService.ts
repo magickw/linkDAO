@@ -386,12 +386,36 @@ export interface TrackingUpdate {
 }
 
 export class UnifiedMarketplaceService {
-  // Use the correct backend API base URL from environment variables
-  private baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
+  // Primary and fallback API base URLs
+  private primaryBaseUrl = this.getPrimaryBaseUrl();
+  private fallbackBaseUrl = this.getFallbackBaseUrl();
+  private currentBaseUrl = this.primaryBaseUrl; // Start with primary
+
+  private getPrimaryBaseUrl(): string {
+    if (typeof window !== 'undefined') {
+      // Client-side - check for environment variables first, then fallback
+      const envUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
+      if (envUrl) {
+        return envUrl;
+      }
+      
+      // If no environment variable is set, default to localhost for development
+      return 'http://localhost:10000';
+    }
+    
+    // Server-side (SSR) - use environment variables
+    return process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
+  }
+
+  private getFallbackBaseUrl(): string {
+    // Fallback to localhost for development when primary fails
+    return 'http://localhost:10000';
+  }
 
   constructor() {
-    // Log the baseUrl during initialization for debugging
-    console.log('[MarketplaceService] Initialized with baseUrl:', this.baseUrl);
+    // Log the base URLs during initialization for debugging
+    console.log('[MarketplaceService] Initialized with primary baseUrl:', this.primaryBaseUrl);
+    console.log('[MarketplaceService] Fallback baseUrl:', this.fallbackBaseUrl);
   }
 
   private createTimeoutSignal(timeoutMs: number): AbortSignal {
@@ -420,9 +444,7 @@ export class UnifiedMarketplaceService {
       }
 
       // Try marketplace/listings endpoint first
-      const response = await fetch(`${this.baseUrl}/api/marketplace/listings?${params.toString()}`, {
-        signal: this.createTimeoutSignal(10000)
-      });
+      const response = await this.makeApiRequest(`/api/marketplace/listings?${params.toString()}`);
 
       if (!response.ok) {
         console.warn('Marketplace API unavailable, using mock data');
@@ -490,8 +512,7 @@ export class UnifiedMarketplaceService {
   }
   async getListingById(id: string): Promise<Product | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/marketplace/listings/${id}`, {
-        signal: this.createTimeoutSignal(15000), // Increase timeout to 15 seconds
+      const response = await this.makeApiRequest(`/api/marketplace/listings/${id}`, {
         headers: {
           'Content-Type': 'application/json',
         }
@@ -931,6 +952,55 @@ export class UnifiedMarketplaceService {
     }
   }
 
+  private async makeApiRequest(endpoint: string, options: RequestInit = {}): Promise<any> {
+    // First try the primary URL
+    let response = await this.attemptApiRequest(`${this.primaryBaseUrl}${endpoint}`, options);
+    
+    // If primary fails and it's different from fallback, try fallback
+    if (!response.ok && this.primaryBaseUrl !== this.fallbackBaseUrl) {
+      console.log(`[MarketplaceService] Primary API failed, trying fallback: ${this.fallbackBaseUrl}${endpoint}`);
+      response = await this.attemptApiRequest(`${this.fallbackBaseUrl}${endpoint}`, options);
+      
+      // If fallback succeeds, temporarily switch to using fallback as primary
+      if (response.ok) {
+        this.currentBaseUrl = this.fallbackBaseUrl;
+        console.log('[MarketplaceService] Switched to fallback API temporarily');
+      }
+    } else if (response.ok) {
+      // If primary succeeded, ensure we're using it
+      this.currentBaseUrl = this.primaryBaseUrl;
+    }
+    
+    return response;
+  }
+
+  private async attemptApiRequest(url: string, options: RequestInit = {}): Promise<Response> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+          'Referrer-Policy': 'origin-when-cross-origin',
+          ...options.headers,
+        },
+        mode: 'cors',
+        credentials: 'omit'
+      });
+
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      throw error;
+    }
+  }
+
   async getMarketplaceListings(filters?: any): Promise<MarketplaceListing[]> {
     try {
       const params = new URLSearchParams();
@@ -942,22 +1012,30 @@ export class UnifiedMarketplaceService {
         });
       }
 
-      console.log('[MarketplaceService] Fetching listings from:', `${this.baseUrl}/api/marketplace/listings?${params.toString()}`);
+      const endpoint = `/api/marketplace/listings?${params.toString()}`;
+      console.log('[MarketplaceService] Fetching listings from primary URL:', `${this.primaryBaseUrl}${endpoint}`);
 
-      const response = await fetch(`${this.baseUrl}/api/marketplace/listings?${params.toString()}`, {
-        signal: this.createTimeoutSignal(10000),
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        }
+      const response = await this.makeApiRequest(endpoint, {
+        method: 'GET',
       });
 
       if (!response.ok) {
         console.warn('[MarketplaceService] Listings request was not ok:', response.status, response.statusText);
+        // Try to get error details from response
+        try {
+          const errorData = await response.json();
+          console.warn('[MarketplaceService] API error response:', errorData);
+        } catch (e) {
+          console.warn('[MarketplaceService] Could not parse error response:', e);
+        }
         return [];
       }
 
-      const result = await response.json().catch(() => ({ success: false }));
+      const result = await response.json().catch((parseError) => {
+        console.error('[MarketplaceService] Failed to parse JSON response:', parseError);
+        return { success: false, data: null };
+      });
+      
       console.log('[MarketplaceService] Raw API result:', result);
 
       if (result && (result.success || result.data)) {
@@ -983,8 +1061,20 @@ export class UnifiedMarketplaceService {
         console.warn('[MarketplaceService] Response indicated failure:', result?.message);
         return [];
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('[MarketplaceService] Error fetching listings:', error);
+      
+      // Provide more specific error information
+      if (error.name === 'AbortError') {
+        console.error('[MarketplaceService] Request timed out');
+      } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        console.error('[MarketplaceService] Network error - could not connect to API');
+        console.error('[MarketplaceService] This might be due to CORS policy, network connectivity, or the server being down');
+      } else {
+        console.error('[MarketplaceService] Unexpected error:', error.message);
+      }
+      
+      // Return empty array as fallback
       return [];
     }
   }
@@ -1160,9 +1250,7 @@ export class UnifiedMarketplaceService {
 
   async getCategories(): Promise<CategoryInfo[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/marketplace/listings/categories`, {
-        signal: this.createTimeoutSignal(10000)
-      });
+      const response = await this.makeApiRequest('/api/marketplace/listings/categories');
 
       if (!response.ok) {
         console.warn('Categories API unavailable, using mock data');

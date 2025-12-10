@@ -3,6 +3,7 @@ import { useWeb3 } from '@/context/Web3Context';
 import { useToast } from '@/context/ToastContext';
 import { communityWeb3Service, CommunityGovernanceProposal } from '@/services/communityWeb3Service';
 import { Community } from '@/models/Community';
+import AdvancedRichTextEditor from './EnhancedPostComposer/AdvancedRichTextEditor';
 
 interface CommunityGovernanceProps {
   community: Community;
@@ -215,13 +216,12 @@ export default function CommunityGovernance({ community, className = '' }: Commu
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Description
                 </label>
-                <textarea
+                <AdvancedRichTextEditor
                   value={newProposal.description}
-                  onChange={(e) => setNewProposal(prev => ({ ...prev, description: e.target.value }))}
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
-                  placeholder="Describe your proposal in detail"
+                  onChange={(value) => setNewProposal(prev => ({ ...prev, description: value }))}
+                  placeholder="Describe your proposal in detail using rich text or markdown..."
                   disabled={submittingProposal}
+                  className="border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700"
                 />
               </div>
               
@@ -281,9 +281,8 @@ export default function CommunityGovernance({ community, className = '' }: Commu
                 </div>
 
                 {/* Proposal Description */}
-                <p className="text-gray-700 dark:text-gray-300 text-sm mb-4">
-                  {proposal.description}
-                </p>
+                <div className="text-gray-700 dark:text-gray-300 text-sm mb-4 prose max-w-none" 
+                     dangerouslySetInnerHTML={{ __html: proposal.description }} />
 
                 {/* Vote Progress */}
                 <div className="mb-4">
