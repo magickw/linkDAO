@@ -20,7 +20,7 @@ const controller = new MarketplaceListingsController();
  * @query {boolean} isActive - Filter by active status (default: true)
  * @query {string} search - Search term for title/description
  */
-router.get('/listings', 
+router.get('/', 
   rateLimitWithCache(req => `listings:${req.ip}`, 1000, 60), // 1000 requests per minute - increased for Service Worker
   cachingMiddleware.listingsCache(),
   controller.getListings
@@ -30,7 +30,7 @@ router.get('/listings',
  * @route GET /marketplace/listings/categories
  * @desc Get available categories with listing counts
  */
-router.get('/listings/categories',
+router.get('/categories',
   rateLimitWithCache(req => `categories:${req.ip}`, 500, 60), // 500 requests per minute - increased for Service Worker
   cachingMiddleware.cache('default', { ttl: 600 }), // Cache categories for 10 minutes
   controller.getCategories
@@ -40,14 +40,14 @@ router.get('/listings/categories',
  * @route GET /marketplace/listings/fallback
  * @desc Fallback endpoint when enhanced marketplace service fails
  */
-router.get('/listings/fallback', controller.getFallbackListings);
+router.get('/fallback', controller.getFallbackListings);
 
 /**
  * @route GET /marketplace/listings/:id
  * @desc Get a single marketplace listing by ID
  * @param {string} id - Listing ID
  */
-router.get('/listings/:id',
+router.get('/:id',
   rateLimitWithCache(req => `listing_detail:${req.ip}`, 300, 60), // 300 requests per minute - increased for Service Worker
   cachingMiddleware.cache('default', { 
     ttl: 300,
@@ -67,7 +67,7 @@ router.get('/listings/:id',
  * @body {string[]} images - Array of image URLs/IPFS hashes (optional)
  * @body {string} category - Listing category (optional)
  */
-router.post('/listings', csrfProtection,  controller.createListing);
+router.post('/', csrfProtection, controller.createListing);
 
 /**
  * @route PUT /marketplace/listings/:id
@@ -82,7 +82,7 @@ router.post('/listings', csrfProtection,  controller.createListing);
  * @body {string} category - Listing category (optional)
  * @body {boolean} isActive - Active status (optional)
  */
-router.put('/listings/:id', csrfProtection,  controller.updateListing);
+router.put('/:id', csrfProtection, controller.updateListing);
 
 /**
  * @route DELETE /marketplace/listings/:id
@@ -90,13 +90,13 @@ router.put('/listings/:id', csrfProtection,  controller.updateListing);
  * @param {string} id - Listing ID
  * @body {string} sellerAddress - Seller's wallet address (for authorization)
  */
-router.delete('/listings/:id', csrfProtection,  controller.deleteListing);
+router.delete('/:id', csrfProtection, controller.deleteListing);
 
 /**
  * @route POST /marketplace/listings/:id/view
  * @desc Track a view for a marketplace listing
  * @param {string} id - Listing ID
  */
-router.post('/listings/:id/view', controller.trackView);
+router.post('/:id/view', controller.trackView);
 
 export default router;

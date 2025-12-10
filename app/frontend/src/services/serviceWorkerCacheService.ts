@@ -1200,9 +1200,19 @@ export class ServiceWorkerCacheService {
         });
         break;
       case 'reaction':
+        // Get auth token from localStorage
+        const token = 
+          localStorage.getItem('token') ||
+          localStorage.getItem('authToken') ||
+          localStorage.getItem('auth_token') ||
+          localStorage.getItem('linkdao-auth-token');
+        
         await fetch(`/api/posts/${action.data.postId}/reactions`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
           body: JSON.stringify(action.data)
         });
         break;

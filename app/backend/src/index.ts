@@ -970,34 +970,34 @@ app.use('/api/orders', orderCreationRoutes);
 // app.use('/api/marketplace', marketplaceSellerRoutes);
 
 // Seller profile API routes
-app.use('/api/marketplace', sellerProfileRoutes);
+app.use('/api/marketplace/seller/profile', sellerProfileRoutes);
 
 // Seller dashboard routes
-app.use('/api/marketplace', sellerDashboardRoutes);
+app.use('/api/marketplace/seller/dashboard', sellerDashboardRoutes);
 
 // Seller order routes
-app.use('/api/marketplace', sellerOrderRoutes);
+app.use('/api/marketplace/seller/orders', sellerOrderRoutes);
 
 // Seller listing routes
-app.use('/api/marketplace', sellerListingRoutes);
+app.use('/api/marketplace/seller/listings', sellerListingRoutes);
 
 // Seller image upload routes (legacy)
-app.use('/api/marketplace', sellerImageUploadRoutes);
+app.use('/api/marketplace/seller/images/upload', sellerImageUploadRoutes);
 
 // Unified seller image routes
 app.use('/api/marketplace/seller/images', sellerImageRoutes);
 
 // Seller verification routes
-app.use('/api/marketplace', sellerVerificationRoutes);
+app.use('/api/marketplace/seller/verification', sellerVerificationRoutes);
 
 // ENS validation routes
-app.use('/api/marketplace', ensValidationRoutes);
+app.use('/api/marketplace/ens', ensValidationRoutes);
 
 // Profile routes are handled by userProfileRoutes.ts
 // This duplicate definition has been removed to prevent conflicts
 
 // Marketplace listings routes (legacy support)
-app.use('/api/marketplace', marketplaceListingsRoutes);
+app.use('/api/marketplace/listings', marketplaceListingsRoutes);
 // Register main marketplace routes at different path to avoid conflicts
 // app.use('/api/v1/marketplace', marketplaceRoutes);
 app.use('/api/marketplace/core', marketplaceRoutes);
@@ -1067,7 +1067,7 @@ import returnRoutes from './routes/returnRoutes';
 app.use('/api/order-events', orderEventHandlerRoutes);
 
 // Return and refund routes
-app.use('/api/marketplace/returns', returnRoutes);
+app.use('/api/marketplace/seller/returns', returnRoutes);
 
 // x402 payment routes
 app.use('/api/x402', x402PaymentRoutes);

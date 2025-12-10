@@ -102,7 +102,8 @@ class ImageStorageService {
     
     if (!cloudName || !apiKey || !apiSecret) {
       safeLogger.error('Cloudinary configuration is missing. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables.');
-      throw new Error('Cloudinary configuration is missing');
+      // Don't throw an error, just log it - we'll handle this gracefully
+      return;
     }
     
     // Initialize Cloudinary with configuration from environment variables
@@ -374,7 +375,7 @@ class ImageStorageService {
       // Upload main image to Cloudinary
       const uploadOptions: any = {
         folder: `linkdao/${options.usageType}/${options.userId}`,
-        public_id: this.generatePublicId(filename),
+        public_id: this.generatePublicId(filename), // Will implement this method
         overwrite: false,
         resource_type: 'image',
         timeout: 60000 // 60 seconds timeout
@@ -435,8 +436,7 @@ class ImageStorageService {
 
       // Save to database
       const imageRecord = await db.insert(imageStorage).values({
-        id: mainUploadResult.public_id,
-        userId: options.userId,
+        ownerId: options.userId,
         usageType: options.usageType,
         usageReferenceId: options.usageReferenceId,
         originalFilename: filename,
@@ -446,8 +446,8 @@ class ImageStorageService {
         height: mainUploadResult.height,
         ipfsHash: mainUploadResult.public_id, // Use public_id as identifier
         cdnUrl: mainUploadResult.secure_url,
-        thumbnails: thumbnailUrls,
-        backupUrls: backupUrls,
+        thumbnails: JSON.stringify(thumbnailUrls),
+        backupUrls: JSON.stringify(backupUrls),
         createdAt: new Date(),
         updatedAt: new Date()
       }).returning();
@@ -528,7 +528,7 @@ class ImageStorageService {
         .from(imageStorage)
         .where(and(
           eq(imageStorage.id, imageId),
-          eq(imageStorage.userId, userId) // Changed from ownerId to userId
+          eq(imageStorage.ownerId, userId)
         ))
         .limit(1);
 
@@ -641,6 +641,13 @@ class ImageStorageService {
   }
 
   // Private helper methods
+  private generatePublicId(filename: string): string {
+    // Simple implementation to generate a public ID based on filename and timestamp
+    const name = filename.replace(/\.[^/.]+$/, ''); // Remove extension
+    const timestamp = Date.now();
+    return `${name}_${timestamp}`;
+  }
+
   private containsSuspiciousContent(buffer: Buffer): boolean {
     // Basic security check - look for suspicious patterns
     const content = buffer.toString('hex');

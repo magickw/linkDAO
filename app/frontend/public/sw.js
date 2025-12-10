@@ -96,6 +96,7 @@ const SERVICE_CIRCUIT_BREAKER_CONFIGS = {
   marketplace: {
     failureThreshold: 5, // Increase threshold to reduce false positives
     recoveryTimeout: 15000, // Faster recovery for marketplace
+    halfOpenMaxCalls: 3
   }
 };
 
@@ -129,7 +130,7 @@ const CACHEABLE_APIS = {
   '/api/tips': { ttl: 60000, priority: 'medium', staleTTL: 300000 }, // 1min fresh, 5min stale
   '/api/follow': { ttl: 120000, priority: 'medium', staleTTL: 600000 }, // 2min fresh, 10min stale
   '/api/search': { ttl: 300000, priority: 'low', staleTTL: 1800000 }, // 5min fresh, 30min stale
-  '/api/marketplace': { ttl: 30000, priority: 'medium', staleTTL: 120000 }, // 30s fresh, 2min stale
+  '/api/marketplace': { ttl: 10000, priority: 'high', staleTTL: 20000 }, // 10s fresh, 20s stale for more responsive marketplace
   '/api/governance': { ttl: 180000, priority: 'medium', staleTTL: 900000 }, // 3min fresh, 15min stale
   '/api/messaging': { ttl: 30000, priority: 'high', staleTTL: 120000 }, // 30s fresh, 2min stale
   '/api/chat/conversations': { ttl: 30000, priority: 'high', staleTTL: 120000, skipCacheOnError: true }, // 30s fresh, 2min stale
@@ -1743,10 +1744,15 @@ async function syncReactions() {
 
     for (const reaction of offlineReactions) {
       try {
+        // Retrieve auth token from storage
+        const token = await getAuthToken();
+        const authHeader = token ? `Bearer ${token}` : '';
+        
         const response = await fetch(`/api/posts/${reaction.postId}/reactions`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': authHeader
           },
           body: JSON.stringify(reaction.data)
         });
@@ -1788,8 +1794,27 @@ async function openDB() {
         actionStore.createIndex('timestamp', 'timestamp', { unique: false });
         actionStore.createIndex('type', 'type', { unique: false });
       }
+      
+      if (!db.objectStoreNames.contains('authTokens')) {
+        db.createObjectStore('authTokens', { keyPath: 'id' });
+      }
     };
   });
+}
+
+// Function to get auth token from IndexedDB
+async function getAuthToken() {
+  try {
+    const db = await openDB();
+    const transaction = db.transaction(['authTokens'], 'readonly');
+    const store = transaction.objectStore('authTokens');
+    const tokenRecord = await store.get('current');
+    
+    return tokenRecord ? tokenRecord.value : null;
+  } catch (error) {
+    console.error('Error getting auth token:', error);
+    return null;
+  }
 }
 
 async function getOfflinePosts(db) {

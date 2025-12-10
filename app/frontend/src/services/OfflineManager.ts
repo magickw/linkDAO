@@ -237,10 +237,18 @@ export class OfflineManager {
    * Execute react to post action
    */
   private async executeReactToPost(payload: any): Promise<void> {
+    // Get auth token from localStorage
+    const token = 
+      localStorage.getItem('token') ||
+      localStorage.getItem('authToken') ||
+      localStorage.getItem('auth_token') ||
+      localStorage.getItem('linkdao-auth-token');
+    
     const response = await fetch(`/api/posts/${payload.postId}/reactions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       },
       body: JSON.stringify({
         type: payload.reactionType,
