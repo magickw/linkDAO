@@ -1000,7 +1000,7 @@ app.use('/api/marketplace', ensValidationRoutes);
 app.use('/api/marketplace', marketplaceListingsRoutes);
 // Register main marketplace routes at different path to avoid conflicts
 app.use('/api/v1/marketplace', marketplaceRoutes);
-app.use('/api/marketplace', marketplaceRoutes);
+// app.use('/api/marketplace', marketplaceRoutes);
 
 // Cart routes
 app.use('/api/v1/cart', cartRoutes);
@@ -1486,7 +1486,3 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 export default app;
-
-
-// Deployment trigger: 2025-11-06T23:46:34.293Z
-// Post creation fix: 2025-11-07T00:17:31.299Z

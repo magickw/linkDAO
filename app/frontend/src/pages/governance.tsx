@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '@/components/Layout';
 import { useAccount } from 'wagmi';
 import { useToast } from '@/context/ToastContext';

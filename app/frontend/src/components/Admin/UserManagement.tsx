@@ -977,7 +977,7 @@ export function UserManagement() {
                 <div>
                   <label className="text-gray-400 text-sm">Role</label>
                   <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(selectedUser.role)}`}>
-                    {selectedUser.role.replace('_', ' ')}
+                    {selectedUser.role ? selectedUser.role.replace('_', ' ') : 'Unknown'}
                   </span>
                 </div>
 
@@ -1313,7 +1313,7 @@ export function UserManagement() {
             <div className="space-y-4">
               <div>
                 <label className="block text-gray-400 text-sm mb-1">Current Role</label>
-                <p className="text-white">{actionModal.user.role.replace('_', ' ')}</p>
+                <p className="text-white">{actionModal.user.role ? actionModal.user.role.replace('_', ' ') : 'Unknown'}</p>
               </div>
 
               <div>

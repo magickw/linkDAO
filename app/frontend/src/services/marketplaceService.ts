@@ -1081,20 +1081,24 @@ export class UnifiedMarketplaceService {
       
       console.log('[MarketplaceService] Raw API result:', result);
 
-      if (result && (result.success || result.data)) {
-        // Handle both array and paginated response formats
-        // API returns: { success: true, data: { listings: [...], total, ... } }
-        const data = result.data || result;
+      if (result && result.success) {
+        // Handle the actual response format from the backend
+        // API returns: { success: true, data: { listings: [...], pagination: {...} } }
+        const data = result.data;
         console.log('[MarketplaceService] Extracted data:', data);
 
+        // Check if data is directly an array (seller service format)
         if (Array.isArray(data)) {
           console.log('[MarketplaceService] Data is array, returning directly:', data.length, 'items');
           return data;
-        } else if (data && Array.isArray(data.listings)) {
+        }
+        // Check if data is an object with listings property (marketplace controller format)
+        else if (data && Array.isArray(data.listings)) {
           console.log('[MarketplaceService] Data has listings array, returning:', data.listings.length, 'items');
           return data.listings;
-        } else if (data && data.data && Array.isArray(data.data.listings)) {
-          // Handle nested data structure
+        }
+        // Handle nested data structure
+        else if (data && data.data && Array.isArray(data.data.listings)) {
           console.log('[MarketplaceService] Data has nested listings array, returning:', data.data.listings.length, 'items');
           return data.data.listings;
         }

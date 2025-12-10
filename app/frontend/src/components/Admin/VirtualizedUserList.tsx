@@ -75,20 +75,20 @@ const UserRow: React.FC<{
               <div className="flex items-start gap-3 flex-1 min-w-0">
                 <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
                   <span className="text-white font-bold">
-                    {user.handle.charAt(0).toUpperCase()}
+                    {user.handle ? user.handle.charAt(0).toUpperCase() : '?'}
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className="text-white font-medium text-sm sm:text-base">{user.handle}</span>
+                    <span className="text-white font-medium text-sm sm:text-base">{user.handle || 'N/A'}</span>
                     {user.ens && (
                       <span className="text-blue-400 text-xs sm:text-sm">({user.ens})</span>
                     )}
                   </div>
-                  <p className="text-gray-400 text-xs sm:text-sm mb-1 truncate">{user.address}</p>
+                  <p className="text-gray-400 text-xs sm:text-sm mb-1 truncate">{user.address || 'N/A'}</p>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
-                      {user.role.replace('_', ' ')}
+                      {user.role ? user.role.replace('_', ' ') : 'Unknown'}
                     </span>
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${getKycStatusColor(user.kycStatus)}`}>
                       KYC: {user.kycStatus}
