@@ -161,8 +161,17 @@ const MarketplaceContent: React.FC = () => {
 
       console.log('Raw data from getMarketplaceListings:', data, 'isArray:', Array.isArray(data), 'length:', data?.length);
 
-      if (Array.isArray(data) && data.length > 0) {
+      // The service already returns the listings array extracted from the API response
+      if (Array.isArray(data)) {
         console.log('Processing listings data:', data.length, 'items');
+        
+        if (data.length === 0) {
+          console.log('No listings returned from API');
+          setListings([]);
+          setLoading(false);
+          return;
+        }
+        
         console.log('First listing sample:', data[0]);
 
         // Transform backend data to frontend format
