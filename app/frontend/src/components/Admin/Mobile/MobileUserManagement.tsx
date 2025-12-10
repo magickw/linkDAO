@@ -201,11 +201,11 @@ export const MobileUserManagement: React.FC = () => {
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
                     <span className="text-white font-medium text-sm">
-                      {user.handle.split(' ').map(n => n[0]).join('')}
+                      {user.handle ? user.handle.split(' ').map(n => n[0]).join('') : '?'}
                     </span>
                   </div>
                   <div>
-                    <h3 className="text-white font-medium">{user.handle}</h3>
+                    <h3 className="text-white font-medium">{user.handle || 'N/A'}</h3>
                     <p className="text-white/70 text-sm">{user.email}</p>
                   </div>
                 </div>

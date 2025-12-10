@@ -343,14 +343,14 @@ export function SellerPerformance() {
                         <div className="flex items-start gap-3">
                           <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
                             <span className="text-white font-bold">
-                              {seller.businessName.charAt(0).toUpperCase()}
+                              {seller.businessName ? seller.businessName.charAt(0).toUpperCase() : '?'}
                             </span>
                           </div>
                           <div>
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="text-white font-medium">{seller.businessName}</span>
+                              <span className="text-white font-medium">{seller.businessName || 'N/A'}</span>
                             </div>
-                            <p className="text-gray-400 text-sm">@{seller.sellerHandle}</p>
+                            <p className="text-gray-400 text-sm">@{seller.sellerHandle || 'unknown'}</p>
                           </div>
                         </div>
                         <span className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${getStatusColor(seller.status)}`}>

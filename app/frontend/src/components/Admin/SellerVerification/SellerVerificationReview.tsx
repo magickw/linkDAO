@@ -563,10 +563,10 @@ export const SellerVerificationReview: React.FC = () => {
                         {request.legalName || 'Unnamed Business'}
                       </h3>
                       <Badge variant={request.status === 'pending' ? 'destructive' : 'secondary'}>
-                        {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                        {request.status ? request.status.charAt(0).toUpperCase() + request.status.slice(1) : 'Unknown'}
                       </Badge>
                       <Badge className={getProgressStatusColor(request.progressStatus)}>
-                        {request.progressStatus.replace('_', ' ')}
+                        {request.progressStatus ? request.progressStatus.replace('_', ' ') : 'Unknown'}
                       </Badge>
                       {request.riskScore && (
                         <Badge className={getRiskScoreColor(request.riskScore)}>
@@ -834,7 +834,7 @@ export const SellerVerificationReview: React.FC = () => {
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
                                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getActionColor(log.action)}`}>
-                                    {log.action.replace('seller_verification_', '').replace('_', ' ')}
+                                    {log.action ? log.action.replace('seller_verification_', '').replace('_', ' ') : 'Unknown Action'}
                                   </span>
                                   <span className="text-xs text-gray-500">
                                     {formatDate(log.createdAt)}

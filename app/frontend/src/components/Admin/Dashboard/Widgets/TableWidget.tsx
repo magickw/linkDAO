@@ -118,9 +118,9 @@ export const TableWidget: React.FC<TableWidgetProps> = ({
                   <td>
                     <div className="user-cell">
                       <div className="user-avatar">
-                        {user.handle.charAt(0).toUpperCase()}
+                        {user.handle ? user.handle.charAt(0).toUpperCase() : '?'}
                       </div>
-                      <span className="user-email">{user.handle}</span>
+                      <span className="user-email">{user.handle || 'N/A'}</span>
                     </div>
                   </td>
                   <td>
