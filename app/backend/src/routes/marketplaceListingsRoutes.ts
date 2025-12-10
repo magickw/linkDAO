@@ -21,7 +21,7 @@ const controller = new MarketplaceListingsController();
  * @query {string} search - Search term for title/description
  */
 router.get('/listings', 
-  rateLimitWithCache(req => `listings:${req.ip}`, 100, 60), // 100 requests per minute
+  rateLimitWithCache(req => `listings:${req.ip}`, 1000, 60), // 1000 requests per minute - increased for Service Worker
   cachingMiddleware.listingsCache(),
   controller.getListings
 );
@@ -31,7 +31,7 @@ router.get('/listings',
  * @desc Get available categories with listing counts
  */
 router.get('/listings/categories',
-  rateLimitWithCache(req => `categories:${req.ip}`, 50, 60), // 50 requests per minute
+  rateLimitWithCache(req => `categories:${req.ip}`, 500, 60), // 500 requests per minute - increased for Service Worker
   cachingMiddleware.cache('default', { ttl: 600 }), // Cache categories for 10 minutes
   controller.getCategories
 );
@@ -48,7 +48,7 @@ router.get('/listings/fallback', controller.getFallbackListings);
  * @param {string} id - Listing ID
  */
 router.get('/listings/:id',
-  rateLimitWithCache(req => `listing_detail:${req.ip}`, 60, 60), // 60 requests per minute
+  rateLimitWithCache(req => `listing_detail:${req.ip}`, 300, 60), // 300 requests per minute - increased for Service Worker
   cachingMiddleware.cache('default', { 
     ttl: 300,
     keyGenerator: (req) => `listing:${req.params.id}`
