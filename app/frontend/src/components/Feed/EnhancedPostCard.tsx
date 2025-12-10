@@ -12,6 +12,8 @@ import { ModerationWarning, ReportContentButton } from '../Moderation';
 import { IPFSContentService } from '../../services/ipfsContentService';
 import { getDisplayName, getUserAddress } from '../../utils/userDisplay';
 import DOMPurify from 'dompurify';
+import VideoEmbed from '../VideoEmbed';
+import { extractVideoUrls, VideoInfo } from '../../utils/videoUtils';
 
 interface EnhancedPostCardProps {
   post: any;
@@ -52,6 +54,12 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
   const [ipfsGatewayIndex, setIpfsGatewayIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Extract video URLs from content for embedding
+  const videoEmbeds = useMemo(() => {
+    if (!content) return [];
+    return extractVideoUrls(content);
+  }, [content]);
 
   // List of IPFS gateways to try as fallbacks
   const ipfsGateways = [
@@ -417,6 +425,23 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
           />
         ) : (
           <p className="text-gray-500 dark:text-gray-400 italic">No content available</p>
+        )}
+
+        {/* Video Embeds - Auto-detected from content URLs */}
+        {videoEmbeds.length > 0 && (
+          <div className="mt-4 space-y-4">
+            {videoEmbeds.map((videoInfo: VideoInfo, index: number) => (
+              <div key={`video-${index}-${videoInfo.id}`} className="rounded-lg overflow-hidden">
+                <VideoEmbed
+                  url={videoInfo.url}
+                  width={560}
+                  height={315}
+                  showPlaceholder={true}
+                  className="w-full"
+                />
+              </div>
+            ))}
+          </div>
         )}
 
         {/* Media */}

@@ -81,17 +81,13 @@ const FacebookStylePostComposer = React.memo(({
     ));
   }, [content, extractVideoLinks]);
 
-  // ... (imports)
-
-  // ... (interface)
-
-  // ... (component start)
-
-  // ... (state)
-
-  // ... (effects)
-
-  // ... (extractHashtags)
+  // Extract hashtags from content
+  const extractHashtags = useCallback((text: string): string[] => {
+    const hashtagRegex = /#(\w+)/g;
+    const matches = text.match(hashtagRegex);
+    if (!matches) return [];
+    return matches.map(tag => tag.slice(1)); // Remove the # prefix
+  }, []);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();

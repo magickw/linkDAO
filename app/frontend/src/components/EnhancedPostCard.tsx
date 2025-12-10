@@ -3,10 +3,12 @@
  * Implements visual hierarchy, better engagement metrics, and improved UX
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { processContent, shouldTruncateContent, getTruncatedContent, formatTimestamp } from '@/utils/contentParser';
+import { extractVideoUrls, VideoInfo } from '@/utils/videoUtils';
+import VideoEmbed from './VideoEmbed';
 import {
   Heart,
   MessageCircle,
@@ -140,6 +142,12 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
 
   const shouldTruncate = shouldTruncateContent(post.content, 280, isExpanded);
   const displayContent = getTruncatedContent(post.content, 280, isExpanded);
+
+  // Extract video URLs from content for embedding
+  const videoEmbeds = useMemo(() => {
+    if (!post.content) return [];
+    return extractVideoUrls(post.content);
+  }, [post.content]);
 
   const getVisibilityIcon = () => {
     switch (post.visibility) {
@@ -288,6 +296,23 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
                   <Hash className="w-3 h-3" />
                   <span>{tag}</span>
                 </span>
+              ))}
+            </div>
+          )}
+
+          {/* Video Embeds - Auto-detected from content URLs */}
+          {videoEmbeds.length > 0 && (
+            <div className="mt-4 space-y-4">
+              {videoEmbeds.map((videoInfo: VideoInfo, index: number) => (
+                <div key={`video-${index}-${videoInfo.id}`} className="rounded-lg overflow-hidden">
+                  <VideoEmbed
+                    url={videoInfo.url}
+                    width={560}
+                    height={315}
+                    showPlaceholder={true}
+                    className="w-full"
+                  />
+                </div>
               ))}
             </div>
           )}
