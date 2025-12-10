@@ -36,7 +36,9 @@ export class MarketplaceListingsService {
       // Filter for active listings that are published
       // Only apply filters if isActive is explicitly set to true
       if (isActive === true) {
-        conditions.push(eq(products.status, 'active'));
+        // Check for multiple possible active statuses
+        // Include products that are not explicitly inactive or draft
+        conditions.push(sql`${products.status} NOT IN ('inactive', 'draft', 'deleted', 'suspended')`);
         // Also check that the product has been published (not draft)
         conditions.push(sql`${products.publishedAt} IS NOT NULL`);
       }
@@ -447,7 +449,9 @@ export class MarketplaceListingsService {
       // Filter for active listings
       // Only apply filters if isActive is explicitly set
       if (filters.isActive === true) {
-        conditions.push(eq(products.status, 'active'));
+        // Check for multiple possible active statuses
+        // Include products that are not explicitly inactive or draft
+        conditions.push(sql`${products.status} NOT IN ('inactive', 'draft', 'deleted', 'suspended')`);
         // Also check that the product has been published (not draft)
         conditions.push(sql`${products.publishedAt} IS NOT NULL`);
       } else if (filters.isActive === false) {

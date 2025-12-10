@@ -18,10 +18,8 @@ interface WalletLoginBridgeProps {
   skipIfAuthenticated?: boolean;
 }
 
-// Global debounce tracking to prevent multiple concurrent auth attempts
-let globalAuthInProgress = false;
-let lastAuthAttemptTime = 0;
-const AUTH_DEBOUNCE_DELAY = 2000; // 2 seconds between auth attempts
+// Global tracking to prevent duplicate auth attempts
+let lastAuthenticatedAddress: string | null = null;
 
 export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
   autoLogin = true,
@@ -31,122 +29,66 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
 }) => {
   const { address, isConnected, connector, status } = useAccount();
   const { user, isAuthenticated, isLoading: isAuthLoading, login } = useAuth();
-  const hasAttemptedLoginRef = useRef(false);
-  const loginTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const currentAddressRef = useRef<string | null>(null);
+  const hasHandledAddressRef = useRef<Set<string>>(new Set());
 
-  // Clear any pending timeout when address changes or component unmounts
   useEffect(() => {
-    return () => {
-      if (loginTimeoutRef.current) {
-        clearTimeout(loginTimeoutRef.current);
-        loginTimeoutRef.current = null;
-      }
-    };
-  }, []);
+    // Only attempt login if:
+    // 1. Auto-login is enabled
+    // 2. Wallet is connected with an address
+    // 3. User is not already authenticated
+    // 4. Not currently loading
+    // 5. Haven't already handled this address
 
-  // Reset state when wallet address changes
-  useEffect(() => {
-    if (address !== currentAddressRef.current) {
-      currentAddressRef.current = address || null;
-      hasAttemptedLoginRef.current = false;
-      
-      // Clear any pending login when address changes
-      if (loginTimeoutRef.current) {
-        clearTimeout(loginTimeoutRef.current);
-        loginTimeoutRef.current = null;
-      }
+    if (!autoLogin || !isConnected || !address || isAuthenticated || isAuthLoading) {
+      return;
     }
-  }, [address]);
 
-  // Reset state when wallet disconnects
+    // Check if we've already handled this address
+    if (hasHandledAddressRef.current.has(address)) {
+      return;
+    }
+
+    // Mark this address as handled
+    hasHandledAddressRef.current.add(address);
+
+    // Add a small delay to ensure wallet state is stable
+    const timeoutId = setTimeout(async () => {
+      console.log(`🔐 Attempting login for wallet: ${address}`);
+      
+      try {
+        const result = await login(address, connector, status);
+
+        if (result.success) {
+          lastAuthenticatedAddress = address;
+          console.log(`✅ Login successful for ${address}`);
+          if (onLoginSuccess) {
+            onLoginSuccess({ address });
+          }
+        } else {
+          console.error(`❌ Login failed for ${address}:`, result.error);
+          if (onLoginError) {
+            onLoginError(result.error || 'Authentication failed');
+          }
+        }
+      } catch (error: any) {
+        const errorMessage = error?.message || 'An unknown error occurred';
+        console.error('💥 Login threw an exception:', errorMessage);
+        if (onLoginError) {
+          onLoginError(errorMessage);
+        }
+      }
+    }, 300); // 300ms delay for stability
+
+    return () => clearTimeout(timeoutId);
+  }, [address, isConnected, isAuthenticated, isAuthLoading, autoLogin, login, connector, status, onLoginSuccess, onLoginError]);
+
+  // Reset when wallet disconnects
   useEffect(() => {
     if (!isConnected) {
-      hasAttemptedLoginRef.current = false;
-      globalAuthInProgress = false;
-      
-      if (loginTimeoutRef.current) {
-        clearTimeout(loginTimeoutRef.current);
-        loginTimeoutRef.current = null;
-      }
+      hasHandledAddressRef.current.clear();
+      lastAuthenticatedAddress = null;
     }
   }, [isConnected]);
-
-  const attemptLogin = useCallback(async () => {
-    if (!address || !connector) {
-      return;
-    }
-
-    // Mark this address as attempted
-    hasAttemptedLoginRef.current = true;
-    globalAuthInProgress = true;
-    lastAuthAttemptTime = Date.now();
-
-    console.log(`🔐 Triggering auto-login for wallet: ${address}`);
-
-    try {
-      const result = await login(address, connector, status);
-
-      if (result.success) {
-        console.log(`✅ Auto-login successful for ${address}`);
-        if (onLoginSuccess) {
-          onLoginSuccess({ address });
-        }
-      } else {
-        console.error(`❌ Auto-login failed for ${address}:`, result.error);
-        if (onLoginError) {
-          onLoginError(result.error || 'Authentication failed');
-        }
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-      console.error('💥 Auto-login threw an exception:', errorMessage);
-      if (onLoginError) {
-        onLoginError(errorMessage);
-      }
-    } finally {
-      globalAuthInProgress = false;
-    }
-  }, [address, connector, status, login, onLoginSuccess, onLoginError]);
-
-  useEffect(() => {
-    // Clear any existing timeout
-    if (loginTimeoutRef.current) {
-      clearTimeout(loginTimeoutRef.current);
-      loginTimeoutRef.current = null;
-    }
-
-    // Check if we should attempt login
-    const now = Date.now();
-    const timeSinceLastAttempt = now - lastAuthAttemptTime;
-    
-    const shouldAttemptLogin =
-      autoLogin &&
-      isConnected &&
-      address &&
-      !isAuthenticated &&
-      !isAuthLoading &&
-      !hasAttemptedLoginRef.current &&
-      !globalAuthInProgress &&
-      timeSinceLastAttempt >= AUTH_DEBOUNCE_DELAY;
-
-    if (!shouldAttemptLogin) {
-      return;
-    }
-
-    // Add a small delay to ensure wallet is fully connected and all states are settled
-    loginTimeoutRef.current = setTimeout(() => {
-      attemptLogin();
-    }, 500); // 500ms delay to ensure stability
-
-  }, [
-    address,
-    isConnected,
-    isAuthenticated,
-    isAuthLoading,
-    autoLogin,
-    attemptLogin,
-  ]);
 
   return null;
 };

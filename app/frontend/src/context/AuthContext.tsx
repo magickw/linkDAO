@@ -14,9 +14,13 @@ let globalAuthLock = false;
 let globalAuthLockTimestamp = 0;
 const AUTH_LOCK_TIMEOUT = 10000; // 10 seconds max lock time
 
-// Global authentication debounce tracking
-let lastGlobalAuthAttempt = 0;
-const GLOBAL_AUTH_DEBOUNCE = 3000; // 3 seconds between auth attempts globally
+// Global authentication queue to serialize auth attempts
+let authQueue: Array<{
+  resolve: (value: any) => void;
+  reject: (reason?: any) => void;
+  args: [string, any, string];
+}> = [];
+let isProcessingQueue = false;
 
 // Helper to acquire auth lock
 const acquireAuthLock = (): boolean => {
@@ -103,7 +107,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Add authentication cooldown tracking (MUST be declared before use in useEffect)
   const [lastAuthTime, setLastAuthTime] = useState<number>(0);
-  const AUTH_COOLDOWN = 5000; // 5 seconds cooldown between auth attempts
+  const AUTH_COOLDOWN = 1000; // 1 second cooldown between auth attempts
 
   const { address, isConnected, connector } = useAccount();
   const { disconnect } = useDisconnect();
@@ -141,65 +145,66 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Check if we have a valid stored session
   const checkStoredSession = useCallback(async () => {
     try {
-      if (!address) return false;
-
-      const normalizedAddress = address.toLowerCase();
-
-      const sessionValidation = await validateSession(address);
-      if (sessionValidation.isValid && sessionValidation.token) {
-        // Try to get user data from storage first
-        const storedUserData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
-        if (storedUserData) {
-          try {
-            const userData = JSON.parse(storedUserData);
+      // First check if we have a token in localStorage (most common case for returning users)
+      const storedToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+      const storedUserData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
+      
+      if (storedToken && storedUserData) {
+        try {
+          const userData = JSON.parse(storedUserData);
+          // Check if token is not expired (24 hours)
+          const timestamp = parseInt(localStorage.getItem(STORAGE_KEYS.SIGNATURE_TIMESTAMP) || '0');
+          const now = Date.now();
+          const TOKEN_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours
+          
+          if (now - timestamp < TOKEN_EXPIRY_TIME) {
             setUser(userData);
-            setAccessToken(sessionValidation.token);
-            console.log('✅ Restored wallet session from storage');
+            setAccessToken(storedToken);
+            console.log('✅ Restored existing session from localStorage');
             return true;
+          } else {
+            // Token expired, clear it
+            clearStoredSession();
+            console.log('⏰ Stored session expired, cleared');
+          }
+        } catch (error) {
+          console.warn('Failed to parse stored user data:', error);
+          clearStoredSession();
+        }
+      }
+      
+      // If we have an address but no valid session, check with backend
+      if (address) {
+        const normalizedAddress = address.toLowerCase();
+        const sessionValidation = await validateSession(address);
+        
+        if (sessionValidation.isValid && sessionValidation.token) {
+          // Try to get user data
+          try {
+            const currentUser = await authService.getCurrentUser();
+            if (currentUser && currentUser.address?.toLowerCase() === normalizedAddress) {
+              setUser(currentUser);
+              setAccessToken(sessionValidation.token);
+              storeSession(sessionValidation.token, currentUser);
+              console.log('✅ Restored session from backend');
+              return true;
+            }
           } catch (error) {
-            console.warn('Failed to parse stored user data:', error);
+            console.warn('Failed to get user from auth service:', error);
           }
-        }
-
-        // If no user data in storage, try to fetch from auth service
-        try {
-          const currentUser = await authService.getCurrentUser();
-          if (currentUser && currentUser.address?.toLowerCase() === normalizedAddress) {
-            setUser(currentUser);
-            setAccessToken(sessionValidation.token);
-            // Store for future use
-            storeSession(sessionValidation.token, currentUser);
-            console.log('✅ Restored wallet session from auth service');
-            return true;
-          }
-        } catch (error) {
-          console.warn('Failed to get user from auth service:', error);
-        }
-
-        // Also try enhanced auth service
-        try {
-          const currentUser = await enhancedAuthService.getCurrentUser();
-          if (currentUser && currentUser.address?.toLowerCase() === normalizedAddress) {
-            setUser(currentUser);
-            setAccessToken(sessionValidation.token);
-            // Store for future use
-            storeSession(sessionValidation.token, currentUser);
-            console.log('✅ Restored wallet session from enhanced auth service');
-            return true;
-          }
-        } catch (error) {
-          console.warn('Failed to get user from enhanced auth service:', error);
         }
       }
     } catch (error) {
       console.error('Error checking stored session:', error);
     }
     return false;
-  }, [address, validateSession, storeSession]);
+  }, [address, validateSession, storeSession, clearStoredSession]);
 
   // Initialize authentication state with comprehensive session checking
   // This should only run once on mount to avoid circular dependencies
   const initAuthRef = useRef(false);
+
+  
 
   useEffect(() => {
     const initAuth = async () => {
@@ -549,35 +554,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [storeSession, validateSession]);
 
-  // Login with wallet authentication
-  const login = async (walletAddress: string, connector: any, status: string): Promise<{ success: boolean; error?: string }> => {
-    console.log('🔐 Login called for address:', walletAddress);
-
-    if (isAuthLocked()) {
-      console.log('⏳ Auth lock active, skipping login attempt');
-      return { success: false, error: 'Authentication in progress' };
-    }
-
-    const now = Date.now();
+  // Process authentication queue
+  const processAuthQueue = useCallback(async () => {
+    if (isProcessingQueue || authQueue.length === 0) return;
     
-    // Check local cooldown
-    if (now - lastAuthTime < AUTH_COOLDOWN) {
-      console.log(`⏳ Authentication cooldown active, skipping attempt`);
-      return { success: false, error: 'Authentication cooldown active' };
-    }
+    isProcessingQueue = true;
     
-    // Check global debounce
-    if (now - lastGlobalAuthAttempt < GLOBAL_AUTH_DEBOUNCE) {
-      console.log(`⏳ Global authentication debounce active, skipping attempt`);
-      return { success: false, error: 'Please wait before trying to authenticate again' };
+    while (authQueue.length > 0) {
+      const { resolve, reject, args } = authQueue.shift()!;
+      
+      try {
+        const result = await performLogin(...args);
+        resolve(result);
+      } catch (error) {
+        reject(error);
+      }
     }
     
-    setLastAuthTime(now);
-    lastGlobalAuthAttempt = now;
+    isProcessingQueue = false;
+  }, [performLogin]);
 
+  // Actual login implementation
+  const performLogin = useCallback(async (walletAddress: string, connector: any, status: string): Promise<{ success: boolean; error?: string }> => {
     if (!acquireAuthLock()) {
-      console.log('⏳ Could not acquire auth lock for login');
-      return { success: false, error: 'Authentication in progress' };
+      throw new Error('Could not acquire auth lock');
     }
 
     try {
@@ -605,7 +605,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false);
       releaseAuthLock();
     }
-  };
+  }, [acquireAuthLock, releaseAuthLock, loadKYCStatus, addToast]);
+
+  // Login with wallet authentication - now uses queue
+  const login = useCallback(async (walletAddress: string, connector: any, status: string): Promise<{ success: boolean; error?: string }> => {
+    console.log('🔐 Login queued for address:', walletAddress);
+
+    // Check if already authenticated for this address
+    if (isAuthenticated && user?.address?.toLowerCase() === walletAddress.toLowerCase()) {
+      console.log('✅ Already authenticated for address:', walletAddress);
+      return { success: true };
+    }
+
+    // Return a promise that will be resolved when processed from the queue
+    return new Promise((resolve, reject) => {
+      authQueue.push({ resolve, reject, args: [walletAddress, connector, status] });
+      
+      // Start processing the queue if not already running
+      if (!isProcessingQueue) {
+        processAuthQueue();
+      }
+    });
+  }, [isAuthenticated, user?.address, processAuthQueue]);
 
   // Register new user
   const register = async (userData: {
