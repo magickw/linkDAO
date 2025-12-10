@@ -28,6 +28,9 @@ export function extractVideoInfo(url: string): VideoInfo | null {
     /youtube\.com\/v\/([^&\n?#]+)/,
     /youtube\.com\/watch\?.*v=([^&\n?#]+)/,
     /youtube\.com\/attribution_link\?.*v=([^&\n?#]+)/,
+    /youtube\.com\/shorts\/([^&\n?#]+)/,  // YouTube Shorts
+    /studio\.youtube\.com\/video\/([^&\n?#\/]+)/,  // YouTube Studio
+    /youtube\.com\/live\/([^&\n?#]+)/,  // YouTube Live
   ];
 
   for (const pattern of youtubePatterns) {
@@ -185,7 +188,7 @@ export function isValidVideoUrl(url: string): boolean {
  */
 export function extractVideoUrls(text: string): VideoInfo[] {
   // Combined regex pattern for all supported video platforms
-  const videoUrlRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|attribution_link\?.*v=)|youtu\.be\/|vimeo\.com\/(?:\d+|.*\/\d+)|twitch\.tv\/(?:videos\/\d+|.*\/video\/\d+|\w+\/clip\/[^&\n?#]+)|tiktok\.com\/(?:@[\w.-]+\/video\/\d+|v\/\d+)|vm\.tiktok\.com\/\d+|instagram\.com\/(?:p\/|tv\/|reel\/)[^&\n?#]+|twitter\.com\/.*\/status\/\d+|x\.com\/.*\/status\/\d+|facebook\.com\/.*\/videos\/\d+|fb\.watch\/\d+)[\w-?&=%.\/#]*/gi;
+  const videoUrlRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|attribution_link\?.*v=|shorts\/|live\/)|youtu\.be\/|studio\.youtube\.com\/video\/|vimeo\.com\/(?:\d+|.*\/\d+)|twitch\.tv\/(?:videos\/\d+|.*\/video\/\d+|\w+\/clip\/[^&\n?#]+)|tiktok\.com\/(?:@[\w.-]+\/video\/\d+|v\/\d+)|vm\.tiktok\.com\/\d+|instagram\.com\/(?:p\/|tv\/|reel\/)[^&\n?#]+|twitter\.com\/.*\/status\/\d+|x\.com\/.*\/status\/\d+|facebook\.com\/.*\/videos\/\d+|fb\.watch\/\d+)[\w-?&=%.\/#]*/gi;
   
   const matches = text.match(videoUrlRegex) || [];
   const videoInfos: VideoInfo[] = [];

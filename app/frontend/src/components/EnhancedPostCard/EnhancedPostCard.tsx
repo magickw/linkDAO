@@ -20,6 +20,8 @@ import EnhancedCommentSystem from '../EnhancedCommentSystem';
 import { analyticsService } from '@/services/analyticsService';
 import { EnhancedPost as SharedEnhancedPost, AuthorProfile, Reaction, Tip } from '@/types/feed';
 import OnChainIdentityBadge from '../Community/OnChainIdentityBadge';
+import VideoEmbed from '../VideoEmbed';
+import { extractVideoUrls, VideoInfo } from '@/utils/videoUtils';
 
 // Use the shared EnhancedPost type with extended properties for component-specific needs
 export interface EnhancedPost extends Omit<SharedEnhancedPost, 'trendingStatus' | 'socialProof'> {
@@ -84,6 +86,12 @@ const EnhancedPostCard = React.memo(({
   const [expanded, setExpanded] = useState(false);
   const [showAllPreviews, setShowAllPreviews] = useState(false);
   const [isPinned, setIsPinned] = useState(post.pinnedUntil && new Date(post.pinnedUntil) > new Date());
+
+  // Extract video URLs from content for embedding
+  const videoEmbeds = useMemo(() => {
+    if (!post.content) return [];
+    return extractVideoUrls(post.content);
+  }, [post.content]);
 
   // Get post action permissions
   const permissions = useMemo(() => {
@@ -512,6 +520,23 @@ const EnhancedPostCard = React.memo(({
                   </button>
                 )}
               </div>
+
+              {/* Video Embeds - Auto-detected from content URLs */}
+              {videoEmbeds.length > 0 && (
+                <div className="mb-4 space-y-4">
+                  {videoEmbeds.map((videoInfo: VideoInfo, index: number) => (
+                    <div key={`video-${index}-${videoInfo.id}`} className="rounded-xl overflow-hidden">
+                      <VideoEmbed
+                        url={videoInfo.url}
+                        width={560}
+                        height={315}
+                        showPlaceholder={true}
+                        className="w-full"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* Media */}
               {post.media && post.media.length > 0 && (
