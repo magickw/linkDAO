@@ -174,14 +174,21 @@ export class MarketplaceController {
         filters.sellerAddress = sellerId as string;
       }
 
-      // Use the marketplace service to get listings from the database
+      // Use the marketplace service to get listings from the database with timeout protection
       const listingsService = new MarketplaceListingsService();
       let result;
       
+      // Add timeout protection for the database query
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database query timeout')), 15000)
+      );
+      
       if (search) {
-        result = await listingsService.searchListings(search as string, filters);
+        const searchPromise = listingsService.searchListings(search as string, filters);
+        result = await Promise.race([searchPromise, timeoutPromise]);
       } else {
-        result = await listingsService.getListings(filters);
+        const listingsPromise = listingsService.getListings(filters);
+        result = await Promise.race([listingsPromise, timeoutPromise]);
       }
 
       // Check if we got valid results

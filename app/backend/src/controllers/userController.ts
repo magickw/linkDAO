@@ -21,35 +21,42 @@ export class UserController {
     try {
       const { role, status, kycStatus, search, page = 1, limit = 10, searchField, lastLoginAfter, lastLoginBefore, createdAfter, createdBefore, sortBy, sortOrder } = req.query;
       
+      // Sanitize and validate inputs
+      const sanitizedSearch = search ? sanitizeString(search as string) : '';
+      const sanitizedSearchField = searchField ? sanitizeString(searchField as string) : 'all';
+      const sanitizedRole = role ? sanitizeString(role as string) : null;
+      const sanitizedPage = Math.max(1, parseInt(page as string) || 1);
+      const sanitizedLimit = Math.min(100, Math.max(1, parseInt(limit as string) || 10));
+      
       const db = databaseService.getDatabase();
       
       // Build query with filters
       let query = db.select().from(users);
       
       // Apply filters
-      if (role) {
-        query = query.where(eq(users.role, role as string));
+      if (sanitizedRole) {
+        query = query.where(eq(users.role, sanitizedRole));
       }
       
       // Apply search
-      if (search) {
-        if (searchField === 'handle') {
-          query = query.where(sql`LOWER(${users.handle}) LIKE ${`%${search}%`}`);
-        } else if (searchField === 'email') {
-          query = query.where(sql`LOWER(${users.email}) LIKE ${`%${search}%`}`);
-        } else if (searchField === 'address') {
-          query = query.where(sql`LOWER(${users.walletAddress}) LIKE ${`%${search}%`}`);
-        } else if (searchField === 'ens') {
-          query = query.where(sql`LOWER(${users.ens}) LIKE ${`%${search}%`}`);
+      if (sanitizedSearch) {
+        if (sanitizedSearchField === 'handle') {
+          query = query.where(sql`LOWER(${users.handle}) LIKE ${`%${sanitizedSearch}%`}`);
+        } else if (sanitizedSearchField === 'email') {
+          query = query.where(sql`LOWER(${users.email}) LIKE ${`%${sanitizedSearch}%`}`);
+        } else if (sanitizedSearchField === 'address') {
+          query = query.where(sql`LOWER(${users.walletAddress}) LIKE ${`%${sanitizedSearch}%`}`);
+        } else if (sanitizedSearchField === 'ens') {
+          query = query.where(sql`LOWER(${users.ens}) LIKE ${`%${sanitizedSearch}%`}`);
         } else {
           // Search all fields
           query = query.where(
             and(
               sql`(
-                LOWER(${users.handle}) LIKE ${`%${search}%`} OR
-                LOWER(${users.email}) LIKE ${`%${search}%`} OR
-                LOWER(${users.walletAddress}) LIKE ${`%${search}%`} OR
-                LOWER(${users.ens}) LIKE ${`%${search}%`}
+                LOWER(${users.handle}) LIKE ${`%${sanitizedSearch}%`} OR
+                LOWER(${users.email}) LIKE ${`%${sanitizedSearch}%`} OR
+                LOWER(${users.walletAddress}) LIKE ${`%${sanitizedSearch}%`} OR
+                LOWER(${users.ens}) LIKE ${`%${sanitizedSearch}%`}
               )`
             )
           );
@@ -58,16 +65,16 @@ export class UserController {
       
       // Apply date filters
       if (lastLoginAfter) {
-        query = query.where(gte(users.lastLogin, lastLoginAfter as string));
+        query = query.where(gte(users.lastLogin, new Date(lastLoginAfter as string)));
       }
       if (lastLoginBefore) {
-        query = query.where(sql`${users.lastLogin} <= ${lastLoginBefore}`);
+        query = query.where(sql`${users.lastLogin} <= ${new Date(lastLoginBefore as string)}`);
       }
       if (createdAfter) {
-        query = query.where(gte(users.createdAt, createdAfter as string));
+        query = query.where(gte(users.createdAt, new Date(createdAfter as string)));
       }
       if (createdBefore) {
-        query = query.where(sql`${users.createdAt} <= ${createdBefore}`);
+        query = query.where(sql`${users.createdAt} <= ${new Date(createdBefore as string)}`);
       }
       
       // Apply sorting
@@ -82,33 +89,33 @@ export class UserController {
       }
       
       // Apply pagination
-      const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
-      query = query.limit(parseInt(limit as string)).offset(offset);
+      const offset = (sanitizedPage - 1) * sanitizedLimit;
+      query = query.limit(sanitizedLimit).offset(offset);
       
       const userList = await query;
       
       // Get total count
       const countQuery = db.select({ count: sql<number>`count(*)` }).from(users);
-      if (role) {
-        countQuery.where(eq(users.role, role as string));
+      if (sanitizedRole) {
+        countQuery.where(eq(users.role, sanitizedRole));
       }
-      if (search) {
-        if (searchField === 'handle') {
-          countQuery.where(sql`LOWER(${users.handle}) LIKE ${`%${search}%`}`);
-        } else if (searchField === 'email') {
-          countQuery.where(sql`LOWER(${users.email}) LIKE ${`%${search}%`}`);
-        } else if (searchField === 'address') {
-          countQuery.where(sql`LOWER(${users.walletAddress}) LIKE ${`%${search}%`}`);
-        } else if (searchField === 'ens') {
-          countQuery.where(sql`LOWER(${users.ens}) LIKE ${`%${search}%`}`);
+      if (sanitizedSearch) {
+        if (sanitizedSearchField === 'handle') {
+          countQuery.where(sql`LOWER(${users.handle}) LIKE ${`%${sanitizedSearch}%`}`);
+        } else if (sanitizedSearchField === 'email') {
+          countQuery.where(sql`LOWER(${users.email}) LIKE ${`%${sanitizedSearch}%`}`);
+        } else if (sanitizedSearchField === 'address') {
+          countQuery.where(sql`LOWER(${users.walletAddress}) LIKE ${`%${sanitizedSearch}%`}`);
+        } else if (sanitizedSearchField === 'ens') {
+          countQuery.where(sql`LOWER(${users.ens}) LIKE ${`%${sanitizedSearch}%`}`);
         } else {
           countQuery.where(
             and(
               sql`(
-                LOWER(${users.handle}) LIKE ${`%${search}%`} OR
-                LOWER(${users.email}) LIKE ${`%${search}%`} OR
-                LOWER(${users.walletAddress}) LIKE ${`%${search}%`} OR
-                LOWER(${users.ens}) LIKE ${`%${search}%`}
+                LOWER(${users.handle}) LIKE ${`%${sanitizedSearch}%`} OR
+                LOWER(${users.email}) LIKE ${`%${sanitizedSearch}%`} OR
+                LOWER(${users.walletAddress}) LIKE ${`%${sanitizedSearch}%`} OR
+                LOWER(${users.ens}) LIKE ${`%${sanitizedSearch}%`}
               )`
             )
           );
@@ -120,8 +127,8 @@ export class UserController {
       res.json({
         users: userList,
         total: totalCount,
-        page: parseInt(page as string),
-        totalPages: Math.ceil(totalCount / parseInt(limit as string))
+        page: sanitizedPage,
+        totalPages: Math.ceil(totalCount / sanitizedLimit)
       });
     } catch (error) {
       safeLogger.error("Error fetching users:", error);

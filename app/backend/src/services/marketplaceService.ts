@@ -14,76 +14,103 @@ import {
 } from '../models/Marketplace';
 import { databaseService } from './databaseService'; // Import the singleton instance
 import { UserProfileService } from './userProfileService';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
+import { db } from '../db'; // Import database instance for health checks
 
 // Use the singleton instance instead of creating a new one
 // const databaseService = new DatabaseService();
 const userProfileService = new UserProfileService();
 
 export class BlockchainMarketplaceService {
+  // Utility function to add timeout to promises
+  private async withTimeout<T>(promise: Promise<T>, timeoutMs: number = 15000): Promise<T> {
+    return Promise.race([
+      promise,
+      new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('Database operation timeout')), timeoutMs)
+      )
+    ]);
+  }
+
   // Listings
   async createListing(input: CreateListingInput): Promise<MarketplaceListing> {
-    // Ensure seller exists
-    let sellerUser = await userProfileService.getProfileByAddress(input.sellerWalletAddress);
-    if (!sellerUser) {
-      sellerUser = await userProfileService.createProfile({
-        walletAddress: input.sellerWalletAddress,
-        handle: '',
-        ens: '',
-        avatarCid: '',
-        bioCid: ''
-      });
-    }
-    
-    // Create listing in database
-    const dbListing = await databaseService.createListing(
-      sellerUser.id,
-      input.tokenAddress,
-      input.price,
-      input.quantity,
-      input.itemType,
-      input.listingType,
-      input.metadataURI,
-      input.nftStandard,
-      input.tokenId,
-      input.reservePrice,
-      input.minIncrement
-    );
-    
-    const now = new Date().toISOString();
-    const listing: MarketplaceListing = {
-      id: dbListing.id,
-      sellerWalletAddress: input.sellerWalletAddress,
-      tokenAddress: dbListing.tokenAddress,
-      price: dbListing.price,
-      quantity: dbListing.quantity,
-      itemType: dbListing.itemType as 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE',
-      listingType: dbListing.listingType as 'FIXED_PRICE' | 'AUCTION',
-      status: (dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED') || 'ACTIVE',
-      startTime: dbListing.startTime?.toISOString() || now,
-      endTime: dbListing.endTime ? dbListing.endTime.toISOString() : undefined,
-      highestBid: dbListing.highestBid?.toString(),
-      highestBidderWalletAddress: dbListing.highestBidder || undefined,
-      metadataURI: dbListing.metadataURI,
-      isEscrowed: dbListing.isEscrowed || false,
-      nftStandard: dbListing.nftStandard as 'ERC721' | 'ERC1155' | undefined,
-      tokenId: dbListing.tokenId || undefined,
-      reservePrice: dbListing.reservePrice?.toString(),
-      minIncrement: dbListing.minIncrement?.toString(),
-      reserveMet: dbListing.reserveMet || false,
-      createdAt: dbListing.createdAt?.toISOString() || now,
-      updatedAt: dbListing.updatedAt?.toISOString() || now
-    };
+    try {
+      // Ensure seller exists with timeout protection
+      let sellerUser = await this.withTimeout(userProfileService.getProfileByAddress(input.sellerWalletAddress));
+      if (!sellerUser) {
+        sellerUser = await this.withTimeout(userProfileService.createProfile({
+          walletAddress: input.sellerWalletAddress,
+          handle: '',
+          ens: '',
+          avatarCid: '',
+          bioCid: ''
+        }));
+      }
+      
+      // Create listing in database with timeout protection
+      const dbListing = await this.withTimeout(databaseService.createListing(
+        sellerUser.id,
+        input.tokenAddress,
+        input.price,
+        input.quantity,
+        input.itemType,
+        input.listingType,
+        input.metadataURI,
+        input.nftStandard,
+        input.tokenId,
+        input.reservePrice,
+        input.minIncrement
+      ));
+      
+      const now = new Date().toISOString();
+      const listing: MarketplaceListing = {
+        id: dbListing.id,
+        sellerWalletAddress: input.sellerWalletAddress,
+        tokenAddress: dbListing.tokenAddress,
+        price: dbListing.price,
+        quantity: dbListing.quantity,
+        itemType: dbListing.itemType as 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE',
+        listingType: dbListing.listingType as 'FIXED_PRICE' | 'AUCTION',
+        status: (dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED') || 'ACTIVE',
+        startTime: dbListing.startTime?.toISOString() || now,
+        endTime: dbListing.endTime ? dbListing.endTime.toISOString() : undefined,
+        highestBid: dbListing.highestBid?.toString(),
+        highestBidderWalletAddress: dbListing.highestBidder || undefined,
+        metadataURI: dbListing.metadataURI,
+        isEscrowed: dbListing.isEscrowed || false,
+        nftStandard: dbListing.nftStandard as 'ERC721' | 'ERC1155' | undefined,
+        tokenId: dbListing.tokenId || undefined,
+        reservePrice: dbListing.reservePrice?.toString(),
+        minIncrement: dbListing.minIncrement?.toString(),
+        reserveMet: dbListing.reserveMet || false,
+        createdAt: dbListing.createdAt?.toISOString() || now,
+        updatedAt: dbListing.updatedAt?.toISOString() || now
+      };
 
-    return listing;
+      return listing;
+    } catch (error) {
+      safeLogger.error('Error creating listing:', error);
+      // Check if it's a database connection error
+      if (this.isDatabaseConnectionError(error)) {
+        throw new Error('Service temporarily unavailable');
+      }
+      throw new Error('Failed to create marketplace listing');
+    }
   }
 
   async getListingById(id: string): Promise<MarketplaceListing | null> {
-    // Get product by ID from the products table
-    let dbListing = await databaseService.getProductById(id);
+    let dbListing;
+    try {
+      // Add timeout protection
+      dbListing = await this.withTimeout(databaseService.getProductById(id));
     
-    if (!dbListing) return null;
+      if (!dbListing) return null;
+    } catch (error) {
+      safeLogger.error('Error getting listing by ID:', error);
+      // Return null for database errors to enable graceful degradation
+      return null;
+    }
     
     // Get seller address
     const seller = await userProfileService.getProfileById(dbListing.sellerId || '');
@@ -129,153 +156,171 @@ export class BlockchainMarketplaceService {
   }
 
   async getListingsBySeller(sellerAddress: string): Promise<MarketplaceListing[]> {
-    const sellerUser = await userProfileService.getProfileByAddress(sellerAddress);
-    if (!sellerUser) return [];
-    
-    // Use the correct database service method that queries the products table
-    const dbListings = await databaseService.getProductsBySeller(sellerUser.id);
-    
-    const now = new Date().toISOString();
-    const listings: MarketplaceListing[] = [];
-    for (const dbListing of dbListings) {
-      // Parse metadata to extract enhanced information
-      let parsedMetadata = {};
-      try {
-        if (dbListing.metadata) {
-          parsedMetadata = JSON.parse(dbListing.metadata);
+    try {
+      const sellerUser = await this.withTimeout(userProfileService.getProfileByAddress(sellerAddress));
+      if (!sellerUser) return [];
+      
+      // Use the correct database service method that queries the products table
+      const dbListings = await this.withTimeout(databaseService.getProductsBySeller(sellerUser.id));
+      
+      const now = new Date().toISOString();
+      const listings: MarketplaceListing[] = [];
+      for (const dbListing of dbListings) {
+        // Parse metadata to extract enhanced information
+        let parsedMetadata = {};
+        try {
+          if (dbListing.metadata) {
+            parsedMetadata = JSON.parse(dbListing.metadata);
+          }
+        } catch (e) {
+          // If parsing fails, use the raw metadata
+          parsedMetadata = { title: dbListing.title || 'Untitled' };
         }
-      } catch (e) {
-        // If parsing fails, use the raw metadata
-        parsedMetadata = { title: dbListing.title || 'Untitled' };
+        
+        const listing: MarketplaceListing = {
+          id: dbListing.id,
+          sellerWalletAddress: sellerAddress,
+          tokenAddress: '', // Not applicable for product listings
+          price: dbListing.priceAmount?.toString() || '0',
+          quantity: dbListing.inventory || 0,
+          itemType: 'PHYSICAL', // Default to physical for product listings
+          listingType: 'FIXED_PRICE', // Default to fixed price for product listings
+          status: (dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED') || 'ACTIVE',
+          startTime: dbListing.publishedAt?.toISOString() || now,
+          endTime: undefined, // Not applicable for product listings
+          highestBid: undefined, // Not applicable for fixed price listings
+          highestBidderWalletAddress: undefined, // Not applicable for fixed price listings
+          metadataURI: dbListing.metadata || '{}',
+          isEscrowed: false, // Default to false for product listings
+          nftStandard: undefined, // Not applicable for regular product listings
+          tokenId: undefined, // Not applicable for regular product listings
+          reservePrice: undefined, // Not applicable for fixed price listings
+          minIncrement: undefined, // Not applicable for fixed price listings
+          reserveMet: false, // Not applicable for fixed price listings
+          createdAt: dbListing.createdAt?.toISOString() || now,
+          updatedAt: dbListing.updatedAt?.toISOString() || now
+        };
+        listings.push(listing);
       }
       
-      const listing: MarketplaceListing = {
-        id: dbListing.id,
-        sellerWalletAddress: sellerAddress,
-        tokenAddress: '', // Not applicable for product listings
-        price: dbListing.priceAmount?.toString() || '0',
-        quantity: dbListing.inventory || 0,
-        itemType: 'PHYSICAL', // Default to physical for product listings
-        listingType: 'FIXED_PRICE', // Default to fixed price for product listings
-        status: (dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED') || 'ACTIVE',
-        startTime: dbListing.publishedAt?.toISOString() || now,
-        endTime: undefined, // Not applicable for product listings
-        highestBid: undefined, // Not applicable for fixed price listings
-        highestBidderWalletAddress: undefined, // Not applicable for fixed price listings
-        metadataURI: dbListing.metadata || '{}',
-        isEscrowed: false, // Default to false for product listings
-        nftStandard: undefined, // Not applicable for regular product listings
-        tokenId: undefined, // Not applicable for regular product listings
-        reservePrice: undefined, // Not applicable for fixed price listings
-        minIncrement: undefined, // Not applicable for fixed price listings
-        reserveMet: false, // Not applicable for fixed price listings
-        createdAt: dbListing.createdAt?.toISOString() || now,
-        updatedAt: dbListing.updatedAt?.toISOString() || now
-      };
-      listings.push(listing);
+      return listings;
+    } catch (error) {
+      safeLogger.error('Error getting listings by seller:', error);
+      // Return empty array for database errors to enable graceful degradation
+      return [];
     }
-    
-    return listings;
   }
 
   async getAllListings(): Promise<MarketplaceListing[]> {
-    const dbListings = await databaseService.getAllProducts();
-    
-    const now = new Date().toISOString();
-    const listings: MarketplaceListing[] = [];
-    for (const dbListing of dbListings) {
-      // Get seller address
-      const seller = await userProfileService.getProfileById(dbListing.sellerId || '');
-      if (!seller) continue;
+    try {
+      const dbListings = await this.withTimeout(databaseService.getAllProducts());
       
-      // Parse metadata to extract enhanced information
-      let parsedMetadata = {};
-      try {
-        if (dbListing.metadata) {
-          parsedMetadata = JSON.parse(dbListing.metadata);
+      const now = new Date().toISOString();
+      const listings: MarketplaceListing[] = [];
+      for (const dbListing of dbListings) {
+        // Get seller address
+        const seller = await this.withTimeout(userProfileService.getProfileById(dbListing.sellerId || ''));
+        if (!seller) continue;
+        
+        // Parse metadata to extract enhanced information
+        let parsedMetadata = {};
+        try {
+          if (dbListing.metadata) {
+            parsedMetadata = JSON.parse(dbListing.metadata);
+          }
+        } catch (e) {
+          // If parsing fails, use the raw metadata
+          parsedMetadata = { title: dbListing.title || 'Untitled' };
         }
-      } catch (e) {
-        // If parsing fails, use the raw metadata
-        parsedMetadata = { title: dbListing.title || 'Untitled' };
+        
+        const listing: MarketplaceListing = {
+          id: dbListing.id,
+          sellerWalletAddress: seller.walletAddress,
+          tokenAddress: '', // Not applicable for product listings
+          price: dbListing.priceAmount?.toString() || '0',
+          quantity: dbListing.inventory || 0,
+          itemType: 'PHYSICAL', // Default to physical for product listings
+          listingType: 'FIXED_PRICE', // Default to fixed price for product listings
+          status: (dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED') || 'ACTIVE',
+          startTime: dbListing.publishedAt?.toISOString() || now,
+          endTime: undefined, // Not applicable for product listings
+          highestBid: undefined, // Not applicable for fixed price listings
+          highestBidderWalletAddress: undefined, // Not applicable for fixed price listings
+          metadataURI: dbListing.metadata || '{}',
+          isEscrowed: false, // Default to false for product listings
+          nftStandard: undefined, // Not applicable for regular product listings
+          tokenId: undefined, // Not applicable for regular product listings
+          reservePrice: undefined, // Not applicable for fixed price listings
+          minIncrement: undefined, // Not applicable for fixed price listings
+          reserveMet: false, // Not applicable for fixed price listings
+          createdAt: dbListing.createdAt?.toISOString() || now,
+          updatedAt: dbListing.updatedAt?.toISOString() || now
+        };
+        listings.push(listing);
       }
       
-      const listing: MarketplaceListing = {
-        id: dbListing.id,
-        sellerWalletAddress: seller.walletAddress,
-        tokenAddress: '', // Not applicable for product listings
-        price: dbListing.priceAmount?.toString() || '0',
-        quantity: dbListing.inventory || 0,
-        itemType: 'PHYSICAL', // Default to physical for product listings
-        listingType: 'FIXED_PRICE', // Default to fixed price for product listings
-        status: (dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED') || 'ACTIVE',
-        startTime: dbListing.publishedAt?.toISOString() || now,
-        endTime: undefined, // Not applicable for product listings
-        highestBid: undefined, // Not applicable for fixed price listings
-        highestBidderWalletAddress: undefined, // Not applicable for fixed price listings
-        metadataURI: dbListing.metadata || '{}',
-        isEscrowed: false, // Default to false for product listings
-        nftStandard: undefined, // Not applicable for regular product listings
-        tokenId: undefined, // Not applicable for regular product listings
-        reservePrice: undefined, // Not applicable for fixed price listings
-        minIncrement: undefined, // Not applicable for fixed price listings
-        reserveMet: false, // Not applicable for fixed price listings
-        createdAt: dbListing.createdAt?.toISOString() || now,
-        updatedAt: dbListing.updatedAt?.toISOString() || now
-      };
-      listings.push(listing);
+      return listings;
+    } catch (error) {
+      safeLogger.error('Error getting all listings:', error);
+      // Return empty array for database errors to enable graceful degradation
+      return [];
     }
-    
-    return listings;
   }
 
   async getActiveListings(): Promise<MarketplaceListing[]> {
-    const dbListings = await databaseService.getActiveProducts();
-    
-    const now = new Date().toISOString();
-    const listings: MarketplaceListing[] = [];
-    for (const dbListing of dbListings) {
-      // Get seller address
-      const seller = await userProfileService.getProfileById(dbListing.sellerId || '');
-      if (!seller) continue;
+    try {
+      const dbListings = await this.withTimeout(databaseService.getActiveProducts());
       
-      // Parse metadata to extract enhanced information
-      let parsedMetadata = {};
-      try {
-        if (dbListing.metadata) {
-          parsedMetadata = JSON.parse(dbListing.metadata);
+      const now = new Date().toISOString();
+      const listings: MarketplaceListing[] = [];
+      for (const dbListing of dbListings) {
+        // Get seller address
+        const seller = await this.withTimeout(userProfileService.getProfileById(dbListing.sellerId || ''));
+        if (!seller) continue;
+        
+        // Parse metadata to extract enhanced information
+        let parsedMetadata = {};
+        try {
+          if (dbListing.metadata) {
+            parsedMetadata = JSON.parse(dbListing.metadata);
+          }
+        } catch (e) {
+          // If parsing fails, use the raw metadata
+          parsedMetadata = { title: dbListing.title || 'Untitled' };
         }
-      } catch (e) {
-        // If parsing fails, use the raw metadata
-        parsedMetadata = { title: dbListing.title || 'Untitled' };
+        
+        const listing: MarketplaceListing = {
+          id: dbListing.id,
+          sellerWalletAddress: seller.walletAddress,
+          tokenAddress: '', // Not applicable for product listings
+          price: dbListing.priceAmount?.toString() || '0',
+          quantity: dbListing.inventory || 0,
+          itemType: 'PHYSICAL', // Default to physical for product listings
+          listingType: 'FIXED_PRICE', // Default to fixed price for product listings
+          status: (dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED') || 'ACTIVE',
+          startTime: dbListing.publishedAt?.toISOString() || now,
+          endTime: undefined, // Not applicable for product listings
+          highestBid: undefined, // Not applicable for fixed price listings
+          highestBidderWalletAddress: undefined, // Not applicable for fixed price listings
+          metadataURI: dbListing.metadata || '{}',
+          isEscrowed: false, // Default to false for product listings
+          nftStandard: undefined, // Not applicable for regular product listings
+          tokenId: undefined, // Not applicable for regular product listings
+          reservePrice: undefined, // Not applicable for fixed price listings
+          minIncrement: undefined, // Not applicable for fixed price listings
+          reserveMet: false, // Not applicable for fixed price listings
+          createdAt: dbListing.createdAt?.toISOString() || now,
+          updatedAt: dbListing.updatedAt?.toISOString() || now
+        };
+        listings.push(listing);
       }
       
-      const listing: MarketplaceListing = {
-        id: dbListing.id,
-        sellerWalletAddress: seller.walletAddress,
-        tokenAddress: '', // Not applicable for product listings
-        price: dbListing.priceAmount?.toString() || '0',
-        quantity: dbListing.inventory || 0,
-        itemType: 'PHYSICAL', // Default to physical for product listings
-        listingType: 'FIXED_PRICE', // Default to fixed price for product listings
-        status: (dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED') || 'ACTIVE',
-        startTime: dbListing.publishedAt?.toISOString() || now,
-        endTime: undefined, // Not applicable for product listings
-        highestBid: undefined, // Not applicable for fixed price listings
-        highestBidderWalletAddress: undefined, // Not applicable for fixed price listings
-        metadataURI: dbListing.metadata || '{}',
-        isEscrowed: false, // Default to false for product listings
-        nftStandard: undefined, // Not applicable for regular product listings
-        tokenId: undefined, // Not applicable for regular product listings
-        reservePrice: undefined, // Not applicable for fixed price listings
-        minIncrement: undefined, // Not applicable for fixed price listings
-        reserveMet: false, // Not applicable for fixed price listings
-        createdAt: dbListing.createdAt?.toISOString() || now,
-        updatedAt: dbListing.updatedAt?.toISOString() || now
-      };
-      listings.push(listing);
+      return listings;
+    } catch (error) {
+      safeLogger.error('Error getting active listings:', error);
+      // Return empty array for database errors to enable graceful degradation
+      return [];
     }
-    
-    return listings;
   }
 
   async updateListing(id: string, input: UpdateListingInput): Promise<MarketplaceListing | null> {
@@ -479,7 +524,7 @@ export class BlockchainMarketplaceService {
   }
 
   async acceptOffer(offerId: string): Promise<boolean> {
-    const dbOffer = await databaseService.acceptOffer(parseInt(offerId));
+    const dbOffer = await databaseService.acceptOffer(offerId);
     return dbOffer !== null;
   }
 
@@ -540,7 +585,7 @@ export class BlockchainMarketplaceService {
     if (!user) return false;
     
     // Get escrow
-    const dbEscrow = await databaseService.getEscrowById(parseInt(escrowId));
+    const dbEscrow = await databaseService.getEscrowById(escrowId);
     if (!dbEscrow) return false;
     
     // Determine which approval to update
@@ -553,7 +598,7 @@ export class BlockchainMarketplaceService {
       return false; // User is not part of this escrow
     }
     
-    const updatedEscrow = await databaseService.updateEscrow(parseInt(escrowId), updates);
+    const updatedEscrow = await databaseService.updateEscrow(escrowId, updates);
     return updatedEscrow !== null;
   }
 
@@ -563,7 +608,7 @@ export class BlockchainMarketplaceService {
     if (!user) return false;
     
     // Get escrow
-    const dbEscrow = await databaseService.getEscrowById(parseInt(escrowId));
+    const dbEscrow = await databaseService.getEscrowById(escrowId);
     if (!dbEscrow) return false;
     
     // Check if user is part of this escrow
@@ -571,7 +616,7 @@ export class BlockchainMarketplaceService {
       return false;
     }
     
-    const updatedEscrow = await databaseService.updateEscrow(parseInt(escrowId), {
+    const updatedEscrow = await databaseService.updateEscrow(escrowId, {
       disputeOpened: true
     });
     
@@ -579,12 +624,12 @@ export class BlockchainMarketplaceService {
   }
 
   async confirmDelivery(escrowId: string, deliveryInfo: string): Promise<boolean> {
-    const updatedEscrow = await databaseService.confirmDelivery(parseInt(escrowId), deliveryInfo);
+    const updatedEscrow = await databaseService.confirmDelivery(escrowId, deliveryInfo);
     return updatedEscrow !== null;
   }
 
   async getEscrowById(id: string): Promise<MarketplaceEscrow | null> {
-    const dbEscrow = await databaseService.getEscrowById(parseInt(id));
+    const dbEscrow = await databaseService.getEscrowById(id);
     if (!dbEscrow) return null;
     
     // Get buyer and seller addresses
@@ -699,7 +744,7 @@ export class BlockchainMarketplaceService {
   }
 
   async getOrderById(id: string): Promise<MarketplaceOrder | null> {
-    const dbOrder = await databaseService.getOrderById(parseInt(id));
+    const dbOrder = await databaseService.getOrderById(id);
     if (!dbOrder) return null;
     
     // Get buyer and seller addresses
@@ -753,7 +798,7 @@ export class BlockchainMarketplaceService {
   }
 
   async updateOrderStatus(orderId: string, status: 'PENDING' | 'COMPLETED' | 'DISPUTED' | 'REFUNDED'): Promise<boolean> {
-    const updatedOrder = await databaseService.updateOrder(parseInt(orderId), {
+    const updatedOrder = await databaseService.updateOrder(orderId, {
       status: status.toLowerCase()
     });
     
@@ -940,7 +985,7 @@ export class BlockchainMarketplaceService {
   async createAIModeration(objectType: string, objectId: string, aiAnalysis?: string): Promise<AIModeration | null> {
     const dbAIModeration = await databaseService.createAIModeration(
       objectType,
-      parseInt(objectId),
+      objectId,
       aiAnalysis
     );
     
@@ -962,7 +1007,7 @@ export class BlockchainMarketplaceService {
   async getAIModerationByObject(objectType: string, objectId: string): Promise<AIModeration | null> {
     const dbAIModeration = await databaseService.getAIModerationByObject(
       objectType,
-      parseInt(objectId)
+      objectId
     );
     
     if (!dbAIModeration) return null;
@@ -991,7 +1036,7 @@ export class BlockchainMarketplaceService {
       updates.updatedAt = new Date();
     }
     
-    const updatedAIModeration = await databaseService.updateAIModeration(parseInt(id), updates);
+    const updatedAIModeration = await databaseService.updateAIModeration(id, updates);
     
     return updatedAIModeration !== null;
   }
@@ -1012,19 +1057,72 @@ export class BlockchainMarketplaceService {
     return aiModerations;
   }
 
+  // Utility method to check if an error is a database connection error
+  private isDatabaseConnectionError(error: any): boolean {
+    if (!error) return false;
+    
+    // Check for common database connection error patterns
+    const errorMessage = error.message?.toLowerCase() || '';
+    const errorCodes = ['econnrefused', 'enotfound', 'etimedout', 'database'];
+    
+    return errorCodes.some(code => errorMessage.includes(code)) ||
+           (error.code && errorCodes.includes(error.code.toLowerCase()));
+  }
+
   // Utility methods
   async getListingCount(): Promise<number> {
-    const listings = await databaseService.getAllListings();
-    return listings.length;
+    try {
+      const listings = await this.withTimeout(databaseService.getAllListings());
+      return listings.length;
+    } catch (error) {
+      safeLogger.error('Error getting listing count:', error);
+      // Return 0 for database errors to enable graceful degradation
+      return 0;
+    }
   }
 
   async getActiveListingCount(): Promise<number> {
-    const listings = await databaseService.getActiveListings();
-    return listings.length;
+    try {
+      const listings = await this.withTimeout(databaseService.getActiveListings());
+      return listings.length;
+    } catch (error) {
+      safeLogger.error('Error getting active listing count:', error);
+      // Return 0 for database errors to enable graceful degradation
+      return 0;
+    }
   }
 
   async getUserListingCount(userAddress: string): Promise<number> {
-    const listings = await this.getListingsBySeller(userAddress);
-    return listings.length;
+    try {
+      const listings = await this.withTimeout(this.getListingsBySeller(userAddress));
+      return listings.length;
+    } catch (error) {
+      safeLogger.error('Error getting user listing count:', error);
+      // Return 0 for database errors to enable graceful degradation
+      return 0;
+    }
+  }
+
+  // Health check method to verify database connectivity
+  async healthCheck(): Promise<{ healthy: boolean; error?: string }> {
+    try {
+      // Test database connection
+      if (!db) {
+        return { healthy: false, error: 'Database connection unavailable' };
+      }
+
+      // Test a simple query with timeout
+      await this.withTimeout(db.execute('SELECT 1'), 5000);
+      return { healthy: true };
+    } catch (error) {
+      safeLogger.error('Marketplace service health check failed:', error);
+      return { 
+        healthy: false, 
+        error: error instanceof Error ? error.message : 'Unknown database error' 
+      };
+    }
   }
 }
+
+// Export singleton instance
+export const marketplaceService = new BlockchainMarketplaceService();

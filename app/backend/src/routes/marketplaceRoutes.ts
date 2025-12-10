@@ -3,6 +3,8 @@ import { csrfProtection } from '../middleware/csrfProtection';
 import { marketplaceController } from '../controllers/marketplaceController';
 import { validateRequest } from '../middleware/validation';
 import rateLimit from 'express-rate-limit';
+import { sql } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 
 // Rate limiting for marketplace endpoints
 const marketplaceRateLimit = rateLimit({
@@ -149,11 +151,12 @@ router.get('/health', async (req, res) => {
         status: 'unhealthy',
         service: 'marketplace',
         error: 'Database connection unavailable',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        recommendation: 'Check DATABASE_URL environment variable and database connectivity'
       });
     }
 
-    // Test a simple query
+    // Test a simple query with better error handling
     try {
       await db.execute(sql`SELECT 1`);
     } catch (dbError) {
@@ -163,15 +166,27 @@ router.get('/health', async (req, res) => {
         service: 'marketplace',
         error: 'Database query failed',
         details: process.env.NODE_ENV === 'development' ? dbError.message : undefined,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        recommendation: 'Check database connection and credentials'
       });
     }
 
-    // Test marketplace service
+    // Test marketplace service with the new health check method
     try {
-      const listingsService = new (await import('../services/marketplaceListingsService')).MarketplaceListingsService();
-      // Test getting categories as a lightweight operation
-      await listingsService.getCategories();
+      const { marketplaceService } = await import('../services/marketplaceService');
+      const healthCheck = await marketplaceService.healthCheck();
+      
+      if (!healthCheck.healthy) {
+        return res.status(503).json({
+          success: false,
+          status: 'unhealthy',
+          service: 'marketplace',
+          error: 'Marketplace service failed',
+          details: process.env.NODE_ENV === 'development' ? healthCheck.error : undefined,
+          timestamp: new Date().toISOString(),
+          recommendation: 'Check marketplace service implementation and dependencies'
+        });
+      }
     } catch (serviceError) {
       return res.status(503).json({
         success: false,
@@ -179,7 +194,8 @@ router.get('/health', async (req, res) => {
         service: 'marketplace',
         error: 'Marketplace service failed',
         details: process.env.NODE_ENV === 'development' ? serviceError.message : undefined,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        recommendation: 'Check marketplace service implementation'
       });
     }
 
@@ -196,7 +212,8 @@ router.get('/health', async (req, res) => {
       service: 'marketplace',
       error: 'Health check failed',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      recommendation: 'Check server logs for detailed error information'
     });
   }
 });

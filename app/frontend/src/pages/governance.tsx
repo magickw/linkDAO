@@ -9,7 +9,8 @@ import { GovernanceErrorBoundary } from '@/components/ErrorHandling/GovernanceEr
 import {
   useProposalCount,
   useAllProposals as useContractProposals,
-  useVotingPower
+  useVotingPower,
+  useCreateProposal as useCreateProposalContract
 } from '@/hooks/useGovernanceContract';
 import { ProposalCardSkeleton } from '@/components/LoadingSkeletons/GovernanceSkeleton';
 import DelegationPanel from '@/components/Governance/DelegationPanel';
@@ -26,9 +27,10 @@ import { ethers } from 'ethers';
 function GovernanceContent() {
   const { address, isConnected } = useAccount();
   const { addToast } = useToast();
-  const { proposalCount, isLoading: isCountLoading } = useProposalCount();
+  const { proposalCount, isLoading: isCountLoading, refetch: refetchProposalCount } = useProposalCount();
   const { proposalIds, isLoading: isProposalsLoading } = useContractProposals();
   const { votingPower, isLoading: isVotingPowerLoading } = useVotingPower(address);
+  const { createProposal: createContractProposal, isLoading: isCreatingProposal, isSuccess: isProposalCreated } = useCreateProposalContract();
 
   const [activeTab, setActiveTab] = useState<'active' | 'ended' | 'create' | 'delegation' | 'charity'>('active');
   const [searchTerm, setSearchTerm] = useState('');
@@ -43,50 +45,50 @@ function GovernanceContent() {
   const [isSubmittingCharity, setIsSubmittingCharity] = useState(false);
 
   // Load proposals from contract
-  useEffect(() => {
-    const loadProposals = async () => {
-      try {
-        // Use contract proposals directly
-        const contractProposals: Proposal[] = [];
-        if (proposalIds && proposalIds.length > 0) {
-          for (const proposalId of proposalIds) {
-            try {
-              const proposal = await governanceService.getProposal(proposalId.toString());
-              if (proposal) {
-                contractProposals.push(proposal);
-              }
-            } catch (error) {
-              console.error(`Failed to load proposal ${proposalId}:`, error);
-            }
-          }
-        }
-        setProposals(contractProposals);
-
-        // Get AI analysis for each proposal
-        const analyses: Record<string, AIProposalAnalysis> = {};
-        for (const proposal of contractProposals) {
+  const loadProposals = useCallback(async () => {
+    try {
+      // Use contract proposals directly
+      const contractProposals: Proposal[] = [];
+      if (proposalIds && proposalIds.length > 0) {
+        for (const proposalId of proposalIds) {
           try {
-            const analysis = await aiGovernanceService.analyzeProposal(proposal);
-            analyses[proposal.id] = analysis;
+            const proposal = await governanceService.getProposal(proposalId.toString());
+            if (proposal) {
+              contractProposals.push(proposal);
+            }
           } catch (error) {
-            console.error(`Failed to analyze proposal ${proposal.id}:`, error);
+            console.error(`Failed to load proposal ${proposalId}:`, error);
           }
         }
-        setProposalAnalyses(analyses);
-      } catch (error) {
-        console.error('Failed to load proposals:', error);
-        addToast('Failed to load governance proposals', 'error');
-      } finally {
-        setIsLoading(false);
       }
-    };
+      setProposals(contractProposals);
 
+      // Get AI analysis for each proposal
+      const analyses: Record<string, AIProposalAnalysis> = {};
+      for (const proposal of contractProposals) {
+        try {
+          const analysis = await aiGovernanceService.analyzeProposal(proposal);
+          analyses[proposal.id] = analysis;
+        } catch (error) {
+          console.error(`Failed to analyze proposal ${proposal.id}:`, error);
+        }
+      }
+      setProposalAnalyses(analyses);
+    } catch (error) {
+      console.error('Failed to load proposals:', error);
+      addToast('Failed to load governance proposals', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isConnected, addToast, proposalIds, isProposalsLoading]);
+
+  useEffect(() => {
     if (isConnected && !isProposalsLoading) {
       loadProposals();
     } else {
       setIsLoading(false);
     }
-  }, [isConnected, addToast, proposalIds, isProposalsLoading]);
+  }, [isConnected, isProposalsLoading, loadProposals]);
 
   // Handle proposal creation
   const handleCreateProposal = async () => {
@@ -103,51 +105,20 @@ function GovernanceContent() {
     try {
       setIsSubmitting(true);
 
-      // Create proposal via governance service
-      const result = await governanceService.createProposal({
-        title: proposalData.title,
-        description: proposalData.description,
-        proposerId: address,
-        votingDuration: proposalData.votingPeriod || 7,
-        category: proposalData.type || 'governance',
-        requiredMajority: proposalData.threshold || 50,
-        executionDelay: 2 // 2 days default
-      });
+      // Create proposal directly via smart contract
+      await createContractProposal(
+        proposalData.description,
+        0, // category: governance = 0
+        '0x' // execution data
+      );
 
-      if (result) {
-        addToast('Proposal created successfully!', 'success');
+      addToast('Proposal transaction submitted!', 'success');
 
-        // Reset form
-        setProposalData(null);
+      // Reset form
+      setProposalData(null);
 
-        // Reload proposals
-        const loadProposals = async () => {
-          try {
-            const contractProposals: Proposal[] = [];
-            if (proposalIds && proposalIds.length > 0) {
-              for (const proposalId of proposalIds) {
-                try {
-                  const proposal = await governanceService.getProposal(proposalId.toString());
-                  if (proposal) {
-                    contractProposals.push(proposal);
-                  }
-                } catch (error) {
-                  console.error(`Failed to load proposal ${proposalId}:`, error);
-                }
-              }
-            }
-            setProposals(contractProposals);
-          } catch (error) {
-            console.error('Failed to reload proposals:', error);
-          }
-        };
-        await loadProposals();
-
-        // Switch to active tab to see the new proposal
-        setActiveTab('active');
-      } else {
-        addToast('Failed to create proposal', 'error');
-      }
+      // Switch to active tab to see the new proposal
+      setActiveTab('active');
     } catch (error) {
       console.error('Error creating proposal:', error);
       addToast(error instanceof Error ? error.message : 'Failed to create proposal', 'error');
@@ -155,6 +126,13 @@ function GovernanceContent() {
       setIsSubmitting(false);
     }
   };
+
+  // Refresh proposals when contract state changes
+  useEffect(() => {
+    if (isProposalCreated) {
+      loadProposals();
+    }
+  }, [isProposalCreated, loadProposals]);
 
   // Handle charity proposal creation
   const handleCreateCharityProposal = async (charityData: CharityProposalData) => {
@@ -344,10 +322,10 @@ function GovernanceContent() {
                 </button>
                 <button
                   onClick={handleCreateProposal}
-                  disabled={isSubmitting || !proposalData?.title || !proposalData?.description}
+                  disabled={isSubmitting || isCreatingProposal || !proposalData?.title || !proposalData?.description}
                   className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
                 >
-                  {isSubmitting ? (
+                  {(isSubmitting || isCreatingProposal) ? (
                     <>
                       <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
