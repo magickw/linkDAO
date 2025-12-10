@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
@@ -21,6 +21,8 @@ import {
 
 // Import the unified image service for Cloudinary uploads
 import { unifiedImageService } from '@/services/unifiedImageService';
+import VideoEmbed from '@/components/VideoEmbed';
+import { extractVideoUrls } from '@/utils/videoUtils';
 
 interface AdvancedRichTextEditorProps {
   value: string;
@@ -51,6 +53,21 @@ const AdvancedRichTextEditor: React.FC<AdvancedRichTextEditorProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  // Extract video URLs from content
+  const extractVideoLinks = useCallback((text: string) => {
+    return extractVideoUrls(text);
+  }, []);
+
+  // Memoize video embeds
+  const videoEmbeds = useMemo(() => {
+    const videoInfos = extractVideoLinks(value);
+    return videoInfos.map((videoInfo, index) => (
+      <div key={index} className="my-3">
+        <VideoEmbed url={videoInfo.url} width={560} height={315} />
+      </div>
+    ));
+  }, [value, extractVideoLinks]);
 
   const editor = useEditor({
     extensions: [
@@ -188,11 +205,9 @@ const AdvancedRichTextEditor: React.FC<AdvancedRichTextEditorProps> = ({
 
   const addVideo = useCallback(() => {
     if (videoUrl && editor) {
-      editor.commands.setYoutubeVideo({
-        src: videoUrl,
-        width: 640,
-        height: 360,
-      });
+      // For now, we'll insert the video URL as text and let the automatic detection handle it
+      // This ensures compatibility with our multi-platform video embedding system
+      editor.chain().focus().insertContent(` ${videoUrl} `).run();
       setVideoUrl('');
       setShowVideoDialog(false);
     }
@@ -304,7 +319,7 @@ const AdvancedRichTextEditor: React.FC<AdvancedRichTextEditorProps> = ({
           disabled={disabled}
           className={`p-2 rounded hover:bg-gray-200 ${disabled ? 'opacity-50 cursor-not-allowed' : ''
             }`}
-          title="Insert Video"
+          title="Insert Video (YouTube, Vimeo, Twitch, TikTok, Instagram, Twitter, Facebook)"
         >
           <Video size={18} />
         </button>
@@ -339,6 +354,9 @@ const AdvancedRichTextEditor: React.FC<AdvancedRichTextEditorProps> = ({
         editor={editor}
         className="prose max-w-none p-3 min-h-[150px] focus:outline-none"
       />
+
+      {/* Video Embeds */}
+      {videoEmbeds}
 
       {/* Image Dialog */}
       {showImageDialog && (
@@ -546,17 +564,17 @@ const AdvancedRichTextEditor: React.FC<AdvancedRichTextEditorProps> = ({
       {/* Video Dialog */}
       {showVideoDialog && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96">
-            <h3 className="text-lg font-semibold mb-4">Insert Video</h3>
-            <p className="text-sm text-gray-600 mb-3">
-              Enter a YouTube video URL
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-96">
+            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Insert Video</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+              Enter a video URL from YouTube, Vimeo, Twitch, TikTok, Instagram, Twitter, or Facebook
             </p>
             <input
               type="text"
               placeholder="https://www.youtube.com/watch?v=..."
               value={videoUrl}
               onChange={(e) => setVideoUrl(e.target.value)}
-              className="w-full border rounded px-3 py-2 mb-4"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 mb-4 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
@@ -571,14 +589,14 @@ const AdvancedRichTextEditor: React.FC<AdvancedRichTextEditorProps> = ({
                   setShowVideoDialog(false);
                   setVideoUrl('');
                 }}
-                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
+                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={addVideo}
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
               >
                 Insert
               </button>
