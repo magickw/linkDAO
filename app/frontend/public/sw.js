@@ -64,6 +64,11 @@ const SERVICE_ENDPOINTS = {
     'https://ipapi.co/json/',
     'https://api.ipify.org/?format=json',
     'https://ipinfo.io/json'
+  ],
+  marketplace: [
+    'https://api.linkdao.io',
+    'https://api-backup.linkdao.io',
+    'https://api-fallback.linkdao.io'
   ]
 };
 // Development mode detection
@@ -79,6 +84,20 @@ const CIRCUIT_BREAKER_CONFIG = {
   failureThreshold: 5,
   recoveryTimeout: 60000, // 60 seconds as specified
   halfOpenMaxCalls: 3
+};
+
+// Service-specific circuit breaker configurations
+const SERVICE_CIRCUIT_BREAKER_CONFIGS = {
+  default: {
+    failureThreshold: 5,
+    recoveryTimeout: 60000,
+    halfOpenMaxCalls: 3
+  },
+  marketplace: {
+    failureThreshold: 3, // Lower threshold for marketplace
+    recoveryTimeout: 30000, // Faster recovery for marketplace
+    halfOpenMaxCalls: 2
+  }
 };
 
 // Assets to cache immediately
@@ -111,7 +130,7 @@ const CACHEABLE_APIS = {
   '/api/tips': { ttl: 60000, priority: 'medium', staleTTL: 300000 }, // 1min fresh, 5min stale
   '/api/follow': { ttl: 120000, priority: 'medium', staleTTL: 600000 }, // 2min fresh, 10min stale
   '/api/search': { ttl: 300000, priority: 'low', staleTTL: 1800000 }, // 5min fresh, 30min stale
-  '/api/marketplace': { ttl: 60000, priority: 'medium', staleTTL: 600000 }, // 1min fresh, 10min stale
+  '/api/marketplace': { ttl: 30000, priority: 'medium', staleTTL: 120000 }, // 30s fresh, 2min stale
   '/api/governance': { ttl: 180000, priority: 'medium', staleTTL: 900000 }, // 3min fresh, 15min stale
   '/api/messaging': { ttl: 30000, priority: 'high', staleTTL: 120000 }, // 30s fresh, 2min stale
   '/api/chat/conversations': { ttl: 30000, priority: 'high', staleTTL: 120000, skipCacheOnError: true }, // 30s fresh, 2min stale
@@ -778,15 +797,14 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
       failureInfo.lastFailure = Date.now();
       failedRequests.set(requestKey, failureInfo);
 
-      // For marketplace requests, don't aggressively backoff on network errors
+      // For marketplace requests, use moderate backoff and clear failure info after moderate period
       console.log('Marketplace request network error, using moderate backoff');
-      // Reduce backoff time for marketplace requests by clearing failure info after moderate period
       setTimeout(() => {
-        if (failedRequests.get(requestKey)?.attempts <= 2) {
+        if (failedRequests.get(requestKey)?.attempts <= 3) {
           failedRequests.delete(requestKey);
           console.log('Cleared marketplace request failure info for faster retry');
         }
-      }, 15000); // Clear after 15 seconds for marketplace requests
+      }, 20000); // Clear after 20 seconds for marketplace requests
     }
     // Handle seller dashboard failures with more specific backoff
     else if (url.pathname.includes('/api/marketplace/seller') || url.pathname.includes('/dashboard/')) {
@@ -1263,6 +1281,11 @@ function getServiceKey(request) {
     return 'geolocation';
   }
 
+  // Special handling for marketplace services
+  if (url.pathname.includes('/api/marketplace')) {
+    return 'marketplace';
+  }
+
   const pathParts = url.pathname.split('/');
 
   if (pathParts[1] === 'api' && pathParts[2]) {
@@ -1298,10 +1321,13 @@ function getCircuitBreakerState(serviceKey) {
     return 'CLOSED';
   }
 
+  // Get service-specific configuration
+  const config = SERVICE_CIRCUIT_BREAKER_CONFIGS[serviceKey] || SERVICE_CIRCUIT_BREAKER_CONFIGS.default;
+  
   const now = Date.now();
 
   // Check if circuit should transition from OPEN to HALF_OPEN
-  if (state.state === 'OPEN' && now - state.lastFailure > CIRCUIT_BREAKER_CONFIG.recoveryTimeout) {
+  if (state.state === 'OPEN' && now - state.lastFailure > config.recoveryTimeout) {
     state.state = 'HALF_OPEN';
     state.halfOpenCalls = 0;
     console.log(`Circuit breaker for ${serviceKey} transitioning to HALF_OPEN`);
@@ -1314,9 +1340,12 @@ function recordCircuitBreakerSuccess(serviceKey) {
   const state = circuitBreakerStates.get(serviceKey);
   if (!state) return;
 
+  // Get service-specific configuration
+  const config = SERVICE_CIRCUIT_BREAKER_CONFIGS[serviceKey] || SERVICE_CIRCUIT_BREAKER_CONFIGS.default;
+
   if (state.state === 'HALF_OPEN') {
     state.halfOpenCalls++;
-    if (state.halfOpenCalls >= CIRCUIT_BREAKER_CONFIG.halfOpenMaxCalls) {
+    if (state.halfOpenCalls >= config.halfOpenMaxCalls) {
       state.state = 'CLOSED';
       state.failures = 0;
       console.log(`Circuit breaker for ${serviceKey} closed after successful recovery`);
@@ -1345,7 +1374,7 @@ function recordCircuitBreakerFailure(serviceKey, error) {
     state.lastFailure = Date.now();
 
     if (state.state === 'HALF_OPEN' ||
-      (state.state === 'CLOSED' && state.failures >= CIRCUIT_BREAKER_CONFIG.failureThreshold)) {
+      (state.state === 'CLOSED' && state.failures >= config.failureThreshold)) {
       state.state = 'OPEN';
       state.halfOpenCalls = 0;
       console.warn(`Circuit breaker for ${serviceKey} opened due to ${state.failures} failures`);

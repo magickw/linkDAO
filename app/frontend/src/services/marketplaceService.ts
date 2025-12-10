@@ -398,6 +398,10 @@ export class UnifiedMarketplaceService {
 
   private getPrimaryBaseUrl(): string {
     // Use the API_BASE_URL from config which respects environment variables
+    // In production, use the secure HTTPS endpoint
+    if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+      return 'https://api.linkdao.io';
+    }
     return API_BASE_URL;
   }
 
