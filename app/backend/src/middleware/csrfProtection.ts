@@ -102,13 +102,13 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
     return next();
   }
   
-  // Skip CSRF for authenticated API requests (they use JWT/wallet auth)
-  // This allows authenticated users to make requests without CSRF tokens
+  // Check if user is authenticated via JWT or wallet signature
   const authHeader = req.headers.authorization;
   const hasWalletAuth = req.headers['x-wallet-address'] || (req as any).user?.address;
   
+  // If authenticated, skip CSRF validation but ensure proper headers are present for logging
   if (authHeader || hasWalletAuth) {
-    // User is authenticated via JWT or wallet signature, skip CSRF
+    console.log(`[csrfProtection] Authenticated request - skipping CSRF for ${req.method} ${req.path}`);
     return next();
   }
   

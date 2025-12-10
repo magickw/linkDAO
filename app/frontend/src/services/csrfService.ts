@@ -2,6 +2,8 @@
  * CSRF Service - Manages CSRF token retrieval and validation
  */
 
+import { ENV_CONFIG } from '@/config/environment';
+
 class CSRFService {
   private static instance: CSRFService;
   private csrfToken: string | null = null;
@@ -9,8 +11,8 @@ class CSRFService {
   private baseUrl: string;
 
   private constructor() {
-    // Use the same base URL as the cart service for consistency
-    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
+    // Use the same base URL as the environment config for consistency
+    this.baseUrl = ENV_CONFIG.BACKEND_URL;
     
     // Load from localStorage if available
     if (typeof window !== 'undefined') {
@@ -69,11 +71,12 @@ class CSRFService {
     }
 
     try {
-      const response = await fetch(`${this.baseUrl}/csrf-token`, {
+      // Use the correct API endpoint path
+      const response = await fetch(`${this.baseUrl}/api/csrf-token`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'X-Session-ID': this.sessionId,
+          'x-session-id': this.sessionId, // Use lowercase header name
         },
       });
 
@@ -111,12 +114,12 @@ class CSRFService {
     };
 
     if (this.sessionId) {
-      headers['X-Session-ID'] = this.sessionId;
+      headers['x-session-id'] = this.sessionId; // Use lowercase header name
     }
 
     const token = await this.getCSRFToken();
     if (token) {
-      headers['X-CSRF-Token'] = token;
+      headers['x-csrf-token'] = token; // Use lowercase header name
     }
 
     return headers;

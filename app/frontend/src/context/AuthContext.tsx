@@ -143,7 +143,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   // Check if we have a valid stored session
-  const checkStoredSession = useCallback(async () => {
+  const checkStoredSession = async () => {
     try {
       // First check if we have a token in localStorage (most common case for returning users)
       const storedToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
@@ -198,7 +198,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error('Error checking stored session:', error);
     }
     return false;
-  }, [address, validateSession, storeSession, clearStoredSession]);
+  };
 
   // Initialize authentication state with comprehensive session checking
   // This should only run once on mount to avoid circular dependencies
@@ -555,7 +555,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [storeSession, validateSession]);
 
   // Process authentication queue
-  const processAuthQueue = useCallback(async () => {
+  const processAuthQueue = async () => {
     if (isProcessingQueue || authQueue.length === 0) return;
     
     isProcessingQueue = true;
@@ -572,10 +572,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     
     isProcessingQueue = false;
-  }, [performLogin]);
+  };
 
   // Actual login implementation
-  const performLogin = useCallback(async (walletAddress: string, connector: any, status: string): Promise<{ success: boolean; error?: string }> => {
+  const performLogin = async (walletAddress: string, connector: any, status: string): Promise<{ success: boolean; error?: string }> => {
     if (!acquireAuthLock()) {
       throw new Error('Could not acquire auth lock');
     }
@@ -605,10 +605,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false);
       releaseAuthLock();
     }
-  }, [acquireAuthLock, releaseAuthLock, loadKYCStatus, addToast]);
+  };
 
   // Login with wallet authentication - now uses queue
-  const login = useCallback(async (walletAddress: string, connector: any, status: string): Promise<{ success: boolean; error?: string }> => {
+  const login = async (walletAddress: string, connector: any, status: string): Promise<{ success: boolean; error?: string }> => {
     console.log('🔐 Login queued for address:', walletAddress);
 
     // Check if already authenticated for this address
@@ -626,7 +626,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         processAuthQueue();
       }
     });
-  }, [isAuthenticated, user?.address, processAuthQueue]);
+  };
 
   // Register new user
   const register = async (userData: {

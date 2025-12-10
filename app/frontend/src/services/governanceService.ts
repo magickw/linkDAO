@@ -9,6 +9,8 @@ import {
 import { communityWeb3Service, CommunityGovernanceProposal } from './communityWeb3Service';
 import { ethers } from 'ethers';
 import { ENV_CONFIG } from '@/config/environment';
+import { authService } from './authService';
+import { csrfService } from './csrfService';
 
 // Safe JSON helper to avoid crashing on non-JSON API responses
 async function safeJson(response: Response): Promise<any | null> {
@@ -223,11 +225,12 @@ export class GovernanceService {
     requiredMajority?: number;
   }): Promise<Proposal | null> {
     try {
+      // Get authentication headers including CSRF token
+      const authHeaders = await this.getAuthHeaders();
+      
       const response = await fetch(`${this.baseUrl}/governance/proposals`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: authHeaders,
         body: JSON.stringify(proposalData)
       });
 
@@ -318,11 +321,12 @@ export class GovernanceService {
     votingPower: number
   ): Promise<{ success: boolean; error?: string }> {
     try {
+      // Get authentication headers including CSRF token
+      const authHeaders = await this.getAuthHeaders();
+      
       const response = await fetch(`${this.baseUrl}/governance/delegate`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: authHeaders,
         body: JSON.stringify({
           delegatorId,
           delegateId,
@@ -355,11 +359,12 @@ export class GovernanceService {
     daoId: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
+      // Get authentication headers including CSRF token
+      const authHeaders = await this.getAuthHeaders();
+      
       const response = await fetch(`${this.baseUrl}/governance/revoke-delegation`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: authHeaders,
         body: JSON.stringify({
           delegatorId,
           delegateId,
@@ -1012,6 +1017,25 @@ export class GovernanceService {
         : 'stable';
 
     return { periods, trend };
+  }
+
+  /**
+   * Get authentication headers for API requests
+   * Combines auth service headers with CSRF protection
+   */
+  private async getAuthHeaders(): Promise<Record<string, string>> {
+    // Get base auth headers from authService
+    const headers = authService.getAuthHeaders();
+    
+    // Add CSRF headers for authenticated requests
+    try {
+      const csrfHeaders = await csrfService.getCSRFHeaders();
+      Object.assign(headers, csrfHeaders);
+    } catch (error) {
+      console.warn('Failed to get CSRF headers:', error);
+    }
+    
+    return headers;
   }
 }
 
