@@ -4,8 +4,8 @@ services:
     env: node
     plan: pro
     rootDir: app/backend
-    buildCommand: cp package.emergency.json package.json && npm install
-    startCommand: npm start
+    buildCommand: chmod +x scripts/prebuild.sh && ./scripts/prebuild.sh && npm install --no-audit --prefer-offline --legacy-peer-deps --include=optional && chmod +x scripts/build-production-optimized.sh && ./scripts/build-production-optimized.sh
+    startCommand: npm run start:production
     healthCheckPath: /health
     envVars:
       - key: NODE_VERSION
