@@ -64,6 +64,16 @@ interface ProductDetailPageProps {
       freeShipping: boolean;
       estimatedDays: string;
       cost?: string;
+      methods?: string[];
+      handlingTime?: string;
+      shipsFrom?: {
+        country: string;
+        state?: string;
+        city?: string;
+      };
+      internationalShipping?: boolean;
+      internationalCost?: string;
+      localPickup?: boolean;
     };
     reviews: {
       average: number;
@@ -269,6 +279,118 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
               {/* Description */}
               <div className="mb-6">
                 <p className="text-white/80">{product.longDescription || product.description}</p>
+              </div>
+
+              {/* Shipping Information */}
+              <div className="mb-6 bg-white/5 rounded-lg p-4">
+                <h3 className="font-medium text-white mb-3 flex items-center">
+                  <Truck size={20} className="mr-2 text-blue-400" />
+                  Shipping & Delivery
+                </h3>
+                <div className="space-y-3">
+                  {/* Free Shipping Badge or Cost */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-white/70">Shipping Cost</span>
+                    {product.shipping.freeShipping ? (
+                      <span className="text-green-400 font-medium flex items-center">
+                        <CheckCircle size={16} className="mr-1" />
+                        Free Shipping
+                      </span>
+                    ) : (
+                      <span className="text-white font-medium">
+                        {product.shipping.cost || 'Contact seller'}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Estimated Delivery */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-white/70">Estimated Delivery</span>
+                    <span className="text-white">
+                      {product.shipping.estimatedDays} business days
+                    </span>
+                  </div>
+
+                  {/* Handling Time */}
+                  {product.shipping.handlingTime && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-white/70">Handling Time</span>
+                      <span className="text-white">
+                        {product.shipping.handlingTime === 'same-day'
+                          ? 'Same day'
+                          : `${product.shipping.handlingTime} business days`}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Ships From */}
+                  {product.shipping.shipsFrom && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-white/70">Ships From</span>
+                      <span className="text-white">
+                        {[
+                          product.shipping.shipsFrom.city,
+                          product.shipping.shipsFrom.state,
+                          product.shipping.shipsFrom.country
+                        ].filter(Boolean).join(', ') || product.shipping.shipsFrom.country}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Shipping Methods */}
+                  {product.shipping.methods && product.shipping.methods.length > 0 && (
+                    <div className="flex items-start justify-between">
+                      <span className="text-white/70">Shipping Methods</span>
+                      <div className="flex flex-wrap gap-2 justify-end">
+                        {product.shipping.methods.map((method) => (
+                          <span
+                            key={method}
+                            className="px-2 py-1 bg-purple-900/50 text-purple-200 text-xs rounded-full capitalize"
+                          >
+                            {method === 'standard' && '📦 '}
+                            {method === 'express' && '🚀 '}
+                            {method === 'overnight' && '⚡ '}
+                            {method === 'economy' && '💰 '}
+                            {method}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* International Shipping */}
+                  {product.shipping.internationalShipping && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-white/70">International Shipping</span>
+                      <span className="text-white">
+                        {product.shipping.internationalCost
+                          ? `Available (+${product.shipping.internationalCost})`
+                          : 'Available'}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Local Pickup */}
+                  {product.shipping.localPickup && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-white/70">Local Pickup</span>
+                      <span className="text-green-400 flex items-center">
+                        <CheckCircle size={16} className="mr-1" />
+                        Available
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Shipping Policy Note */}
+                <div className="mt-4 pt-3 border-t border-white/10">
+                  <div className="flex items-start">
+                    <RotateCcw size={16} className="mr-2 text-white/50 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-white/50">
+                      Delivery times are estimates and may vary. Contact the seller for specific shipping details.
+                    </p>
+                  </div>
+                </div>
               </div>
 
               {/* Specifications */}

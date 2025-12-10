@@ -106,6 +106,7 @@ export class MarketplaceListingsService {
           categoryId: products.categoryId,
           images: products.images,
           status: products.status,
+          shipping: products.shipping,
           createdAt: products.createdAt,
           updatedAt: products.updatedAt,
         })
@@ -137,6 +138,13 @@ export class MarketplaceListingsService {
           parsedImages = [];
         }
 
+        let parsedShipping = null;
+        try {
+          parsedShipping = listing.shipping ? JSON.parse(listing.shipping) : null;
+        } catch {
+          parsedShipping = null;
+        }
+
         return {
           id: listing.id,
           sellerAddress: sellerAddressMap.get(listing.sellerId) || '',
@@ -147,6 +155,7 @@ export class MarketplaceListingsService {
           images: parsedImages,
           category: listing.categoryId || undefined,
           isActive: listing.status === 'active',
+          shipping: parsedShipping,
           createdAt: listing.createdAt || new Date(),
           updatedAt: listing.updatedAt || new Date()
         };
@@ -183,6 +192,7 @@ export class MarketplaceListingsService {
           categoryId: products.categoryId,
           images: products.images,
           status: products.status,
+          shipping: products.shipping,
           createdAt: products.createdAt,
           updatedAt: products.updatedAt,
         })
@@ -210,6 +220,13 @@ export class MarketplaceListingsService {
         parsedImages = [];
       }
 
+      let parsedShipping = null;
+      try {
+        parsedShipping = listing.shipping ? JSON.parse(listing.shipping) : null;
+      } catch {
+        parsedShipping = null;
+      }
+
       return {
         id: listing.id,
         sellerAddress: userResult[0]?.walletAddress || '',
@@ -220,6 +237,7 @@ export class MarketplaceListingsService {
         images: parsedImages,
         category: listing.categoryId || undefined,
         isActive: listing.status === 'active',
+        shipping: parsedShipping,
         createdAt: listing.createdAt || new Date(),
         updatedAt: listing.updatedAt || new Date()
       };
@@ -267,6 +285,12 @@ export class MarketplaceListingsService {
           status: 'active',
           listingStatus: 'active',
           publishedAt: new Date(),
+          // Store shipping info if provided
+          shipping: listingData.shipping ? JSON.stringify(listingData.shipping) : JSON.stringify({
+            freeShipping: true,
+            estimatedDelivery: '3-5',
+            shippingMethods: ['standard']
+          }),
         })
         .returning();
 

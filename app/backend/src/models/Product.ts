@@ -100,7 +100,7 @@ export interface ShippingInfo {
   freeShipping: boolean;
   shippingCost?: string;
   shippingMethods: string[]; // e.g., ['standard', 'express', 'overnight']
-  handlingTime: number; // in days
+  handlingTime: number | string; // in days or string like "1-2"
   shipsFrom: {
     country: string;
     state?: string;
@@ -109,6 +109,17 @@ export interface ShippingInfo {
   restrictions?: {
     countries?: string[]; // ISO country codes
     states?: string[];
+  };
+  // Enhanced shipping options
+  estimatedDelivery?: string; // e.g., "3-5 business days"
+  internationalShipping?: boolean;
+  internationalCost?: string;
+  localPickup?: boolean;
+  packageDimensions?: {
+    weight?: number;
+    length?: number;
+    width?: number;
+    height?: number;
   };
 }
 

@@ -8,7 +8,7 @@ import { eq } from 'drizzle-orm';
 import * as schema from '../db/schema';
 import { Product, ProductSortOptions } from '../models/Product';
 import { BlockchainMarketplaceService } from '../services/marketplaceService';
-
+import { MarketplaceListingsService } from '../services/marketplaceListingsService';
 const productService = new ProductService();
 const marketplaceService = new BlockchainMarketplaceService();
 
@@ -64,8 +64,13 @@ export class MarketplaceController {
         status: listing.status.toLowerCase(),
         tags: [listing.itemType],
         shipping: {
-          weight: 0.5, // Default weight
-          freeShipping: true // Default policy
+          freeShipping: true,
+          estimatedDays: '3-5',
+          methods: ['standard'],
+          handlingTime: '1-2',
+          shipsFrom: {
+            country: 'US'
+          }
         },
         nft: listing.nftStandard ? {
           standard: listing.nftStandard,
@@ -139,72 +144,86 @@ export class MarketplaceController {
         sortOrder = 'desc'
       } = req.query;
 
-      // For now, return empty results with proper structure
-      // This allows the API to work while the database is being set up
-      const paginationOptions = {
-        page: parseInt(page as string),
-        limit: Math.min(parseInt(limit as string), 100) // Cap at 100 items per page
+      // Build filters for the database query
+      const filters: any = {
+        limit: Math.min(parseInt(limit as string), 100), // Cap at 100 items per page
+        offset: (parseInt(page as string) - 1) * parseInt(limit as string),
+        sortBy: ['createdAt', 'price', 'title'].includes(sortBy as string)
+          ? (sortBy as 'createdAt' | 'price' | 'title')
+          : 'createdAt',
+        sortOrder: (sortOrder as 'asc' | 'desc') || 'desc',
+        isActive: true // Only show active listings
       };
 
-      safeLogger.info('Marketplace listings request:', {
-        page: paginationOptions.page,
-        limit: paginationOptions.limit,
-        category,
-        search,
-        sellerId
-      });
-
-      // Fetch listings from the marketplace service
-      let listings;
-      if (sellerId) {
-        listings = await marketplaceService.getListingsBySeller(sellerId as string);
-      } else {
-        listings = await marketplaceService.getActiveListings();
+      if (category) {
+        filters.category = category as string;
       }
 
-      // Apply pagination
-      const total = listings.length;
-      const totalPages = Math.ceil(total / paginationOptions.limit);
-      const startIndex = (paginationOptions.page - 1) * paginationOptions.limit;
-      const endIndex = startIndex + paginationOptions.limit;
-      const paginatedListings = listings.slice(startIndex, endIndex);
+      if (minPrice || maxPrice) {
+        filters.priceRange = {
+          min: minPrice ? minPrice as string : '0',
+          max: maxPrice ? maxPrice as string : '999999999'
+        };
+      }
+
+      if (sellerId) {
+        filters.sellerAddress = sellerId as string;
+      }
+
+      // Use the marketplace service to get listings from the database
+      const listingsService = new MarketplaceListingsService();
+      let result;
+      
+      if (search) {
+        result = await listingsService.searchListings(search as string, filters);
+      } else {
+        result = await listingsService.getListings(filters);
+      }
 
       // Map listings to the expected product format
-      const mappedListings = paginatedListings.map(listing => ({
+      const mappedListings = result.listings.map(listing => ({
         id: listing.id,
-        sellerId: listing.sellerWalletAddress,
-        title: `Listing ${listing.id}`,
-        description: `Description for listing ${listing.id}`,
+        sellerId: listing.sellerAddress,
+        title: listing.title,
+        description: listing.description || '',
         priceAmount: Number(listing.price),
-        priceCurrency: 'USD',
-        category: {
-          id: listing.itemType.toLowerCase(),
-          name: listing.itemType,
-          slug: listing.itemType.toLowerCase()
-        },
-        images: [],
-        inventory: listing.quantity,
-        status: listing.status.toLowerCase(),
-        tags: [listing.itemType],
-        shipping: {
-          weight: 0.5,
-          freeShipping: true
-        },
-        nft: listing.nftStandard ? {
-          standard: listing.nftStandard,
-          tokenId: listing.tokenId
+        priceCurrency: listing.currency || 'USD',
+        category: listing.category ? {
+          id: listing.category,
+          name: listing.category,
+          slug: listing.category ? listing.category.toLowerCase() : ''
         } : null,
+        images: listing.images || [],
+        inventory: 1,
+        status: listing.isActive ? 'active' : 'inactive',
+        tags: [],
+        shipping: listing.shipping ? {
+          freeShipping: listing.shipping.freeShipping || false,
+          estimatedDays: listing.shipping.estimatedDelivery || '3-5',
+          cost: listing.shipping.cost,
+          methods: listing.shipping.methods || ['standard'],
+          handlingTime: listing.shipping.handlingTime,
+          shipsFrom: listing.shipping.shipsFrom,
+          internationalShipping: listing.shipping.internationalShipping,
+          internationalCost: listing.shipping.internationalCost,
+          localPickup: listing.shipping.localPickup
+        } : {
+          freeShipping: true,
+          estimatedDays: '3-5',
+          methods: ['standard']
+        },
+        nft: null,
         views: 0,
         favorites: 0,
-        listingStatus: listing.status.toLowerCase(),
+        listingStatus: listing.isActive ? 'active' : 'inactive',
         publishedAt: listing.createdAt,
         createdAt: listing.createdAt,
         updatedAt: listing.updatedAt,
         seller: {
-          id: listing.sellerWalletAddress,
-          walletAddress: listing.sellerWalletAddress,
-          displayName: `Seller ${listing.sellerWalletAddress.substring(0, 6)}`,
-          storeName: `Store ${listing.sellerWalletAddress.substring(0, 6)}`,
+          id: listing.sellerAddress,
+          walletAddress: listing.sellerAddress,
+          displayName: listing.sellerAddress ? `Seller ${listing.sellerAddress.substring(0, 6)}...` : 'Unknown',
+          storeName: listing.sellerAddress ? `Store ${listing.sellerAddress.substring(0, 6)}` : 'Unknown Store',
           rating: 4.5,
           reputation: 85,
           verified: true,
@@ -214,7 +233,7 @@ export class MarketplaceController {
         },
         trust: {
           verified: true,
-          escrowProtected: listing.isEscrowed,
+          escrowProtected: true,
           onChainCertified: false,
           safetyScore: 85
         },
@@ -230,10 +249,10 @@ export class MarketplaceController {
         data: {
           listings: mappedListings,
           pagination: {
-            total,
-            page: paginationOptions.page,
-            limit: paginationOptions.limit,
-            totalPages
+            total: result.total,
+            page: parseInt(page as string),
+            limit: parseInt(limit as string),
+            totalPages: Math.ceil(result.total / parseInt(limit as string))
           }
         },
         metadata: {
@@ -299,7 +318,7 @@ export class MarketplaceController {
       const responseData = {
         id: sellerProfile.walletAddress,
         walletAddress: sellerProfile.walletAddress,
-        displayName: sellerProfile.displayName,
+        displayName: sellerProfile.storeName,
         storeName: sellerProfile.storeName,
         bio: sellerProfile.bio,
         description: sellerProfile.description,
@@ -321,7 +340,6 @@ export class MarketplaceController {
         createdAt: (sellerProfile as any)?.createdAt,
         updatedAt: (sellerProfile as any)?.updatedAt
       };
-
       return res.json({
         success: true,
         data: responseData,
@@ -401,8 +419,13 @@ export class MarketplaceController {
         status: listing.status.toLowerCase(),
         tags: [listing.itemType],
         shipping: {
-          weight: 0.5,
-          freeShipping: true
+          freeShipping: true,
+          estimatedDays: '3-5',
+          methods: ['standard'],
+          handlingTime: '1-2',
+          shipsFrom: {
+            country: 'US'
+          }
         },
         nft: listing.nftStandard ? {
           standard: listing.nftStandard,
@@ -563,8 +586,13 @@ export class MarketplaceController {
         status: listing.status.toLowerCase(),
         tags: [listing.itemType],
         shipping: {
-          weight: 0.5,
-          freeShipping: true
+          freeShipping: true,
+          estimatedDays: '3-5',
+          methods: ['standard'],
+          handlingTime: '1-2',
+          shipsFrom: {
+            country: 'US'
+          }
         },
         nft: listing.nftStandard ? {
           standard: listing.nftStandard,

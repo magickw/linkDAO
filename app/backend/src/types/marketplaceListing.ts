@@ -1,5 +1,28 @@
 // Types for marketplace listings API endpoints
 
+// Shipping information interface
+export interface ShippingInfo {
+  freeShipping: boolean;
+  cost?: string;
+  estimatedDelivery?: string;
+  methods?: string[];
+  handlingTime?: string;
+  shipsFrom?: {
+    country: string;
+    state?: string;
+    city?: string;
+  };
+  packageDimensions?: {
+    weight?: number;
+    length?: number;
+    width?: number;
+    height?: number;
+  };
+  internationalShipping?: boolean;
+  internationalCost?: string;
+  localPickup?: boolean;
+}
+
 export interface MarketplaceListing {
   id: string;
   sellerAddress: string;
@@ -10,6 +33,7 @@ export interface MarketplaceListing {
   images?: string[]; // Array of image URLs/IPFS hashes
   category?: string;
   isActive: boolean;
+  shipping?: ShippingInfo | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -21,6 +45,7 @@ export interface CreateMarketplaceListingRequest {
   currency?: string;
   images?: string[];
   category?: string;
+  shipping?: ShippingInfo;
 }
 
 export interface UpdateMarketplaceListingRequest {
@@ -31,6 +56,7 @@ export interface UpdateMarketplaceListingRequest {
   images?: string[];
   category?: string;
   isActive?: boolean;
+  shipping?: ShippingInfo;
 }
 
 export interface MarketplaceListingFilters {

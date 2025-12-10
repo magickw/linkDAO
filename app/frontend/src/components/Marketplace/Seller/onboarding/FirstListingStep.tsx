@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Button } from '../../../../design-system';
 import { ImageUploadResult } from '../../../../services/unifiedImageService';
-
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 interface FirstListingStepProps {
   onComplete: (data: any) => void;
   data?: any;
@@ -25,6 +25,19 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
     shippingFree: data?.shippingFree !== undefined ? data.shippingFree : true,
     shippingCost: data?.shippingCost || '',
     estimatedDays: data?.estimatedDays || '3-5',
+    // Enhanced shipping options
+    shippingMethods: data?.shippingMethods || ['standard'],
+    handlingTime: data?.handlingTime || '1-2',
+    shipsFromCountry: data?.shipsFromCountry || 'US',
+    shipsFromState: data?.shipsFromState || '',
+    shipsFromCity: data?.shipsFromCity || '',
+    packageWeight: data?.packageWeight || '',
+    packageLength: data?.packageLength || '',
+    packageWidth: data?.packageWidth || '',
+    packageHeight: data?.packageHeight || '',
+    internationalShipping: data?.internationalShipping || false,
+    internationalShippingCost: data?.internationalShippingCost || '',
+    localPickup: data?.localPickup || false,
     // Service-specific fields
     serviceDuration: data?.serviceDuration || '',
     serviceUnit: data?.serviceUnit || 'hours',
@@ -116,13 +129,78 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
   };
 
   const blockchains = [
-    { value: 'ethereum', label: 'Ethereum', icon: 'Ξ' },
-    { value: 'polygon', label: 'Polygon', icon: '🔷' },
-    { value: 'arbitrum', label: 'Arbitrum', icon: '🔵' },
-    { value: 'optimism', label: 'Optimism', icon: '🔴' },
-    { value: 'base', label: 'Base', icon: '🔵' },
-    { value: 'solana', label: 'Solana', icon: '◎' },
-    { value: 'other', label: 'Other', icon: '🔗' },
+    {
+      value: 'ethereum',
+      label: 'Ethereum',
+      icon: (
+        <svg className="w-4 h-4" viewBox="0 0 256 417" fill="currentColor">
+          <path d="M127.961 0l-2.795 9.5v275.668l2.795 2.79 127.962-75.638z" fillOpacity=".6"/>
+          <path d="M127.962 0L0 212.32l127.962 75.639V154.158z"/>
+          <path d="M127.961 312.187l-1.575 1.92v98.199l1.575 4.6L256 236.587z" fillOpacity=".6"/>
+          <path d="M127.962 416.905v-104.72L0 236.585z"/>
+        </svg>
+      )
+    },
+    {
+      value: 'polygon',
+      label: 'Polygon',
+      icon: (
+        <svg className="w-4 h-4" viewBox="0 0 38 33" fill="currentColor">
+          <path d="M29 10.2c-.7-.4-1.6-.4-2.4 0L21 13.5l-3.8 2.1-5.5 3.3c-.7.4-1.6.4-2.4 0L5 16.3c-.7-.4-1.2-1.2-1.2-2.1v-5c0-.8.4-1.6 1.2-2.1l4.3-2.5c.7-.4 1.6-.4 2.4 0L16 7.2c.7.4 1.2 1.2 1.2 2.1v3.3l3.8-2.2V7c0-.8-.4-1.6-1.2-2.1l-8-4.7c-.7-.4-1.6-.4-2.4 0L1.2 5C.4 5.4 0 6.2 0 7v9.4c0 .8.4 1.6 1.2 2.1l8.1 4.7c.7.4 1.6.4 2.4 0l5.5-3.2 3.8-2.2 5.5-3.2c.7-.4 1.6-.4 2.4 0l4.3 2.5c.7.4 1.2 1.2 1.2 2.1v5c0 .8-.4 1.6-1.2 2.1L29 28.8c-.7.4-1.6.4-2.4 0l-4.3-2.5c-.7-.4-1.2-1.2-1.2-2.1V21l-3.8 2.2v3.3c0 .8.4 1.6 1.2 2.1l8.1 4.7c.7.4 1.6.4 2.4 0l8.1-4.7c.7-.4 1.2-1.2 1.2-2.1V17c0-.8-.4-1.6-1.2-2.1L29 10.2z"/>
+        </svg>
+      )
+    },
+    {
+      value: 'arbitrum',
+      label: 'Arbitrum',
+      icon: (
+        <svg className="w-4 h-4" viewBox="0 0 40 40" fill="currentColor">
+          <path d="M20.9 25.2l3.8 6.3c.2.3.5.5.9.5h4.3c.5 0 .8-.5.6-.9L21.5 16c-.2-.3-.5-.5-.9-.5h-3.3c-.5 0-.8.5-.6.9l4.2 8.8z"/>
+          <path d="M14.1 15.5c-.2-.3-.5-.5-.9-.5h-3.3c-.5 0-.8.5-.6.9l9.3 15.6c.2.3.5.5.9.5h4.3c.5 0 .8-.5.6-.9l-10.3-15.6z"/>
+          <path d="M31.6 8.5H8.4c-.3 0-.5.2-.5.5v2.1c0 .3.2.5.5.5h23.2c.3 0 .5-.2.5-.5V9c0-.3-.2-.5-.5-.5z"/>
+        </svg>
+      )
+    },
+    {
+      value: 'optimism',
+      label: 'Optimism',
+      icon: (
+        <svg className="w-4 h-4" viewBox="0 0 500 500" fill="currentColor">
+          <circle cx="250" cy="250" r="250" fill="#FF0420"/>
+          <path d="M177.1 316.4c-14.9 0-26.6-4.2-35.2-12.5-8.5-8.4-12.8-20.3-12.8-35.7 0-20.4 5.6-37 16.7-49.8 11.2-12.8 26.1-19.2 44.7-19.2 14.7 0 26.3 4.1 34.7 12.4 8.4 8.2 12.6 19.7 12.6 34.3 0 20.8-5.5 37.7-16.6 50.6-11 13-26 19.5-44.8 19.5l.7-.6zm4.3-29.8c7.3 0 13.2-3.5 17.7-10.5 4.5-7.1 6.7-16.3 6.7-27.8 0-8-1.5-14.2-4.6-18.6-3-4.4-7.5-6.6-13.4-6.6-7.4 0-13.4 3.5-17.9 10.5-4.5 7-6.8 16.2-6.8 27.6 0 8.1 1.6 14.4 4.7 18.8 3.1 4.4 7.7 6.6 13.6 6.6z" fill="white"/>
+          <path d="M276.8 313.4V202h36.5c15.3 0 26.7 3.1 34.3 9.2 7.6 6.1 11.4 15.2 11.4 27.2 0 12.6-4.4 22.6-13.1 30-8.7 7.4-20.6 11.1-35.7 11.1h-11.4v33.9h-22zm22-54.2h8.1c7.3 0 12.8-1.6 16.5-4.7 3.8-3.2 5.6-7.8 5.6-13.8 0-5.5-1.7-9.6-5-12.2-3.3-2.6-8.4-3.9-15.2-3.9h-10v34.6z" fill="white"/>
+        </svg>
+      )
+    },
+    {
+      value: 'base',
+      label: 'Base',
+      icon: (
+        <svg className="w-4 h-4" viewBox="0 0 111 111" fill="currentColor">
+          <path d="M54.921 110.034C85.359 110.034 110.034 85.402 110.034 55.017C110.034 24.6319 85.359 0 54.921 0C26.0432 0 2.35281 22.1714 0 50.3923H72.8467V59.6416H0C2.35281 87.8625 26.0432 110.034 54.921 110.034Z" fill="#0052FF"/>
+        </svg>
+      )
+    },
+    {
+      value: 'solana',
+      label: 'Solana',
+      icon: (
+        <svg className="w-4 h-4" viewBox="0 0 397 311" fill="currentColor">
+          <path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7z"/>
+          <path d="M64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8z"/>
+          <path d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z"/>
+        </svg>
+      )
+    },
+    {
+      value: 'other',
+      label: 'Other',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+        </svg>
+      )
+    },
   ];
 
   const defiProtocols = [
@@ -142,8 +220,6 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
   const currencies = [
     { value: 'USDC', label: 'USDC', symbol: '$' },
     { value: 'ETH', label: 'ETH', symbol: 'Ξ' },
-    { value: 'BTC', label: 'BTC', symbol: '₿' },
-    { value: 'MATIC', label: 'MATIC', symbol: '🔷' },
   ];
 
   const validateForm = () => {
@@ -294,6 +370,28 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
           shippingCost: formData.shippingFree ? 0 : parseFloat(formData.shippingCost || '0'),
           shippingFree: formData.shippingFree,
           estimatedDays: formData.estimatedDays,
+          // Enhanced shipping information
+          shipping: {
+            freeShipping: formData.shippingFree,
+            cost: formData.shippingFree ? '0' : formData.shippingCost,
+            estimatedDelivery: formData.estimatedDays,
+            methods: formData.shippingMethods,
+            handlingTime: formData.handlingTime,
+            shipsFrom: {
+              country: formData.shipsFromCountry,
+              state: formData.shipsFromState,
+              city: formData.shipsFromCity,
+            },
+            packageDimensions: {
+              weight: formData.packageWeight ? parseFloat(formData.packageWeight) : undefined,
+              length: formData.packageLength ? parseFloat(formData.packageLength) : undefined,
+              width: formData.packageWidth ? parseFloat(formData.packageWidth) : undefined,
+              height: formData.packageHeight ? parseFloat(formData.packageHeight) : undefined,
+            },
+            internationalShipping: formData.internationalShipping,
+            internationalCost: formData.internationalShipping ? formData.internationalShippingCost : undefined,
+            localPickup: formData.localPickup,
+          },
         };
       } else if (listingType === 'service') {
         listingData = {
@@ -345,7 +443,7 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
     }
   };
 
-  const handleInputChange = (field: string, value: string | boolean | number) => {
+  const handleInputChange = (field: string, value: string | boolean | number | string[]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     
     // Clear error when user starts typing
@@ -1085,8 +1183,9 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
       {/* Shipping - Only for physical goods */}
       {listingType === 'physical' && (
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-white">Shipping</h3>
+          <h3 className="text-lg font-semibold text-white">Shipping & Delivery</h3>
 
+          {/* Free Shipping Toggle */}
           <div className="flex items-center justify-between">
             <div>
               <h4 className="text-white font-medium">Free Shipping</h4>
@@ -1103,6 +1202,7 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
             </label>
           </div>
 
+          {/* Shipping Cost & Delivery Time */}
           {!formData.shippingFree && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -1133,17 +1233,274 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
                 <label htmlFor="estimatedDays" className="block text-sm font-medium text-gray-300 mb-2">
                   Estimated Delivery
                 </label>
-                <input
-                  type="text"
+                <select
                   id="estimatedDays"
                   value={formData.estimatedDays}
                   onChange={(e) => handleInputChange('estimatedDays', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  placeholder="3-5 business days"
-                />
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="1-2">1-2 business days</option>
+                  <option value="3-5">3-5 business days</option>
+                  <option value="5-7">5-7 business days</option>
+                  <option value="7-14">7-14 business days</option>
+                  <option value="14-21">14-21 business days</option>
+                  <option value="21+">21+ business days</option>
+                </select>
               </div>
             </div>
           )}
+
+          {formData.shippingFree && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="estimatedDays" className="block text-sm font-medium text-gray-300 mb-2">
+                  Estimated Delivery Time
+                </label>
+                <select
+                  id="estimatedDays"
+                  value={formData.estimatedDays}
+                  onChange={(e) => handleInputChange('estimatedDays', e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="1-2">1-2 business days</option>
+                  <option value="3-5">3-5 business days</option>
+                  <option value="5-7">5-7 business days</option>
+                  <option value="7-14">7-14 business days</option>
+                  <option value="14-21">14-21 business days</option>
+                  <option value="21+">21+ business days</option>
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* Shipping Methods */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Shipping Methods
+            </label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { value: 'standard', label: 'Standard', icon: '📦' },
+                { value: 'express', label: 'Express', icon: '🚀' },
+                { value: 'overnight', label: 'Overnight', icon: '⚡' },
+                { value: 'economy', label: 'Economy', icon: '💰' },
+              ].map((method) => (
+                <button
+                  key={method.value}
+                  type="button"
+                  onClick={() => {
+                    const currentMethods = formData.shippingMethods as string[];
+                    const newMethods = currentMethods.includes(method.value)
+                      ? currentMethods.filter(m => m !== method.value)
+                      : [...currentMethods, method.value];
+                    handleInputChange('shippingMethods', newMethods.length > 0 ? newMethods : ['standard']);
+                  }}
+                  className={`p-3 rounded-lg border-2 text-center transition-all ${
+                    (formData.shippingMethods as string[]).includes(method.value)
+                      ? 'border-purple-500 bg-purple-900/50'
+                      : 'border-gray-600 bg-gray-800/50 hover:border-gray-500'
+                  }`}
+                >
+                  <span className="text-xl block mb-1">{method.icon}</span>
+                  <span className="text-white text-sm">{method.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Handling Time */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="handlingTime" className="block text-sm font-medium text-gray-300 mb-2">
+                Handling Time (days to ship after order)
+              </label>
+              <select
+                id="handlingTime"
+                value={formData.handlingTime}
+                onChange={(e) => handleInputChange('handlingTime', e.target.value)}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="same-day">Same day</option>
+                <option value="1">1 business day</option>
+                <option value="1-2">1-2 business days</option>
+                <option value="2-3">2-3 business days</option>
+                <option value="3-5">3-5 business days</option>
+                <option value="5-7">5-7 business days</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Ships From Location */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Ships From
+            </label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <select
+                  id="shipsFromCountry"
+                  value={formData.shipsFromCountry}
+                  onChange={(e) => handleInputChange('shipsFromCountry', e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="US">United States</option>
+                  <option value="CA">Canada</option>
+                  <option value="UK">United Kingdom</option>
+                  <option value="AU">Australia</option>
+                  <option value="DE">Germany</option>
+                  <option value="FR">France</option>
+                  <option value="JP">Japan</option>
+                  <option value="CN">China</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </div>
+              <div>
+                <input
+                  type="text"
+                  id="shipsFromState"
+                  value={formData.shipsFromState}
+                  onChange={(e) => handleInputChange('shipsFromState', e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="State / Province"
+                />
+              </div>
+              <div>
+                <input
+                  type="text"
+                  id="shipsFromCity"
+                  value={formData.shipsFromCity}
+                  onChange={(e) => handleInputChange('shipsFromCity', e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="City"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Package Dimensions (Optional) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Package Dimensions (Optional - for shipping cost estimation)
+            </label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Weight (kg)</label>
+                <input
+                  type="number"
+                  value={formData.packageWeight}
+                  onChange={(e) => handleInputChange('packageWeight', e.target.value)}
+                  step="0.1"
+                  min="0"
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="0.5"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Length (cm)</label>
+                <input
+                  type="number"
+                  value={formData.packageLength}
+                  onChange={(e) => handleInputChange('packageLength', e.target.value)}
+                  step="1"
+                  min="0"
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="20"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Width (cm)</label>
+                <input
+                  type="number"
+                  value={formData.packageWidth}
+                  onChange={(e) => handleInputChange('packageWidth', e.target.value)}
+                  step="1"
+                  min="0"
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="15"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Height (cm)</label>
+                <input
+                  type="number"
+                  value={formData.packageHeight}
+                  onChange={(e) => handleInputChange('packageHeight', e.target.value)}
+                  step="1"
+                  min="0"
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="10"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* International Shipping */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-white font-medium">International Shipping</h4>
+              <p className="text-gray-400 text-sm">Ship to customers outside your country</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.internationalShipping}
+                onChange={(e) => handleInputChange('internationalShipping', e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+            </label>
+          </div>
+
+          {formData.internationalShipping && (
+            <div>
+              <label htmlFor="internationalShippingCost" className="block text-sm font-medium text-gray-300 mb-2">
+                International Shipping Cost
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  id="internationalShippingCost"
+                  value={formData.internationalShippingCost}
+                  onChange={(e) => handleInputChange('internationalShippingCost', e.target.value)}
+                  step="0.01"
+                  min="0"
+                  className="w-full px-3 py-2 pr-16 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="0.00"
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                  <span className="text-gray-400 text-sm">{currencies.find(c => c.value === formData.currency)?.symbol}</span>
+                </div>
+              </div>
+              <p className="mt-1 text-xs text-gray-400">Additional cost for international orders</p>
+            </div>
+          )}
+
+          {/* Local Pickup */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-white font-medium">Local Pickup Available</h4>
+              <p className="text-gray-400 text-sm">Allow buyers to pick up the item in person</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.localPickup}
+                onChange={(e) => handleInputChange('localPickup', e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+            </label>
+          </div>
+
+          {/* Shipping Policy Note */}
+          <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-3">
+            <p className="text-blue-200 text-sm flex items-start">
+              <svg className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+              Shipping details help buyers understand delivery expectations. Accurate information builds trust and reduces disputes.
+            </p>
+          </div>
         </div>
       )}
 
