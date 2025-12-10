@@ -4,8 +4,8 @@ services:
     env: node
     plan: pro
     rootDir: app/backend
-    buildCommand: chmod +x scripts/prebuild.sh && ./scripts/prebuild.sh && npm install --no-audit --prefer-offline --legacy-peer-deps --include=optional && chmod +x scripts/build-production-optimized.sh && ./scripts/build-production-optimized.sh
-    startCommand: npm run start:production
+    buildCommand: npm install --no-audit --prefer-offline --legacy-peer-deps && npm run build
+    startCommand: npm start
     healthCheckPath: /health
     envVars:
       - key: NODE_VERSION
