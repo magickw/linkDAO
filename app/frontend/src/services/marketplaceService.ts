@@ -446,8 +446,12 @@ export class UnifiedMarketplaceService {
       }
 
       // Try marketplace/listings endpoint first
-      const response = await this.makeApiRequest(`/api/marketplace/listings?${params.toString()}`);
-
+      // Add cache-busting parameter to prevent service worker caching issues
+      const cacheBuster = `_=${Date.now()}`;
+      const paramsString = params.toString();
+      const separator = paramsString ? '&' : '';
+      const endpoint = `/api/marketplace/listings?${paramsString}${separator}${cacheBuster}`;
+      const response = await this.makeApiRequest(endpoint);
       if (!response.ok) {
         console.warn('Marketplace API unavailable, using mock data');
         return this.getMockProducts(filters);
@@ -730,13 +734,16 @@ export class UnifiedMarketplaceService {
         }
       });
 
-      const response = await this.makeApiRequest(`/api/marketplace/search?${params.toString()}`);
+      // Add cache-busting parameter to prevent service worker caching issues
+      const cacheBuster = `_=${Date.now()}`;
+      const paramsString = params.toString();
+      const separator = paramsString ? '&' : '';
+      const endpoint = `/api/marketplace/search?${paramsString}${separator}${cacheBuster}`;
+      const response = await this.makeApiRequest(endpoint);
       
       if (!response.ok) {
         throw new Error('Failed to search products');
-      }
-
-      const result = await response.json();
+      }      const result = await response.json();
       if (result.success) {
         return result.data.products || [];
       } else {
@@ -755,13 +762,16 @@ export class UnifiedMarketplaceService {
         limit: limit.toString()
       });
 
-      const response = await this.makeApiRequest(`/api/marketplace/search-suggestions?${params.toString()}`);
+      // Add cache-busting parameter to prevent service worker caching issues
+      const cacheBuster = `_=${Date.now()}`;
+      const paramsString = params.toString();
+      const separator = paramsString ? '&' : '';
+      const endpoint = `/api/marketplace/search-suggestions?${paramsString}${separator}${cacheBuster}`;
+      const response = await this.makeApiRequest(endpoint);
       
       if (!response.ok) {
         throw new Error('Failed to get search suggestions');
-      }
-
-      const result = await response.json();
+      }      const result = await response.json();
       if (result.success) {
         return result.data || [];
       } else {
@@ -793,8 +803,12 @@ export class UnifiedMarketplaceService {
         }
       });
 
-      const response = await this.makeApiRequest(`/api/marketplace/auctions/active?${params.toString()}`);
-      
+      // Add cache-busting parameter to prevent service worker caching issues
+            const cacheBuster = `_=${Date.now()}`;
+            const paramsString = params.toString();
+            const separator = paramsString ? '&' : '';
+            const endpoint = `/api/marketplace/auctions/active?${paramsString}${separator}${cacheBuster}`;
+            const response = await this.makeApiRequest(endpoint);
       if (!response.ok) {
         throw new Error('Failed to fetch active auctions');
       }
@@ -1006,19 +1020,28 @@ export class UnifiedMarketplaceService {
         throw new Error('Cannot connect to localhost in production due to CSP restrictions');
       }
 
-      const response = await fetch(url, {
+      // Prepare headers - be more careful with CORS headers
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        ...options.headers,
+      };
+
+      // Only add Referrer-Policy if we're not in a browser context that might restrict it
+      if (typeof window === 'undefined' || !window.navigator) {
+        (headers as Record<string, string>)['Referrer-Policy'] = 'origin-when-cross-origin';
+      }
+
+      const fetchOptions: RequestInit = {
         ...options,
         signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache',
-          'Referrer-Policy': 'origin-when-cross-origin',
-          ...options.headers,
-        },
-        mode: 'cors',
-        credentials: 'omit'
-      });
+        headers,
+        // Let the browser decide on mode and credentials to avoid CORS issues
+        mode: options.mode || 'cors',
+        credentials: options.credentials || 'same-origin'
+      };
+      const response = await fetch(url, fetchOptions);
 
       clearTimeout(timeoutId);
       return response;
@@ -1033,7 +1056,6 @@ export class UnifiedMarketplaceService {
       throw error;
     }
   }
-
   async getMarketplaceListings(filters?: any): Promise<MarketplaceListing[]> {
     try {
       const params = new URLSearchParams();
@@ -1045,10 +1067,12 @@ export class UnifiedMarketplaceService {
         });
       }
 
-      const endpoint = `/api/marketplace/listings?${params.toString()}`;
-      console.log('[MarketplaceService] Fetching listings from primary URL:', `${this.primaryBaseUrl}${endpoint}`);
-
-      const response = await this.makeApiRequest(endpoint, {
+      // Add cache-busting parameter to prevent service worker caching issues
+      const cacheBuster = `_=${Date.now()}`;
+      const paramsString = params.toString();
+      const separator = paramsString ? '&' : '';
+      const endpoint = `/api/marketplace/listings?${paramsString}${separator}${cacheBuster}`;
+      console.log('[MarketplaceService] Fetching listings from primary URL:', `${this.primaryBaseUrl}${endpoint}`);      const response = await this.makeApiRequest(endpoint, {
         method: 'GET',
       });
 
@@ -1135,7 +1159,10 @@ export class UnifiedMarketplaceService {
    */
   async checkHealth(): Promise<{ healthy: boolean; message?: string }> {
     try {
-      const response = await this.makeApiRequest('/api/marketplace/health');
+      // Add cache-busting parameter to prevent service worker caching issues
+      const cacheBuster = `_=${Date.now()}`;
+      const endpoint = `/api/marketplace/health?${cacheBuster}`;
+      const response = await this.makeApiRequest(endpoint);
       
       if (!response.ok) {
         return { healthy: false, message: 'Marketplace service unavailable' };
@@ -1157,7 +1184,10 @@ export class UnifiedMarketplaceService {
    */
   async getStats(): Promise<any> {
     try {
-      const response = await this.makeApiRequest('/api/marketplace/stats');
+      // Add cache-busting parameter to prevent service worker caching issues
+      const cacheBuster = `_=${Date.now()}`;
+      const endpoint = `/api/marketplace/stats?${cacheBuster}`;
+      const response = await this.makeApiRequest(endpoint);
       
       if (!response.ok) {
         console.warn('[MarketplaceService] Stats request failed:', response.status);
@@ -1344,17 +1374,21 @@ export class UnifiedMarketplaceService {
 
   async healthCheck(): Promise<boolean> {
     try {
-      const response = await this.makeApiRequest(`/api/marketplace/health`);
+      // Add cache-busting parameter to prevent service worker caching issues
+      const cacheBuster = `_=${Date.now()}`;
+      const endpoint = `/api/marketplace/health?${cacheBuster}`;
+      const response = await this.makeApiRequest(endpoint);
       return response.ok;
     } catch (error) {
       console.error('Health check failed:', error);
       return false;
     }
-  }
-
-  async getCategories(): Promise<CategoryInfo[]> {
+  }  async getCategories(): Promise<CategoryInfo[]> {
     try {
-      const response = await this.makeApiRequest('/api/marketplace/listings/categories');
+      // Add cache-busting parameter to prevent service worker caching issues
+      const cacheBuster = `_=${Date.now()}`;
+      const endpoint = `/api/marketplace/listings/categories?${cacheBuster}`;
+      const response = await this.makeApiRequest(endpoint);
 
       if (!response.ok) {
         console.warn('Categories API unavailable, using mock data');

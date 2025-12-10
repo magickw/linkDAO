@@ -94,9 +94,8 @@ const SERVICE_CIRCUIT_BREAKER_CONFIGS = {
     halfOpenMaxCalls: 3
   },
   marketplace: {
-    failureThreshold: 3, // Lower threshold for marketplace
-    recoveryTimeout: 30000, // Faster recovery for marketplace
-    halfOpenMaxCalls: 2
+    failureThreshold: 5, // Increase threshold to reduce false positives
+    recoveryTimeout: 15000, // Faster recovery for marketplace
   }
 };
 

@@ -999,8 +999,8 @@ app.use('/api/marketplace', ensValidationRoutes);
 // Marketplace listings routes (legacy support)
 app.use('/api/marketplace', marketplaceListingsRoutes);
 // Register main marketplace routes at different path to avoid conflicts
-app.use('/api/v1/marketplace', marketplaceRoutes);
-// app.use('/api/marketplace', marketplaceRoutes);
+// app.use('/api/v1/marketplace', marketplaceRoutes);
+app.use('/api/marketplace/core', marketplaceRoutes);
 
 // Cart routes
 app.use('/api/v1/cart', cartRoutes);
@@ -1067,7 +1067,7 @@ import returnRoutes from './routes/returnRoutes';
 app.use('/api/order-events', orderEventHandlerRoutes);
 
 // Return and refund routes
-app.use('/api/marketplace', returnRoutes);
+app.use('/api/marketplace/returns', returnRoutes);
 
 // x402 payment routes
 app.use('/api/x402', x402PaymentRoutes);
