@@ -965,11 +965,10 @@ app.use('/api/listings', listingRoutes);
 // Order creation routes
 app.use('/api/orders', orderCreationRoutes);
 
-// Marketplace seller routes
-// NOTE: Seller Profile routes are now handled by sellerProfileRoutes to avoid conflicts
-// app.use('/api/marketplace', marketplaceSellerRoutes);
+// Marketplace seller routes - Main seller endpoints
+app.use('/api/marketplace', marketplaceSellerRoutes);
 
-// Seller profile API routes
+// Seller profile API routes - Additional profile functionality
 app.use('/api/marketplace/seller/profile', sellerProfileRoutes);
 
 // Seller dashboard routes

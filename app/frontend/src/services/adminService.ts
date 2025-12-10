@@ -1465,6 +1465,33 @@ class AdminService {
       return { success: false };
     }
   }
+
+  // User Management - Create User
+  async createUser(userData: {
+    handle: string;
+    email: string;
+    walletAddress: string;
+    role: string;
+    password: string;
+  }): Promise<{ success: boolean; user?: AuthUser; error?: string }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/users`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(userData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to create user: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in createUser:', error);
+      return { success: false, error: (error as any).message };
+    }
+  }
 }
 
 export const adminService = new AdminService();

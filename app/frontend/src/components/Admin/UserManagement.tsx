@@ -270,8 +270,6 @@ export function UserManagement() {
   const loadUserStats = async () => {
     try {
       setLoadingStats(true);
-      // This would typically be a call to get user statistics
-      // For now, we'll use mock data or fetch from an actual API
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/admin/users/stats`, {
         headers: adminService.getAuthHeaders()
       });
@@ -280,36 +278,27 @@ export function UserManagement() {
         const data = await response.json();
         setUserStats(data);
       } else {
-        // Mock data if API is not available
+        console.error('Failed to load user stats:', response.status, response.statusText);
+        // Set empty stats object instead of mock data
         setUserStats({
-          totalUsers: 1000,
-          activeUsers: 850,
-          suspendedUsers: 50,
-          newUsersThisMonth: 150,
-          newUsersThisWeek: 45,
-          userGrowthRate: 12.5,
-          mostActiveUsers: [
-            { id: 'user1', handle: 'active_user_1', activityCount: 120 },
-            { id: 'user2', handle: 'active_user_2', activityCount: 98 },
-            { id: 'user3', handle: 'active_user_3', activityCount: 87 }
-          ]
+          totalUsers: 0,
+          activeUsers: 0,
+          suspendedUsers: 0,
+          userGrowthRate: 0,
+          newUsersThisMonth: 0,
+          newUsersThisWeek: 0
         });
       }
     } catch (error) {
       console.error('Failed to load user stats:', error);
-      // Set mock data on error
+      // Set empty stats object instead of mock data
       setUserStats({
-        totalUsers: 1000,
-        activeUsers: 850,
-        suspendedUsers: 50,
-        newUsersThisMonth: 150,
-        newUsersThisWeek: 45,
-        userGrowthRate: 12.5,
-        mostActiveUsers: [
-          { id: 'user1', handle: 'active_user_1', activityCount: 120 },
-          { id: 'user2', handle: 'active_user_2', activityCount: 98 },
-          { id: 'user3', handle: 'active_user_3', activityCount: 87 }
-        ]
+        totalUsers: 0,
+        activeUsers: 0,
+        suspendedUsers: 0,
+        userGrowthRate: 0,
+        newUsersThisMonth: 0,
+        newUsersThisWeek: 0
       });
     } finally {
       setLoadingStats(false);
@@ -322,24 +311,15 @@ export function UserManagement() {
     setCreationError('');
 
     try {
-      // In a real implementation, we would call the API to create a user
-      // For now, we'll just show a success message
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/admin/users/create`, {
-        method: 'POST',
-        headers: {
-          ...adminService.getAuthHeaders(),
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          handle: newUser.handle,
-          email: newUser.email,
-          walletAddress: newUser.walletAddress,
-          role: newUser.role,
-          password: newUser.password
-        })
+      const result = await adminService.createUser({
+        handle: newUser.handle,
+        email: newUser.email,
+        walletAddress: newUser.walletAddress,
+        role: newUser.role,
+        password: newUser.password
       });
 
-      if (response.ok) {
+      if (result.success) {
         setShowCreateUserModal(false);
         setNewUser({
           handle: '',
@@ -350,8 +330,7 @@ export function UserManagement() {
         });
         loadUsers(); // Refresh the user list
       } else {
-        const errorData = await response.json();
-        setCreationError(errorData.message || 'Failed to create user');
+        setCreationError(result.error || 'Failed to create user');
       }
     } catch (error) {
       console.error('Failed to create user:', error);
@@ -1067,8 +1046,7 @@ export function UserManagement() {
                         size="sm"
                         className="text-xs"
                         onClick={() => {
-                          // In a real implementation, this would open a profile edit modal
-                          alert('Profile editing functionality would open here');
+                          // Profile editing functionality would open here
                         }}
                       >
                         Edit Profile
@@ -1078,8 +1056,7 @@ export function UserManagement() {
                         size="sm"
                         className="text-xs"
                         onClick={() => {
-                          // In a real implementation, this would reset the user's password
-                          alert('Password reset functionality would go here');
+                          // Password reset functionality would go here
                         }}
                       >
                         Reset Password
@@ -1089,8 +1066,7 @@ export function UserManagement() {
                         size="sm"
                         className="text-xs"
                         onClick={() => {
-                          // In a real implementation, this would manage the user's KYC status
-                          alert('KYC management functionality would go here');
+                          // KYC management functionality would go here
                         }}
                       >
                         Manage KYC
