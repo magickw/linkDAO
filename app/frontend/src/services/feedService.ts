@@ -109,6 +109,14 @@ const cacheUtils = {
   
   clear: () => {
     feedCache.clear();
+  },
+  
+  invalidate: (pattern: RegExp) => {
+    for (const [key] of feedCache.entries()) {
+      if (pattern.test(key)) {
+        feedCache.delete(key);
+      }
+    }
   }
 };
 
@@ -785,6 +793,9 @@ export class FeedService {
         metadata: { hasParent: !!parentCommentId }
       });
       
+      // Invalidate feed cache to ensure updated comment counts appear
+      cacheUtils.invalidate(/^feed_/); // Clear all feed cache entries to ensure fresh data
+      
       return comment;
     } catch (error: any) {
       console.error('Error adding comment:', error);
@@ -973,6 +984,9 @@ export class FeedService {
         metadata: { type, tokenAmount }
       });
       
+      // Invalidate feed cache to ensure updated reaction counts appear
+      cacheUtils.invalidate(/^feed_/); // Clear all feed cache entries to ensure fresh data
+      
       return reaction;
     } catch (error: any) {
       console.error('Error adding reaction:', error);
@@ -1080,6 +1094,9 @@ export class FeedService {
         timestamp: new Date(),
         metadata: { amount, tokenType, hasMessage: !!message }
       });
+      
+      // Invalidate feed cache to ensure updated tip counts appear
+      cacheUtils.invalidate(/^feed_/); // Clear all feed cache entries to ensure fresh data
       
       return tip;
     } catch (error: any) {

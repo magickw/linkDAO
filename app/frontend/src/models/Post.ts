@@ -77,12 +77,13 @@ export function convertBackendPostToPost(backendPost: any): Post {
     reputationScore: parseInt(backendPost.reputationScore || backendPost.reputation_score || 0),
 
     // Engagement data (will be populated by services)
-    reactions: [] as Reaction[],
+    reactions: [] as Reaction[], // Reactions will be fetched separately to avoid overfetching
     tips: [] as Tip[],
     comments: backendPost.commentCount || 0,
     shares: backendPost.shareCount || 0,
     views: backendPost.viewCount || 0,
     engagementScore: backendPost.engagementScore || 0,
+    reactionCount: backendPost.reactionCount || 0, // Include reaction count for display
 
     // Enhanced features (will be populated by services)
     previews: [] as ContentPreview[],

@@ -169,11 +169,35 @@ export default function EnhancedHomeFeed({
               post={post}
               onReaction={async (postId, type, amount) => {
                 await FeedService.addReaction(postId, type, amount || 0);
+                
+                // Update the local state to reflect the new reaction count
+                setPosts(prevPosts => 
+                  prevPosts.map(p => 
+                    p.id === postId 
+                      ? { 
+                          ...p, 
+                          reactionCount: (p.reactionCount || 0) + 1 
+                        } 
+                      : p
+                  )
+                );
+                
                 addToast('Reaction added successfully!', 'success');
               }}
               onTip={async (postId, amount, token) => {
                 if (amount && token) {
                   await FeedService.sendTip(postId, parseFloat(amount), token, '');
+                  // Update the local state to reflect the new tip
+                  setPosts(prevPosts => 
+                    prevPosts.map(p => 
+                      p.id === postId 
+                        ? { 
+                            ...p, 
+                            totalTipAmount: (p.totalTipAmount || 0) + parseFloat(amount)
+                          } 
+                        : p
+                    )
+                  );
                   addToast('Tip sent successfully!', 'success');
                 }
               }}

@@ -324,350 +324,397 @@ export class BlockchainMarketplaceService {
   }
 
   async updateListing(id: string, input: UpdateListingInput): Promise<MarketplaceListing | null> {
-    const updates: any = {};
-    if (input.price !== undefined) updates.price = input.price;
-    if (input.quantity !== undefined) updates.quantity = input.quantity;
-    
-    const dbListing = await databaseService.updateListing(id, updates);
-    if (!dbListing) return null;
-    
-    // Get seller address
-    const seller = await userProfileService.getProfileById(dbListing.sellerId || '');
-    if (!seller) return null;
-    
-    const now = new Date().toISOString();
-    const listing: MarketplaceListing = {
-      id: dbListing.id,
-      sellerWalletAddress: seller.walletAddress,
-      tokenAddress: dbListing.tokenAddress,
-      price: dbListing.price,
-      quantity: dbListing.quantity,
-      itemType: dbListing.itemType as 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE',
-      listingType: dbListing.listingType as 'FIXED_PRICE' | 'AUCTION',
-      status: (dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED') || 'ACTIVE',
-      startTime: dbListing.startTime?.toISOString() || now,
-      endTime: dbListing.endTime ? dbListing.endTime.toISOString() : undefined,
-      highestBid: dbListing.highestBid?.toString(),
-      highestBidderWalletAddress: dbListing.highestBidder || undefined,
-      metadataURI: dbListing.metadataURI,
-      isEscrowed: dbListing.isEscrowed || false,
-      nftStandard: dbListing.nftStandard as 'ERC721' | 'ERC1155' | undefined,
-      tokenId: dbListing.tokenId || undefined,
-      reservePrice: dbListing.reservePrice?.toString(),
-      minIncrement: dbListing.minIncrement?.toString(),
-      reserveMet: dbListing.reserveMet || false,
-      createdAt: dbListing.createdAt?.toISOString() || now,
-      updatedAt: dbListing.updatedAt?.toISOString() || now
-    };
-    
-    return listing;
+    try {
+      const updates: any = {};
+      if (input.price !== undefined) updates.price = input.price;
+      if (input.quantity !== undefined) updates.quantity = input.quantity;
+      
+      const dbListing = await this.withTimeout(databaseService.updateListing(id, updates));
+      if (!dbListing) return null;
+      
+      // Get seller address
+      const seller = await this.withTimeout(userProfileService.getProfileById(dbListing.sellerId || ''));
+      if (!seller) return null;
+      
+      const now = new Date().toISOString();
+      const listing: MarketplaceListing = {
+        id: dbListing.id,
+        sellerWalletAddress: seller.walletAddress,
+        tokenAddress: dbListing.tokenAddress,
+        price: dbListing.price,
+        quantity: dbListing.quantity,
+        itemType: dbListing.itemType as 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE',
+        listingType: dbListing.listingType as 'FIXED_PRICE' | 'AUCTION',
+        status: (dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED') || 'ACTIVE',
+        startTime: dbListing.startTime?.toISOString() || now,
+        endTime: dbListing.endTime ? dbListing.endTime.toISOString() : undefined,
+        highestBid: dbListing.highestBid?.toString(),
+        highestBidderWalletAddress: dbListing.highestBidder || undefined,
+        metadataURI: dbListing.metadataURI,
+        isEscrowed: dbListing.isEscrowed || false,
+        nftStandard: dbListing.nftStandard as 'ERC721' | 'ERC1155' | undefined,
+        tokenId: dbListing.tokenId || undefined,
+        reservePrice: dbListing.reservePrice?.toString(),
+        minIncrement: dbListing.minIncrement?.toString(),
+        reserveMet: dbListing.reserveMet || false,
+        createdAt: dbListing.createdAt?.toISOString() || now,
+        updatedAt: dbListing.updatedAt?.toISOString() || now
+      };
+      
+      return listing;
+    } catch (error) {
+      safeLogger.error('Error updating marketplace listing:', error);
+      // Return null for database errors to enable graceful degradation
+      return null;
+    }
   }
 
   async cancelListing(id: string): Promise<boolean> {
-    const dbListing = await databaseService.cancelListing(id);
-    return dbListing !== null;
+    try {
+      const dbListing = await this.withTimeout(databaseService.cancelListing(id));
+      return dbListing !== null;
+    } catch (error) {
+      safeLogger.error('Error canceling marketplace listing:', error);
+      // Return false for database errors to enable graceful degradation
+      return false;
+    }
   }
 
   // Bids
   async placeBid(listingId: string, input: PlaceBidInput): Promise<MarketplaceBid | null> {
-    // Ensure bidder exists
-    let bidderUser = await userProfileService.getProfileByAddress(input.bidderWalletAddress);
-    if (!bidderUser) {
-      bidderUser = await userProfileService.createProfile({
-        walletAddress: input.bidderWalletAddress,
-        handle: '',
-        ens: '',
-        avatarCid: '',
-        bioCid: ''
-      });
-    }
-    
-    const dbBid = await databaseService.placeBid(
-      listingId,
-      bidderUser.id,
-      input.amount
-    );
-    
-    if (!dbBid) return null;
-    
-    const bid: MarketplaceBid = {
-      id: dbBid.id.toString(),
-      listingId: listingId,
-      bidderWalletAddress: input.bidderWalletAddress,
-      amount: dbBid.amount,
-      timestamp: dbBid.timestamp?.toISOString() || new Date().toISOString()
-    };
-    
-    return bid;
-  }
-
-  async getBidsByListing(listingId: string): Promise<MarketplaceBid[]> {
-    const dbBids = await databaseService.getBidsByListing(listingId);
-    
-    const bids: MarketplaceBid[] = [];
-    for (const dbBid of dbBids) {
-      // Get bidder address
-      const bidder = await userProfileService.getProfileById(dbBid.bidderId || '');
-      if (!bidder) continue;
+    try {
+      // Ensure bidder exists
+      let bidderUser = await this.withTimeout(userProfileService.getProfileByAddress(input.bidderWalletAddress));
+      if (!bidderUser) {
+        bidderUser = await this.withTimeout(userProfileService.createProfile({
+          walletAddress: input.bidderWalletAddress,
+          handle: '',
+          ens: '',
+          avatarCid: '',
+          bioCid: ''
+        }));
+      }
+      
+      const dbBid = await this.withTimeout(databaseService.placeBid(
+        listingId,
+        bidderUser.id,
+        input.amount
+      ));
+      
+      if (!dbBid) return null;
       
       const bid: MarketplaceBid = {
         id: dbBid.id.toString(),
         listingId: listingId,
-        bidderWalletAddress: bidder.walletAddress,
+        bidderWalletAddress: input.bidderWalletAddress,
         amount: dbBid.amount,
         timestamp: dbBid.timestamp?.toISOString() || new Date().toISOString()
       };
-      bids.push(bid);
+      
+      return bid;
+    } catch (error) {
+      safeLogger.error('Error placing bid:', error);
+      // Return null for database errors to enable graceful degradation
+      return null;
     }
-    
-    return bids;
+  }
+
+  async getBidsByListing(listingId: string): Promise<MarketplaceBid[]> {
+    try {
+      const dbBids = await this.withTimeout(databaseService.getBidsByListing(listingId));
+      
+      const bids: MarketplaceBid[] = [];
+      for (const dbBid of dbBids) {
+        // Get bidder address
+        const bidder = await this.withTimeout(userProfileService.getProfileById(dbBid.bidderId || ''));
+        if (!bidder) continue;
+        
+        const bid: MarketplaceBid = {
+          id: dbBid.id.toString(),
+          listingId: listingId,
+          bidderWalletAddress: bidder.walletAddress,
+          amount: dbBid.amount,
+          timestamp: dbBid.timestamp?.toISOString() || new Date().toISOString()
+        };
+        bids.push(bid);
+      }
+      
+      return bids;
+    } catch (error) {
+      safeLogger.error('Error getting bids by listing:', error);
+      // Return empty array for database errors to enable graceful degradation
+      return [];
+    }
   }
 
   async getBidsByBidder(bidderAddress: string): Promise<MarketplaceBid[]> {
-    const bidderUser = await userProfileService.getProfileByAddress(bidderAddress);
-    if (!bidderUser) return [];
-    
-    const dbBids = await databaseService.getBidsByBidder(bidderUser.id);
-    
-    const bids: MarketplaceBid[] = [];
-    for (const dbBid of dbBids) {
-      const bid: MarketplaceBid = {
-        id: dbBid.id.toString(),
-        listingId: dbBid.listingId?.toString() || '',
-        bidderWalletAddress: bidderAddress,
-        amount: dbBid.amount,
-        timestamp: dbBid.timestamp?.toISOString() || new Date().toISOString()
-      };
-      bids.push(bid);
+    try {
+      const bidderUser = await this.withTimeout(userProfileService.getProfileByAddress(bidderAddress));
+      if (!bidderUser) return [];
+      
+      const dbBids = await this.withTimeout(databaseService.getBidsByBidder(bidderUser.id));
+      
+      const bids: MarketplaceBid[] = [];
+      for (const dbBid of dbBids) {
+        const bid: MarketplaceBid = {
+          id: dbBid.id.toString(),
+          listingId: dbBid.listingId?.toString() || '',
+          bidderWalletAddress: bidderAddress,
+          amount: dbBid.amount,
+          timestamp: dbBid.timestamp?.toISOString() || new Date().toISOString()
+        };
+        bids.push(bid);
+      }
+      
+      return bids;
+    } catch (error) {
+      safeLogger.error('Error getting bids by bidder:', error);
+      // Return empty array for database errors to enable graceful degradation
+      return [];
     }
-    
-    return bids;
   }
 
   // Offers
   async makeOffer(listingId: string, input: MakeOfferInput): Promise<MarketplaceOffer | null> {
-    // Ensure buyer exists
-    let buyerUser = await userProfileService.getProfileByAddress(input.buyerWalletAddress);
-    if (!buyerUser) {
-      buyerUser = await userProfileService.createProfile({
-        walletAddress: input.buyerWalletAddress,
-        handle: '',
-        ens: '',
-        avatarCid: '',
-        bioCid: ''
-      });
-    }
-    
-    const dbOffer = await databaseService.makeOffer(
-      listingId,
-      buyerUser.id,
-      input.amount
-    );
-    
-    if (!dbOffer) return null;
-    
-    const offer: MarketplaceOffer = {
-      id: dbOffer.id.toString(),
-      listingId: listingId,
-      buyerWalletAddress: input.buyerWalletAddress,
-      amount: dbOffer.amount,
-      createdAt: dbOffer.createdAt?.toISOString() || new Date().toISOString(),
-      accepted: dbOffer.accepted || false
-    };
-    
-    return offer;
-  }
-
-  async getOffersByListing(listingId: string): Promise<MarketplaceOffer[]> {
-    const dbOffers = await databaseService.getOffersByListing(listingId);
-    
-    const offers: MarketplaceOffer[] = [];
-    for (const dbOffer of dbOffers) {
-      // Get buyer address
-      const buyer = await userProfileService.getProfileById(dbOffer.buyerId || '');
-      if (!buyer) continue;
+    try {
+      // Ensure buyer exists
+      let buyerUser = await this.withTimeout(userProfileService.getProfileByAddress(input.buyerWalletAddress));
+      if (!buyerUser) {
+        buyerUser = await this.withTimeout(userProfileService.createProfile({
+          walletAddress: input.buyerWalletAddress,
+          handle: '',
+          ens: '',
+          avatarCid: '',
+          bioCid: ''
+        }));
+      }
+      
+      const dbOffer = await this.withTimeout(databaseService.makeOffer(
+        listingId,
+        buyerUser.id,
+        input.amount
+      ));
+      
+      if (!dbOffer) return null;
       
       const offer: MarketplaceOffer = {
         id: dbOffer.id.toString(),
         listingId: listingId,
-        buyerWalletAddress: buyer.walletAddress,
+        buyerWalletAddress: input.buyerWalletAddress,
         amount: dbOffer.amount,
         createdAt: dbOffer.createdAt?.toISOString() || new Date().toISOString(),
         accepted: dbOffer.accepted || false
       };
-      offers.push(offer);
+      
+      return offer;
+    } catch (error) {
+      safeLogger.error('Error making offer:', error);
+      // Return null for database errors to enable graceful degradation
+      return null;
     }
-    
-    return offers;
+  }
+
+  async getOffersByListing(listingId: string): Promise<MarketplaceOffer[]> {
+    try {
+      const dbOffers = await this.withTimeout(databaseService.getOffersByListing(listingId));
+      
+      const offers: MarketplaceOffer[] = [];
+      for (const dbOffer of dbOffers) {
+        // Get buyer address
+        const buyer = await this.withTimeout(userProfileService.getProfileById(dbOffer.buyerId || ''));
+        if (!buyer) continue;
+        
+        const offer: MarketplaceOffer = {
+          id: dbOffer.id.toString(),
+          listingId: listingId,
+          buyerWalletAddress: buyer.walletAddress,
+          amount: dbOffer.amount,
+          createdAt: dbOffer.createdAt?.toISOString() || new Date().toISOString(),
+          accepted: dbOffer.accepted || false
+        };
+        offers.push(offer);
+      }
+      
+      return offers;
+    } catch (error) {
+      safeLogger.error('Error getting offers by listing:', error);
+      // Return empty array for database errors to enable graceful degradation
+      return [];
+    }
   }
 
   async getOffersByBuyer(buyerAddress: string): Promise<MarketplaceOffer[]> {
-    const buyerUser = await userProfileService.getProfileByAddress(buyerAddress);
-    if (!buyerUser) return [];
-    
-    const dbOffers = await databaseService.getOffersByBuyer(buyerUser.id);
-    
-    const offers: MarketplaceOffer[] = [];
-    for (const dbOffer of dbOffers) {
-      const offer: MarketplaceOffer = {
-        id: dbOffer.id.toString(),
-        listingId: dbOffer.listingId?.toString() || '',
-        buyerWalletAddress: buyerAddress,
-        amount: dbOffer.amount,
-        createdAt: dbOffer.createdAt?.toISOString() || new Date().toISOString(),
-        accepted: dbOffer.accepted || false
-      };
-      offers.push(offer);
+    try {
+      const buyerUser = await this.withTimeout(userProfileService.getProfileByAddress(buyerAddress));
+      if (!buyerUser) return [];
+      
+      const dbOffers = await this.withTimeout(databaseService.getOffersByBuyer(buyerUser.id));
+      
+      const offers: MarketplaceOffer[] = [];
+      for (const dbOffer of dbOffers) {
+        const offer: MarketplaceOffer = {
+          id: dbOffer.id.toString(),
+          listingId: dbOffer.listingId?.toString() || '',
+          buyerWalletAddress: buyerAddress,
+          amount: dbOffer.amount,
+          createdAt: dbOffer.createdAt?.toISOString() || new Date().toISOString(),
+          accepted: dbOffer.accepted || false
+        };
+        offers.push(offer);
+      }
+      
+      return offers;
+    } catch (error) {
+      safeLogger.error('Error getting offers by buyer:', error);
+      // Return empty array for database errors to enable graceful degradation
+      return [];
     }
-    
-    return offers;
   }
 
   async acceptOffer(offerId: string): Promise<boolean> {
-    const dbOffer = await databaseService.acceptOffer(offerId);
-    return dbOffer !== null;
+    try {
+      const dbOffer = await this.withTimeout(databaseService.acceptOffer(offerId));
+      return dbOffer !== null;
+    } catch (error) {
+      safeLogger.error('Error accepting offer:', error);
+      // Return false for database errors to enable graceful degradation
+      return false;
+    }
   }
 
   // Escrow
   async createEscrow(listingId: string, buyerAddress: string, deliveryInfo?: string): Promise<MarketplaceEscrow | null> {
-    // Get listing
-    const listing = await this.getListingById(listingId);
-    if (!listing) return null;
-    
-    // Ensure buyer exists
-    let buyerUser = await userProfileService.getProfileByAddress(buyerAddress);
-    if (!buyerUser) {
-      buyerUser = await userProfileService.createProfile({
-        walletAddress: buyerAddress,
-        handle: '',
-        ens: '',
-        avatarCid: '',
-        bioCid: ''
-      });
+    try {
+      // Get listing
+      const listing = await this.withTimeout(this.getListingById(listingId));
+      if (!listing) return null;
+      
+      // Ensure buyer exists
+      let buyerUser = await this.withTimeout(userProfileService.getProfileByAddress(buyerAddress));
+      if (!buyerUser) {
+        buyerUser = await this.withTimeout(userProfileService.createProfile({
+          walletAddress: buyerAddress,
+          handle: '',
+          ens: '',
+          avatarCid: '',
+          bioCid: ''
+        }));
+      }
+      
+      // Get seller user
+      const sellerUser = await this.withTimeout(userProfileService.getProfileByAddress(listing.sellerWalletAddress));
+      if (!sellerUser) return null;
+      
+      const dbEscrow = await this.withTimeout(databaseService.createEscrow(
+        listingId,
+        buyerUser.id,
+        sellerUser.id,
+        listing.price,
+        deliveryInfo
+      ));
+      
+      if (!dbEscrow) return null;
+      
+      const escrow: MarketplaceEscrow = {
+        id: dbEscrow.id.toString(),
+        listingId: listingId,
+        buyerWalletAddress: buyerAddress,
+        sellerWalletAddress: listing.sellerWalletAddress,
+        amount: dbEscrow.amount,
+        buyerApproved: dbEscrow.buyerApproved || false,
+        sellerApproved: dbEscrow.sellerApproved || false,
+        disputeOpened: dbEscrow.disputeOpened || false,
+        resolverWalletAddress: dbEscrow.resolverAddress || undefined,
+        createdAt: dbEscrow.createdAt?.toISOString() || new Date().toISOString(),
+        resolvedAt: dbEscrow.resolvedAt?.toISOString(),
+        deliveryInfo: dbEscrow.deliveryInfo || undefined,
+        deliveryConfirmed: dbEscrow.deliveryConfirmed || false
+      };
+      
+      return escrow;
+    } catch (error) {
+      safeLogger.error('Error creating escrow:', error);
+      // Return null for database errors to enable graceful degradation
+      return null;
     }
-    
-    // Get seller user
-    const sellerUser = await userProfileService.getProfileByAddress(listing.sellerWalletAddress);
-    if (!sellerUser) return null;
-    
-    const dbEscrow = await databaseService.createEscrow(
-      listingId,
-      buyerUser.id,
-      sellerUser.id,
-      listing.price,
-      deliveryInfo
-    );
-    
-    if (!dbEscrow) return null;
-    
-    const escrow: MarketplaceEscrow = {
-      id: dbEscrow.id.toString(),
-      listingId: listingId,
-      buyerWalletAddress: buyerAddress,
-      sellerWalletAddress: listing.sellerWalletAddress,
-      amount: dbEscrow.amount,
-      buyerApproved: dbEscrow.buyerApproved || false,
-      sellerApproved: dbEscrow.sellerApproved || false,
-      disputeOpened: dbEscrow.disputeOpened || false,
-      resolverWalletAddress: dbEscrow.resolverAddress || undefined,
-      createdAt: dbEscrow.createdAt?.toISOString() || new Date().toISOString(),
-      resolvedAt: dbEscrow.resolvedAt?.toISOString(),
-      deliveryInfo: dbEscrow.deliveryInfo || undefined,
-      deliveryConfirmed: dbEscrow.deliveryConfirmed || false
-    };
-    
-    return escrow;
   }
 
   async approveEscrow(escrowId: string, userAddress: string): Promise<boolean> {
-    // Get user
-    const user = await userProfileService.getProfileByAddress(userAddress);
-    if (!user) return false;
-    
-    // Get escrow
-    const dbEscrow = await databaseService.getEscrowById(escrowId);
-    if (!dbEscrow) return false;
-    
-    // Determine which approval to update
-    const updates: any = {};
-    if (dbEscrow.buyerId === user.id) {
-      updates.buyerApproved = true;
-    } else if (dbEscrow.sellerId === user.id) {
-      updates.sellerApproved = true;
-    } else {
-      return false; // User is not part of this escrow
+    try {
+      // Get user
+      const user = await this.withTimeout(userProfileService.getProfileByAddress(userAddress));
+      if (!user) return false;
+      
+      // Get escrow
+      const dbEscrow = await this.withTimeout(databaseService.getEscrowById(escrowId));
+      if (!dbEscrow) return false;
+      
+      // Determine which approval to update
+      const updates: any = {};
+      if (dbEscrow.buyerId === user.id) {
+        updates.buyerApproved = true;
+      } else if (dbEscrow.sellerId === user.id) {
+        updates.sellerApproved = true;
+      } else {
+        return false; // User is not part of this escrow
+      }
+      
+      const updatedEscrow = await this.withTimeout(databaseService.updateEscrow(escrowId, updates));
+      return updatedEscrow !== null;
+    } catch (error) {
+      safeLogger.error('Error approving escrow:', error);
+      // Return false for database errors to enable graceful degradation
+      return false;
     }
-    
-    const updatedEscrow = await databaseService.updateEscrow(escrowId, updates);
-    return updatedEscrow !== null;
   }
 
   async openDispute(escrowId: string, userAddress: string): Promise<boolean> {
-    // Get user
-    const user = await userProfileService.getProfileByAddress(userAddress);
-    if (!user) return false;
-    
-    // Get escrow
-    const dbEscrow = await databaseService.getEscrowById(escrowId);
-    if (!dbEscrow) return false;
-    
-    // Check if user is part of this escrow
-    if (dbEscrow.buyerId !== user.id && dbEscrow.sellerId !== user.id) {
+    try {
+      // Get user
+      const user = await this.withTimeout(userProfileService.getProfileByAddress(userAddress));
+      if (!user) return false;
+      
+      // Get escrow
+      const dbEscrow = await this.withTimeout(databaseService.getEscrowById(escrowId));
+      if (!dbEscrow) return false;
+      
+      // Check if user is part of this escrow
+      if (dbEscrow.buyerId !== user.id && dbEscrow.sellerId !== user.id) {
+        return false;
+      }
+      
+      const updatedEscrow = await this.withTimeout(databaseService.updateEscrow(escrowId, {
+        disputeOpened: true
+      }));
+      
+      return updatedEscrow !== null;
+    } catch (error) {
+      safeLogger.error('Error opening dispute:', error);
+      // Return false for database errors to enable graceful degradation
       return false;
     }
-    
-    const updatedEscrow = await databaseService.updateEscrow(escrowId, {
-      disputeOpened: true
-    });
-    
-    return updatedEscrow !== null;
   }
 
   async confirmDelivery(escrowId: string, deliveryInfo: string): Promise<boolean> {
-    const updatedEscrow = await databaseService.confirmDelivery(escrowId, deliveryInfo);
-    return updatedEscrow !== null;
+    try {
+      const updatedEscrow = await this.withTimeout(databaseService.confirmDelivery(escrowId, deliveryInfo));
+      return updatedEscrow !== null;
+    } catch (error) {
+      safeLogger.error('Error confirming delivery:', error);
+      // Return false for database errors to enable graceful degradation
+      return false;
+    }
   }
 
   async getEscrowById(id: string): Promise<MarketplaceEscrow | null> {
-    const dbEscrow = await databaseService.getEscrowById(id);
-    if (!dbEscrow) return null;
-    
-    // Get buyer and seller addresses
-    const buyer = await userProfileService.getProfileById(dbEscrow.buyerId || '');
-    const seller = await userProfileService.getProfileById(dbEscrow.sellerId || '');
-    if (!buyer || !seller) return null;
-    
-    const escrow: MarketplaceEscrow = {
-      id: dbEscrow.id.toString(),
-      listingId: dbEscrow.listingId?.toString() || '',
-      buyerWalletAddress: buyer.walletAddress,
-      sellerWalletAddress: seller.walletAddress,
-      amount: dbEscrow.amount,
-      buyerApproved: dbEscrow.buyerApproved || false,
-      sellerApproved: dbEscrow.sellerApproved || false,
-      disputeOpened: dbEscrow.disputeOpened || false,
-      resolverWalletAddress: dbEscrow.resolverAddress || undefined,
-      createdAt: dbEscrow.createdAt?.toISOString() || new Date().toISOString(),
-      resolvedAt: dbEscrow.resolvedAt?.toISOString(),
-      deliveryInfo: dbEscrow.deliveryInfo || undefined,
-      deliveryConfirmed: dbEscrow.deliveryConfirmed || false
-    };
-    
-    return escrow;
-  }
-
-  async getEscrowsByUser(userAddress: string): Promise<MarketplaceEscrow[]> {
-    const user = await userProfileService.getProfileByAddress(userAddress);
-    if (!user) return [];
-    
-    const dbEscrows = await databaseService.getEscrowsByUser(user.id);
-    
-    const escrows: MarketplaceEscrow[] = [];
-    for (const dbEscrow of dbEscrows) {
+    try {
+      const dbEscrow = await this.withTimeout(databaseService.getEscrowById(id));
+      if (!dbEscrow) return null;
+      
       // Get buyer and seller addresses
-      const buyer = await userProfileService.getProfileById(dbEscrow.buyerId || '');
-      const seller = await userProfileService.getProfileById(dbEscrow.sellerId || '');
-      if (!buyer || !seller) continue;
+      const buyer = await this.withTimeout(userProfileService.getProfileById(dbEscrow.buyerId || ''));
+      const seller = await this.withTimeout(userProfileService.getProfileById(dbEscrow.sellerId || ''));
+      if (!buyer || !seller) return null;
       
       const escrow: MarketplaceEscrow = {
         id: dbEscrow.id.toString(),
@@ -684,87 +731,142 @@ export class BlockchainMarketplaceService {
         deliveryInfo: dbEscrow.deliveryInfo || undefined,
         deliveryConfirmed: dbEscrow.deliveryConfirmed || false
       };
-      escrows.push(escrow);
+      
+      return escrow;
+    } catch (error) {
+      safeLogger.error('Error getting escrow by ID:', error);
+      // Return null for database errors to enable graceful degradation
+      return null;
     }
-    
-    return escrows;
+  }
+
+  async getEscrowsByUser(userAddress: string): Promise<MarketplaceEscrow[]> {
+    try {
+      const user = await this.withTimeout(userProfileService.getProfileByAddress(userAddress));
+      if (!user) return [];
+      
+      const dbEscrows = await this.withTimeout(databaseService.getEscrowsByUser(user.id));
+      
+      const escrows: MarketplaceEscrow[] = [];
+      for (const dbEscrow of dbEscrows) {
+        // Get buyer and seller addresses
+        const buyer = await this.withTimeout(userProfileService.getProfileById(dbEscrow.buyerId || ''));
+        const seller = await this.withTimeout(userProfileService.getProfileById(dbEscrow.sellerId || ''));
+        if (!buyer || !seller) continue;
+        
+        const escrow: MarketplaceEscrow = {
+          id: dbEscrow.id.toString(),
+          listingId: dbEscrow.listingId?.toString() || '',
+          buyerWalletAddress: buyer.walletAddress,
+          sellerWalletAddress: seller.walletAddress,
+          amount: dbEscrow.amount,
+          buyerApproved: dbEscrow.buyerApproved || false,
+          sellerApproved: dbEscrow.sellerApproved || false,
+          disputeOpened: dbEscrow.disputeOpened || false,
+          resolverWalletAddress: dbEscrow.resolverAddress || undefined,
+          createdAt: dbEscrow.createdAt?.toISOString() || new Date().toISOString(),
+          resolvedAt: dbEscrow.resolvedAt?.toISOString(),
+          deliveryInfo: dbEscrow.deliveryInfo || undefined,
+          deliveryConfirmed: dbEscrow.deliveryConfirmed || false
+        };
+        escrows.push(escrow);
+      }
+      
+      return escrows;
+    } catch (error) {
+      safeLogger.error('Error getting escrows by user:', error);
+      // Return empty array for database errors to enable graceful degradation
+      return [];
+    }
   }
 
   // Orders
   async createOrder(listingId: string, buyerAddress: string, sellerAddress: string, 
                     amount: string, paymentToken: string, escrowId?: string): Promise<MarketplaceOrder | null> {
-    // Ensure buyer exists
-    let buyerUser = await userProfileService.getProfileByAddress(buyerAddress);
-    if (!buyerUser) {
-      buyerUser = await userProfileService.createProfile({
-        walletAddress: buyerAddress,
-        handle: '',
-        ens: '',
-        avatarCid: '',
-        bioCid: ''
-      });
+    try {
+      // Ensure buyer exists
+      let buyerUser = await this.withTimeout(userProfileService.getProfileByAddress(buyerAddress));
+      if (!buyerUser) {
+        buyerUser = await this.withTimeout(userProfileService.createProfile({
+          walletAddress: buyerAddress,
+          handle: '',
+          ens: '',
+          avatarCid: '',
+          bioCid: ''
+        }));
+      }
+      
+      // Ensure seller exists
+      let sellerUser = await this.withTimeout(userProfileService.getProfileByAddress(sellerAddress));
+      if (!sellerUser) {
+        sellerUser = await this.withTimeout(userProfileService.createProfile({
+          walletAddress: sellerAddress,
+          handle: '',
+          ens: '',
+          avatarCid: '',
+          bioCid: ''
+        }));
+      }
+      
+      const dbOrder = await this.withTimeout(databaseService.createOrder(
+        listingId,
+        buyerUser.id,
+        sellerUser.id,
+        amount,
+        paymentToken,
+        escrowId
+      ));
+      
+      if (!dbOrder) return null;
+      
+      const order: MarketplaceOrder = {
+        id: dbOrder.id.toString(),
+        listingId: listingId,
+        buyerWalletAddress: buyerAddress,
+        sellerWalletAddress: sellerAddress,
+        escrowId: escrowId,
+        amount: dbOrder.amount,
+        paymentToken: dbOrder.paymentToken || '',
+        status: (dbOrder.status?.toUpperCase() as 'PENDING' | 'COMPLETED' | 'DISPUTED' | 'REFUNDED') || 'PENDING',
+        createdAt: dbOrder.createdAt?.toISOString() || new Date().toISOString()
+      };
+      
+      return order;
+    } catch (error) {
+      safeLogger.error('Error creating order:', error);
+      // Return null for database errors to enable graceful degradation
+      return null;
     }
-    
-    // Ensure seller exists
-    let sellerUser = await userProfileService.getProfileByAddress(sellerAddress);
-    if (!sellerUser) {
-      sellerUser = await userProfileService.createProfile({
-        walletAddress: sellerAddress,
-        handle: '',
-        ens: '',
-        avatarCid: '',
-        bioCid: ''
-      });
-    }
-    
-    const dbOrder = await databaseService.createOrder(
-      listingId,
-      buyerUser.id,
-      sellerUser.id,
-      amount,
-      paymentToken,
-      escrowId
-    );
-    
-    if (!dbOrder) return null;
-    
-    const order: MarketplaceOrder = {
-      id: dbOrder.id.toString(),
-      listingId: listingId,
-      buyerWalletAddress: buyerAddress,
-      sellerWalletAddress: sellerAddress,
-      escrowId: escrowId,
-      amount: dbOrder.amount,
-      paymentToken: dbOrder.paymentToken || '',
-      status: (dbOrder.status?.toUpperCase() as 'PENDING' | 'COMPLETED' | 'DISPUTED' | 'REFUNDED') || 'PENDING',
-      createdAt: dbOrder.createdAt?.toISOString() || new Date().toISOString()
-    };
-    
-    return order;
   }
 
   async getOrderById(id: string): Promise<MarketplaceOrder | null> {
-    const dbOrder = await databaseService.getOrderById(id);
-    if (!dbOrder) return null;
-    
-    // Get buyer and seller addresses
-    const buyer = await userProfileService.getProfileById(dbOrder.buyerId || '');
-    const seller = await userProfileService.getProfileById(dbOrder.sellerId || '');
-    if (!buyer || !seller) return null;
-    
-    const order: MarketplaceOrder = {
-      id: dbOrder.id.toString(),
-      listingId: dbOrder.listingId?.toString() || '',
-      buyerWalletAddress: buyer.walletAddress,
-      sellerWalletAddress: seller.walletAddress,
-      escrowId: dbOrder.escrowId?.toString(),
-      amount: dbOrder.amount,
-      paymentToken: dbOrder.paymentToken || '',
-      status: (dbOrder.status?.toUpperCase() as 'PENDING' | 'COMPLETED' | 'DISPUTED' | 'REFUNDED') || 'PENDING',
-      createdAt: dbOrder.createdAt?.toISOString() || new Date().toISOString()
-    };
-    
-    return order;
+    try {
+      const dbOrder = await this.withTimeout(databaseService.getOrderById(id));
+      if (!dbOrder) return null;
+      
+      // Get buyer and seller addresses
+      const buyer = await this.withTimeout(userProfileService.getProfileById(dbOrder.buyerId || ''));
+      const seller = await this.withTimeout(userProfileService.getProfileById(dbOrder.sellerId || ''));
+      if (!buyer || !seller) return null;
+      
+      const order: MarketplaceOrder = {
+        id: dbOrder.id.toString(),
+        listingId: dbOrder.listingId?.toString() || '',
+        buyerWalletAddress: buyer.walletAddress,
+        sellerWalletAddress: seller.walletAddress,
+        escrowId: dbOrder.escrowId?.toString(),
+        amount: dbOrder.amount,
+        paymentToken: dbOrder.paymentToken || '',
+        status: (dbOrder.status?.toUpperCase() as 'PENDING' | 'COMPLETED' | 'DISPUTED' | 'REFUNDED') || 'PENDING',
+        createdAt: dbOrder.createdAt?.toISOString() || new Date().toISOString()
+      };
+      
+      return order;
+    } catch (error) {
+      safeLogger.error('Error getting order by ID:', error);
+      // Return null for database errors to enable graceful degradation
+      return null;
+    }
   }
 
   async getOrdersByUser(userAddress: string): Promise<MarketplaceOrder[]> {

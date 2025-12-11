@@ -17,6 +17,9 @@ const router = Router();
  * GET /api/marketplace/seller/{walletAddress}
  * Get seller profile by wallet address
  * Returns null data instead of 404 for missing profiles
+ * 
+ * NOTE: This is the primary endpoint for seller profile operations
+ * and should not be duplicated in other route files to avoid conflicts
  */
 router.get('/seller/:walletAddress',
   rateLimitWithCache(req => `seller_profile:${req.ip}`, 60, 60), // 60 requests per minute
@@ -80,6 +83,9 @@ router.get('/seller/:walletAddress',
 /**
  * PUT /api/marketplace/seller/{walletAddress}
  * Update existing seller profile
+ * 
+ * NOTE: This is the primary endpoint for seller profile updates
+ * and should not be duplicated in other route files to avoid conflicts
  */
 router.put('/seller/:walletAddress', csrfProtection,
   rateLimitWithCache(req => `seller_profile_update:${req.ip}`, 10, 60), // 10 updates per minute

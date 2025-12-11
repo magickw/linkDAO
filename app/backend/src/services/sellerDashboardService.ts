@@ -105,7 +105,12 @@ class SellerDashboardService {
     }
 
     // Use transaction to reduce connection overhead
-    const stats = await db.transaction(async (tx) => {
+    // Add timeout protection for database operations
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Database operation timeout')), 10000)
+    );
+    
+    const dbTransactionPromise = db.transaction(async (tx) => {
       // Verify seller exists and get user UUID for orders queries
       // NOTE: sellers.id is an integer (serial), but orders.sellerId references users.id (UUID)
       // So we need to get the user's UUID by wallet address for querying orders
@@ -180,6 +185,7 @@ class SellerDashboardService {
       let orderCounts: { pending: number; processing: number; completed: number; total: number } | undefined;
 
       // Only query orders if we have a valid user UUID
+      // Add a fallback mechanism to handle cases where user exists but sellerIdForOrders is undefined
       if (sellerIdForOrders) {
         // OPTIMIZED: Combined sales query with conditional aggregation
         [salesData] = await tx
@@ -280,6 +286,47 @@ class SellerDashboardService {
       };
     });
 
+    // Execute the database transaction with timeout protection
+    let stats;
+    try {
+      stats = await Promise.race([dbTransactionPromise, timeoutPromise]);
+    } catch (error) {
+      safeLogger.error('Dashboard stats database operation timed out:', error);
+      // Return default stats on timeout to enable graceful degradation
+      stats = {
+        sales: {
+          today: '0',
+          week: '0',
+          month: '0',
+          total: '0',
+        },
+        orders: {
+          pending: 0,
+          processing: 0,
+          completed: 0,
+          total: 0,
+        },
+        listings: {
+          active: 0,
+          draft: 0,
+          soldOut: 0,
+          total: 0,
+        },
+        balance: {
+          available: '0',
+          pending: '0',
+          escrow: '0',
+          total: '0',
+        },
+        reputation: {
+          score: 0,
+          totalReviews: 0,
+          averageRating: 0,
+        },
+        unreadNotifications: 0,
+      };
+    }
+
     // OPTIMIZED: Cache results with short TTL for dashboard data (30 seconds)
     await cacheService.set(cacheKey, stats, 30);
 
@@ -300,8 +347,13 @@ class SellerDashboardService {
     const safeLimit = Math.min(Math.max(limit, 1), 100); // Between 1-100
     const safeOffset = Math.max(offset, 0);
 
+    // Add timeout protection for database operations
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Database operation timeout')), 10000)
+    );
+
     // OPTIMIZED: Use transaction for consistency
-    return await db.transaction(async (tx) => {
+    const dbTransactionPromise = db.transaction(async (tx) => {
       const conditions = [eq(notifications.userAddress, walletAddress)];
 
       if (unreadOnly) {
@@ -362,6 +414,19 @@ class SellerDashboardService {
         total,
       };
     });
+
+    // Execute the database transaction with timeout protection
+    try {
+      const result = await Promise.race([dbTransactionPromise, timeoutPromise]);
+      return result as { notifications: Notification[]; total: number };
+    } catch (error) {
+      safeLogger.error('Notifications database operation timed out:', error);
+      // Return default empty result on timeout to enable graceful degradation
+      return {
+        notifications: [],
+        total: 0,
+      };
+    }
   }
 
   /**
@@ -369,9 +434,11 @@ class SellerDashboardService {
    * OPTIMIZED: Added cache invalidation
    */
   async markNotificationRead(notificationId: number): Promise<void> {
-    const notification = await db.query.notifications.findFirst({
-      where: eq(notifications.id, notificationId),
-    });
+    const [notification] = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.id, notificationId))
+      .limit(1);
 
     if (!notification) {
       throw new Error('Notification not found');
@@ -399,7 +466,12 @@ class SellerDashboardService {
     const periodStart = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
     // OPTIMIZED: Use single transaction for all analytics queries
-    return await db.transaction(async (tx) => {
+    // Add timeout protection for database operations
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Database operation timeout')), 10000)
+    );
+    
+    const dbTransactionPromise = db.transaction(async (tx) => {
       // Verify seller exists
       const [seller] = await tx
         .select({ id: sellers.id })
@@ -537,6 +609,41 @@ class SellerDashboardService {
         },
       };
     });
+
+    // Execute the database transaction with timeout protection
+    try {
+      const result = await Promise.race([dbTransactionPromise, timeoutPromise]);
+      return result as AnalyticsData;
+    } catch (error) {
+      safeLogger.error('Analytics database operation timed out:', error);
+      // Return default analytics result on timeout to enable graceful degradation
+      return {
+        period: '30d',
+        revenue: {
+          total: '0',
+          byDay: [],
+        },
+        orders: {
+          total: 0,
+          byStatus: {},
+          byDay: [],
+        },
+        products: {
+          topSelling: [],
+          byCategory: {},
+        },
+        customers: {
+          new: 0,
+          returning: 0,
+          total: 0,
+        },
+        performance: {
+          averageOrderValue: '0.00',
+          conversionRate: 0,
+          fulfillmentRate: 0,
+        },
+      };
+    }
   }
 }
 

@@ -94,9 +94,9 @@ const SERVICE_CIRCUIT_BREAKER_CONFIGS = {
     halfOpenMaxCalls: 3
   },
   marketplace: {
-    failureThreshold: 5, // Increase threshold to reduce false positives
-    recoveryTimeout: 15000, // Faster recovery for marketplace
-    halfOpenMaxCalls: 3
+    failureThreshold: 10, // Increase threshold to reduce false positives
+    recoveryTimeout: 5000, // Faster recovery for marketplace
+    halfOpenMaxCalls: 1
   }
 };
 
@@ -130,7 +130,9 @@ const CACHEABLE_APIS = {
   '/api/tips': { ttl: 60000, priority: 'medium', staleTTL: 300000 }, // 1min fresh, 5min stale
   '/api/follow': { ttl: 120000, priority: 'medium', staleTTL: 600000 }, // 2min fresh, 10min stale
   '/api/search': { ttl: 300000, priority: 'low', staleTTL: 1800000 }, // 5min fresh, 30min stale
-  '/api/marketplace': { ttl: 10000, priority: 'high', staleTTL: 20000 }, // 10s fresh, 20s stale for more responsive marketplace
+  '/api/marketplace/listings': { ttl: 30000, priority: 'high', staleTTL: 60000 }, // 30s fresh, 1min stale for listings
+  '/api/marketplace/listings/categories': { ttl: 300000, priority: 'medium', staleTTL: 600000 }, // 5min fresh, 10min stale for categories
+  '/api/marketplace/seller': { ttl: 30000, priority: 'high', staleTTL: 60000 }, // 30s fresh, 1min stale for seller data
   '/api/governance': { ttl: 180000, priority: 'medium', staleTTL: 900000 }, // 3min fresh, 15min stale
   '/api/messaging': { ttl: 30000, priority: 'high', staleTTL: 120000 }, // 30s fresh, 2min stale
   '/api/chat/conversations': { ttl: 30000, priority: 'high', staleTTL: 120000, skipCacheOnError: true }, // 30s fresh, 2min stale
@@ -362,15 +364,15 @@ async function networkFirst(request, cacheName) {
     let baseBackoffTime;
 
     if (isCommunityRequest) {
-      baseBackoffTime = 10000; // 10s for communities
+      baseBackoffTime = 3000; // 3s for communities
     } else if (isCartRequest) {
-      baseBackoffTime = 5000; // 5s for cart API to enable faster recovery
+      baseBackoffTime = 2000; // 2s for cart API to enable faster recovery
     } else if (isSellerRequest) {
-      baseBackoffTime = 10000; // 10s for seller dashboard to enable faster recovery
+      baseBackoffTime = 3000; // 3s for seller dashboard to enable faster recovery
     } else if (isMarketplaceRequest) {
-      baseBackoffTime = 15000; // 15s for marketplace requests to enable moderate recovery
+      baseBackoffTime = 5000; // 5s for marketplace requests to enable moderate recovery
     } else {
-      baseBackoffTime = 30000; // 30s for others
+      baseBackoffTime = 10000; // 10s for others
     }
 
     const backoffTime = Math.min(
@@ -800,11 +802,11 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
       // For marketplace requests, use moderate backoff and clear failure info after moderate period
       console.log('Marketplace request network error, using moderate backoff');
       setTimeout(() => {
-        if (failedRequests.get(requestKey)?.attempts <= 3) {
+        if (failedRequests.get(requestKey)?.attempts <= 2) {
           failedRequests.delete(requestKey);
           console.log('Cleared marketplace request failure info for faster retry');
         }
-      }, 20000); // Clear after 20 seconds for marketplace requests
+      }, 5000); // Clear after 5 seconds for marketplace requests
     }
     // Handle seller dashboard failures with more specific backoff
     else if (url.pathname.includes('/api/marketplace/seller') || url.pathname.includes('/dashboard/')) {
@@ -819,11 +821,11 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
       console.log('Seller request network error, reducing backoff time');
       // Reduce backoff time for seller requests by clearing failure info after short period
       setTimeout(() => {
-        if (failedRequests.get(requestKey)?.attempts <= 3) {
+        if (failedRequests.get(requestKey)?.attempts <= 2) {
           failedRequests.delete(requestKey);
           console.log('Cleared seller request failure info for faster retry');
         }
-      }, 5000); // Clear after 5 seconds for seller requests
+      }, 2000); // Clear after 2 seconds for seller requests
     }
     else {
       // Track failure with exponential backoff for other requests
