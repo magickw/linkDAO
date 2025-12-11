@@ -612,7 +612,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     console.log('🔐 Login queued for address:', walletAddress);
 
     // Check if already authenticated for this address
-    if (isAuthenticated && user?.address?.toLowerCase() === walletAddress.toLowerCase()) {
+    // Note: isAuthenticated is computed from user && accessToken, so we check both directly
+    const currentlyAuthenticated = !!user && !!accessToken;
+    if (currentlyAuthenticated && user?.address?.toLowerCase() === walletAddress.toLowerCase()) {
       console.log('✅ Already authenticated for address:', walletAddress);
       return { success: true };
     }

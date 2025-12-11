@@ -168,9 +168,10 @@ export default function EnhancedHomeFeed({
             <EnhancedPostCard
               post={post}
               onReaction={async (postId, type, amount) => {
-                await FeedService.addReaction(postId, type, amount || 0);
+                // Store the previous count for rollback in case of failure
+                const previousReactionCount = posts.find(p => p.id === postId)?.reactionCount || 0;
                 
-                // Update the local state to reflect the new reaction count
+                // Optimistic update
                 setPosts(prevPosts => 
                   prevPosts.map(p => 
                     p.id === postId 
@@ -182,23 +183,50 @@ export default function EnhancedHomeFeed({
                   )
                 );
                 
-                addToast('Reaction added successfully!', 'success');
-              }}
-              onTip={async (postId, amount, token) => {
-                if (amount && token) {
-                  await FeedService.sendTip(postId, parseFloat(amount), token, '');
-                  // Update the local state to reflect the new tip
+                try {
+                  await FeedService.addReaction(postId, type, amount || 0);
+                  addToast('Reaction added successfully!', 'success');
+                } catch (error) {
+                  // Revert the optimistic update on error
                   setPosts(prevPosts => 
                     prevPosts.map(p => 
                       p.id === postId 
                         ? { 
                             ...p, 
-                            totalTipAmount: (p.totalTipAmount || 0) + parseFloat(amount)
+                            reactionCount: previousReactionCount
                           } 
                         : p
                     )
                   );
-                  addToast('Tip sent successfully!', 'success');
+                  console.error('Error adding reaction:', error);
+                  addToast('Failed to add reaction. Please try again.', 'error');
+                }
+              }}
+              onTip={async (postId, amount, token) => {
+                if (amount && token) {
+                  // Store the previous amount for rollback in case of failure
+                  const previousTipAmount = posts.find(p => p.id === postId)?.totalTipAmount || 0;
+                  
+                  try {
+                    await FeedService.sendTip(postId, parseFloat(amount), token, '');
+                    // Update the local state to reflect the new tip
+                    setPosts(prevPosts => 
+                      prevPosts.map(p => 
+                        p.id === postId 
+                          ? { 
+                              ...p, 
+                              totalTipAmount: (p.totalTipAmount || 0) + parseFloat(amount)
+                            } 
+                          : p
+                      )
+                    );
+                    addToast('Tip sent successfully!', 'success');
+                  } catch (error) {
+                    // Note: We don't revert tip amount here as it's harder to know exact previous state
+                    // since multiple people may tip simultaneously
+                    console.error('Error sending tip:', error);
+                    addToast('Failed to send tip. Please try again.', 'error');
+                  }
                 }
               }}
               onExpand={() => {
