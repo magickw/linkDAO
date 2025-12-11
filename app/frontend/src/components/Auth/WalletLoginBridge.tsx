@@ -40,51 +40,72 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
     // 4. Not currently loading
     // 5. Haven't already handled this address
     isMountedRef.current = true;
+    console.log('WalletLoginBridge: useEffect triggered', { 
+      autoLogin, 
+      isConnected, 
+      address, 
+      isAuthenticated, 
+      isAuthLoading 
+    });
+    
     if (!autoLogin || !isConnected || !address || isAuthenticated || isAuthLoading) {
+      console.log('WalletLoginBridge: Skipping login, conditions not met');
       return;
     }
 
     // Check if we've already handled this address
     if (hasHandledAddressRef.current.has(address)) {
+      console.log('WalletLoginBridge: Skipping login, address already handled');
       return;
     }
 
     // Mark this address as handled
     hasHandledAddressRef.current.add(address);
+    console.log('WalletLoginBridge: Marking address as handled', address);
 
-    // Add a small delay to ensure wallet state is stable
+    // MINIMAL delay to ensure wallet state is stable - further reduced to prevent navigation blocking
     const timeoutId = setTimeout(() => {
       console.log(`🔐 Attempting login for wallet: ${address}`);
 
       // Fire-and-forget login to avoid blocking UI/navigation while auth completes.
       // The login call will still update AuthContext state when complete.
-      login(address, connector, status)
-        .then(result => {
-          if (!isMountedRef.current) return;
-          if (result.success) {
-            lastAuthenticatedAddress = address;
-            console.log(`✅ Login successful for ${address}`);
-            if (onLoginSuccess) {
-              onLoginSuccess({ address });
+      // USING Promise.resolve().then to defer execution to next tick
+      Promise.resolve().then(() => {
+        login(address, connector, status)
+          .then(result => {
+            if (!isMountedRef.current) {
+              console.log('WalletLoginBridge: Component unmounted, ignoring result');
+              return;
             }
-          } else {
-            console.error(`❌ Login failed for ${address}:`, result.error);
+            if (result.success) {
+              lastAuthenticatedAddress = address;
+              console.log(`✅ Login successful for ${address}`);
+              if (onLoginSuccess) {
+                onLoginSuccess({ address });
+              }
+            } else {
+              console.error(`❌ Login failed for ${address}:`, result.error);
+              if (onLoginError) {
+                onLoginError(result.error || 'Authentication failed');
+              }
+            }
+          })
+          .catch((error: any) => {
+            if (!isMountedRef.current) {
+              console.log('WalletLoginBridge: Component unmounted, ignoring error');
+              return;
+            }
+            const errorMessage = error?.message || 'An unknown error occurred';
+            console.error('💥 Login threw an exception:', errorMessage);
             if (onLoginError) {
-              onLoginError(result.error || 'Authentication failed');
+              onLoginError(errorMessage);
             }
-          }
-        })
-        .catch((error: any) => {
-          if (!isMountedRef.current) return;
-          const errorMessage = error?.message || 'An unknown error occurred';
-          console.error('💥 Login threw an exception:', errorMessage);
-          if (onLoginError) {
-            onLoginError(errorMessage);
-          }
-        });
-    }, 300); // 300ms delay for stability
+          });
+      });
+    }, 10); // 10ms delay for stability (reduced from 50ms)
 
     return () => {
+      console.log('WalletLoginBridge: Cleaning up effect');
       isMountedRef.current = false;
       clearTimeout(timeoutId);
     };

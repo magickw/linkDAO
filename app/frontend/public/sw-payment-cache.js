@@ -57,6 +57,13 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   
+  // CRITICAL FIX: Bypass ALL navigation requests immediately to prevent blocking
+  // This prevents wallet-connected users from being unable to navigate
+  if (event.request.mode === 'navigate') {
+    console.log('Payment Cache SW: Bypassing navigation request:', event.request.url);
+    return; // Early return to bypass service worker completely
+  }
+  
   // Only handle requests for our cache data
   if (shouldHandleRequest(url)) {
     event.respondWith(handleCacheRequest(event.request));

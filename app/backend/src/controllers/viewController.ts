@@ -26,7 +26,7 @@ class ViewController {
       }
 
       const tracked = await viewService.trackView({
-        postId: parseInt(postId),
+        postId,
         userId,
         ipAddress,
         userAgent
@@ -49,9 +49,9 @@ class ViewController {
    */
   async getViewCount(req: Request, res: Response) {
     try {
-      const postId = parseInt(req.params.postId);
+      const postId = req.params.postId;
 
-      if (isNaN(postId)) {
+      if (!postId || typeof postId !== 'string' || postId.length === 0) {
         return res.status(400).json({ error: 'Invalid post ID' });
       }
 
@@ -70,9 +70,9 @@ class ViewController {
    */
   async getViewAnalytics(req: Request, res: Response) {
     try {
-      const postId = parseInt(req.params.postId);
+      const postId = req.params.postId;
 
-      if (isNaN(postId)) {
+      if (!postId || typeof postId !== 'string' || postId.length === 0) {
         return res.status(400).json({ error: 'Invalid post ID' });
       }
 
@@ -103,7 +103,7 @@ class ViewController {
       const results = await Promise.all(
         postIds.map(postId =>
           viewService.trackView({
-            postId: parseInt(postId),
+            postId,
             userId,
             ipAddress,
             userAgent

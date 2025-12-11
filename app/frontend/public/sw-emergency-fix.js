@@ -57,6 +57,13 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
   
+  // CRITICAL FIX: Bypass ALL navigation requests immediately to prevent blocking
+  // This prevents wallet-connected users from being unable to navigate
+  if (request.mode === 'navigate') {
+    console.log('Emergency SW: Bypassing navigation request:', request.url);
+    return; // Early return to bypass service worker completely
+  }
+  
   // Skip non-GET requests
   if (request.method !== 'GET') {
     return;
@@ -117,7 +124,7 @@ self.addEventListener('fetch', (event) => {
               return cachedResponse;
             }
             
-            // Return offline page for navigation requests
+            // Return offline page for navigation requests (should not execute due to early return above)
             if (request.mode === 'navigate') {
               return caches.match('/offline.html') || new Response(
                 '<!DOCTYPE html><html><head><title>Offline</title></head><body><h1>You are offline</h1><p>Please check your internet connection.</p></body></html>',

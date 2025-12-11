@@ -209,6 +209,13 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
+  // CRITICAL FIX: Bypass ALL navigation requests immediately to prevent blocking
+  // This prevents wallet-connected users from being unable to navigate
+  if (isEnhancedNavigation(request)) {
+    console.log('SW: Bypassing navigation request:', request.url);
+    return; // Early return to bypass service worker completely
+  }
+
   // Skip Socket.IO requests - let them go directly to the server
   // Socket.IO needs to handle its own transport mechanism (websocket/polling)
   if (url.pathname.startsWith('/socket.io/')) {
@@ -242,16 +249,16 @@ self.addEventListener('fetch', (event) => {
 
   // Handle different types of requests with different strategies
   if (isStaticAsset(request)) {
+    console.log('SW: Handling static asset request:', request.url);
     event.respondWith(cacheFirst(request, STATIC_CACHE));
   } else if (isImage(request)) {
+    console.log('SW: Handling image request:', request.url);
     event.respondWith(cacheFirst(request, IMAGE_CACHE));
   } else if (isAPI(request)) {
+    console.log('SW: Handling API request:', request.url);
     event.respondWith(networkFirst(request, DYNAMIC_CACHE));
-  } else if (isNavigation(request)) {
-    // Temporarily bypass service worker for navigation to test routing
-    // event.respondWith(navigationHandler(request));
-    return;
   } else {
+    console.log('SW: Handling dynamic request:', request.url);
     event.respondWith(networkFirst(request, DYNAMIC_CACHE));
   }
 });
@@ -530,11 +537,14 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
   try {
     // Add timeout to prevent hanging requests
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    // Adjust timeout based on request type - shorter for marketplace listings to avoid hanging requests
+    const url = new URL(request.url);
+    const isMarketplaceRequest = url.pathname.includes('/api/marketplace');
+    const timeoutMs = isMarketplaceRequest ? 8000 : 15000; // 8 seconds for marketplace, 15 for others
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     // Check if this is an authenticated request and add auth headers if needed
     let fetchRequest = request;
-    const url = new URL(request.url);
     let isAuthRequest = false;
 
     // For API requests that require authentication, check if this is already an authenticated request
@@ -825,13 +835,13 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
           }
         }, 5000); // Clear after 5 seconds for marketplace network errors
       } else {
-        // For other types of errors, use longer timeout
+        // For other types of errors (like 400 validation errors), clear faster since they might be temporary
         setTimeout(() => {
           if (failedRequests.get(requestKey)?.attempts <= 2) {
             failedRequests.delete(requestKey);
             console.log('Cleared marketplace request failure info for faster retry');
           }
-        }, 8000); // Clear after 8 seconds for marketplace requests
+        }, 5000); // Clear after 5 seconds for marketplace requests - reduced from 8s for better recovery
       }
     }
     // Handle seller dashboard failures with more specific backoff
@@ -999,7 +1009,7 @@ async function getCachedResponse(request, cacheName) {
     }
 
     // Return offline page for navigation requests
-    if (isNavigation(request)) {
+    if (isEnhancedNavigation(request)) {
       try {
         const offlineResponse = await caches.match('/offline.html');
         if (offlineResponse) {
@@ -1080,7 +1090,7 @@ async function handleCacheFailure(request, error) {
   }
 
   // Final fallback - return offline page or error response
-  if (isNavigation(request)) {
+  if (isEnhancedNavigation(request)) {
     try {
       const cache = await caches.open(STATIC_CACHE);
       const offlineResponse = await cache.match('/offline.html');
@@ -1508,9 +1518,73 @@ function isCriticalAPI(request) {
   return CRITICAL_APIS.some(api => url.pathname.startsWith(api));
 }
 
+// Enhanced navigation detection to ensure all navigation requests bypass service worker
 function isNavigation(request) {
-  return request.mode === 'navigate' ||
-    (request.method === 'GET' && request.headers.get('accept').includes('text/html'));
+  // Check if it's a navigation request (Next.js pages)
+  if (request.mode === 'navigate') {
+    return true;
+  }
+  
+  // Check if it's a GET request for HTML content
+  if (request.method === 'GET') {
+    const acceptHeader = request.headers.get('accept');
+    if (acceptHeader && acceptHeader.includes('text/html')) {
+      return true;
+    }
+    
+    // Additional check for navigation-like requests
+    const url = new URL(request.url);
+    // If it's a GET request to a path that looks like a page (no file extension except for known static assets)
+    if (!url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|webp|avif)$/i)) {
+      // And it's not an API request
+      if (!url.pathname.startsWith('/api/') && !url.pathname.startsWith('/_next/')) {
+        return true;
+      }
+    }
+  }
+  
+  return false;
+}
+
+// ENHANCED NAVIGATION DETECTION - More comprehensive check to ensure ALL navigation requests bypass service worker
+function isEnhancedNavigation(request) {
+  // First check with existing logic
+  if (isNavigation(request)) {
+    return true;
+  }
+  
+  // Additional checks for edge cases that might still block navigation
+  const url = new URL(request.url);
+  
+  // Check for navigation to Next.js dynamic routes
+  if (request.destination === 'document' && request.mode === 'same-origin') {
+    return true;
+  }
+  
+  // Check for navigation-like requests that might be missed
+  if (request.method === 'GET' && !request.headers.get('x-requested-with')) {
+    // If it's likely a page request (not an AJAX request)
+    const pathname = url.pathname;
+    
+    // Exclude known API/static asset paths
+    const excludePatterns = [
+      '^/api/',
+      '^/_next/',
+      '^/static/',
+      '^/images/',
+      '\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|webp|avif|json|xml|pdf|txt)$'
+    ];
+    
+    const shouldExclude = excludePatterns.some(pattern => 
+      new RegExp(pattern, 'i').test(pathname)
+    );
+    
+    if (!shouldExclude) {
+      return true;
+    }
+  }
+  
+  return false;
 }
 
 // Message handler for offline actions

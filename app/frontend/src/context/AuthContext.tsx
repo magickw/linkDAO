@@ -15,8 +15,9 @@ let globalAuthLockTimestamp = 0;
 let globalAuthLockTimeout = 0; // timeout (ms) used for the current lock
 
 // Timeouts (ms) for different connector types (defaults can be overridden via env)
-const DEFAULT_SOFTWARE_LOCK_TIMEOUT = 3000; // 3s for software wallets
-const DEFAULT_HARDWARE_LOCK_TIMEOUT = 10000; // 10s for hardware wallets
+// REDUCED timeouts to prevent navigation blocking
+const DEFAULT_SOFTWARE_LOCK_TIMEOUT = 500; // 500ms for software wallets (reduced from 1s)
+const DEFAULT_HARDWARE_LOCK_TIMEOUT = 1000; // 1s for hardware wallets (reduced from 3s)
 
 // Parse env-provided timeout values safely (milliseconds)
 const parseEnvTimeout = (envVar: string | undefined, fallback: number): number => {
@@ -158,7 +159,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Add authentication cooldown tracking using ref to prevent re-render loops
   // Using ref instead of state because we don't want changes to trigger re-renders
   const lastAuthTimeRef = useRef<number>(0);
-  const AUTH_COOLDOWN = 500; // 500ms cooldown between auth attempts (reduced from 1s)
+  const AUTH_COOLDOWN = 50; // 50ms cooldown between auth attempts (reduced from 100ms)
 
   const { address, isConnected, connector } = useAccount();
   const { disconnect } = useDisconnect();
@@ -397,7 +398,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           clearTimeout(disconnectTimeoutRef.current);
         }
 
-        // Wait 500ms to confirm it's a real disconnect, not a state transition
+        // Wait 50ms to confirm it's a real disconnect, not a state transition (reduced from 100ms)
         disconnectTimeoutRef.current = setTimeout(() => {
           // Double-check that wallet is still disconnected before logging out
           // We check isConnected again via the closure, but also check localStorage as backup
@@ -609,6 +610,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const processAuthQueue = useCallback(async () => {
     if (isProcessingQueueRef.current || authQueue.length === 0) return;
     
+    console.log('Auth: Processing authentication queue, items:', authQueue.length);
     isProcessingQueueRef.current = true;
     
     try {
@@ -619,16 +621,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Call the current performLogin function stored in ref
           const performLoginFn = performLoginRef.current;
           if (performLoginFn) {
+            console.log('Auth: Processing login for address:', args[0]);
             const result = await performLoginFn(...args);
+            console.log('Auth: Login completed for address:', args[0], 'success:', result.success);
             resolve(result);
           } else {
             reject(new Error('performLogin not initialized'));
           }
         } catch (error) {
+          console.error('Auth: Login failed for address:', args[0], error);
           reject(error);
         }
       }
     } finally {
+      console.log('Auth: Finished processing authentication queue');
       isProcessingQueueRef.current = false;
     }
   }, []);
@@ -688,12 +694,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Return a promise that will be resolved when processed from the queue
     return new Promise((resolve, reject) => {
+      console.log('Auth: Adding login to queue for address:', walletAddress);
       authQueue.push({ resolve, reject, args: [walletAddress, connector, status] });
+      console.log('Auth: Queue size after adding:', authQueue.length);
       
       // Start processing the queue if not already running (use Promise to not block)
       if (!isProcessingQueueRef.current) {
+        console.log('Auth: Starting queue processing');
         // Schedule processing asynchronously to avoid blocking navigation
         Promise.resolve().then(() => processAuthQueue());
+      } else {
+        console.log('Auth: Queue processing already in progress');
       }
     });
   }, [user, accessToken, processAuthQueue]);

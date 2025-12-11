@@ -32,7 +32,7 @@ class ShareController {
       }
 
       await shareService.trackShare({
-        postId: parseInt(postId),
+        postId,
         userId,
         targetType,
         targetId,
@@ -55,9 +55,9 @@ class ShareController {
    */
   async getShareCount(req: Request, res: Response) {
     try {
-      const postId = parseInt(req.params.postId);
+      const postId = req.params.postId;
 
-      if (isNaN(postId)) {
+      if (!postId || typeof postId !== 'string' || postId.length === 0) {
         return res.status(400).json({ error: 'Invalid post ID' });
       }
 
@@ -76,9 +76,9 @@ class ShareController {
    */
   async getShareBreakdown(req: Request, res: Response) {
     try {
-      const postId = parseInt(req.params.postId);
+      const postId = req.params.postId;
 
-      if (isNaN(postId)) {
+      if (!postId || typeof postId !== 'string' || postId.length === 0) {
         return res.status(400).json({ error: 'Invalid post ID' });
       }
 

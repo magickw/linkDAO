@@ -15,8 +15,8 @@ const router = Router();
 // Validation schemas
 const createReactionValidation = [
   body('postId')
-    .isInt({ min: 1 })
-    .withMessage('postId must be a positive integer'),
+    .isUUID()
+    .withMessage('postId must be a valid UUID'),
   body('type')
     .isIn(['🔥', '🚀', '💎'])
     .withMessage('type must be one of: 🔥, 🚀, 💎'),
@@ -27,8 +27,9 @@ const createReactionValidation = [
 
 const getReactionsValidation = [
   query('postId')
-    .isInt({ min: 1 })
-    .withMessage('postId must be a positive integer'),
+    .optional()
+    .isUUID()
+    .withMessage('postId must be a valid UUID'),
   query('reactionType')
     .optional()
     .isIn(['🔥', '🚀', '💎'])
@@ -45,8 +46,8 @@ const getReactionsValidation = [
 
 const postIdValidation = [
   param('postId')
-    .isInt({ min: 1 })
-    .withMessage('postId must be a positive integer'),
+    .isUUID()
+    .withMessage('postId must be a valid UUID'),
 ];
 
 const reactionIdValidation = [

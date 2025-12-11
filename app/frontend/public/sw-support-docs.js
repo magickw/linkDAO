@@ -96,6 +96,13 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
+  // CRITICAL FIX: Bypass ALL navigation requests immediately to prevent blocking
+  // This prevents wallet-connected users from being unable to navigate
+  if (request.mode === 'navigate') {
+    console.log('Support Docs SW: Bypassing navigation request:', request.url);
+    return; // Early return to bypass service worker completely
+  }
+
   // Skip non-GET requests
   if (request.method !== 'GET') {
     return;

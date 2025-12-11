@@ -14,6 +14,7 @@ import { Send, Vote, TrendingUp, Users, MessageCircle, RefreshCw, Award, Video, 
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import SupportWidget from '@/components/SupportWidget';
 import { newsletterService } from '@/services/newsletterService';
+import NavigationTest from '@/components/NavigationTest';
 
 // Lazy load heavy components
 const SmartRightSidebar = lazy(() => import('@/components/SmartRightSidebar/SmartRightSidebar').catch(() => ({ default: () => <div>Failed to load sidebar</div> })));
@@ -974,6 +975,11 @@ export default function Home() {
               className="focus:outline-none"
             >
               <div className="py-6 px-4">
+                {/* Navigation Test - For verifying fix */}
+                <div className="mb-6">
+                  <NavigationTest />
+                </div>
+                
                 {/* Post Composer - Inline Facebook-style */}
                 <div className="mb-6">
                   <Suspense fallback={<FeedSkeleton />}>

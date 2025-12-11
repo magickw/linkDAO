@@ -651,7 +651,16 @@ function generateResponsiveImageUrl(originalUrl) {
 
 // Enhanced offline page handling
 self.addEventListener('fetch', (event) => {
-  // Handle navigation requests that fail
+  // CRITICAL FIX: Bypass ALL navigation requests immediately to prevent blocking
+  // This prevents wallet-connected users from being unable to navigate
+  if (event.request.mode === 'navigate') {
+    console.log('Enhanced SW: Bypassing navigation request:', event.request.url);
+    return; // Early return to bypass service worker completely
+  }
+  
+  // Handle navigation requests that fail (fallback)
+  // This code should never execute due to the early return above
+  /*
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
@@ -659,6 +668,7 @@ self.addEventListener('fetch', (event) => {
       })
     );
   }
+  */
 });
 
 // Periodic cleanup
