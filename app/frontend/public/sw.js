@@ -130,9 +130,9 @@ const CACHEABLE_APIS = {
   '/api/tips': { ttl: 60000, priority: 'medium', staleTTL: 300000 }, // 1min fresh, 5min stale
   '/api/follow': { ttl: 120000, priority: 'medium', staleTTL: 600000 }, // 2min fresh, 10min stale
   '/api/search': { ttl: 300000, priority: 'low', staleTTL: 1800000 }, // 5min fresh, 30min stale
-  '/api/marketplace/listings': { ttl: 30000, priority: 'high', staleTTL: 60000 }, // 30s fresh, 1min stale for listings
-  '/api/marketplace/listings/categories': { ttl: 300000, priority: 'medium', staleTTL: 600000 }, // 5min fresh, 10min stale for categories
-  '/api/marketplace/seller': { ttl: 30000, priority: 'high', staleTTL: 60000 }, // 30s fresh, 1min stale for seller data
+  '/api/marketplace/listings': { ttl: 30000, priority: 'high', staleTTL: 60000, skipCacheOnError: true }, // 30s fresh, 1min stale for listings
+  '/api/marketplace/listings/categories': { ttl: 300000, priority: 'medium', staleTTL: 600000, skipCacheOnError: true }, // 5min fresh, 10min stale for categories
+  '/api/marketplace/seller': { ttl: 30000, priority: 'high', staleTTL: 60000, skipCacheOnError: true }, // 30s fresh, 1min stale for seller data
   '/api/governance': { ttl: 180000, priority: 'medium', staleTTL: 900000 }, // 3min fresh, 15min stale
   '/api/messaging': { ttl: 30000, priority: 'high', staleTTL: 120000 }, // 30s fresh, 2min stale
   '/api/chat/conversations': { ttl: 30000, priority: 'high', staleTTL: 120000, skipCacheOnError: true }, // 30s fresh, 2min stale
@@ -185,8 +185,9 @@ self.addEventListener('activate', (event) => {
   console.log('Service Worker activating...');
 
   event.waitUntil(
-    caches.keys()
-      .then((cacheNames) => {
+    Promise.all([
+      // Clean up old cache versions
+      caches.keys().then((cacheNames) => {
         return Promise.all(
           cacheNames.map((cacheName) => {
             if (cacheName !== STATIC_CACHE &&
@@ -197,10 +198,43 @@ self.addEventListener('activate', (event) => {
             }
           })
         );
+      }),
+      // EXTRA: Clear any cached responses for navigation routes that might be causing 404 issues
+      caches.open(DYNAMIC_CACHE).then(cache => {
+        return Promise.all([
+          cache.delete('/').catch(() => {
+            // Ignore errors if '/' is not in cache
+          }),
+          cache.delete('/profile').catch(() => {
+            // Ignore errors if '/profile' is not in cache
+          }),
+          cache.delete('/communities').catch(() => {
+            // Ignore errors if '/communities' is not in cache
+          }),
+          cache.delete('/marketplace').catch(() => {
+            // Ignore errors if '/marketplace' is not in cache
+          }),
+          cache.delete('/governance').catch(() => {
+            // Ignore errors if '/governance' is not in cache
+          }),
+          cache.delete('/dashboard').catch(() => {
+            // Ignore errors if '/dashboard' is not in cache
+          }),
+          cache.delete('/settings').catch(() => {
+            // Ignore errors if '/settings' is not in cache
+          }),
+          cache.delete('/notifications').catch(() => {
+            // Ignore errors if '/notifications' is not in cache
+          })
+        ]).catch(() => {
+          // Ignore errors if cache operations fail
+        });
+      }).catch(() => {
+        // Ignore errors if cache doesn't exist yet
       })
-      .then(() => {
-        return self.clients.claim();
-      })
+    ]).then(() => {
+      return self.clients.claim();
+    })
   );
 });
 
@@ -213,17 +247,20 @@ self.addEventListener('fetch', (event) => {
   // This prevents wallet-connected users from being unable to navigate
   if (isEnhancedNavigation(request)) {
     console.log('SW: Bypassing navigation request:', request.url);
+    event.respondWith(fetch(request)); // MUST call event.respondWith for navigation
     return; // Early return to bypass service worker completely
   }
 
   // Skip Socket.IO requests - let them go directly to the server
   // Socket.IO needs to handle its own transport mechanism (websocket/polling)
   if (url.pathname.startsWith('/socket.io/')) {
+    event.respondWith(fetch(request)); // MUST call event.respondWith
     return; // Don't intercept - let Socket.IO handle it
   }
 
   // Skip non-GET requests
   if (request.method !== 'GET') {
+    event.respondWith(fetch(request)); // MUST call event.respondWith
     return;
   }
 
@@ -302,6 +339,17 @@ async function cacheFirst(request, cacheName) {
         console.warn('Failed to cache static asset:', cacheError);
         // Continue serving the response even if caching fails
       }
+    } else {
+      // Check if this endpoint has skipCacheOnError enabled and if the response is an error
+      const cacheConfig = getAPICacheConfig(request);
+      if (cacheConfig.skipCacheOnError) {
+        console.log('Not caching error response for endpoint with skipCacheOnError:', request.url, networkResponse.status);
+      } else {
+        // For static assets that return error status (like 404), don't cache the error response
+        // This prevents caching error responses that cause persistent 404s
+        console.warn('Request failed, not caching error response:', request.url, networkResponse.status);
+      }
+      return networkResponse;
     }
 
     return networkResponse;
@@ -879,6 +927,13 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
 // Cache response with TTL metadata
 async function cacheResponseWithTTL(request, response, cacheName, ttl) {
   try {
+    // Check if this endpoint has skipCacheOnError enabled and if the response is an error
+    const cacheConfig = getAPICacheConfig(request);
+    if (cacheConfig.skipCacheOnError && (!response.ok || response.status >= 400)) {
+      console.log('Skipping cache for error response on endpoint with skipCacheOnError:', request.url);
+      return; // Don't cache error responses for endpoints with skipCacheOnError
+    }
+    
     const cache = await caches.open(cacheName);
     const now = Date.now();
 
@@ -1531,15 +1586,49 @@ function isNavigation(request) {
     if (acceptHeader && acceptHeader.includes('text/html')) {
       return true;
     }
-    
-    // Additional check for navigation-like requests
-    const url = new URL(request.url);
-    // If it's a GET request to a path that looks like a page (no file extension except for known static assets)
-    if (!url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|webp|avif)$/i)) {
-      // And it's not an API request
-      if (!url.pathname.startsWith('/api/') && !url.pathname.startsWith('/_next/')) {
-        return true;
-      }
+  }
+  
+  // Additional check for navigation-like requests
+  const url = new URL(request.url);
+  
+  // CRITICAL FIXES: Always treat specific routes as navigation
+  if (url.pathname === '/' || url.pathname === '/index.html') {
+    return true;
+  }
+  
+  if (url.pathname === '/profile' || url.pathname.startsWith('/profile/')) {
+    return true;
+  }
+  
+  if (url.pathname === '/communities' || url.pathname.startsWith('/communities/')) {
+    return true;
+  }
+  
+  if (url.pathname === '/marketplace' || url.pathname.startsWith('/marketplace/')) {
+    return true;
+  }
+  
+  if (url.pathname === '/governance' || url.pathname.startsWith('/governance/')) {
+    return true;
+  }
+  
+  if (url.pathname === '/dashboard' || url.pathname.startsWith('/dashboard/')) {
+    return true;
+  }
+  
+  if (url.pathname === '/settings' || url.pathname.startsWith('/settings/')) {
+    return true;
+  }
+  
+  if (url.pathname === '/notifications' || url.pathname.startsWith('/notifications/')) {
+    return true;
+  }
+  
+  // If it's a GET request to a path that looks like a page (no file extension except for known static assets)
+  if (!url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|webp|avif)$/i)) {
+    // And it's not an API request
+    if (!url.pathname.startsWith('/api/') && !url.pathname.startsWith('/_next/')) {
+      return true;
     }
   }
   
@@ -1559,29 +1648,6 @@ function isEnhancedNavigation(request) {
   // Check for navigation to Next.js dynamic routes
   if (request.destination === 'document' && request.mode === 'same-origin') {
     return true;
-  }
-  
-  // Check for navigation-like requests that might be missed
-  if (request.method === 'GET' && !request.headers.get('x-requested-with')) {
-    // If it's likely a page request (not an AJAX request)
-    const pathname = url.pathname;
-    
-    // Exclude known API/static asset paths
-    const excludePatterns = [
-      '^/api/',
-      '^/_next/',
-      '^/static/',
-      '^/images/',
-      '\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|webp|avif|json|xml|pdf|txt)$'
-    ];
-    
-    const shouldExclude = excludePatterns.some(pattern => 
-      new RegExp(pattern, 'i').test(pathname)
-    );
-    
-    if (!shouldExclude) {
-      return true;
-    }
   }
   
   return false;
