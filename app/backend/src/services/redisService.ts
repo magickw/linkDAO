@@ -9,7 +9,7 @@ export class RedisService {
   private isConnected: boolean = false;
   private useRedis: boolean = true; // Flag to enable/disable Redis functionality
   private reconnectAttempts: number = 0;
-  private maxReconnectAttempts: number = 5; // Increased for cloud deployments where initial connections can be flaky
+  private maxReconnectAttempts: number = 10; // Increased for cloud deployments where initial connections can be flaky
   private reconnectDelay: number = 1000; // Start with 1 second delay
   private maxReconnectDelay: number = 5000; // Cap at 5 seconds instead of 30
   private connectionPromise: Promise<void> | null = null;
@@ -51,40 +51,66 @@ export class RedisService {
     
     safeLogger.info('🔗 Attempting Redis connection to:', redisUrl.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
     
-    // Determine if we need to use SSL based on the URL scheme
-    const isSecureConnection = redisUrl.startsWith('rediss://');
+    // For Redis Cloud services that require SSL but use redis:// URL, 
+    // we need to change the URL scheme to rediss://
+    // Check if this looks like a Redis Cloud/managed service that typically requires SSL
+    const isManagedService = /redis.*\.com|redis.*\.io|redis.*\.net|cache\.windows\.net|redis.*\.amazonaws\.com/.test(redisUrl);
+    const isRedisCloud = /redis.*\.cloud\.redislabs\.com|.*\.amazonaws\.com|.*\.redis\.com|.*\.ec2\.cloud\.redislabs\.com/.test(redisUrl);
     
-    this.client = Redis.createClient({
-      url: redisUrl,
+    let adjustedRedisUrl = redisUrl;
+    if (isManagedService && redisUrl.startsWith('redis://')) {
+      adjustedRedisUrl = redisUrl.replace('redis://', 'rediss://');
+      safeLogger.info('Detected managed Redis service, switching to SSL connection:', {
+        originalUrl: redisUrl.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'),
+        adjustedUrl: adjustedRedisUrl.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')
+      });
+    }
+    
+    // Parse the URL to extract host, port, password, etc.
+    const url = new URL(adjustedRedisUrl);
+    
+    const options: any = {
       socket: {
-        connectTimeout: 10000, // 10 seconds timeout
-        tls: isSecureConnection, // Enable TLS for secure connections (rediss://)
-        reconnectStrategy: (attempts) => {
-          this.reconnectAttempts = attempts;
-          if (attempts > this.maxReconnectAttempts) {
-            safeLogger.error('Redis max reconnection attempts reached, disabling Redis functionality', {
-              attempts,
-              maxReconnectAttempts: this.maxReconnectAttempts,
-              redisUrl: redisUrl.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')
-            });
-            this.useRedis = false;
-            return false; // Stop reconnecting
-          }
-          
-          // Calculate delay with faster backoff: 1s, 2s, 4s (max 5s)
-          const delay = Math.min(Math.pow(2, attempts - 1) * this.reconnectDelay, this.maxReconnectDelay);
-          safeLogger.warn(`Redis reconnection attempt ${attempts}/${this.maxReconnectAttempts}, next attempt in ${delay}ms`, {
-            attempts,
-            delay,
-            redisUrl: redisUrl.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')
-          });
-          
-          return delay;
-        }
-      }
-    });
-
+        host: url.hostname,
+        port: parseInt(url.port) || (adjustedRedisUrl.startsWith('rediss://') ? 6380 : 6379),
+        connectTimeout: 15000, // Increased timeout to 15 seconds for cloud deployments
+      },
+      username: url.username || undefined,
+      password: url.password || undefined
+    };
+    
+    // For Redis Cloud specifically, we need additional SSL options
+    if (isRedisCloud || adjustedRedisUrl.startsWith('rediss://')) {
+      options.socket.tls = {
+        rejectUnauthorized: false, // Redis Cloud sometimes has certificate issues
+        // Add other SSL options as needed for Redis Cloud
+        servername: url.hostname // Important for SNI with Redis Cloud
+      };
+    }
+    
+    this.client = Redis.createClient(options);
+    
     this.client.on('error', (err) => {
+      safeLogger.error('Redis Client Error (non-fatal):', {
+        error: {
+          name: err.name,
+          message: err.message,
+          code: (err as any).code,
+          errno: (err as any).errno,
+          syscall: (err as any).syscall,
+          address: (err as any).address,
+          port: (err as any).port
+        },
+        redisUrl: redisUrl.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')
+      });
+    });
+    
+    this.client.on('reconnecting', (delay) => {
+      safeLogger.info(`Redis reconnection attempt ${this.reconnectAttempts + 1}/${this.maxReconnectAttempts}, next attempt in ${delay}ms`);
+    });
+    
+    this.client.on('error', (err) => {
+      this.reconnectAttempts++;
       safeLogger.error('Redis Client Error:', {
         error: {
           name: err.name,
@@ -99,7 +125,8 @@ export class RedisService {
         reconnectAttempts: this.reconnectAttempts,
         maxReconnectAttempts: this.maxReconnectAttempts,
         useRedis: this.useRedis,
-        isConnected: this.isConnected
+        isConnected: this.isConnected,
+        redisUrl: redisUrl.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')
       });
       this.isConnected = false;
       
@@ -109,7 +136,7 @@ export class RedisService {
         safeLogger.warn('Redis functionality has been disabled due to persistent connection errors', {
           reconnectAttempts: this.reconnectAttempts,
           maxReconnectAttempts: this.maxReconnectAttempts,
-          redisUrl: process.env.REDIS_URL || 'redis://localhost:6379'
+          redisUrl: redisUrl.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')
         });
       }
     });

@@ -5,7 +5,7 @@
 
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
-import { reactions, posts, users } from '../db/schema';
+import { reactions, posts, quickPosts, users } from '../db/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 
 export type ReactionType = '🔥' | '🚀' | '💎';
@@ -71,7 +71,7 @@ export interface ReactionSummary {
 }
 
 export interface CreateReactionRequest {
-  postId: number;
+  postId: string;
   userId: string;
   type: ReactionType;
   amount: number;
@@ -108,9 +108,27 @@ class TokenReactionService {
       throw new Error(`Minimum amount for ${type} reaction is ${config.tokenCost} tokens`);
     }
 
-    // Verify post exists
-    const post = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
-    if (post.length === 0) {
+    // Verify post exists - check both posts (integer ID) and quickPosts (UUID) tables
+    let postExists = false;
+    
+    // Check if postId looks like a UUID
+    const isUUID = typeof postId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(postId);
+    
+    if (isUUID) {
+      // Query quickPosts table for UUID
+      const quickPost = await db.select().from(quickPosts).where(eq(quickPosts.id, postId)).limit(1);
+      if (quickPost.length > 0) {
+        postExists = true;
+      }
+    } else {
+      // Query posts table for integer ID
+      const post = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
+      if (post.length > 0) {
+        postExists = true;
+      }
+    }
+    
+    if (!postExists) {
       throw new Error('Post not found');
     }
 
@@ -172,7 +190,7 @@ class TokenReactionService {
   /**
    * Get reaction summary for a specific type
    */
-  async getReactionSummary(postId: number, type: ReactionType, userId?: string): Promise<ReactionSummary> {
+  async getReactionSummary(postId: string, type: ReactionType, userId?: string): Promise<ReactionSummary> {
     try {
       // Get total amount and count
       const [totals] = await db
@@ -213,6 +231,7 @@ class TokenReactionService {
         .limit(5);
 
       return {
+        postId,
         type,
         totalAmount: parseFloat(totals?.totalAmount || '0'),
         totalCount: totals?.totalCount || 0,
@@ -233,7 +252,7 @@ class TokenReactionService {
   /**
    * Get all reaction summaries for a post
    */
-  async getReactionSummaries(postId: number, userId?: string): Promise<ReactionSummary[]> {
+  async getReactionSummaries(postId: string, userId?: string): Promise<ReactionSummary[]> {
     const summaries: ReactionSummary[] = [];
     
     for (const type of Object.keys(REACTION_TYPES) as ReactionType[]) {
@@ -250,7 +269,7 @@ class TokenReactionService {
    * Get reactions for a post with pagination
    */
   async getReactions(
-    postId: number,
+    postId: string,
     reactionType?: ReactionType,
     limit: number = 20,
     offset: number = 0
@@ -270,36 +289,18 @@ class TokenReactionService {
           amount: reactions.amount,
           rewardsEarned: reactions.rewardsEarned,
           createdAt: reactions.createdAt,
-          userWalletAddress: users.walletAddress,
-          userHandle: users.handle,
         })
         .from(reactions)
-        .innerJoin(users, eq(reactions.userId, users.id))
         .where(and(...whereConditions))
         .orderBy(desc(reactions.createdAt))
-        .limit(limit + 1)
+        .limit(limit + 1) // Get one more to check if there are more results
         .offset(offset);
 
       const hasMore = reactionData.length > limit;
-      const reactionsToReturn = hasMore ? reactionData.slice(0, -1) : reactionData;
-
-      const formattedReactions: TokenReaction[] = reactionsToReturn.map(r => ({
-        id: r.id,
-        postId: r.postId!,
-        userId: r.userId!,
-        type: r.type as ReactionType,
-        amount: parseFloat(r.amount),
-        rewardsEarned: parseFloat(r.rewardsEarned),
-        createdAt: r.createdAt!,
-        user: {
-          id: r.userId!,
-          walletAddress: r.userWalletAddress,
-          handle: r.userHandle || undefined,
-        },
-      }));
+      const reactionsToReturn = hasMore ? reactionData.slice(0, limit) : reactionData;
 
       return {
-        reactions: formattedReactions,
+        reactions: reactionsToReturn,
         hasMore,
       };
     } catch (error) {
@@ -311,7 +312,7 @@ class TokenReactionService {
   /**
    * Get user's reactions for a post
    */
-  async getUserReactions(postId: number, userId: string): Promise<TokenReaction[]> {
+  async getUserReactions(postId: string, userId: string): Promise<TokenReaction[]> {
     try {
       const userReactions = await db
         .select({
@@ -376,7 +377,7 @@ class TokenReactionService {
   /**
    * Get reaction analytics for a post
    */
-  async getReactionAnalytics(postId: number) {
+  async getReactionAnalytics(postId: string) {
     try {
       const allReactions = await db
         .select()

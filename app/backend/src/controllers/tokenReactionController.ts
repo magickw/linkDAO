@@ -45,10 +45,10 @@ export class TokenReactionController {
       }
 
       const result = await tokenReactionService.createReaction({
-        postId: parseInt(postId),
+        postId,
         userId,
         type: type as ReactionType,
-        amount: parseFloat(amount)
+        amount: parseInt(amount)
       });
 
       res.status(201).json(result);
@@ -77,7 +77,7 @@ export class TokenReactionController {
       }
 
       const result = await tokenReactionService.getReactions(
-        parseInt(postId as string),
+        postId as string,
         reactionType as ReactionType,
         parseInt(limit as string),
         parseInt(offset as string)
@@ -85,8 +85,8 @@ export class TokenReactionController {
 
       // Also get summaries for the response
       const summaries = await tokenReactionService.getReactionSummaries(
-        parseInt(postId as string),
-        req.user?.id
+        postId as string,
+        userId
       );
 
       // Get analytics
@@ -119,7 +119,7 @@ export class TokenReactionController {
       const userId = req.user?.id;
 
       const summaries = await tokenReactionService.getReactionSummaries(
-        parseInt(postId),
+        postId,
         userId
       );
 
@@ -142,7 +142,7 @@ export class TokenReactionController {
       const { postId } = req.params;
 
       const analytics = await tokenReactionService.getReactionAnalytics(
-        parseInt(postId)
+        postId
       );
 
       res.json(analytics);
@@ -229,7 +229,7 @@ export class TokenReactionController {
 
       // Get all summaries and extract top contributors
       const summaries = await tokenReactionService.getReactionSummaries(
-        parseInt(postId)
+        postId
       );
 
       // Aggregate contributors across all reaction types

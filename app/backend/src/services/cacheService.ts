@@ -123,18 +123,13 @@ export class CacheService {
     }
 
     try {
-      // Use the shared Redis service instead of creating a new connection
-      // This prevents multiple Redis connections and connection conflicts
-      const redisClient = redisService.getClient();
-      if (redisClient) {
-        this.redis = redisClient as any; // Type assertion to match ioredis
-        this.isConnected = redisService.getRedisStatus().connected;
-        safeLogger.info('✅ Using shared Redis service for cache operations');
-        
-        // Set up event handlers to track connection status
-        // We don't attach new handlers since the shared service already handles them
+      // Check if shared Redis service is available and connected
+      const redisStatus = redisService.getRedisStatus();
+      if (redisStatus.enabled && redisStatus.connected) {
+        this.isConnected = true;
+        safeLogger.info('✅ Shared Redis service is available and connected');
       } else {
-        safeLogger.warn('⚠️ Shared Redis service not available, Redis functionality disabled for cache');
+        safeLogger.warn('⚠️ Shared Redis service is not available or connected, Redis functionality disabled for cache');
         this.useRedis = false;
       }
     } catch (error) {
@@ -212,8 +207,14 @@ export class CacheService {
     // Use the shared Redis service for connection
     try {
       await redisService.connect();
-      this.isConnected = redisService.getRedisStatus().connected;
-      safeLogger.info('Cache service connected via shared Redis service');
+      const status = redisService.getRedisStatus();
+      this.isConnected = status.connected;
+      if (this.isConnected) {
+        safeLogger.info('Cache service connected via shared Redis service');
+      } else {
+        safeLogger.warn('Cache service failed to connect via shared Redis service');
+        this.useRedis = false;
+      }
     } catch (error) {
       safeLogger.error('Failed to connect cache service via shared Redis service:', {
         error: {
@@ -254,7 +255,7 @@ export class CacheService {
 
   // Core cache operations
   async get<T>(key: string): Promise<T | null> {
-    if (!this.useRedis || !this.redis) {
+    if (!this.useRedis) {
       safeLogger.warn('Redis is disabled or not available, cache miss for key:', key);
       this.stats.misses++;
       return null;
@@ -269,6 +270,11 @@ export class CacheService {
         // Try to reconnect
         try {
           await this.connect();
+          if (!this.isConnected) {
+            safeLogger.warn('Failed to connect to Redis, returning null for key:', key);
+            this.stats.misses++;
+            return null;
+          }
         } catch (connectError) {
           safeLogger.warn('Failed to connect to Redis, returning null for key:', key);
           this.stats.misses++;
@@ -276,14 +282,14 @@ export class CacheService {
         }
       }
 
-      const value = await this.redis.get(key);
+      const value = await redisService.get(key);
       const endTime = performance.now();
       this.stats.responseTimeSum += (endTime - startTime);
 
       if (value !== null) {
         this.stats.hits++;
         try {
-          return JSON.parse(value) as T;
+          return value as T;
         } catch (parseError) {
           safeLogger.warn('Failed to parse cached value for key:', key);
           return value as unknown as T;
@@ -304,7 +310,7 @@ export class CacheService {
   }
 
   async set<T>(key: string, value: T, ttl?: number): Promise<boolean> {
-    if (!this.useRedis || !this.redis) {
+    if (!this.useRedis) {
       safeLogger.warn('Redis is disabled or not available, skipping cache set for key:', key);
       return false;
     }
@@ -315,15 +321,18 @@ export class CacheService {
         // Try to reconnect
         try {
           await this.connect();
+          if (!this.isConnected) {
+            safeLogger.warn('Failed to connect to Redis, skipping cache set for key:', key);
+            return false;
+          }
         } catch (connectError) {
           safeLogger.warn('Failed to connect to Redis, skipping cache set for key:', key);
           return false;
         }
       }
 
-      const serializedValue = JSON.stringify(value);
-
       // Add size limit check (1MB max per cache entry)
+      const serializedValue = JSON.stringify(value);
       if (serializedValue.length > 1000000) {
         safeLogger.warn(`Cache value too large for key ${key}: ${serializedValue.length} bytes, skipping cache`);
         return false;
@@ -332,9 +341,9 @@ export class CacheService {
       const cacheTTL = ttl || this.config.ttl.DEFAULT;
 
       if (cacheTTL > 0) {
-        await this.redis.setex(key, cacheTTL, serializedValue);
+        await redisService.setex(key, cacheTTL, serializedValue);
       } else {
-        await this.redis.set(key, serializedValue);
+        await redisService.set(key, value, cacheTTL);
       }
 
       return true;
@@ -346,7 +355,7 @@ export class CacheService {
   }
 
   async invalidate(key: string): Promise<boolean> {
-    if (!this.useRedis || !this.redis) {
+    if (!this.useRedis) {
       safeLogger.warn('Redis is disabled or not available, skipping cache invalidation for key:', key);
       return false;
     }
@@ -357,13 +366,17 @@ export class CacheService {
         // Try to reconnect
         try {
           await this.connect();
+          if (!this.isConnected) {
+            safeLogger.warn('Failed to connect to Redis, skipping cache invalidation for key:', key);
+            return false;
+          }
         } catch (connectError) {
           safeLogger.warn('Failed to connect to Redis, skipping cache invalidation for key:', key);
           return false;
         }
       }
 
-      await this.redis.del(key);
+      await redisService.del(key);
       return true;
     } catch (error) {
       safeLogger.error(`Cache invalidate error for key ${key}:`, error);
@@ -373,7 +386,7 @@ export class CacheService {
   }
 
   async invalidatePattern(pattern: string): Promise<number> {
-    if (!this.useRedis || !this.redis) {
+    if (!this.useRedis) {
       safeLogger.warn('Redis is disabled or not available, skipping cache invalidation for pattern:', pattern);
       return 0;
     }
@@ -384,18 +397,23 @@ export class CacheService {
         // Try to reconnect
         try {
           await this.connect();
+          if (!this.isConnected) {
+            safeLogger.warn('Failed to connect to Redis, skipping cache invalidation for pattern:', pattern);
+            return 0;
+          }
         } catch (connectError) {
           safeLogger.warn('Failed to connect to Redis, skipping cache invalidation for pattern:', pattern);
           return 0;
         }
       }
 
-      const keys = await this.redis.keys(pattern);
-      if (keys.length > 0) {
-        const deletedCount = await this.redis.del(...keys);
-        return deletedCount;
+      const keys = await redisService.keys(pattern);
+      let deletedCount = 0;
+      for (const key of keys) {
+        await redisService.del(key);
+        deletedCount++;
       }
-      return 0;
+      return deletedCount;
     } catch (error) {
       safeLogger.error(`Cache invalidate pattern error for pattern ${pattern}:`, error);
       this.useRedis = false; // Disable Redis on failure
@@ -404,7 +422,7 @@ export class CacheService {
   }
 
   async exists(key: string): Promise<boolean> {
-    if (!this.useRedis || !this.redis) {
+    if (!this.useRedis) {
       safeLogger.warn('Redis is disabled or not available, returning false for exists check:', key);
       return false;
     }
@@ -415,14 +433,17 @@ export class CacheService {
         // Try to reconnect
         try {
           await this.connect();
+          if (!this.isConnected) {
+            safeLogger.warn('Failed to connect to Redis, returning false for exists check:', key);
+            return false;
+          }
         } catch (connectError) {
           safeLogger.warn('Failed to connect to Redis, returning false for exists check:', key);
           return false;
         }
       }
 
-      const result = await this.redis.exists(key);
-      return result === 1;
+      return await redisService.exists(key);
     } catch (error) {
       safeLogger.error(`Cache exists error for key ${key}:`, error);
       this.useRedis = false; // Disable Redis on failure
@@ -431,7 +452,7 @@ export class CacheService {
   }
 
   async ttl(key: string): Promise<number> {
-    if (!this.useRedis || !this.redis) {
+    if (!this.useRedis) {
       safeLogger.warn('Redis is disabled or not available, returning -1 for TTL check:', key);
       return -1;
     }
@@ -442,13 +463,17 @@ export class CacheService {
         // Try to reconnect
         try {
           await this.connect();
+          if (!this.isConnected) {
+            safeLogger.warn('Failed to connect to Redis, returning -1 for TTL check:', key);
+            return -1;
+          }
         } catch (connectError) {
           safeLogger.warn('Failed to connect to Redis, returning -1 for TTL check:', key);
           return -1;
         }
       }
 
-      return await this.redis.ttl(key);
+      return await redisService.ttl(key);
     } catch (error) {
       safeLogger.error(`Cache TTL error for key ${key}:`, error);
       this.useRedis = false; // Disable Redis on failure
@@ -532,7 +557,7 @@ export class CacheService {
 
   // Batch operations
   async mget<T>(keys: string[]): Promise<(T | null)[]> {
-    if (!this.useRedis || !this.redis) {
+    if (!this.useRedis) {
       safeLogger.warn('Redis is disabled or not available, returning null array for mget');
       return keys.map(() => null);
     }
@@ -543,14 +568,23 @@ export class CacheService {
         // Try to reconnect
         try {
           await this.connect();
+          if (!this.isConnected) {
+            safeLogger.warn('Failed to connect to Redis, returning null array for mget');
+            return keys.map(() => null);
+          }
         } catch (connectError) {
           safeLogger.warn('Failed to connect to Redis, returning null array for mget');
           return keys.map(() => null);
         }
       }
 
-      const values = await this.redis.mget(...keys);
-      return values.map(value => value ? JSON.parse(value) : null);
+      // Since redisService doesn't have mget, we'll fetch keys individually
+      const results: (T | null)[] = [];
+      for (const key of keys) {
+        const value = await redisService.get(key);
+        results.push(value as T | null);
+      }
+      return results;
     } catch (error) {
       safeLogger.error('Cache mget error:', error);
       this.useRedis = false; // Disable Redis on failure
@@ -559,7 +593,7 @@ export class CacheService {
   }
 
   async mset(keyValuePairs: Array<[string, any]>, ttl?: number): Promise<boolean> {
-    if (!this.useRedis || !this.redis) {
+    if (!this.useRedis) {
       safeLogger.warn('Redis is disabled or not available, skipping mset operation');
       return false;
     }
@@ -570,25 +604,27 @@ export class CacheService {
         // Try to reconnect
         try {
           await this.connect();
+          if (!this.isConnected) {
+            safeLogger.warn('Failed to connect to Redis, skipping mset operation');
+            return false;
+          }
         } catch (connectError) {
           safeLogger.warn('Failed to connect to Redis, skipping mset operation');
           return false;
         }
       }
 
-      const pipeline = this.redis.pipeline();
       const cacheTTL = ttl || this.config.ttl.DEFAULT;
 
-      keyValuePairs.forEach(([key, value]) => {
-        const serializedValue = JSON.stringify(value);
+      // Since redisService doesn't have pipeline, we'll set keys individually
+      for (const [key, value] of keyValuePairs) {
         if (cacheTTL > 0) {
-          pipeline.setex(key, cacheTTL, serializedValue);
+          await redisService.setex(key, cacheTTL, JSON.stringify(value));
         } else {
-          pipeline.set(key, serializedValue);
+          await redisService.set(key, value);
         }
-      });
+      }
 
-      await pipeline.exec();
       return true;
     } catch (error) {
       safeLogger.error('Cache mset error:', error);
@@ -603,11 +639,10 @@ export class CacheService {
     remaining: number;
     resetTime: number;
   }> {
-    if (!this.useRedis || !this.redis) {
+    if (!this.useRedis) {
       safeLogger.warn('Redis is disabled or not available, allowing rate limit check for key:', key);
       return { allowed: true, remaining: limit, resetTime: Date.now() + (windowSeconds * 1000) };
     }
-
 
     try {
       // Check connection status
@@ -615,6 +650,10 @@ export class CacheService {
         // Try to reconnect
         try {
           await this.connect();
+          if (!this.isConnected) {
+            safeLogger.warn('Failed to connect to Redis, allowing rate limit check for key:', key);
+            return { allowed: true, remaining: limit, resetTime: Date.now() + (windowSeconds * 1000) };
+          }
         } catch (connectError) {
           safeLogger.warn('Failed to connect to Redis, allowing rate limit check for key:', key);
           return { allowed: true, remaining: limit, resetTime: Date.now() + (windowSeconds * 1000) };
@@ -622,17 +661,7 @@ export class CacheService {
       }
 
       const rateLimitKey = `ratelimit:${key}`;
-      const current = await this.redis.incr(rateLimitKey);
-
-      if (current === 1) {
-        await this.redis.expire(rateLimitKey, windowSeconds);
-      }
-
-      const remaining = Math.max(0, limit - current);
-      const allowed = current <= limit;
-      const resetTime = Date.now() + (windowSeconds * 1000);
-
-      return { allowed, remaining, resetTime };
+      return await redisService.checkRateLimit(rateLimitKey, limit, windowSeconds);
     } catch (error) {
       safeLogger.error('Rate limit check error:', error);
       this.useRedis = false; // Disable Redis on failure
@@ -677,7 +706,7 @@ export class CacheService {
     memoryUsage?: string;
     keyCount?: number;
   }> {
-    if (!this.useRedis || !this.redis) {
+    if (!this.useRedis) {
       return {
         connected: false,
         enabled: false,
@@ -687,20 +716,23 @@ export class CacheService {
 
     try {
       const startTime = performance.now();
-      await this.redis.ping();
+      const result = await redisService.testConnection();
       const endTime = performance.now();
       const latency = endTime - startTime;
 
-      const info = await this.redis.info('memory');
-      const keyspace = await this.redis.info('keyspace');
-
-      return {
-        connected: true,
-        enabled: true,
-        latency,
-        memoryUsage: this.parseRedisInfo(info, 'used_memory_human'),
-        keyCount: this.parseRedisKeyspace(keyspace)
-      };
+      if (result.connected) {
+        return {
+          connected: true,
+          enabled: true,
+          latency
+        };
+      } else {
+        return {
+          connected: false,
+          enabled: false,
+          latency: -1
+        };
+      }
     } catch (error) {
       safeLogger.error('Cache health check failed:', error);
       this.useRedis = false; // Disable Redis on failure
@@ -716,7 +748,7 @@ export class CacheService {
     const hitRate = this.stats.totalRequests > 0 ? this.stats.hits / this.stats.totalRequests : 0;
     const avgResponseTime = this.stats.totalRequests > 0 ? this.stats.responseTimeSum / this.stats.totalRequests : 0;
 
-    if (!this.useRedis || !this.redis) {
+    if (!this.useRedis) {
       return {
         hits: this.stats.hits,
         misses: this.stats.misses,
@@ -729,17 +761,15 @@ export class CacheService {
     }
 
     try {
-      const info = await this.redis.info('memory');
-      const clients = await this.redis.info('clients');
-
+      // Just return basic stats since redisService doesn't provide detailed info
       return {
         hits: this.stats.hits,
         misses: this.stats.misses,
         hitRate,
         totalRequests: this.stats.totalRequests,
         avgResponseTime,
-        memoryUsage: parseInt(this.parseRedisInfo(info, 'used_memory') || '0'),
-        connectedClients: parseInt(this.parseRedisInfo(clients, 'connected_clients') || '0')
+        memoryUsage: 0, // Not available from our Redis service
+        connectedClients: 0 // Not available from our Redis service
       };
     } catch (error) {
       this.useRedis = false; // Disable Redis on failure
