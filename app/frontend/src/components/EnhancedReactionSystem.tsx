@@ -3,6 +3,12 @@ import { useWeb3 } from '@/context/Web3Context';
 import { useToast } from '@/context/ToastContext';
 import { ldaoTokenService } from '@/services/web3/ldaoTokenService';
 import { tokenReactionService } from '@/services/tokenReactionService';
+import { 
+  checkAuthentication, 
+  checkWalletConnection, 
+  handleReactionWithAuth, 
+  getReactionsWithFallback 
+} from '@/utils/reactionFixes';
 
 interface Reaction {
   type: 'hot' | 'diamond' | 'bullish' | 'governance' | 'art' | 'like' | 'love' | 'laugh' | 'angry' | 'sad';
@@ -109,7 +115,8 @@ export default function EnhancedReactionSystem({
   useEffect(() => {
     const fetchReactions = async () => {
       try {
-        const summaries = await tokenReactionService.getReactionSummaries(postId);
+        // Use the enhanced reaction fetcher with fallback
+        const summaries = await getReactionsWithFallback(postId);
         
         if (summaries && summaries.length > 0) {
           // Merge backend data with current local state to preserve user interactions
@@ -136,10 +143,15 @@ export default function EnhancedReactionSystem({
       return;
     }
 
+    // Check authentication
+    if (!checkAuthentication()) {
+      addToast('Please authenticate to react. Try refreshing the page.', 'error');
+      return;
+    }
+
     try {
-      if (onReaction) {
-        await onReaction(postId, reactionType);
-      }
+      // Use the enhanced reaction handler
+      await handleReactionWithAuth(postId, reactionType, 0);
 
       // Update local state
       setReactions(prev => prev.map(reaction => {
@@ -155,9 +167,9 @@ export default function EnhancedReactionSystem({
       }));
 
       addToast(`Reacted with ${reactionType}!`, 'success');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error reacting:', error);
-      addToast('Failed to react. Please try again.', 'error');
+      addToast(error.message || 'Failed to react. Please try again.', 'error');
     }
   };
 
@@ -165,6 +177,12 @@ export default function EnhancedReactionSystem({
   const handleReactionWithStake = async (reactionType: string, amount: number) => {
     if (!isConnected) {
       addToast('Please connect your wallet to react', 'error');
+      return;
+    }
+
+    // Check authentication
+    if (!checkAuthentication()) {
+      addToast('Please authenticate to react. Try refreshing the page.', 'error');
       return;
     }
 
@@ -177,9 +195,8 @@ export default function EnhancedReactionSystem({
         return;
       }
 
-      if (onReaction) {
-        await onReaction(postId, reactionType, amount);
-      }
+      // Use the enhanced reaction handler
+      await handleReactionWithAuth(postId, reactionType, amount);
 
       // Update local state
       setReactions(prev => prev.map(reaction => {
@@ -200,9 +217,9 @@ export default function EnhancedReactionSystem({
       addToast(`Successfully staked ${amount} $LDAO on ${reactionType} reaction!`, 'success');
       setShowStakeModal(null);
       setStakeAmount('1');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error reacting:', error);
-      addToast('Failed to react. Please try again.', 'error');
+      addToast(error.message || 'Failed to react. Please try again.', 'error');
     }
   };
 

@@ -1,0 +1,111 @@
+// Fix for reaction functionality
+// This file contains patches to fix the reaction system
+
+import { tokenReactionService } from './tokenReactionService';
+import { authService } from './authService';
+
+// 1. Fix for authentication check
+export const checkAuthentication = () => {
+  const token = authService.getToken() || 
+                localStorage.getItem('linkdao_access_token') ||
+                localStorage.getItem('token') ||
+                localStorage.getItem('authToken') ||
+                localStorage.getItem('auth_token');
+  
+  return !!token;
+};
+
+// 2. Fix for wallet connection check
+export const checkWalletConnection = () => {
+  if (typeof window === 'undefined') return false;
+  return !!(window as any).ethereum?.selectedAddress;
+};
+
+// 3. Fix for post ID validation and conversion
+export const ensureValidPostId = (postId: string): string => {
+  // If it's already a valid UUID, return as-is
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (uuidRegex.test(postId)) {
+    return postId;
+  }
+  
+  // If it's not a UUID, we need to handle it differently
+  // For now, we'll return a placeholder UUID that the backend can handle
+  console.warn('Invalid post ID format, converting to placeholder:', postId);
+  return '00000000-0000-0000-0000-000000000000';
+};
+
+// 4. Enhanced reaction handler with proper error handling
+export const handleReactionWithAuth = async (
+  postId: string,
+  reactionType: string,
+  amount: number = 0
+) => {
+  // Check authentication
+  if (!checkAuthentication()) {
+    throw new Error('Please connect your wallet and authenticate to react');
+  }
+  
+  // Check wallet connection
+  if (!checkWalletConnection()) {
+    throw new Error('Please connect your wallet to react');
+  }
+  
+  // Ensure valid post ID
+  const validPostId = ensureValidPostId(postId);
+  
+  try {
+    // Try the feed service endpoint first
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.linkdao.io'}/api/feed/${validPostId}/react`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authService.getAuthHeaders()
+      },
+      body: JSON.stringify({
+        type: reactionType,
+        tokenAmount: amount
+      })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || `Failed to react: ${response.statusText}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Reaction error:', error);
+    throw error;
+  }
+};
+
+// 5. Fix for getting reactions with proper error handling
+export const getReactionsWithFallback = async (postId: string) => {
+  const validPostId = ensureValidPostId(postId);
+  
+  try {
+    // Try the token reaction service first
+    const summaries = await tokenReactionService.getReactionSummaries(validPostId);
+    return summaries;
+  } catch (error) {
+    console.warn('Failed to get reactions from token service, trying fallback:', error);
+    
+    // Fallback to feed endpoint
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.linkdao.io'}/api/feed/${validPostId}/reactions`, {
+        headers: authService.getAuthHeaders()
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data.reactions || [];
+      }
+    } catch (fallbackError) {
+      console.error('Fallback also failed:', fallbackError);
+    }
+    
+    // Return empty array as last resort
+    return [];
+  }
+};

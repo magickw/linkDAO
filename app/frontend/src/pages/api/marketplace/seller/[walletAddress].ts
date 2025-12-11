@@ -38,7 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { walletAddress } = req.query;
 
   // Handle GET requests with caching
-  if (method === 'GET' && walletAddress && typeof walletAddress === 'string' && walletAddress !== 'undefined' && walletAddress !== 'profile') {
+  if (method === 'GET' && walletAddress && typeof walletAddress === 'string' && walletAddress !== 'undefined' && walletAddress !== 'profile' && walletAddress !== 'unknown') {
     try {
       console.log(`Fetching seller profile with caching for: ${walletAddress}`);
       
@@ -117,7 +117,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
   
   // Handle PUT requests (updating an existing profile)
-  if (method === 'PUT' && walletAddress && typeof walletAddress === 'string' && walletAddress !== 'undefined' && walletAddress !== 'profile') {
+  if (method === 'PUT' && walletAddress && typeof walletAddress === 'string' && walletAddress !== 'undefined' && walletAddress !== 'profile' && walletAddress !== 'unknown') {
     try {
       // Construct the backend URL for updating a profile
       const backendEndpoint = `${BACKEND_URL}/api/marketplace/seller/${walletAddress}`;

@@ -166,7 +166,7 @@ const ProductDetailPageRoute: React.FC = () => {
             };
 
             // If we have a seller ID but incomplete seller information, try to get the full profile
-            if (productData.sellerId && (!enhancedSeller.name || enhancedSeller.name === 'Unknown Seller' || enhancedSeller.avatar === '')) {
+            if (productData.sellerId && productData.sellerId !== 'unknown' && (!enhancedSeller.name || enhancedSeller.name === 'Unknown Seller' || enhancedSeller.avatar === '')) {
               try {
                 const { sellerService } = await import('@/services/sellerService');
                 const sellerProfile = await sellerService.getSellerProfile(productData.sellerId);

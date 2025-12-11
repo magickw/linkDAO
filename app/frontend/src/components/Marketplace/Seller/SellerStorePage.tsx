@@ -257,7 +257,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
 
   // Function to refresh seller data
   const refreshSellerData = async () => {
-    if (sellerId) {
+    if (sellerId && sellerId !== 'unknown') {
       setLoading(true);
       try {
         const { sellerService } = await import('@/services/sellerService');
@@ -394,8 +394,8 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
 
   // Enhanced data fetching with proper error handling and retry logic
   const fetchSellerData = async (isRetry = false) => {
-    if (!sellerId) {
-      setError('No seller ID provided');
+    if (!sellerId || sellerId === 'unknown') {
+      setError('No valid seller ID provided');
       setLoading(false);
       return;
     }

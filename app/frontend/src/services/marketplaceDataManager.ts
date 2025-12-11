@@ -189,6 +189,11 @@ class MarketplaceDataManager {
   // ============================================================================
 
   async getSeller(sellerId: string, forceRefresh = false): Promise<SellerInfo | null> {
+    // Don't fetch if sellerId is 'unknown'
+    if (!sellerId || sellerId === 'unknown') {
+      return null;
+    }
+    
     // Check cache first
     if (!forceRefresh) {
       const cached = this.sellerCache.get(sellerId);

@@ -1418,6 +1418,11 @@ export class UnifiedMarketplaceService {
 
   async getSellerById(sellerId: string): Promise<SellerInfo | null> {
     try {
+      // Don't fetch profile if sellerId is 'unknown'
+      if (!sellerId || sellerId === 'unknown') {
+        return null;
+      }
+      
       // Try to use the seller service if available
       const { sellerService } = await import('@/services/sellerService');
       const sellerProfile = await sellerService.getSellerProfile(sellerId);
