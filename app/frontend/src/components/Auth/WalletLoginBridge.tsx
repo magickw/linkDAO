@@ -52,31 +52,33 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
     hasHandledAddressRef.current.add(address);
 
     // Add a small delay to ensure wallet state is stable
-    const timeoutId = setTimeout(async () => {
+    const timeoutId = setTimeout(() => {
       console.log(`🔐 Attempting login for wallet: ${address}`);
-      
-      try {
-        const result = await login(address, connector, status);
 
-        if (result.success) {
-          lastAuthenticatedAddress = address;
-          console.log(`✅ Login successful for ${address}`);
-          if (onLoginSuccess) {
-            onLoginSuccess({ address });
+      // Fire-and-forget login to avoid blocking UI/navigation while auth completes.
+      // The login call will still update AuthContext state when complete.
+      login(address, connector, status)
+        .then(result => {
+          if (result.success) {
+            lastAuthenticatedAddress = address;
+            console.log(`✅ Login successful for ${address}`);
+            if (onLoginSuccess) {
+              onLoginSuccess({ address });
+            }
+          } else {
+            console.error(`❌ Login failed for ${address}:`, result.error);
+            if (onLoginError) {
+              onLoginError(result.error || 'Authentication failed');
+            }
           }
-        } else {
-          console.error(`❌ Login failed for ${address}:`, result.error);
+        })
+        .catch((error: any) => {
+          const errorMessage = error?.message || 'An unknown error occurred';
+          console.error('💥 Login threw an exception:', errorMessage);
           if (onLoginError) {
-            onLoginError(result.error || 'Authentication failed');
+            onLoginError(errorMessage);
           }
-        }
-      } catch (error: any) {
-        const errorMessage = error?.message || 'An unknown error occurred';
-        console.error('💥 Login threw an exception:', errorMessage);
-        if (onLoginError) {
-          onLoginError(errorMessage);
-        }
-      }
+        });
     }, 300); // 300ms delay for stability
 
     return () => clearTimeout(timeoutId);

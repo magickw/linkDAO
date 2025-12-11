@@ -12,7 +12,7 @@ import { useToast } from '@/context/ToastContext';
 // Global authentication lock to prevent concurrent auth processes
 let globalAuthLock = false;
 let globalAuthLockTimestamp = 0;
-const AUTH_LOCK_TIMEOUT = 10000; // 10 seconds max lock time
+const AUTH_LOCK_TIMEOUT = 3000; // 3 seconds max lock time (reduced from 10s)
 
 // Global authentication queue to serialize auth attempts
 let authQueue: Array<{
@@ -108,7 +108,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Add authentication cooldown tracking using ref to prevent re-render loops
   // Using ref instead of state because we don't want changes to trigger re-renders
   const lastAuthTimeRef = useRef<number>(0);
-  const AUTH_COOLDOWN = 1000; // 1 second cooldown between auth attempts
+  const AUTH_COOLDOWN = 500; // 500ms cooldown between auth attempts (reduced from 1s)
 
   const { address, isConnected, connector } = useAccount();
   const { disconnect } = useDisconnect();
@@ -343,7 +343,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           clearTimeout(disconnectTimeoutRef.current);
         }
 
-        // Wait 1.5 seconds to confirm it's a real disconnect, not a state transition
+        // Wait 500ms to confirm it's a real disconnect, not a state transition
         disconnectTimeoutRef.current = setTimeout(() => {
           // Double-check that wallet is still disconnected before logging out
           // We check isConnected again via the closure, but also check localStorage as backup
@@ -361,7 +361,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           console.log('🔗 Wallet disconnected confirmed, logging out user');
           handleLogout();
           isDisconnectingRef.current = false;
-        }, 1500);
+        }, 500); // Reduced from 1500ms
 
         return;
       }
@@ -371,7 +371,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isDisconnectingRef.current = false;
       }
 
-      // If wallet is connected but no user, try to restore session (with cooldown and lock)
+      // If wallet is connected but no user, try to restore session (non-blocking)
       if (isConnected && address && !user && !isLoading) {
         const now = Date.now();
         if (now - lastAuthTimeRef.current >= AUTH_COOLDOWN) {
@@ -380,23 +380,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             console.log('⏳ Auth lock active, skipping session check');
             return;
           }
-          // Try to acquire lock before checking session
-          if (!acquireAuthLock()) {
-            console.log('⏳ Could not acquire auth lock, skipping session check');
-            return;
-          }
-          try {
-            console.log('🔗 Wallet connected, checking for existing session...');
-            lastAuthTimeRef.current = now; // Update cooldown timer to prevent infinite loop
-            const hasValidSession = await checkStoredSession();
+          // Non-blocking session check - don't wait for it
+          lastAuthTimeRef.current = now;
+          checkStoredSession().then(hasValidSession => {
             if (hasValidSession) {
               console.log('✅ Restored session without requiring signature');
             } else {
               console.log('🔐 No valid session found, signature will be required when needed');
             }
-          } finally {
-            releaseAuthLock();
-          }
+          }).catch(err => {
+            console.warn('Session check failed:', err);
+          });
         } else {
           console.log('⏳ Wallet connection change cooldown active, skipping session check');
         }
@@ -578,8 +572,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Actual login implementation
   const performLogin = async (walletAddress: string, connector: any, status: string): Promise<{ success: boolean; error?: string }> => {
-    if (!acquireAuthLock()) {
-      throw new Error('Could not acquire auth lock');
+    // Try to acquire lock with timeout
+    const lockAcquired = acquireAuthLock();
+    if (!lockAcquired) {
+      console.warn('Could not acquire auth lock, auth may be in progress');
+      return { success: false, error: 'Authentication in progress' };
     }
 
     try {
