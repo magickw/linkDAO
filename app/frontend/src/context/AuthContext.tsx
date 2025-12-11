@@ -600,28 +600,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [storeSession, validateSession]);
 
-  // Process authentication queue
-  const processAuthQueue = async () => {
+  // Process authentication queue with debouncing to prevent navigation blocking
+  const processAuthQueue = useCallback(async () => {
     if (isProcessingQueue || authQueue.length === 0) return;
     
     isProcessingQueue = true;
     
-    while (authQueue.length > 0) {
-      const { resolve, reject, args } = authQueue.shift()!;
-      
-      try {
-        const result = await performLogin(...args);
-        resolve(result);
-      } catch (error) {
-        reject(error);
+    try {
+      while (authQueue.length > 0) {
+        const { resolve, reject, args } = authQueue.shift()!;
+        
+        try {
+          const result = await performLogin(...args);
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        }
       }
+    } finally {
+      isProcessingQueue = false;
     }
-    
-    isProcessingQueue = false;
-  };
+  }, []);
 
-  // Actual login implementation
-  const performLogin = async (walletAddress: string, connector: any, status: string): Promise<{ success: boolean; error?: string }> => {
+  // Actual login implementation - memoized to prevent effect re-triggers
+  const performLogin = useCallback(async (walletAddress: string, connector: any, status: string): Promise<{ success: boolean; error?: string }> => {
     // Try to acquire lock with timeout (pass connector so hardware wallets get longer timeout)
     const lockAcquired = acquireAuthLock(connector);
     if (!lockAcquired) {
@@ -654,10 +656,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false);
       releaseAuthLock();
     }
-  };
+  }, [storeSession, loadKYCStatus, addToast]);
 
-  // Login with wallet authentication - now uses queue
-  const login = async (walletAddress: string, connector: any, status: string): Promise<{ success: boolean; error?: string }> => {
+  // Login with wallet authentication - now uses queue and is memoized
+  const login = useCallback(async (walletAddress: string, connector: any, status: string): Promise<{ success: boolean; error?: string }> => {
     console.log('🔐 Login queued for address:', walletAddress);
 
     // Check if already authenticated for this address
@@ -672,12 +674,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return new Promise((resolve, reject) => {
       authQueue.push({ resolve, reject, args: [walletAddress, connector, status] });
       
-      // Start processing the queue if not already running
+      // Start processing the queue if not already running (use Promise to not block)
       if (!isProcessingQueue) {
-        processAuthQueue();
+        // Schedule processing asynchronously to avoid blocking navigation
+        Promise.resolve().then(() => processAuthQueue());
       }
     });
-  };
+  }, [user, accessToken, processAuthQueue]);
 
   // Register new user
   const register = async (userData: {

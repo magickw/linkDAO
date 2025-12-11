@@ -39,6 +39,12 @@ const COMMUNITY_REACTIONS: Omit<Reaction, 'totalStaked' | 'userStaked' | 'contri
   { type: 'art', emoji: '🎨', label: 'Art Appreciation' }
 ];
 
+// Helper to format wallet address in shortened form (e.g., "0x1234...5678")
+const formatShortAddress = (address: string): string => {
+  if (!address || address.length < 10) return address;
+  return address.substring(0, 6) + '...' + address.substring(address.length - 4);
+};
+
 export default function EnhancedReactionSystem({
   postId,
   postType,
@@ -67,40 +73,61 @@ export default function EnhancedReactionSystem({
   }, [postType, initialReactions]);
 
   const [reactions, setReactions] = useState<Reaction[]>(getInitialReactions());
+  const [isFetchingReactions, setIsFetchingReactions] = useState(true);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [showStakeModal, setShowStakeModal] = useState<string | null>(null);
   const [stakeAmount, setStakeAmount] = useState('1');
 
-  // Fetch reactions from backend on mount
+  // Merge backend summaries with current local state to preserve user interactions
+  const mergeReactions = useCallback((summaries: any[]) => {
+    setReactions(prev => prev.map(reaction => {
+      const summary = summaries.find(s => s.type === reaction.emoji);
+      if (summary) {
+        return {
+          ...reaction,
+          // Preserve user's local stake (they just interacted with it)
+          // Only update if local userStaked is 0 (no recent user interaction)
+          userStaked: reaction.userStaked > 0 ? reaction.userStaked : (summary.userAmount || 0),
+          totalStaked: summary.totalAmount || 0,
+          count: summary.totalCount || 0,
+          // Format all contributor addresses to shortened format for consistency
+          contributors: summary.topContributors?.map((c: any) => formatShortAddress(c.walletAddress)) || []
+        };
+      }
+      return reaction;
+    }));
+  }, []);
+
+  // Sync initialReactions prop into state when it changes
+  useEffect(() => {
+    const updated = getInitialReactions();
+    setReactions(updated);
+    setIsFetchingReactions(true);
+  }, [initialReactions, postType, getInitialReactions]);
+
+  // Fetch reactions from backend and merge with local state
   useEffect(() => {
     const fetchReactions = async () => {
       try {
         const summaries = await tokenReactionService.getReactionSummaries(postId);
         
         if (summaries && summaries.length > 0) {
-          setReactions(prev => prev.map(reaction => {
-            const summary = summaries.find(s => s.type === reaction.emoji);
-            if (summary) {
-              return {
-                ...reaction,
-                totalStaked: summary.totalAmount || 0,
-                userStaked: summary.userAmount || 0,
-                count: summary.totalCount || 0,
-                contributors: summary.topContributors?.map(c => c.walletAddress) || []
-              };
-            }
-            return reaction;
-          }));
+          // Merge backend data with current local state to preserve user interactions
+          mergeReactions(summaries);
         }
       } catch (error) {
         console.error('Failed to fetch reactions:', error);
+      } finally {
+        setIsFetchingReactions(false);
       }
     };
 
     if (postId) {
       fetchReactions();
+    } else {
+      setIsFetchingReactions(false);
     }
-  }, [postId]);
+  }, [postId, mergeReactions]);
 
   // Handle simple reaction (for feed posts)
   const handleSimpleReaction = async (reactionType: string) => {
@@ -163,7 +190,8 @@ export default function EnhancedReactionSystem({
             totalStaked: reaction.totalStaked + amount,
             userStaked: reaction.userStaked + amount,
             rewardsEarned: reaction.rewardsEarned + reward,
-            contributors: [...reaction.contributors, address!.substring(0, 6) + '...' + address!.substring(38)]
+            // Use same address formatting helper for consistency
+            contributors: [...reaction.contributors, formatShortAddress(address!)]
           };
         }
         return reaction;
@@ -196,6 +224,19 @@ export default function EnhancedReactionSystem({
   };
 
   const topReactions = getTopReactions();
+
+  // Show loading state or withhold rendering during initial fetch to prevent stale UI flash
+  if (isFetchingReactions && topReactions.length === 0) {
+    return (
+      <div className={`relative ${className}`}>
+        <div className="flex gap-2 mb-3">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`relative ${className}`}>

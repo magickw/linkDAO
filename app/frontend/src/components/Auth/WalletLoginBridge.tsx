@@ -84,10 +84,10 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
         });
     }, 300); // 300ms delay for stability
 
-      return () => {
+    return () => {
       isMountedRef.current = false;
       clearTimeout(timeoutId);
-      };
+    };
   }, [address, isConnected, isAuthenticated, isAuthLoading, autoLogin, login, connector, status, onLoginSuccess, onLoginError]);
 
   // Reset when wallet disconnects

@@ -1366,6 +1366,9 @@ function recordCircuitBreakerFailure(serviceKey, error) {
     halfOpenCalls: 0
   };
 
+  // Get service-specific configuration
+  const config = SERVICE_CIRCUIT_BREAKER_CONFIGS[serviceKey] || SERVICE_CIRCUIT_BREAKER_CONFIGS.default;
+
   const isServiceFailure = error?.status >= 500 ||
     error?.status === 503 ||
     error?.message?.includes('fetch') ||
