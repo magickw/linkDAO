@@ -511,7 +511,10 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
 
     try {
       const networkResponse = await fetch(request, {
-        signal: controller.signal
+        signal: controller.signal,
+        mode: 'cors', // Explicitly set mode to cors
+        credentials: 'include', // Include credentials if available
+        cache: 'no-store' // Don't cache responses at the fetch level, we handle caching separately
       });
 
       clearTimeout(timeoutId);
@@ -542,7 +545,10 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
     }
 
     const networkResponse = await fetch(fetchRequest, {
-      signal: controller.signal
+      signal: controller.signal,
+      mode: 'cors', // Explicitly set mode to cors
+      credentials: 'include', // Include credentials if available
+      cache: 'no-store' // Don't cache responses at the fetch level, we handle caching separately
     });
 
     clearTimeout(timeoutId);
@@ -673,12 +679,13 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
         else if (isMarketplaceRequest) {
           console.log('Marketplace request 503 error, using moderate backoff');
           // Clear failure info after moderate period for marketplace requests
+          // Reduce timeout to allow faster recovery for marketplace listings
           setTimeout(() => {
             if (failedRequests.get(requestKey)?.attempts <= 2) {
               failedRequests.delete(requestKey);
               console.log('Cleared marketplace request failure info for faster retry');
             }
-          }, 15000); // Clear after 15 seconds for marketplace requests
+          }, 8000); // Clear after 8 seconds for marketplace requests
         }
       }
       // Handle community API errors with specific backoff
@@ -753,6 +760,15 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
     const url = new URL(request.url);
     // requestKey is already available from arguments
 
+    // Check if this is a network-level error (e.g., "Failed to fetch", DNS issues, connection refused)
+    const isNetworkError = error.name === 'TypeError' && 
+                          (error.message.includes('Failed to fetch') || 
+                           error.message.includes('NetworkError') || 
+                           error.message.includes('network') || 
+                           error.message.includes('fetch') ||
+                           error.message.includes('connection') ||
+                           error.message.includes('aborted'));
+
     // Handle WebSocket connection failures
     if (url.pathname.includes('socket.io')) {
       console.warn('WebSocket connection failed, falling back to polling:', error.message);
@@ -799,14 +815,24 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
       failureInfo.lastFailure = Date.now();
       failedRequests.set(requestKey, failureInfo);
 
-      // For marketplace requests, use moderate backoff and clear failure info after moderate period
-      console.log('Marketplace request network error, using moderate backoff');
-      setTimeout(() => {
-        if (failedRequests.get(requestKey)?.attempts <= 2) {
-          failedRequests.delete(requestKey);
-          console.log('Cleared marketplace request failure info for faster retry');
-        }
-      }, 5000); // Clear after 5 seconds for marketplace requests
+      // For marketplace requests, use improved backoff handling
+      if (isNetworkError) {
+        // For network-level errors, clear failure info faster to enable quicker retries
+        setTimeout(() => {
+          if (failedRequests.get(requestKey)?.attempts <= 2) {
+            failedRequests.delete(requestKey);
+            console.log('Cleared marketplace network error failure info for faster retry');
+          }
+        }, 5000); // Clear after 5 seconds for marketplace network errors
+      } else {
+        // For other types of errors, use longer timeout
+        setTimeout(() => {
+          if (failedRequests.get(requestKey)?.attempts <= 2) {
+            failedRequests.delete(requestKey);
+            console.log('Cleared marketplace request failure info for faster retry');
+          }
+        }, 8000); // Clear after 8 seconds for marketplace requests
+      }
     }
     // Handle seller dashboard failures with more specific backoff
     else if (url.pathname.includes('/api/marketplace/seller') || url.pathname.includes('/dashboard/')) {
@@ -835,6 +861,7 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
       failedRequests.set(requestKey, failureInfo);
     }
 
+    // For network-level errors, try to get a cached response first, then fallback to offline page
     return await getCachedResponse(request, cacheName);
   }
 }

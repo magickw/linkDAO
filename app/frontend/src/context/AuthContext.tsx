@@ -170,6 +170,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const disconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isDisconnectingRef = useRef(false);
 
+  // Refs to avoid stale closure issues in processAuthQueue and prevent circular dependencies
+  const performLoginRef = useRef<(walletAddress: string, connector: any, status: string) => Promise<{ success: boolean; error?: string }>>();
+  const isProcessingQueueRef = useRef(false);
+
   // Store session data - must be defined before checkStoredSession
   const storeSession = useCallback((token: string, userData: AuthUser) => {
     try {
@@ -601,24 +605,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [storeSession, validateSession]);
 
   // Process authentication queue with debouncing to prevent navigation blocking
+  // Uses ref to access the current performLogin to avoid stale closure
   const processAuthQueue = useCallback(async () => {
-    if (isProcessingQueue || authQueue.length === 0) return;
+    if (isProcessingQueueRef.current || authQueue.length === 0) return;
     
-    isProcessingQueue = true;
+    isProcessingQueueRef.current = true;
     
     try {
       while (authQueue.length > 0) {
         const { resolve, reject, args } = authQueue.shift()!;
         
         try {
-          const result = await performLogin(...args);
-          resolve(result);
+          // Call the current performLogin function stored in ref
+          const performLoginFn = performLoginRef.current;
+          if (performLoginFn) {
+            const result = await performLoginFn(...args);
+            resolve(result);
+          } else {
+            reject(new Error('performLogin not initialized'));
+          }
         } catch (error) {
           reject(error);
         }
       }
     } finally {
-      isProcessingQueue = false;
+      isProcessingQueueRef.current = false;
     }
   }, []);
 
@@ -658,6 +669,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [storeSession, loadKYCStatus, addToast]);
 
+  // Update the ref whenever performLogin changes so processAuthQueue always has latest
+  useEffect(() => {
+    performLoginRef.current = performLogin;
+  }, [performLogin]);
+
   // Login with wallet authentication - now uses queue and is memoized
   const login = useCallback(async (walletAddress: string, connector: any, status: string): Promise<{ success: boolean; error?: string }> => {
     console.log('🔐 Login queued for address:', walletAddress);
@@ -675,7 +691,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       authQueue.push({ resolve, reject, args: [walletAddress, connector, status] });
       
       // Start processing the queue if not already running (use Promise to not block)
-      if (!isProcessingQueue) {
+      if (!isProcessingQueueRef.current) {
         // Schedule processing asynchronously to avoid blocking navigation
         Promise.resolve().then(() => processAuthQueue());
       }
