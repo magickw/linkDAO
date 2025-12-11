@@ -1,7 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useWeb3 } from '@/context/Web3Context';
 import { useToast } from '@/context/ToastContext';
 import { ldaoTokenService } from '@/services/web3/ldaoTokenService';
+import { tokenReactionService } from '@/services/tokenReactionService';
 
 interface Reaction {
   type: 'hot' | 'diamond' | 'bullish' | 'governance' | 'art' | 'like' | 'love' | 'laugh' | 'angry' | 'sad';
@@ -69,6 +70,37 @@ export default function EnhancedReactionSystem({
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [showStakeModal, setShowStakeModal] = useState<string | null>(null);
   const [stakeAmount, setStakeAmount] = useState('1');
+
+  // Fetch reactions from backend on mount
+  useEffect(() => {
+    const fetchReactions = async () => {
+      try {
+        const summaries = await tokenReactionService.getReactionSummaries(postId);
+        
+        if (summaries && summaries.length > 0) {
+          setReactions(prev => prev.map(reaction => {
+            const summary = summaries.find(s => s.type === reaction.emoji);
+            if (summary) {
+              return {
+                ...reaction,
+                totalStaked: summary.totalAmount || 0,
+                userStaked: summary.userAmount || 0,
+                count: summary.totalCount || 0,
+                contributors: summary.topContributors?.map(c => c.walletAddress) || []
+              };
+            }
+            return reaction;
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to fetch reactions:', error);
+      }
+    };
+
+    if (postId) {
+      fetchReactions();
+    }
+  }, [postId]);
 
   // Handle simple reaction (for feed posts)
   const handleSimpleReaction = async (reactionType: string) => {
@@ -278,7 +310,7 @@ export default function EnhancedReactionSystem({
 
             <div className="flex space-x-3">
               <button
-                onClick={() => handleStakedReaction(showStakeModal, parseFloat(stakeAmount))}
+                onClick={() => handleReactionWithStake(showStakeModal, parseFloat(stakeAmount))}
                 disabled={!stakeAmount || parseFloat(stakeAmount) <= 0}
                 className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >

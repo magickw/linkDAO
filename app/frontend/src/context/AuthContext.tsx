@@ -12,7 +12,42 @@ import { useToast } from '@/context/ToastContext';
 // Global authentication lock to prevent concurrent auth processes
 let globalAuthLock = false;
 let globalAuthLockTimestamp = 0;
-const AUTH_LOCK_TIMEOUT = 3000; // 3 seconds max lock time (reduced from 10s)
+let globalAuthLockTimeout = 0; // timeout (ms) used for the current lock
+
+// Timeouts (ms) for different connector types (defaults can be overridden via env)
+const DEFAULT_SOFTWARE_LOCK_TIMEOUT = 3000; // 3s for software wallets
+const DEFAULT_HARDWARE_LOCK_TIMEOUT = 10000; // 10s for hardware wallets
+
+// Parse env-provided timeout values safely (milliseconds)
+const parseEnvTimeout = (envVar: string | undefined, fallback: number): number => {
+  if (typeof envVar === 'undefined' || envVar === '') return fallback;
+  const n = Number(envVar);
+  return Number.isFinite(n) && n > 0 ? Math.round(n) : fallback;
+};
+
+// Read Next.js public env vars (available at build time and exposed to client)
+const SOFTWARE_LOCK_TIMEOUT_MS = typeof process !== 'undefined' && process.env && process.env.NEXT_PUBLIC_AUTH_LOCK_TIMEOUT_SOFTWARE
+  ? parseEnvTimeout(process.env.NEXT_PUBLIC_AUTH_LOCK_TIMEOUT_SOFTWARE, DEFAULT_SOFTWARE_LOCK_TIMEOUT)
+  : DEFAULT_SOFTWARE_LOCK_TIMEOUT;
+
+const HARDWARE_LOCK_TIMEOUT_MS = typeof process !== 'undefined' && process.env && process.env.NEXT_PUBLIC_AUTH_LOCK_TIMEOUT_HARDWARE
+  ? parseEnvTimeout(process.env.NEXT_PUBLIC_AUTH_LOCK_TIMEOUT_HARDWARE, DEFAULT_HARDWARE_LOCK_TIMEOUT)
+  : DEFAULT_HARDWARE_LOCK_TIMEOUT;
+
+// Detect hardware wallets by connector id/name
+const isHardwareConnector = (connector?: any): boolean => {
+  if (!connector) return false;
+  const id = (connector.id || '').toString().toLowerCase();
+  const name = (connector.name || '').toString().toLowerCase();
+
+  const hardwareIdentifiers = ['ledger', 'trezor', 'coldcard', 'bitbox', 'keepkey'];
+  return hardwareIdentifiers.some(h => id.includes(h) || name.includes(h));
+};
+
+// Get lock timeout based on connector type
+const getAuthLockTimeout = (connector?: any): number => {
+  return isHardwareConnector(connector) ? HARDWARE_LOCK_TIMEOUT_MS : SOFTWARE_LOCK_TIMEOUT_MS;
+};
 
 // Global authentication queue to serialize auth attempts
 let authQueue: Array<{
@@ -22,19 +57,25 @@ let authQueue: Array<{
 }> = [];
 let isProcessingQueue = false;
 
-// Helper to acquire auth lock
-const acquireAuthLock = (): boolean => {
+// Helper to acquire auth lock (connector-aware timeout)
+const acquireAuthLock = (connector?: any): boolean => {
   const now = Date.now();
-  // Release stale lock
-  if (globalAuthLock && now - globalAuthLockTimestamp > AUTH_LOCK_TIMEOUT) {
+  const timeoutMs = getAuthLockTimeout(connector);
+
+  // Release stale lock if it exceeded the previously set timeout
+  if (globalAuthLock && now - globalAuthLockTimestamp > (globalAuthLockTimeout || timeoutMs)) {
     console.log('🔓 Releasing stale auth lock');
     globalAuthLock = false;
+    globalAuthLockTimeout = 0;
   }
+
   if (globalAuthLock) {
     return false;
   }
+
   globalAuthLock = true;
   globalAuthLockTimestamp = now;
+  globalAuthLockTimeout = timeoutMs;
   return true;
 };
 
@@ -42,10 +83,19 @@ const acquireAuthLock = (): boolean => {
 const releaseAuthLock = () => {
   globalAuthLock = false;
   globalAuthLockTimestamp = 0;
+  globalAuthLockTimeout = 0;
 };
 
 // Export for use by WalletLoginBridge
 export const isAuthLocked = () => globalAuthLock;
+
+// Export helpers and defaults for testing and configuration
+export const DEFAULT_SOFTWARE_LOCK_TIMEOUT_MS = DEFAULT_SOFTWARE_LOCK_TIMEOUT;
+export const DEFAULT_HARDWARE_LOCK_TIMEOUT_MS = DEFAULT_HARDWARE_LOCK_TIMEOUT;
+export const EFFECTIVE_SOFTWARE_LOCK_TIMEOUT_MS = SOFTWARE_LOCK_TIMEOUT_MS;
+export const EFFECTIVE_HARDWARE_LOCK_TIMEOUT_MS = HARDWARE_LOCK_TIMEOUT_MS;
+
+export { isHardwareConnector, getAuthLockTimeout, acquireAuthLock, releaseAuthLock };
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -217,7 +267,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       initAuthRef.current = true;
 
       // Try to acquire global auth lock
-      if (!acquireAuthLock()) {
+      if (!acquireAuthLock(connector)) {
         console.log('⏳ Auth initialization skipped - another auth process is running');
         setIsLoading(false);
         return;
@@ -572,8 +622,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Actual login implementation
   const performLogin = async (walletAddress: string, connector: any, status: string): Promise<{ success: boolean; error?: string }> => {
-    // Try to acquire lock with timeout
-    const lockAcquired = acquireAuthLock();
+    // Try to acquire lock with timeout (pass connector so hardware wallets get longer timeout)
+    const lockAcquired = acquireAuthLock(connector);
     if (!lockAcquired) {
       console.warn('Could not acquire auth lock, auth may be in progress');
       return { success: false, error: 'Authentication in progress' };

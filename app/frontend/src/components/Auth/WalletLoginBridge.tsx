@@ -30,6 +30,7 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
   const { address, isConnected, connector, status } = useAccount();
   const { user, isAuthenticated, isLoading: isAuthLoading, login } = useAuth();
   const hasHandledAddressRef = useRef<Set<string>>(new Set());
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
     // Only attempt login if:
@@ -38,7 +39,7 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
     // 3. User is not already authenticated
     // 4. Not currently loading
     // 5. Haven't already handled this address
-
+    isMountedRef.current = true;
     if (!autoLogin || !isConnected || !address || isAuthenticated || isAuthLoading) {
       return;
     }
@@ -59,6 +60,7 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
       // The login call will still update AuthContext state when complete.
       login(address, connector, status)
         .then(result => {
+          if (!isMountedRef.current) return;
           if (result.success) {
             lastAuthenticatedAddress = address;
             console.log(`✅ Login successful for ${address}`);
@@ -73,6 +75,7 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
           }
         })
         .catch((error: any) => {
+          if (!isMountedRef.current) return;
           const errorMessage = error?.message || 'An unknown error occurred';
           console.error('💥 Login threw an exception:', errorMessage);
           if (onLoginError) {
@@ -81,7 +84,10 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
         });
     }, 300); // 300ms delay for stability
 
-    return () => clearTimeout(timeoutId);
+      return () => {
+      isMountedRef.current = false;
+      clearTimeout(timeoutId);
+      };
   }, [address, isConnected, isAuthenticated, isAuthLoading, autoLogin, login, connector, status, onLoginSuccess, onLoginError]);
 
   // Reset when wallet disconnects
