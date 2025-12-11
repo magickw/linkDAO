@@ -9,7 +9,7 @@ export class RedisService {
   private isConnected: boolean = false;
   private useRedis: boolean = true; // Flag to enable/disable Redis functionality
   private reconnectAttempts: number = 0;
-  private maxReconnectAttempts: number = 2; // Further reduced to prevent excessive retries
+  private maxReconnectAttempts: number = 5; // Increased for cloud deployments where initial connections can be flaky
   private reconnectDelay: number = 1000; // Start with 1 second delay
   private maxReconnectDelay: number = 5000; // Cap at 5 seconds instead of 30
   private connectionPromise: Promise<void> | null = null;
@@ -51,10 +51,14 @@ export class RedisService {
     
     safeLogger.info('🔗 Attempting Redis connection to:', redisUrl.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
     
+    // Determine if we need to use SSL based on the URL scheme
+    const isSecureConnection = redisUrl.startsWith('rediss://');
+    
     this.client = Redis.createClient({
       url: redisUrl,
       socket: {
         connectTimeout: 10000, // 10 seconds timeout
+        tls: isSecureConnection, // Enable TLS for secure connections (rediss://)
         reconnectStrategy: (attempts) => {
           this.reconnectAttempts = attempts;
           if (attempts > this.maxReconnectAttempts) {
