@@ -965,11 +965,13 @@ app.use('/api/listings', listingRoutes);
 // Order creation routes
 app.use('/api/orders', orderCreationRoutes);
 
-// Marketplace seller routes - Main seller endpoints
-app.use('/api/marketplace', marketplaceSellerRoutes);
+// =============================================================================
+// MARKETPLACE ROUTES - Order matters! More specific paths must come FIRST
+// =============================================================================
 
-// Seller profile API routes - Additional profile functionality
-app.use('/api/marketplace/seller/profile', sellerProfileRoutes);
+// Marketplace listings routes - MUST be before generic /api/marketplace routes
+// Frontend expects: GET /api/marketplace/listings
+app.use('/api/marketplace/listings', marketplaceListingsRoutes);
 
 // Seller dashboard routes
 app.use('/api/marketplace/seller/dashboard', sellerDashboardRoutes);
@@ -992,14 +994,21 @@ app.use('/api/marketplace/seller/verification', sellerVerificationRoutes);
 // ENS validation routes
 app.use('/api/marketplace/ens', ensValidationRoutes);
 
+// Register main marketplace routes at different path to avoid conflicts
+app.use('/api/marketplace/core', marketplaceRoutes);
+
+// Seller profile API routes - Primary seller endpoints
+// sellerProfileRoutes defines routes like /seller/:walletAddress, so mounting at /api/marketplace
+// creates the correct path: /api/marketplace/seller/:walletAddress
+// Frontend expects: GET /api/marketplace/seller/:walletAddress
+app.use('/api/marketplace', sellerProfileRoutes);
+
+// Marketplace seller routes - Additional seller utility endpoints
+// These are more specific routes like /seller/:walletAddress/enhanced, /seller/:walletAddress/completeness
+app.use('/api/marketplace', marketplaceSellerRoutes);
+
 // Profile routes are handled by userProfileRoutes.ts
 // This duplicate definition has been removed to prevent conflicts
-
-// Marketplace listings routes (legacy support)
-app.use('/api/marketplace/listings', marketplaceListingsRoutes);
-// Register main marketplace routes at different path to avoid conflicts
-// app.use('/api/v1/marketplace', marketplaceRoutes);
-app.use('/api/marketplace/core', marketplaceRoutes);
 
 // Cart routes
 app.use('/api/v1/cart', cartRoutes);
