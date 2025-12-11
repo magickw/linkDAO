@@ -10,8 +10,11 @@ const router = Router();
 /**
  * GET /api/marketplace/seller/listings/:walletAddress
  * Get all listings for a seller
+ *
+ * Note: This router is mounted at /api/marketplace/seller/listings
+ * so the route path is just /:walletAddress
  */
-router.get('/seller/listings/:walletAddress',
+router.get('/:walletAddress',
   rateLimitWithCache(req => `seller_listings:${req.ip}`, 60, 60), // 60 requests per minute
   cachingMiddleware.cache('sellerListings', { ttl: 60 }), // Cache for 1 minute
   async (req: Request, res: Response) => {
@@ -76,8 +79,10 @@ router.get('/seller/listings/:walletAddress',
 /**
  * POST /api/marketplace/seller/listings
  * Create a new listing
+ *
+ * Note: This router is mounted at /api/marketplace/seller/listings
  */
-router.post('/seller/listings', csrfProtection, 
+router.post('/', csrfProtection, 
   rateLimitWithCache(req => `create_listing:${req.ip}`, 10, 60), // 10 requests per minute
   cachingMiddleware.invalidate('sellerListings'),
   async (req: Request, res: Response) => {
@@ -152,8 +157,10 @@ router.post('/seller/listings', csrfProtection,
 /**
  * PUT /api/marketplace/seller/listings/:listingId
  * Update an existing listing
+ *
+ * Note: This router is mounted at /api/marketplace/seller/listings
  */
-router.put('/seller/listings/:listingId', csrfProtection, 
+router.put('/:listingId', csrfProtection, 
   rateLimitWithCache(req => `update_listing:${req.ip}`, 30, 60), // 30 requests per minute
   cachingMiddleware.invalidate('sellerListings'),
   async (req: Request, res: Response) => {
@@ -217,8 +224,10 @@ router.put('/seller/listings/:listingId', csrfProtection,
 /**
  * DELETE /api/marketplace/seller/listings/:listingId
  * Delete a listing
+ *
+ * Note: This router is mounted at /api/marketplace/seller/listings
  */
-router.delete('/seller/listings/:listingId', csrfProtection, 
+router.delete('/:listingId', csrfProtection, 
   rateLimitWithCache(req => `delete_listing:${req.ip}`, 20, 60), // 20 requests per minute
   cachingMiddleware.invalidate('sellerListings'),
   async (req: Request, res: Response) => {
@@ -272,8 +281,10 @@ router.delete('/seller/listings/:listingId', csrfProtection,
 /**
  * GET /api/marketplace/seller/listings/detail/:listingId
  * Get single listing details
+ *
+ * Note: This router is mounted at /api/marketplace/seller/listings
  */
-router.get('/seller/listings/detail/:listingId',
+router.get('/detail/:listingId',
   rateLimitWithCache(req => `listing_detail:${req.ip}`, 120, 60), // 120 requests per minute
   cachingMiddleware.cache('listingDetail', { ttl: 60 }), // Cache for 1 minute
   async (req: Request, res: Response) => {

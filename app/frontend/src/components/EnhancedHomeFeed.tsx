@@ -51,14 +51,19 @@ export default function EnhancedHomeFeed({
     triggerOnce: false,
   });
 
+  // Use ref to track loading state without causing re-renders in the callback
+  const isLoadingRef = useRef(false);
+
   // Fetch posts function with debouncing and concurrency control
+  // IMPORTANT: Do NOT include isLoading in dependencies - use isLoadingRef instead
+  // to prevent infinite re-render loops
   const fetchPosts = useCallback(async (pageNum: number, isRefresh: boolean = false) => {
     const now = Date.now();
     const timeSinceLastFetch = now - lastFetchTimeRef.current;
     const requestKey = `${activeTab}-${userProfile?.walletAddress || userProfile?.address || 'anonymous'}-${pageNum}`;
 
-    // Prevent concurrent requests and add debouncing
-    if (isLoading || 
+    // Prevent concurrent requests and add debouncing - use ref to check loading state
+    if (isLoadingRef.current ||
         (fetchRequestRef.current === requestKey) ||
         (timeSinceLastFetch < FETCH_DEBOUNCE_DELAY && !isRefresh)) {
       console.log('[FEED] Skipping fetch - request in progress or debounced');
@@ -68,6 +73,7 @@ export default function EnhancedHomeFeed({
     // Set request tracking
     fetchRequestRef.current = requestKey;
     lastFetchTimeRef.current = now;
+    isLoadingRef.current = true;
     setIsLoading(true);
 
     try {
@@ -107,35 +113,53 @@ export default function EnhancedHomeFeed({
       console.error('Error fetching posts:', error);
       addToast('Failed to load feed', 'error');
     } finally {
+      isLoadingRef.current = false;
       setIsLoading(false);
       fetchRequestRef.current = null;
     }
-  }, [activeTab, userProfile, addToast, isLoading]);
+  }, [activeTab, userProfile, addToast]); // Removed isLoading from dependencies
+
+  // Track userProfile address for triggering refresh
+  const userAddressRef = useRef<string | undefined>(undefined);
 
   // Initial load and refresh on tab/profile change
+  // Use separate tracking to prevent infinite loops
   useEffect(() => {
-    fetchPosts(1, true);
-  }, [fetchPosts]);
+    const currentAddress = userProfile?.walletAddress || userProfile?.address;
 
-  // Handle external refresh
+    // Only fetch if this is initial load or if the user address actually changed
+    if (userAddressRef.current !== currentAddress) {
+      userAddressRef.current = currentAddress;
+      fetchPosts(1, true);
+    }
+  }, [fetchPosts, userProfile?.walletAddress, userProfile?.address]);
+
+  // Handle external refresh - use a ref to track the last processed key
+  const lastExternalRefreshKeyRef = useRef(0);
   useEffect(() => {
-    if (externalRefreshKey > 0) {
+    if (externalRefreshKey > 0 && externalRefreshKey !== lastExternalRefreshKeyRef.current) {
+      lastExternalRefreshKeyRef.current = externalRefreshKey;
       fetchPosts(1, true);
     }
   }, [externalRefreshKey, fetchPosts]);
 
   // Load more posts function with concurrency control
+  // Use isLoadingRef instead of isLoading to prevent dependency loops
   const loadMorePosts = useCallback(async () => {
-    if (loadingMore || !hasMore || isLoading) return;
+    if (loadingMore || !hasMore || isLoadingRef.current) return;
 
     setLoadingMore(true);
     await fetchPosts(page, false);
     setLoadingMore(false);
-  }, [loadingMore, hasMore, fetchPosts, page, isLoading]);
+  }, [loadingMore, hasMore, fetchPosts, page]);
 
-  // Infinite scroll
+  // Infinite scroll - use a ref to prevent rapid triggering
+  const lastInViewTriggerRef = useRef(0);
   useEffect(() => {
-    if (inView && hasMore && !loadingMore) {
+    const now = Date.now();
+    // Debounce inView triggers to prevent rapid re-fetching
+    if (inView && hasMore && !loadingMore && (now - lastInViewTriggerRef.current > 500)) {
+      lastInViewTriggerRef.current = now;
       loadMorePosts();
     }
   }, [inView, hasMore, loadingMore, loadMorePosts]);

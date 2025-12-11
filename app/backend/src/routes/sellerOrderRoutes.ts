@@ -10,8 +10,11 @@ const router = Router();
 /**
  * GET /api/marketplace/seller/orders/:walletAddress
  * Get all orders for a seller
+ *
+ * Note: This router is mounted at /api/marketplace/seller/orders
+ * so the route path is just /:walletAddress
  */
-router.get('/seller/orders/:walletAddress',
+router.get('/:walletAddress',
   rateLimitWithCache(req => `seller_orders:${req.ip}`, 60, 60), // 60 requests per minute
   cachingMiddleware.cache('sellerOrders', { ttl: 30 }), // Cache for 30 seconds
   async (req: Request, res: Response) => {
@@ -77,7 +80,7 @@ router.get('/seller/orders/:walletAddress',
  * PUT /api/marketplace/seller/orders/:orderId/status
  * Update order status
  */
-router.put('/seller/orders/:orderId/status', csrfProtection, 
+router.put('/:orderId/status', csrfProtection, 
   rateLimitWithCache(req => `order_status_update:${req.ip}`, 30, 60), // 30 requests per minute
   cachingMiddleware.invalidate('sellerOrders'),
   async (req: Request, res: Response) => {
@@ -134,7 +137,7 @@ router.put('/seller/orders/:orderId/status', csrfProtection,
  * PUT /api/marketplace/seller/orders/:orderId/tracking
  * Update order tracking information
  */
-router.put('/seller/orders/:orderId/tracking', csrfProtection, 
+router.put('/:orderId/tracking', csrfProtection, 
   rateLimitWithCache(req => `order_tracking_update:${req.ip}`, 30, 60), // 30 requests per minute
   cachingMiddleware.invalidate('sellerOrders'),
   async (req: Request, res: Response) => {
@@ -206,7 +209,7 @@ router.put('/seller/orders/:orderId/tracking', csrfProtection,
  * GET /api/marketplace/seller/orders/:orderId
  * Get single order details
  */
-router.get('/seller/orders/detail/:orderId',
+router.get('/detail/:orderId',
   rateLimitWithCache(req => `order_detail:${req.ip}`, 120, 60), // 120 requests per minute
   cachingMiddleware.cache('orderDetail', { ttl: 60 }), // Cache for 1 minute
   async (req: Request, res: Response) => {

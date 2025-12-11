@@ -105,8 +105,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [kycStatus, setKycStatus] = useState<KYCStatus | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
-  // Add authentication cooldown tracking (MUST be declared before use in useEffect)
-  const [lastAuthTime, setLastAuthTime] = useState<number>(0);
+  // Add authentication cooldown tracking using ref to prevent re-render loops
+  // Using ref instead of state because we don't want changes to trigger re-renders
+  const lastAuthTimeRef = useRef<number>(0);
   const AUTH_COOLDOWN = 1000; // 1 second cooldown between auth attempts
 
   const { address, isConnected, connector } = useAccount();
@@ -143,12 +144,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   // Check if we have a valid stored session
-  const checkStoredSession = async () => {
+  // Memoized with useCallback to prevent infinite re-render loops
+  const checkStoredSession = useCallback(async () => {
     try {
       // First check if we have a token in localStorage (most common case for returning users)
       const storedToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
       const storedUserData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
-      
+
       if (storedToken && storedUserData) {
         try {
           const userData = JSON.parse(storedUserData);
@@ -156,7 +158,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const timestamp = parseInt(localStorage.getItem(STORAGE_KEYS.SIGNATURE_TIMESTAMP) || '0');
           const now = Date.now();
           const TOKEN_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours
-          
+
           if (now - timestamp < TOKEN_EXPIRY_TIME) {
             setUser(userData);
             setAccessToken(storedToken);
@@ -172,12 +174,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           clearStoredSession();
         }
       }
-      
+
       // If we have an address but no valid session, check with backend
       if (address) {
         const normalizedAddress = address.toLowerCase();
         const sessionValidation = await validateSession(address);
-        
+
         if (sessionValidation.isValid && sessionValidation.token) {
           // Try to get user data
           try {
@@ -198,7 +200,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error('Error checking stored session:', error);
     }
     return false;
-  };
+  }, [address, clearStoredSession, storeSession, validateSession]);
 
   // Initialize authentication state with comprehensive session checking
   // This should only run once on mount to avoid circular dependencies
@@ -372,7 +374,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // If wallet is connected but no user, try to restore session (with cooldown and lock)
       if (isConnected && address && !user && !isLoading) {
         const now = Date.now();
-        if (now - lastAuthTime >= AUTH_COOLDOWN) {
+        if (now - lastAuthTimeRef.current >= AUTH_COOLDOWN) {
           // Check if auth is already in progress using the helper function
           if (isAuthLocked()) {
             console.log('⏳ Auth lock active, skipping session check');
@@ -385,7 +387,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
           try {
             console.log('🔗 Wallet connected, checking for existing session...');
-            setLastAuthTime(now); // Update cooldown timer to prevent infinite loop
+            lastAuthTimeRef.current = now; // Update cooldown timer to prevent infinite loop
             const hasValidSession = await checkStoredSession();
             if (hasValidSession) {
               console.log('✅ Restored session without requiring signature');
@@ -420,7 +422,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         clearTimeout(disconnectTimeoutRef.current);
       }
     };
-  }, [isConnected, address, user, isLoading, checkStoredSession, lastAuthTime]);
+  }, [isConnected, address, user, isLoading, checkStoredSession]); // Removed lastAuthTime - using ref instead
 
   // Load KYC status
   const loadKYCStatus = async () => {
@@ -1003,9 +1005,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // If wallet is connected but not authenticated, trigger login (with cooldown check)
     const now = Date.now();
-    if (now - lastAuthTime >= AUTH_COOLDOWN) {
+    if (now - lastAuthTimeRef.current >= AUTH_COOLDOWN) {
       console.log('🔐 Wallet connected but not authenticated, triggering login...');
-      setLastAuthTime(now); // Update cooldown timer
+      lastAuthTimeRef.current = now; // Update cooldown timer
       try {
         const result = await login(address, connector, 'connected');
         return result;
@@ -1017,7 +1019,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         };
       }
     } else {
-      console.log(`⏳ Authentication cooldown active, skipping login (${AUTH_COOLDOWN - (now - lastAuthTime)}ms remaining)`);
+      console.log(`⏳ Authentication cooldown active, skipping login (${AUTH_COOLDOWN - (now - lastAuthTimeRef.current)}ms remaining)`);
       return { success: true }; // Return success to prevent error loops
     }
   }, [user, accessToken, isConnected, address, connector, login]);

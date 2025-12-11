@@ -10,8 +10,11 @@ const router = Router();
 /**
  * GET /api/marketplace/seller/dashboard/:walletAddress
  * Get seller dashboard statistics
+ *
+ * Note: This router is mounted at /api/marketplace/seller/dashboard
+ * so the route path is just /:walletAddress
  */
-router.get('/seller/dashboard/:walletAddress',
+router.get('/:walletAddress',
   rateLimitWithCache(req => `seller_dashboard:${req.ip}`, 60, 60), // 60 requests per minute
   cachingMiddleware.cache('sellerDashboard', { ttl: 60 }), // Cache for 1 minute
   async (req: Request, res: Response) => {
@@ -64,10 +67,13 @@ router.get('/seller/dashboard/:walletAddress',
   });
 
 /**
- * GET /api/marketplace/seller/notifications/:walletAddress
+ * GET /api/marketplace/seller/dashboard/notifications/:walletAddress
  * Get seller notifications
+ *
+ * Note: This router is mounted at /api/marketplace/seller/dashboard
+ * Changed path from /seller/notifications to /notifications to avoid double prefix
  */
-router.get('/seller/notifications/:walletAddress',
+router.get('/notifications/:walletAddress',
   rateLimitWithCache(req => `seller_notifications:${req.ip}`, 60, 60),
   cachingMiddleware.cache('sellerNotifications', { ttl: 30 }), // Cache for 30 seconds
   async (req: Request, res: Response) => {
@@ -120,10 +126,12 @@ router.get('/seller/notifications/:walletAddress',
   });
 
 /**
- * PUT /api/marketplace/seller/notifications/:notificationId/read
+ * PUT /api/marketplace/seller/dashboard/notifications/:notificationId/read
  * Mark notification as read
+ *
+ * Note: This router is mounted at /api/marketplace/seller/dashboard
  */
-router.put('/seller/notifications/:notificationId/read', csrfProtection, 
+router.put('/notifications/:notificationId/read', csrfProtection, 
   rateLimitWithCache(req => `mark_notification_read:${req.ip}`, 30, 60),
   cachingMiddleware.invalidate('sellerNotifications'),
   async (req: Request, res: Response) => {
@@ -167,10 +175,12 @@ router.put('/seller/notifications/:notificationId/read', csrfProtection,
   });
 
 /**
- * GET /api/marketplace/seller/analytics/:walletAddress
+ * GET /api/marketplace/seller/dashboard/analytics/:walletAddress
  * Get seller analytics data
+ *
+ * Note: This router is mounted at /api/marketplace/seller/dashboard
  */
-router.get('/seller/analytics/:walletAddress',
+router.get('/analytics/:walletAddress',
   rateLimitWithCache(req => `seller_analytics:${req.ip}`, 30, 60),
   cachingMiddleware.cache('sellerAnalytics', { ttl: 300 }), // Cache for 5 minutes
   async (req: Request, res: Response) => {
