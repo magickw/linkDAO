@@ -353,7 +353,7 @@ class EnhancedAuthService {
   /**
    * Sign message with enhanced error handling and retry logic
    */
-  private async signMessageWithRetry(address: string, message: string, retries = 2): Promise<string> {
+  private async signMessageWithRetry(address: string, message: string, retries = 3): Promise<string> {
     if (!message || typeof message !== 'string') {
       throw new Error('Invalid message for signing');
     }
@@ -364,8 +364,17 @@ class EnhancedAuthService {
 
     for (let attempt = 0; attempt < retries; attempt++) {
       try {
-        // Verify connector is actually connected before attempting to sign
-        const account = getAccount(config);
+        // Wait for connector to be ready before attempting to sign
+        const maxWaitTime = 5000; // 5 seconds max wait per attempt
+        const startWait = Date.now();
+        let account = getAccount(config);
+        
+        while ((!account.isConnected || !account.connector) && (Date.now() - startWait < maxWaitTime)) {
+          await this.sleep(200);
+          account = getAccount(config);
+        }
+
+        // Final check after waiting
         if (!account.isConnected || !account.connector) {
           throw new Error('Connector not connected');
         }
@@ -387,16 +396,6 @@ class EnhancedAuthService {
         // Don't retry on user rejection or unsupported operations
         if (this.isUserRejectionError(error) || this.isUnsupportedError(error)) {
           throw new Error(errorMessage);
-        }
-
-        // If connector is not connected, wait longer before retrying
-        if (errorMessage.includes('Connector not connected')) {
-          if (attempt === retries - 1) {
-            throw new Error(errorMessage);
-          }
-          console.warn(`Signing attempt ${attempt + 1} failed, waiting for connector:`, errorMessage);
-          await this.sleep(2000); // Wait longer for connector to be ready
-          continue;
         }
 
         if (attempt === retries - 1) {
