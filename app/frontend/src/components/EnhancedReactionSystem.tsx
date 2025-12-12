@@ -170,6 +170,11 @@ export default function EnhancedReactionSystem({
         return reaction;
       }));
 
+      // Call the parent's onReaction callback to notify of the change
+      if (onReaction) {
+        await onReaction(postId, reactionType, 0); // Pass amount as 0 for simple reactions
+      }
+
       addToast(`Reacted with ${reactionType}!`, 'success');
     } catch (error: any) {
       console.error('Error reacting:', error);
@@ -187,7 +192,7 @@ export default function EnhancedReactionSystem({
 
     // Check authentication
     if (!checkAuthentication()) {
-      addToast('Please authenticate to react. TryRefreshing the page.', 'error');
+      addToast('Please authenticate to react. Try refreshing the page.', 'error');
       return;
     }
 
@@ -218,6 +223,11 @@ export default function EnhancedReactionSystem({
         }
         return reaction;
       }));
+
+      // Call the parent's onReaction callback to notify of the change
+      if (onReaction) {
+        await onReaction(postId, reactionType, amount);
+      }
 
       addToast(`Successfully staked ${amount} $LDAO on ${reactionType} reaction!`, 'success');
       setShowStakeModal(null);

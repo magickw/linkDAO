@@ -17,7 +17,7 @@ if (typeof self !== 'undefined' && self.location && self.location.hostname === '
 }
 
 // Service Worker Version - increment to force update
-const SW_VERSION = '2.0.1';
+const SW_VERSION = '2.0.2';
 
 const CACHE_NAME = 'linkdao-v1';
 const STATIC_CACHE = 'static-v1';

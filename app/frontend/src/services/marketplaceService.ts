@@ -1068,7 +1068,8 @@ export class UnifiedMarketplaceService {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache',
         'Pragma': 'no-cache',
-        'X-Service-Worker-Bypass': 'true', // Bypass service worker for marketplace API
+        // NOTE: Removed 'X-Service-Worker-Bypass' header - let SW handle caching via networkFirst strategy
+        // The bypass was causing "Failed to fetch" errors in production
         ...options.headers,
       };
 
@@ -1128,10 +1129,8 @@ export class UnifiedMarketplaceService {
       const separator = paramsString ? '&' : '';
       const endpoint = `/api/marketplace/listings?${paramsString}${separator}${cacheBuster}`;
       console.log('[MarketplaceService] Fetching listings from primary URL:', `${this.primaryBaseUrl}${endpoint}`);      const response = await this.makeApiRequest(endpoint, {
-        method: 'GET',
-        headers: {
-          'X-Service-Worker-Bypass': 'true'
-        }
+        method: 'GET'
+        // NOTE: Removed X-Service-Worker-Bypass header - let SW handle via networkFirst strategy
       });
 
       if (!response.ok) {

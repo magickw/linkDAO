@@ -73,56 +73,58 @@ export default function Web3SocialPostCard({
   const [commentCount, setCommentCount] = useState(post.commentCount || 0);
   const [reactions, setReactions] = useState<Reaction[]>([]);
   const [reactionsFetched, setReactionsFetched] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // Add refresh trigger state
   
-  // Fetch real reaction data from backend
+  // Function to fetch real reaction data from backend
+  const fetchReactions = async () => {
+    try {
+      const summaries = await tokenReactionService.getReactionSummaries(post.id);
+      
+      // Convert summaries to our Reaction format
+      const convertedReactions = summaries.map(summary => ({
+        type: summary.type,  // The emoji itself
+        emoji: summary.type,
+        label: summary.type, // Use emoji as label for now
+        totalStaked: summary.totalAmount,
+        userStaked: summary.userAmount,
+        contributors: summary.topContributors.map(c => c.walletAddress).slice(0, 5),
+        rewardsEarned: 0, // Placeholder
+      }));
+      
+      // Add any missing reaction types that don't have reactions yet
+      const existingTypes = new Set(convertedReactions.map(r => r.type));
+      const allReactionTypes = ['🔥', '💎', '🚀']; // Add all possible reaction types
+      
+      allReactionTypes.forEach(type => {
+        if (!existingTypes.has(type)) {
+          convertedReactions.push({
+            type,
+            emoji: type,
+            label: type,
+            totalStaked: 0,
+            userStaked: 0,
+            contributors: [],
+            rewardsEarned: 0,
+          });
+        }
+      });
+      
+      setReactions(convertedReactions);
+      setReactionsFetched(true);
+    } catch (error) {
+      console.error('Failed to fetch reactions:', error);
+      // Fallback to empty reactions if fetch fails
+      setReactions([]);
+      setReactionsFetched(true);
+    }
+  };
+  
+  // Fetch reactions when component mounts or refresh trigger changes
   useEffect(() => {
-    const fetchReactions = async () => {
-      try {
-        const summaries = await tokenReactionService.getReactionSummaries(post.id);
-        
-        // Convert summaries to our Reaction format
-        const convertedReactions = summaries.map(summary => ({
-          type: summary.type,  // The emoji itself
-          emoji: summary.type,
-          label: summary.type, // Use emoji as label for now
-          totalStaked: summary.totalAmount,
-          userStaked: summary.userAmount,
-          contributors: summary.topContributors.map(c => c.walletAddress).slice(0, 5),
-          rewardsEarned: 0, // Placeholder
-        }));
-        
-        // Add any missing reaction types that don't have reactions yet
-        const existingTypes = new Set(convertedReactions.map(r => r.type));
-        const allReactionTypes = ['🔥', '💎', '🚀']; // Add all possible reaction types
-        
-        allReactionTypes.forEach(type => {
-          if (!existingTypes.has(type)) {
-            convertedReactions.push({
-              type,
-              emoji: type,
-              label: type,
-              totalStaked: 0,
-              userStaked: 0,
-              contributors: [],
-              rewardsEarned: 0,
-            });
-          }
-        });
-        
-        setReactions(convertedReactions);
-        setReactionsFetched(true);
-      } catch (error) {
-        console.error('Failed to fetch reactions:', error);
-        // Fallback to empty reactions if fetch fails
-        setReactions([]);
-        setReactionsFetched(true);
-      }
-    };
-    
     if (post.id) {
       fetchReactions();
     }
-  }, [post.id]);
+  }, [post.id, refreshTrigger]); // Add refreshTrigger to dependency array
 
   // Format the timestamp
   const timestamp = useMemo(() => {
@@ -233,49 +235,14 @@ export default function Web3SocialPostCard({
         return updated;
       });
 
-      // Call the onReaction callback if provided
+      // Call the onReaction callback if provided (this triggers EnhancedReactionSystem's logic)
       if (onReaction) {
         await onReaction(post.id, reactionType, amount);
       }
 
-      // Refresh reactions from backend to get accurate counts and sync with other users
-      try {
-        const summaries = await tokenReactionService.getReactionSummaries(post.id);
-        
-        // Convert summaries to our Reaction format
-        const convertedReactions = summaries.map(summary => ({
-          type: summary.type,  // The emoji itself
-          emoji: summary.type,
-          label: summary.type, // Use emoji as label for now
-          totalStaked: summary.totalAmount,
-          userStaked: summary.userAmount,
-          contributors: summary.topContributors.map(c => c.walletAddress).slice(0, 5),
-          rewardsEarned: 0, // Placeholder
-        }));
-        
-        // Add any missing reaction types that don't have reactions yet
-        const existingTypes = new Set(convertedReactions.map(r => r.type));
-        const allReactionTypes = ['🔥', '💎', '🚀']; // Add all possible reaction types
-        
-        allReactionTypes.forEach(type => {
-          if (!existingTypes.has(type)) {
-            convertedReactions.push({
-              type,
-              emoji: type,
-              label: type,
-              totalStaked: 0,
-              userStaked: 0,
-              contributors: [],
-              rewardsEarned: 0,
-            });
-          }
-        });
-        
-        setReactions(convertedReactions);
-      } catch (error) {
-        console.error('Failed to refresh reactions after reaction:', error);
-        // If refresh fails, the optimistic update will remain until next page refresh
-      }
+      // Refresh reactions immediately after successful backend call
+      // This ensures the component is updated with accurate data from the server
+      setRefreshTrigger(prev => prev + 1);
 
       addToast(`Successfully staked ${amount} $LDAO on ${reactionType} reaction!`, 'success');
     } catch (error) {
@@ -933,6 +900,8 @@ export default function Web3SocialPostCard({
           postType="feed"
           onReaction={async (postId: string, reactionType: string, amount?: number) => {
             await handleReaction(reactionType, amount);
+            // Trigger refresh to ensure reaction counts are updated in real-time
+            setRefreshTrigger(prev => prev + 1);
           }}
           onTip={async (postId: string, amount: string, token: string) => {
             if (onTip) {
