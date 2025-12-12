@@ -746,9 +746,17 @@ class EnhancedAuthService {
    * Handle wallet connection changes
    */
   async handleWalletChange(newAddress?: string): Promise<void> {
+    // Don't logout if authentication is in progress
+    if (this.authenticationInProgress) {
+      console.log('⏳ Authentication in progress, ignoring wallet change');
+      return;
+    }
+
     if (!newAddress) {
-      // Wallet disconnected
-      await this.logout();
+      // Wallet disconnected - only logout if we have an active session
+      if (this.sessionData) {
+        await this.logout();
+      }
       return;
     }
 
