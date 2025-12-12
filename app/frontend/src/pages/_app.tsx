@@ -374,8 +374,9 @@ export default function App({ Component, pageProps, router }: AppProps) {
                               <AppContent>
                                 <Component {...pageProps} />
                               </AppContent>
-                              {/* Automatic wallet login bridge with toast notifications */}
-                              <WalletLoginBridgeWithToast />
+                              {/* Automatic wallet login bridge - DISABLED to prevent navigation blocking */}
+                              {/* Authentication will trigger when user performs actions requiring auth */}
+                              <WalletLoginBridgeWithToast autoLogin={false} />
                             </EnhancedThemeProvider>
                           </ContactProvider>
                         </NavigationProvider>
