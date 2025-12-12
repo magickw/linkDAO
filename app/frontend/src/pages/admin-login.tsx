@@ -64,6 +64,12 @@ const AdminLoginPage: NextPage = () => {
     }
   }, [isConnected, address, loginMethod, hasAuthenticated, lastAuthAttempt]);
 
+  useEffect(() => {
+    if (isConnected && address && !isAuthenticated && !isLoading) {
+      authenticateWithBackend();
+    }
+  }, [isConnected, address, isAuthenticated, isLoading]);
+
   // Function to authenticate with backend
   const authenticateWithBackend = async () => {
     if (!address || hasAuthenticated) return;
@@ -74,6 +80,9 @@ const AdminLoginPage: NextPage = () => {
     try {
       // Find the connected connector or use the first available one
       const connectedConnector = connectors.find(c => c.ready) || connectors[0];
+      if (!connectedConnector) {
+        throw new Error('No wallet connector available. Please try again.');
+      }
       console.log('Attempting authentication for address:', address);
       const result = await enhancedAuthService.authenticateWallet(address, connectedConnector, 'connected');
       console.log('Authentication result:', result);
