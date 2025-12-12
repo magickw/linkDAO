@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, startTransition } from 'react';
 import { useAccount, useDisconnect } from 'wagmi';
 import { useRouter } from 'next/router';
 import { enhancedAuthService, KYCStatus } from '@/services/enhancedAuthService';
@@ -92,7 +92,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    syncAuthState();
+    // Use startTransition to make initial auth sync non-blocking
+    // This prevents blocking navigation during app initialization
+    startTransition(() => {
+      syncAuthState();
+    });
   }, [syncAuthState]);
 
   useEffect(() => {
@@ -107,7 +111,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       const result = await enhancedAuthService.authenticateWallet(address, connector, 'connected');
       if (result.success && result.user) {
-        await syncAuthState();
+        // Use startTransition to make state sync non-blocking
+        startTransition(() => {
+          syncAuthState();
+        });
       } else {
         throw new Error(result.error || 'Authentication failed');
       }
@@ -125,7 +132,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const result = await enhancedAuthService.authenticateWallet(walletAddress, connector, status);
       if (result.success && result.user) {
-        await syncAuthState();
+        // Use startTransition to make auth state sync non-blocking
+        // This allows navigation to proceed immediately while auth completes in background
+        startTransition(() => {
+          syncAuthState();
+        });
         addToast('Successfully authenticated!', 'success');
         return { success: true };
       }
@@ -135,7 +146,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return { success: false, error: error.message };
     }
   }, [syncAuthState, addToast]);
-  
+
   const register = async (userData: {
     address: string;
     handle: string;
@@ -249,14 +260,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isAdmin = hasRole('admin');
   const isModerator = hasRole('moderator');
   const isSuperAdmin = hasRole('super_admin');
-  
+
   const enhancedAuthenticate = useCallback(async (options: { forceRefresh?: boolean } = {}): Promise<{ success: boolean; error?: string }> => {
     if (!address || !isConnected || !connector) {
       return { success: false, error: 'Wallet not connected' };
     }
     const result = await enhancedAuthService.authenticateWallet(address, connector, 'connected', options);
     if (result.success) {
-      await syncAuthState();
+      // Use startTransition to make state sync non-blocking
+      startTransition(() => {
+        syncAuthState();
+      });
     }
     return result;
   }, [address, isConnected, connector, syncAuthState]);
@@ -265,7 +279,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!address) return false;
     const result = await enhancedAuthService.recoverAuthentication(address);
     if (result.success) {
-      await syncAuthState();
+      // Use startTransition to make state sync non-blocking
+      startTransition(() => {
+        syncAuthState();
+      });
     }
     return result.success;
   }, [address, syncAuthState]);
