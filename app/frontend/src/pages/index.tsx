@@ -67,18 +67,8 @@ export default function Home() {
   const { profile } = useProfile(address);
   const { navigationState, openModal, closeModal } = useNavigation();
 
-  // Use deferred value for isConnected to prevent blocking navigation
-  // This allows the main thread to process navigation events during the heavy re-render
-  const [deferredConnected, setDeferredConnected] = useState(isConnected);
-
-  // Update deferred connected state in a transition to keep UI responsive
-  useEffect(() => {
-    if (isConnected !== deferredConnected) {
-      startTransition(() => {
-        setDeferredConnected(isConnected);
-      });
-    }
-  }, [isConnected, deferredConnected]);
+  // Removed deferredConnected state - it was causing navigation blocking
+  // by triggering heavy re-renders with startTransition when wallet connects
 
   const [mounted, setMounted] = useState(false);
   const [hasNewPosts, setHasNewPosts] = useState(false);
@@ -236,8 +226,7 @@ export default function Home() {
   }, [isConnected, address, createPost, addToast, closeModal]);
 
   // If not connected, show enhanced landing page
-  // Use deferredConnected to prevent blocking navigation during the heavy re-render
-  if (!deferredConnected) {
+  if (!isConnected) {
     const scrollToFeatures = () => {
       document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
     };

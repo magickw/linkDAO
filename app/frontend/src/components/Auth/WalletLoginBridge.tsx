@@ -67,6 +67,37 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
 
     console.log(`🔐 Attempting login for wallet: ${address}`);
 
+    // Check if we have a valid stored session before triggering authentication
+    // This prevents unnecessary signature requests when session is already valid
+    const hasValidSession = (): boolean => {
+      if (typeof window === 'undefined') return false;
+
+      try {
+        const sessionDataStr = localStorage.getItem('linkdao_session_data');
+        if (!sessionDataStr) return false;
+
+        const sessionData = JSON.parse(sessionDataStr);
+        // Check if session is for the same address and not expired
+        const isValid = sessionData.user?.address?.toLowerCase() === address.toLowerCase() &&
+          Date.now() < sessionData.expiresAt;
+
+        if (isValid) {
+          console.log('✅ Valid session exists in storage, skipping authentication');
+        }
+
+        return isValid;
+      } catch (error) {
+        console.error('Error checking session validity:', error);
+        return false;
+      }
+    };
+
+    // Skip authentication if we already have a valid session
+    if (hasValidSession()) {
+      console.log('WalletLoginBridge: Valid session exists, skipping login');
+      return;
+    }
+
     // Fire-and-forget login to avoid blocking UI/navigation while auth completes.
     // The login call will still update AuthContext state when complete.
     // Use requestIdleCallback or setTimeout to defer execution and not block navigation

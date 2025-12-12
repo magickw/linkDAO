@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, startTransition } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useAccount, useDisconnect } from 'wagmi';
 import { useRouter } from 'next/router';
 import { enhancedAuthService, KYCStatus } from '@/services/enhancedAuthService';
@@ -92,11 +92,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    // Use startTransition to make initial auth sync non-blocking
-    // This prevents blocking navigation during app initialization
-    startTransition(() => {
-      syncAuthState();
-    });
+    syncAuthState();
   }, [syncAuthState]);
 
   useEffect(() => {
@@ -111,10 +107,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       const result = await enhancedAuthService.authenticateWallet(address, connector, 'connected');
       if (result.success && result.user) {
-        // Use startTransition to make state sync non-blocking
-        startTransition(() => {
-          syncAuthState();
-        });
+        // Fire-and-forget: Don't await to prevent blocking
+        syncAuthState().catch(err => console.error('Background auth sync failed:', err));
       } else {
         throw new Error(result.error || 'Authentication failed');
       }
@@ -132,11 +126,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const result = await enhancedAuthService.authenticateWallet(walletAddress, connector, status);
       if (result.success && result.user) {
-        // Use startTransition to make auth state sync non-blocking
-        // This allows navigation to proceed immediately while auth completes in background
-        startTransition(() => {
-          syncAuthState();
-        });
+        // Fire-and-forget: Don't await syncAuthState to prevent blocking navigation
+        // This allows navigation to proceed immediately while auth state syncs in background
+        syncAuthState().catch(err => console.error('Background auth sync failed:', err));
         addToast('Successfully authenticated!', 'success');
         return { success: true };
       }
@@ -267,10 +259,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     const result = await enhancedAuthService.authenticateWallet(address, connector, 'connected', options);
     if (result.success) {
-      // Use startTransition to make state sync non-blocking
-      startTransition(() => {
-        syncAuthState();
-      });
+      // Fire-and-forget: Don't await to prevent blocking
+      syncAuthState().catch(err => console.error('Background auth sync failed:', err));
     }
     return result;
   }, [address, isConnected, connector, syncAuthState]);
@@ -279,10 +269,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!address) return false;
     const result = await enhancedAuthService.recoverAuthentication(address);
     if (result.success) {
-      // Use startTransition to make state sync non-blocking
-      startTransition(() => {
-        syncAuthState();
-      });
+      // Fire-and-forget: Don't await to prevent blocking
+      syncAuthState().catch(err => console.error('Background auth sync failed:', err));
     }
     return result.success;
   }, [address, syncAuthState]);
