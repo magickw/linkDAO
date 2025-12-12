@@ -277,8 +277,8 @@ class EnhancedAuthService {
     // Sign message with enhanced error handling
     const signature = await this.signMessageWithRetry(address, message);
 
-    // Authenticate with backend using circuit breaker
-    return await this.authenticateWithBackend(address, signature, nonce);
+    // Authenticate with backend using circuit breaker - send message not nonce
+    return await this.authenticateWithBackend(address, signature, message);
   }
 
   /**
@@ -416,7 +416,7 @@ class EnhancedAuthService {
   private async authenticateWithBackend(
     address: string,
     signature: string,
-    nonce: string
+    message: string
   ): Promise<AuthResponse & { refreshToken?: string }> {
     return await apiCircuitBreaker.execute(
       async () => {
@@ -428,7 +428,7 @@ class EnhancedAuthService {
             body: JSON.stringify({
               walletAddress: address,
               signature,
-              nonce
+              message
             })
           },
           { timeout: 15000, retries: 2 }
