@@ -49,26 +49,8 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
       connector
     });
 
-    // Don't block on isAuthLoading - let auth happen in background
-    if (!autoLogin || !isConnected || !address || !connector || isAuthenticated) {
-      console.log('WalletLoginBridge: Skipping login, conditions not met');
-      return;
-    }
-
-    // Check if we've already handled this address
-    if (hasHandledAddressRef.current.has(address)) {
-      console.log('WalletLoginBridge: Skipping login, address already handled');
-      return;
-    }
-
-    // Mark this address as handled
-    hasHandledAddressRef.current.add(address);
-    console.log('WalletLoginBridge: Marking address as handled', address);
-
-    console.log(`🔐 Attempting login for wallet: ${address}`);
-
-    // Check if we have a valid stored session before triggering authentication
-    // This prevents unnecessary signature requests when session is already valid
+    // FIRST: Check if we have a valid stored session before any other logic
+    // This prevents race conditions where isAuthenticated is briefly false during session restoration
     const hasValidSession = (): boolean => {
       if (typeof window === 'undefined') return false;
 
@@ -78,7 +60,7 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
 
         const sessionData = JSON.parse(sessionDataStr);
         // Check if session is for the same address and not expired
-        const isValid = sessionData.user?.address?.toLowerCase() === address.toLowerCase() &&
+        const isValid = sessionData.user?.address?.toLowerCase() === address?.toLowerCase() &&
           Date.now() < sessionData.expiresAt;
 
         if (isValid) {
@@ -97,6 +79,24 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
       console.log('WalletLoginBridge: Valid session exists, skipping login');
       return;
     }
+
+    // Don't block on isAuthLoading - let auth happen in background
+    if (!autoLogin || !isConnected || !address || !connector || isAuthenticated) {
+      console.log('WalletLoginBridge: Skipping login, conditions not met');
+      return;
+    }
+
+    // Check if we've already handled this address
+    if (hasHandledAddressRef.current.has(address)) {
+      console.log('WalletLoginBridge: Skipping login, address already handled');
+      return;
+    }
+
+    // Mark this address as handled
+    hasHandledAddressRef.current.add(address);
+    console.log('WalletLoginBridge: Marking address as handled', address);
+
+    console.log(`🔐 Attempting login for wallet: ${address}`);
 
     // Fire-and-forget login to avoid blocking UI/navigation while auth completes.
     // The login call will still update AuthContext state when complete.
