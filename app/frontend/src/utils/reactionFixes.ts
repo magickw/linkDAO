@@ -29,10 +29,15 @@ export const ensureValidPostId = (postId: string): string => {
     return postId;
   }
   
-  // If it's not a UUID, we need to handle it differently
-  // For now, we'll return a placeholder UUID that the backend can handle
-  console.warn('Invalid post ID format, converting to placeholder:', postId);
-  return '00000000-0000-0000-0000-000000000000';
+  // If it's a numeric ID, return it as-is
+  const numericIdRegex = /^\d+$/;
+  if (numericIdRegex.test(postId)) {
+    return postId;
+  }
+  
+  // For any other format, return as-is (might be a valid format we don't recognize)
+  console.warn('Unrecognized post ID format, using as-is:', postId);
+  return postId;
 };
 
 // 4. Enhanced reaction handler with proper error handling

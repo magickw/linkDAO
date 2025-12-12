@@ -257,9 +257,9 @@ class TokenReactionService {
     
     for (const type of Object.keys(REACTION_TYPES) as ReactionType[]) {
       const summary = await this.getReactionSummary(postId, type, userId);
-      if (summary.totalAmount > 0 || summary.userAmount > 0) {
-        summaries.push(summary);
-      }
+      // Always include all reaction types, even if they have no reactions
+      // This ensures the frontend shows all possible reaction buttons
+      summaries.push(summary);
     }
 
     return summaries.sort((a, b) => b.totalAmount - a.totalAmount);

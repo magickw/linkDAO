@@ -87,6 +87,8 @@ export default function EnhancedReactionSystem({
   // Merge backend summaries with current local state to preserve user interactions
   const mergeReactions = useCallback((summaries: any[]) => {
     setReactions(prev => prev.map(reaction => {
+      // Find matching summary by emoji (both backend and frontend use emojis as types for community reactions)
+      // For feed reactions, summaries may not exist if they use a different system
       const summary = summaries.find(s => s.type === reaction.emoji);
       if (summary) {
         return {
@@ -232,18 +234,11 @@ export default function EnhancedReactionSystem({
     }
   };
 
-  // Get top reactions to display
-  const getTopReactions = () => {
-    return reactions
-      .filter(r => (postType === 'community' ? r.totalStaked > 0 : r.count > 0))
-      .sort((a, b) => (postType === 'community' || postType === 'enhanced' ? b.totalStaked - a.totalStaked : b.count - a.count))
-      .slice(0, 5);
-  };
-
-  const topReactions = getTopReactions();
+  // Show all reactions for the post type, not just those with activity
+  const allReactions = reactions;
 
   // Show loading state or withhold rendering during initial fetch to prevent stale UI flash
-  if (isFetchingReactions && topReactions.length === 0) {
+  if (isFetchingReactions && allReactions.length === 0) {
     return (
       <div className={`relative ${className}`}>
         <div className="flex gap-2 mb-3">
@@ -259,7 +254,7 @@ export default function EnhancedReactionSystem({
     <div className={`relative ${className}`}>
       {/* Reaction Display */}
       <div className="flex flex-wrap gap-2 mb-3">
-        {topReactions.map((reaction) => (
+        {allReactions.map((reaction) => (
           <button
             key={reaction.type}
             onClick={() => handleReactionClick(reaction.type)}

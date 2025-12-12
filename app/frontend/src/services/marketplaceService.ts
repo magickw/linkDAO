@@ -978,15 +978,22 @@ export class UnifiedMarketplaceService {
     // First try the primary URL
     let response = await this.attemptApiRequest(`${this.primaryBaseUrl}${endpoint}`, options);
     
-    // If primary fails with 503 (service unavailable), implement backoff strategy
+    // If primary fails with 503 (service unavailable), implement immediate retry with shorter backoff
     if (response.status === 503) {
-      console.log(`[MarketplaceService] Primary API returned 503, implementing backoff strategy`);
+      console.log(`[MarketplaceService] Primary API returned 503, implementing immediate retry strategy`);
       
-      // Wait 15 seconds before retrying (shorter than service worker for faster recovery)
-      await new Promise(resolve => setTimeout(resolve, 15000));
+      // Wait 3 seconds before retrying (much shorter for better UX)
+      await new Promise(resolve => setTimeout(resolve, 3000));
       
       // Retry the request
       response = await this.attemptApiRequest(`${this.primaryBaseUrl}${endpoint}`, options);
+      
+      // If still 503, try one more time after 5 seconds
+      if (response.status === 503) {
+        console.log(`[MarketplaceService] Second attempt also returned 503, trying final retry`);
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        response = await this.attemptApiRequest(`${this.primaryBaseUrl}${endpoint}`, options);
+      }
     }
     
     // If primary still fails and we're in development, try fallback
@@ -1025,6 +1032,7 @@ export class UnifiedMarketplaceService {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache',
         'Pragma': 'no-cache',
+        'X-Service-Worker-Bypass': 'true', // Bypass service worker for marketplace API
         ...options.headers,
       };
 

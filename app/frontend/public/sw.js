@@ -292,8 +292,14 @@ self.addEventListener('fetch', (event) => {
     console.log('SW: Handling image request:', request.url);
     event.respondWith(cacheFirst(request, IMAGE_CACHE));
   } else if (isAPI(request)) {
-    console.log('SW: Handling API request:', request.url);
-    event.respondWith(networkFirst(request, DYNAMIC_CACHE));
+    // Check for bypass header
+    if (request.headers.get('X-Service-Worker-Bypass') === 'true') {
+      console.log('SW: Bypassing API request due to bypass header:', request.url);
+      event.respondWith(fetch(request));
+    } else {
+      console.log('SW: Handling API request:', request.url);
+      event.respondWith(networkFirst(request, DYNAMIC_CACHE));
+    }
   } else {
     console.log('SW: Handling dynamic request:', request.url);
     event.respondWith(networkFirst(request, DYNAMIC_CACHE));
