@@ -43,7 +43,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // Start with isLoading: false to prevent blocking navigation on initial load
+  // Authentication will happen in background and update state when complete
+  const [isLoading, setIsLoading] = useState(false);
   const [kycStatus, setKycStatus] = useState<KYCStatus | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
@@ -64,7 +66,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [disconnect, isConnected]);
 
   const syncAuthState = useCallback(async () => {
-    setIsLoading(true);
+    // Don't set global isLoading for initial sync - this prevents blocking navigation
+    // setIsLoading(true); -- REMOVED to prevent blocking navigation on page load
     try {
       const currentUser = await enhancedAuthService.getCurrentUser();
       if (currentUser) {
@@ -84,9 +87,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(null);
       setAccessToken(null);
       setKycStatus(null);
-    } finally {
-      setIsLoading(false);
     }
+    // Don't need to set isLoading(false) since we didn't set it to true
   }, []);
 
   useEffect(() => {

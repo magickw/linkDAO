@@ -37,20 +37,21 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
     // 1. Auto-login is enabled
     // 2. Wallet is connected with an address
     // 3. User is not already authenticated
-    // 4. Not currently loading
-    // 5. Haven't already handled this address
-    // 6. Connector is available and ready
+    // 4. Haven't already handled this address
+    // 5. Connector is available and ready
+    // NOTE: Removed isAuthLoading check to prevent blocking navigation
+    //       The authentication will run in background without blocking
     isMountedRef.current = true;
-    console.log('WalletLoginBridge: useEffect triggered', { 
-      autoLogin, 
-      isConnected, 
-      address, 
-      isAuthenticated, 
-      isAuthLoading,
+    console.log('WalletLoginBridge: useEffect triggered', {
+      autoLogin,
+      isConnected,
+      address,
+      isAuthenticated,
       connector
     });
-    
-    if (!autoLogin || !isConnected || !address || !connector || isAuthenticated || isAuthLoading) {
+
+    // Don't block on isAuthLoading - let auth happen in background
+    if (!autoLogin || !isConnected || !address || !connector || isAuthenticated) {
       console.log('WalletLoginBridge: Skipping login, conditions not met');
       return;
     }
@@ -69,8 +70,8 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
 
     // Fire-and-forget login to avoid blocking UI/navigation while auth completes.
     // The login call will still update AuthContext state when complete.
-    // USING Promise.resolve().then to defer execution to next tick
-    Promise.resolve().then(() => {
+    // Use requestIdleCallback or setTimeout to defer execution and not block navigation
+    const scheduleLogin = () => {
       login(address, connector, status)
         .then(result => {
           if (!isMountedRef.current) {
@@ -101,13 +102,21 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
             onLoginError(errorMessage);
           }
         });
-    });
+    };
+
+    // Use requestIdleCallback if available, otherwise use setTimeout
+    // This ensures the login doesn't block the main thread or navigation
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(scheduleLogin, { timeout: 2000 });
+    } else {
+      setTimeout(scheduleLogin, 100);
+    }
 
     return () => {
       console.log('WalletLoginBridge: Cleaning up effect');
       isMountedRef.current = false;
     };
-  }, [address, isConnected, isAuthenticated, isAuthLoading, autoLogin, login, connector, status, onLoginSuccess, onLoginError]);
+  }, [address, isConnected, isAuthenticated, autoLogin, login, connector, status, onLoginSuccess, onLoginError]);
   // Reset when wallet disconnects
   useEffect(() => {
     if (!isConnected) {
