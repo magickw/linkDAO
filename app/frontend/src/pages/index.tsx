@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, lazy, Suspense, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, lazy, Suspense, useRef, useCallback, startTransition, useDeferredValue } from 'react';
 import Head from 'next/head';
 import Layout from '@/components/Layout';
 import { useWeb3 } from '@/context/Web3Context';
@@ -66,6 +66,19 @@ export default function Home() {
   const { createPost, isLoading: isCreatingPost } = useCreatePost();
   const { profile } = useProfile(address);
   const { navigationState, openModal, closeModal } = useNavigation();
+
+  // Use deferred value for isConnected to prevent blocking navigation
+  // This allows the main thread to process navigation events during the heavy re-render
+  const [deferredConnected, setDeferredConnected] = useState(isConnected);
+
+  // Update deferred connected state in a transition to keep UI responsive
+  useEffect(() => {
+    if (isConnected !== deferredConnected) {
+      startTransition(() => {
+        setDeferredConnected(isConnected);
+      });
+    }
+  }, [isConnected, deferredConnected]);
 
   const [mounted, setMounted] = useState(false);
   const [hasNewPosts, setHasNewPosts] = useState(false);
@@ -223,7 +236,8 @@ export default function Home() {
   }, [isConnected, address, createPost, addToast, closeModal]);
 
   // If not connected, show enhanced landing page
-  if (!isConnected) {
+  // Use deferredConnected to prevent blocking navigation during the heavy re-render
+  if (!deferredConnected) {
     const scrollToFeatures = () => {
       document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
     };
@@ -946,7 +960,8 @@ export default function Home() {
         type="website"
         noIndex={true}
       />
-      <Layout title="LinkDAO - Home" fullWidth={true} key={`home-${isConnected ? address : 'disconnected'}`}>
+      {/* Removed key prop to prevent full component tree remount on wallet connection */}
+      <Layout title="LinkDAO - Home" fullWidth={true}>
         {/* Skip to content link for accessibility */}
         <a
           href="#main-feed-content"

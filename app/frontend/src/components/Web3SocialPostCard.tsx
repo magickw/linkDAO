@@ -244,43 +244,16 @@ export default function Web3SocialPostCard({
       // This ensures the component is updated with accurate data from the server
       setRefreshTrigger(prev => prev + 1);
 
-      addToast(`Successfully staked ${amount} $LDAO on ${reactionType} reaction!`, 'success');
+      // Small delay to allow refresh to happen
+      setTimeout(() => {
+        addToast(`Successfully staked ${amount} $LDAO on ${reactionType} reaction!`, 'success');
+      }, 100);
+
     } catch (error) {
       console.error('Error reacting:', error);
       // If the operation fails, revert the optimistic update by refetching
       try {
-        const summaries = await tokenReactionService.getReactionSummaries(post.id);
-        
-        // Convert summaries to our Reaction format
-        const convertedReactions = summaries.map(summary => ({
-          type: summary.type,
-          emoji: summary.type,
-          label: summary.type,
-          totalStaked: summary.totalAmount,
-          userStaked: summary.userAmount,
-          contributors: summary.topContributors.map(c => c.walletAddress).slice(0, 5),
-          rewardsEarned: 0,
-        }));
-        
-        // Add any missing reaction types
-        const existingTypes = new Set(convertedReactions.map(r => r.type));
-        const allReactionTypes = ['🔥', '💎', '🚀'];
-        
-        allReactionTypes.forEach(type => {
-          if (!existingTypes.has(type)) {
-            convertedReactions.push({
-              type,
-              emoji: type,
-              label: type,
-              totalStaked: 0,
-              userStaked: 0,
-              contributors: [],
-              rewardsEarned: 0,
-            });
-          }
-        });
-        
-        setReactions(convertedReactions);
+        await fetchReactions();
       } catch (refreshError) {
         console.error('Failed to revert reaction after error:', refreshError);
       }
@@ -900,8 +873,6 @@ export default function Web3SocialPostCard({
           postType="feed"
           onReaction={async (postId: string, reactionType: string, amount?: number) => {
             await handleReaction(reactionType, amount);
-            // Trigger refresh to ensure reaction counts are updated in real-time
-            setRefreshTrigger(prev => prev + 1);
           }}
           onTip={async (postId: string, amount: string, token: string) => {
             if (onTip) {
