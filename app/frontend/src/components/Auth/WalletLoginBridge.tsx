@@ -102,7 +102,7 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
     // The login call will still update AuthContext state when complete.
     // Use requestIdleCallback or setTimeout to defer execution and not block navigation
     const scheduleLogin = () => {
-      login(address, connector, status)
+      login(address, connector, 'connected')
         .then(result => {
           if (!isMountedRef.current) {
             console.log('WalletLoginBridge: Component unmounted, ignoring result');
