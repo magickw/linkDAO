@@ -15,10 +15,11 @@ import EnhancedCommentSystem from '@/components/EnhancedCommentSystem';
 import PostModal from '@/components/PostModal';
 import { CommunityPostService } from '@/services/communityPostService';
 import { ldaoTokenService } from '@/services/web3/ldaoTokenService';
+import { tokenReactionService } from '@/services/tokenReactionService';
 import { generateAvatarPlaceholder, generateSVGPlaceholder } from '../utils/placeholderService';
 
 interface Reaction {
-  type: 'hot' | 'diamond' | 'bullish' | 'governance' | 'art';
+  type: string; // Can be emoji or string type
   emoji: string;
   label: string;
   totalStaked: number;
@@ -70,13 +71,58 @@ export default function Web3SocialPostCard({
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showPostModal, setShowPostModal] = useState(false);
   const [commentCount, setCommentCount] = useState(post.commentCount || 0);
-  const [reactions, setReactions] = useState<Reaction[]>([
-    { type: 'hot', emoji: '🔥', label: 'Hot Take', totalStaked: 120, userStaked: 0, contributors: [], rewardsEarned: 24.5 },
-    { type: 'diamond', emoji: '💎', label: 'Diamond Hands', totalStaked: 85, userStaked: 0, contributors: [], rewardsEarned: 17.2 },
-    { type: 'bullish', emoji: '🚀', label: 'Bullish', totalStaked: 210, userStaked: 0, contributors: [], rewardsEarned: 42.8 },
-    { type: 'governance', emoji: '⚖️', label: 'Governance', totalStaked: 95, userStaked: 0, contributors: [], rewardsEarned: 19.0 },
-    { type: 'art', emoji: '🎨', label: 'Art Appreciation', totalStaked: 42, userStaked: 0, contributors: [], rewardsEarned: 8.4 }
-  ]);
+  const [reactions, setReactions] = useState<Reaction[]>([]);
+  const [reactionsFetched, setReactionsFetched] = useState(false);
+  
+  // Fetch real reaction data from backend
+  useEffect(() => {
+    const fetchReactions = async () => {
+      try {
+        const summaries = await tokenReactionService.getReactionSummaries(post.id);
+        
+        // Convert summaries to our Reaction format
+        const convertedReactions = summaries.map(summary => ({
+          type: summary.type,  // The emoji itself
+          emoji: summary.type,
+          label: summary.type, // Use emoji as label for now
+          totalStaked: summary.totalAmount,
+          userStaked: summary.userAmount,
+          contributors: summary.topContributors.map(c => c.walletAddress).slice(0, 5),
+          rewardsEarned: 0, // Placeholder
+        }));
+        
+        // Add any missing reaction types that don't have reactions yet
+        const existingTypes = new Set(convertedReactions.map(r => r.type));
+        const allReactionTypes = ['🔥', '💎', '🚀']; // Add all possible reaction types
+        
+        allReactionTypes.forEach(type => {
+          if (!existingTypes.has(type)) {
+            convertedReactions.push({
+              type,
+              emoji: type,
+              label: type,
+              totalStaked: 0,
+              userStaked: 0,
+              contributors: [],
+              rewardsEarned: 0,
+            });
+          }
+        });
+        
+        setReactions(convertedReactions);
+        setReactionsFetched(true);
+      } catch (error) {
+        console.error('Failed to fetch reactions:', error);
+        // Fallback to empty reactions if fetch fails
+        setReactions([]);
+        setReactionsFetched(true);
+      }
+    };
+    
+    if (post.id) {
+      fetchReactions();
+    }
+  }, [post.id]);
 
   // Format the timestamp
   const timestamp = useMemo(() => {
@@ -157,30 +203,121 @@ export default function Web3SocialPostCard({
         return;
       }
 
+      // Optimistically update local state to provide immediate feedback
+      setReactions(prev => {
+        const updated = prev.map(reaction => {
+          if (reaction.emoji === reactionType) {
+            return {
+              ...reaction,
+              totalStaked: reaction.totalStaked + amount,
+              userStaked: reaction.userStaked + amount,
+              contributors: address ? [...new Set([...reaction.contributors, address.substring(0, 6) + '...' + address.substring(38)])] : reaction.contributors
+            };
+          }
+          return reaction;
+        });
+
+        // If the reaction type doesn't exist yet, add it
+        if (!updated.some(r => r.emoji === reactionType)) {
+          updated.push({
+            type: reactionType,
+            emoji: reactionType,
+            label: reactionType,
+            totalStaked: amount,
+            userStaked: amount,
+            contributors: address ? [address.substring(0, 6) + '...' + address.substring(38)] : [],
+            rewardsEarned: 0,
+          });
+        }
+
+        return updated;
+      });
+
       // Call the onReaction callback if provided
       if (onReaction) {
         await onReaction(post.id, reactionType, amount);
       }
 
-      // Update local state
-      setReactions(prev => prev.map(reaction => {
-        if (reaction.type === reactionType) {
-          // Calculate rewards (10% of staked amount goes to author as reward)
-          const reward = amount * 0.1;
-          return {
-            ...reaction,
-            totalStaked: reaction.totalStaked + amount,
-            userStaked: reaction.userStaked + amount,
-            rewardsEarned: reaction.rewardsEarned + reward,
-            contributors: [...reaction.contributors, address!.substring(0, 6) + '...' + address!.substring(38)]
-          };
-        }
-        return reaction;
-      }));
+      // Refresh reactions from backend to get accurate counts and sync with other users
+      try {
+        const summaries = await tokenReactionService.getReactionSummaries(post.id);
+        
+        // Convert summaries to our Reaction format
+        const convertedReactions = summaries.map(summary => ({
+          type: summary.type,  // The emoji itself
+          emoji: summary.type,
+          label: summary.type, // Use emoji as label for now
+          totalStaked: summary.totalAmount,
+          userStaked: summary.userAmount,
+          contributors: summary.topContributors.map(c => c.walletAddress).slice(0, 5),
+          rewardsEarned: 0, // Placeholder
+        }));
+        
+        // Add any missing reaction types that don't have reactions yet
+        const existingTypes = new Set(convertedReactions.map(r => r.type));
+        const allReactionTypes = ['🔥', '💎', '🚀']; // Add all possible reaction types
+        
+        allReactionTypes.forEach(type => {
+          if (!existingTypes.has(type)) {
+            convertedReactions.push({
+              type,
+              emoji: type,
+              label: type,
+              totalStaked: 0,
+              userStaked: 0,
+              contributors: [],
+              rewardsEarned: 0,
+            });
+          }
+        });
+        
+        setReactions(convertedReactions);
+      } catch (error) {
+        console.error('Failed to refresh reactions after reaction:', error);
+        // If refresh fails, the optimistic update will remain until next page refresh
+      }
 
       addToast(`Successfully staked ${amount} $LDAO on ${reactionType} reaction!`, 'success');
     } catch (error) {
       console.error('Error reacting:', error);
+      // If the operation fails, revert the optimistic update by refetching
+      try {
+        const summaries = await tokenReactionService.getReactionSummaries(post.id);
+        
+        // Convert summaries to our Reaction format
+        const convertedReactions = summaries.map(summary => ({
+          type: summary.type,
+          emoji: summary.type,
+          label: summary.type,
+          totalStaked: summary.totalAmount,
+          userStaked: summary.userAmount,
+          contributors: summary.topContributors.map(c => c.walletAddress).slice(0, 5),
+          rewardsEarned: 0,
+        }));
+        
+        // Add any missing reaction types
+        const existingTypes = new Set(convertedReactions.map(r => r.type));
+        const allReactionTypes = ['🔥', '💎', '🚀'];
+        
+        allReactionTypes.forEach(type => {
+          if (!existingTypes.has(type)) {
+            convertedReactions.push({
+              type,
+              emoji: type,
+              label: type,
+              totalStaked: 0,
+              userStaked: 0,
+              contributors: [],
+              rewardsEarned: 0,
+            });
+          }
+        });
+        
+        setReactions(convertedReactions);
+      } catch (refreshError) {
+        console.error('Failed to revert reaction after error:', refreshError);
+      }
+      
       addToast('Failed to react. Please try again.', 'error');
     }
   };
@@ -745,13 +882,24 @@ export default function Web3SocialPostCard({
         {/* Real-time engagement metric breakdown */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            {reactions.slice(0, 3).map((reaction, index) => (
-              <div key={reaction.type} className="flex items-center space-x-1 text-xs bg-white dark:bg-gray-800 px-2 py-1 rounded-full shadow-sm">
-                <span className="text-sm">{reaction.emoji}</span>
-                <span className="font-medium text-gray-700 dark:text-gray-300">{reaction.totalStaked}</span>
-                <span className="text-gray-500 dark:text-gray-400">({reaction.contributors.length})</span>
+            {reactionsFetched ? (
+              reactions.slice(0, 3).map((reaction, index) => (
+                <div key={reaction.type} className="flex items-center space-x-1 text-xs bg-white dark:bg-gray-800 px-2 py-1 rounded-full shadow-sm">
+                  <span className="text-sm">{reaction.emoji}</span>
+                  <span className="font-medium text-gray-700 dark:text-gray-300">{reaction.totalStaked}</span>
+                  <span className="text-gray-500 dark:text-gray-400">({reaction.contributors.length})</span>
+                </div>
+              ))
+            ) : (
+              // Show loading placeholders while fetching
+              <div className="flex space-x-2">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center space-x-1 text-xs bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded-full shadow-sm animate-pulse">
+                    <span className="text-sm">...</span>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
           
           {/* Real-time update indicator */}

@@ -16,6 +16,9 @@ if (typeof self !== 'undefined' && self.location && self.location.hostname === '
   });
 }
 
+// Service Worker Version - increment to force update
+const SW_VERSION = '2.0.1';
+
 const CACHE_NAME = 'linkdao-v1';
 const STATIC_CACHE = 'static-v1';
 const DYNAMIC_CACHE = 'dynamic-v1';
@@ -151,7 +154,7 @@ const maxQueueSize = 100;
 
 // Install event - cache static assets with graceful failure handling
 self.addEventListener('install', (event) => {
-  console.log('Service Worker installing...');
+  console.log(`Service Worker v${SW_VERSION} installing...`);
 
   event.waitUntil(
     caches.open(STATIC_CACHE)
@@ -182,7 +185,14 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker activating...');
+  console.log(`Service Worker v${SW_VERSION} activating...`);
+
+  // CRITICAL: Reset all circuit breaker states on activation to clear stuck states
+  circuitBreakerStates.clear();
+  failedRequests.clear();
+  requestCounts.clear();
+  pendingRequests.clear();
+  console.log('SW: Reset all circuit breaker and request tracking states');
 
   event.waitUntil(
     Promise.all([
@@ -239,6 +249,13 @@ self.addEventListener('activate', (event) => {
           cache.delete(request => request.url.includes('/api/marketplace/listings/categories')).catch(() => {}),
           cache.delete(request => request.url.includes('/api/marketplace/seller')).catch(() => {})
         ]).catch(() => {});
+      }).catch(() => {}),
+      // Clear ALL API cache entries to start fresh
+      caches.open(API_CACHE).then(cache => {
+        return cache.keys().then(keys => {
+          console.log('SW: Clearing', keys.length, 'cached API responses');
+          return Promise.all(keys.map(key => cache.delete(key)));
+        });
       }).catch(() => {})
     ]).then(() => {
       return self.clients.claim();
@@ -304,10 +321,53 @@ self.addEventListener('fetch', (event) => {
     if (request.headers.get('X-Service-Worker-Bypass') === 'true') {
       console.log('SW: Bypassing API request due to bypass header:', request.url);
       event.respondWith(
-        fetch(request).catch(error => {
-          console.error('Direct fetch failed:', error);
-          return new Response('Network error', { status: 500, statusText: 'Network Error' });
-        })
+        (async () => {
+          // Try fetch with retry logic
+          const maxRetries = 2;
+          let lastError = null;
+
+          for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+              if (attempt > 0) {
+                console.log(`SW: Retry attempt ${attempt} for:`, request.url);
+                // Wait before retry (exponential backoff)
+                await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+              }
+
+              const response = await fetch(request.url, {
+                method: request.method,
+                headers: request.headers,
+                mode: 'cors',
+                credentials: 'include'
+              });
+
+              if (response.ok || response.status < 500) {
+                return response;
+              }
+
+              lastError = new Error(`HTTP ${response.status}: ${response.statusText}`);
+            } catch (error) {
+              console.error(`SW: Fetch attempt ${attempt} failed:`, error.message, error.name);
+              lastError = error;
+            }
+          }
+
+          // All retries failed
+          console.error('SW: All fetch attempts failed:', lastError?.message, lastError?.name, lastError?.stack);
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'Network error',
+            details: lastError?.message || 'Unknown error',
+            errorType: lastError?.name || 'Error',
+            timestamp: new Date().toISOString(),
+            url: request.url,
+            retriesAttempted: maxRetries
+          }), {
+            status: 500,
+            statusText: 'Network Error',
+            headers: { 'Content-Type': 'application/json' }
+          });
+        })()
       );
       return;
     } else {
