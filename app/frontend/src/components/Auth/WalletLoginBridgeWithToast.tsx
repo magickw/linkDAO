@@ -9,20 +9,24 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { WalletLoginBridge } from './WalletLoginBridge';
 
-export const WalletLoginBridgeWithToast: React.FC = () => {
+interface WalletLoginBridgeWithToastProps {
+  autoLogin?: boolean;
+}
+
+export const WalletLoginBridgeWithToast: React.FC<WalletLoginBridgeWithToastProps> = ({ autoLogin }) => {
   const { connector } = useAccount();
   const toastContext = useToast();
 
   const handleLoginSuccess = useCallback((user: any) => {
     const { addToast } = toastContext;
-    
+
     // Check if addToast is available
     if (!addToast || typeof addToast !== 'function') {
       // Fallback to console logging
       const walletName = connector?.name || 'Wallet';
-      const isBaseWallet = connector?.name?.toLowerCase().includes('coinbase') || 
-                          connector?.id === 'coinbaseWallet';
-      
+      const isBaseWallet = connector?.name?.toLowerCase().includes('coinbase') ||
+        connector?.id === 'coinbaseWallet';
+
       if (isBaseWallet) {
         console.log(`🎉 Successfully logged in with ${walletName}! Welcome to Base!`);
       } else {
@@ -30,11 +34,11 @@ export const WalletLoginBridgeWithToast: React.FC = () => {
       }
       return;
     }
-    
+
     const walletName = connector?.name || 'Wallet';
-    const isBaseWallet = connector?.name?.toLowerCase().includes('coinbase') || 
-                        connector?.id === 'coinbaseWallet';
-    
+    const isBaseWallet = connector?.name?.toLowerCase().includes('coinbase') ||
+      connector?.id === 'coinbaseWallet';
+
     if (isBaseWallet) {
       addToast(`🎉 Successfully logged in with ${walletName}! Welcome to Base!`, 'success');
     } else {
@@ -44,7 +48,7 @@ export const WalletLoginBridgeWithToast: React.FC = () => {
 
   const handleLoginError = useCallback((error: string) => {
     const { addToast } = toastContext;
-    
+
     // Check if addToast is available
     if (!addToast || typeof addToast !== 'function') {
       // Fallback to console logging
@@ -57,7 +61,7 @@ export const WalletLoginBridgeWithToast: React.FC = () => {
       }
       return;
     }
-    
+
     if (error.includes('signature')) {
       addToast('📝 Please sign the message in your wallet to complete login', 'warning');
     } else if (error.includes('rejected') || error.includes('denied')) {
@@ -69,7 +73,7 @@ export const WalletLoginBridgeWithToast: React.FC = () => {
 
   return (
     <WalletLoginBridge
-      autoLogin={true}
+      autoLogin={autoLogin}
       skipIfAuthenticated={true}
       onLoginSuccess={handleLoginSuccess}
       onLoginError={handleLoginError}

@@ -86,7 +86,7 @@ class EnhancedAuthService {
       const sessionDataStr = localStorage.getItem(this.STORAGE_KEYS.SESSION_DATA);
       if (sessionDataStr) {
         const sessionData: SessionData = JSON.parse(sessionDataStr);
-        
+
         // Check if session is still valid
         if (Date.now() < sessionData.expiresAt) {
           this.sessionData = sessionData;
@@ -123,7 +123,7 @@ class EnhancedAuthService {
    */
   private shouldRefreshToken(): boolean {
     if (!this.sessionData || !this.token) return false;
-    
+
     const timeUntilExpiry = this.sessionData.expiresAt - Date.now();
     return timeUntilExpiry < this.REFRESH_THRESHOLD && timeUntilExpiry > 0;
   }
@@ -132,8 +132,8 @@ class EnhancedAuthService {
    * Enhanced wallet authentication with proper error handling and retry logic
    */
   async authenticateWallet(
-    address: string, 
-    connector: any, 
+    address: string,
+    connector: any,
     status: string,
     options: AuthenticationOptions = {}
   ): Promise<AuthResponse> {
@@ -146,8 +146,8 @@ class EnhancedAuthService {
 
     // Prevent concurrent authentication attempts
     if (this.authenticationInProgress) {
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: 'Authentication already in progress',
         retryable: false
       };
@@ -179,10 +179,10 @@ class EnhancedAuthService {
 
       // Execute authentication with retry logic
       const result = await this.executeAuthenticationWithRetry(
-        address, 
-        connector, 
-        status, 
-        retries, 
+        address,
+        connector,
+        status,
+        retries,
         timeout
       );
 
@@ -225,15 +225,15 @@ class EnhancedAuthService {
         }
 
         const result = await this.performAuthentication(address, connector, status, timeout);
-        
+
         // Clear retry count on success
         this.retryAttempts.delete(retryKey);
-        
+
         return result;
 
       } catch (error: any) {
         lastError = error;
-        
+
         // Don't retry on certain errors
         if (!this.isRetryableError(error) || attempt === maxRetries) {
           break;
@@ -242,7 +242,7 @@ class EnhancedAuthService {
         // Exponential backoff with jitter
         const delay = Math.min(1000 * Math.pow(2, attempt), 10000) + Math.random() * 1000;
         console.warn(`Authentication attempt ${attempt + 1} failed, retrying in ${delay}ms:`, error.message);
-        
+
         await this.sleep(delay);
       }
     }
@@ -286,7 +286,7 @@ class EnhancedAuthService {
    */
   private async ensureWalletReady(connector: any, timeout: number): Promise<void> {
     const startTime = Date.now();
-    
+
     while (Date.now() - startTime < timeout) {
       if (connector && config) {
         // Verify the connector is actually connected
@@ -298,7 +298,7 @@ class EnhancedAuthService {
       }
       await this.sleep(100);
     }
-    
+
     throw new Error('Wallet not ready for authentication');
   }
 
@@ -340,13 +340,13 @@ class EnhancedAuthService {
         );
       } catch (error: any) {
         if (attempt === retries - 1) throw error;
-        
+
         const delay = 1000 * Math.pow(2, attempt);
         console.warn(`Nonce request failed, retrying in ${delay}ms:`, error.message);
         await this.sleep(delay);
       }
     }
-    
+
     throw new Error('Failed to get nonce after retries');
   }
 
@@ -368,7 +368,7 @@ class EnhancedAuthService {
         const maxWaitTime = 5000; // 5 seconds max wait per attempt
         const startWait = Date.now();
         let account = getAccount(config);
-        
+
         while ((!account.isConnected || !account.connector) && (Date.now() - startWait < maxWaitTime)) {
           await this.sleep(200);
           account = getAccount(config);
@@ -392,7 +392,7 @@ class EnhancedAuthService {
 
       } catch (error: any) {
         const errorMessage = this.getSigningErrorMessage(error);
-        
+
         // Don't retry on user rejection or unsupported operations
         if (this.isUserRejectionError(error) || this.isUnsupportedError(error)) {
           throw new Error(errorMessage);
@@ -441,7 +441,7 @@ class EnhancedAuthService {
         // Handle both direct token response and nested data response
         const sessionToken = response.sessionToken || (response.data && response.data.sessionToken) || response.token || (response.data && response.data.token);
         const refreshToken = response.refreshToken || (response.data && response.data.refreshToken) || undefined;
-        
+
         if (!sessionToken) {
           throw new Error('No session token received');
         }
@@ -489,13 +489,13 @@ class EnhancedAuthService {
    */
   private hasValidSession(address: string): boolean {
     if (!this.sessionData || !this.token) return false;
-    
+
     // Check if session is for the same address
     if (this.sessionData.user.address !== address) return false;
-    
+
     // Check if session is not expired
     if (Date.now() >= this.sessionData.expiresAt) return false;
-    
+
     return true;
   }
 
@@ -524,7 +524,7 @@ class EnhancedAuthService {
         localStorage.setItem(this.STORAGE_KEYS.WALLET_ADDRESS, user.address);
         localStorage.setItem(this.STORAGE_KEYS.SIGNATURE_TIMESTAMP, now.toString());
         localStorage.setItem(this.STORAGE_KEYS.USER_DATA, JSON.stringify(user));
-        
+
         if (refreshToken) {
           localStorage.setItem(this.STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
         }
@@ -583,7 +583,7 @@ class EnhancedAuthService {
           // Handle both direct token response and nested data response
           const token = response.token || (response.data && response.data.token);
           const refreshToken = response.refreshToken || (response.data && response.data.refreshToken) || undefined;
-          
+
           if (!token) {
             throw new Error('No token received in refresh response');
           }
@@ -652,7 +652,7 @@ class EnhancedAuthService {
    */
   async logout(): Promise<void> {
     const token = this.token;
-    
+
     // Clear session immediately
     this.clearStoredSession();
 
@@ -763,7 +763,8 @@ class EnhancedAuthService {
     // Check if address changed - be careful about initial connections
     if (this.sessionData && this.sessionData.user.address) {
       // Only check for real address changes, not initial connections
-      if (this.sessionData.user.address !== newAddress) {
+      // Use case-insensitive comparison to prevent unnecessary logouts
+      if (newAddress && this.sessionData.user.address.toLowerCase() !== newAddress.toLowerCase()) {
         console.log('👛 Wallet address changed from', this.sessionData.user.address, 'to', newAddress, 'clearing session');
         await this.logout();
       }
@@ -982,7 +983,7 @@ class EnhancedAuthService {
 
   private isRetryableError(error: any): boolean {
     const message = this.getErrorMessage(error).toLowerCase();
-    
+
     // Network errors are retryable
     if (message.includes('network') || message.includes('fetch') || message.includes('timeout')) {
       return true;
@@ -1024,15 +1025,15 @@ class EnhancedAuthService {
 
   private getSigningErrorMessage(error: any): string {
     const message = this.getErrorMessage(error);
-    
+
     if (message.includes('rejected') || message.includes('denied')) {
       return 'Signature request was rejected by user';
     }
-    
+
     if (message.includes('not supported')) {
       return 'Your wallet does not support message signing';
     }
-    
+
     return message || 'Failed to sign authentication message';
   }
 }
