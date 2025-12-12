@@ -73,15 +73,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const status = await enhancedAuthService.getKYCStatus();
         setKycStatus(status);
       } else {
-        await handleLogout();
+        // No stored session - just clear state without calling logout
+        setUser(null);
+        setAccessToken(null);
+        setKycStatus(null);
       }
     } catch (error) {
       console.error('Failed to sync auth state:', error);
-      await handleLogout();
+      // Only logout on actual errors
+      setUser(null);
+      setAccessToken(null);
+      setKycStatus(null);
     } finally {
       setIsLoading(false);
     }
-  }, [handleLogout]);
+  }, []);
 
   useEffect(() => {
     syncAuthState();
