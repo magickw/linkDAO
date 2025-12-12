@@ -7,7 +7,7 @@ import {
   GroupConversation,
   ConversationMember
 } from '../types/messaging';
-import { authService } from './authService';
+import { enhancedAuthService } from './enhancedAuthService';
 
 export class ConversationManagementService {
   private static instance: ConversationManagementService;
@@ -25,7 +25,7 @@ export class ConversationManagementService {
    * Get authentication headers for API requests
    */
   private getAuthHeaders(): Record<string, string> {
-    return authService.getAuthHeaders();
+    return enhancedAuthService.getAuthHeaders();
   }
 
   /**

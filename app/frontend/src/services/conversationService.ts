@@ -1,6 +1,6 @@
 import { fetchWithRetry } from '../utils/apiUtils';
 import { API_BASE_URL } from '../config/api';
-import { authService } from './authService';
+import { enhancedAuthService } from './enhancedAuthService';
 
 // Ordered list of conversation endpoint patterns to try
 const CONVERSATION_ENDPOINTS = [
@@ -37,8 +37,8 @@ export class ConversationService {
     
     for (const endpoint of CONVERSATION_ENDPOINTS) {
       try {
-        // Get JWT token from authService
-        const token = authService.getToken();
+        // Get JWT token from enhancedAuthService
+        const token = enhancedAuthService.getToken();
         const headers: Record<string, string> = {
           'Content-Type': 'application/json'
         };

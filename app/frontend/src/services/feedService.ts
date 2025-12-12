@@ -3,7 +3,7 @@ import { requestManager } from './requestManager';
 import { convertBackendPostToPost } from '../models/Post';
 import { convertBackendQuickPostToQuickPost } from '../models/QuickPost';
 import { analyticsService } from './analyticsService';
-import { authService } from './authService'; // Add authService import
+import { enhancedAuthService } from './enhancedAuthService'; // Add enhancedAuthService import
 import { ENV_CONFIG } from '@/config/environment';
 
 // Use centralized environment config to ensure consistent backend URL
@@ -243,8 +243,8 @@ export class FeedService {
         metadata: { filter, page, limit }
       });
 
-      // Get auth headers from authService to include JWT token
-      const authHeaders = authService.getAuthHeaders();
+      // Get auth headers from enhancedAuthService to include JWT token
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -393,7 +393,7 @@ export class FeedService {
         timeRange
       });
 
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/community/${communityId}/metrics?${params}`, {
         method: 'GET',
         headers: {
@@ -476,7 +476,7 @@ export class FeedService {
         limit: limit.toString()
       });
 
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/community/${communityId}/leaderboard?${params}`, {
         method: 'GET',
         headers: {
@@ -528,7 +528,7 @@ export class FeedService {
 
   static async getLikedByData(postId: string): Promise<LikedByData> {
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/posts/${postId}/engagement`, {
         method: 'GET',
         headers: {
@@ -589,7 +589,7 @@ export class FeedService {
         limit: limit.toString()
       });
 
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/trending?${params}`, {
         method: 'GET',
         headers: {
@@ -657,7 +657,7 @@ export class FeedService {
         limit: limit.toString()
       });
 
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/hashtags/trending?${params}`, {
         method: 'GET',
         headers: {
@@ -709,7 +709,7 @@ export class FeedService {
   // Get content popularity metrics
   static async getContentPopularityMetrics(postId: string): Promise<any> {
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/posts/${postId}/popularity`, {
         method: 'GET',
         headers: {
@@ -758,7 +758,7 @@ export class FeedService {
   // Add comment to post
   static async addComment(postId: string, content: string, parentCommentId?: string): Promise<any> {
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/comments`, {
         method: 'POST',
         headers: {
@@ -829,7 +829,7 @@ export class FeedService {
         sort
       });
 
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/comments?${params}`, {
         method: 'GET',
         headers: {
@@ -895,7 +895,7 @@ export class FeedService {
         sort
       });
 
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/comments/${commentId}/replies?${params}`, {
         method: 'GET',
         headers: {
@@ -949,7 +949,7 @@ export class FeedService {
   // Add reaction to post
   static async addReaction(postId: string, type: string, tokenAmount: number = 0): Promise<any> {
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/react`, {
         method: 'POST',
         headers: {
@@ -1010,7 +1010,7 @@ export class FeedService {
   // Get post reactions
   static async getPostReactions(postId: string): Promise<any> {
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/posts/${postId}/reactions`, {
         method: 'GET',
         headers: {
@@ -1059,7 +1059,7 @@ export class FeedService {
   // Send tip to post author
   static async sendTip(postId: string, amount: number, tokenType: string, message?: string): Promise<any> {
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/tip`, {
         method: 'POST',
         headers: {
@@ -1122,7 +1122,7 @@ export class FeedService {
   // Share post
   static async sharePost(postId: string, platform: string, message?: string): Promise<any> {
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/posts/${postId}/share`, {
         method: 'POST',
         headers: {
@@ -1180,7 +1180,7 @@ export class FeedService {
   // Toggle bookmark
   static async toggleBookmark(postId: string): Promise<any> {
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/posts/${postId}/bookmark`, {
         method: 'POST',
         headers: {
@@ -1314,7 +1314,7 @@ export class FeedService {
   // Upvote a post
   static async upvotePost(postId: string): Promise<any> {
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/upvote`, {
         method: 'POST',
         headers: {
@@ -1363,7 +1363,7 @@ export class FeedService {
   // Downvote a post
   static async downvotePost(postId: string): Promise<any> {
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/downvote`, {
         method: 'POST',
         headers: {

@@ -5,8 +5,8 @@ import { CreateWorkflowTemplateRequest, WorkflowTemplate } from '@/types/workflo
 global.fetch = jest.fn();
 
 // Mock auth service
-jest.mock('../authService', () => ({
-  authService: {
+jest.mock('../enhancedAuthService', () => ({
+  enhancedAuthService: {
     getAuthHeaders: jest.fn().mockReturnValue({
       'Authorization': 'Bearer test-token',
       'Content-Type': 'application/json'

@@ -10,7 +10,7 @@ import {
 } from '../models/CommunityMembership';
 import { ModerationQueue as ModerationQueueItem } from '../types/auth';
 import { requestManager } from './requestManager';
-import { authService } from './authService';
+import { enhancedAuthService } from './enhancedAuthService';
 
 // Get the backend API base URL from environment variables
 const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
@@ -466,7 +466,7 @@ export class CommunityInteractionService {
     
     try {
       // Get authentication headers
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${request.communityId}/posts`, {
         method: 'POST',
@@ -533,7 +533,7 @@ export class CommunityInteractionService {
     
     try {
       // Get authentication headers
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${request.communityId}/posts/ai-assisted`, {
         method: 'POST',
@@ -598,7 +598,7 @@ export class CommunityInteractionService {
     
     try {
       // Get authentication headers
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${action.communityId}/moderate`, {
         method: 'POST',
@@ -660,7 +660,7 @@ export class CommunityInteractionService {
     
     try {
       // Get authentication headers
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${settingsUpdate.communityId}/settings`, {
         method: 'PUT',

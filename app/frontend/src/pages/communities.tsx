@@ -79,7 +79,6 @@ import {
 import CommunityCardEnhanced from '@/components/Community/CommunityCardEnhanced';
 import MyCommunitiesCard from '@/components/Community/MyCommunitiesCard';
 import { CommunityService } from '@/services/communityService';
-import { authService } from '@/services/authService';
 import { useAuth } from '@/context/AuthContext';
 import { Community } from '@/models/Community';
 import { FeedSortType } from '@/types/feed';
@@ -232,6 +231,11 @@ const CommunitiesPage: React.FC = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isAuthLoading && !isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isAuthenticated, isAuthLoading, router]);
 
   // Load communities and enhanced Web3 data on component mount
   useEffect(() => {

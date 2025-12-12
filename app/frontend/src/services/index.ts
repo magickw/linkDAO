@@ -1,6 +1,6 @@
 // Export all services
 export * from './adminService';
-export * from './authService';
+export * from './enhancedAuthService';
 export * from './communityService';
 export * from './communityPostService';
 export * from './feedService';

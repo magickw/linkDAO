@@ -1,9 +1,9 @@
 import { adminService } from '../adminService';
-import { authService } from '../authService';
+import { enhancedAuthService } from '../enhancedAuthService';
 
-// Mock authService
-jest.mock('../authService', () => ({
-    authService: {
+// Mock enhancedAuthService
+jest.mock('../enhancedAuthService', () => ({
+    enhancedAuthService: {
         getAuthHeaders: jest.fn(() => ({
             'Content-Type': 'application/json',
             'Authorization': 'Bearer test-token',

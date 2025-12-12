@@ -6,7 +6,7 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { Shield, AlertTriangle, Lock, Key, UserCheck, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import { Button, GlassPanel } from '@/design-system';
 import { useAuth } from '@/hooks/useAuth';
-import { authService } from '@/services/authService';
+import { enhancedAuthService } from '@/services/enhancedAuthService';
 
 const AdminLoginPage: NextPage = () => {
   const router = useRouter();
@@ -75,7 +75,7 @@ const AdminLoginPage: NextPage = () => {
       // Find the connected connector or use the first available one
       const connectedConnector = connectors.find(c => c.ready) || connectors[0];
       console.log('Attempting authentication for address:', address);
-      const result = await authService.authenticateWallet(address, connectedConnector, 'connected');
+      const result = await enhancedAuthService.authenticateWallet(address, connectedConnector, 'connected');
       console.log('Authentication result:', result);
       
       if (result.success && result.user) {
@@ -121,7 +121,7 @@ const AdminLoginPage: NextPage = () => {
     setIsSubmitting(true);
 
     try {
-      const result = await authService.adminLogin(formData.email, formData.password);
+      const result = await enhancedAuthService.adminLogin(formData.email, formData.password);
       
       if (result.success && result.user) {
         // Refresh user context to get updated permissions

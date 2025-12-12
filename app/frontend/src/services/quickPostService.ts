@@ -1,6 +1,6 @@
 import { QuickPost, CreateQuickPostInput, UpdateQuickPostInput } from '../models/QuickPost';
 import { ENV_CONFIG } from '@/config/environment';
-import { authService } from './authService';
+import { enhancedAuthService } from './enhancedAuthService';
 
 // Use centralized environment config to ensure consistent backend URL
 const BACKEND_API_BASE_URL = ENV_CONFIG.BACKEND_URL;
@@ -43,8 +43,8 @@ export class QuickPostService {
     }
 
     try {
-      // Get auth headers from authService to include JWT token
-      let authHeaders = authService.getAuthHeaders();
+      // Get auth headers from enhancedAuthService to include JWT token
+      let authHeaders = enhancedAuthService.getAuthHeaders();
       
       // Check if we have a valid token
       if (!authHeaders['Authorization']) {
@@ -125,7 +125,7 @@ export class QuickPostService {
 
   static async getQuickPost(id: string): Promise<QuickPost | null> {
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/quick-posts/${id}`, {
         method: 'GET',
         headers: {
@@ -151,7 +151,7 @@ export class QuickPostService {
 
   static async updateQuickPost(id: string, data: UpdateQuickPostInput): Promise<QuickPost> {
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/quick-posts/${id}`, {
         method: 'PUT',
         headers: {
@@ -176,7 +176,7 @@ export class QuickPostService {
 
   static async deleteQuickPost(id: string): Promise<boolean> {
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       
       // Check if we have a valid token
       if (!authHeaders['Authorization']) {
@@ -227,7 +227,7 @@ export class QuickPostService {
         limit: limit.toString()
       });
 
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/quick-posts/author/${authorId}?${params}`, {
         method: 'GET',
         headers: {
@@ -255,7 +255,7 @@ export class QuickPostService {
     tokenAmount: number = 0
   ): Promise<any> {
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/quick-posts/${quickPostId}/react`, {
         method: 'POST',
         headers: {
@@ -288,7 +288,7 @@ export class QuickPostService {
     message?: string
   ): Promise<any> {
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/quick-posts/${quickPostId}/tip`, {
         method: 'POST',
         headers: {

@@ -1,4 +1,4 @@
-import { authService } from './authService';
+import { enhancedAuthService } from './enhancedAuthService';
 import { ENV_CONFIG } from '@/config/environment';
 
 export interface UploadResult {
@@ -44,7 +44,7 @@ class IPFSUploadService {
     formData.append('file', file);
 
     // Get auth headers
-    const authHeaders = authService.getAuthHeaders();
+    const authHeaders = enhancedAuthService.getAuthHeaders();
 
     // Create headers object for fetch
     // IMPORTANT: Do NOT set Content-Type for FormData - browser will set it automatically with boundary

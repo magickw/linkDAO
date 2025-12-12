@@ -1,5 +1,5 @@
 import { QuickPostService } from '../quickPostService';
-import { authService } from '../authService';
+import { enhancedAuthService } from '../enhancedAuthService';
 import { webcrypto } from 'crypto';
 
 // Mock fetch globally
@@ -12,9 +12,9 @@ Object.defineProperty(global, 'crypto', {
     }
 });
 
-// Mock authService
-jest.mock('../authService', () => ({
-    authService: {
+// Mock enhancedAuthService
+jest.mock('../enhancedAuthService', () => ({
+    enhancedAuthService: {
         getAuthHeaders: jest.fn()
     }
 }));
@@ -53,7 +53,7 @@ describe('QuickPostService', () => {
                     json: async () => ({ data: mockPost })
                 });
 
-            (authService.getAuthHeaders as jest.Mock).mockReturnValue({
+            (enhancedAuthService.getAuthHeaders as jest.Mock).mockReturnValue({
                 'Authorization': 'Bearer test-token'
             });
 
@@ -98,7 +98,7 @@ describe('QuickPostService', () => {
                 'Authorization': 'Bearer test-token-123'
             };
 
-            (authService.getAuthHeaders as jest.Mock).mockReturnValue(mockAuthHeaders);
+            (enhancedAuthService.getAuthHeaders as jest.Mock).mockReturnValue(mockAuthHeaders);
 
             await QuickPostService.createQuickPost({
                 author: '0x1234567890abcdef',
@@ -124,7 +124,7 @@ describe('QuickPostService', () => {
                     json: async () => ({ error: 'Author ID is required' })
                 });
 
-            (authService.getAuthHeaders as jest.Mock).mockReturnValue({});
+            (enhancedAuthService.getAuthHeaders as jest.Mock).mockReturnValue({});
 
             await expect(
                 QuickPostService.createQuickPost({
@@ -146,7 +146,7 @@ describe('QuickPostService', () => {
                     json: async () => ({ error: 'Unauthorized to create quick post' })
                 });
 
-            (authService.getAuthHeaders as jest.Mock).mockReturnValue({});
+            (enhancedAuthService.getAuthHeaders as jest.Mock).mockReturnValue({});
 
             await expect(
                 QuickPostService.createQuickPost({
@@ -167,7 +167,7 @@ describe('QuickPostService', () => {
                     new Error('Failed to fetch')
                 );
 
-            (authService.getAuthHeaders as jest.Mock).mockReturnValue({});
+            (enhancedAuthService.getAuthHeaders as jest.Mock).mockReturnValue({});
 
             await expect(
                 QuickPostService.createQuickPost({
@@ -195,7 +195,7 @@ describe('QuickPostService', () => {
                     json: async () => ({ data: mockPost })
                 });
 
-            (authService.getAuthHeaders as jest.Mock).mockReturnValue({});
+            (enhancedAuthService.getAuthHeaders as jest.Mock).mockReturnValue({});
 
             const postData = {
                 author: '0x1234567890abcdef',
@@ -231,7 +231,7 @@ describe('QuickPostService', () => {
                 json: async () => ({ data: mockPost })
             });
 
-            (authService.getAuthHeaders as jest.Mock).mockReturnValue({});
+            (enhancedAuthService.getAuthHeaders as jest.Mock).mockReturnValue({});
 
             const result = await QuickPostService.getQuickPost('123');
 
@@ -249,7 +249,7 @@ describe('QuickPostService', () => {
                 statusText: 'Not Found'
             });
 
-            (authService.getAuthHeaders as jest.Mock).mockReturnValue({});
+            (enhancedAuthService.getAuthHeaders as jest.Mock).mockReturnValue({});
 
             const result = await QuickPostService.getQuickPost('nonexistent');
 

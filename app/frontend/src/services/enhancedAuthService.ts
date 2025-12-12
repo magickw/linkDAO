@@ -764,6 +764,188 @@ class EnhancedAuthService {
     };
   }
 
+  /**
+   * Update user preferences
+   */
+  async updatePreferences(preferences: any): Promise<{ success: boolean; preferences?: any; error?: string }> {
+    if (!this.token) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    try {
+      const response = await enhancedRequestManager.request<any>(
+        `${this.baseUrl}/api/auth/preferences`,
+        {
+          method: 'PUT',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify({ preferences }),
+        },
+        { timeout: 10000, retries: 2 }
+      );
+
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to update preferences');
+      }
+
+      // Update local user data
+      if (this.sessionData) {
+        this.sessionData.user.preferences = { ...this.sessionData.user.preferences, ...preferences };
+        this.storeSession(this.sessionData.token, this.sessionData.user, this.sessionData.refreshToken);
+      }
+
+      return { success: true, preferences: response.data };
+    } catch (error: any) {
+      console.error('Failed to update preferences:', error);
+      return { success: false, error: this.getErrorMessage(error) };
+    }
+  }
+
+  /**
+   * Update privacy settings
+   */
+  async updatePrivacySettings(privacySettings: any): Promise<{ success: boolean; privacySettings?: any; error?: string }> {
+    if (!this.token) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    try {
+      const response = await enhancedRequestManager.request<any>(
+        `${this.baseUrl}/api/auth/privacy`,
+        {
+          method: 'PUT',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify({ privacySettings }),
+        },
+        { timeout: 10000, retries: 2 }
+      );
+
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to update privacy settings');
+      }
+
+      // Update local user data
+      if (this.sessionData) {
+        this.sessionData.user.privacySettings = { ...this.sessionData.user.privacySettings, ...privacySettings };
+        this.storeSession(this.sessionData.token, this.sessionData.user, this.sessionData.refreshToken);
+      }
+
+      return { success: true, privacySettings: response.data };
+    } catch (error: any) {
+      console.error('Failed to update privacy settings:', error);
+      return { success: false, error: this.getErrorMessage(error) };
+    }
+  }
+
+  /**
+   * Initiate KYC verification
+   */
+  async initiateKYC(tier: 'basic' | 'intermediate' | 'advanced', documents?: any[]): Promise<{ success: boolean; kycId?: string; error?: string }> {
+    if (!this.token) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    try {
+      const response = await enhancedRequestManager.request<any>(
+        `${this.baseUrl}/api/auth/kyc/initiate`,
+        {
+          method: 'POST',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify({ tier, documents }),
+        },
+        { timeout: 15000, retries: 2 }
+      );
+
+      if (!response.success) {
+        throw new Error(response.error || 'KYC initiation failed');
+      }
+
+      return { success: true, kycId: response.data.kycId };
+    } catch (error: any) {
+      console.error('Failed to initiate KYC:', error);
+      return { success: false, error: this.getErrorMessage(error) };
+    }
+  }
+
+  /**
+   * Get KYC status
+   */
+  async getKYCStatus(): Promise<KYCStatus | null> {
+    if (!this.token) {
+      return null;
+    }
+
+    try {
+      const response = await enhancedRequestManager.request<any>(
+        `${this.baseUrl}/api/auth/kyc/status`,
+        {
+          method: 'GET',
+          headers: this.getAuthHeaders(),
+        },
+        { timeout: 10000, retries: 2 }
+      );
+
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to get KYC status');
+      }
+
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get KYC status:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Register new user with enhanced profile data
+   */
+  async register(userData: {
+    address: string;
+    handle: string;
+    ens?: string;
+    email?: string;
+    preferences?: any;
+    privacySettings?: any;
+  }): Promise<AuthResponse> {
+    try {
+      const response = await enhancedRequestManager.request<any>(
+        `${this.baseUrl}/api/auth/register`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(userData)
+        },
+        { timeout: 15000, retries: 2 }
+      );
+
+      if (!response.success) {
+        throw new Error(response.error || 'Registration failed');
+      }
+
+      const sessionToken = response.token || (response.data && response.data.token);
+      if (!sessionToken) {
+        throw new Error('No session token received');
+      }
+
+      const responseUserData = (response.data && response.data.user) || response.user;
+      const newUser = this.createUserData(userData.address, responseUserData);
+
+      this.storeSession(sessionToken, newUser);
+
+      return {
+        success: true,
+        token: sessionToken,
+        user: newUser
+      };
+    } catch (error: any) {
+      console.error('Registration failed:', error);
+      return {
+        success: false,
+        error: this.getErrorMessage(error),
+        retryable: this.isRetryableError(error)
+      };
+    }
+  }
+
   // Utility methods
 
   private sleep(ms: number): Promise<void> {

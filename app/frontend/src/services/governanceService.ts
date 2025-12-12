@@ -9,7 +9,7 @@ import {
 import { communityWeb3Service, CommunityGovernanceProposal } from './communityWeb3Service';
 import { ethers } from 'ethers';
 import { ENV_CONFIG } from '@/config/environment';
-import { authService } from './authService';
+import { enhancedAuthService } from './enhancedAuthService';
 import { csrfService } from './csrfService';
 
 // Safe JSON helper to avoid crashing on non-JSON API responses
@@ -1024,8 +1024,8 @@ export class GovernanceService {
    * Combines auth service headers with CSRF protection
    */
   private async getAuthHeaders(): Promise<Record<string, string>> {
-    // Get base auth headers from authService
-    const headers = authService.getAuthHeaders();
+    // Get base auth headers from enhancedAuthService
+    const headers = enhancedAuthService.getAuthHeaders();
     
     // Add CSRF headers for authenticated requests
     try {

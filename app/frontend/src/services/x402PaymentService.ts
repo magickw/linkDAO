@@ -1,4 +1,4 @@
-import { authService } from './authService';
+import { enhancedAuthService } from './enhancedAuthService';
 
 export interface X402PaymentRequest {
   orderId: string;
@@ -70,7 +70,7 @@ export class X402PaymentService {
       }
 
       // Get auth headers with Bearer token
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
 
       // Call the backend x402 payment API with proper authentication
       const headers: Record<string, string> = {

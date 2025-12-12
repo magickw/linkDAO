@@ -6,7 +6,7 @@ import {
   WorkflowRule,
   WorkflowAnalytics
 } from '@/types/workflow';
-import { authService } from './authService';
+import { enhancedAuthService } from './enhancedAuthService';
 
 class WorkflowService {
   private baseUrl: string;
@@ -16,7 +16,7 @@ class WorkflowService {
   }
 
   private getHeaders() {
-    return authService.getAuthHeaders();
+    return enhancedAuthService.getAuthHeaders();
   }
 
   // Template Management

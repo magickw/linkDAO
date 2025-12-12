@@ -9,7 +9,7 @@ import { communityPerformanceService } from './communityPerformanceService';
 import { requestManager } from './requestManager';
 import { communityCircuitBreaker } from './circuitBreaker';
 import { globalRequestCoalescer } from '../hooks/useRequestCoalescing';
-import { authService } from './authService';
+import { enhancedAuthService } from './enhancedAuthService';
 import { cacheInvalidationService } from './communityCache';
 
 // Get the backend API base URL from environment variables
@@ -65,7 +65,7 @@ export class CommunityService {
 
     try {
       // Get authentication headers
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
 
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}`,
@@ -423,7 +423,7 @@ export class CommunityService {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            ...authService.getAuthHeaders(),
+            ...enhancedAuthService.getAuthHeaders(),
           },
           signal: controller.signal,
         },
@@ -499,7 +499,7 @@ export class CommunityService {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            ...authService.getAuthHeaders(),
+            ...enhancedAuthService.getAuthHeaders(),
           },
           signal: controller.signal,
         },
@@ -638,7 +638,7 @@ export class CommunityService {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            ...authService.getAuthHeaders(),
+            ...enhancedAuthService.getAuthHeaders(),
           },
         },
         COMMUNITY_RETRY_OPTIONS
@@ -674,7 +674,7 @@ export class CommunityService {
 
     try {
       // Get authentication headers
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
 
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${id}`,
@@ -744,7 +744,7 @@ export class CommunityService {
 
     try {
       // Get authentication headers
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
 
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${id}`,
@@ -925,7 +925,7 @@ export class CommunityService {
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
 
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${communityId}/governance/${proposalId}/vote`,
@@ -976,7 +976,7 @@ export class CommunityService {
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
 
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${communityId}/delegations`,
@@ -1026,7 +1026,7 @@ export class CommunityService {
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
 
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${communityId}/delegations`,
@@ -1075,7 +1075,7 @@ export class CommunityService {
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
 
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${communityId}/delegations?delegateAddress=${delegateAddress}&page=${page}&limit=${limit}`,
@@ -1125,7 +1125,7 @@ export class CommunityService {
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
 
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/proxy-votes`,
@@ -1185,7 +1185,7 @@ export class CommunityService {
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
 
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${communityId}/subscription-tiers`,
@@ -1271,7 +1271,7 @@ export class CommunityService {
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
 
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${communityId}/subscriptions`,
@@ -1316,7 +1316,7 @@ export class CommunityService {
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
 
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${communityId}/subscriptions`,
@@ -1412,7 +1412,7 @@ export class CommunityService {
     timeRange: string;
   }): Promise<{ posts: any[]; pagination: any }> {
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const params = new URLSearchParams({
         page: options.page.toString(),
         limit: options.limit.toString(),

@@ -1,6 +1,6 @@
 import { Post, CreatePostInput, UpdatePostInput } from '../models/Post';
 import { ENV_CONFIG } from '@/config/environment';
-import { authService } from './authService';
+import { enhancedAuthService } from './enhancedAuthService';
 
 // Use centralized environment config to ensure consistent backend URL
 const BACKEND_API_BASE_URL = ENV_CONFIG.BACKEND_URL;
@@ -38,7 +38,7 @@ export class PostService {
 
   static async createPost(data: CreatePostInput): Promise<Post> {
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
 
       // If communityId is provided, create post in community
       // Otherwise, create a quick post on user's timeline
@@ -85,7 +85,7 @@ export class PostService {
 
   static async getPost(id: string): Promise<Post | null> {
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/${id}`, {
         method: 'GET',
         headers: {
@@ -112,7 +112,7 @@ export class PostService {
 
   static async updatePost(id: string, data: UpdatePostInput): Promise<Post> {
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/${id}`, {
         method: 'PUT',
         headers: {
@@ -131,7 +131,7 @@ export class PostService {
 
   static async deletePost(id: string): Promise<boolean> {
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/${id}`, {
         method: 'DELETE',
         headers: {
@@ -172,7 +172,7 @@ export class PostService {
     tokenAmount: number = 0
   ): Promise<any> {
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/react`, {
         method: 'POST',
         headers: {
@@ -199,7 +199,7 @@ export class PostService {
     message?: string
   ): Promise<any> {
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/tip`, {
         method: 'POST',
         headers: {
@@ -233,7 +233,7 @@ export class PostService {
         sort
       });
 
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/comments?${params}`, {
         method: 'GET',
         headers: {
@@ -255,7 +255,7 @@ export class PostService {
     parentCommentId?: string
   ): Promise<any> {
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/comments`, {
         method: 'POST',
         headers: {
@@ -288,7 +288,7 @@ export class PostService {
         sort
       });
 
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts?${params}`, {
         method: 'GET',
         headers: {
@@ -331,7 +331,7 @@ export class PostService {
 
   static async getFeed(forUser?: string): Promise<Post[]> {
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const params = new URLSearchParams();
       if (forUser) params.append('forUser', forUser);
 
@@ -355,7 +355,7 @@ export class PostService {
 
   static async getPostsByAuthor(author: string): Promise<Post[]> {
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(
         `${BACKEND_API_BASE_URL}/api/posts/author/${author}`,
         {

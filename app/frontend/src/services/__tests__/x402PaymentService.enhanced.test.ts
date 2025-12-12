@@ -4,9 +4,9 @@ import { X402PaymentService } from '../x402PaymentService';
 // Mock fetch
 global.fetch = vi.fn();
 
-// Mock authService
-vi.mock('../authService', () => ({
-  authService: {
+// Mock enhancedAuthService
+vi.mock('../enhancedAuthService', () => ({
+  enhancedAuthService: {
     getAuthHeaders: () => ({
       'Authorization': 'Bearer mock-token'
     })

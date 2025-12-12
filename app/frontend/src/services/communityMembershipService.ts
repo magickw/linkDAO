@@ -4,7 +4,7 @@ import {
   UpdateCommunityMembershipInput,
   CommunityMembershipStats
 } from '../models/CommunityMembership';
-import { authService } from './authService';
+import { enhancedAuthService } from './enhancedAuthService';
 
 // Get the backend API base URL from environment variables
 const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
@@ -34,7 +34,7 @@ export class CommunityMembershipService {
     
     try {
       // Get authentication headers
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${data.communityId}/members`, {
         method: 'POST',
@@ -74,7 +74,7 @@ export class CommunityMembershipService {
     
     try {
       // Get authentication headers
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/members/${userId}`, {
         method: 'DELETE',
@@ -304,7 +304,7 @@ export class CommunityMembershipService {
     
     try {
       // Get authentication headers
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
       
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/members/${userId}`, {
         method: 'PUT',

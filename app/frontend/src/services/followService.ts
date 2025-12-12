@@ -1,4 +1,4 @@
-import { authService } from './authService';
+import { enhancedAuthService } from './enhancedAuthService';
 import { csrfService } from './csrfService';
 
 // Get the backend API base URL from environment variables
@@ -16,7 +16,7 @@ export class FollowService {
    * @returns True if successful
    */
   static async follow(follower: string, following: string): Promise<boolean> {
-    const authHeaders = authService.getAuthHeaders();
+    const authHeaders = enhancedAuthService.getAuthHeaders();
     const csrfHeaders = await csrfService.getCSRFHeaders();
 
     const response = await fetch(`${BACKEND_API_BASE_URL}/api/follow/follow`, {
@@ -43,7 +43,7 @@ export class FollowService {
    * @returns True if successful
    */
   static async unfollow(follower: string, following: string): Promise<boolean> {
-    const authHeaders = authService.getAuthHeaders();
+    const authHeaders = enhancedAuthService.getAuthHeaders();
     const csrfHeaders = await csrfService.getCSRFHeaders();
 
     const response = await fetch(`${BACKEND_API_BASE_URL}/api/follow/unfollow`, {
@@ -69,7 +69,7 @@ export class FollowService {
    * @returns Array of follower addresses
    */
   static async getFollowers(address: string): Promise<string[]> {
-    const authHeaders = authService.getAuthHeaders();
+    const authHeaders = enhancedAuthService.getAuthHeaders();
 
     const response = await fetch(`${BACKEND_API_BASE_URL}/api/follow/followers/${address}`, {
       method: 'GET',
@@ -93,7 +93,7 @@ export class FollowService {
    * @returns Array of following addresses
    */
   static async getFollowing(address: string): Promise<string[]> {
-    const authHeaders = authService.getAuthHeaders();
+    const authHeaders = enhancedAuthService.getAuthHeaders();
 
     const response = await fetch(`${BACKEND_API_BASE_URL}/api/follow/following/${address}`, {
       method: 'GET',
@@ -119,7 +119,7 @@ export class FollowService {
    */
   static async isFollowing(follower: string, following: string): Promise<boolean> {
     try {
-      const authHeaders = authService.getAuthHeaders();
+      const authHeaders = enhancedAuthService.getAuthHeaders();
 
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/follow/is-following/${follower}/${following}`, {
         method: 'GET',
@@ -150,7 +150,7 @@ export class FollowService {
    * @returns Object with followers and following counts
    */
   static async getFollowCount(address: string): Promise<{ followers: number, following: number }> {
-    const authHeaders = authService.getAuthHeaders();
+    const authHeaders = enhancedAuthService.getAuthHeaders();
 
     const response = await fetch(`${BACKEND_API_BASE_URL}/api/follow/count/${address}`, {
       method: 'GET',

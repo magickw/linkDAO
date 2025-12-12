@@ -1,4 +1,4 @@
-import { authService } from './authService';
+import { enhancedAuthService } from './enhancedAuthService';
 import { csrfService } from './csrfService';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.linkdao.io';
@@ -11,7 +11,7 @@ export class BlockService {
    * @returns True if successful
    */
   static async block(blocker: string, blocked: string): Promise<boolean> {
-    const authHeaders = authService.getAuthHeaders();
+    const authHeaders = enhancedAuthService.getAuthHeaders();
     const csrfHeaders = await csrfService.getCSRFHeaders();
 
     const response = await fetch(`${API_BASE_URL}/api/block/block`, {
@@ -38,7 +38,7 @@ export class BlockService {
    * @returns True if successful
    */
   static async unblock(blocker: string, blocked: string): Promise<boolean> {
-    const authHeaders = authService.getAuthHeaders();
+    const authHeaders = enhancedAuthService.getAuthHeaders();
     const csrfHeaders = await csrfService.getCSRFHeaders();
 
     const response = await fetch(`${API_BASE_URL}/api/block/unblock`, {
@@ -69,7 +69,7 @@ export class BlockService {
       `${API_BASE_URL}/api/block/is-blocked/${blocker}/${blocked}`,
       {
         headers: {
-          ...authService.getAuthHeaders(),
+          ...enhancedAuthService.getAuthHeaders(),
         },
       }
     );
@@ -92,7 +92,7 @@ export class BlockService {
       `${API_BASE_URL}/api/block/blocked-users/${address}`,
       {
         headers: {
-          ...authService.getAuthHeaders(),
+          ...enhancedAuthService.getAuthHeaders(),
         },
       }
     );
@@ -114,7 +114,7 @@ export class BlockService {
       `${API_BASE_URL}/api/block/blocked-by/${address}`,
       {
         headers: {
-          ...authService.getAuthHeaders(),
+          ...enhancedAuthService.getAuthHeaders(),
         },
       }
     );

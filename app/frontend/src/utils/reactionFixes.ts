@@ -2,11 +2,11 @@
 // This file contains patches to fix the reaction system
 
 import { tokenReactionService } from '../services/tokenReactionService';
-import { authService } from '../services/authService';
+import { enhancedAuthService } from '../services/enhancedAuthService';
 
 // 1. Fix for authentication check
 export const checkAuthentication = () => {
-  const token = authService.getToken() || 
+  const token = enhancedAuthService.getToken() || 
                 localStorage.getItem('linkdao_access_token') ||
                 localStorage.getItem('token') ||
                 localStorage.getItem('authToken') ||
@@ -60,7 +60,7 @@ export const handleReactionWithAuth = async (
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...authService.getAuthHeaders()
+        ...enhancedAuthService.getAuthHeaders()
       },
       body: JSON.stringify({
         type: reactionType,
@@ -94,7 +94,7 @@ export const getReactionsWithFallback = async (postId: string) => {
     // Fallback to feed endpoint
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.linkdao.io'}/api/feed/${validPostId}/reactions`, {
-        headers: authService.getAuthHeaders()
+        headers: enhancedAuthService.getAuthHeaders()
       });
       
       if (response.ok) {

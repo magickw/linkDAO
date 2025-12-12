@@ -130,6 +130,10 @@ export class ProfileService {
           return null;
         }
 
+        if (response.status === 503) {
+          throw new Error('Service temporarily unavailable. Please try again later.');
+        }
+
         let errorMessage = 'Failed to fetch profile';
         try {
           const errorData = await response.json();

@@ -1,4 +1,4 @@
-import { authService } from './authService';
+import { enhancedAuthService } from './enhancedAuthService';
 import {
   ModerationQueue,
   SellerApplication,
@@ -135,7 +135,7 @@ class AdminService {
 
   // Public method to get auth headers
   getAuthHeaders() {
-    return authService.getAuthHeaders();
+    return enhancedAuthService.getAuthHeaders();
   }
 
   // Private method for internal use

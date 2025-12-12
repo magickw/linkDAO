@@ -3,7 +3,7 @@
  */
 
 import { csrfService } from './csrfService';
-import { authService } from './authService';
+import { enhancedAuthService } from './enhancedAuthService';
 
 export interface CartItem {
   id: string;
