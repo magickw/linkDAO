@@ -584,23 +584,32 @@ export class CacheService {
       };
     }
 
-    try {
-      const startTime = performance.now();
-      const result = await redisService.testConnection();
-      const endTime = performance.now();
-      const latency = endTime - startTime;
+    // Only perform actual test if connection is not established
+    if (!redisStatus.connected) {
+      try {
+        const startTime = performance.now();
+        const result = await redisService.testConnection();
+        const endTime = performance.now();
+        const latency = endTime - startTime;
 
+        return {
+          connected: result.connected,
+          enabled: result.enabled,
+          latency: latency
+        };
+      } catch (error) {
+        return {
+          connected: false,
+          enabled: true,
+          latency: -1
+        };
+      }
+    } else {
+      // If already connected, just return status without testing
       return {
-        connected: result.connected,
-        enabled: redisStatus.enabled,
-        latency: result.connected ? latency : -1
-      };
-    } catch (error) {
-      safeLogger.error('Cache health check failed:', error);
-      return {
-        connected: false,
-        enabled: redisStatus.enabled,
-        latency: -1
+        connected: true,
+        enabled: true,
+        latency: 0 // No latency for existing connection
       };
     }
   }

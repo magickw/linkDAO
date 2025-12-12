@@ -396,10 +396,10 @@ export class RedisService {
   }
 
   // Rate limiting
-  async checkRateLimit(key: string, limit: number, window: number): Promise<{ allowed: boolean; remaining: number }> {
+  async checkRateLimit(key: string, limit: number, window: number): Promise<{ allowed: boolean; remaining: number; resetTime: number }> {
     if (!this.useRedis) {
       safeLogger.warn('Redis is disabled, rate limit check bypassed for key:', key);
-      return { allowed: true, remaining: limit }; // Allow all if Redis disabled
+      return { allowed: true, remaining: limit, resetTime: Date.now() + (window * 1000) }; // Allow all if Redis disabled
     }
     
     await this.ensureConnected();
@@ -412,8 +412,9 @@ export class RedisService {
     
     const remaining = Math.max(0, limit - current);
     const allowed = current <= limit;
+    const resetTime = Date.now() + (window * 1000);
     
-    return { allowed, remaining };
+    return { allowed, remaining, resetTime };
   }
 
   // Marketplace-specific caching
@@ -482,9 +483,24 @@ export class RedisService {
         return { connected: false, enabled: false };
       }
       
-      await this.ping();
-      safeLogger.info('Redis connection test successful');
-      return { connected: true, enabled: true };
+      // Use existing connection if available, rather than creating a new one each time
+      if (this.isConnected && this.client) {
+        // Just ping the existing connection
+        await this.client.ping();
+        safeLogger.info('Redis connection test successful');
+        return { connected: true, enabled: true };
+      } else {
+        // If not connected, try to connect
+        await this.connect();
+        if (this.isConnected && this.client) {
+          await this.client.ping();
+          safeLogger.info('Redis connection test successful');
+          return { connected: true, enabled: true };
+        } else {
+          safeLogger.warn('Redis connection test failed - unable to establish connection');
+          return { connected: false, enabled: true };
+        }
+      }
     } catch (error) {
       safeLogger.error("Redis connection test failed:", {
         error: {
@@ -497,8 +513,8 @@ export class RedisService {
           port: (error as any).port
         }
       });
-      this.useRedis = false; // Disable Redis on failure
-      return { connected: false, enabled: false, error };
+      // Don't disable Redis on a single test failure
+      return { connected: false, enabled: this.useRedis, error };
     }
   }
 

@@ -520,16 +520,12 @@ app.get('/health', async (req, res) => {
     'Expires': '0'
   });
 
-  // Get Redis status
+  // Get Redis status without forcing a new connection test
   let redisStatus: any = { enabled: false, connected: false };
   try {
     const { redisService } = await import('./services/redisService');
-    // Test Redis connection to ensure current status
-    const testResult = await redisService.testConnection();
-    redisStatus = {
-      ...redisService.getRedisStatus(),
-      testResult
-    };
+    // Use existing connection status rather than forcing a test
+    redisStatus = redisService.getRedisStatus();
   } catch (error) {
     // Redis service not available
     console.warn('Redis service not available for health check:', error.message);
@@ -543,31 +539,26 @@ app.get('/health', async (req, res) => {
       const startTime = Date.now();
       const result = await dbPool.query('SELECT 1');
       const queryTime = Date.now() - startTime;
-
+      
       databaseStatus = {
         enabled: true,
         connected: true,
-        queryTime: queryTime,
-        pool: {
-          total: dbPool.totalCount,
-          idle: dbPool.idleCount,
-          waiting: dbPool.waitingCount
-        }
+        latency: queryTime,
+        rows: result.rowCount
       };
     }
   } catch (error) {
-    // Database not available
-    console.warn('Database not available for health check:', error.message);
     databaseStatus = {
       enabled: true,
       connected: false,
-      error: error.message
-    } as any;
+      error: error instanceof Error ? error.message : 'Database connection failed'
+    };
   }
 
-  res.status(200).json({
-    success: true,
-    status: 'healthy',
+  res.json({
+    status: 'ok',
+    service: 'marketplace-api',
+    environment: process.env.NODE_ENV || 'development',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     memory: {
@@ -584,7 +575,15 @@ app.get('/health/redis', async (req, res) => {
   try {
     const { redisService } = await import('./services/redisService');
     const status = redisService.getRedisStatus();
-    const testResult = await redisService.testConnection();
+    // Only perform actual test if connection is not established or if forced
+    const forceTest = req.query.force === 'true';
+    let testResult;
+    
+    if (forceTest || !status.connected) {
+      testResult = await redisService.testConnection();
+    } else {
+      testResult = { connected: status.connected, enabled: status.enabled };
+    }
 
     res.status(200).json({
       success: true,

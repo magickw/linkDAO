@@ -1,8 +1,8 @@
 // Fix for reaction functionality
 // This file contains patches to fix the reaction system
 
-import { tokenReactionService } from './tokenReactionService';
-import { authService } from './authService';
+import { tokenReactionService } from '../services/tokenReactionService';
+import { authService } from '../services/authService';
 
 // 1. Fix for authentication check
 export const checkAuthentication = () => {
