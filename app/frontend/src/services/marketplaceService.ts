@@ -980,24 +980,55 @@ export class UnifiedMarketplaceService {
     const separator = endpoint.includes('?') ? '&' : '?';
     const endpointWithTimestamp = `${endpoint}${separator}_t=${timestamp}`;
     
-    // First try the primary URL
+    // First try the primary URL with bypass header
     let response = await this.attemptApiRequest(`${this.primaryBaseUrl}${endpointWithTimestamp}`, options);
     
-    // If primary fails with 503 (service unavailable), implement immediate retry with shorter backoff
-    if (response.status === 503) {
-      console.log(`[MarketplaceService] Primary API returned 503, implementing immediate retry strategy`);
+    // If primary fails with network error or 503, try without bypass header as fallback
+    if (!response.ok || response.status === 503) {
+      console.log(`[MarketplaceService] Primary request failed (status: ${response.status}), trying without bypass header`);
       
-      // Wait 3 seconds before retrying (much shorter for better UX)
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Remove bypass header and try again
+      const optionsWithoutBypass = {
+        ...options,
+        headers: { ...options.headers }
+      };
+      delete (optionsWithoutBypass.headers as Record<string, string>)['X-Service-Worker-Bypass'];
       
-      // Retry the request with new timestamp
-      response = await this.attemptApiRequest(`${this.primaryBaseUrl}${endpointWithTimestamp}`, options);
+      try {
+        response = await this.attemptApiRequest(`${this.primaryBaseUrl}${endpointWithTimestamp}`, optionsWithoutBypass);
+      } catch (error) {
+        console.error('[MarketplaceService] Fallback request also failed:', error);
+      }
       
-      // If still 503, try one more time after 5 seconds
-      if (response.status === 503) {
-        console.log(`[MarketplaceService] Second attempt also returned 503, trying final retry`);
-        await new Promise(resolve => setTimeout(resolve, 5000));
-        response = await this.attemptApiRequest(`${this.primaryBaseUrl}${endpointWithTimestamp}`, options);
+      // If still failing, implement retry with backoff
+      if (!response.ok || response.status === 503) {
+        console.log(`[MarketplaceService] Still failing, implementing retry strategy`);
+        
+        // Wait 3 seconds before retrying
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        // Retry the request with new timestamp
+        try {
+          response = await this.attemptApiRequest(`${this.primaryBaseUrl}${endpointWithTimestamp}`, optionsWithoutBypass);
+        } catch (error) {
+          console.error('[MarketplaceService] Retry failed:', error);
+        }
+        
+        // If still 503, try one more time after 5 seconds
+        if (!response.ok || response.status === 503) {
+          console.log(`[MarketplaceService] Second attempt also returned ${response.status}, trying final retry`);
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          try {
+            response = await this.attemptApiRequest(`${this.primaryBaseUrl}${endpointWithTimestamp}`, optionsWithoutBypass);
+          } catch (error) {
+            console.error('[MarketplaceService] Final retry failed:', error);
+            // Return a mock response to prevent complete failure
+            return new Response(JSON.stringify({ success: false, data: [] }), {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' }
+            });
+          }
+        }
       }
     }
     
@@ -1041,29 +1072,40 @@ export class UnifiedMarketplaceService {
         ...options.headers,
       };
 
-      // Only add Referrer-Policy if we're not in a browser context that might restrict it
-      if (typeof window === 'undefined' || !window.navigator) {
-        (headers as Record<string, string>)['Referrer-Policy'] = 'origin-when-cross-origin';
-      }
+      // Remove conflicting headers that might cause CORS issues
+      delete (headers as Record<string, string>)['Referrer-Policy'];
 
       const fetchOptions: RequestInit = {
         ...options,
         signal: controller.signal,
         headers,
-        // Let the browser decide on mode and credentials to avoid CORS issues
-        mode: options.mode || 'cors',
-        credentials: options.credentials || 'same-origin'
+        // Use more permissive CORS settings
+        mode: 'cors',
+        credentials: 'include',
+        redirect: 'follow'
       };
+
+      console.log('[MarketplaceService] Attempting fetch to:', url);
       const response = await fetch(url, fetchOptions);
+      console.log('[MarketplaceService] Fetch response status:', response.status);
 
       clearTimeout(timeoutId);
       return response;
     } catch (error) {
       clearTimeout(timeoutId);
       
-      // Handle localhost connection errors specifically
-      if (url.startsWith('http://localhost') && error instanceof Error && error.message.includes('CSP')) {
-        console.warn('[MarketplaceService] Localhost connection blocked by CSP in production');
+      // Handle different types of errors
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          console.error('[MarketplaceService] Request timeout');
+        } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+          console.error('[MarketplaceService] Network error - could not connect to API');
+          console.error('[MarketplaceService] This might be due to CORS policy, network connectivity, or the server being down');
+        } else if (url.startsWith('http://localhost') && error.message.includes('CSP')) {
+          console.warn('[MarketplaceService] Localhost connection blocked by CSP in production');
+        } else {
+          console.error('[MarketplaceService] Request error:', error.message);
+        }
       }
       
       throw error;

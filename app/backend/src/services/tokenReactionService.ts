@@ -5,7 +5,7 @@
 
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
-import { reactions, posts, quickPosts, users } from '../db/schema';
+import { reactions, quickPostReactions, posts, quickPosts, users } from '../db/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 
 export type ReactionType = '🔥' | '🚀' | '💎';
@@ -44,7 +44,7 @@ export const REACTION_TYPES: Record<ReactionType, TokenReactionConfig> = {
 
 export interface TokenReaction {
   id: number;
-  postId: number;
+  postId: string; // Changed to string to accommodate both integer IDs and UUIDs
   userId: string;
   type: ReactionType;
   amount: number;
@@ -108,12 +108,11 @@ class TokenReactionService {
       throw new Error(`Minimum amount for ${type} reaction is ${config.tokenCost} tokens`);
     }
 
-    // Verify post exists - check both posts (integer ID) and quickPosts (UUID) tables
-    let postExists = false;
-    
-    // Check if postId looks like a UUID
+    // Determine if postId is UUID or integer
     const isUUID = typeof postId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(postId);
     
+    // Verify post exists - check appropriate table
+    let postExists = false;
     if (isUUID) {
       // Query quickPosts table for UUID
       const quickPost = await db.select().from(quickPosts).where(eq(quickPosts.id, postId)).limit(1);
@@ -137,14 +136,33 @@ class TokenReactionService {
     const rewardsEarned = baseReward * config.multiplier;
 
     try {
-      // Create the reaction
-      const [newReaction] = await db.insert(reactions).values({
-        postId,
-        userId,
-        type,
-        amount: amount.toString(),
-        rewardsEarned: rewardsEarned.toString(),
-      }).returning();
+      let newReaction: any;
+      
+      if (isUUID) {
+        // Insert into quickPostReactions table for UUID posts
+        const [insertedReaction] = await db.insert(quickPostReactions).values({
+          quickPostId: postId,
+          userId,
+          type,
+          amount: amount.toString(),
+          rewardsEarned: rewardsEarned.toString(),
+        }).returning();
+        
+        newReaction = insertedReaction;
+        // For UUID-based reactions, postId is the quickPostId
+        newReaction.postId = insertedReaction.quickPostId;
+      } else {
+        // Insert into reactions table for integer posts
+        const [insertedReaction] = await db.insert(reactions).values({
+          postId: parseInt(postId), // Convert string to integer for integer column
+          userId,
+          type,
+          amount: amount.toString(),
+          rewardsEarned: rewardsEarned.toString(),
+        }).returning();
+        
+        newReaction = insertedReaction;
+      }
 
       // Get user info
       const [user] = await db.select({
@@ -155,7 +173,7 @@ class TokenReactionService {
 
       const reaction: TokenReaction = {
         id: newReaction.id,
-        postId: newReaction.postId!,
+        postId: newReaction.postId!, // This will be either postId or quickPostId depending on the table
         userId: newReaction.userId!,
         type: newReaction.type as ReactionType,
         amount: parseFloat(newReaction.amount),
@@ -192,46 +210,90 @@ class TokenReactionService {
    */
   async getReactionSummary(postId: string, type: ReactionType, userId?: string): Promise<ReactionSummary> {
     try {
-      // Get total amount and count
-      const [totals] = await db
-        .select({
-          totalAmount: sql<string>`SUM(${reactions.amount})`,
-          totalCount: sql<number>`COUNT(${reactions.id})`,
-        })
-        .from(reactions)
-        .where(and(eq(reactions.postId, postId), eq(reactions.type, type)));
+      // Determine if postId is UUID or integer
+      const isUUID = typeof postId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(postId);
 
-      // Get user amount if userId provided
-      let userAmount = 0;
-      if (userId) {
-        const [userReaction] = await db
-          .select({ amount: sql<string>`SUM(${reactions.amount})` })
+      let totals: any, userAmount = 0, topContributors: any;
+
+      if (isUUID) {
+        // Query from quickPostReactions table for UUID posts
+        // Get total amount and count
+        [totals] = await db
+          .select({
+            totalAmount: sql<string>`SUM(${quickPostReactions.amount})`,
+            totalCount: sql<number>`COUNT(${quickPostReactions.id})`,
+          })
+          .from(quickPostReactions)
+          .where(and(eq(quickPostReactions.quickPostId, postId), eq(quickPostReactions.type, type)));
+
+        // Get user amount if userId provided
+        if (userId) {
+          const [userReaction] = await db
+            .select({ amount: sql<string>`SUM(${quickPostReactions.amount})` })
+            .from(quickPostReactions)
+            .where(and(
+              eq(quickPostReactions.quickPostId, postId),
+              eq(quickPostReactions.type, type),
+              eq(quickPostReactions.userId, userId)
+            ));
+          userAmount = parseFloat(userReaction?.amount || '0');
+        }
+
+        // Get top contributors
+        topContributors = await db
+          .select({
+            userId: quickPostReactions.userId,
+            walletAddress: users.walletAddress,
+            handle: users.handle,
+            amount: sql<string>`SUM(${quickPostReactions.amount})`,
+          })
+          .from(quickPostReactions)
+          .innerJoin(users, eq(quickPostReactions.userId, users.id))
+          .where(and(eq(quickPostReactions.quickPostId, postId), eq(quickPostReactions.type, type)))
+          .groupBy(quickPostReactions.userId, users.walletAddress, users.handle)
+          .orderBy(desc(sql<string>`SUM(${quickPostReactions.amount})`))
+          .limit(5);
+      } else {
+        // Query from reactions table for integer posts
+        // Get total amount and count
+        [totals] = await db
+          .select({
+            totalAmount: sql<string>`SUM(${reactions.amount})`,
+            totalCount: sql<number>`COUNT(${reactions.id})`,
+          })
           .from(reactions)
-          .where(and(
-            eq(reactions.postId, postId),
-            eq(reactions.type, type),
-            eq(reactions.userId, userId)
-          ));
-        userAmount = parseFloat(userReaction?.amount || '0');
+          .where(and(eq(reactions.postId, parseInt(postId)), eq(reactions.type, type)));
+
+        // Get user amount if userId provided
+        if (userId) {
+          const [userReaction] = await db
+            .select({ amount: sql<string>`SUM(${reactions.amount})` })
+            .from(reactions)
+            .where(and(
+              eq(reactions.postId, parseInt(postId)),
+              eq(reactions.type, type),
+              eq(reactions.userId, userId)
+            ));
+          userAmount = parseFloat(userReaction?.amount || '0');
+        }
+
+        // Get top contributors
+        topContributors = await db
+          .select({
+            userId: reactions.userId,
+            walletAddress: users.walletAddress,
+            handle: users.handle,
+            amount: sql<string>`SUM(${reactions.amount})`,
+          })
+          .from(reactions)
+          .innerJoin(users, eq(reactions.userId, users.id))
+          .where(and(eq(reactions.postId, parseInt(postId)), eq(reactions.type, type)))
+          .groupBy(reactions.userId, users.walletAddress, users.handle)
+          .orderBy(desc(sql<string>`SUM(${reactions.amount})`))
+          .limit(5);
       }
 
-      // Get top contributors
-      const topContributors = await db
-        .select({
-          userId: reactions.userId,
-          walletAddress: users.walletAddress,
-          handle: users.handle,
-          amount: sql<string>`SUM(${reactions.amount})`,
-        })
-        .from(reactions)
-        .innerJoin(users, eq(reactions.userId, users.id))
-        .where(and(eq(reactions.postId, postId), eq(reactions.type, type)))
-        .groupBy(reactions.userId, users.walletAddress, users.handle)
-        .orderBy(desc(sql<string>`SUM(${reactions.amount})`))
-        .limit(5);
-
       return {
-        postId,
         type,
         totalAmount: parseFloat(totals?.totalAmount || '0'),
         totalCount: totals?.totalCount || 0,
@@ -275,32 +337,70 @@ class TokenReactionService {
     offset: number = 0
   ): Promise<{ reactions: TokenReaction[]; hasMore: boolean }> {
     try {
-      const whereConditions = [eq(reactions.postId, postId)];
-      if (reactionType) {
-        whereConditions.push(eq(reactions.type, reactionType));
-      }
+      // Determine if postId is UUID or integer
+      const isUUID = typeof postId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(postId);
 
-      const reactionData = await db
-        .select({
-          id: reactions.id,
-          postId: reactions.postId,
-          userId: reactions.userId,
-          type: reactions.type,
-          amount: reactions.amount,
-          rewardsEarned: reactions.rewardsEarned,
-          createdAt: reactions.createdAt,
-        })
-        .from(reactions)
-        .where(and(...whereConditions))
-        .orderBy(desc(reactions.createdAt))
-        .limit(limit + 1) // Get one more to check if there are more results
-        .offset(offset);
+      let reactionData: any[];
+      
+      if (isUUID) {
+        // Query quickPostReactions table for UUID posts
+        const whereConditions = [eq(quickPostReactions.quickPostId, postId)];
+        if (reactionType) {
+          whereConditions.push(eq(quickPostReactions.type, reactionType));
+        }
+
+        reactionData = await db
+          .select({
+            id: quickPostReactions.id,
+            postId: quickPostReactions.quickPostId,  // Map quickPostId to postId field
+            userId: quickPostReactions.userId,
+            type: quickPostReactions.type,
+            amount: quickPostReactions.amount,
+            rewardsEarned: quickPostReactions.rewardsEarned,
+            createdAt: quickPostReactions.createdAt,
+          })
+          .from(quickPostReactions)
+          .where(and(...whereConditions))
+          .orderBy(desc(quickPostReactions.createdAt))
+          .limit(limit + 1) // Get one more to check if there are more results
+          .offset(offset);
+      } else {
+        // Query reactions table for integer posts
+        const whereConditions = [eq(reactions.postId, parseInt(postId))];
+        if (reactionType) {
+          whereConditions.push(eq(reactions.type, reactionType));
+        }
+
+        reactionData = await db
+          .select({
+            id: reactions.id,
+            postId: reactions.postId,
+            userId: reactions.userId,
+            type: reactions.type,
+            amount: reactions.amount,
+            rewardsEarned: reactions.rewardsEarned,
+            createdAt: reactions.createdAt,
+          })
+          .from(reactions)
+          .where(and(...whereConditions))
+          .orderBy(desc(reactions.createdAt))
+          .limit(limit + 1) // Get one more to check if there are more results
+          .offset(offset);
+      }
 
       const hasMore = reactionData.length > limit;
       const reactionsToReturn = hasMore ? reactionData.slice(0, limit) : reactionData;
 
       return {
-        reactions: reactionsToReturn,
+        reactions: reactionsToReturn.map(r => ({
+          id: r.id,
+          postId: r.postId!,
+          userId: r.userId!,
+          type: r.type as ReactionType,
+          amount: parseFloat(r.amount),
+          rewardsEarned: parseFloat(r.rewardsEarned),
+          createdAt: r.createdAt!,
+        })),
         hasMore,
       };
     } catch (error) {
@@ -314,19 +414,42 @@ class TokenReactionService {
    */
   async getUserReactions(postId: string, userId: string): Promise<TokenReaction[]> {
     try {
-      const userReactions = await db
-        .select({
-          id: reactions.id,
-          postId: reactions.postId,
-          userId: reactions.userId,
-          type: reactions.type,
-          amount: reactions.amount,
-          rewardsEarned: reactions.rewardsEarned,
-          createdAt: reactions.createdAt,
-        })
-        .from(reactions)
-        .where(and(eq(reactions.postId, postId), eq(reactions.userId, userId)))
-        .orderBy(desc(reactions.createdAt));
+      // Determine if postId is UUID or integer
+      const isUUID = typeof postId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(postId);
+
+      let userReactions: any[];
+
+      if (isUUID) {
+        // Query quickPostReactions table for UUID posts
+        userReactions = await db
+          .select({
+            id: quickPostReactions.id,
+            postId: quickPostReactions.quickPostId,  // Map quickPostId to postId field
+            userId: quickPostReactions.userId,
+            type: quickPostReactions.type,
+            amount: quickPostReactions.amount,
+            rewardsEarned: quickPostReactions.rewardsEarned,
+            createdAt: quickPostReactions.createdAt,
+          })
+          .from(quickPostReactions)
+          .where(and(eq(quickPostReactions.quickPostId, postId), eq(quickPostReactions.userId, userId)))
+          .orderBy(desc(quickPostReactions.createdAt));
+      } else {
+        // Query reactions table for integer posts
+        userReactions = await db
+          .select({
+            id: reactions.id,
+            postId: reactions.postId,
+            userId: reactions.userId,
+            type: reactions.type,
+            amount: reactions.amount,
+            rewardsEarned: reactions.rewardsEarned,
+            createdAt: reactions.createdAt,
+          })
+          .from(reactions)
+          .where(and(eq(reactions.postId, parseInt(postId)), eq(reactions.userId, userId)))
+          .orderBy(desc(reactions.createdAt));
+      }
 
       return userReactions.map(r => ({
         id: r.id,
@@ -348,26 +471,48 @@ class TokenReactionService {
    */
   async removeReaction(reactionId: number, userId: string): Promise<{ success: boolean; refundAmount: number }> {
     try {
-      // Get the reaction to verify ownership and get refund amount
-      const [reaction] = await db
+      // First, get the reaction to determine which table it's from and verify ownership
+      // Check in reactions table first (for integer posts)
+      let reaction = await db
         .select()
         .from(reactions)
         .where(and(eq(reactions.id, reactionId), eq(reactions.userId, userId)))
         .limit(1);
 
-      if (!reaction) {
-        throw new Error('Reaction not found or not owned by user');
+      if (reaction.length > 0) {
+        // This is a reaction from the reactions table (integer post IDs)
+        const refundAmount = parseFloat(reaction[0].amount);
+
+        // Delete the reaction
+        await db.delete(reactions).where(eq(reactions.id, reactionId));
+
+        return {
+          success: true,
+          refundAmount,
+        };
+      } else {
+        // Check in quickPostReactions table (for UUID posts)
+        reaction = await db
+          .select()
+          .from(quickPostReactions)
+          .where(and(eq(quickPostReactions.id, reactionId), eq(quickPostReactions.userId, userId)))
+          .limit(1);
+
+        if (reaction.length > 0) {
+          // This is a reaction from the quickPostReactions table (UUID post IDs)
+          const refundAmount = parseFloat(reaction[0].amount);
+
+          // Delete the reaction
+          await db.delete(quickPostReactions).where(eq(quickPostReactions.id, reactionId));
+
+          return {
+            success: true,
+            refundAmount,
+          };
+        } else {
+          throw new Error('Reaction not found or not owned by user');
+        }
       }
-
-      const refundAmount = parseFloat(reaction.amount);
-
-      // Delete the reaction
-      await db.delete(reactions).where(eq(reactions.id, reactionId));
-
-      return {
-        success: true,
-        refundAmount,
-      };
     } catch (error) {
       safeLogger.error('Error removing reaction:', error);
       throw new Error('Failed to remove reaction');
@@ -379,10 +524,24 @@ class TokenReactionService {
    */
   async getReactionAnalytics(postId: string) {
     try {
-      const allReactions = await db
-        .select()
-        .from(reactions)
-        .where(eq(reactions.postId, postId));
+      // Determine if postId is UUID or integer
+      const isUUID = typeof postId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(postId);
+
+      let allReactions: any[];
+
+      if (isUUID) {
+        // Query quickPostReactions table for UUID posts
+        allReactions = await db
+          .select()
+          .from(quickPostReactions)
+          .where(eq(quickPostReactions.quickPostId, postId));
+      } else {
+        // Query reactions table for integer posts
+        allReactions = await db
+          .select()
+          .from(reactions)
+          .where(eq(reactions.postId, postId));
+      }
 
       const totalReactions = allReactions.length;
       const totalTokensStaked = allReactions.reduce((sum, r) => sum + parseFloat(r.amount), 0);

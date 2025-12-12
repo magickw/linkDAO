@@ -300,10 +300,16 @@ self.addEventListener('fetch', (event) => {
     console.log('SW: Handling image request:', request.url);
     event.respondWith(cacheFirst(request, IMAGE_CACHE));
   } else if (isAPI(request)) {
-    // Check for bypass header
+    // Check for bypass header - if present, fetch directly without caching
     if (request.headers.get('X-Service-Worker-Bypass') === 'true') {
       console.log('SW: Bypassing API request due to bypass header:', request.url);
-      event.respondWith(fetch(request));
+      event.respondWith(
+        fetch(request).catch(error => {
+          console.error('Direct fetch failed:', error);
+          return new Response('Network error', { status: 500, statusText: 'Network Error' });
+        })
+      );
+      return;
     } else {
       console.log('SW: Handling API request:', request.url);
       event.respondWith(networkFirst(request, DYNAMIC_CACHE));
