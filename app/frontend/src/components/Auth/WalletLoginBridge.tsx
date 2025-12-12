@@ -28,7 +28,7 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
   skipIfAuthenticated = true,
 }) => {
   const { address, isConnected, connector, status } = useAccount();
-  const { user, isAuthenticated, isLoading: isAuthLoading, login } = useAuth();
+  const { user, isAuthenticated, login } = useAuth();
   const hasHandledAddressRef = useRef<Set<string>>(new Set());
   const isMountedRef = useRef(true);
 
@@ -39,8 +39,7 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
     // 3. User is not already authenticated
     // 4. Haven't already handled this address
     // 5. Connector is available and ready
-    // NOTE: Removed isAuthLoading check to prevent blocking navigation
-    //       The authentication will run in background without blocking
+    // NOTE: Authentication runs in background without blocking navigation
     isMountedRef.current = true;
     console.log('WalletLoginBridge: useEffect triggered', {
       autoLogin,

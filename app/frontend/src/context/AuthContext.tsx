@@ -120,7 +120,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [address, connector, syncAuthState, addToast]);
 
   const login = useCallback(async (walletAddress: string, connector: any, status: string): Promise<{ success: boolean; error?: string }> => {
-    setIsLoading(true);
+    // Don't set global isLoading - it blocks navigation
+    // Authentication happens in background without blocking UI
     try {
       const result = await enhancedAuthService.authenticateWallet(walletAddress, connector, status);
       if (result.success && result.user) {
@@ -132,8 +133,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
       addToast(error.message, 'error');
       return { success: false, error: error.message };
-    } finally {
-      setIsLoading(false);
     }
   }, [syncAuthState, addToast]);
   
