@@ -4,7 +4,7 @@
  * session persistence, CORS handling, and authentication recovery mechanisms
  */
 
-import { signMessage } from '@wagmi/core';
+import { signMessage, getAccount } from '@wagmi/core';
 import { config } from '@/lib/rainbowkit';
 import { ENV_CONFIG } from '@/config/environment';
 import { AuthUser, UserRole } from '@/types/auth';
@@ -289,7 +289,12 @@ class EnhancedAuthService {
     
     while (Date.now() - startTime < timeout) {
       if (connector && config) {
-        return;
+        // Verify the connector is actually connected
+        const account = getAccount(config);
+        if (account.isConnected && account.connector) {
+          console.log('✅ Wallet connector is ready');
+          return;
+        }
       }
       await this.sleep(100);
     }
@@ -359,6 +364,12 @@ class EnhancedAuthService {
 
     for (let attempt = 0; attempt < retries; attempt++) {
       try {
+        // Verify connector is actually connected before attempting to sign
+        const account = getAccount(config);
+        if (!account.isConnected || !account.connector) {
+          throw new Error('Connector not connected');
+        }
+
         const signature = await signMessage(config, {
           account: address as `0x${string}`,
           message: message
@@ -376,6 +387,16 @@ class EnhancedAuthService {
         // Don't retry on user rejection or unsupported operations
         if (this.isUserRejectionError(error) || this.isUnsupportedError(error)) {
           throw new Error(errorMessage);
+        }
+
+        // If connector is not connected, wait longer before retrying
+        if (errorMessage.includes('Connector not connected')) {
+          if (attempt === retries - 1) {
+            throw new Error(errorMessage);
+          }
+          console.warn(`Signing attempt ${attempt + 1} failed, waiting for connector:`, errorMessage);
+          await this.sleep(2000); // Wait longer for connector to be ready
+          continue;
         }
 
         if (attempt === retries - 1) {
