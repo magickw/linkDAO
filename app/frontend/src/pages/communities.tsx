@@ -231,12 +231,6 @@ const CommunitiesPage: React.FC = () => {
     };
   }, []);
 
-  useEffect(() => {
-    if (!isAuthLoading && !isAuthenticated) {
-      router.push('/login');
-    }
-  }, [isAuthenticated, isAuthLoading, router]);
-
   // Load communities and enhanced Web3 data on component mount
   useEffect(() => {
     const loadEnhancedCommunities = async () => {
