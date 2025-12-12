@@ -153,6 +153,8 @@ export default function EnhancedReactionSystem({
 
     try {
       // Use the enhanced reaction handler
+      // The handleReactionWithAuth function will also check wallet connection,
+      // but we already checked it above so this should pass
       await handleReactionWithAuth(postId, reactionType, 0);
 
       // Update local state
@@ -171,6 +173,7 @@ export default function EnhancedReactionSystem({
       addToast(`Reacted with ${reactionType}!`, 'success');
     } catch (error: any) {
       console.error('Error reacting:', error);
+      // Only show the error message that's relevant to user action
       addToast(error.message || 'Failed to react. Please try again.', 'error');
     }
   };
@@ -184,7 +187,7 @@ export default function EnhancedReactionSystem({
 
     // Check authentication
     if (!checkAuthentication()) {
-      addToast('Please authenticate to react. Try refreshing the page.', 'error');
+      addToast('Please authenticate to react. TryRefreshing the page.', 'error');
       return;
     }
 

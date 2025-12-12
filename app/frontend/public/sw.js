@@ -231,7 +231,15 @@ self.addEventListener('activate', (event) => {
         });
       }).catch(() => {
         // Ignore errors if cache doesn't exist yet
-      })
+      }),
+      // Clear marketplace API cache to prevent serving stale 503 responses
+      caches.open(DYNAMIC_CACHE).then(cache => {
+        return Promise.all([
+          cache.delete(request => request.url.includes('/api/marketplace/listings')).catch(() => {}),
+          cache.delete(request => request.url.includes('/api/marketplace/listings/categories')).catch(() => {}),
+          cache.delete(request => request.url.includes('/api/marketplace/seller')).catch(() => {})
+        ]).catch(() => {});
+      }).catch(() => {})
     ]).then(() => {
       return self.clients.claim();
     })
@@ -317,6 +325,8 @@ setInterval(() => {
     }
   }
 }, 300000);
+
+
 
 // Cache first strategy - for static assets with enhanced error handling
 async function cacheFirst(request, cacheName) {

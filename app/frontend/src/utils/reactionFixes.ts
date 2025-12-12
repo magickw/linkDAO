@@ -46,14 +46,9 @@ export const handleReactionWithAuth = async (
   reactionType: string,
   amount: number = 0
 ) => {
-  // Check authentication
+  // Check authentication (wallet connection should be checked by the caller)
   if (!checkAuthentication()) {
-    throw new Error('Please connect your wallet and authenticate to react');
-  }
-  
-  // Check wallet connection
-  if (!checkWalletConnection()) {
-    throw new Error('Please connect your wallet to react');
+    throw new Error('Please authenticate to react. Try refreshing the page.');
   }
   
   // Ensure valid post ID

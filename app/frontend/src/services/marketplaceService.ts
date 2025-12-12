@@ -974,9 +974,14 @@ export class UnifiedMarketplaceService {
     }
   }
 
-  private async makeApiRequest(endpoint: string, options: RequestInit = {}): Promise<any> {
+  private async makeApiRequest(endpoint: string, options: RequestInit = {}): Promise<Response> {
+    // Add timestamp to bypass any cached responses
+    const timestamp = Date.now();
+    const separator = endpoint.includes('?') ? '&' : '?';
+    const endpointWithTimestamp = `${endpoint}${separator}_t=${timestamp}`;
+    
     // First try the primary URL
-    let response = await this.attemptApiRequest(`${this.primaryBaseUrl}${endpoint}`, options);
+    let response = await this.attemptApiRequest(`${this.primaryBaseUrl}${endpointWithTimestamp}`, options);
     
     // If primary fails with 503 (service unavailable), implement immediate retry with shorter backoff
     if (response.status === 503) {
@@ -985,14 +990,14 @@ export class UnifiedMarketplaceService {
       // Wait 3 seconds before retrying (much shorter for better UX)
       await new Promise(resolve => setTimeout(resolve, 3000));
       
-      // Retry the request
-      response = await this.attemptApiRequest(`${this.primaryBaseUrl}${endpoint}`, options);
+      // Retry the request with new timestamp
+      response = await this.attemptApiRequest(`${this.primaryBaseUrl}${endpointWithTimestamp}`, options);
       
       // If still 503, try one more time after 5 seconds
       if (response.status === 503) {
         console.log(`[MarketplaceService] Second attempt also returned 503, trying final retry`);
         await new Promise(resolve => setTimeout(resolve, 5000));
-        response = await this.attemptApiRequest(`${this.primaryBaseUrl}${endpoint}`, options);
+        response = await this.attemptApiRequest(`${this.primaryBaseUrl}${endpointWithTimestamp}`, options);
       }
     }
     
@@ -1082,6 +1087,9 @@ export class UnifiedMarketplaceService {
       const endpoint = `/api/marketplace/listings?${paramsString}${separator}${cacheBuster}`;
       console.log('[MarketplaceService] Fetching listings from primary URL:', `${this.primaryBaseUrl}${endpoint}`);      const response = await this.makeApiRequest(endpoint, {
         method: 'GET',
+        headers: {
+          'X-Service-Worker-Bypass': 'true'
+        }
       });
 
       if (!response.ok) {
