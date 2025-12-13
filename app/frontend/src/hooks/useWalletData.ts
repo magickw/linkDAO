@@ -75,7 +75,7 @@ export function useWalletData({
 
   // No direct on-chain subscription here; we'll poll via our service to support multi-chain balances
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
-  const refetchBalance = async () => {};
+  const refetchBalance = async () => { };
 
   const [walletData, setWalletData] = useState<EnhancedWalletData | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -121,7 +121,7 @@ export function useWalletData({
 
       // Merge discovered tokens with existing balances
       const allTokens: ServiceTokenBalance[] = [...walletData.tokens];
-      
+
       // Update the original tokens with price data
       for (let i = 0; i < allTokens.length; i++) {
         const priceData = tokensWithPrices.find(t => t.symbol === allTokens[i].symbol);
@@ -134,7 +134,7 @@ export function useWalletData({
           };
         }
       }
-      
+
       for (const discoveredToken of discoveredTokens) {
         // Only add if not already in the list
         if (!allTokens.some(t => t.symbol === discoveredToken.symbol)) {
@@ -180,182 +180,182 @@ export function useWalletData({
               const chainIdsToQuery = [...defaultChainIds, ...extraChainIds];
               const nativeSymbolFor = (cid: number) => (cid === 137 ? 'MATIC' : 'ETH');
 
-            if (unifiedKey) {
-              // Use unified v2 endpoint for both native and token transfers
-              const fetchNative = chainIdsToQuery.map(async (chainId) => {
-                try {
-                  const url = new URL(unifiedBase);
-                  url.searchParams.set('chainid', String(chainId));
-                  url.searchParams.set('module', 'account');
-                  url.searchParams.set('action', 'txlist');
-                  url.searchParams.set('address', address as string);
-                  url.searchParams.set('sort', 'desc');
-                  url.searchParams.set('apikey', unifiedKey);
-                  const res = await fetch(url.toString());
-                  const data = await res.json().catch(() => ({ status: '0', result: [] }));
-                  if (data && data.status !== '0' && Array.isArray(data.result)) {
-                    return data.result.slice(0, maxTransactions).map((tx: any) => {
-                      const valueWei = BigInt(tx.value || '0');
-                      const amount = Number(valueWei) / 1e18;
-                      const isSend = (tx.from || '').toLowerCase() === (address as string).toLowerCase();
-                      return {
-                        id: `${chainId}_${tx.hash}`,
-                        type: isSend ? 'send' : 'receive',
-                        amount,
-                        token: nativeSymbolFor(chainId),
-                        valueUSD: undefined,
-                        timestamp: new Date((Number(tx.timeStamp) || 0) * 1000),
-                        status: Number(tx.confirmations || 0) > 0 ? 'confirmed' : 'pending',
-                        hash: tx.hash,
-                        chainId,
-                        from: tx.from,
-                        to: tx.to || (isSend ? tx.to : address),
-                      };
-                    });
-                  }
-                } catch (_) {}
-                return [];
-              });
+              if (unifiedKey) {
+                // Use unified v2 endpoint for both native and token transfers
+                const fetchNative = chainIdsToQuery.map(async (chainId) => {
+                  try {
+                    const url = new URL(unifiedBase);
+                    url.searchParams.set('chainid', String(chainId));
+                    url.searchParams.set('module', 'account');
+                    url.searchParams.set('action', 'txlist');
+                    url.searchParams.set('address', address as string);
+                    url.searchParams.set('sort', 'desc');
+                    url.searchParams.set('apikey', unifiedKey);
+                    const res = await fetch(url.toString());
+                    const data = await res.json().catch(() => ({ status: '0', result: [] }));
+                    if (data && data.status !== '0' && Array.isArray(data.result)) {
+                      return data.result.slice(0, maxTransactions).map((tx: any) => {
+                        const valueWei = BigInt(tx.value || '0');
+                        const amount = Number(valueWei) / 1e18;
+                        const isSend = (tx.from || '').toLowerCase() === (address as string).toLowerCase();
+                        return {
+                          id: `${chainId}_${tx.hash}`,
+                          type: isSend ? 'send' : 'receive',
+                          amount,
+                          token: nativeSymbolFor(chainId),
+                          valueUSD: undefined,
+                          timestamp: new Date((Number(tx.timeStamp) || 0) * 1000),
+                          status: Number(tx.confirmations || 0) > 0 ? 'confirmed' : 'pending',
+                          hash: tx.hash,
+                          chainId,
+                          from: tx.from,
+                          to: tx.to || (isSend ? tx.to : address),
+                        };
+                      });
+                    }
+                  } catch (_) { }
+                  return [];
+                });
 
-              const fetchErc20 = chainIdsToQuery.map(async (chainId) => {
-                try {
-                  const url = new URL(unifiedBase);
-                  url.searchParams.set('chainid', String(chainId));
-                  url.searchParams.set('module', 'account');
-                  url.searchParams.set('action', 'tokentx');
-                  url.searchParams.set('address', address as string);
-                  url.searchParams.set('sort', 'desc');
-                  url.searchParams.set('apikey', unifiedKey);
-                  const res = await fetch(url.toString());
-                  const data = await res.json().catch(() => ({ status: '0', result: [] }));
-                  if (data && data.status !== '0' && Array.isArray(data.result)) {
-                    return data.result.slice(0, maxTransactions).map((tx: any) => {
-                      const decimals = Number(tx.tokenDecimal || 18);
-                      const raw = tx.value || '0';
-                      const amount = Number(raw) / Math.pow(10, decimals);
-                      const isSend = (tx.from || '').toLowerCase() === (address as string).toLowerCase();
-                      const symbol = (tx.tokenSymbol || '').toUpperCase();
-                      return {
-                        id: `${chainId}_${tx.hash}_${tx.contractAddress}`,
-                        type: isSend ? 'send' : 'receive',
-                        amount,
-                        token: symbol,
-                        valueUSD: undefined,
-                        timestamp: new Date((Number(tx.timeStamp) || 0) * 1000),
-                        status: Number(tx.confirmations || 0) > 0 ? 'confirmed' : 'pending',
-                        hash: tx.hash,
-                        chainId,
-                        from: tx.from,
-                        to: tx.to || (isSend ? tx.to : address),
-                      };
-                    });
-                  }
-                } catch (_) {}
-                return [];
-              });
+                const fetchErc20 = chainIdsToQuery.map(async (chainId) => {
+                  try {
+                    const url = new URL(unifiedBase);
+                    url.searchParams.set('chainid', String(chainId));
+                    url.searchParams.set('module', 'account');
+                    url.searchParams.set('action', 'tokentx');
+                    url.searchParams.set('address', address as string);
+                    url.searchParams.set('sort', 'desc');
+                    url.searchParams.set('apikey', unifiedKey);
+                    const res = await fetch(url.toString());
+                    const data = await res.json().catch(() => ({ status: '0', result: [] }));
+                    if (data && data.status !== '0' && Array.isArray(data.result)) {
+                      return data.result.slice(0, maxTransactions).map((tx: any) => {
+                        const decimals = Number(tx.tokenDecimal || 18);
+                        const raw = tx.value || '0';
+                        const amount = Number(raw) / Math.pow(10, decimals);
+                        const isSend = (tx.from || '').toLowerCase() === (address as string).toLowerCase();
+                        const symbol = (tx.tokenSymbol || '').toUpperCase();
+                        return {
+                          id: `${chainId}_${tx.hash}_${tx.contractAddress}`,
+                          type: isSend ? 'send' : 'receive',
+                          amount,
+                          token: symbol,
+                          valueUSD: undefined,
+                          timestamp: new Date((Number(tx.timeStamp) || 0) * 1000),
+                          status: Number(tx.confirmations || 0) > 0 ? 'confirmed' : 'pending',
+                          hash: tx.hash,
+                          chainId,
+                          from: tx.from,
+                          to: tx.to || (isSend ? tx.to : address),
+                        };
+                      });
+                    }
+                  } catch (_) { }
+                  return [];
+                });
 
-              const [perChainNative, perChainErc20] = await Promise.all([Promise.all(fetchNative), Promise.all(fetchErc20)]);
-              recentTransactions = [...perChainNative.flat(), ...perChainErc20.flat()]
-                .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-                .slice(0, maxTransactions);
-            } else {
-              // Fallback to previous per-explorer approach if unified key is not set
-              const explorerConfigs: Array<{ chainId: number; baseUrl: string; apiKey?: string; nativeSymbol: string }> = [
-                { chainId: 1, baseUrl: 'https://api.etherscan.io/api', apiKey: process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY, nativeSymbol: 'ETH' },
-                { chainId: 8453, baseUrl: 'https://api.basescan.org/api', apiKey: process.env.NEXT_PUBLIC_BASESCAN_API_KEY, nativeSymbol: 'ETH' },
-                { chainId: 84532, baseUrl: 'https://api-sepolia.basescan.org/api', apiKey: process.env.NEXT_PUBLIC_BASESCAN_API_KEY, nativeSymbol: 'ETH' },
-                { chainId: 137, baseUrl: 'https://api.polygonscan.com/api', apiKey: process.env.NEXT_PUBLIC_POLYGONSCAN_API_KEY, nativeSymbol: 'MATIC' },
-                { chainId: 42161, baseUrl: 'https://api.arbiscan.io/api', apiKey: process.env.NEXT_PUBLIC_ARBISCAN_API_KEY, nativeSymbol: 'ETH' },
-              ];
+                const [perChainNative, perChainErc20] = await Promise.all([Promise.all(fetchNative), Promise.all(fetchErc20)]);
+                recentTransactions = [...perChainNative.flat(), ...perChainErc20.flat()]
+                  .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+                  .slice(0, maxTransactions);
+              } else {
+                // Fallback to previous per-explorer approach if unified key is not set
+                const explorerConfigs: Array<{ chainId: number; baseUrl: string; apiKey?: string; nativeSymbol: string }> = [
+                  { chainId: 1, baseUrl: 'https://api.etherscan.io/api', apiKey: process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY, nativeSymbol: 'ETH' },
+                  { chainId: 8453, baseUrl: 'https://api.basescan.org/api', apiKey: process.env.NEXT_PUBLIC_BASESCAN_API_KEY, nativeSymbol: 'ETH' },
+                  { chainId: 84532, baseUrl: 'https://api-sepolia.basescan.org/api', apiKey: process.env.NEXT_PUBLIC_BASESCAN_API_KEY, nativeSymbol: 'ETH' },
+                  { chainId: 137, baseUrl: 'https://api.polygonscan.com/api', apiKey: process.env.NEXT_PUBLIC_POLYGONSCAN_API_KEY, nativeSymbol: 'MATIC' },
+                  { chainId: 42161, baseUrl: 'https://api.arbiscan.io/api', apiKey: process.env.NEXT_PUBLIC_ARBISCAN_API_KEY, nativeSymbol: 'ETH' },
+                ];
 
-              const fetches = explorerConfigs.map(async ({ chainId, baseUrl, apiKey, nativeSymbol }) => {
-                try {
-                  const url = new URL(baseUrl);
-                  url.searchParams.set('module', 'account');
-                  url.searchParams.set('action', 'txlist');
-                  url.searchParams.set('address', address as string);
-                  url.searchParams.set('sort', 'desc');
-                  if (apiKey) url.searchParams.set('apikey', apiKey);
-                  const res = await fetch(url.toString());
-                  const data = await res.json().catch(() => ({ status: '0', result: [] }));
-                  if (data && data.status !== '0' && Array.isArray(data.result)) {
-                    return data.result.slice(0, maxTransactions).map((tx: any) => {
-                      const valueWei = BigInt(tx.value || '0');
-                      const amount = Number(valueWei) / 1e18;
-                      const isSend = (tx.from || '').toLowerCase() === (address as string).toLowerCase();
-                      return {
-                        id: `${chainId}_${tx.hash}`,
-                        type: isSend ? 'send' : 'receive',
-                        amount,
-                        token: nativeSymbol,
-                        valueUSD: undefined,
-                        timestamp: new Date((Number(tx.timeStamp) || 0) * 1000),
-                        status: Number(tx.confirmations || 0) > 0 ? 'confirmed' : 'pending',
-                        hash: tx.hash,
-                        chainId,
-                        from: tx.from,
-                        to: tx.to || (isSend ? tx.to : address),
-                      };
-                    });
-                  }
-                } catch (_) {}
-                return [];
-              });
+                const fetches = explorerConfigs.map(async ({ chainId, baseUrl, apiKey, nativeSymbol }) => {
+                  try {
+                    const url = new URL(baseUrl);
+                    url.searchParams.set('module', 'account');
+                    url.searchParams.set('action', 'txlist');
+                    url.searchParams.set('address', address as string);
+                    url.searchParams.set('sort', 'desc');
+                    if (apiKey) url.searchParams.set('apikey', apiKey);
+                    const res = await fetch(url.toString());
+                    const data = await res.json().catch(() => ({ status: '0', result: [] }));
+                    if (data && data.status !== '0' && Array.isArray(data.result)) {
+                      return data.result.slice(0, maxTransactions).map((tx: any) => {
+                        const valueWei = BigInt(tx.value || '0');
+                        const amount = Number(valueWei) / 1e18;
+                        const isSend = (tx.from || '').toLowerCase() === (address as string).toLowerCase();
+                        return {
+                          id: `${chainId}_${tx.hash}`,
+                          type: isSend ? 'send' : 'receive',
+                          amount,
+                          token: nativeSymbol,
+                          valueUSD: undefined,
+                          timestamp: new Date((Number(tx.timeStamp) || 0) * 1000),
+                          status: Number(tx.confirmations || 0) > 0 ? 'confirmed' : 'pending',
+                          hash: tx.hash,
+                          chainId,
+                          from: tx.from,
+                          to: tx.to || (isSend ? tx.to : address),
+                        };
+                      });
+                    }
+                  } catch (_) { }
+                  return [];
+                });
 
-              const erc20Fetches = explorerConfigs.map(async ({ chainId, baseUrl, apiKey }) => {
-                try {
-                  const url = new URL(baseUrl);
-                  url.searchParams.set('module', 'account');
-                  url.searchParams.set('action', 'tokentx');
-                  url.searchParams.set('address', address as string);
-                  url.searchParams.set('sort', 'desc');
-                  if (apiKey) url.searchParams.set('apikey', apiKey);
-                  const res = await fetch(url.toString());
-                  const data = await res.json().catch(() => ({ status: '0', result: [] }));
-                  if (data && data.status !== '0' && Array.isArray(data.result)) {
-                    return data.result.slice(0, maxTransactions).map((tx: any) => {
-                      const decimals = Number(tx.tokenDecimal || 18);
-                      const raw = tx.value || '0';
-                      const amount = Number(raw) / Math.pow(10, decimals);
-                      const isSend = (tx.from || '').toLowerCase() === (address as string).toLowerCase();
-                      const symbol = (tx.tokenSymbol || '').toUpperCase();
-                      return {
-                        id: `${chainId}_${tx.hash}_${tx.contractAddress}`,
-                        type: isSend ? 'send' : 'receive',
-                        amount,
-                        token: symbol,
-                        valueUSD: undefined,
-                        timestamp: new Date((Number(tx.timeStamp) || 0) * 1000),
-                        status: Number(tx.confirmations || 0) > 0 ? 'confirmed' : 'pending',
-                        hash: tx.hash,
-                        chainId,
-                        from: tx.from,
-                        to: tx.to || (isSend ? tx.to : address),
-                      };
-                    });
-                  }
-                } catch (_) {}
-                return [];
-              });
+                const erc20Fetches = explorerConfigs.map(async ({ chainId, baseUrl, apiKey }) => {
+                  try {
+                    const url = new URL(baseUrl);
+                    url.searchParams.set('module', 'account');
+                    url.searchParams.set('action', 'tokentx');
+                    url.searchParams.set('address', address as string);
+                    url.searchParams.set('sort', 'desc');
+                    if (apiKey) url.searchParams.set('apikey', apiKey);
+                    const res = await fetch(url.toString());
+                    const data = await res.json().catch(() => ({ status: '0', result: [] }));
+                    if (data && data.status !== '0' && Array.isArray(data.result)) {
+                      return data.result.slice(0, maxTransactions).map((tx: any) => {
+                        const decimals = Number(tx.tokenDecimal || 18);
+                        const raw = tx.value || '0';
+                        const amount = Number(raw) / Math.pow(10, decimals);
+                        const isSend = (tx.from || '').toLowerCase() === (address as string).toLowerCase();
+                        const symbol = (tx.tokenSymbol || '').toUpperCase();
+                        return {
+                          id: `${chainId}_${tx.hash}_${tx.contractAddress}`,
+                          type: isSend ? 'send' : 'receive',
+                          amount,
+                          token: symbol,
+                          valueUSD: undefined,
+                          timestamp: new Date((Number(tx.timeStamp) || 0) * 1000),
+                          status: Number(tx.confirmations || 0) > 0 ? 'confirmed' : 'pending',
+                          hash: tx.hash,
+                          chainId,
+                          from: tx.from,
+                          to: tx.to || (isSend ? tx.to : address),
+                        };
+                      });
+                    }
+                  } catch (_) { }
+                  return [];
+                });
 
-              const [perChainNative, perChainErc20] = await Promise.all([Promise.all(fetches), Promise.all(erc20Fetches)]);
-              recentTransactions = [...perChainNative.flat(), ...perChainErc20.flat()]
-                .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-                .slice(0, maxTransactions);
-            }
+                const [perChainNative, perChainErc20] = await Promise.all([Promise.all(fetches), Promise.all(erc20Fetches)]);
+                recentTransactions = [...perChainNative.flat(), ...perChainErc20.flat()]
+                  .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+                  .slice(0, maxTransactions);
+              }
 
-            // Enrich transactions with USD values via price service
-            const symbols = Array.from(new Set(recentTransactions.map((t) => String(t.token).toUpperCase()).filter(Boolean)));
-            if (symbols.length > 0) {
-              const prices = await cryptoPriceService.getPrices(symbols);
-              recentTransactions = recentTransactions.map((t) => {
-                const pd = prices.get(String(t.token).toUpperCase());
-                const usd = pd ? (t.amount || 0) * (pd.current_price || 0) : undefined;
-                return { ...t, valueUSD: usd };
-              });
-            }
-            // Cache normalized result (serialize timestamp)
-            txCache.set(cacheKey, { data: recentTransactions.map((t) => ({ ...t, timestamp: (t.timestamp as Date).toISOString() })), timestamp: Date.now() });
+              // Enrich transactions with USD values via price service
+              const symbols = Array.from(new Set(recentTransactions.map((t) => String(t.token).toUpperCase()).filter(Boolean)));
+              if (symbols.length > 0) {
+                const prices = await cryptoPriceService.getPrices(symbols);
+                recentTransactions = recentTransactions.map((t) => {
+                  const pd = prices.get(String(t.token).toUpperCase());
+                  const usd = pd ? (t.amount || 0) * (pd.current_price || 0) : undefined;
+                  return { ...t, valueUSD: usd };
+                });
+              }
+              // Cache normalized result (serialize timestamp)
+              txCache.set(cacheKey, { data: recentTransactions.map((t) => ({ ...t, timestamp: (t.timestamp as Date).toISOString() })), timestamp: Date.now() });
             }
           } catch (e) {
             // Soft-fail on tx history
@@ -482,10 +482,21 @@ export function useWalletData({
     }
   }, [refetchBalance, fetchWalletData, chainId, providedChainId, connectedChainId]);
 
-  // Initial fetch when address is available
+  // Initial fetch when address is available - strictly deferred to prevent UI blocking
   useEffect(() => {
     if (address) {
-      fetchWalletData();
+      // Use requestIdleCallback if available, or fallback to setTimeout
+      // This ensures we don't block the main thread immediately after connection/navigation
+      // which allows the router transition to complete smoothly first.
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        const handle = (window as any).requestIdleCallback(() => {
+          fetchWalletData();
+        }, { timeout: 3000 });
+        return () => (window as any).cancelIdleCallback(handle);
+      } else {
+        const timer = setTimeout(fetchWalletData, 500);
+        return () => clearTimeout(timer);
+      }
     }
   }, [address, fetchWalletData, chainId, providedChainId, connectedChainId]);
 
@@ -496,14 +507,14 @@ export function useWalletData({
     }
 
     const tokenSymbols = walletData.balances.map(balance => balance.symbol);
-    
+
     const unsubscribe = cryptoPriceService.subscribe({
       tokens: tokenSymbols,
       callback: (prices) => {
         // Update wallet data with new prices
         setWalletData(currentData => {
           if (!currentData) return currentData;
-          
+
           const updatedBalances = currentData.balances.map(balance => {
             const priceData = prices.get(balance.symbol.toUpperCase());
             if (priceData) {
@@ -515,12 +526,12 @@ export function useWalletData({
             }
             return balance;
           });
-          
+
           const newPortfolioValue = updatedBalances.reduce((sum, b) => sum + b.valueUSD, 0);
           const newPortfolioChange = updatedBalances.length > 0
             ? updatedBalances.reduce((sum, b) => sum + (b.change24h * (b.valueUSD / (newPortfolioValue || 1))), 0)
             : 0;
-          
+
           return {
             ...currentData,
             balances: updatedBalances,
@@ -528,7 +539,7 @@ export function useWalletData({
             portfolioChange: newPortfolioChange
           };
         });
-        
+
         setLastUpdated(new Date());
       }
     });

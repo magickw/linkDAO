@@ -47,7 +47,7 @@ function getAvatarUrl(profileCid: string | undefined): string | undefined {
 export default function Profile() {
   const router = useRouter();
   const { address: currentUserAddress, isConnected } = useWeb3();
-  const { isAuthenticated, login } = useAuth();
+  const { isAuthenticated, login, recoverSession } = useAuth();
   const { addToast } = useToast();
 
   // Determine which user profile to display based on query parameter
