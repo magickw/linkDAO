@@ -39,6 +39,7 @@ const queryClient = new QueryClient();
 function AppContent({ children }: { children: React.ReactNode }) {
   const [isOnline, setIsOnline] = React.useState(true);
   const [updateAvailable, setUpdateAvailable] = React.useState(false);
+  const router = useRouter();
   const swUtilRef = React.useRef<ServiceWorkerUtil | null>(null);
   const [isBackendAvailable, setIsBackendAvailable] = React.useState(true);
   const [retryAttempt, setRetryAttempt] = React.useState(0);
@@ -63,26 +64,13 @@ function AppContent({ children }: { children: React.ReactNode }) {
 
     checkBackendAvailability();
     const healthCheckInterval = setInterval(checkBackendAvailability, 60000);
+    // Service worker registration moved to initializeServices for better control
     // Network status monitoring
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-
-    // Service worker registration with enhanced error handling
-    if ('serviceWorker' in navigator) {
-      swUtilRef.current = new ServiceWorkerUtil();
-      swUtilRef.current.register()
-        .then(() => console.log('Service Worker registered successfully'))
-        .catch(error => console.warn('Service Worker registration failed:', error));
-
-      // Check for updates
-      setInterval(() => {
-        swUtilRef.current?.checkForUpdates()
-          .then(hasUpdate => setUpdateAvailable(hasUpdate));
-      }, 60 * 60 * 1000); // Check every hour
-    }
 
     // Initialize performance monitoring
     performanceMonitor.mark('app_init_start');
