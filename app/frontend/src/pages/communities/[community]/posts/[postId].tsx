@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Layout from '@/components/Layout';
 import { EnhancedPostCard } from '@/components/Feed/EnhancedPostCard';
-import { PostService } from '@/services/postService';
+import { CommunityPostService } from '@/services/communityPostService';
 import { Post } from '@/models/Post';
 import { useToast } from '@/context/ToastContext';
 import { Loader2 } from 'lucide-react';
@@ -22,7 +22,7 @@ export default function CommunityPostPage() {
         const fetchPost = async () => {
             try {
                 setIsLoading(true);
-                const fetchedPost = await PostService.getPost(postId);
+                const fetchedPost = await CommunityPostService.getPost(community as string, postId);
 
                 if (!fetchedPost) {
                     // Post not found, redirect to community page

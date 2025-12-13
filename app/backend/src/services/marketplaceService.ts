@@ -1,10 +1,10 @@
-import { 
-  CreateListingInput, 
-  UpdateListingInput, 
-  PlaceBidInput, 
+import {
+  CreateListingInput,
+  UpdateListingInput,
+  PlaceBidInput,
   MakeOfferInput,
-  MarketplaceListing, 
-  MarketplaceBid, 
+  MarketplaceListing,
+  MarketplaceBid,
   MarketplaceOffer,
   MarketplaceEscrow,
   MarketplaceOrder,
@@ -27,7 +27,7 @@ export class BlockchainMarketplaceService {
   private async withTimeout<T>(promise: Promise<T>, timeoutMs: number = 15000): Promise<T> {
     return Promise.race([
       promise,
-      new Promise<never>((_, reject) => 
+      new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Database operation timeout')), timeoutMs)
       )
     ]);
@@ -47,8 +47,15 @@ export class BlockchainMarketplaceService {
           bioCid: ''
         }));
       }
-      
+
       // Create listing in database with timeout protection
+      // Extract title and description from input or defaults
+      const title = input.title || 'Untitled Listing';
+      const description = input.description || '';
+      const categoryId = input.categoryId || 'general';
+      const images = input.images || [];
+      const currency = input.priceCurrency || 'USDC';
+
       const dbListing = await this.withTimeout(databaseService.createListing(
         sellerUser.id,
         input.tokenAddress,
@@ -60,9 +67,14 @@ export class BlockchainMarketplaceService {
         input.nftStandard,
         input.tokenId,
         input.reservePrice,
-        input.minIncrement
+        input.minIncrement,
+        title,
+        description,
+        categoryId,
+        images,
+        currency
       ));
-      
+
       const now = new Date().toISOString();
       const listing: MarketplaceListing = {
         id: dbListing.id,
@@ -104,18 +116,18 @@ export class BlockchainMarketplaceService {
     try {
       // Add timeout protection
       dbListing = await this.withTimeout(databaseService.getProductById(id));
-    
+
       if (!dbListing) return null;
     } catch (error) {
       safeLogger.error('Error getting listing by ID:', error);
       // Return null for database errors to enable graceful degradation
       return null;
     }
-    
+
     // Get seller address
     const seller = await userProfileService.getProfileById(dbListing.sellerId || '');
     if (!seller) return null;
-    
+
     // Parse metadata to extract enhanced information
     let parsedMetadata = {};
     try {
@@ -126,7 +138,7 @@ export class BlockchainMarketplaceService {
       // If parsing fails, use the raw metadata
       parsedMetadata = { title: dbListing.title || 'Untitled' };
     }
-    
+
     const now = new Date().toISOString();
     const listing: MarketplaceListing = {
       id: dbListing.id,
@@ -151,7 +163,7 @@ export class BlockchainMarketplaceService {
       createdAt: dbListing.createdAt?.toISOString() || now,
       updatedAt: dbListing.updatedAt?.toISOString() || now
     };
-    
+
     return listing;
   }
 
@@ -159,10 +171,10 @@ export class BlockchainMarketplaceService {
     try {
       const sellerUser = await this.withTimeout(userProfileService.getProfileByAddress(sellerAddress));
       if (!sellerUser) return [];
-      
+
       // Use the correct database service method that queries the products table
       const dbListings = await this.withTimeout(databaseService.getProductsBySeller(sellerUser.id));
-      
+
       const now = new Date().toISOString();
       const listings: MarketplaceListing[] = [];
       for (const dbListing of dbListings) {
@@ -176,7 +188,7 @@ export class BlockchainMarketplaceService {
           // If parsing fails, use the raw metadata
           parsedMetadata = { title: dbListing.title || 'Untitled' };
         }
-        
+
         const listing: MarketplaceListing = {
           id: dbListing.id,
           sellerWalletAddress: sellerAddress,
@@ -202,7 +214,7 @@ export class BlockchainMarketplaceService {
         };
         listings.push(listing);
       }
-      
+
       return listings;
     } catch (error) {
       safeLogger.error('Error getting listings by seller:', error);
@@ -214,14 +226,14 @@ export class BlockchainMarketplaceService {
   async getAllListings(): Promise<MarketplaceListing[]> {
     try {
       const dbListings = await this.withTimeout(databaseService.getAllProducts());
-      
+
       const now = new Date().toISOString();
       const listings: MarketplaceListing[] = [];
       for (const dbListing of dbListings) {
         // Get seller address
         const seller = await this.withTimeout(userProfileService.getProfileById(dbListing.sellerId || ''));
         if (!seller) continue;
-        
+
         // Parse metadata to extract enhanced information
         let parsedMetadata = {};
         try {
@@ -232,7 +244,7 @@ export class BlockchainMarketplaceService {
           // If parsing fails, use the raw metadata
           parsedMetadata = { title: dbListing.title || 'Untitled' };
         }
-        
+
         const listing: MarketplaceListing = {
           id: dbListing.id,
           sellerWalletAddress: seller.walletAddress,
@@ -258,7 +270,7 @@ export class BlockchainMarketplaceService {
         };
         listings.push(listing);
       }
-      
+
       return listings;
     } catch (error) {
       safeLogger.error('Error getting all listings:', error);
@@ -270,14 +282,14 @@ export class BlockchainMarketplaceService {
   async getActiveListings(): Promise<MarketplaceListing[]> {
     try {
       const dbListings = await this.withTimeout(databaseService.getActiveProducts());
-      
+
       const now = new Date().toISOString();
       const listings: MarketplaceListing[] = [];
       for (const dbListing of dbListings) {
         // Get seller address
         const seller = await this.withTimeout(userProfileService.getProfileById(dbListing.sellerId || ''));
         if (!seller) continue;
-        
+
         // Parse metadata to extract enhanced information
         let parsedMetadata = {};
         try {
@@ -288,7 +300,7 @@ export class BlockchainMarketplaceService {
           // If parsing fails, use the raw metadata
           parsedMetadata = { title: dbListing.title || 'Untitled' };
         }
-        
+
         const listing: MarketplaceListing = {
           id: dbListing.id,
           sellerWalletAddress: seller.walletAddress,
@@ -314,7 +326,7 @@ export class BlockchainMarketplaceService {
         };
         listings.push(listing);
       }
-      
+
       return listings;
     } catch (error) {
       safeLogger.error('Error getting active listings:', error);
@@ -328,14 +340,14 @@ export class BlockchainMarketplaceService {
       const updates: any = {};
       if (input.price !== undefined) updates.price = input.price;
       if (input.quantity !== undefined) updates.quantity = input.quantity;
-      
+
       const dbListing = await this.withTimeout(databaseService.updateListing(id, updates));
       if (!dbListing) return null;
-      
+
       // Get seller address
       const seller = await this.withTimeout(userProfileService.getProfileById(dbListing.sellerId || ''));
       if (!seller) return null;
-      
+
       const now = new Date().toISOString();
       const listing: MarketplaceListing = {
         id: dbListing.id,
@@ -360,7 +372,7 @@ export class BlockchainMarketplaceService {
         createdAt: dbListing.createdAt?.toISOString() || now,
         updatedAt: dbListing.updatedAt?.toISOString() || now
       };
-      
+
       return listing;
     } catch (error) {
       safeLogger.error('Error updating marketplace listing:', error);
@@ -394,15 +406,15 @@ export class BlockchainMarketplaceService {
           bioCid: ''
         }));
       }
-      
+
       const dbBid = await this.withTimeout(databaseService.placeBid(
         listingId,
         bidderUser.id,
         input.amount
       ));
-      
+
       if (!dbBid) return null;
-      
+
       const bid: MarketplaceBid = {
         id: dbBid.id.toString(),
         listingId: listingId,
@@ -410,7 +422,7 @@ export class BlockchainMarketplaceService {
         amount: dbBid.amount,
         timestamp: dbBid.timestamp?.toISOString() || new Date().toISOString()
       };
-      
+
       return bid;
     } catch (error) {
       safeLogger.error('Error placing bid:', error);
@@ -422,13 +434,13 @@ export class BlockchainMarketplaceService {
   async getBidsByListing(listingId: string): Promise<MarketplaceBid[]> {
     try {
       const dbBids = await this.withTimeout(databaseService.getBidsByListing(listingId));
-      
+
       const bids: MarketplaceBid[] = [];
       for (const dbBid of dbBids) {
         // Get bidder address
         const bidder = await this.withTimeout(userProfileService.getProfileById(dbBid.bidderId || ''));
         if (!bidder) continue;
-        
+
         const bid: MarketplaceBid = {
           id: dbBid.id.toString(),
           listingId: listingId,
@@ -438,7 +450,7 @@ export class BlockchainMarketplaceService {
         };
         bids.push(bid);
       }
-      
+
       return bids;
     } catch (error) {
       safeLogger.error('Error getting bids by listing:', error);
@@ -451,9 +463,9 @@ export class BlockchainMarketplaceService {
     try {
       const bidderUser = await this.withTimeout(userProfileService.getProfileByAddress(bidderAddress));
       if (!bidderUser) return [];
-      
+
       const dbBids = await this.withTimeout(databaseService.getBidsByBidder(bidderUser.id));
-      
+
       const bids: MarketplaceBid[] = [];
       for (const dbBid of dbBids) {
         const bid: MarketplaceBid = {
@@ -465,7 +477,7 @@ export class BlockchainMarketplaceService {
         };
         bids.push(bid);
       }
-      
+
       return bids;
     } catch (error) {
       safeLogger.error('Error getting bids by bidder:', error);
@@ -488,15 +500,15 @@ export class BlockchainMarketplaceService {
           bioCid: ''
         }));
       }
-      
+
       const dbOffer = await this.withTimeout(databaseService.makeOffer(
         listingId,
         buyerUser.id,
         input.amount
       ));
-      
+
       if (!dbOffer) return null;
-      
+
       const offer: MarketplaceOffer = {
         id: dbOffer.id.toString(),
         listingId: listingId,
@@ -505,7 +517,7 @@ export class BlockchainMarketplaceService {
         createdAt: dbOffer.createdAt?.toISOString() || new Date().toISOString(),
         accepted: dbOffer.accepted || false
       };
-      
+
       return offer;
     } catch (error) {
       safeLogger.error('Error making offer:', error);
@@ -517,13 +529,13 @@ export class BlockchainMarketplaceService {
   async getOffersByListing(listingId: string): Promise<MarketplaceOffer[]> {
     try {
       const dbOffers = await this.withTimeout(databaseService.getOffersByListing(listingId));
-      
+
       const offers: MarketplaceOffer[] = [];
       for (const dbOffer of dbOffers) {
         // Get buyer address
         const buyer = await this.withTimeout(userProfileService.getProfileById(dbOffer.buyerId || ''));
         if (!buyer) continue;
-        
+
         const offer: MarketplaceOffer = {
           id: dbOffer.id.toString(),
           listingId: listingId,
@@ -534,7 +546,7 @@ export class BlockchainMarketplaceService {
         };
         offers.push(offer);
       }
-      
+
       return offers;
     } catch (error) {
       safeLogger.error('Error getting offers by listing:', error);
@@ -547,9 +559,9 @@ export class BlockchainMarketplaceService {
     try {
       const buyerUser = await this.withTimeout(userProfileService.getProfileByAddress(buyerAddress));
       if (!buyerUser) return [];
-      
+
       const dbOffers = await this.withTimeout(databaseService.getOffersByBuyer(buyerUser.id));
-      
+
       const offers: MarketplaceOffer[] = [];
       for (const dbOffer of dbOffers) {
         const offer: MarketplaceOffer = {
@@ -562,7 +574,7 @@ export class BlockchainMarketplaceService {
         };
         offers.push(offer);
       }
-      
+
       return offers;
     } catch (error) {
       safeLogger.error('Error getting offers by buyer:', error);
@@ -588,7 +600,7 @@ export class BlockchainMarketplaceService {
       // Get listing
       const listing = await this.withTimeout(this.getListingById(listingId));
       if (!listing) return null;
-      
+
       // Ensure buyer exists
       let buyerUser = await this.withTimeout(userProfileService.getProfileByAddress(buyerAddress));
       if (!buyerUser) {
@@ -600,11 +612,11 @@ export class BlockchainMarketplaceService {
           bioCid: ''
         }));
       }
-      
+
       // Get seller user
       const sellerUser = await this.withTimeout(userProfileService.getProfileByAddress(listing.sellerWalletAddress));
       if (!sellerUser) return null;
-      
+
       const dbEscrow = await this.withTimeout(databaseService.createEscrow(
         listingId,
         buyerUser.id,
@@ -612,9 +624,9 @@ export class BlockchainMarketplaceService {
         listing.price,
         deliveryInfo
       ));
-      
+
       if (!dbEscrow) return null;
-      
+
       const escrow: MarketplaceEscrow = {
         id: dbEscrow.id.toString(),
         listingId: listingId,
@@ -630,7 +642,7 @@ export class BlockchainMarketplaceService {
         deliveryInfo: dbEscrow.deliveryInfo || undefined,
         deliveryConfirmed: dbEscrow.deliveryConfirmed || false
       };
-      
+
       return escrow;
     } catch (error) {
       safeLogger.error('Error creating escrow:', error);
@@ -644,11 +656,11 @@ export class BlockchainMarketplaceService {
       // Get user
       const user = await this.withTimeout(userProfileService.getProfileByAddress(userAddress));
       if (!user) return false;
-      
+
       // Get escrow
       const dbEscrow = await this.withTimeout(databaseService.getEscrowById(escrowId));
       if (!dbEscrow) return false;
-      
+
       // Determine which approval to update
       const updates: any = {};
       if (dbEscrow.buyerId === user.id) {
@@ -658,7 +670,7 @@ export class BlockchainMarketplaceService {
       } else {
         return false; // User is not part of this escrow
       }
-      
+
       const updatedEscrow = await this.withTimeout(databaseService.updateEscrow(escrowId, updates));
       return updatedEscrow !== null;
     } catch (error) {
@@ -673,20 +685,20 @@ export class BlockchainMarketplaceService {
       // Get user
       const user = await this.withTimeout(userProfileService.getProfileByAddress(userAddress));
       if (!user) return false;
-      
+
       // Get escrow
       const dbEscrow = await this.withTimeout(databaseService.getEscrowById(escrowId));
       if (!dbEscrow) return false;
-      
+
       // Check if user is part of this escrow
       if (dbEscrow.buyerId !== user.id && dbEscrow.sellerId !== user.id) {
         return false;
       }
-      
+
       const updatedEscrow = await this.withTimeout(databaseService.updateEscrow(escrowId, {
         disputeOpened: true
       }));
-      
+
       return updatedEscrow !== null;
     } catch (error) {
       safeLogger.error('Error opening dispute:', error);
@@ -710,12 +722,12 @@ export class BlockchainMarketplaceService {
     try {
       const dbEscrow = await this.withTimeout(databaseService.getEscrowById(id));
       if (!dbEscrow) return null;
-      
+
       // Get buyer and seller addresses
       const buyer = await this.withTimeout(userProfileService.getProfileById(dbEscrow.buyerId || ''));
       const seller = await this.withTimeout(userProfileService.getProfileById(dbEscrow.sellerId || ''));
       if (!buyer || !seller) return null;
-      
+
       const escrow: MarketplaceEscrow = {
         id: dbEscrow.id.toString(),
         listingId: dbEscrow.listingId?.toString() || '',
@@ -731,7 +743,7 @@ export class BlockchainMarketplaceService {
         deliveryInfo: dbEscrow.deliveryInfo || undefined,
         deliveryConfirmed: dbEscrow.deliveryConfirmed || false
       };
-      
+
       return escrow;
     } catch (error) {
       safeLogger.error('Error getting escrow by ID:', error);
@@ -744,16 +756,16 @@ export class BlockchainMarketplaceService {
     try {
       const user = await this.withTimeout(userProfileService.getProfileByAddress(userAddress));
       if (!user) return [];
-      
+
       const dbEscrows = await this.withTimeout(databaseService.getEscrowsByUser(user.id));
-      
+
       const escrows: MarketplaceEscrow[] = [];
       for (const dbEscrow of dbEscrows) {
         // Get buyer and seller addresses
         const buyer = await this.withTimeout(userProfileService.getProfileById(dbEscrow.buyerId || ''));
         const seller = await this.withTimeout(userProfileService.getProfileById(dbEscrow.sellerId || ''));
         if (!buyer || !seller) continue;
-        
+
         const escrow: MarketplaceEscrow = {
           id: dbEscrow.id.toString(),
           listingId: dbEscrow.listingId?.toString() || '',
@@ -771,7 +783,7 @@ export class BlockchainMarketplaceService {
         };
         escrows.push(escrow);
       }
-      
+
       return escrows;
     } catch (error) {
       safeLogger.error('Error getting escrows by user:', error);
@@ -781,8 +793,8 @@ export class BlockchainMarketplaceService {
   }
 
   // Orders
-  async createOrder(listingId: string, buyerAddress: string, sellerAddress: string, 
-                    amount: string, paymentToken: string, escrowId?: string): Promise<MarketplaceOrder | null> {
+  async createOrder(listingId: string, buyerAddress: string, sellerAddress: string,
+    amount: string, paymentToken: string, escrowId?: string): Promise<MarketplaceOrder | null> {
     try {
       // Ensure buyer exists
       let buyerUser = await this.withTimeout(userProfileService.getProfileByAddress(buyerAddress));
@@ -795,7 +807,7 @@ export class BlockchainMarketplaceService {
           bioCid: ''
         }));
       }
-      
+
       // Ensure seller exists
       let sellerUser = await this.withTimeout(userProfileService.getProfileByAddress(sellerAddress));
       if (!sellerUser) {
@@ -807,7 +819,7 @@ export class BlockchainMarketplaceService {
           bioCid: ''
         }));
       }
-      
+
       const dbOrder = await this.withTimeout(databaseService.createOrder(
         listingId,
         buyerUser.id,
@@ -816,9 +828,9 @@ export class BlockchainMarketplaceService {
         paymentToken,
         escrowId
       ));
-      
+
       if (!dbOrder) return null;
-      
+
       const order: MarketplaceOrder = {
         id: dbOrder.id.toString(),
         listingId: listingId,
@@ -830,7 +842,7 @@ export class BlockchainMarketplaceService {
         status: (dbOrder.status?.toUpperCase() as 'PENDING' | 'COMPLETED' | 'DISPUTED' | 'REFUNDED') || 'PENDING',
         createdAt: dbOrder.createdAt?.toISOString() || new Date().toISOString()
       };
-      
+
       return order;
     } catch (error) {
       safeLogger.error('Error creating order:', error);
@@ -843,12 +855,12 @@ export class BlockchainMarketplaceService {
     try {
       const dbOrder = await this.withTimeout(databaseService.getOrderById(id));
       if (!dbOrder) return null;
-      
+
       // Get buyer and seller addresses
       const buyer = await this.withTimeout(userProfileService.getProfileById(dbOrder.buyerId || ''));
       const seller = await this.withTimeout(userProfileService.getProfileById(dbOrder.sellerId || ''));
       if (!buyer || !seller) return null;
-      
+
       const order: MarketplaceOrder = {
         id: dbOrder.id.toString(),
         listingId: dbOrder.listingId?.toString() || '',
@@ -860,7 +872,7 @@ export class BlockchainMarketplaceService {
         status: (dbOrder.status?.toUpperCase() as 'PENDING' | 'COMPLETED' | 'DISPUTED' | 'REFUNDED') || 'PENDING',
         createdAt: dbOrder.createdAt?.toISOString() || new Date().toISOString()
       };
-      
+
       return order;
     } catch (error) {
       safeLogger.error('Error getting order by ID:', error);
@@ -872,16 +884,16 @@ export class BlockchainMarketplaceService {
   async getOrdersByUser(userAddress: string): Promise<MarketplaceOrder[]> {
     const user = await userProfileService.getProfileByAddress(userAddress);
     if (!user) return [];
-    
+
     const dbOrders = await databaseService.getOrdersByUser(user.id);
-    
+
     const orders: MarketplaceOrder[] = [];
     for (const dbOrder of dbOrders) {
       // Get buyer and seller addresses
       const buyer = await userProfileService.getProfileById(dbOrder.buyerId || '');
       const seller = await userProfileService.getProfileById(dbOrder.sellerId || '');
       if (!buyer || !seller) continue;
-      
+
       const order: MarketplaceOrder = {
         id: dbOrder.id.toString(),
         listingId: dbOrder.listingId?.toString() || '',
@@ -895,7 +907,7 @@ export class BlockchainMarketplaceService {
       };
       orders.push(order);
     }
-    
+
     return orders;
   }
 
@@ -903,7 +915,7 @@ export class BlockchainMarketplaceService {
     const updatedOrder = await databaseService.updateOrder(orderId, {
       status: status.toLowerCase()
     });
-    
+
     return updatedOrder !== null;
   }
 
@@ -920,18 +932,18 @@ export class BlockchainMarketplaceService {
         bioCid: ''
       });
     }
-    
+
     const evidenceString = evidence ? JSON.stringify(evidence) : undefined;
-    
+
     const dbDispute = await databaseService.createDispute(
       parseInt(escrowId),
       reporterUser.id,
       reason,
       evidenceString
     );
-    
+
     if (!dbDispute) return null;
-    
+
     const dispute: MarketplaceDispute = {
       id: dbDispute.id.toString(),
       escrowId: escrowId,
@@ -943,18 +955,18 @@ export class BlockchainMarketplaceService {
       resolution: dbDispute.resolution || undefined,
       evidence: evidence
     };
-    
+
     return dispute;
   }
 
   async getDisputeById(id: string): Promise<MarketplaceDispute | null> {
     const dbDispute = await databaseService.getDisputeById(parseInt(id));
     if (!dbDispute) return null;
-    
+
     // Get reporter address
     const reporter = await userProfileService.getProfileById(dbDispute.reporterId || '');
     if (!reporter) return null;
-    
+
     let evidence: string[] | undefined;
     if (dbDispute.evidence) {
       try {
@@ -963,7 +975,7 @@ export class BlockchainMarketplaceService {
         evidence = undefined;
       }
     }
-    
+
     const dispute: MarketplaceDispute = {
       id: dbDispute.id.toString(),
       escrowId: dbDispute.escrowId?.toString() || '',
@@ -975,22 +987,22 @@ export class BlockchainMarketplaceService {
       resolution: dbDispute.resolution || undefined,
       evidence: evidence
     };
-    
+
     return dispute;
   }
 
   async getDisputesByUser(userAddress: string): Promise<MarketplaceDispute[]> {
     const user = await userProfileService.getProfileByAddress(userAddress);
     if (!user) return [];
-    
+
     const dbDisputes = await databaseService.getDisputesByUser(user.id);
-    
+
     const disputes: MarketplaceDispute[] = [];
     for (const dbDispute of dbDisputes) {
       // Get reporter address
       const reporter = await userProfileService.getProfileById(dbDispute.reporterId || '');
       if (!reporter) continue;
-      
+
       let evidence: string[] | undefined;
       if (dbDispute.evidence) {
         try {
@@ -999,7 +1011,7 @@ export class BlockchainMarketplaceService {
           evidence = undefined;
         }
       }
-      
+
       const dispute: MarketplaceDispute = {
         id: dbDispute.id.toString(),
         escrowId: dbDispute.escrowId?.toString() || '',
@@ -1013,23 +1025,23 @@ export class BlockchainMarketplaceService {
       };
       disputes.push(dispute);
     }
-    
+
     return disputes;
   }
 
-  async updateDisputeStatus(disputeId: string, status: 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'ESCALATED', 
-                            resolution?: string): Promise<boolean> {
+  async updateDisputeStatus(disputeId: string, status: 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'ESCALATED',
+    resolution?: string): Promise<boolean> {
     const updates: any = {
       status: status.toLowerCase()
     };
-    
+
     if (resolution) {
       updates.resolution = resolution;
       updates.resolvedAt = new Date();
     }
-    
+
     const updatedDispute = await databaseService.updateDispute(parseInt(disputeId), updates);
-    
+
     return updatedDispute !== null;
   }
 
@@ -1037,20 +1049,20 @@ export class BlockchainMarketplaceService {
   async getUserReputation(address: string): Promise<UserReputation | null> {
     const dbReputation = await databaseService.getUserReputation(address);
     if (!dbReputation) return null;
-    
+
     const reputation: UserReputation = {
       walletAddress: dbReputation.walletAddress,
       score: dbReputation.score,
       daoApproved: dbReputation.daoApproved || false
     };
-    
+
     return reputation;
   }
 
   async updateUserReputation(address: string, score: number, daoApproved: boolean): Promise<UserReputation> {
     // Check if reputation exists
     let dbReputation = await databaseService.getUserReputation(address);
-    
+
     if (!dbReputation) {
       // Create new reputation
       dbReputation = await databaseService.createUserReputation(address, score, daoApproved);
@@ -1061,25 +1073,25 @@ export class BlockchainMarketplaceService {
         daoApproved
       });
     }
-    
+
     const reputation: UserReputation = {
       walletAddress: dbReputation.walletAddress,
       score: dbReputation.score,
       daoApproved: dbReputation.daoApproved || false
     };
-    
+
     return reputation;
   }
 
   async getDAOApprovedVendors(): Promise<UserReputation[]> {
     const dbReputations = await databaseService.getDAOApprovedVendors();
-    
+
     const reputations: UserReputation[] = dbReputations.map((dbReputation: any) => ({
       walletAddress: dbReputation.walletAddress,
       score: dbReputation.score,
       daoApproved: dbReputation.daoApproved || false
     }));
-    
+
     return reputations;
   }
 
@@ -1090,9 +1102,9 @@ export class BlockchainMarketplaceService {
       objectId,
       aiAnalysis
     );
-    
+
     if (!dbAIModeration) return null;
-    
+
     const aiModeration: AIModeration = {
       id: dbAIModeration.id.toString(),
       objectType: dbAIModeration.objectType,
@@ -1102,7 +1114,7 @@ export class BlockchainMarketplaceService {
       createdAt: dbAIModeration.createdAt?.toISOString() || new Date().toISOString(),
       updatedAt: dbAIModeration.updatedAt?.toISOString() || new Date().toISOString()
     };
-    
+
     return aiModeration;
   }
 
@@ -1111,9 +1123,9 @@ export class BlockchainMarketplaceService {
       objectType,
       objectId
     );
-    
+
     if (!dbAIModeration) return null;
-    
+
     const aiModeration: AIModeration = {
       id: dbAIModeration.id.toString(),
       objectType: dbAIModeration.objectType,
@@ -1123,29 +1135,29 @@ export class BlockchainMarketplaceService {
       createdAt: dbAIModeration.createdAt?.toISOString() || new Date().toISOString(),
       updatedAt: dbAIModeration.updatedAt?.toISOString() || new Date().toISOString()
     };
-    
+
     return aiModeration;
   }
 
-  async updateAIModerationStatus(id: string, status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'FLAGGED', 
-                                aiAnalysis?: string): Promise<boolean> {
+  async updateAIModerationStatus(id: string, status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'FLAGGED',
+    aiAnalysis?: string): Promise<boolean> {
     const updates: any = {
       status: status.toLowerCase()
     };
-    
+
     if (aiAnalysis) {
       updates.aiAnalysis = aiAnalysis;
       updates.updatedAt = new Date();
     }
-    
+
     const updatedAIModeration = await databaseService.updateAIModeration(id, updates);
-    
+
     return updatedAIModeration !== null;
   }
 
   async getPendingAIModeration(): Promise<AIModeration[]> {
     const dbAIModerations = await databaseService.getPendingAIModeration();
-    
+
     const aiModerations: AIModeration[] = dbAIModerations.map((dbAIModeration: any) => ({
       id: dbAIModeration.id.toString(),
       objectType: dbAIModeration.objectType,
@@ -1155,20 +1167,20 @@ export class BlockchainMarketplaceService {
       createdAt: dbAIModeration.createdAt?.toISOString() || new Date().toISOString(),
       updatedAt: dbAIModeration.updatedAt?.toISOString() || new Date().toISOString()
     }));
-    
+
     return aiModerations;
   }
 
   // Utility method to check if an error is a database connection error
   private isDatabaseConnectionError(error: any): boolean {
     if (!error) return false;
-    
+
     // Check for common database connection error patterns
     const errorMessage = error.message?.toLowerCase() || '';
     const errorCodes = ['econnrefused', 'enotfound', 'etimedout', 'database'];
-    
+
     return errorCodes.some(code => errorMessage.includes(code)) ||
-           (error.code && errorCodes.includes(error.code.toLowerCase()));
+      (error.code && errorCodes.includes(error.code.toLowerCase()));
   }
 
   // Utility methods
@@ -1218,9 +1230,9 @@ export class BlockchainMarketplaceService {
       return { healthy: true };
     } catch (error) {
       safeLogger.error('Marketplace service health check failed:', error);
-      return { 
-        healthy: false, 
-        error: error instanceof Error ? error.message : 'Unknown database error' 
+      return {
+        healthy: false,
+        error: error instanceof Error ? error.message : 'Unknown database error'
       };
     }
   }

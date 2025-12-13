@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { EnhancedPost } from '../../types/feed';
-import { CommunityPostCardEnhanced } from './CommunityPostCardEnhanced';
+import CommunityPostCardEnhanced from './CommunityPostCardEnhanced';
 import { PostComposer } from '../Feed/PostComposer';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { InfiniteScroll } from '../ui/InfiniteScroll';

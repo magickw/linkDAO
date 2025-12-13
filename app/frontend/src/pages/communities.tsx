@@ -359,8 +359,18 @@ const CommunitiesPage: React.FC = () => {
       // Import CommunityPostService for fetching community-specific posts
       const { CommunityPostService } = await import('../services/communityPostService');
 
-      // If user is authenticated and has joined communities, fetch the aggregated feed
-      if (isAuthenticated && joinedCommunities.length > 0) {
+      // Debug logging
+      console.log(`[COMMUNITY FEED FRONTEND DEBUG] Fetching posts:`, {
+        isAuthenticated,
+        joinedCommunities: joinedCommunities.length,
+        joinedCommunityIds: joinedCommunities,
+        pageNum,
+        sortBy,
+        timeFilter
+      });
+
+      // If user is authenticated, fetch the aggregated feed (now includes public communities)
+      if (isAuthenticated) {
         // Map frontend sort values to backend expected values
         const sortMapping: Record<string, string> = {
           'hot': 'hot',
@@ -377,6 +387,13 @@ const CommunitiesPage: React.FC = () => {
           backendSort,
           timeFilter
         );
+
+        // Debug logging
+        console.log(`[COMMUNITY FEED FRONTEND DEBUG] API response:`, {
+          postsCount: result.posts?.length || 0,
+          pagination: result.pagination,
+          firstPost: result.posts?.[0]
+        });
 
         // Check if component is still mounted before updating state
         if (!isMounted.current) return;
@@ -396,7 +413,8 @@ const CommunitiesPage: React.FC = () => {
         setHasMore(hasMorePosts);
         setPage(pageNum);
       } else {
-        // No joined communities - show empty state
+        // Not authenticated - show empty state
+        console.log(`[COMMUNITY FEED FRONTEND DEBUG] User not authenticated, showing empty state`);
         if (!isMounted.current) return;
         setPosts([]);
         setHasMore(false);

@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, memo } from 'react';
+import { useRouter } from 'next/router';
 import { CommunityPost, Comment, CreateCommentInput } from '@/models/CommunityPost';
 import { EnhancedPost } from '@/types/feed';
 import { Community } from '@/models/Community';
@@ -58,6 +59,7 @@ function CommunityPostCardEnhanced({
   className = '',
   isLoading = false
 }: CommunityPostCardEnhancedProps) {
+  const router = useRouter();
   const { address, isConnected } = useWeb3();
   const { ensureAuthenticated } = useAuth();
   const { addToast } = useToast();
@@ -421,7 +423,7 @@ function CommunityPostCardEnhanced({
                   e.stopPropagation();
                   // Navigate to community page
                   const communitySlug = community.slug || community.name || community.id || 'unknown';
-                  window.location.href = `/communities/${communitySlug}`;
+                  router.push(`/communities/${communitySlug}`);
                 }}
                 className="font-medium text-blue-600 dark:text-blue-400 hover:underline"
               >
@@ -430,8 +432,8 @@ function CommunityPostCardEnhanced({
               <span>•</span>
               {/* Author */}
               <span className="font-medium text-gray-900 dark:text-white">
-                u/{post.author || post.walletAddress || post.authorAddress ? 
-                  `${(post.author || post.walletAddress || post.authorAddress)?.slice(0, 6)}...${(post.author || post.walletAddress || post.authorAddress)?.slice(-4)}` : 
+                u/{post.author || post.walletAddress ? 
+                  `${(post.author || post.walletAddress)?.slice(0, 6)}...${(post.author || post.walletAddress)?.slice(-4)}` : 
                   'Unknown'
                 }
               </span>
@@ -478,7 +480,7 @@ function CommunityPostCardEnhanced({
                   // Navigate to the specific post page within the community
                   const communitySlug = community.slug || community.name || community.id || 'unknown';
                   const postPath = `/communities/${communitySlug}/posts/${post.id}`;
-                  window.location.href = postPath;
+                  router.push(postPath);
                 }}
               >
                 {post.title}
@@ -492,7 +494,7 @@ function CommunityPostCardEnhanced({
                     // Navigate to the specific post page within the community
                     const communitySlug = community.slug || community.name || community.id || 'unknown';
                     const postPath = `/communities/${communitySlug}/posts/${post.id}`;
-                    window.location.href = postPath;
+                    router.push(postPath);
                   }}
                 >
                   {post.content.split('\n')[0].substring(0, 100)}

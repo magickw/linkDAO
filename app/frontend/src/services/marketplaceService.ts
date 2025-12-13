@@ -390,7 +390,7 @@ export class UnifiedMarketplaceService {
   private primaryBaseUrl = this.getPrimaryBaseUrl();
   private fallbackBaseUrl = this.getFallbackBaseUrl();
   private currentBaseUrl = this.primaryBaseUrl; // Start with primary
-  
+
   // Add baseUrl property for consistency
   private get baseUrl(): string {
     return this.currentBaseUrl;
@@ -472,7 +472,7 @@ export class UnifiedMarketplaceService {
   private getMockProducts(filters?: ProductFilters): ProductPage {
     // Return mock products when API is unavailable
     let filteredProducts = MOCK_PRODUCTS;
-    
+
     // Apply filters if provided
     if (filters) {
       if (filters.category) {
@@ -480,7 +480,7 @@ export class UnifiedMarketplaceService {
       }
       if (filters.search) {
         const searchLower = filters.search.toLowerCase();
-        filteredProducts = filteredProducts.filter(p => 
+        filteredProducts = filteredProducts.filter(p =>
           p.title.toLowerCase().includes(searchLower) ||
           p.description.toLowerCase().includes(searchLower) ||
           p.tags?.some(tag => tag.toLowerCase().includes(searchLower))
@@ -493,14 +493,14 @@ export class UnifiedMarketplaceService {
         filteredProducts = filteredProducts.filter(p => p.priceAmount <= filters.maxPrice!);
       }
     }
-    
+
     // Apply pagination
     const page = filters?.page || 1;
     const limit = filters?.limit || 20;
     const startIndex = (page - 1) * limit;
     const endIndex = startIndex + limit;
     const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
-    
+
     return {
       products: paginatedProducts,
       total: filteredProducts.length,
@@ -770,10 +770,10 @@ export class UnifiedMarketplaceService {
       const separator = paramsString ? '&' : '';
       const endpoint = `/api/marketplace/search?${paramsString}${separator}${cacheBuster}`;
       const response = await this.makeApiRequest(endpoint);
-      
+
       if (!response.ok) {
         throw new Error('Failed to search products');
-      }      const result = await response.json();
+      } const result = await response.json();
       if (result.success) {
         return result.data.products || [];
       } else {
@@ -798,10 +798,10 @@ export class UnifiedMarketplaceService {
       const separator = paramsString ? '&' : '';
       const endpoint = `/api/marketplace/search-suggestions?${paramsString}${separator}${cacheBuster}`;
       const response = await this.makeApiRequest(endpoint);
-      
+
       if (!response.ok) {
         throw new Error('Failed to get search suggestions');
-      }      const result = await response.json();
+      } const result = await response.json();
       if (result.success) {
         return result.data || [];
       } else {
@@ -834,11 +834,11 @@ export class UnifiedMarketplaceService {
       });
 
       // Add cache-busting parameter to prevent service worker caching issues
-            const cacheBuster = `_=${Date.now()}`;
-            const paramsString = params.toString();
-            const separator = paramsString ? '&' : '';
-            const endpoint = `/api/marketplace/auctions/active?${paramsString}${separator}${cacheBuster}`;
-            const response = await this.makeApiRequest(endpoint);
+      const cacheBuster = `_=${Date.now()}`;
+      const paramsString = params.toString();
+      const separator = paramsString ? '&' : '';
+      const endpoint = `/api/marketplace/auctions/active?${paramsString}${separator}${cacheBuster}`;
+      const response = await this.makeApiRequest(endpoint);
       if (!response.ok) {
         throw new Error('Failed to fetch active auctions');
       }
@@ -1009,45 +1009,45 @@ export class UnifiedMarketplaceService {
     const timestamp = Date.now();
     const separator = endpoint.includes('?') ? '&' : '?';
     const endpointWithTimestamp = `${endpoint}${separator}_t=${timestamp}`;
-    
+
     // First try the primary URL with bypass header
     let response = await this.attemptApiRequest(`${this.primaryBaseUrl}${endpointWithTimestamp}`, options);
-    
+
     // If primary fails with network error or 503, try without bypass header as fallback
     if (!response.ok || response.status === 503) {
       console.log(`[MarketplaceService] Primary request failed (status: ${response.status}), trying without bypass header`);
-      
+
       // Remove bypass header and try again
       const optionsWithoutBypass = {
         ...options,
         headers: { ...options.headers }
       };
       delete (optionsWithoutBypass.headers as Record<string, string>)['X-Service-Worker-Bypass'];
-      
+
       try {
         response = await this.attemptApiRequest(`${this.primaryBaseUrl}${endpointWithTimestamp}`, optionsWithoutBypass);
       } catch (error) {
         console.error('[MarketplaceService] Fallback request also failed:', error);
       }
-      
+
       // If still failing, implement retry with backoff
       if (!response.ok || response.status === 503) {
         console.log(`[MarketplaceService] Still failing, implementing retry strategy`);
-        
-        // Wait 3 seconds before retrying
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        
+
+        // Wait 800ms before retrying (reduced from 3s for faster feedback)
+        await new Promise(resolve => setTimeout(resolve, 800));
+
         // Retry the request with new timestamp
         try {
           response = await this.attemptApiRequest(`${this.primaryBaseUrl}${endpointWithTimestamp}`, optionsWithoutBypass);
         } catch (error) {
           console.error('[MarketplaceService] Retry failed:', error);
         }
-        
-        // If still 503, try one more time after 5 seconds
+
+        // If still 503, try one more time after 1.5 seconds
         if (!response.ok || response.status === 503) {
           console.log(`[MarketplaceService] Second attempt also returned ${response.status}, trying final retry`);
-          await new Promise(resolve => setTimeout(resolve, 5000));
+          await new Promise(resolve => setTimeout(resolve, 1500));
           try {
             response = await this.attemptApiRequest(`${this.primaryBaseUrl}${endpointWithTimestamp}`, optionsWithoutBypass);
           } catch (error) {
@@ -1061,13 +1061,13 @@ export class UnifiedMarketplaceService {
         }
       }
     }
-    
+
     // If primary still fails and we're in development, try fallback
-    if (!response.ok && this.primaryBaseUrl !== this.fallbackBaseUrl && 
-        typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    if (!response.ok && this.primaryBaseUrl !== this.fallbackBaseUrl &&
+      typeof window !== 'undefined' && window.location.hostname === 'localhost') {
       console.log(`[MarketplaceService] Primary API failed, trying fallback: ${this.fallbackBaseUrl}${endpoint}`);
       response = await this.attemptApiRequest(`${this.fallbackBaseUrl}${endpoint}`, options);
-      
+
       // If fallback succeeds, temporarily switch to using fallback as primary
       if (response.ok) {
         this.currentBaseUrl = this.fallbackBaseUrl;
@@ -1077,7 +1077,7 @@ export class UnifiedMarketplaceService {
       // If primary succeeded, ensure we're using it
       this.currentBaseUrl = this.primaryBaseUrl;
     }
-    
+
     return response;
   }
 
@@ -1087,9 +1087,9 @@ export class UnifiedMarketplaceService {
 
     try {
       // Check if we're trying to connect to localhost in production
-      if (url.startsWith('http://localhost') && 
-          typeof window !== 'undefined' && 
-          window.location.hostname !== 'localhost') {
+      if (url.startsWith('http://localhost') &&
+        typeof window !== 'undefined' &&
+        window.location.hostname !== 'localhost') {
         throw new Error('Cannot connect to localhost in production due to CSP restrictions');
       }
 
@@ -1124,7 +1124,7 @@ export class UnifiedMarketplaceService {
       return response;
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       // Handle different types of errors
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
@@ -1138,7 +1138,7 @@ export class UnifiedMarketplaceService {
           console.error('[MarketplaceService] Request error:', error.message);
         }
       }
-      
+
       throw error;
     }
   }
@@ -1158,14 +1158,14 @@ export class UnifiedMarketplaceService {
       const paramsString = params.toString();
       const separator = paramsString ? '&' : '';
       const endpoint = `/api/marketplace/listings?${paramsString}${separator}${cacheBuster}`;
-      console.log('[MarketplaceService] Fetching listings from primary URL:', `${this.primaryBaseUrl}${endpoint}`);      const response = await this.makeApiRequest(endpoint, {
+      console.log('[MarketplaceService] Fetching listings from primary URL:', `${this.primaryBaseUrl}${endpoint}`); const response = await this.makeApiRequest(endpoint, {
         method: 'GET'
         // NOTE: Removed X-Service-Worker-Bypass header - let SW handle via networkFirst strategy
       });
 
       if (!response.ok) {
         console.warn('[MarketplaceService] Listings request was not ok:', response.status, response.statusText);
-        
+
         // Handle 503 Service Unavailable specifically
         if (response.status === 503) {
           console.warn('[MarketplaceService] Service temporarily unavailable (503). Using mock data.');
@@ -1180,7 +1180,7 @@ export class UnifiedMarketplaceService {
           // Return mock data instead of empty array
           return this.getMockProducts(filters);
         }
-        
+
         // Try to get error details from response
         try {
           const errorData = await response.json();
@@ -1188,7 +1188,7 @@ export class UnifiedMarketplaceService {
         } catch (e) {
           console.warn('[MarketplaceService] Could not parse error response:', e);
         }
-        
+
         // For other errors, also return mock data as fallback
         console.warn('[MarketplaceService] API error, using mock data as fallback');
         return this.getMockProducts(filters);
@@ -1198,7 +1198,7 @@ export class UnifiedMarketplaceService {
         console.error('[MarketplaceService] Failed to parse JSON response:', parseError);
         return { success: false, data: null };
       });
-      
+
       console.log('[MarketplaceService] Raw API result:', result);
 
       if (result && result.success) {
@@ -1230,7 +1230,7 @@ export class UnifiedMarketplaceService {
       }
     } catch (error: any) {
       console.error('[MarketplaceService] Error fetching listings:', error);
-      
+
       // Provide more specific error information
       if (error.name === 'AbortError') {
         console.error('[MarketplaceService] Request timed out');
@@ -1240,7 +1240,7 @@ export class UnifiedMarketplaceService {
       } else {
         console.error('[MarketplaceService] Unexpected error:', error.message);
       }
-      
+
       // Return empty array as fallback
       return [];
     }
@@ -1255,13 +1255,13 @@ export class UnifiedMarketplaceService {
       const cacheBuster = `_=${Date.now()}`;
       const endpoint = `/api/marketplace/health?${cacheBuster}`;
       const response = await this.makeApiRequest(endpoint);
-      
+
       if (!response.ok) {
         return { healthy: false, message: 'Marketplace service unavailable' };
       }
-      
+
       const result = await response.json();
-      return { 
+      return {
         healthy: result.success && result.status === 'healthy',
         message: result.message || 'Service status checked'
       };
@@ -1280,7 +1280,7 @@ export class UnifiedMarketplaceService {
       const cacheBuster = `_=${Date.now()}`;
       const endpoint = `/api/marketplace/stats?${cacheBuster}`;
       const response = await this.makeApiRequest(endpoint);
-      
+
       if (!response.ok) {
         console.warn('[MarketplaceService] Stats request failed:', response.status);
         return {
@@ -1290,7 +1290,7 @@ export class UnifiedMarketplaceService {
           message: 'Marketplace service temporarily unavailable'
         };
       }
-      
+
       const result = await response.json();
       return result.data || {
         totalListings: 0,
@@ -1475,7 +1475,7 @@ export class UnifiedMarketplaceService {
       console.error('Health check failed:', error);
       return false;
     }
-  }  async getCategories(): Promise<CategoryInfo[]> {
+  } async getCategories(): Promise<CategoryInfo[]> {
     try {
       // Add cache-busting parameter to prevent service worker caching issues
       const cacheBuster = `_=${Date.now()}`;
@@ -1557,7 +1557,7 @@ export class UnifiedMarketplaceService {
       if (!sellerId || sellerId === 'unknown') {
         return null;
       }
-      
+
       // Try to use the seller service if available
       const { sellerService } = await import('@/services/sellerService');
       const sellerProfile = await sellerService.getSellerProfile(sellerId);
@@ -1716,7 +1716,7 @@ export class UnifiedMarketplaceService {
   async getTrackingInfo(orderId: string): Promise<TrackingInfo> {
     try {
       const response = await this.makeApiRequest(`/orders/${orderId}/tracking`);
-      
+
       if (!response.ok) {
         const error = await response.json().catch(() => ({ message: 'Failed to get tracking info' }));
         throw new Error(error.message || 'Failed to get tracking info');

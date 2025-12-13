@@ -1402,19 +1402,24 @@ export class CommunityService {
           eq(communityMembers.isActive, true)
         ));
 
-      const communityIds = memberships.map(m => m.communityId);
+      let communityIds = memberships.map(m => m.communityId);
 
-      // If user hasn't joined any communities, show all public community posts for discovery
+      // Always include all public communities for discovery, but prioritize joined communities
+      const allCommunitiesResult = await db
+        .select({ id: communities.id })
+        .from(communities)
+        .where(eq(communities.isPublic, true));
+
+      // Add public communities that the user hasn't joined yet
+      const publicCommunityIds = allCommunitiesResult.map(c => c.id);
+      const newCommunities = publicCommunityIds.filter(id => !communityIds.includes(id));
+      communityIds.push(...newCommunities);
+
+      // Debug logging
+      console.log(`[COMMUNITY FEED DEBUG] User ${userAddress} has access to ${communityIds.length} communities:`, communityIds);
+
       if (communityIds.length === 0) {
-        const allCommunitiesResult = await db
-          .select({ id: communities.id })
-          .from(communities)
-          .where(eq(communities.isPublic, true));
-
-        communityIds.push(...allCommunitiesResult.map(c => c.id));
-      }
-
-      if (communityIds.length === 0) {
+        console.log(`[COMMUNITY FEED DEBUG] No communities available for user ${userAddress}`);
         return {
           posts: [],
           pagination: { page, limit, total: 0, totalPages: 0 }
@@ -1460,7 +1465,7 @@ export class CommunityService {
       const communityMap = new Map(communitiesData.map(c => [c.id, c]));
 
       // Query posts from these communities
-      const postsResult = await db
+      let postsResult = await db
         .select({
           id: posts.id,
           authorId: posts.authorId,
@@ -1487,6 +1492,42 @@ export class CommunityService {
         .orderBy(orderBy)
         .limit(limit)
         .offset(offset);
+
+      // Debug: If no posts found with community filter, try without it
+      if (postsResult.length === 0) {
+        console.log(`[COMMUNITY FEED DEBUG] No posts found with community filter, trying without filter`);
+        postsResult = await db
+          .select({
+            id: posts.id,
+            authorId: posts.authorId,
+            title: posts.title,
+            contentCid: posts.contentCid,
+            parentId: posts.parentId,
+            mediaCids: posts.mediaCids,
+            tags: posts.tags,
+            stakedValue: posts.stakedValue,
+            reputationScore: posts.reputationScore,
+            dao: posts.dao,
+            communityId: posts.communityId,
+            createdAt: posts.createdAt,
+            authorAddress: users.walletAddress,
+            authorHandle: users.handle,
+          })
+          .from(posts)
+          .leftJoin(users, eq(posts.authorId, users.id))
+          .where(and(
+            timeFilter,
+            isNull(posts.parentId) // Only top-level posts
+          ))
+          .orderBy(orderBy)
+          .limit(limit)
+          .offset(offset);
+        
+        console.log(`[COMMUNITY FEED DEBUG] Query without filter returned ${postsResult.length} posts`);
+      }
+
+      // Debug logging
+      console.log(`[COMMUNITY FEED DEBUG] Query returned ${postsResult.length} posts for user ${userAddress}`);
 
       // Transform posts with community metadata
       const transformedPosts = postsResult.map(post => ({
@@ -1525,6 +1566,9 @@ export class CommunityService {
         ));
 
       const total = totalResult[0]?.count || 0;
+      
+      // Debug logging
+      console.log(`[COMMUNITY FEED DEBUG] Total posts available: ${total} for user ${userAddress}`);
 
       return {
         posts: transformedPosts,

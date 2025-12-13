@@ -12,6 +12,13 @@ export interface CreateListingInput {
   nftStandard?: 'ERC721' | 'ERC1155'; // Only for NFT items
   tokenId?: string; // Only for NFT items
   // DeFi collectible specific fields
+  // Products table fields
+  title?: string;
+  description?: string;
+  categoryId?: string;
+  images?: string[];
+  priceCurrency?: string;
+
   defiProtocol?: string; // e.g., 'uniswap', 'compound', 'aave'
   defiAssetType?: 'LP_POSITION' | 'YIELD_TOKEN' | 'VAULT_SHARE' | 'GOVERNANCE_POSITION';
   underlyingAssets?: Array<{ address: string; symbol: string; weight: number }>;

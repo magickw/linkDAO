@@ -485,22 +485,59 @@ export class DatabaseService {
   }
 
   // Marketplace operations
+  // Marketplace operations
   async createListing(sellerId: string, tokenAddress: string, price: string, quantity: number,
     itemType: string, listingType: string, metadataURI: string,
-    nftStandard?: string, tokenId?: string, reservePrice?: string, minIncrement?: string) {
+    nftStandard?: string, tokenId?: string, reservePrice?: string, minIncrement?: string,
+    title: string = 'Untitled Listing', description: string = '', categoryId: string = 'general',
+    images: string[] = [], priceCurrency: string = 'USDC') {
     try {
-      const result = await this.db.insert(schema.listings).values({
-        sellerId,
+      // Create a plain object for metadata to store in the JSON column
+      const metadataObj = {
+        uri: metadataURI,
         tokenAddress,
-        price,
-        quantity,
-        itemType,
         listingType,
-        metadataURI,
-        nftStandard: nftStandard || null,
-        tokenId: tokenId || null,
-        reservePrice: reservePrice || null,
-        minIncrement: minIncrement || null
+        nftStandard,
+        tokenId,
+        reservePrice,
+        minIncrement
+      };
+
+      // Ensure category exists or use default
+      // Note: In a real app we'd lookup or create, here we assume IDs are managed or we use a known default
+      // For now, let's look for the category ID
+      let finalCategoryId = categoryId;
+      try {
+        const catResult = await this.db.select().from(schema.categories).where(eq(schema.categories.slug, categoryId.toLowerCase())).limit(1);
+        if (catResult.length > 0) {
+          finalCategoryId = catResult[0].id;
+        } else {
+          // Get any category or default
+          const anyCat = await this.db.select().from(schema.categories).limit(1);
+          if (anyCat.length > 0) finalCategoryId = anyCat[0].id;
+        }
+      } catch (e) {
+        // Fallback if category lookup fails
+      }
+
+      const result = await this.db.insert(schema.products).values({
+        sellerId,
+        title,
+        description,
+        priceAmount: price,
+        priceCurrency,
+        categoryId: finalCategoryId,
+        images: JSON.stringify(images),
+        metadata: JSON.stringify(metadataObj),
+        inventory: quantity,
+        status: 'active',
+        listingStatus: 'active',
+        publishedAt: new Date(),
+        // Map other fields that were previously in listings but now part of metadata or specialized columns
+        // We'll store the itemType as the mainCategory for products
+        mainCategory: itemType.toLowerCase(),
+        priceCrypto: price,
+        metadataUri: metadataURI
       }).returning();
 
       return result[0];
