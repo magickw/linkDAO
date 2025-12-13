@@ -343,19 +343,74 @@ export class UnifiedCheckoutService {
   }
 
   /**
-   * Process checkout with prioritized payment method
+   * Check inventory availability before checkout
+   */
+  async checkInventoryAvailability(listingId: string): Promise<{
+    available: boolean;
+    availableQuantity: number;
+    heldQuantity: number;
+    totalQuantity: number;
+    canProceed: boolean;
+    message?: string;
+  }> {
+    try {
+      const response = await fetch(`${this.apiBaseUrl}/api/marketplace/inventory/${listingId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to check inventory availability');
+      }
+
+      const inventoryData = await response.json();
+      
+      return {
+        available: inventoryData.available > 0,
+        availableQuantity: inventoryData.available,
+        heldQuantity: inventoryData.held,
+        totalQuantity: inventoryData.total,
+        canProceed: inventoryData.available > 0,
+        message: inventoryData.available > 0 
+          ? `${inventoryData.available} items available` 
+          : 'Item is currently out of stock'
+      };
+    } catch (error) {
+      console.error('Error checking inventory availability:', error);
+      // Return conservative default on error
+      return {
+        available: false,
+        availableQuantity: 0,
+        heldQuantity: 0,
+        totalQuantity: 0,
+        canProceed: false,
+        message: 'Unable to check inventory availability'
+      };
+    }
+  }
+
+  /**
+   * Process checkout with prioritized payment method and inventory validation
    */
   async processPrioritizedCheckout(request: PrioritizedCheckoutRequest): Promise<UnifiedCheckoutResult> {
     try {
       const { selectedPaymentMethod, paymentDetails } = request;
       
-      // Determine payment path based on selected method
+      // 1. Check inventory availability first
+      const inventoryCheck = await this.checkInventoryAvailability(request.listingId);
+      if (!inventoryCheck.canProceed) {
+        throw new Error(inventoryCheck.message || 'Item not available');
+      }
+
+      // 2. Determine payment path based on selected method
       const paymentPath = this.getPaymentPathFromMethod(selectedPaymentMethod.method.type);
       
-      // Validate payment method availability
+      // 3. Validate payment method availability
       await this.validatePaymentMethodAvailability(selectedPaymentMethod);
       
-      // Process payment based on method type
+      // 4. Process payment based on method type
       let result: UnifiedCheckoutResult;
       
       if (selectedPaymentMethod.method.type === PaymentMethodType.X402) {
@@ -366,18 +421,36 @@ export class UnifiedCheckoutService {
         result = await this.processFiatPayment(request);
       }
       
-      // Add prioritization metadata to result
+      // 5. Add inventory information to result
+      result.nextSteps.unshift(inventoryCheck.message || 'Inventory reserved');
+      
+      // 6. Add prioritization metadata to result
       result.prioritizationMetadata = {
         selectedMethod: selectedPaymentMethod.method,
         priority: selectedPaymentMethod.priority,
         recommendationReason: selectedPaymentMethod.recommendationReason,
         costEstimate: selectedPaymentMethod.costEstimate,
-        alternativeMethods: [] // Could include other available methods
+        alternativeMethods: [], // Could include other available methods
+        inventoryInfo: {
+          wasAvailable: inventoryCheck.available,
+          remainingQuantity: inventoryCheck.availableQuantity - 1 // Assuming 1 item purchased
+        }
       };
       
       return result;
     } catch (error) {
       console.error('Prioritized checkout failed:', error);
+      
+      // Enhanced error handling for inventory issues
+      if (error instanceof Error) {
+        if (error.message.includes('inventory') || error.message.includes('stock')) {
+          throw new Error(`Inventory issue: ${error.message}`);
+        }
+        if (error.message.includes('payment')) {
+          throw new Error(`Payment failed: ${error.message}`);
+        }
+      }
+      
       throw error;
     }
   }
@@ -424,7 +497,7 @@ export class UnifiedCheckoutService {
   }
 
   /**
-   * Get unified order status
+   * Get unified order status with real-time updates
    */
   async getOrderStatus(orderId: string): Promise<{
     orderId: string;
@@ -448,6 +521,17 @@ export class UnifiedCheckoutService {
       description: string;
       status: 'completed' | 'pending' | 'failed';
     }>;
+    paymentDetails?: {
+      stripePaymentIntentId?: string;
+      transactionHash?: string;
+      escrowId?: string;
+      requiresAction?: boolean;
+      clientSecret?: string;
+    };
+    inventoryInfo?: {
+      holdReleased: boolean;
+      itemShipped: boolean;
+    };
   }> {
     try {
       const response = await fetch(`${this.apiBaseUrl}/api/hybrid-payment/orders/${orderId}/status`);
@@ -462,6 +546,21 @@ export class UnifiedCheckoutService {
       const progress = this.calculateOrderProgress(data);
       const timeline = this.generateOrderTimeline(data);
 
+      // Extract payment details for frontend actions
+      const paymentDetails = {
+        stripePaymentIntentId: data.stripeStatus?.paymentIntentId,
+        transactionHash: data.escrowStatus?.transactionHash,
+        escrowId: data.escrowStatus?.id,
+        requiresAction: data.stripeStatus?.status === 'requires_action',
+        clientSecret: data.stripeStatus?.clientSecret
+      };
+
+      // Extract inventory information
+      const inventoryInfo = {
+        holdReleased: data.status === 'completed' || data.status === 'cancelled',
+        itemShipped: data.status === 'shipped' || data.status === 'delivered'
+      };
+
       return {
         orderId: data.orderId,
         status: data.status,
@@ -473,12 +572,94 @@ export class UnifiedCheckoutService {
           canDispute: data.canDispute,
           canCancel: data.status === 'pending' || data.status === 'created'
         },
-        timeline
+        timeline,
+        paymentDetails,
+        inventoryInfo
       };
     } catch (error) {
       console.error('Error getting order status:', error);
       throw error;
     }
+  }
+
+  /**
+   * Verify crypto transaction on blockchain
+   */
+  async verifyCryptoTransaction(escrowId: string, transactionHash: string): Promise<{
+    verified: boolean;
+    status: string;
+    blockNumber?: number;
+    gasUsed?: number;
+    error?: string;
+  }> {
+    try {
+      const response = await fetch(`${this.apiBaseUrl}/api/hybrid-payment/orders/verify-transaction`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          escrowId,
+          transactionHash
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to verify transaction');
+      }
+
+      const { data } = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error verifying crypto transaction:', error);
+      return {
+        verified: false,
+        status: 'failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Poll for order status updates with exponential backoff
+   */
+  async pollOrderStatus(
+    orderId: string, 
+    onStatusUpdate: (status: any) => void,
+    maxAttempts = 20
+  ): Promise<void> {
+    let attempts = 0;
+    let delay = 1000; // Start with 1 second
+
+    const poll = async (): Promise<void> => {
+      try {
+        const status = await this.getOrderStatus(orderId);
+        onStatusUpdate(status);
+
+        // Stop polling if order is in a final state
+        if (['completed', 'cancelled', 'failed'].includes(status.status)) {
+          return;
+        }
+
+        attempts++;
+        if (attempts >= maxAttempts) {
+          console.warn('Max polling attempts reached for order', orderId);
+          return;
+        }
+
+        // Exponential backoff with jitter
+        delay = Math.min(delay * 1.5, 30000); // Max 30 seconds
+        const jitter = Math.random() * 1000;
+        setTimeout(poll, delay + jitter);
+      } catch (error) {
+        console.error('Error polling order status:', error);
+        // Continue polling with longer delay on error
+        delay = Math.min(delay * 2, 30000);
+        setTimeout(poll, delay);
+      }
+    };
+
+    poll();
   }
 
   /**

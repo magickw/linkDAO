@@ -1,49 +1,134 @@
 import express from 'express';
 import { authMiddleware } from '../middleware/authMiddleware';
+import { HybridPaymentOrchestrator } from '../services/hybridPaymentOrchestrator';
+import { safeLogger } from '../utils/safeLogger';
 
 const router = express.Router();
+const paymentOrchestrator = new HybridPaymentOrchestrator();
 
 /**
- * Get checkout recommendation based on cart and context
+ * Get checkout recommendation based on real market data
  */
-router.post('/recommend-path', (req, res) => {
-  const { amount, currency, buyerAddress, sellerAddress } = req.body;
+router.post('/recommend-path', async (req, res) => {
+  try {
+    const { amount, currency, buyerAddress, sellerAddress, preferredMethod, userCountry } = req.body;
 
-  // Mock logic for recommendation
-  // In a real implementation, this would analyze gas fees, user preferences, etc.
-
-  // Default to crypto if under $50, otherwise fiat (just as an example logic)
-  // or purely random/static for now since we want to unblock frontend
-
-  const isCryptoPreferred = amount < 50;
-
-  const cryptoFees = (amount * 0.01) + 2; // Mock gas + fee
-  const fiatFees = (amount * 0.029) + 0.30; // Stripe standard
-
-  res.json({
-    success: true,
-    data: {
-      selectedPath: isCryptoPreferred ? 'crypto' : 'fiat',
-      reason: isCryptoPreferred
-        ? 'Gas fees are low right now, saving you money.'
-        : 'Credit card is faster for this amount.',
-      method: {
-        tokenSymbol: 'USDC',
-        chainId: 1
-      },
-      fees: {
-        totalFees: isCryptoPreferred ? cryptoFees : fiatFees
-      },
-      estimatedTime: isCryptoPreferred ? '1-3 mins' : 'Instant',
-      fallbackOptions: [
-        {
-          selectedPath: isCryptoPreferred ? 'fiat' : 'crypto',
-          fees: isCryptoPreferred ? fiatFees : cryptoFees
-        }
-      ]
+    // Validate required fields
+    if (!amount || !currency || !buyerAddress || !sellerAddress) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: amount, currency, buyerAddress, sellerAddress'
+      });
     }
-  });
+
+    // Create checkout request
+    const checkoutRequest = {
+      orderId: `temp_${Date.now()}`, // Temporary ID for recommendation
+      listingId: 'recommendation', // Special ID for recommendations
+      buyerAddress,
+      sellerAddress,
+      amount: parseFloat(amount),
+      currency,
+      preferredMethod,
+      userCountry
+    };
+
+    // Get intelligent payment path recommendation
+    const pathDecision = await paymentOrchestrator.determineOptimalPaymentPath(checkoutRequest);
+
+    // Get real-time market data for additional context
+    const marketData = await getMarketData();
+
+    // Enhance recommendation with market insights
+    const enhancedRecommendation = {
+      ...pathDecision,
+      marketContext: {
+        gasPrice: marketData.gasPrice,
+        ethPrice: marketData.ethPrice,
+        networkCongestion: marketData.networkCongestion,
+        recommendation: marketData.recommendation
+      }
+    };
+
+    res.json({
+      success: true,
+      data: enhancedRecommendation
+    });
+  } catch (error) {
+    safeLogger.error('Error in payment path recommendation:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate payment recommendation'
+    });
+  }
 });
+
+/**
+ * Fetch real-time market data
+ */
+async function getMarketData() {
+  try {
+    // Get gas prices from multiple sources for accuracy
+    const gasPromises = [
+      fetch('https://api.etherscan.io/api?module=gastracker&action=gasoracle').then(r => r.json()),
+      fetch('https://gasstation-mainnet.matic.network').then(r => r.json()).catch(() => null)
+    ];
+
+    const [etherscanGas, polygonGas] = await Promise.allSettled(gasPromises);
+
+    let gasPrice = '20'; // Default fallback in gwei
+    let networkCongestion = 'low';
+
+    if (etherscanGas.status === 'fulfilled' && etherscanGas.value.result) {
+      gasPrice = etherscanGas.value.result.SafeGasPrice || '20';
+      
+      // Determine congestion based on gas price
+      const gasGwei = parseFloat(gasPrice);
+      if (gasGwei > 50) {
+        networkCongestion = 'high';
+      } else if (gasGwei > 30) {
+        networkCongestion = 'medium';
+      }
+    }
+
+    // Get ETH price from CoinGecko
+    const ethPriceResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
+    const ethPriceData = await ethPriceResponse.json();
+    const ethPrice = ethPriceData.ethereum?.usd || 2000;
+
+    // Get USDC price (should be ~$1 but we check anyway)
+    const usdcPriceResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=usd-coin&vs_currencies=usd');
+    const usdcPriceData = await usdcPriceResponse.json();
+    const usdcPrice = usdcPriceData['usd-coin']?.usd || 1;
+
+    // Calculate recommendation based on current conditions
+    let recommendation = 'fiat'; // Default
+    if (networkCongestion === 'low' && ethPrice < 2500) {
+      recommendation = 'crypto'; // Prefer crypto when gas is cheap and ETH price is reasonable
+    }
+
+    return {
+      gasPrice,
+      ethPrice,
+      usdcPrice,
+      networkCongestion,
+      recommendation,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    safeLogger.warn('Failed to fetch market data, using defaults:', error);
+    
+    // Return conservative defaults
+    return {
+      gasPrice: '20',
+      ethPrice: 2000,
+      usdcPrice: 1,
+      networkCongestion: 'medium',
+      recommendation: 'fiat',
+      timestamp: new Date().toISOString()
+    };
+  }
+}
 
 /**
  * Compare payment methods
@@ -68,30 +153,248 @@ router.get('/comparison', (req, res) => {
 });
 
 /**
- * Process a unified checkout
+ * Process a unified checkout with real payment processing
  */
-router.post('/checkout', authMiddleware, (req, res) => {
-  // Mock successful response
-  const { paymentMethodDetails, amount } = req.body;
+router.post('/checkout', authMiddleware, async (req, res) => {
+  try {
+    const { 
+      orderId, 
+      listingId, 
+      buyerAddress, 
+      sellerAddress, 
+      amount, 
+      currency, 
+      preferredMethod,
+      userCountry,
+      paymentMethodDetails 
+    } = req.body;
 
-  // Simulate processing delay
-  setTimeout(() => {
-  }, 100);
-
-  const orderId = `ord_${Math.random().toString(36).substring(7)}`;
-
-  res.json({
-    success: true,
-    data: {
-      orderId: orderId,
-      paymentPath: paymentMethodDetails?.type?.includes('stripe') ? 'fiat' : 'crypto',
-      escrowType: paymentMethodDetails?.type?.includes('stripe') ? 'stripe_connect' : 'smart_contract',
-      stripePaymentIntentId: 'pi_mock_' + Math.random().toString(36).substring(7),
-      escrowId: '0x' + Math.random().toString(16).substring(2, 42), // Mock hex string
-      status: 'pending', // or processing
-      estimatedCompletionTime: new Date(Date.now() + 5 * 60000).toISOString()
+    // Validate required fields
+    if (!orderId || !listingId || !buyerAddress || !sellerAddress || !amount || !currency) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields for checkout'
+      });
     }
-  });
+
+    // Create checkout request
+    const checkoutRequest = {
+      orderId,
+      listingId,
+      buyerAddress,
+      sellerAddress,
+      amount: parseFloat(amount),
+      currency,
+      preferredMethod,
+      userCountry,
+      metadata: paymentMethodDetails
+    };
+
+    // Process checkout with real payment integration
+    const checkoutResult = await paymentOrchestrator.processHybridCheckout(checkoutRequest);
+
+    res.json({
+      success: true,
+      data: {
+        ...checkoutResult,
+        estimatedCompletionTime: checkoutResult.estimatedCompletionTime.toISOString()
+      }
+    });
+  } catch (error) {
+    safeLogger.error('Error processing checkout:', error);
+    
+    // Provide specific error messages for common issues
+    let errorMessage = 'Checkout processing failed';
+    if (error instanceof Error) {
+      if (error.message.includes('insufficient')) {
+        errorMessage = 'Insufficient inventory or balance';
+      } else if (error.message.includes('Stripe')) {
+        errorMessage = 'Payment processing error. Please try another payment method';
+      } else if (error.message.includes('network')) {
+        errorMessage = 'Network error. Please try again';
+      }
+    }
+
+    res.status(500).json({
+      success: false,
+      error: errorMessage
+    });
+  }
+});
+
+/**
+ * Get unified order status
+ */
+router.get('/orders/:orderId/status', authMiddleware, async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    if (!orderId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Order ID is required'
+      });
+    }
+
+    const orderStatus = await paymentOrchestrator.getUnifiedOrderStatus(orderId);
+
+    res.json({
+      success: true,
+      data: orderStatus
+    });
+  } catch (error) {
+    safeLogger.error('Error getting order status:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get order status'
+    });
+  }
+});
+
+/**
+ * Handle order fulfillment (confirm delivery, release funds, dispute)
+ */
+router.post('/orders/:orderId/fulfill', authMiddleware, async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { action, metadata } = req.body;
+
+    if (!orderId || !action) {
+      return res.status(400).json({
+        success: false,
+        error: 'Order ID and action are required'
+      });
+    }
+
+    // Validate action
+    const validActions = ['confirm_delivery', 'release_funds', 'dispute'];
+    if (!validActions.includes(action)) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid action. Must be one of: ${validActions.join(', ')}`
+      });
+    }
+
+    await paymentOrchestrator.handleOrderFulfillment(orderId, action, metadata);
+
+    res.json({
+      success: true,
+      message: `Order ${action} processed successfully`
+    });
+  } catch (error) {
+    safeLogger.error('Error handling order fulfillment:', error);
+    
+    let errorMessage = 'Order fulfillment failed';
+    if (error instanceof Error) {
+      if (error.message.includes('not found')) {
+        errorMessage = 'Order not found';
+      } else if (error.message.includes('already')) {
+        errorMessage = 'Order is already in a state that prevents this action';
+      }
+    }
+
+    res.status(500).json({
+      success: false,
+      error: errorMessage
+    });
+  }
+});
+
+/**
+ * Capture Stripe payment (for when delivery is confirmed)
+ */
+router.post('/orders/:orderId/capture-payment', authMiddleware, async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { paymentIntentId } = req.body;
+
+    if (!paymentIntentId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Payment intent ID is required'
+      });
+    }
+
+    const captureResult = await paymentOrchestrator.captureStripePayment(paymentIntentId, orderId);
+
+    res.json({
+      success: true,
+      data: captureResult
+    });
+  } catch (error) {
+    safeLogger.error('Error capturing Stripe payment:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to capture payment'
+    });
+  }
+});
+
+/**
+ * Refund Stripe payment
+ */
+router.post('/orders/:orderId/refund-payment', authMiddleware, async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { paymentIntentId, reason } = req.body;
+
+    if (!paymentIntentId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Payment intent ID is required'
+      });
+    }
+
+    const refundResult = await paymentOrchestrator.refundStripePayment(paymentIntentId, orderId, reason);
+
+    res.json({
+      success: true,
+      data: refundResult
+    });
+  } catch (error) {
+    safeLogger.error('Error refunding Stripe payment:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to process refund'
+    });
+  }
+});
+
+/**
+ * Verify crypto escrow transaction
+ */
+router.post('/orders/:orderId/verify-transaction', authMiddleware, async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { transactionHash, escrowId } = req.body;
+
+    if (!transactionHash || !escrowId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Transaction hash and escrow ID are required'
+      });
+    }
+
+    const { EnhancedEscrowService } = await import('../services/enhancedEscrowService');
+    const escrowService = new EnhancedEscrowService(
+      process.env.RPC_URL || '',
+      process.env.ENHANCED_ESCROW_CONTRACT_ADDRESS || '',
+      process.env.MARKETPLACE_CONTRACT_ADDRESS || ''
+    );
+
+    const verificationResult = await escrowService.verifyEscrowTransaction(escrowId, transactionHash);
+
+    res.json({
+      success: true,
+      data: verificationResult
+    });
+  } catch (error) {
+    safeLogger.error('Error verifying transaction:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to verify transaction'
+    });
+  }
 });
 
 export default router;

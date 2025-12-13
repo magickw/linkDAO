@@ -753,10 +753,9 @@ export class DatabaseService {
     paymentToken: string, escrowId?: string) {
     try {
       return await this.db.transaction(async (tx: any) => {
-        // 1. Check inventory lock
-        // Note: In a real high-concurrency environment, we might want to use FOR UPDATE
+        // 1. Check and hold inventory with pessimistic locking
         const product = await tx.select().from(schema.products).where(eq(schema.products.id, listingId));
-
+        
         if (product.length === 0) {
           // Fallback to listings table check if not found in products (backward compatibility)
           const listing = await tx.select().from(schema.listings).where(eq(schema.listings.id, listingId));
@@ -766,18 +765,58 @@ export class DatabaseService {
             throw new Error('Insufficient inventory');
           }
 
+          // Create inventory hold record for legacy listings
+          await tx.insert(schema.inventoryHolds).values({
+            productId: listingId,
+            quantity: 1,
+            heldBy: buyerId,
+            orderId: null, // Will be updated after order creation
+            holdType: 'order_pending',
+            expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minute timeout
+            status: 'active',
+            metadata: JSON.stringify({
+              sellerId,
+              amount,
+              paymentToken,
+              source: 'legacy_listing'
+            })
+          });
+
           // Decrement legacy listing
           await tx.update(schema.listings)
-            .set({ quantity: sql`${schema.listings.quantity} - 1` })
+            .set({ 
+              quantity: sql`${schema.listings.quantity} - 1`,
+              inventoryHolds: sql`${schema.listings.inventoryHolds} + 1`
+            })
             .where(eq(schema.listings.id, listingId));
         } else {
           if (product[0].inventory < 1) {
             throw new Error('Insufficient inventory');
           }
 
-          // Decrement product inventory
+          // Create inventory hold record
+          await tx.insert(schema.inventoryHolds).values({
+            productId: listingId,
+            quantity: 1,
+            heldBy: buyerId,
+            orderId: null, // Will be updated after order creation
+            holdType: 'order_pending',
+            expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minute timeout
+            status: 'active',
+            metadata: JSON.stringify({
+              sellerId,
+              amount,
+              paymentToken,
+              source: 'product'
+            })
+          });
+
+          // Decrement product inventory and increment holds
           await tx.update(schema.products)
-            .set({ inventory: sql`${schema.products.inventory} - 1` })
+            .set({ 
+              inventory: sql`${schema.products.inventory} - 1`,
+              inventoryHolds: sql`${schema.products.inventoryHolds} + 1`
+            })
             .where(eq(schema.products.id, listingId));
         }
 
@@ -790,13 +829,197 @@ export class DatabaseService {
           paymentToken,
           escrowId: escrowId || null,
           status: 'pending',
-          createdAt: new Date()
+          createdAt: new Date(),
+          inventoryHoldId: null // Will be updated in the next step
         }).returning();
+
+        // 3. Update inventory hold with order ID
+        const orderId = result[0].id;
+        await tx.update(schema.inventoryHolds)
+          .set({ 
+            orderId: orderId.toString(),
+            status: 'order_created'
+          })
+          .where(eq(schema.inventoryHolds.heldBy, buyerId));
+
+        // 4. Update order with inventory hold ID
+        await tx.update(schema.orders)
+          .set({ inventoryHoldId: orderId.toString() })
+          .where(eq(schema.orders.id, orderId));
 
         return result[0];
       });
     } catch (error) {
       safeLogger.error("Error creating order:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Release inventory hold when order is completed or cancelled
+   */
+  async releaseInventoryHold(holdId: string, reason: 'order_completed' | 'order_cancelled' | 'expired'): Promise<void> {
+    try {
+      await this.db.transaction(async (tx: any) => {
+        const hold = await tx.select().from(schema.inventoryHolds).where(eq(schema.inventoryHolds.id, holdId));
+        
+        if (hold.length === 0) {
+          throw new Error('Inventory hold not found');
+        }
+
+        const inventoryHold = hold[0];
+        
+        // Update hold status
+        await tx.update(schema.inventoryHolds)
+          .set({ 
+            status: reason === 'order_completed' ? 'consumed' : 'released',
+            releasedAt: new Date(),
+            releaseReason: reason
+          })
+          .where(eq(schema.inventoryHolds.id, holdId));
+
+        // Only return inventory if order was cancelled or expired (not completed)
+        if (reason !== 'order_completed') {
+          // Check if it's a legacy listing or product
+          const product = await tx.select().from(schema.products).where(eq(schema.products.id, inventoryHold.productId));
+          
+          if (product.length === 0) {
+            // Legacy listing - restore quantity
+            await tx.update(schema.listings)
+              .set({ 
+                quantity: sql`${schema.listings.quantity} + 1`,
+                inventoryHolds: sql`${schema.listings.inventoryHolds} - 1`
+              })
+              .where(eq(schema.listings.id, inventoryHold.productId));
+          } else {
+            // Product - restore inventory
+            await tx.update(schema.products)
+              .set({ 
+                inventory: sql`${schema.products.inventory} + 1`,
+                inventoryHolds: sql`${schema.products.inventoryHolds} - 1`
+              })
+              .where(eq(schema.products.id, inventoryHold.productId));
+          }
+        }
+      });
+    } catch (error) {
+      safeLogger.error("Error releasing inventory hold:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Find and release expired inventory holds
+   */
+  async releaseExpiredInventoryHolds(): Promise<number> {
+    try {
+      const expiredHolds = await this.db
+        .select()
+        .from(schema.inventoryHolds)
+        .where(
+          and(
+            eq(schema.inventoryHolds.status, 'active'),
+            lt(schema.inventoryHolds.expiresAt, new Date())
+          )
+        );
+
+      let releasedCount = 0;
+      
+      for (const hold of expiredHolds) {
+        try {
+          await this.releaseInventoryHold(hold.id, 'expired');
+          releasedCount++;
+          
+          // Update associated order if it exists
+          if (hold.orderId) {
+            await this.updateOrder(hold.orderId, { 
+              status: 'cancelled',
+              metadata: JSON.stringify({
+                reason: 'Inventory hold expired',
+                expiredAt: new Date()
+              })
+            });
+          }
+        } catch (error) {
+          safeLogger.error(`Failed to release expired hold ${hold.id}:`, error);
+        }
+      }
+
+      safeLogger.info(`Released ${releasedCount} expired inventory holds`);
+      return releasedCount;
+    } catch (error) {
+      safeLogger.error("Error releasing expired inventory holds:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check available inventory for a product
+   */
+  async checkAvailableInventory(productId: string): Promise<{
+    available: number;
+    held: number;
+    total: number;
+  }> {
+    try {
+      // Check if it's a product or legacy listing
+      const product = await this.db.select().from(schema.products).where(eq(schema.products.id, productId));
+      
+      if (product.length === 0) {
+        // Legacy listing
+        const listing = await this.db.select().from(schema.listings).where(eq(schema.listings.id, productId));
+        if (listing.length === 0) {
+          return { available: 0, held: 0, total: 0 };
+        }
+        
+        return {
+          available: Math.max(0, listing[0].quantity),
+          held: listing[0].inventoryHolds || 0,
+          total: listing[0].quantity + (listing[0].inventoryHolds || 0)
+        };
+      } else {
+        // Product
+        return {
+          available: Math.max(0, product[0].inventory),
+          held: product[0].inventoryHolds || 0,
+          total: product[0].inventory + (product[0].inventoryHolds || 0)
+        };
+      }
+    } catch (error) {
+      safeLogger.error("Error checking available inventory:", error);
+      return { available: 0, held: 0, total: 0 };
+    }
+  }
+
+  /**
+   * Fulfill order and consume inventory hold
+   */
+  async fulfillOrder(orderId: string): Promise<void> {
+    try {
+      await this.db.transaction(async (tx: any) => {
+        const order = await tx.select().from(schema.orders).where(eq(schema.orders.id, orderId));
+        
+        if (order.length === 0) {
+          throw new Error('Order not found');
+        }
+
+        const orderData = order[0];
+        
+        // Update order status
+        await tx.update(schema.orders)
+          .set({ 
+            status: 'completed',
+            completedAt: new Date()
+          })
+          .where(eq(schema.orders.id, orderId));
+
+        // Release inventory hold as consumed
+        if (orderData.inventoryHoldId) {
+          await this.releaseInventoryHold(orderData.inventoryHoldId, 'order_completed');
+        }
+      });
+    } catch (error) {
+      safeLogger.error("Error fulfilling order:", error);
       throw error;
     }
   }

@@ -101,7 +101,7 @@ export class EnhancedEscrowService {
   }
 
   /**
-   * Validate escrow creation request
+   * Validate escrow creation request with real blockchain verification
    */
   async validateEscrowCreation(request: EscrowCreationRequest): Promise<EscrowValidationResult> {
     const result: EscrowValidationResult = {
@@ -131,13 +131,31 @@ export class EnhancedEscrowService {
         return result;
       }
 
-      // Check if buyer has sufficient balance
+      // Verify network connectivity and contract deployment
+      try {
+        const network = await this.provider.getNetwork();
+        safeLogger.info(`Connected to network: ${network.name} (Chain ID: ${network.chainId})`);
+        
+        // Check if escrow contract is deployed
+        if (this.enhancedEscrowContract) {
+          const code = await this.provider.getCode(this.enhancedEscrowContract.target as string);
+          if (code === '0x') {
+            result.errors.push('Enhanced escrow contract is not deployed on this network');
+            return result;
+          }
+        }
+      } catch (networkError) {
+        result.errors.push('Failed to connect to blockchain network');
+        return result;
+      }
+
+      // Enhanced balance check with real blockchain data
       try {
         const balanceCheck = await this.paymentValidationService.checkCryptoBalance(
           request.buyerAddress,
           request.tokenAddress,
           request.amount,
-          1 // Assuming mainnet for now
+          (await this.provider.getNetwork()).chainId
         );
 
         result.hasSufficientBalance = balanceCheck.hasSufficientBalance;
@@ -146,38 +164,89 @@ export class EnhancedEscrowService {
           result.errors.push(`Insufficient balance. Required: ${request.amount}, Available: ${balanceCheck.balance.balanceFormatted}`);
         }
 
-        // Check gas balance for ERC-20 tokens
+        // Check gas balance for ERC-20 tokens with enhanced validation
         if (request.tokenAddress !== '0x0000000000000000000000000000000000000000' && balanceCheck.gasBalance) {
-          const minGasBalance = ethers.parseUnits('0.01', balanceCheck.gasBalance.decimals);
-          if (BigInt(balanceCheck.gasBalance.balance) < minGasBalance) {
-            result.warnings.push(`Low ${balanceCheck.gasBalance.tokenSymbol} balance for gas fees`);
+          const gasPrice = await this.provider.getFeeData();
+          if (gasPrice.gasPrice) {
+            // Estimate gas for ERC-20 approval + escrow creation
+            const estimatedGasLimit = 200000; // Conservative estimate
+            const requiredGas = gasPrice.gasPrice * BigInt(estimatedGasLimit);
+            
+            if (BigInt(balanceCheck.gasBalance.balance) < requiredGas) {
+              const requiredEth = ethers.formatEther(requiredGas);
+              result.errors.push(`Insufficient ETH for gas. Required: ${requiredEth} ETH, Available: ${balanceCheck.gasBalance.balanceFormatted}`);
+            }
           }
         }
       } catch (error) {
-        result.errors.push('Failed to check buyer balance');
+        result.errors.push('Failed to check buyer balance on blockchain');
         return result;
       }
 
-      // Estimate gas fees
+      // Enhanced gas fee estimation with EIP-1559 support
       try {
-        const gasPrice = await this.provider.getFeeData();
-        if (gasPrice.gasPrice) {
-          const gasLimit = request.tokenAddress === '0x0000000000000000000000000000000000000000' ? 100000 : 150000;
-          const gasCost = gasPrice.gasPrice * BigInt(gasLimit);
+        const feeData = await this.provider.getFeeData();
+        const gasLimit = await this.estimateEscrowCreationGas(request);
+        
+        if (feeData.maxFeePerGas && feeData.maxPriorityFeePerGas) {
+          // EIP-1559 transaction
+          const maxCost = feeData.maxFeePerGas * BigInt(gasLimit);
+          result.estimatedGasFee = ethers.formatEther(maxCost);
+          result.warnings.push(`Using EIP-1559 transaction. Max gas cost: ${result.estimatedGasFee} ETH`);
+        } else if (feeData.gasPrice) {
+          // Legacy transaction
+          const gasCost = feeData.gasPrice * BigInt(gasLimit);
           result.estimatedGasFee = ethers.formatEther(gasCost);
         }
       } catch (error) {
-        result.warnings.push('Unable to estimate gas fees');
+        result.warnings.push('Unable to estimate gas fees accurately');
       }
 
-      // Check token approvals for ERC-20
+      // Check token approvals for ERC-20 with real contract verification
       if (request.tokenAddress !== '0x0000000000000000000000000000000000000000') {
-        result.requiredApprovals.push(`Approve ${request.amount} tokens for escrow contract`);
+        try {
+          // Check if token contract exists and is valid
+          const tokenCode = await this.provider.getCode(request.tokenAddress);
+          if (tokenCode === '0x') {
+            result.errors.push('Token contract does not exist at provided address');
+            return result;
+          }
+
+          // Check current allowance
+          if (this.enhancedEscrowContract) {
+            const tokenContract = new ethers.Contract(
+              request.tokenAddress,
+              ['function allowance(address owner, address spender) view returns (uint256)'],
+              this.provider
+            );
+            
+            const currentAllowance = await tokenContract.allowance(
+              request.buyerAddress,
+              this.enhancedEscrowContract.target
+            );
+            
+            const requiredAmount = ethers.parseUnits(request.amount, 18); // Assuming 18 decimals, adjust as needed
+            
+            if (currentAllowance < requiredAmount) {
+              result.requiredApprovals.push(`Approve ${request.amount} tokens for escrow contract`);
+              result.warnings.push('Token approval required before creating escrow');
+            }
+          }
+        } catch (tokenError) {
+          result.warnings.push('Unable to verify token contract or current allowance');
+          result.requiredApprovals.push(`Approve ${request.amount} tokens for escrow contract`);
+        }
       }
 
       // Validate escrow duration
       if (request.escrowDuration && (request.escrowDuration < 1 || request.escrowDuration > 30)) {
         result.errors.push('Escrow duration must be between 1 and 30 days');
+        return result;
+      }
+
+      // Additional validation: check if buyer and seller are different
+      if (request.buyerAddress.toLowerCase() === request.sellerAddress.toLowerCase()) {
+        result.errors.push('Buyer and seller addresses cannot be the same');
         return result;
       }
 
@@ -187,6 +256,39 @@ export class EnhancedEscrowService {
       safeLogger.error('Error validating escrow creation:', error);
       result.errors.push('Escrow validation failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
       return result;
+    }
+  }
+
+  /**
+   * Estimate gas required for escrow creation
+   */
+  private async estimateEscrowCreationGas(request: EscrowCreationRequest): Promise<number> {
+    try {
+      if (!this.enhancedEscrowContract) {
+        return request.tokenAddress === '0x0000000000000000000000000000000000000000' ? 100000 : 150000;
+      }
+
+      // Create a read-only interface for gas estimation
+      const contractInterface = this.enhancedEscrowContract.interface;
+      const encodedData = contractInterface.encodeFunctionData('createEscrow', [
+        request.listingId,
+        request.buyerAddress,
+        request.sellerAddress,
+        request.tokenAddress,
+        ethers.parseUnits(request.amount, 18) // Assuming 18 decimals
+      ]);
+
+      const gasEstimate = await this.provider.estimateGas({
+        to: this.enhancedEscrowContract.target as string,
+        data: encodedData,
+        from: request.buyerAddress
+      });
+
+      // Add 20% buffer for safety
+      return Math.floor(Number(gasEstimate) * 1.2);
+    } catch (error) {
+      safeLogger.warn('Failed to estimate gas, using fallback:', error);
+      return request.tokenAddress === '0x0000000000000000000000000000000000000000' ? 100000 : 150000;
     }
   }
 
@@ -243,10 +345,48 @@ export class EnhancedEscrowService {
 
       const escrowId = dbEscrow.id.toString();
 
-      // In a real implementation, interact with smart contract here
-      safeLogger.info(`Creating enhanced escrow ${escrowId} for listing ${listingId}`);
-      safeLogger.info(`Buyer: ${buyerAddress}, Seller: ${sellerAddress}`);
-      safeLogger.info(`Token: ${tokenAddress}, Amount: ${amount}`);
+      // Prepare smart contract transaction
+      const contractInterface = this.enhancedEscrowContract.interface;
+      const encodedData = contractInterface.encodeFunctionData('createEscrow', [
+        listingId,
+        buyerAddress,
+        sellerAddress,
+        tokenAddress,
+        ethers.parseUnits(amount, 18) // Assuming 18 decimals
+      ]);
+
+      // Get gas estimate and fees
+      const gasEstimate = await this.estimateEscrowCreationGas({
+        listingId,
+        buyerAddress,
+        sellerAddress,
+        tokenAddress,
+        amount
+      });
+
+      const feeData = await this.provider.getFeeData();
+      
+      // Log transaction details for frontend to execute
+      safeLogger.info(`Enhanced escrow transaction prepared:`);
+      safeLogger.info(`Contract: ${this.enhancedEscrowContract.target}`);
+      safeLogger.info(`Data: ${encodedData}`);
+      safeLogger.info(`Gas estimate: ${gasEstimate}`);
+      safeLogger.info(`Max fee per gas: ${feeData.maxFeePerGas?.toString()}`);
+      safeLogger.info(`Max priority fee: ${feeData.maxPriorityFeePerGas?.toString()}`);
+
+      // Store transaction details in database for tracking
+      await databaseService.updateEscrow(parseInt(escrowId), {
+        transactionData: JSON.stringify({
+          to: this.enhancedEscrowContract.target,
+          data: encodedData,
+          gasEstimate,
+          feeData: {
+            maxFeePerGas: feeData.maxFeePerGas?.toString(),
+            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas?.toString(),
+            gasPrice: feeData.gasPrice?.toString()
+          }
+        })
+      });
 
       // Send notifications
       await Promise.all([
@@ -258,6 +398,193 @@ export class EnhancedEscrowService {
     } catch (error) {
       safeLogger.error('Error creating enhanced escrow:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Verify blockchain transaction and update escrow status
+   */
+  async verifyEscrowTransaction(escrowId: string, transactionHash: string): Promise<{
+    verified: boolean;
+    status: string;
+    blockNumber?: number;
+    blockHash?: string;
+    gasUsed?: number;
+    effectiveGasPrice?: string;
+  }> {
+    try {
+      // Get transaction receipt
+      const receipt = await this.provider.getTransactionReceipt(transactionHash);
+      
+      if (!receipt) {
+        throw new Error('Transaction not found or not yet mined');
+      }
+
+      if (receipt.status === 0) {
+        throw new Error('Transaction failed');
+      }
+
+      // Get transaction details
+      const transaction = await this.provider.getTransaction(transactionHash);
+      if (!transaction) {
+        throw new Error('Transaction details not found');
+      }
+
+      // Verify transaction was sent to our contract
+      if (this.enhancedEscrowContract && 
+          receipt.to?.toLowerCase() !== (this.enhancedEscrowContract.target as string).toLowerCase()) {
+        throw new Error('Transaction was not sent to the escrow contract');
+      }
+
+      // Parse transaction logs to find escrow creation event
+      let escrowCreated = false;
+      if (this.enhancedEscrowContract) {
+        for (const log of receipt.logs) {
+          try {
+            const parsedLog = this.enhancedEscrowContract.interface.parseLog(log);
+            if (parsedLog && parsedLog.name === 'EscrowCreated') {
+              escrowCreated = true;
+              safeLogger.info(`Found EscrowCreated event for escrow ${escrowId}`);
+              break;
+            }
+          } catch (logError) {
+            // Log doesn't belong to our contract, continue
+          }
+        }
+      }
+
+      if (!escrowCreated) {
+        safeLogger.warn('No EscrowCreated event found in transaction logs');
+      }
+
+      // Update escrow in database with transaction details
+      await databaseService.updateEscrow(parseInt(escrowId), {
+        transactionHash,
+        blockNumber: receipt.blockNumber.toString(),
+        blockHash: receipt.blockHash,
+        gasUsed: receipt.gasUsed.toString(),
+        effectiveGasPrice: receipt.effectiveGasPrice?.toString(),
+        status: 'funded',
+        fundedAt: new Date()
+      });
+
+      safeLogger.info(`Verified escrow transaction ${transactionHash} for escrow ${escrowId}`);
+
+      return {
+        verified: true,
+        status: 'confirmed',
+        blockNumber: receipt.blockNumber,
+        blockHash: receipt.blockHash,
+        gasUsed: Number(receipt.gasUsed),
+        effectiveGasPrice: ethers.formatUnits(receipt.effectiveGasPrice || 0, 'gwei')
+      };
+    } catch (error) {
+      safeLogger.error('Error verifying escrow transaction:', error);
+      
+      // Update escrow status to failed
+      await databaseService.updateEscrow(parseInt(escrowId), {
+        status: 'failed',
+        lastError: error instanceof Error ? error.message : 'Unknown verification error'
+      });
+
+      return {
+        verified: false,
+        status: 'failed'
+      };
+    }
+  }
+
+  /**
+   * Monitor escrow events and update database accordingly
+   */
+  async startEventMonitoring(escrowId: string): Promise<void> {
+    if (!this.enhancedEscrowContract) {
+      safeLogger.warn('Cannot start event monitoring: escrow contract not initialized');
+      return;
+    }
+
+    try {
+      // Listen for escrow-specific events
+      const escrowFilter = this.enhancedEscrowContract.filters.EscrowCreated(escrowId);
+      
+      this.enhancedEscrowContract.on(escrowFilter, (listingId, buyer, seller, token, amount, event) => {
+        safeLogger.info(`EscrowCreated event received for escrow ${escrowId}:`, {
+          listingId,
+          buyer,
+          seller,
+          token,
+          amount: amount.toString(),
+          transactionHash: event.transactionHash,
+          blockNumber: event.blockNumber
+        });
+
+        // Update database with event data
+        databaseService.updateEscrow(parseInt(escrowId), {
+          status: 'funded',
+          fundedAt: new Date(),
+          transactionHash: event.transactionHash,
+          blockNumber: event.blockNumber.toString()
+        }).catch(error => {
+          safeLogger.error('Failed to update escrow from event:', error);
+        });
+      });
+
+      // Listen for delivery confirmation events
+      const deliveryFilter = this.enhancedEscrowContract.filters.DeliveryConfirmed(escrowId);
+      
+      this.enhancedEscrowContract.on(deliveryFilter, (deliveryInfo, event) => {
+        safeLogger.info(`DeliveryConfirmed event received for escrow ${escrowId}:`, {
+          deliveryInfo,
+          transactionHash: event.transactionHash
+        });
+
+        databaseService.updateEscrow(parseInt(escrowId), {
+          deliveryConfirmed: true,
+          deliveryInfo,
+          status: 'active'
+        }).catch(error => {
+          safeLogger.error('Failed to update escrow delivery status:', error);
+        });
+      });
+
+      // Listen for dispute events
+      const disputeFilter = this.enhancedEscrowContract.filters.DisputeOpened(escrowId);
+      
+      this.enhancedEscrowContract.on(disputeFilter, (initiator, reason, event) => {
+        safeLogger.info(`DisputeOpened event received for escrow ${escrowId}:`, {
+          initiator,
+          reason,
+          transactionHash: event.transactionHash
+        });
+
+        databaseService.updateEscrow(parseInt(escrowId), {
+          disputeOpened: true,
+          status: 'disputed'
+        }).catch(error => {
+          safeLogger.error('Failed to update escrow dispute status:', error);
+        });
+      });
+
+      safeLogger.info(`Started event monitoring for escrow ${escrowId}`);
+    } catch (error) {
+      safeLogger.error('Error starting event monitoring:', error);
+    }
+  }
+
+  /**
+   * Stop monitoring escrow events
+   */
+  async stopEventMonitoring(escrowId: string): Promise<void> {
+    if (!this.enhancedEscrowContract) {
+      return;
+    }
+
+    try {
+      // Remove all listeners for this escrow
+      this.enhancedEscrowContract.removeAllListeners();
+      safeLogger.info(`Stopped event monitoring for escrow ${escrowId}`);
+    } catch (error) {
+      safeLogger.error('Error stopping event monitoring:', error);
     }
   }
 

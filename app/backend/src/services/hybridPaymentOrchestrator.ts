@@ -329,55 +329,99 @@ export class HybridPaymentOrchestrator {
   }> {
     try {
       if (!process.env.STRIPE_SECRET_KEY) {
-        safeLogger.warn('Missing STRIPE_SECRET_KEY, falling back to mock implementation');
-        const transferGroup = `order_${request.orderId}_${Date.now()}`;
-        return {
-          paymentIntentId: `pi_mock_${Math.random().toString(36).substring(2, 9)}`,
-          transferGroup,
-          sellerAccountId: `acct_mock_${Math.random().toString(36).substring(2, 9)}`,
-          clientSecret: 'mock_secret'
-        };
+        throw new Error('STRIPE_SECRET_KEY environment variable is required for real Stripe integration');
       }
 
-      const transferGroup = `order_${request.orderId}`;
+      // Validate Stripe key format
+      if (!process.env.STRIPE_SECRET_KEY.startsWith('sk_')) {
+        throw new Error('Invalid STRIPE_SECRET_KEY format. Must start with "sk_"');
+      }
 
-      // In a full Connect implementation, we would look up the seller's connected account ID
-      // const seller = await this.userProfileService.getProfileByAddress(request.sellerAddress);
-      // const sellerAccountId = seller?.stripeAccountId;
-      const sellerAccountId = undefined; // Placeholder until schema update
+      const transferGroup = `order_${request.orderId}_${Date.now()}`;
+
+      // Look up seller's Stripe Connect account ID
+      let sellerAccountId: string | undefined;
+      try {
+        const seller = await this.databaseService.getUserByAddress?.(request.sellerAddress);
+        if (seller?.stripeAccountId) {
+          sellerAccountId = seller.stripeAccountId;
+        }
+      } catch (error) {
+        safeLogger.warn('Could not retrieve seller Stripe account:', error);
+      }
+
+      // Calculate total amount including fees
+      const totalAmount = Math.round((request.amount + pathDecision.fees.totalFees) * 100); // Convert to cents
+      const platformFee = Math.round(pathDecision.fees.platformFee * 100);
 
       const paymentIntentParams: Stripe.PaymentIntentCreateParams = {
-        amount: Math.round(pathDecision.fees.totalFees * 100), // Convert to cents
+        amount: totalAmount,
         currency: pathDecision.fees.currency.toLowerCase(),
         payment_method_types: ['card'],
         transfer_group: transferGroup,
+        capture_method: 'manual', // Don't capture immediately for escrow-like behavior
         metadata: {
           orderId: request.orderId,
           listingId: request.listingId,
           buyerAddress: request.buyerAddress,
-          sellerAddress: request.sellerAddress
-        }
+          sellerAddress: request.sellerAddress,
+          platformFee: platformFee.toString(),
+          originalAmount: (request.amount * 100).toString()
+        },
+        description: `Order ${request.orderId} - LinkDAO Marketplace`
       };
 
+      // Add transfer data if seller has a Connect account
       if (sellerAccountId) {
         paymentIntentParams.transfer_data = {
           destination: sellerAccountId,
+          amount: Math.round((request.amount * 100) - platformFee), // Amount to transfer to seller
         };
       }
 
+      // Create payment intent with real Stripe API
       const paymentIntent = await stripe.paymentIntents.create(paymentIntentParams);
 
       safeLogger.info(`Created Stripe PaymentIntent ${paymentIntent.id} for order ${request.orderId}`);
+      safeLogger.info(`Payment amount: $${(totalAmount / 100).toFixed(2)} ${pathDecision.fees.currency.toUpperCase()}`);
+
+      // Store payment intent details in database for tracking
+      try {
+        await this.databaseService.createPayment(
+          request.buyerAddress,
+          request.sellerAddress,
+          'USD',
+          request.amount.toString(),
+          paymentIntent.id,
+          `Order ${request.orderId} payment intent`
+        );
+      } catch (dbError) {
+        safeLogger.warn('Failed to store payment intent in database:', dbError);
+      }
 
       return {
         paymentIntentId: paymentIntent.id,
         transferGroup,
-        sellerAccountId: sellerAccountId || 'platform', // Default to platform if no connected account
+        sellerAccountId: sellerAccountId || 'platform',
         clientSecret: paymentIntent.client_secret || undefined
       };
     } catch (error) {
       safeLogger.error('Error creating Stripe PaymentIntent:', error);
-      throw error;
+      
+      // Provide more specific error messages
+      if (error instanceof Error) {
+        if (error.message.includes('api_key')) {
+          throw new Error('Stripe API key is invalid or missing');
+        }
+        if (error.message.includes('currency')) {
+          throw new Error('Invalid currency specified for Stripe payment');
+        }
+        if (error.message.includes('amount')) {
+          throw new Error('Invalid payment amount for Stripe');
+        }
+      }
+      
+      throw new Error('Failed to create Stripe payment: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   }
 
@@ -581,6 +625,161 @@ export class HybridPaymentOrchestrator {
       ]);
     } catch (error) {
       safeLogger.error('Error sending checkout notifications:', error);
+    }
+  }
+
+  /**
+   * Capture Stripe payment after delivery confirmation
+   */
+  async captureStripePayment(paymentIntentId: string, orderId: string): Promise<{
+    captured: boolean;
+    amount: number;
+    currency: string;
+    transferId?: string;
+  }> {
+    try {
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      
+      if (paymentIntent.status !== 'requires_capture') {
+        throw new Error(`Payment intent ${paymentIntentId} is not in capturable state: ${paymentIntent.status}`);
+      }
+
+      // Capture the payment
+      const capturedIntent = await stripe.paymentIntents.capture(paymentIntentId);
+      
+      safeLogger.info(`Captured Stripe payment ${paymentIntentId} for order ${orderId}`);
+      
+      // Create transfer if using Connect
+      let transferId: string | undefined;
+      if (capturedIntent.transfer_data?.destination) {
+        try {
+          const transfer = await stripe.transfers.create({
+            amount: capturedIntent.transfer_data.amount,
+            currency: capturedIntent.currency,
+            destination: capturedIntent.transfer_data.destination,
+            transfer_group: capturedIntent.transfer_group,
+            metadata: {
+              orderId: orderId,
+              paymentIntentId: paymentIntentId
+            }
+          });
+          transferId = transfer.id;
+          safeLogger.info(`Created Stripe transfer ${transferId} to seller`);
+        } catch (transferError) {
+          safeLogger.error('Failed to create Stripe transfer:', transferError);
+        }
+      }
+
+      return {
+        captured: true,
+        amount: capturedIntent.amount / 100,
+        currency: capturedIntent.currency.toUpperCase(),
+        transferId
+      };
+    } catch (error) {
+      safeLogger.error('Error capturing Stripe payment:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Issue refund for Stripe payment
+   */
+  async refundStripePayment(paymentIntentId: string, orderId: string, reason?: string): Promise<{
+    refunded: boolean;
+    amount: number;
+    currency: string;
+    refundId: string;
+  }> {
+    try {
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      
+      if (paymentIntent.status === 'canceled') {
+        throw new Error(`Payment intent ${paymentIntentId} is already cancelled`);
+      }
+
+      // Create refund
+      const refund = await stripe.refunds.create({
+        payment_intent: paymentIntentId,
+        reason: (reason as Stripe.RefundCreateParams.Reason) || 'requested_by_customer',
+        metadata: {
+          orderId: orderId,
+          refundReason: reason || 'Customer requested refund'
+        }
+      });
+
+      safeLogger.info(`Created Stripe refund ${refund.id} for payment ${paymentIntentId}`);
+      
+      return {
+        refunded: true,
+        amount: refund.amount / 100,
+        currency: refund.currency.toUpperCase(),
+        refundId: refund.id
+      };
+    } catch (error) {
+      safeLogger.error('Error refunding Stripe payment:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Cancel Stripe payment intent
+   */
+  async cancelStripePayment(paymentIntentId: string, orderId: string): Promise<boolean> {
+    try {
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      
+      if (paymentIntent.status !== 'requires_payment_method' && 
+          paymentIntent.status !== 'requires_capture' && 
+          paymentIntent.status !== 'requires_confirmation') {
+        throw new Error(`Payment intent ${paymentIntentId} cannot be cancelled in state: ${paymentIntent.status}`);
+      }
+
+      await stripe.paymentIntents.cancel(paymentIntentId, {
+        cancellation_reason: 'requested_by_customer'
+      });
+
+      safeLogger.info(`Cancelled Stripe payment intent ${paymentIntentId} for order ${orderId}`);
+      return true;
+    } catch (error) {
+      safeLogger.error('Error cancelling Stripe payment:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get Stripe payment status
+   */
+  async getStripePaymentStatus(paymentIntentId: string): Promise<{
+    status: string;
+    amount: number;
+    currency: string;
+    captured: boolean;
+    refunds: Array<{
+      id: string;
+      amount: number;
+      status: string;
+    }>;
+  }> {
+    try {
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      
+      const refunds = paymentIntent.charges.data[0]?.refunds?.data || [];
+      
+      return {
+        status: paymentIntent.status,
+        amount: paymentIntent.amount / 100,
+        currency: paymentIntent.currency.toUpperCase(),
+        captured: paymentIntent.status === 'succeeded',
+        refunds: refunds.map((refund: any) => ({
+          id: refund.id,
+          amount: refund.amount / 100,
+          status: refund.status
+        }))
+      };
+    } catch (error) {
+      safeLogger.error('Error getting Stripe payment status:', error);
+      throw error;
     }
   }
 }
