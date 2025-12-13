@@ -385,7 +385,7 @@ export default function App({ Component, pageProps, router }: AppProps) {
                           <ContactProvider>
                             <EnhancedThemeProvider defaultTheme="system">
                               <AppContent>
-                                <Component {...pageProps} key={router.pathname} />
+                                <Component {...pageProps} />
                               </AppContent>
                               {/* Automatic wallet login bridge - DISABLED to prevent navigation blocking */}
                               {/* Authentication will trigger when user performs actions requiring auth */}
