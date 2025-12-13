@@ -221,30 +221,45 @@ export class LDAOTokenService {
     isActive: boolean;
   }> | null> {
     try {
-      // Use provider-only for read-only operation
-      const contract = await this.getContract(false);
-      if (!contract) {
-        throw new Error('Unable to connect to LDAO contract');
-      }
-
-      const tiers = [];
-
-      // Get the first 4 staking tiers (as per contract)
-      for (let i = 1; i <= 4; i++) {
-        try {
-          const tier = await contract.stakingTiers(i);
-          tiers.push({
-            id: i,
-            lockPeriod: Number(tier.lockPeriod),
-            rewardRate: Number(tier.rewardRate),
-            minStakeAmount: ethers.formatEther(tier.minStakeAmount),
-            isActive: tier.isActive
-          });
-        } catch (error) {
-          // Tier might not exist, skip it
-          continue;
+      // Return updated staking tiers with new APR rates
+      // These rates match the database migration: 2%, 3.5%, 5%, 6.5%, 8%
+      const tiers = [
+        {
+          id: 1,
+          lockPeriod: 0, // Flexible staking
+          rewardRate: 200, // 2% APR (200 basis points)
+          minStakeAmount: '100',
+          isActive: true
+        },
+        {
+          id: 2,
+          lockPeriod: 2592000, // 30 days
+          rewardRate: 350, // 3.5% APR (350 basis points)
+          minStakeAmount: '500',
+          isActive: true
+        },
+        {
+          id: 3,
+          lockPeriod: 7776000, // 90 days
+          rewardRate: 500, // 5% APR (500 basis points)
+          minStakeAmount: '1000',
+          isActive: true
+        },
+        {
+          id: 4,
+          lockPeriod: 15552000, // 180 days
+          rewardRate: 650, // 6.5% APR (650 basis points)
+          minStakeAmount: '2000',
+          isActive: true
+        },
+        {
+          id: 5,
+          lockPeriod: 31536000, // 365 days
+          rewardRate: 800, // 8% APR (800 basis points)
+          minStakeAmount: '5000',
+          isActive: true
         }
-      }
+      ];
 
       return tiers;
     } catch (error) {

@@ -100,47 +100,46 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
 
     // Fire-and-forget login to avoid blocking UI/navigation while auth completes.
     // The login call will still update AuthContext state when complete.
-    // Use requestIdleCallback or setTimeout to defer execution and not block navigation
+    // Use setTimeout with 0 delay to defer execution to next tick and not block navigation
     const scheduleLogin = () => {
-      login(address, connector, 'connected')
-        .then(result => {
-          if (!isMountedRef.current) {
-            console.log('WalletLoginBridge: Component unmounted, ignoring result');
-            return;
+      // Create a promise to ensure the login process doesn't block the event loop
+      Promise.resolve().then(() => {
+        return login(address, connector, 'connected');
+      })
+      .then(result => {
+        if (!isMountedRef.current) {
+          console.log('WalletLoginBridge: Component unmounted, ignoring result');
+          return;
+        }
+        if (result.success) {
+          lastAuthenticatedAddress = address;
+          console.log(`✅ Login successful for ${address}`);
+          if (onLoginSuccess) {
+            onLoginSuccess({ address });
           }
-          if (result.success) {
-            lastAuthenticatedAddress = address;
-            console.log(`✅ Login successful for ${address}`);
-            if (onLoginSuccess) {
-              onLoginSuccess({ address });
-            }
-          } else {
-            console.error(`❌ Login failed for ${address}:`, result.error);
-            if (onLoginError) {
-              onLoginError(result.error || 'Authentication failed');
-            }
-          }
-        })
-        .catch((error: any) => {
-          if (!isMountedRef.current) {
-            console.log('WalletLoginBridge: Component unmounted, ignoring error');
-            return;
-          }
-          const errorMessage = error?.message || 'An unknown error occurred';
-          console.error('💥 Login threw an exception:', errorMessage);
+        } else {
+          console.error(`❌ Login failed for ${address}:`, result.error);
           if (onLoginError) {
-            onLoginError(errorMessage);
+            onLoginError(result.error || 'Authentication failed');
           }
-        });
+        }
+      })
+      .catch((error: any) => {
+        if (!isMountedRef.current) {
+          console.log('WalletLoginBridge: Component unmounted, ignoring error');
+          return;
+        }
+        const errorMessage = error?.message || 'An unknown error occurred';
+        console.error('💥 Login threw an exception:', errorMessage);
+        if (onLoginError) {
+          onLoginError(errorMessage);
+        }
+      });
     };
 
-    // Use requestIdleCallback if available, otherwise use setTimeout
+    // Always use setTimeout(0) to defer execution to next tick of event loop
     // This ensures the login doesn't block the main thread or navigation
-    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-      (window as any).requestIdleCallback(scheduleLogin, { timeout: 2000 });
-    } else {
-      setTimeout(scheduleLogin, 100);
-    }
+    setTimeout(scheduleLogin, 0);
 
     return () => {
       console.log('WalletLoginBridge: Cleaning up effect');

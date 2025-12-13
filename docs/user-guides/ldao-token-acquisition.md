@@ -154,19 +154,19 @@ LDAO tokens are the native utility tokens of the LinkDAO platform with a total s
 ### Staking Options
 
 #### Flexible Staking
-- **APR**: 5% base rate
+- **APR**: 2% base rate
 - **Lock Period**: None
 - **Withdrawal**: Anytime without penalties
 - **Compounding**: Manual or automatic
 
 #### Fixed-Term Staking
-- **30 Days**: 8% APR
-- **90 Days**: 12% APR
-- **180 Days**: 15% APR
-- **365 Days**: 18% APR
+- **30 Days**: 3.5% APR
+- **90 Days**: 5% APR
+- **180 Days**: 6.5% APR
+- **365 Days**: 8% APR
 
 ### Premium Member Benefits
-- **Bonus APR**: Additional 2% on all staking tiers
+- **Bonus APR**: Additional 0.5% on flexible staking, 1% on short-term, 1.5% on medium-term, 2% on long-term, and 3% on premium long-term
 - **Exclusive Pools**: Access to premium-only staking events
 - **Priority Unstaking**: Faster withdrawal processing
 - **Enhanced Rewards**: Multiplied earning rates

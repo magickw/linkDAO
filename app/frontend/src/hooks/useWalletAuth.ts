@@ -111,32 +111,40 @@ export const useWalletAuth = (): UseWalletAuthReturn => {
     // Store attempt timestamp in localStorage for persistence across page refreshes
     localStorage.setItem(`linkdao_last_auth_attempt_${normalizedAddress}`, Date.now().toString());
 
+    // Set authenticating state but ensure navigation is not blocked
     setIsAuthenticating(true);
     setError(null);
 
-    try {
-      console.log('🔐 Requesting wallet signature for authentication...');
-      // Use the login method from AuthContext which handles the full flow
-      const loginResult = await login(address, connector, 'connected');
+    // Use setTimeout to ensure the authenticating state update happens before
+    // the async operation to prevent blocking any UI updates
+    return new Promise((resolve) => {
+      setTimeout(async () => {
+        try {
+          console.log('🔐 Requesting wallet signature for authentication...');
+          // Use the login method from AuthContext which handles the full flow
+          const loginResult = await login(address, connector, 'connected');
 
-      if (loginResult.success) {
-        console.log('✅ Wallet authentication successful');
-        // Clear the cooldown on successful authentication
-        localStorage.removeItem(`linkdao_last_auth_attempt_${normalizedAddress}`);
-        return { success: true };
-      } else {
-        const errorMsg = loginResult.error || 'Authentication failed';
-        setError(errorMsg);
-        return { success: false, error: errorMsg };
-      }
-    } catch (error: any) {
-      const errorMsg = error?.message || String(error) || 'Authentication error';
-      console.error('❌ Wallet authentication error:', error);
-      setError(errorMsg);
-      return { success: false, error: errorMsg };
-    } finally {
-      setIsAuthenticating(false);
-    }
+          if (loginResult.success) {
+            console.log('✅ Wallet authentication successful');
+            // Clear the cooldown on successful authentication
+            localStorage.removeItem(`linkdao_last_auth_attempt_${normalizedAddress}`);
+            resolve({ success: true });
+          } else {
+            const errorMsg = loginResult.error || 'Authentication failed';
+            setError(errorMsg);
+            resolve({ success: false, error: errorMsg });
+          }
+        } catch (error: any) {
+          const errorMsg = error?.message || String(error) || 'Authentication error';
+          console.error('❌ Wallet authentication error:', error);
+          setError(errorMsg);
+          resolve({ success: false, error: errorMsg });
+        } finally {
+          // Ensure authenticating state is reset even after async operation completes
+          setIsAuthenticating(false);
+        }
+      }, 0); // Use 0ms timeout to defer to next tick of event loop
+    });
   };
 
   return {

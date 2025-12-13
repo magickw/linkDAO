@@ -234,14 +234,15 @@ The LDAOToken serves as the ecosystem's native governance and utility token, imp
 
 #### 3.1.2 Staking Mechanism
 
-The contract implements four staking tiers with increasing rewards:
+The contract implements five staking tiers with increasing rewards:
 
 | Tier | Lock Period | Base APR | Voting Multiplier |
 |------|-------------|----------|-------------------|
-| Bronze | 30 days | 5% | 1.2x |
-| Silver | 90 days | 8% | 1.5x |
-| Gold | 180 days | 12% | 1.8x |
-| Platinum | 365 days | 18% | 2.0x |
+| Flexible | None | 2% | 1.0x |
+| Bronze | 30 days | 3.5% | 1.2x |
+| Silver | 90 days | 5% | 1.5x |
+| Gold | 180 days | 6.5% | 1.8x |
+| Platinum | 365 days | 8% | 2.0x |
 
 #### 3.1.3 Voting Power Calculation
 

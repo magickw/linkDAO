@@ -138,13 +138,18 @@ Tokens can be reduced or revoked for:
 
 **Fixed-Term Staking**
 - 30 days: 8% APR
-- 90 days: 12% APR
-- 180 days: 15% APR
-- 365 days: 18% APR
+- 90 days: 5% APR
+- 180 days: 6.5% APR
+- 365 days: 8% APR
 
 ### Do premium members get staking bonuses?
 Yes! Premium members receive:
-- **Additional 2% APR** on all staking tiers
+- **Additional tier-based APR bonuses**:
+  - Flexible: +0.5% APR
+  - 30 days: +1% APR
+  - 90 days: +1.5% APR
+  - 180 days: +2% APR
+  - 365 days: +3% APR
 - **Exclusive staking pools** with higher rewards
 - **Priority unstaking** for faster withdrawals
 - **Enhanced compound rates** for better returns

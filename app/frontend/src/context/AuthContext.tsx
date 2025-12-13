@@ -128,7 +128,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (result.success && result.user) {
         // Fire-and-forget: Don't await syncAuthState to prevent blocking navigation
         // This allows navigation to proceed immediately while auth state syncs in background
-        syncAuthState().catch(err => console.error('Background auth sync failed:', err));
+        // Use setTimeout to further ensure it doesn't block the event loop
+        setTimeout(() => {
+          syncAuthState().catch(err => console.error('Background auth sync failed:', err));
+        }, 0);
         addToast('Successfully authenticated!', 'success');
         return { success: true };
       }

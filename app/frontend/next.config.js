@@ -210,3 +210,15 @@ const nextConfig = {
 };
 
 module.exports = nextConfig;
+
+// Add rewrites for API proxying in development
+if (process.env.NODE_ENV === 'development') {
+  nextConfig.rewrites = async () => {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:10000/api/:path*'
+      }
+    ];
+  };
+}

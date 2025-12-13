@@ -38,6 +38,11 @@ export const NavigationLoadingStates: React.FC<NavigationLoadingStatesProps> = (
 
   // Handle route change start
   const handleRouteChangeStart = useCallback((url: string) => {
+    // Don't show loading states for hash changes or same-page navigation
+    if (url.startsWith('#') || url === router.asPath.split('#')[0]) {
+      return;
+    }
+
     setLoadingState({
       isLoading: true,
       progress: 0,
@@ -61,7 +66,7 @@ export const NavigationLoadingStates: React.FC<NavigationLoadingStatesProps> = (
     }, 100);
 
     return () => clearInterval(progressInterval);
-  }, []);
+  }, [router.asPath]);
 
   // Handle route change complete
   const handleRouteChangeComplete = useCallback(() => {

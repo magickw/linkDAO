@@ -156,7 +156,7 @@ export class ContractRegistryService {
    * Get fallback addresses from deployed contracts on Sepolia
    */
   private getFallbackAddress(name: string): string | null {
-    // Deployed addresses from deployedAddresses-sepolia.json
+    // Deployed addresses from deployedAddresses-sepolia.json (updated 2025-10-22)
     const deployedAddresses: Record<string, string> = {
       'LDAOToken': '0xc9F690B45e33ca909bB9ab97836091673232611B',
       'MockERC20': '0xA31D2faD2B1Ab84Fb420824A5CF3aB5a272782CC',
@@ -170,13 +170,13 @@ export class ContractRegistryService {
       'DisputeResolution': '0x6852f68F30Fe3B63965930FF31882fe9CbFe3b3a',
       'Marketplace': '0x21A667693095337d7c1dEAa4fa5E5dFcd7146b6A',
       'RewardPool': '0x0bc773696BD4399a93672F82437a59369C2a1e6f',
-      'EnhancedLDAOStaking': '0x5f9fc9C25B221f861a9B0a9699aF13E07457F316',
       'NFTMarketplace': '0x012d3646Cd0D587183112fdD38f473FaA50D2A09',
       'NFTCollectionFactory': '0xf9ba6552025C3e40CB1B91D4b4CF82462643F34F',
       'TipRouter': '0x755Fe81411c86019fff6033E0567A4D93b57281b',
       'FollowModule': '0x624Fe32F9b61c612ADD2b2Ef505bb99e4A7f6439',
       'MultiSigWallet': '0xA0bD2057F45Deb2553745B5ddbB6e2AB80cFCE98',
       'LDAOTreasury': '0xeF85C8CcC03320dA32371940b315D563be2585e5',
+      'EnhancedLDAOStaking': '0x5f9fc9C25B221f861a9B0a9699aF13E07457F316',
       'EnhancedLDAOTreasury': '0x074E3874CA62F8cB9be6DDCD23235d0Bb5a8A0b5',
       'CharityVerificationSystem': '0x4e2F69c11897771e443A3EA03E207DC402496eb0',
       'CharityProposal': '0x2777b61C59a46Af2e672580eDAf13D75124B112c',
