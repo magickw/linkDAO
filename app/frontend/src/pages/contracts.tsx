@@ -18,7 +18,7 @@ const ContractsPage: React.FC = () => {
         <meta property="og:description" content="Monitor and interact with LinkDAO smart contracts in real-time" />
         <link rel="canonical" href="https://linkdao.io/contracts" />
       </Head>
-
+      
       <SmartContractDashboard />
     </Layout>
   );

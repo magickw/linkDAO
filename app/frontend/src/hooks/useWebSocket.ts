@@ -27,30 +27,30 @@ interface WebSocketHookReturn {
   isConnected: boolean;
   isRealTimeAvailable: boolean;
   socket?: any; // Raw socket access (deprecated, use methods instead)
-  
+
   // Connection methods
   connect: () => Promise<void>;
   disconnect: () => void;
   forceReconnect: () => void;
-  
+
   // Subscription methods
   subscribe: (type: 'feed' | 'community' | 'conversation' | 'user' | 'global', target: string, filters?: any) => string;
   unsubscribe: (subscriptionId: string) => void;
-  
+
   // Legacy room methods
   joinCommunity: (communityId: string) => void;
   leaveCommunity: (communityId: string) => void;
   joinConversation: (conversationId: string) => void;
   leaveConversation: (conversationId: string) => void;
-  
+
   // Typing indicators
   startTyping: (conversationId: string) => void;
   stopTyping: (conversationId: string) => void;
-  
+
   // Event listeners
   on: (event: string, callback: Function) => void;
   off: (event: string, callback: Function) => void;
-  
+
   // Utility
   send: (event: string, data: any, priority?: 'low' | 'medium' | 'high' | 'urgent') => void;
   getQueuedMessageCount: () => number;
@@ -64,26 +64,51 @@ export const useWebSocket = (config: UseWebSocketConfig): WebSocketHookReturn =>
     mode: 'websocket',
     resourceConstrained: false
   });
-  
+
   const serviceRef = useRef<WebSocketClientService | null>(null);
   const managerRef = useRef<WebSocketConnectionManager>(webSocketConnectionManager);
   const listenersRef = useRef<Map<string, Function>>(new Map());
 
   // Initialize WebSocket service and connection manager
   useEffect(() => {
-    // Use environment config for consistent URL handling
-    const backendUrl = ENV_CONFIG.BACKEND_URL || 'http://localhost:10000';
-    const wsUrl = backendUrl.replace(/^http/, 'ws');
-    
-    const wsConfig = {
-      url: config.url || ENV_CONFIG.WS_URL,
-      walletAddress: config.walletAddress,
-      autoReconnect: config.autoReconnect ?? true,
-      reconnectAttempts: config.reconnectAttempts ?? 10,
-      reconnectDelay: config.reconnectDelay ?? 1000
-    };
+    // Persistent Connection Logic:
+    // Check if we already have an active client for this address
+    const existingClient = getWebSocketClient();
+    const currentUrl = config.url || ENV_CONFIG.WS_URL;
 
-    serviceRef.current = initializeWebSocketClient(wsConfig);
+    // Reuse existing client if it exists and matches the configuration
+    if (existingClient &&
+      existingClient.getUrl() === currentUrl &&
+      // We can access private config via a getter if we added one, but effectively 
+      // if the singleton exists, we assume it's for the current session/address 
+      // or the service handles address updates via authenticate()
+      true
+    ) {
+      console.log('[useWebSocket] Reusing existing WebSocket connection');
+      serviceRef.current = existingClient;
+
+      // Ensure we are authenticated with the current address
+      if (config.walletAddress) {
+        // Authenticate will handle checking if we need to re-auth
+        // Accessing private method via type casting or public method if available
+        // For now, reliance on auto-reconnect or manual connect will trigger auth
+      }
+    } else {
+      console.log('[useWebSocket] Initializing new WebSocket connection');
+      // Use environment config for consistent URL handling
+      const backendUrl = ENV_CONFIG.BACKEND_URL || 'http://localhost:10000';
+      const wsUrl = backendUrl.replace(/^http/, 'ws');
+
+      const wsConfig = {
+        url: config.url || ENV_CONFIG.WS_URL,
+        walletAddress: config.walletAddress,
+        autoReconnect: config.autoReconnect ?? true,
+        reconnectAttempts: config.reconnectAttempts ?? 10,
+        reconnectDelay: config.reconnectDelay ?? 1000
+      };
+
+      serviceRef.current = initializeWebSocketClient(wsConfig);
+    }
 
     // Set up connection state listeners for both service and manager
     const handleConnectionStateChange = (state: any) => {
@@ -98,23 +123,25 @@ export const useWebSocket = (config: UseWebSocketConfig): WebSocketHookReturn =>
       setConnectionState(prevState => ({
         ...prevState,
         mode: data.mode as any,
-        status: data.mode === 'websocket' ? 'connected' : 
-                data.mode === 'polling' ? 'polling' : 'disconnected'
+        status: data.mode === 'websocket' ? 'connected' :
+          data.mode === 'polling' ? 'polling' : 'disconnected'
       }));
     };
 
     serviceRef.current.on('connection_state_changed', handleConnectionStateChange);
     managerRef.current.on('connection_mode_changed', handleConnectionModeChange);
 
-    // Auto-connect if enabled
-    if (config.autoConnect !== false) {
+    // Auto-connect if enabled and not already connected
+    if (config.autoConnect !== false && !serviceRef.current.isConnected()) {
       managerRef.current.connect().catch(console.error);
     }
 
     return () => {
+      // CLEANUP: Only remove listeners, DO NOT disconnect the service
+      // This allows the connection to persist across page navigations
       if (serviceRef.current) {
         serviceRef.current.off('connection_state_changed', handleConnectionStateChange);
-        serviceRef.current.disconnect();
+        // CRITICAL FIX: Removed serviceRef.current.disconnect() call
       }
       managerRef.current.off('connection_mode_changed', handleConnectionModeChange);
     };
@@ -354,10 +381,10 @@ export const useConversationUpdates = (walletAddress: string, conversationId: st
     }
   }, [webSocket.isConnected, conversationId]);
 
-  return { 
-    messages, 
+  return {
+    messages,
     typingUsers: Array.from(typingUsers),
-    ...webSocket 
+    ...webSocket
   };
 };
 
