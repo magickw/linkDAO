@@ -95,6 +95,11 @@
       "owner": "0xEe034b53D4cCb101b2a4faec27708be507197350",
       "deploymentTx": "0x57c6090b2760861c2f5efcedc6c669541edbdd8874e5c72adc890832cbec67be"
     },
+    "EnhancedLDAOStaking": {
+      "address": "0x5f9fc9C25B221f861a9B0a9699aF13E07457F316",
+      "owner": "0xEe034b53D4cCb101b2a4faec27708be507197350",
+      "deploymentTx": "0x2d8d8b8f6ef2824581f090ecf6fc6c46c554206e7260d1e69857320ea896a83b"
+    },
     "EnhancedLDAOTreasury": {
       "address": "0x074E3874CA62F8cB9be6DDCD23235d0Bb5a8A0b5",
       "owner": "0xEe034b53D4cCb101b2a4faec27708be507197350",

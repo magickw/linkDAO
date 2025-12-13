@@ -6,6 +6,7 @@
 
 import { useState, useEffect } from 'react';
 import { Contract, ethers } from 'ethers';
+import { usePublicClient } from 'wagmi';
 import { ENV_CONFIG } from '@/config/environment';
 
 // Contract Registry ABI (minimal interface)
@@ -29,10 +30,10 @@ export class ContractRegistryService {
     return ContractRegistryService.instance;
   }
 
-  async initialize(provider: any): Promise<void> {
+  async initialize(publicClient: any): Promise<void> {
     if (this.initialized) return;
 
-    this.provider = provider;
+    this.provider = publicClient;
     
     // Get registry address from deployed addresses
     // TODO: Update this with actual deployed ContractRegistry address
@@ -45,7 +46,13 @@ export class ContractRegistryService {
       return;
     }
 
-    this.registry = new Contract(registryAddress, CONTRACT_REGISTRY_ABI, provider);
+    // Convert PublicClient to ethers provider for contract interactions
+    const { fallbackTransport } = await import('viem');
+    const ethersProvider = new ethers.BrowserProvider(
+      publicClient.transport || fallbackTransport
+    );
+    
+    this.registry = new Contract(registryAddress, CONTRACT_REGISTRY_ABI, ethersProvider);
     this.initialized = true;
 
     // Listen for contract updates
@@ -163,6 +170,7 @@ export class ContractRegistryService {
       'DisputeResolution': '0x6852f68F30Fe3B63965930FF31882fe9CbFe3b3a',
       'Marketplace': '0x21A667693095337d7c1dEAa4fa5E5dFcd7146b6A',
       'RewardPool': '0x0bc773696BD4399a93672F82437a59369C2a1e6f',
+      'EnhancedLDAOStaking': '0x5f9fc9C25B221f861a9B0a9699aF13E07457F316',
       'NFTMarketplace': '0x012d3646Cd0D587183112fdD38f473FaA50D2A09',
       'NFTCollectionFactory': '0xf9ba6552025C3e40CB1B91D4b4CF82462643F34F',
       'TipRouter': '0x755Fe81411c86019fff6033E0567A4D93b57281b',
@@ -234,21 +242,23 @@ export const contractRegistryService = ContractRegistryService.getInstance();
 export const useContractRegistry = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const publicClient = usePublicClient();
 
   useEffect(() => {
     const initialize = async () => {
       try {
-        // Get provider from wagmi or create new one
-        const { provider } = useProvider();
-        await contractRegistryService.initialize(provider);
+        // Get provider from wagmi v2 publicClient
+        await contractRegistryService.initialize(publicClient);
         setIsInitialized(true);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to initialize ContractRegistry');
       }
     };
 
-    initialize();
-  }, []);
+    if (publicClient) {
+      initialize();
+    }
+  }, [publicClient]);
 
   return {
     isInitialized,

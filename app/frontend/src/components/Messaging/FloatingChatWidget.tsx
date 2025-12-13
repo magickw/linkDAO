@@ -28,6 +28,7 @@ import ContactDetail from './Contacts/ContactDetail';
 import { GlassPanel } from '@/design-system';
 import DiscordStyleMessagingInterface from './DiscordStyleMessagingInterface';
 import { OnlineStatus } from './MessageStatusComponents';
+import { useAuth } from '@/context/AuthContext';
 
 interface FloatingChatWidgetProps {
   className?: string;
@@ -41,6 +42,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
   // ✅ PHASE 1 FIX: Consolidate to useWalletAuth only
   const { walletInfo } = useWalletAuth();
   const { address, isConnected } = useAccount();
+  const { isAuthenticated } = useAuth();
 
   const [isOpen, setIsOpen] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -103,7 +105,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
-    
+
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
@@ -115,20 +117,21 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
       setUnreadCount(0);
       return;
     }
-    
+
     const total = hookConversations.reduce((sum, conv) => {
       return sum + (conv.unreadCounts?.[address] || 0);
     }, 0);
-    
+
     setUnreadCount(total);
   }, [hookConversations, address]);
 
   // Load conversations on mount and when wallet connects
+
   useEffect(() => {
-    if (address) {
+    if (address && isAuthenticated) {
       loadConversations();
     }
-  }, [address, loadConversations]);
+  }, [address, isAuthenticated, loadConversations]);
 
   // ✅ PHASE 1 FIX: Enhanced WebSocket message handling with UI updates
   // ✅ PHASE 2: Added online status and typing indicators
@@ -241,7 +244,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
   // Register the startChat callback with the contact context
   const { setOnStartChat } = useContacts();
   const isOpenRef = useRef(isOpen);
-  
+
   // Keep the ref updated with the current isOpen state
   useEffect(() => {
     isOpenRef.current = isOpen;
@@ -294,7 +297,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
       'top-right': 'top-6 right-6 md:top-6 md:right-6',
       'top-left': 'top-6 left-6 md:top-6 md:left-6'
     }[position] || 'bottom-6 right-6 md:bottom-6 md:right-6';
-    
+
     return classes;
   };
 
@@ -345,14 +348,14 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
         console.error('Failed to mark as read:', error);
       }
     }
-    
+
     console.log("FloatingChatWidget: Conversation selected, activeTab set to 'chat'");
   };
 
   const handleBackToList = () => {
     setSelectedConversation(null);
     setActiveTab('messages');
-    
+
     // Leave conversation room
     if (isWebSocketConnected && selectedConversation?.id) {
       leaveConversation(selectedConversation.id);
@@ -363,20 +366,20 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
   useEffect(() => {
     if (pendingContact && address) {
       console.log("FloatingChatWidget: Processing pending contact:", pendingContact);
-      
+
       // If hookConversations is not loaded yet, we might need to load them first
       if (!hookConversations) {
         console.log("FloatingChatWidget: Conversations not loaded yet, loading...");
         loadConversations();
         return; // Wait for the next render when conversations are loaded
       }
-      
+
       console.log("FloatingChatWidget: Looking for existing conversation with:", pendingContact.walletAddress);
       console.log("FloatingChatWidget: Available conversations:", hookConversations);
-      
+
       // Find an existing conversation with this contact (case-insensitive address matching)
       const normalizedContactAddress = pendingContact.walletAddress.toLowerCase();
-      const existingConversation = hookConversations.find(conv => 
+      const existingConversation = hookConversations.find(conv =>
         conv.participants.some(participant => participant.toLowerCase() === normalizedContactAddress)
       );
 
@@ -392,7 +395,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
         setNewRecipientAddress(pendingContact.walletAddress);
         setShowNewConversationModal(true);
       }
-      
+
       // Clear the pending contact
       setPendingContact(null);
       console.log("FloatingChatWidget: Cleared pending contact");
@@ -401,7 +404,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
 
   const handleSendMessage = async (content: string) => {
     if (!content.trim() || !selectedConversation || !address) return;
-    
+
     try {
       await sendChatMessage({
         conversationId: selectedConversation.id,
@@ -421,7 +424,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
       console.log("FloatingChatWidget: Missing recipient address or user address");
       return;
     }
-    
+
     try {
       const response = await fetch('/api/conversations', {
         method: 'POST',
@@ -484,7 +487,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
             exit={{ scale: 0.95, opacity: 0 }}
             transition={{ type: "spring", stiffness: 360, damping: 22, mass: 0.9 }}
             className={`fixed z-[60] ${getPositionClasses()} ${className} hidden md:block`} // Increased z-index to 60 to appear above MobileNavigation
-            style={{ 
+            style={{
               bottom: position.includes('bottom') ? '1.5rem' : undefined,
               top: position.includes('top') ? '1.5rem' : undefined,
               right: position.includes('right') ? '1.5rem' : undefined,
@@ -504,7 +507,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
               aria-label="Open chat"
             >
               <MessageCircle size={20} className="text-white" />
-              
+
               {/* Unread Badge */}
               {unreadCount > 0 && (
                 <motion.div
@@ -537,7 +540,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
             exit={{ opacity: 0, scale: 0.94, y: 16 }}
             transition={{ type: "spring", stiffness: 360, damping: 24, mass: 0.9 }}
             className={`fixed z-[60] ${getPositionClasses()} hidden md:block`} // Increased z-index to 60 to appear above MobileNavigation
-            style={{ 
+            style={{
               width: '340px',
               height: isMinimized ? '50px' : '520px',
               maxWidth: '95vw',
@@ -556,18 +559,18 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
                 </div>
                 <div className="flex items-center">
                   {activeTab === 'messages' && (
-                  <button
+                    <button
                       onClick={() => setShowNewConversationModal(true)}
-                    className="mr-1 opacity-70 hover:opacity-100 active:scale-[0.98] transition-transform"
+                      className="mr-1 opacity-70 hover:opacity-100 active:scale-[0.98] transition-transform"
                       aria-label="Start new conversation"
                     >
                       <Plus size={16} className="text-white" />
                     </button>
                   )}
                   {activeTab === 'chat' && (
-                  <button
+                    <button
                       onClick={handleBackToList}
-                    className="mr-1 opacity-70 hover:opacity-100 active:scale-[0.98] transition-transform"
+                      className="mr-1 opacity-70 hover:opacity-100 active:scale-[0.98] transition-transform"
                       aria-label="Back to messages"
                     >
                       <ArrowLeft size={16} className="text-white" />
@@ -593,7 +596,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
                   </button>
                 </div>
               </div>
-              
+
               {/* Content area - hidden when minimized */}
               {!isMinimized && (
                 <div className="flex-1 overflow-y-auto">
@@ -601,28 +604,26 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
                   <div className="flex border-b border-gray-700 bg-gray-800">
                     <button
                       onClick={() => setActiveTab('messages')}
-                      className={`flex items-center gap-1 px-4 py-2 text-xs font-medium transition-colors flex-1 justify-center ${
-                        activeTab === 'messages'
-                          ? 'text-blue-400 border-b-2 border-blue-400'
-                          : 'text-gray-400 hover:text-white'
-                      }`}
+                      className={`flex items-center gap-1 px-4 py-2 text-xs font-medium transition-colors flex-1 justify-center ${activeTab === 'messages'
+                        ? 'text-blue-400 border-b-2 border-blue-400'
+                        : 'text-gray-400 hover:text-white'
+                        }`}
                     >
                       <MessageCircle className="w-3 h-3" />
                       <span>Chats</span>
                     </button>
                     <button
                       onClick={() => setActiveTab('contacts')}
-                      className={`flex items-center gap-1 px-4 py-2 text-xs font-medium transition-colors flex-1 justify-center ${
-                        activeTab === 'contacts'
-                          ? 'text-blue-400 border-b-2 border-blue-400'
-                          : 'text-gray-400 hover:text-white'
-                      }`}
+                      className={`flex items-center gap-1 px-4 py-2 text-xs font-medium transition-colors flex-1 justify-center ${activeTab === 'contacts'
+                        ? 'text-blue-400 border-b-2 border-blue-400'
+                        : 'text-gray-400 hover:text-white'
+                        }`}
                     >
                       <Users className="w-3 h-3" />
                       <span>Contacts</span>
                     </button>
                   </div>
-                  
+
                   {activeTab === 'messages' && (
                     <div className="flex flex-col h-full">
                       {/* Search and connection status */}
@@ -683,63 +684,63 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
                         ) : (
                           <AnimatePresence initial={false}>
                             {sortedConversations.map((conversation) => {
-                            const otherParticipant = getOtherParticipant(conversation);
-                            const isUserOnline = onlineUsers.has(otherParticipant);
-                            const conversationTyping = typingUsers.get(conversation.id) || [];
-                            const isTyping = conversationTyping.length > 0;
+                              const otherParticipant = getOtherParticipant(conversation);
+                              const isUserOnline = onlineUsers.has(otherParticipant);
+                              const conversationTyping = typingUsers.get(conversation.id) || [];
+                              const isTyping = conversationTyping.length > 0;
 
-                            return (
-                              <motion.div
-                                key={conversation.id}
-                                layout
-                                initial={{ opacity: 0, y: 8 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: 8 }}
-                                transition={{ duration: 0.16, ease: 'easeOut' }}
-                                whileTap={{ scale: 0.99, backgroundColor: 'rgba(55,65,81,1)' }}
-                                className="relative overflow-hidden flex items-center px-3 py-2.5 hover:bg-gray-700 rounded cursor-pointer text-xs transition-colors group"
-                                onClick={() => handleConversationSelect(conversation)}
-                              >
-                                {/* Centered ripple */}
-                                <motion.span
-                                  aria-hidden
-                                  className="pointer-events-none absolute inset-0"
-                                  initial={false}
-                                  animate={{ background: ['radial-gradient(circle at 50% 50%, rgba(255,255,255,0.08), transparent 40%)', 'transparent'] }}
-                                  transition={{ duration: 0.35 }}
-                                />
-                                {/* Avatar with Online Status */}
-                                <div className="relative mr-2 flex-shrink-0">
-                                  <div className="w-7 h-7 bg-gray-600 rounded-full"></div>
-                                  <div className="absolute bottom-0 right-0">
-                                    <OnlineStatus isOnline={isUserOnline} size={8} />
+                              return (
+                                <motion.div
+                                  key={conversation.id}
+                                  layout
+                                  initial={{ opacity: 0, y: 8 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  exit={{ opacity: 0, y: 8 }}
+                                  transition={{ duration: 0.16, ease: 'easeOut' }}
+                                  whileTap={{ scale: 0.99, backgroundColor: 'rgba(55,65,81,1)' }}
+                                  className="relative overflow-hidden flex items-center px-3 py-2.5 hover:bg-gray-700 rounded cursor-pointer text-xs transition-colors group"
+                                  onClick={() => handleConversationSelect(conversation)}
+                                >
+                                  {/* Centered ripple */}
+                                  <motion.span
+                                    aria-hidden
+                                    className="pointer-events-none absolute inset-0"
+                                    initial={false}
+                                    animate={{ background: ['radial-gradient(circle at 50% 50%, rgba(255,255,255,0.08), transparent 40%)', 'transparent'] }}
+                                    transition={{ duration: 0.35 }}
+                                  />
+                                  {/* Avatar with Online Status */}
+                                  <div className="relative mr-2 flex-shrink-0">
+                                    <div className="w-7 h-7 bg-gray-600 rounded-full"></div>
+                                    <div className="absolute bottom-0 right-0">
+                                      <OnlineStatus isOnline={isUserOnline} size={8} />
+                                    </div>
                                   </div>
-                                </div>
 
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-medium text-white truncate flex items-center text-sm leading-5">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-white truncate flex items-center text-sm leading-5">
+                                      {otherParticipant}
+                                      {isTyping && (
+                                        <span className="ml-2 text-blue-400 text-[11px] leading-4">typing...</span>
+                                      )}
+                                    </div>
+                                    <div className="text-gray-400 truncate text-[11px] leading-4">
+                                      {conversation.lastMessage?.content || 'No messages yet'}
+                                    </div>
+                                  </div>
+
+                                  {conversation.unreadCounts?.[address || ''] && (
+                                    <div className="bg-blue-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center flex-shrink-0">
+                                      {conversation.unreadCounts?.[address || ''] > 9 ? '9+' : conversation.unreadCounts?.[address || '']}
+                                    </div>
+                                  )}
+
+                                  <div className="absolute left-0 top-full mt-1 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 whitespace-nowrap">
                                     {otherParticipant}
-                                    {isTyping && (
-                                      <span className="ml-2 text-blue-400 text-[11px] leading-4">typing...</span>
-                                    )}
+                                    {isUserOnline && <span className="ml-2 text-green-400">● Online</span>}
                                   </div>
-                                  <div className="text-gray-400 truncate text-[11px] leading-4">
-                                    {conversation.lastMessage?.content || 'No messages yet'}
-                                  </div>
-                                </div>
-
-                                {conversation.unreadCounts?.[address || ''] && (
-                                  <div className="bg-blue-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center flex-shrink-0">
-                                    {conversation.unreadCounts?.[address || ''] > 9 ? '9+' : conversation.unreadCounts?.[address || '']}
-                                  </div>
-                                )}
-
-                                <div className="absolute left-0 top-full mt-1 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 whitespace-nowrap">
-                                  {otherParticipant}
-                                  {isUserOnline && <span className="ml-2 text-green-400">● Online</span>}
-                                </div>
-                              </motion.div>
-                            );
+                                </motion.div>
+                              );
                             })}
                           </AnimatePresence>
                         )}
@@ -781,7 +782,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
               <h3 className="text-lg font-semibold text-white mb-4">
                 Start New Conversation
               </h3>
-              
+
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Recipient Wallet Address or ENS

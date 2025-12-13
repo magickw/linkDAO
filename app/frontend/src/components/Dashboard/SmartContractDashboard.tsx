@@ -7,7 +7,6 @@ import React, { useState, useEffect } from 'react';
 import { useAccount, useWalletClient, usePublicClient } from 'wagmi';
 import { ethers } from 'ethers';
 import { contractRegistryService } from '@/services/contractRegistryService';
-import { useTheme } from '@/components/ui/EnhancedTheme';
 import { 
   Activity, 
   AlertCircle, 
@@ -39,7 +38,28 @@ export const SmartContractDashboard: React.FC = () => {
   const { address, isConnected } = useAccount();
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
-  const { actualTheme } = useTheme();
+  
+  // Check if dark mode is active by checking document class
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  
+  useEffect(() => {
+    // Check if dark mode is active
+    const checkDarkMode = () => {
+      setIsDarkMode(document.documentElement.classList.contains('dark'));
+    };
+    
+    // Initial check
+    checkDarkMode();
+    
+    // Listen for changes
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+    
+    return () => observer.disconnect();
+  }, []);
   
   // Mobile menu state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -206,27 +226,37 @@ export const SmartContractDashboard: React.FC = () => {
       // Fetch staking info if available
       try {
         const stakingAddress = await contractRegistryService.getContractAddress('EnhancedLDAOStaking');
-        const stakingContract = new ethers.Contract(
-          stakingAddress,
-          [
-            'function getUserStakes(address) view returns (tuple(uint256 amount, uint256 startTime, uint256 lockPeriod, uint256 rewardRate, uint256 lastRewardClaim, bool isActive)[])',
-            'function getTotalStaked(address) view returns (uint256)',
-            'function getPendingRewards(address) view returns (uint256)'
-          ],
-          ethersProvider
-        );
-        const totalStaked = await stakingContract.getTotalStaked(address);
-        const pendingRewards = await stakingContract.getPendingRewards(address);
-        
-        data.Staking = {
-          totalStaked: ethers.formatEther(totalStaked),
-          totalStakedFormatted: `${parseFloat(ethers.formatEther(totalStaked)).toLocaleString()} LDAO`,
-          pendingRewards: ethers.formatEther(pendingRewards),
-          pendingRewardsFormatted: `${parseFloat(ethers.formatEther(pendingRewards)).toFixed(4)} LDAO`,
-          apy: '12.5%' // Mock APY
-        };
+        if (stakingAddress && stakingAddress !== ethers.ZeroAddress) {
+          const stakingContract = new ethers.Contract(
+            stakingAddress,
+            [
+              'function getUserStakes(address) view returns (tuple(uint256 amount, uint256 startTime, uint256 lockPeriod, uint256 rewardRate, uint256 lastRewardClaim, bool isActive)[])',
+              'function getTotalStaked(address) view returns (uint256)',
+              'function getPendingRewards(address) view returns (uint256)'
+            ],
+            ethersProvider
+          );
+          const totalStaked = await stakingContract.getTotalStaked(address);
+          const pendingRewards = await stakingContract.getPendingRewards(address);
+          
+          data.Staking = {
+            totalStaked: ethers.formatEther(totalStaked),
+            totalStakedFormatted: `${parseFloat(ethers.formatEther(totalStaked)).toLocaleString()} LDAO`,
+            pendingRewards: ethers.formatEther(pendingRewards),
+            pendingRewardsFormatted: `${parseFloat(ethers.formatEther(pendingRewards)).toFixed(4)} LDAO`,
+            apy: '12.5%' // Mock APY
+          };
+        }
       } catch (err) {
         console.error('Failed to fetch staking data:', err);
+        // Set default staking data
+        data.Staking = {
+          totalStaked: '0',
+          totalStakedFormatted: '0 LDAO',
+          pendingRewards: '0',
+          pendingRewardsFormatted: '0 LDAO',
+          apy: '0%'
+        };
       }
 
       setRealTimeData(data);
@@ -299,8 +329,7 @@ const executeTransaction = async (contractName: string, functionName: string, pa
           [
             'function stake(uint256 amount, uint256 tierId)',
             'function unstake(uint256 stakeIndex, uint256 amount)',
-            'function claimRewards(uint256 stakeIndex)',
-            'function claimAllRewards()'
+            'function claimRewards(uint256 stakeIndex)'
           ],
           ethersSigner
         );
@@ -314,8 +343,21 @@ const executeTransaction = async (contractName: string, functionName: string, pa
         } else if (functionName === 'claimRewards') {
           const [stakeIndex] = params;
           tx = await stakingContract.claimRewards(stakeIndex);
-        } else if (functionName === 'claimAllRewards') {
-          tx = await stakingContract.claimAllRewards();
+        }
+      }
+      // Handle RewardPool operations
+      else if (contractName === 'RewardPool') {
+        const rewardPoolAddress = await contractRegistryService.getContractAddress('RewardPool');
+        const rewardPoolContract = new ethers.Contract(
+          rewardPoolAddress,
+          [
+            'function claimStakingRewards(address) returns (uint256)'
+          ],
+          ethersSigner
+        );
+        
+        if (functionName === 'claimAllRewards') {
+          tx = await rewardPoolContract.claimStakingRewards(address);
         }
       }
       // Handle NFTMarketplace operations
@@ -420,13 +462,13 @@ const executeTransaction = async (contractName: string, functionName: string, pa
 
       <>
 
-        <div className={`min-h-screen ${actualTheme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'} p-4 sm:p-6`}>
+        <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'} p-4 sm:p-6`}>
 
           <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
 
             {/* Header - Mobile Responsive */}
 
-            <div className={`${actualTheme === 'dark' ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-4 sm:p-6`}>
+            <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-4 sm:p-6`}>
 
               {/* Mobile Header */}
 
@@ -438,7 +480,7 @@ const executeTransaction = async (contractName: string, functionName: string, pa
 
                     onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
 
-                    className={`p-2 rounded-lg ${actualTheme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'}`}
+                    className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}
 
                   >
 
@@ -472,7 +514,7 @@ const executeTransaction = async (contractName: string, functionName: string, pa
 
                   <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Smart Contract Dashboard</h1>
 
-                  <p className={`mt-1 ${actualTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <p className={`mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
 
                     Real-time monitoring and interaction with LinkDAO contracts
 
@@ -500,7 +542,7 @@ const executeTransaction = async (contractName: string, functionName: string, pa
 
                 <div className="flex items-center gap-2 sm:gap-4">
 
-                  <div className={`text-xs sm:text-sm ${actualTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <div className={`text-xs sm:text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
 
                     <span className="hidden sm:inline">Network: </span>
 
@@ -539,7 +581,7 @@ const executeTransaction = async (contractName: string, functionName: string, pa
           )}
 
           {/* Contract Status */}
-          <div className={`${actualTheme === 'dark' ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-4 sm:p-6`}>
+          <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-4 sm:p-6`}>
             <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4">Contract Status</h2>
             
             {/* Mobile Contract Selector */}
@@ -547,7 +589,7 @@ const executeTransaction = async (contractName: string, functionName: string, pa
               <select
                 value={selectedContractMobile || ''}
                 onChange={(e) => setSelectedContractMobile(e.target.value)}
-                className={`w-full p-3 rounded-lg border ${actualTheme === 'dark' ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+                className={`w-full p-3 rounded-lg border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
               >
                 <option value="">Select a contract</option>
                 {contracts.map((contract) => (
@@ -566,7 +608,7 @@ const executeTransaction = async (contractName: string, functionName: string, pa
                   className={`border rounded-lg p-4 cursor-pointer transition-all ${
                     selectedContract === contract.name
                       ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                      : actualTheme === 'dark' 
+                      : isDarkMode 
                         ? 'border-gray-700 hover:border-gray-600' 
                         : 'border-gray-200 hover:border-gray-300'
                   }`}
@@ -583,10 +625,10 @@ const executeTransaction = async (contractName: string, functionName: string, pa
                       <AlertCircle className="w-5 h-5 text-red-500" />
                     )}
                   </div>
-                  <p className={`text-xs mb-2 font-mono break-all ${actualTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <p className={`text-xs mb-2 font-mono break-all ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                     {contract.address}
                   </p>
-                  <p className={`text-xs ${actualTheme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
+                  <p className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
                     Last updated: {new Date(contract.lastUpdated).toLocaleTimeString()}
                   </p>
                 </div>
@@ -596,32 +638,32 @@ const executeTransaction = async (contractName: string, functionName: string, pa
 
           {/* Real-time Token Balances */}
           {Object.keys(realTimeData).length > 0 && (
-            <div className={`${actualTheme === 'dark' ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-4 sm:p-6`}>
+            <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-4 sm:p-6`}>
               <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4">Real-time Balances & Data</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {/* LDAO Token Balance */}
                 {realTimeData.LDAOToken && (
-                  <div className={`border ${actualTheme === 'dark' ? 'border-gray-700' : 'border-gray-200'} rounded-lg p-4`}>
+                  <div className={`border ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} rounded-lg p-4`}>
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className={`font-medium flex items-center gap-2 ${actualTheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                      <h3 className={`font-medium flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                         <Coins className="w-5 h-5 text-yellow-500" />
                         {realTimeData.LDAOToken.symbol}
                       </h3>
-                      <span className={`text-xs ${actualTheme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
+                      <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
                         {new Date(realTimeData.LDAOToken.lastUpdated).toLocaleTimeString()}
                       </span>
                     </div>
                     <div className="space-y-2">
                       <div>
-                        <p className={`text-sm ${actualTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Your Balance</p>
-                        <p className={`text-2xl font-bold ${actualTheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                        <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Your Balance</p>
+                        <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                           {realTimeData.LDAOToken.userBalanceFormatted}
                         </p>
-                        <p className={`text-sm ${actualTheme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>{realTimeData.LDAOToken.usdValue}</p>
+                        <p className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>{realTimeData.LDAOToken.usdValue}</p>
                       </div>
                       <div>
-                        <p className={`text-sm ${actualTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Total Supply</p>
-                        <p className={`text-sm font-medium ${actualTheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                        <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total Supply</p>
+                        <p className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                           {realTimeData.LDAOToken.totalSupplyFormatted}
                         </p>
                       </div>
@@ -631,30 +673,30 @@ const executeTransaction = async (contractName: string, functionName: string, pa
                 
                 {/* Reputation */}
                 {realTimeData.ReputationSystem && (
-                  <div className={`border ${actualTheme === 'dark' ? 'border-gray-700' : 'border-gray-200'} rounded-lg p-4`}>
+                  <div className={`border ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} rounded-lg p-4`}>
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className={`font-medium flex items-center gap-2 ${actualTheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                      <h3 className={`font-medium flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                         <Award className="w-5 h-5 text-purple-500" />
                         Reputation
                       </h3>
                     </div>
                     <div className="space-y-2">
                       <div>
-                        <p className={`text-sm ${actualTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Your Reputation</p>
-                        <p className={`text-2xl font-bold ${actualTheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                        <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Your Reputation</p>
+                        <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                           {realTimeData.ReputationSystem.userReputation}
                         </p>
-                        <p className={`text-sm ${actualTheme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>Level {realTimeData.ReputationSystem.userLevel}</p>
+                        <p className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>Level {realTimeData.ReputationSystem.userLevel}</p>
                       </div>
                       <div>
-                        <p className={`text-sm ${actualTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Progress to Next Level</p>
-                        <div className={`w-full ${actualTheme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'} rounded-full h-2 mt-1`}>
+                        <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Progress to Next Level</p>
+                        <div className={`w-full ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'} rounded-full h-2 mt-1`}>
                           <div 
                             className="bg-purple-600 h-2 rounded-full" 
                             style={{ width: `${realTimeData.ReputationSystem.progressToNext}%` }}
                           ></div>
                         </div>
-                        <p className={`text-xs ${actualTheme === 'dark' ? 'text-gray-500' : 'text-gray-500'} mt-1`}>
+                        <p className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'} mt-1`}>
                           {realTimeData.ReputationSystem.progressToNext}% complete
                         </p>
                       </div>
@@ -664,25 +706,25 @@ const executeTransaction = async (contractName: string, functionName: string, pa
                 
                 {/* Staking */}
                 {realTimeData.Staking && (
-                  <div className={`border ${actualTheme === 'dark' ? 'border-gray-700' : 'border-gray-200'} rounded-lg p-4`}>
+                  <div className={`border ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} rounded-lg p-4`}>
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className={`font-medium flex items-center gap-2 ${actualTheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                      <h3 className={`font-medium flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                         <TrendingUp className="w-5 h-5 text-green-500" />
                         Staking
                       </h3>
-                      <span className={`text-xs ${actualTheme === 'dark' ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-800'} px-2 py-1 rounded`}>
+                      <span className={`text-xs ${isDarkMode ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-800'} px-2 py-1 rounded`}>
                         {realTimeData.Staking.apy} APY
                       </span>
                     </div>
                     <div className="space-y-2">
                       <div>
-                        <p className={`text-sm ${actualTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Total Staked</p>
-                        <p className={`text-2xl font-bold ${actualTheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                        <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total Staked</p>
+                        <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                           {realTimeData.Staking.totalStakedFormatted}
                         </p>
                       </div>
                       <div>
-                        <p className={`text-sm ${actualTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Pending Rewards</p>
+                        <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Pending Rewards</p>
                         <p className="text-lg font-medium text-green-600">
                           {realTimeData.Staking.pendingRewardsFormatted}
                         </p>
@@ -696,13 +738,13 @@ const executeTransaction = async (contractName: string, functionName: string, pa
 
           {/* Selected Contract Details */}
           {(selectedContract || selectedContractMobile) && (
-            <div className={`${actualTheme === 'dark' ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-4 sm:p-6`}>
-              <h2 className={`text-lg sm:text-xl font-semibold ${actualTheme === 'dark' ? 'text-white' : 'text-gray-900'} mb-4`}>
+            <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-4 sm:p-6`}>
+              <h2 className={`text-lg sm:text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>
                 {(selectedContract || selectedContractMobile)} Details
               </h2>
               <div className="space-y-4">
-                <div className={`p-4 ${actualTheme === 'dark' ? 'bg-gray-700' : 'bg-gray-50'} rounded-lg`}>
-                  <h3 className={`font-medium ${actualTheme === 'dark' ? 'text-white' : 'text-gray-900'} mb-2`}>Contract Address</h3>
+                <div className={`p-4 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'} rounded-lg`}>
+                  <h3 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>Contract Address</h3>
                   <p className="text-sm font-mono break-all text-gray-600 dark:text-gray-400">
                     {contracts.find(c => c.name === (selectedContract || selectedContractMobile))?.address}
                   </p>
@@ -712,7 +754,7 @@ const executeTransaction = async (contractName: string, functionName: string, pa
                 {/* Token Transfer Actions */}
                 {(selectedContract === 'LDAOToken' || selectedContractMobile === 'LDAOToken') && (
                   <div className="space-y-3">
-                    <h4 className={`font-medium ${actualTheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Token Actions</h4>
+                    <h4 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Token Actions</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <button
                         onClick={() => {
@@ -751,7 +793,7 @@ const executeTransaction = async (contractName: string, functionName: string, pa
                 {/* Reputation Actions */}
                 {(selectedContract === 'ReputationSystem' || selectedContractMobile === 'ReputationSystem') && (
                   <div className="space-y-3">
-                    <h4 className={`font-medium ${actualTheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Reputation Actions</h4>
+                    <h4 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Reputation Actions</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <button
                         onClick={() => executeTransaction('ReputationSystem', 'updateReputation', [address, 'POST_CREATED', ethers.parseEther('10')])}
@@ -779,7 +821,7 @@ const executeTransaction = async (contractName: string, functionName: string, pa
                 {/* Staking Actions */}
                 {(selectedContract === 'EnhancedLDAOStaking' || selectedContractMobile === 'EnhancedLDAOStaking') && (
                   <div className="space-y-3">
-                    <h4 className={`font-medium ${actualTheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Staking Actions</h4>
+                    <h4 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Staking Actions</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <button
                         onClick={() => {
@@ -815,7 +857,7 @@ const executeTransaction = async (contractName: string, functionName: string, pa
                 {/* NFT Marketplace Actions */}
                 {(selectedContract === 'NFTMarketplace' || selectedContractMobile === 'NFTMarketplace') && (
                   <div className="space-y-3">
-                    <h4 className={`font-medium ${actualTheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Marketplace Actions</h4>
+                    <h4 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Marketplace Actions</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <button
                         onClick={() => {
@@ -891,14 +933,14 @@ const executeTransaction = async (contractName: string, functionName: string, pa
               <div className="space-y-3">
                 {transactionState.hash && (
                   <div>
-                    <p className={`text-sm ${actualTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mb-1`}>Transaction Hash</p>
+                    <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-1`}>Transaction Hash</p>
                     <div className="flex items-center gap-2">
-                      <code className={`text-sm font-mono ${actualTheme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'} px-2 py-1 rounded break-all`}>
+                      <code className={`text-sm font-mono ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'} px-2 py-1 rounded break-all`}>
                         {transactionState.hash}
                       </code>
                       <button
                         onClick={() => navigator.clipboard.writeText(transactionState.hash!)}
-                        className={`${actualTheme === 'dark' ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}`}
+                        className={`${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}`}
                         title="Copy hash"
                       >
                         <Link className="w-4 h-4" />
@@ -917,37 +959,37 @@ const executeTransaction = async (contractName: string, functionName: string, pa
                 
                 {transactionState.blockNumber && (
                   <div>
-                    <p className={`text-sm ${actualTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mb-1`}>Block Number</p>
+                    <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-1`}>Block Number</p>
                     <p className="text-sm font-medium">{transactionState.blockNumber}</p>
                   </div>
                 )}
                 
                 {transactionState.gasUsed && (
                   <div>
-                    <p className={`text-sm ${actualTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mb-1`}>Gas Used</p>
+                    <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-1`}>Gas Used</p>
                     <p className="text-sm font-medium">{transactionState.gasUsed}</p>
                   </div>
                 )}
                 
                 {transactionState.error && (
-                  <div className={`border ${actualTheme === 'dark' ? 'bg-red-900/20 border-red-800' : 'bg-red-100 border-red-200'} rounded p-3`}>
-                    <p className={`text-sm font-medium ${actualTheme === 'dark' ? 'text-red-200' : 'text-red-800'} mb-1`}>Error Details</p>
-                    <p className={`text-sm ${actualTheme === 'dark' ? 'text-red-300' : 'text-red-700'}`}>{transactionState.error}</p>
+                  <div className={`border ${isDarkMode ? 'bg-red-900/20 border-red-800' : 'bg-red-100 border-red-200'} rounded p-3`}>
+                    <p className={`text-sm font-medium ${isDarkMode ? 'text-red-200' : 'text-red-800'} mb-1`}>Error Details</p>
+                    <p className={`text-sm ${isDarkMode ? 'text-red-300' : 'text-red-700'}`}>{transactionState.error}</p>
                     
                     {/* Common error suggestions */}
                     <div className="mt-3 space-y-1">
                       {transactionState.error.includes('insufficient funds') && (
-                        <p className={`text-xs ${actualTheme === 'dark' ? 'text-red-400' : 'text-red-600'}`}>
+                        <p className={`text-xs ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>
                           💡 Make sure you have enough ETH in your wallet for gas fees
                         </p>
                       )}
                       {transactionState.error.includes('user rejected') && (
-                        <p className={`text-xs ${actualTheme === 'dark' ? 'text-red-400' : 'text-red-600'}`}>
+                        <p className={`text-xs ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>
                           💡 Please approve the transaction in your wallet
                         </p>
                       )}
                       {transactionState.error.includes('gas required exceeds allowance') && (
-                        <p className={`text-xs ${actualTheme === 'dark' ? 'text-red-400' : 'text-red-600'}`}>
+                        <p className={`text-xs ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>
                           💡 Try increasing the gas limit in your wallet settings
                         </p>
                       )}
@@ -956,8 +998,8 @@ const executeTransaction = async (contractName: string, functionName: string, pa
                 )}
                 
                 {transactionState.status === 'success' && (
-                  <div className={`border ${actualTheme === 'dark' ? 'bg-green-900/20 border-green-800' : 'bg-green-100 border-green-200'} rounded p-3`}>
-                    <p className={`text-sm ${actualTheme === 'dark' ? 'text-green-200' : 'text-green-800'}`}>
+                  <div className={`border ${isDarkMode ? 'bg-green-900/20 border-green-800' : 'bg-green-100 border-green-200'} rounded p-3`}>
+                    <p className={`text-sm ${isDarkMode ? 'text-green-200' : 'text-green-800'}`}>
                       ✅ Your transaction has been successfully processed on the blockchain
                     </p>
                   </div>

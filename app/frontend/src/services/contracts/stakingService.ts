@@ -72,7 +72,8 @@ export class StakingService {
 
     if (!this.stakingContract) {
       const address = await contractRegistryService.getContractAddress('EnhancedLDAOStaking');
-      const { provider } = await import('@/lib/wagmi');
+      // Create a read-only provider for view functions
+      const provider = new ethers.JsonRpcProvider('https://sepolia.drpc.org');
       this.stakingContract = new Contract(address, ENHANCED_STAKING_ABI, provider);
     }
 
@@ -86,7 +87,8 @@ export class StakingService {
 
     if (!this.rewardPoolContract) {
       const address = await contractRegistryService.getContractAddress('RewardPool');
-      const { provider } = await import('@/lib/wagmi');
+      // Create a read-only provider for view functions
+      const provider = new ethers.JsonRpcProvider('https://sepolia.drpc.org');
       this.rewardPoolContract = new Contract(address, REWARD_POOL_ABI, provider);
     }
 
