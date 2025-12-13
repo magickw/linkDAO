@@ -25,6 +25,7 @@ import { performanceMonitor, memoryMonitor } from '@/utils/performanceMonitor';
 import { initializeExtensionErrorSuppression, debugExtensionErrors } from '@/utils/extensionErrorHandler';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { WalletLoginBridgeWithToast } from '@/components/Auth/WalletLoginBridgeWithToast';
+import { NavigationFixer } from '@/components/NavigationFixer';
 import Head from 'next/head';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/globals.css';
@@ -360,11 +361,12 @@ export default function App({ Component, pageProps, router }: AppProps) {
                           <ContactProvider>
                             <EnhancedThemeProvider defaultTheme="system">
                               <AppContent>
-                                <Component {...pageProps} />
+                                <Component {...pageProps} key={router.pathname} />
                               </AppContent>
                               {/* Automatic wallet login bridge - DISABLED to prevent navigation blocking */}
                               {/* Authentication will trigger when user performs actions requiring auth */}
                               <WalletLoginBridgeWithToast autoLogin={false} />
+                              <NavigationFixer />
                             </EnhancedThemeProvider>
                           </ContactProvider>
                         </NavigationProvider>

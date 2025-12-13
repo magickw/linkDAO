@@ -47,7 +47,7 @@ function getAvatarUrl(profileCid: string | undefined): string | undefined {
 export default function Profile() {
   const router = useRouter();
   const { address: currentUserAddress, isConnected } = useWeb3();
-  const { isAuthenticated, login, recoverSession } = useAuth();
+  const { isAuthenticated, login, recoverSession, ensureAuthenticated } = useAuth();
   const { addToast } = useToast();
 
   // Determine which user profile to display based on query parameter
@@ -562,8 +562,12 @@ export default function Profile() {
       return;
     }
 
-    // Authentication is optional for profile updates - the backend will handle it
-    // If the user is not authenticated, they will need to sign a message through the backend
+    // Check authentication and trigger login if needed
+    const authResult = await ensureAuthenticated();
+    if (!authResult.success) {
+      addToast(authResult.error || 'Authentication failed', 'error');
+      return;
+    }
 
     try {
       setIsUpdating(true);
@@ -621,6 +625,13 @@ export default function Profile() {
   const handleSaveProfile = async () => {
     if (!backendProfile) {
       addToast('No profile to update', 'error');
+      return;
+    }
+
+    // Check authentication
+    const authResult = await ensureAuthenticated();
+    if (!authResult.success) {
+      addToast(authResult.error || 'Authentication failed', 'error');
       return;
     }
 
@@ -716,23 +727,11 @@ export default function Profile() {
       return;
     }
 
-    if (!isAuthenticated) {
-      addToast('Please authenticate with your wallet first', 'error');
-
-      // Get the active connector from wagmi
-      const { connector } = getAccount(config);
-
-      if (!connector) {
-        addToast('No wallet connector found. Please reconnect your wallet.', 'error');
-        return;
-      }
-
-      // Try to authenticate
-      const result = await login(currentUserAddress, connector, 'connected');
-      if (!result.success) {
-        addToast(result.error || 'Authentication failed', 'error');
-        return;
-      }
+    // Check authentication and trigger login if needed
+    const authResult = await ensureAuthenticated();
+    if (!authResult.success) {
+      addToast(authResult.error || 'Authentication failed', 'error');
+      return;
     }
 
     // Validate required fields for billing address

@@ -347,52 +347,8 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
               </div>
             </div>
 
-            {/* Activity Card */}
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
-              <div className="p-4">
-                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-                  Activity
-                </div>
-                {activityIndicators.length > 0 ? (
-                  <div className="space-y-2">
-                    {activityIndicators.slice(0, 4).map((indicator) => (
-                      <button
-                        key={indicator.id}
-                        onClick={() => handleActivityIndicatorClick(indicator)}
-                        className="w-full flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer"
-                      >
-                        <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${indicator.type === 'notification' ? 'bg-blue-500' :
-                              indicator.type === 'transaction' ? 'bg-green-500' :
-                                indicator.type === 'community' ? 'bg-purple-500' :
-                                  'bg-orange-500'
-                            }`}></div>
-                          <span className="text-sm text-gray-900 dark:text-white font-medium capitalize">
-                            {indicator.type === 'notification' ? 'Notifications' :
-                              indicator.type === 'transaction' ? 'Transactions' :
-                                indicator.type === 'community' ? 'Community' :
-                                  indicator.type === 'governance' ? 'Governance' :
-                                    indicator.type}
-                          </span>
-                        </div>
-                        <span className="text-sm font-bold text-white bg-primary-600 dark:bg-primary-500 px-2 py-1 rounded-full">
-                          {indicator.count}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-6">
-                    <div className="w-12 h-12 mx-auto mb-2 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
-                      <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                      </svg>
-                    </div>
-                    <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">No recent activity</p>
-                  </div>
-                )}
-              </div>
-            </div>
+            {/* Activity Card - REMOVED per user request to reduce load */}
+
 
             {/* Navigation Card */}
             <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
@@ -632,8 +588,8 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                   key={community.id}
                   onClick={() => handleCommunitySelectWithContext(community.id)}
                   className={`w-full p-2 rounded-lg transition-colors relative ${navigationState.activeCommunity === community.id
-                      ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
-                      : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700'
+                    ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
+                    : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700'
                     }`}
                   title={community.displayName}
                 >

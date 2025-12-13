@@ -1,13 +1,14 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useWeb3 } from '@/context/Web3Context';
+import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { ldaoTokenService } from '@/services/web3/ldaoTokenService';
 import { tokenReactionService } from '@/services/tokenReactionService';
-import { 
-  checkAuthentication, 
-  checkWalletConnection, 
-  handleReactionWithAuth, 
-  getReactionsWithFallback 
+import {
+  checkAuthentication,
+  checkWalletConnection,
+  handleReactionWithAuth,
+  getReactionsWithFallback
 } from '@/utils/reactionFixes';
 
 interface Reaction {
@@ -59,12 +60,13 @@ export default function EnhancedReactionSystem({
   className = ''
 }: EnhancedReactionSystemProps) {
   const { address, isConnected } = useWeb3();
+  const { ensureAuthenticated } = useAuth();
   const { addToast } = useToast();
 
   // Initialize reactions based on post type
   const getInitialReactions = useCallback(() => {
     const baseReactions = postType === 'community' ? COMMUNITY_REACTIONS : FEED_REACTIONS;
-    
+
     return baseReactions.map(base => {
       const existing = initialReactions.find(r => r.type === base.type);
       return {
@@ -119,7 +121,7 @@ export default function EnhancedReactionSystem({
       try {
         // Use the enhanced reaction fetcher with fallback
         const summaries = await getReactionsWithFallback(postId);
-        
+
         if (summaries && summaries.length > 0) {
           // Merge backend data with current local state to preserve user interactions
           mergeReactions(summaries);
@@ -145,16 +147,17 @@ export default function EnhancedReactionSystem({
       return;
     }
 
-    // Check authentication
-    if (!checkAuthentication()) {
-      addToast('Please authenticate to react. Try refreshing the page.', 'error');
+    // Check authentication and trigger login if needed
+    const authResult = await ensureAuthenticated();
+    if (!authResult.success) {
+      addToast(authResult.error || 'Authentication failed', 'error');
       return;
     }
 
     try {
       // Use the enhanced reaction handler
-      // The handleReactionWithAuth function will also check wallet connection,
-      // but we already checked it above so this should pass
+      // The handleReactionWithAuth function calls checkAuthentication internally,
+      // but since ensureAuthenticated succeeded, it should pass.
       await handleReactionWithAuth(postId, reactionType, 0);
 
       // Update local state
@@ -190,16 +193,17 @@ export default function EnhancedReactionSystem({
       return;
     }
 
-    // Check authentication
-    if (!checkAuthentication()) {
-      addToast('Please authenticate to react. Try refreshing the page.', 'error');
+    // Check authentication and trigger login if needed
+    const authResult = await ensureAuthenticated();
+    if (!authResult.success) {
+      addToast(authResult.error || 'Authentication failed', 'error');
       return;
     }
 
     try {
       // Use real LDAO staking functionality
       const stakeResult = await ldaoTokenService.stakeTokens(amount.toString(), 1); // Use tier 1 (30 days)
-      
+
       if (!stakeResult.success) {
         addToast(stakeResult.error || 'Failed to stake LDAO tokens', 'error');
         return;
@@ -271,11 +275,10 @@ export default function EnhancedReactionSystem({
           <button
             key={reaction.type}
             onClick={() => handleReactionClick(reaction.type)}
-            className={`flex items-center space-x-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
-              (postType === 'community' || postType === 'enhanced' ? reaction.userStaked > 0 : reaction.userStaked > 0)
-                ? 'bg-gradient-to-r from-primary-500 to-secondary-500 text-white shadow-md animate-pulse'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-            }`}
+            className={`flex items-center space-x-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 transform hover:scale-105 ${(postType === 'community' || postType === 'enhanced' ? reaction.userStaked > 0 : reaction.userStaked > 0)
+              ? 'bg-gradient-to-r from-primary-500 to-secondary-500 text-white shadow-md animate-pulse'
+              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
           >
             <span className="text-lg">{reaction.emoji}</span>
             <span>
