@@ -183,7 +183,7 @@ export const PAYMENT_CONFIG = {
     [polygon.id]: '0x0000000000000000000000000000000000000000', // TODO: Deploy to Polygon
     [arbitrum.id]: '0x0000000000000000000000000000000000000000', // TODO: Deploy to Arbitrum
     [base.id]: '0x0000000000000000000000000000000000000000', // TODO: Deploy to Base
-    [sepolia.id]: '0xa5c2126de8CC1a998833E97CdE6d185aDb4B3AD1', // Deployed on Sepolia testnet
+    [sepolia.id]: '0xa5c2126de8CC1a998833E97CdE6d185aDb4B3AD1', // EnhancedEscrow deployed on Sepolia testnet
     [baseSepolia.id]: '0x0000000000000000000000000000000000000000', // TODO: Deploy to Base Sepolia
   },
 

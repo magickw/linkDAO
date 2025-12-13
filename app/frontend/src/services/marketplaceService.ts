@@ -470,13 +470,43 @@ export class UnifiedMarketplaceService {
   }
 
   private getMockProducts(filters?: ProductFilters): ProductPage {
-    // Return empty products for now - can be populated with mock data if needed
+    // Return mock products when API is unavailable
+    let filteredProducts = MOCK_PRODUCTS;
+    
+    // Apply filters if provided
+    if (filters) {
+      if (filters.category) {
+        filteredProducts = filteredProducts.filter(p => p.categoryId === filters.category);
+      }
+      if (filters.search) {
+        const searchLower = filters.search.toLowerCase();
+        filteredProducts = filteredProducts.filter(p => 
+          p.title.toLowerCase().includes(searchLower) ||
+          p.description.toLowerCase().includes(searchLower) ||
+          p.tags?.some(tag => tag.toLowerCase().includes(searchLower))
+        );
+      }
+      if (filters.minPrice) {
+        filteredProducts = filteredProducts.filter(p => p.priceAmount >= filters.minPrice!);
+      }
+      if (filters.maxPrice) {
+        filteredProducts = filteredProducts.filter(p => p.priceAmount <= filters.maxPrice!);
+      }
+    }
+    
+    // Apply pagination
+    const page = filters?.page || 1;
+    const limit = filters?.limit || 20;
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
+    
     return {
-      products: [],
-      total: 0,
-      page: filters?.page || 1,
-      limit: filters?.limit || 20,
-      hasMore: false
+      products: paginatedProducts,
+      total: filteredProducts.length,
+      page,
+      limit,
+      hasMore: endIndex < filteredProducts.length
     };
   }
 
@@ -1138,15 +1168,17 @@ export class UnifiedMarketplaceService {
         
         // Handle 503 Service Unavailable specifically
         if (response.status === 503) {
-          console.warn('[MarketplaceService] Service temporarily unavailable (503). Please try again later.');
+          console.warn('[MarketplaceService] Service temporarily unavailable (503). Using mock data.');
           // Show user-friendly message
           if (typeof window !== 'undefined' && window.dispatchEvent) {
             window.dispatchEvent(new CustomEvent('marketplace-service-unavailable', {
               detail: {
-                message: 'Marketplace service is temporarily unavailable. Please try again in a few minutes.'
+                message: 'Marketplace service is temporarily unavailable. Showing sample products.'
               }
             }));
           }
+          // Return mock data instead of empty array
+          return this.getMockProducts(filters);
         }
         
         // Try to get error details from response
@@ -1156,7 +1188,10 @@ export class UnifiedMarketplaceService {
         } catch (e) {
           console.warn('[MarketplaceService] Could not parse error response:', e);
         }
-        return [];
+        
+        // For other errors, also return mock data as fallback
+        console.warn('[MarketplaceService] API error, using mock data as fallback');
+        return this.getMockProducts(filters);
       }
 
       const result = await response.json().catch((parseError) => {
@@ -1465,8 +1500,51 @@ export class UnifiedMarketplaceService {
   }
 
   private getMockCategories(): CategoryInfo[] {
-    // Return empty categories for now - can be populated with mock data if needed
-    return [];
+    // Return mock categories when API is unavailable
+    return [
+      {
+        id: 'cat_001',
+        name: 'Digital Art',
+        slug: 'digital-art',
+        description: 'Digital artworks and NFTs',
+        imageUrl: 'https://placeholder.com/categories/digital-art.jpg'
+      },
+      {
+        id: 'cat_002',
+        name: 'Education',
+        slug: 'education',
+        description: 'Courses and educational content',
+        imageUrl: 'https://placeholder.com/categories/education.jpg'
+      },
+      {
+        id: 'cat_003',
+        name: 'Software',
+        slug: 'software',
+        description: 'Software tools and applications',
+        imageUrl: 'https://placeholder.com/categories/software.jpg'
+      },
+      {
+        id: 'cat_004',
+        name: 'Gaming',
+        slug: 'gaming',
+        description: 'Gaming items and virtual goods',
+        imageUrl: 'https://placeholder.com/categories/gaming.jpg'
+      },
+      {
+        id: 'cat_005',
+        name: 'Music',
+        slug: 'music',
+        description: 'Music tracks and audio content',
+        imageUrl: 'https://placeholder.com/categories/music.jpg'
+      },
+      {
+        id: 'cat_006',
+        name: 'Videos',
+        slug: 'videos',
+        description: 'Video content and streaming',
+        imageUrl: 'https://placeholder.com/categories/videos.jpg'
+      }
+    ];
   }
 
   // ============================================================================

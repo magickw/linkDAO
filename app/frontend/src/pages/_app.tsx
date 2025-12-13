@@ -17,6 +17,7 @@ import { NavigationProvider } from '@/context/NavigationContext';
 import { SellerQueryProvider } from '@/providers/SellerQueryProvider';
 import { ContactProvider } from '@/contexts/ContactContext';
 import { ENV_CONFIG } from '@/config/environment';
+import { contractRegistryService } from '@/services/contractRegistryService';
 
 import { EnhancedThemeProvider } from '@/components/VisualPolish';
 // Cart provider not needed - using service-based cart
@@ -76,6 +77,29 @@ function AppContent({ children }: { children: React.ReactNode }) {
     // Initialize performance monitoring
     performanceMonitor.mark('app_init_start');
     memoryMonitor.start();
+
+    // Initialize ContractRegistry with provider
+    const initializeContractRegistry = async () => {
+      try {
+        if (typeof window !== 'undefined' && window.ethereum) {
+          await contractRegistryService.initialize(window.ethereum);
+
+          // Defer heavy preloading to avoid blocking initial navigation
+          if ('requestIdleCallback' in window) {
+            (window as any).requestIdleCallback(async () => {
+              await contractRegistryService.preloadCommonContracts();
+            }, { timeout: 5000 });
+          } else {
+            setTimeout(async () => {
+              await contractRegistryService.preloadCommonContracts();
+            }, 1000);
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to initialize ContractRegistry:', error);
+      }
+    };
+    initializeContractRegistry();
 
     // IMMEDIATE: Set up chrome.runtime error suppression before anything else
     const immediateErrorSuppressor = (event: any) => {
