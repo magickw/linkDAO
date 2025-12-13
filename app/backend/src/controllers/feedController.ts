@@ -274,7 +274,13 @@ export class FeedController {
         tokenAmount
       });
 
-      res.json(apiResponse.success(reaction, 'Reaction added successfully'));
+      // Also fetch updated reaction summaries to return to client
+      const reactionSummaries = await feedService.getReactionSummaries(id);
+
+      res.json(apiResponse.success({
+        reaction,
+        summaries: reactionSummaries
+      }, 'Reaction added successfully'));
     } catch (error) {
       safeLogger.error('Error adding reaction:', error);
       res.status(500).json(apiResponse.error('Failed to add reaction'));

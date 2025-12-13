@@ -26,7 +26,6 @@ import { performanceMonitor, memoryMonitor } from '@/utils/performanceMonitor';
 import { initializeExtensionErrorSuppression, debugExtensionErrors } from '@/utils/extensionErrorHandler';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { WalletLoginBridgeWithToast } from '@/components/Auth/WalletLoginBridgeWithToast';
-import { NavigationFixer } from '@/components/NavigationFixer';
 import Head from 'next/head';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/globals.css';
@@ -78,11 +77,22 @@ function AppContent({ children }: { children: React.ReactNode }) {
     performanceMonitor.mark('app_init_start');
     memoryMonitor.start();
 
+
     // Initialize ContractRegistry with provider
     const initializeContractRegistry = async () => {
       try {
         if (typeof window !== 'undefined' && window.ethereum) {
           await contractRegistryService.initialize(window.ethereum);
+
+          // FORCE UNREGISTER SERVICE WORKER FOR DEBUGGING
+          if ('serviceWorker' in navigator) {
+            console.log('Force unregistering Service Worker for navigation debugging...');
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (const registration of registrations) {
+              await registration.unregister();
+              console.log('Unregistered SW:', registration.scope);
+            }
+          }
 
           // Defer heavy preloading to avoid blocking initial navigation
           if ('requestIdleCallback' in window) {

@@ -240,14 +240,12 @@ export default function Web3SocialPostCard({
         await onReaction(post.id, reactionType, amount);
       }
 
-      // Refresh reactions immediately after successful backend call
+      // Wait a moment for the backend to process the reaction, then refresh
       // This ensures the component is updated with accurate data from the server
-      setRefreshTrigger(prev => prev + 1);
-
-      // Small delay to allow refresh to happen
       setTimeout(() => {
+        setRefreshTrigger(prev => prev + 1);
         addToast(`Successfully staked ${amount} $LDAO on ${reactionType} reaction!`, 'success');
-      }, 100);
+      }, 500); // Increased delay to allow backend processing
 
     } catch (error) {
       console.error('Error reacting:', error);

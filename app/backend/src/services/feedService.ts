@@ -2231,6 +2231,51 @@ export class FeedService {
       throw error;
     }
   }
+
+  // Get reaction summaries for a post
+  async getReactionSummaries(postId: string) {
+    try {
+      // Check if postId is a UUID (quick post) or integer (regular post)
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(postId);
+
+      let summaries;
+
+      if (isUUID) {
+        // Handle quick post reactions
+        summaries = await db
+          .select({
+            type: quickPostReactions.type,
+            totalAmount: sql<number>`SUM(CAST(${quickPostReactions.amount} AS INTEGER))`.mapWith(Number),
+            totalCount: sql<number>`COUNT(*)`.mapWith(Number),
+            userAmount: sql<number>`SUM(CASE WHEN ${quickPostReactions.userId} IN (SELECT id FROM ${users} WHERE LOWER(${users.walletAddress}) = LOWER(${sql.placeholder('userAddress')})) THEN CAST(${quickPostReactions.amount} AS INTEGER) ELSE 0 END)`.mapWith(Number),
+            topContributors: sql<any>`ARRAY_AGG(DISTINCT ${users.walletAddress} ORDER BY CAST(${quickPostReactions.amount} AS INTEGER) DESC LIMIT 5)`
+          })
+          .from(quickPostReactions)
+          .leftJoin(users, eq(quickPostReactions.userId, users.id))
+          .where(eq(quickPostReactions.quickPostId, postId))
+          .groupBy(quickPostReactions.type);
+      } else {
+        // Handle regular post reactions
+        summaries = await db
+          .select({
+            type: reactions.type,
+            totalAmount: sql<number>`SUM(CAST(${reactions.amount} AS INTEGER))`.mapWith(Number),
+            totalCount: sql<number>`COUNT(*)`.mapWith(Number),
+            userAmount: sql<number>`SUM(CASE WHEN ${reactions.userId} IN (SELECT id FROM ${users} WHERE LOWER(${users.walletAddress}) = LOWER(${sql.placeholder('userAddress')})) THEN CAST(${reactions.amount} AS INTEGER) ELSE 0 END)`.mapWith(Number),
+            topContributors: sql<any>`ARRAY_AGG(DISTINCT ${users.walletAddress} ORDER BY CAST(${reactions.amount} AS INTEGER) DESC LIMIT 5)`
+          })
+          .from(reactions)
+          .leftJoin(users, eq(reactions.userId, users.id))
+          .where(eq(reactions.postId, parseInt(postId)))
+          .groupBy(reactions.type);
+      }
+
+      return summaries || [];
+    } catch (error) {
+      safeLogger.error('Error getting reaction summaries:', error);
+      return [];
+    }
+  }
 }
 
 // Export singleton instance

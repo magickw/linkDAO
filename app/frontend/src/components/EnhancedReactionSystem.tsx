@@ -158,20 +158,35 @@ export default function EnhancedReactionSystem({
       // Use the enhanced reaction handler
       // The handleReactionWithAuth function calls checkAuthentication internally,
       // but since ensureAuthenticated succeeded, it should pass.
-      await handleReactionWithAuth(postId, reactionType, 0);
+      const reactionResponse = await handleReactionWithAuth(postId, reactionType, 0);
 
-      // Update local state
-      setReactions(prev => prev.map(reaction => {
-        if (reaction.type === reactionType) {
-          const hasUserReacted = reaction.userStaked > 0 || reaction.count > 0;
-          return {
-            ...reaction,
-            count: hasUserReacted ? Math.max(0, reaction.count - 1) : reaction.count + 1,
-            userStaked: hasUserReacted ? 0 : 1 // Use userStaked as a flag for user interaction
-          };
+      // If the backend returned updated summaries, use them directly
+      if (reactionResponse && reactionResponse.summaries && reactionResponse.summaries.length > 0) {
+        mergeReactions(reactionResponse.summaries);
+      } else {
+        // Otherwise, update local state optimistically
+        setReactions(prev => prev.map(reaction => {
+          if (reaction.type === reactionType) {
+            const hasUserReacted = reaction.userStaked > 0 || reaction.count > 0;
+            return {
+              ...reaction,
+              count: hasUserReacted ? Math.max(0, reaction.count - 1) : reaction.count + 1,
+              userStaked: hasUserReacted ? 0 : 1 // Use userStaked as a flag for user interaction
+            };
+          }
+          return reaction;
+        }));
+
+        // And refetch reactions from backend to get accurate counts
+        try {
+          const summaries = await getReactionsWithFallback(postId);
+          if (summaries && summaries.length > 0) {
+            mergeReactions(summaries);
+          }
+        } catch (error) {
+          console.error('Failed to refresh reactions after simple reaction:', error);
         }
-        return reaction;
-      }));
+      }
 
       // Call the parent's onReaction callback to notify of the change
       if (onReaction) {
@@ -210,23 +225,38 @@ export default function EnhancedReactionSystem({
       }
 
       // Use the enhanced reaction handler
-      await handleReactionWithAuth(postId, reactionType, amount);
+      const reactionResponse = await handleReactionWithAuth(postId, reactionType, amount);
 
-      // Update local state
-      setReactions(prev => prev.map(reaction => {
-        if (reaction.type === reactionType) {
-          const reward = amount * 0.1;
-          return {
-            ...reaction,
-            totalStaked: reaction.totalStaked + amount,
-            userStaked: reaction.userStaked + amount,
-            rewardsEarned: reaction.rewardsEarned + reward,
-            // Use same address formatting helper for consistency
-            contributors: [...reaction.contributors, formatShortAddress(address!)]
-          };
+      // If the backend returned updated summaries, use them directly
+      if (reactionResponse && reactionResponse.summaries && reactionResponse.summaries.length > 0) {
+        mergeReactions(reactionResponse.summaries);
+      } else {
+        // Otherwise, update local state optimistically
+        setReactions(prev => prev.map(reaction => {
+          if (reaction.type === reactionType) {
+            const reward = amount * 0.1;
+            return {
+              ...reaction,
+              totalStaked: reaction.totalStaked + amount,
+              userStaked: reaction.userStaked + amount,
+              rewardsEarned: reaction.rewardsEarned + reward,
+              // Use same address formatting helper for consistency
+              contributors: [...reaction.contributors, formatShortAddress(address!)]
+            };
+          }
+          return reaction;
+        }));
+
+        // And refetch reactions from backend to get accurate counts
+        try {
+          const summaries = await getReactionsWithFallback(postId);
+          if (summaries && summaries.length > 0) {
+            mergeReactions(summaries);
+          }
+        } catch (error) {
+          console.error('Failed to refresh reactions after staking:', error);
         }
-        return reaction;
-      }));
+      }
 
       // Call the parent's onReaction callback to notify of the change
       if (onReaction) {

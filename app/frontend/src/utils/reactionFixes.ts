@@ -73,7 +73,8 @@ export const handleReactionWithAuth = async (
       throw new Error(error.error || `Failed to react: ${response.statusText}`);
     }
     
-    return await response.json();
+    const responseData = await response.json();
+    return responseData.data || responseData; // Return the data field if it exists, otherwise the whole response
   } catch (error) {
     console.error('Reaction error:', error);
     throw error;
