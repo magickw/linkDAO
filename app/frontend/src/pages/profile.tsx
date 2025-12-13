@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { getAccount } from '@wagmi/core';
+import { config } from '@/lib/rainbowkit';
 // import { useReadProfileRegistryGetProfileByAddress, useWriteProfileRegistryCreateProfile, useWriteProfileRegistryUpdateProfile } from '@/generated';
 import { useWeb3 } from '@/context/Web3Context';
 import { useProfile } from '@/hooks/useProfile';
@@ -716,8 +718,17 @@ export default function Profile() {
 
     if (!isAuthenticated) {
       addToast('Please authenticate with your wallet first', 'error');
+
+      // Get the active connector from wagmi
+      const { connector } = getAccount(config);
+
+      if (!connector) {
+        addToast('No wallet connector found. Please reconnect your wallet.', 'error');
+        return;
+      }
+
       // Try to authenticate
-      const result = await login(currentUserAddress, null, 'connected');
+      const result = await login(currentUserAddress, connector, 'connected');
       if (!result.success) {
         addToast(result.error || 'Authentication failed', 'error');
         return;

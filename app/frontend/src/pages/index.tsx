@@ -111,10 +111,35 @@ export default function Home() {
     };
   }, []);
 
+  // Progressive loading to prevent main thread blocking on connection
+  const [isContentReady, setIsContentReady] = useState(!isConnected);
+  // Dedicated state for WebSocket connection to ensure it's deferred
+  // strictly initialized to false to prevent immediate connection on mount/update
+  const [isConnectionStabilized, setIsConnectionStabilized] = useState(false);
+
+  useEffect(() => {
+    if (isConnected) {
+      // Small delay to allow main thread to process navigation clicks
+      // before rendering heavy feed components
+      setIsContentReady(false);
+      setIsConnectionStabilized(false);
+
+      const timer = setTimeout(() => {
+        setIsContentReady(true);
+        setIsConnectionStabilized(true);
+      }, 50); // 50ms is enough to yield to the event loop
+
+      return () => clearTimeout(timer);
+    } else {
+      setIsContentReady(true);
+      setIsConnectionStabilized(false);
+    }
+  }, [isConnected]);
+
   // Initialize WebSocket for real-time updates
   const { isConnected: wsConnected, subscribe, on, off } = useWebSocket({
     walletAddress: address || '',
-    autoConnect: isConnected && !!address,
+    autoConnect: isConnected && !!address && isConnectionStabilized,
     autoReconnect: true
   });
 
