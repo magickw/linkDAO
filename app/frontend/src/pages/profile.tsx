@@ -1775,11 +1775,11 @@ export default function Profile() {
                   ) : (
                     <div className="space-y-4">
                       {posts.map((post) => (
-                        <Link key={post.id} href={post.communityId ? `/communities/${post.communityId}` : `/profile?user=${post.author}`}>
+                        <Link key={post.id} href={post.communityId ? `/communities/${post.communityId}/posts/${post.id}` : `/post/${post.id}`}>
                           <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                             <div className="flex justify-between items-start">
-                              <Link href={post.communityId ? `/communities/${post.communityId}` : `/profile?user=${post.author}`} className="flex-grow">
-                                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                              <Link href={post.communityId ? `/communities/${post.communityId}/posts/${post.id}` : `/post/${post.id}`} className="flex-grow">
+                                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 hover:text-blue-600 dark:hover:text-blue-400">
                                   {post.title || 'Untitled Post'}
                                 </h4>
                                 <p className="text-gray-600 dark:text-gray-300 mb-2 line-clamp-2">
@@ -1816,6 +1816,21 @@ export default function Profile() {
                               )}
                             </div>
                             <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mt-2">
+                              {post.communityId && (
+                                <>
+                                  <span>
+                                    in{' '}
+                                    <Link 
+                                      href={`/communities/${post.communityId}`}
+                                      className="text-blue-600 dark:text-blue-400 hover:underline"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      {post.communityName || post.communityId}
+                                    </Link>
+                                  </span>
+                                  <span className="mx-2">•</span>
+                                </>
+                              )}
                               <span>{new Date(post.createdAt).toLocaleDateString()}</span>
                               <span className="mx-2">•</span>
                               <span>{post.comments || 0} comments</span>

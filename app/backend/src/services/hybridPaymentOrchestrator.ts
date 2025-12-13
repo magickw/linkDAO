@@ -5,6 +5,11 @@ import { EnhancedEscrowService } from './enhancedEscrowService';
 import { ExchangeRateService } from './exchangeRateService';
 import { DatabaseService } from './databaseService';
 import { NotificationService } from './notificationService';
+import Stripe from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_mock_key_12345', {
+  apiVersion: '2023-10-16',
+});
 
 export interface HybridCheckoutRequest {
   orderId: string;
@@ -132,20 +137,20 @@ export class HybridPaymentOrchestrator {
       };
 
       // Calculate fees
-      const fees = selectedPath === 'crypto' 
+      const fees = selectedPath === 'crypto'
         ? cryptoValidation.estimatedFees || {
-            processingFee: 0,
-            platformFee: request.amount * 0.005,
-            gasFee: 0.01,
-            totalFees: (request.amount * 0.005) + 0.01,
-            currency: 'USDC'
-          }
+          processingFee: 0,
+          platformFee: request.amount * 0.005,
+          gasFee: 0.01,
+          totalFees: (request.amount * 0.005) + 0.01,
+          currency: 'USDC'
+        }
         : {
-            processingFee: (request.amount * 0.029) + 0.30,
-            platformFee: request.amount * 0.01,
-            totalFees: (request.amount * 0.029) + 0.30 + (request.amount * 0.01),
-            currency: request.currency
-          };
+          processingFee: (request.amount * 0.029) + 0.30,
+          platformFee: request.amount * 0.01,
+          totalFees: (request.amount * 0.029) + 0.30 + (request.amount * 0.01),
+          currency: request.currency
+        };
 
       // Generate fallback options
       const fallbackOptions: PaymentPathDecision[] = [];
@@ -175,7 +180,7 @@ export class HybridPaymentOrchestrator {
       };
     } catch (error) {
       safeLogger.error('Error determining payment path:', error);
-      
+
       // Default to fiat on error
       return {
         selectedPath: 'fiat',
@@ -218,14 +223,14 @@ export class HybridPaymentOrchestrator {
       return result;
     } catch (error) {
       safeLogger.error('Hybrid checkout failed:', error);
-      
+
       // Try fallback path if available
       const pathDecision = await this.determineOptimalPaymentPath(request);
       if (pathDecision.fallbackOptions.length > 0) {
         safeLogger.info('Attempting fallback payment path...');
         return await this.processFiatEscrowPath(request, pathDecision.fallbackOptions[0], null);
       }
-      
+
       throw error;
     }
   }
@@ -320,27 +325,60 @@ export class HybridPaymentOrchestrator {
     paymentIntentId: string;
     transferGroup: string;
     sellerAccountId: string;
+    clientSecret?: string;
   }> {
-    // Mock Stripe Connect implementation
-    // In production, this would:
-    // 1. Create/get seller's connected account
-    // 2. Create payment intent with transfer_group
-    // 3. Set up delayed transfer to seller
-    
-    const transferGroup = `order_${request.orderId}_${Date.now()}`;
-    const paymentIntentId = `pi_${Math.random().toString(36).substr(2, 9)}`;
-    const sellerAccountId = `acct_${Math.random().toString(36).substr(2, 9)}`;
+    try {
+      if (!process.env.STRIPE_SECRET_KEY) {
+        safeLogger.warn('Missing STRIPE_SECRET_KEY, falling back to mock implementation');
+        const transferGroup = `order_${request.orderId}_${Date.now()}`;
+        return {
+          paymentIntentId: `pi_mock_${Math.random().toString(36).substring(2, 9)}`,
+          transferGroup,
+          sellerAccountId: `acct_mock_${Math.random().toString(36).substring(2, 9)}`,
+          clientSecret: 'mock_secret'
+        };
+      }
 
-    safeLogger.info(`Creating Stripe Connect escrow for order ${request.orderId}`);
-    safeLogger.info(`Transfer Group: ${transferGroup}`);
-    safeLogger.info(`Payment Intent: ${paymentIntentId}`);
-    safeLogger.info(`Seller Account: ${sellerAccountId}`);
+      const transferGroup = `order_${request.orderId}`;
 
-    return {
-      paymentIntentId,
-      transferGroup,
-      sellerAccountId
-    };
+      // In a full Connect implementation, we would look up the seller's connected account ID
+      // const seller = await this.userProfileService.getProfileByAddress(request.sellerAddress);
+      // const sellerAccountId = seller?.stripeAccountId;
+      const sellerAccountId = undefined; // Placeholder until schema update
+
+      const paymentIntentParams: Stripe.PaymentIntentCreateParams = {
+        amount: Math.round(pathDecision.fees.totalFees * 100), // Convert to cents
+        currency: pathDecision.fees.currency.toLowerCase(),
+        payment_method_types: ['card'],
+        transfer_group: transferGroup,
+        metadata: {
+          orderId: request.orderId,
+          listingId: request.listingId,
+          buyerAddress: request.buyerAddress,
+          sellerAddress: request.sellerAddress
+        }
+      };
+
+      if (sellerAccountId) {
+        paymentIntentParams.transfer_data = {
+          destination: sellerAccountId,
+        };
+      }
+
+      const paymentIntent = await stripe.paymentIntents.create(paymentIntentParams);
+
+      safeLogger.info(`Created Stripe PaymentIntent ${paymentIntent.id} for order ${request.orderId}`);
+
+      return {
+        paymentIntentId: paymentIntent.id,
+        transferGroup,
+        sellerAccountId: sellerAccountId || 'platform', // Default to platform if no connected account
+        clientSecret: paymentIntent.client_secret || undefined
+      };
+    } catch (error) {
+      safeLogger.error('Error creating Stripe PaymentIntent:', error);
+      throw error;
+    }
   }
 
   /**
@@ -428,9 +466,9 @@ export class HybridPaymentOrchestrator {
       }
 
       // Update order status
-      const newStatus = action === 'release_funds' ? 'completed' : 
-                       action === 'dispute' ? 'disputed' : 'processing';
-      
+      const newStatus = action === 'release_funds' ? 'completed' :
+        action === 'dispute' ? 'disputed' : 'processing';
+
       await this.databaseService.updateOrder(parseInt(orderId), { status: newStatus });
 
     } catch (error) {

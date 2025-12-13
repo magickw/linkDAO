@@ -752,16 +752,49 @@ export class DatabaseService {
   async createOrder(listingId: string, buyerId: string, sellerId: string, amount: string,
     paymentToken: string, escrowId?: string) {
     try {
-      const result = await this.db.insert(schema.orders).values({
-        listingId,
-        buyerId,
-        sellerId,
-        amount,
-        paymentToken,
-        escrowId: escrowId || null
-      }).returning();
+      return await this.db.transaction(async (tx: any) => {
+        // 1. Check inventory lock
+        // Note: In a real high-concurrency environment, we might want to use FOR UPDATE
+        const product = await tx.select().from(schema.products).where(eq(schema.products.id, listingId));
 
-      return result[0];
+        if (product.length === 0) {
+          // Fallback to listings table check if not found in products (backward compatibility)
+          const listing = await tx.select().from(schema.listings).where(eq(schema.listings.id, listingId));
+          if (listing.length === 0) throw new Error('Product not found');
+
+          if (listing[0].quantity < 1) {
+            throw new Error('Insufficient inventory');
+          }
+
+          // Decrement legacy listing
+          await tx.update(schema.listings)
+            .set({ quantity: sql`${schema.listings.quantity} - 1` })
+            .where(eq(schema.listings.id, listingId));
+        } else {
+          if (product[0].inventory < 1) {
+            throw new Error('Insufficient inventory');
+          }
+
+          // Decrement product inventory
+          await tx.update(schema.products)
+            .set({ inventory: sql`${schema.products.inventory} - 1` })
+            .where(eq(schema.products.id, listingId));
+        }
+
+        // 2. Create Order
+        const result = await tx.insert(schema.orders).values({
+          listingId,
+          buyerId,
+          sellerId,
+          amount,
+          paymentToken,
+          escrowId: escrowId || null,
+          status: 'pending',
+          createdAt: new Date()
+        }).returning();
+
+        return result[0];
+      });
     } catch (error) {
       safeLogger.error("Error creating order:", error);
       throw error;
