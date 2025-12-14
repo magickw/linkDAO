@@ -132,8 +132,12 @@ export const useWebSocket = (config: UseWebSocketConfig): WebSocketHookReturn =>
     managerRef.current.on('connection_mode_changed', handleConnectionModeChange);
 
     // Auto-connect if enabled and not already connected
+    // Defer connection to prevent blocking navigation during wallet connection
     if (config.autoConnect !== false && !serviceRef.current.isConnected()) {
-      managerRef.current.connect().catch(console.error);
+      // Use setTimeout to defer connection and prevent blocking navigation
+      setTimeout(() => {
+        managerRef.current.connect().catch(console.error);
+      }, 0);
     }
 
     return () => {

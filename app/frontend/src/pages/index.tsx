@@ -115,42 +115,51 @@ export default function Home() {
 
   // Progressive loading to prevent main thread blocking on connection
   const [isContentReady, setIsContentReady] = useState(!isConnected);
-  // Dedicated state for WebSocket connection to ensure it's deferred
-  // strictly initialized to false to prevent immediate connection on mount/update
+  // Dedicated state for WebSocket connection to ensure it's properly deferred
+  // This prevents WebSocket connection from blocking navigation when wallet is connected
   const [isConnectionStabilized, setIsConnectionStabilized] = useState(false);
+  const [shouldConnectWebSocket, setShouldConnectWebSocket] = useState(false);
 
   useEffect(() => {
     if (isConnected) {
-      // Use requestIdleCallback to defer rendering until navigation is complete
+      // Use setTimeout to defer both content loading and WebSocket connection
+      // This ensures navigation can complete without being blocked by WebSocket setup
       const scheduleContentLoad = () => {
-        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-          requestIdleCallback(() => {
+        // Defer content loading first
+        setTimeout(() => {
+          if (isMounted.current) {
             setIsContentReady(true);
+          }
+        }, 50);
+
+        // Then defer WebSocket connection establishment separately
+        setTimeout(() => {
+          if (isMounted.current) {
             setIsConnectionStabilized(true);
-          }, { timeout: 100 });
-        } else {
-          // Fallback for browsers without requestIdleCallback
-          setTimeout(() => {
-            setIsContentReady(true);
-            setIsConnectionStabilized(true);
-          }, 100);
-        }
+            setShouldConnectWebSocket(true);
+          }
+        }, 200); // Longer delay to ensure navigation is complete
       };
 
-      // Defer the content loading to prevent blocking navigation
+      // Initial delay to let navigation start first
       const timer = setTimeout(scheduleContentLoad, 10);
 
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timer);
+        setShouldConnectWebSocket(false);
+      };
     } else {
       setIsContentReady(true);
       setIsConnectionStabilized(false);
+      setShouldConnectWebSocket(false);
     }
   }, [isConnected]);
 
   // Initialize WebSocket for real-time updates with proper cleanup
+  // Only connect when wallet is connected AND navigation is complete
   const { isConnected: wsConnected, subscribe, on, off } = useWebSocket({
     walletAddress: address || '',
-    autoConnect: isConnected && !!address && isConnectionStabilized,
+    autoConnect: shouldConnectWebSocket && !!address && isMounted.current,
     autoReconnect: true
   });
 
@@ -240,24 +249,36 @@ export default function Home() {
   useEffect(() => {
     const handleRouteChangeStart = (url: string) => {
       console.log('Route change start:', url);
-      // Mark as unmounted to prevent further updates
+      // Immediately mark as unmounted to prevent further updates
       isMounted.current = false;
+      
+      // Disable WebSocket connection during navigation to prevent blocking
+      setShouldConnectWebSocket(false);
       
       // Pause WebSocket subscription when navigating away
       if (wsSubscribed) {
         setWsSubscribed(false);
       }
       
-      // Clear any pending timeouts to prevent blocking
-      // This ensures navigation can complete without interference
+      // Reset connection stabilization to prevent reconnection during navigation
+      setIsConnectionStabilized(false);
     };
 
     const handleRouteChangeComplete = (url: string) => {
       console.log('Route change complete:', url);
-      // Remount the component for the new route
+      // Delay remounting to ensure the new page has started rendering
       setTimeout(() => {
-        isMounted.current = true;
-      }, 0);
+        if (isConnected) {
+          isMounted.current = true;
+          // Re-enable WebSocket connection after navigation is complete
+          setTimeout(() => {
+            if (isMounted.current) {
+              setIsConnectionStabilized(true);
+              setShouldConnectWebSocket(true);
+            }
+          }, 100); // Small delay to ensure page is stable
+        }
+      }, 50);
     };
 
     // Listen for route changes to properly cleanup
@@ -268,7 +289,7 @@ export default function Home() {
       router.events.off('routeChangeStart', handleRouteChangeStart);
       router.events.off('routeChangeComplete', handleRouteChangeComplete);
     };
-  }, [wsSubscribed, router.events]);
+  }, [wsSubscribed, router.events, isConnected]);
 
   // Handle post creation with useCallback and mount check
   const handlePostSubmit = useCallback(async (postData: CreatePostInput) => {
