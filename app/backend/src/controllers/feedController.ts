@@ -712,6 +712,24 @@ export class FeedController {
       res.status(500).json(apiResponse.error('Failed to downvote post'));
     }
   }
+
+  // Get post by ID
+  async getPostById(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const { id: postId } = req.params;
+
+      const post = await feedService.getPostById(postId);
+      if (!post) {
+        res.status(404).json(apiResponse.error('Post not found', 404));
+        return;
+      }
+
+      res.json(apiResponse.success({ post }, 'Post retrieved successfully'));
+    } catch (error) {
+      safeLogger.error('Error getting post by ID:', error);
+      res.status(500).json(apiResponse.error('Failed to retrieve post'));
+    }
+  }
 }
 
 export const feedController = new FeedController();

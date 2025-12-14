@@ -1149,6 +1149,96 @@ export class FeedService {
     }
   }
 
+  // Get post by ID
+  async getPostById(postId: string) {
+    try {
+      // Check if postId is an integer (regular post) or UUID (quick post)
+      const isIntegerId = /^\d+$/.test(postId);
+      
+      if (isIntegerId) {
+        // Regular post
+        const postIdInt = parseInt(postId);
+        const post = await db
+          .select({
+            id: posts.id,
+            authorId: posts.authorId,
+            content: posts.content,
+            createdAt: posts.createdAt,
+            updatedAt: posts.updatedAt,
+            dao: posts.dao,
+            mediaUrls: posts.mediaUrls,
+            tags: posts.tags,
+            stakedValue: posts.stakedValue
+          })
+          .from(posts)
+          .where(eq(posts.id, postIdInt))
+          .limit(1);
+          
+        if (post.length === 0) {
+          return null;
+        }
+        
+        // Get author details
+        const author = await db
+          .select({
+            id: users.id,
+            walletAddress: users.walletAddress
+          })
+          .from(users)
+          .where(eq(users.id, post[0].authorId))
+          .limit(1);
+          
+        return {
+          ...post[0],
+          author: author.length > 0 ? {
+            id: author[0].id,
+            address: author[0].walletAddress
+          } : null
+        };
+      } else {
+        // Quick post
+        const post = await db
+          .select({
+            id: quickPosts.id,
+            authorId: quickPosts.authorId,
+            content: quickPosts.content,
+            createdAt: quickPosts.createdAt,
+            updatedAt: quickPosts.updatedAt,
+            mediaUrls: quickPosts.mediaUrls,
+            tags: quickPosts.tags
+          })
+          .from(quickPosts)
+          .where(eq(quickPosts.id, postId))
+          .limit(1);
+          
+        if (post.length === 0) {
+          return null;
+        }
+        
+        // Get author details
+        const author = await db
+          .select({
+            id: users.id,
+            walletAddress: users.walletAddress
+          })
+          .from(users)
+          .where(eq(users.id, post[0].authorId))
+          .limit(1);
+          
+        return {
+          ...post[0],
+          author: author.length > 0 ? {
+            id: author[0].id,
+            address: author[0].walletAddress
+          } : null
+        };
+      }
+    } catch (error) {
+      safeLogger.error('Error getting post by ID:', error);
+      throw new Error('Failed to retrieve post');
+    }
+  }
+
   // Get engagement data for post
   async getEngagementData(postId: string) {
     try {

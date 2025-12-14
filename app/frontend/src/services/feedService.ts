@@ -1077,7 +1077,7 @@ export class FeedService {
         }
         
         const postData = await postResponse.json();
-        const authorAddress = postData.data?.author?.address || postData.data?.authorAddress;
+        const authorAddress = postData.data?.post?.author?.address || postData.data?.post?.authorAddress;
         
         if (!authorAddress) {
           throw new Error('Could not determine post author address');

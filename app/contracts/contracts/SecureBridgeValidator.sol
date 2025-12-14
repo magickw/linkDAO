@@ -139,18 +139,18 @@ contract SecureBridgeValidator is Ownable, ReentrancyGuard {
         // Note: In implementation, this would use IERC20 transferFrom
         // require(ldaoToken.transferFrom(msg.sender, address(this), stake), "Stake transfer failed");
         
-        enhancedValidators[validatorAddress] = EnhancedValidator({
-            validatorAddress: validatorAddress,
-            stake: stake,
-            validatedTransactions: 0,
-            lastActivity: block.timestamp,
-            reputation: 100, // Start with neutral reputation
-            slashCount: 0,
-            lastSlashReason: 0,
-            isActive: true,
-            isSlashed: false,
-            commitment: bytes32(0)
-        });
+        // Initialize enhanced validator struct fields individually
+        EnhancedValidator storage validator = enhancedValidators[validatorAddress];
+        validator.validatorAddress = validatorAddress;
+        validator.stake = stake;
+        validator.validatedTransactions = 0;
+        validator.lastActivity = block.timestamp;
+        validator.reputation = 100; // Start with neutral reputation
+        validator.slashCount = 0;
+        validator.lastSlashReason = 0;
+        validator.isActive = true;
+        validator.isSlashed = false;
+        validator.commitment = bytes32(0);
         
         validatorList.push(validatorAddress);
         
@@ -221,17 +221,17 @@ contract SecureBridgeValidator is Ownable, ReentrancyGuard {
         
         uint256 challengeId = nextChallengeId++;
         
-        challenges[challengeId] = Challenge({
-            id: challengeId,
-            challenger: msg.sender,
-            challengedValidator: challengedValidator,
-            transactionId: transactionId,
-            transactionHash: transactionHash,
-            challengeAmount: msg.value,
-            startTime: block.timestamp,
-            resolved: false,
-            successful: false
-        });
+        // Initialize challenge struct fields individually
+        Challenge storage challenge = challenges[challengeId];
+        challenge.id = challengeId;
+        challenge.challenger = msg.sender;
+        challenge.challengedValidator = challengedValidator;
+        challenge.transactionId = transactionId;
+        challenge.transactionHash = transactionHash;
+        challenge.challengeAmount = msg.value;
+        challenge.startTime = block.timestamp;
+        challenge.resolved = false;
+        challenge.successful = false;
         
         validatorChallenges[challengedValidator].push(challengeId);
         challengeStakes[msg.sender] += msg.value;
@@ -258,7 +258,8 @@ contract SecureBridgeValidator is Ownable, ReentrancyGuard {
             validator.stake -= slashAmount;
             validator.lastSlashReason = block.timestamp;
             validator.isSlashed = true;
-            validator.reputation = Math.max(0, int256(validator.reputation) - 100);
+            int256 newRep = int256(validator.reputation) - 100;
+            validator.reputation = uint256(newRep > 0 ? newRep : int256(0));
             validator.slashCount++;
             
             // Auto-remove if too many slashes or low reputation
@@ -268,15 +269,18 @@ contract SecureBridgeValidator is Ownable, ReentrancyGuard {
             
             // Transfer stake to challenger and insurance fund
             uint256 challengerReward = slashAmount / 2;
-            require(insuranceFundAddress.call{value: challengerReward}(""), "Insurance fund transfer failed");
-            require(payable(challenge.challenger).transfer(challengerReward), "Challenger reward transfer failed");
+            (bool success, ) = insuranceFundAddress.call{value: challengerReward}("");
+            require(success, "Insurance fund transfer failed");
+            (bool sent, ) = payable(challenge.challenger).call{value: challengerReward}("");
+            require(sent, "Challenger reward transfer failed");
             
             emit ValidatorSlashedSecure(challenge.challengedValidator, slashAmount, block.timestamp, msg.sender);
         }
         
         // Return stake to challenger (if challenge fails)
         if (!success) {
-            require(payable(challenge.challenger).transfer(challenge.challengeAmount), "Stake return failed");
+            (bool sent, ) = payable(challenge.challenger).call{value: challenge.challengeAmount}("");
+            require(sent, "Stake return failed");
         }
         
         emit ChallengeResolved(challengeId, success, success ? challenge.challengeAmount / 2 : 0);
@@ -340,7 +344,9 @@ contract SecureBridgeValidator is Ownable, ReentrancyGuard {
         uint256 oldReputation = v.reputation;
         
         if (change > 0) {
-            v.reputation = Math.min(REPUTATION_MAX, v.reputation + uint256(change));
+            int256 newReputation = int256(v.reputation) + change;
+            int256 maxRep = int256(REPUTATION_MAX);
+            v.reputation = uint256(newReputation > maxRep ? maxRep : newReputation);
         } else {
             v.reputation = v.reputation > uint256(-change) ? v.reputation - uint256(-change) : 0;
         }

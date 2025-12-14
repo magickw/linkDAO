@@ -157,6 +157,16 @@ router.post('/:id/tip',
   feedController.sendTip
 );
 
+// Get post by ID (public access)
+router.get('/:id',
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    }
+  }),
+  feedController.getPostById
+);
+
 // Get detailed engagement data for post (public access)
 router.get('/:id/engagement',
   validateRequest({
