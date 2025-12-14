@@ -2,7 +2,8 @@ import express from 'express';
 import { csrfProtection } from '../middleware/csrfProtection';
 import { feedController } from '../controllers/feedController';
 import { validateRequest } from '../middleware/validation';
-import { authMiddleware } from '../middleware/authMiddleware';
+import { AuthenticationMiddleware } from '../middleware/authenticationMiddleware';
+import { createDefaultAuthRoutes } from './authenticationRoutes';
 import { feedRateLimit } from '../middleware/rateLimitingMiddleware';
 
 const router = express.Router();
@@ -10,39 +11,19 @@ const router = express.Router();
 // Apply rate limiting to all routes
 router.use(feedRateLimit);
 
+// Import the AuthenticationService directly
+import { AuthenticationService } from '../services/authenticationService';
+
+// Create authentication middleware instance
+const connectionString = process.env.DATABASE_URL || '';
+const jwtSecret = process.env.JWT_SECRET || 'development-secret-key-change-in-production';
+const authService = new AuthenticationService(connectionString, jwtSecret);
+const customAuthMiddleware = new AuthenticationMiddleware(authService);
+
 // Get personalized feed with filtering (optional authentication for personalization)
 router.get('/',
   // Use optional auth - if user is authenticated, personalize feed; if not, show public feed
-  (req, res, next) => {
-    // Try to authenticate but don't fail if no token
-    const authHeader = req.headers['authorization'];
-    if (authHeader) {
-      // Extract token and try to verify it
-      const token = authHeader.split(' ')[1];
-      if (token) {
-        try {
-          const jwt = require('jsonwebtoken');
-          const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
-
-          // Attach user to request
-          (req as any).user = {
-            address: decoded.walletAddress || decoded.address,
-            walletAddress: decoded.walletAddress || decoded.address,
-            userId: decoded.userId || decoded.id,
-            id: decoded.userId || decoded.id || decoded.walletAddress || decoded.address,
-            kycStatus: decoded.kycStatus,
-            permissions: decoded.permissions || [],
-            isAdmin: decoded.isAdmin || false
-          };
-        } catch (error) {
-          // Token invalid, continue without user
-          console.warn('Invalid token in feed request:', error);
-        }
-      }
-    }
-    // Continue to next middleware regardless
-    next();
-  },
+  customAuthMiddleware.optionalAuth,
   validateRequest({
     query: {
       page: { type: 'number', optional: true, min: 1 },
@@ -70,7 +51,7 @@ router.get('/trending',
 
 // Create new post (requires authentication)
 router.post('/',
-  authMiddleware, // Apply auth only to this route
+  customAuthMiddleware.requireAuth, // Apply auth only to this route
   csrfProtection,
   validateRequest({
     body: {
@@ -86,7 +67,7 @@ router.post('/',
 
 // Update post (requires authentication)
 router.put('/:id',
-  authMiddleware, // Apply auth only to this route
+  customAuthMiddleware.requireAuth, // Apply auth only to this route
   csrfProtection,
   validateRequest({
     params: {
@@ -102,7 +83,7 @@ router.put('/:id',
 
 // Delete post (requires authentication)
 router.delete('/:id',
-  authMiddleware, // Apply auth only to this route
+  customAuthMiddleware.requireAuth, // Apply auth only to this route
   csrfProtection,
   validateRequest({
     params: {
@@ -114,7 +95,7 @@ router.delete('/:id',
 
 // Alias for delete post to handle legacy/stale client requests to /api/feed/posts/:id
 router.delete('/posts/:id',
-  authMiddleware, // Apply auth only to this route
+  customAuthMiddleware.requireAuth, // Apply auth only to this route
   csrfProtection,
   validateRequest({
     params: {
@@ -126,7 +107,7 @@ router.delete('/posts/:id',
 
 // Add reaction to post (requires authentication)
 router.post('/:id/react',
-  authMiddleware, // Apply auth only to this route
+  customAuthMiddleware.requireAuth, // Apply auth only to this route
   csrfProtection,
   validateRequest({
     params: {
@@ -142,7 +123,7 @@ router.post('/:id/react',
 
 // Send tip to post author (requires authentication)
 router.post('/:id/tip',
-  authMiddleware, // Apply auth only to this route
+  customAuthMiddleware.requireAuth, // Apply auth only to this route
   csrfProtection,
   validateRequest({
     params: {
@@ -179,7 +160,7 @@ router.get('/:id/engagement',
 
 // Share post (requires authentication)
 router.post('/:id/share',
-  authMiddleware, // Apply auth only to this route
+  customAuthMiddleware.requireAuth, // Apply auth only to this route
   csrfProtection,
   validateRequest({
     params: {
@@ -211,7 +192,7 @@ router.get('/:id/comments',
 
 // Add comment to post (requires authentication)
 router.post('/:id/comments',
-  authMiddleware, // Apply auth only to this route
+  customAuthMiddleware.requireAuth, // Apply auth only to this route
   csrfProtection,
   validateRequest({
     params: {
@@ -274,7 +255,7 @@ router.get('/content/:cid',
 
 // Upvote post (requires authentication)
 router.post('/:id/upvote',
-  authMiddleware,
+  customAuthMiddleware.requireAuth,
   csrfProtection,
   validateRequest({
     params: {
@@ -286,7 +267,7 @@ router.post('/:id/upvote',
 
 // Downvote post (requires authentication)
 router.post('/:id/downvote',
-  authMiddleware,
+  customAuthMiddleware.requireAuth,
   csrfProtection,
   validateRequest({
     params: {

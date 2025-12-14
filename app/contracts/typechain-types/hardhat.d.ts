@@ -250,14 +250,6 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.EnhancedLDAOTreasury__factory>;
     getContractFactory(
-      name: "EnhancedRewardPool",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.EnhancedRewardPool__factory>;
-    getContractFactory(
-      name: "FixedLDAOTreasury",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.FixedLDAOTreasury__factory>;
-    getContractFactory(
       name: "FollowModule",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.FollowModule__factory>;
@@ -298,10 +290,6 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.Marketplace__factory>;
     getContractFactory(
-      name: "MinimalStaking",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.MinimalStaking__factory>;
-    getContractFactory(
       name: "MockERC20",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.MockERC20__factory>;
@@ -326,14 +314,6 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.OptimizedLDAOToken__factory>;
     getContractFactory(
-      name: "OptimizedMarketplace",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.OptimizedMarketplace__factory>;
-    getContractFactory(
-      name: "OptimizedX402PaymentHandler",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.OptimizedX402PaymentHandler__factory>;
-    getContractFactory(
       name: "PaymentRouter",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.PaymentRouter__factory>;
@@ -354,6 +334,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ContractRegistry__factory>;
     getContractFactory(
+      name: "ReputationBridge",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ReputationBridge__factory>;
+    getContractFactory(
       name: "ReputationSystem",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ReputationSystem__factory>;
@@ -361,6 +345,10 @@ declare module "hardhat/types/runtime" {
       name: "RewardPool",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.RewardPool__factory>;
+    getContractFactory(
+      name: "SecureBridgeValidator",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.SecureBridgeValidator__factory>;
     getContractFactory(
       name: "EmergencyPause",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -390,10 +378,6 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ISubDAO__factory>;
     getContractFactory(
-      name: "MockUSDC",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.MockUSDC__factory>;
-    getContractFactory(
       name: "IX402PaymentHandler",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IX402PaymentHandler__factory>;
@@ -402,9 +386,9 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.TipRouter__factory>;
     getContractFactory(
-      name: "X402PaymentHandler",
+      name: "OptimizedX402PaymentHandler",
       signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.X402PaymentHandler__factory>;
+    ): Promise<Contracts.OptimizedX402PaymentHandler__factory>;
 
     getContractAt(
       name: "AggregatorV3Interface",
@@ -702,16 +686,6 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.EnhancedLDAOTreasury>;
     getContractAt(
-      name: "EnhancedRewardPool",
-      address: string | ethers.Addressable,
-      signer?: ethers.Signer
-    ): Promise<Contracts.EnhancedRewardPool>;
-    getContractAt(
-      name: "FixedLDAOTreasury",
-      address: string | ethers.Addressable,
-      signer?: ethers.Signer
-    ): Promise<Contracts.FixedLDAOTreasury>;
-    getContractAt(
       name: "FollowModule",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -762,11 +736,6 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.Marketplace>;
     getContractAt(
-      name: "MinimalStaking",
-      address: string | ethers.Addressable,
-      signer?: ethers.Signer
-    ): Promise<Contracts.MinimalStaking>;
-    getContractAt(
       name: "MockERC20",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -797,16 +766,6 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.OptimizedLDAOToken>;
     getContractAt(
-      name: "OptimizedMarketplace",
-      address: string | ethers.Addressable,
-      signer?: ethers.Signer
-    ): Promise<Contracts.OptimizedMarketplace>;
-    getContractAt(
-      name: "OptimizedX402PaymentHandler",
-      address: string | ethers.Addressable,
-      signer?: ethers.Signer
-    ): Promise<Contracts.OptimizedX402PaymentHandler>;
-    getContractAt(
       name: "PaymentRouter",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -832,6 +791,11 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.ContractRegistry>;
     getContractAt(
+      name: "ReputationBridge",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ReputationBridge>;
+    getContractAt(
       name: "ReputationSystem",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -841,6 +805,11 @@ declare module "hardhat/types/runtime" {
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.RewardPool>;
+    getContractAt(
+      name: "SecureBridgeValidator",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.SecureBridgeValidator>;
     getContractAt(
       name: "EmergencyPause",
       address: string | ethers.Addressable,
@@ -877,11 +846,6 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.ISubDAO>;
     getContractAt(
-      name: "MockUSDC",
-      address: string | ethers.Addressable,
-      signer?: ethers.Signer
-    ): Promise<Contracts.MockUSDC>;
-    getContractAt(
       name: "IX402PaymentHandler",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -892,10 +856,10 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.TipRouter>;
     getContractAt(
-      name: "X402PaymentHandler",
+      name: "OptimizedX402PaymentHandler",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
-    ): Promise<Contracts.X402PaymentHandler>;
+    ): Promise<Contracts.OptimizedX402PaymentHandler>;
 
     deployContract(
       name: "AggregatorV3Interface",
@@ -1134,14 +1098,6 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.EnhancedLDAOTreasury>;
     deployContract(
-      name: "EnhancedRewardPool",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.EnhancedRewardPool>;
-    deployContract(
-      name: "FixedLDAOTreasury",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.FixedLDAOTreasury>;
-    deployContract(
       name: "FollowModule",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.FollowModule>;
@@ -1182,10 +1138,6 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.Marketplace>;
     deployContract(
-      name: "MinimalStaking",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.MinimalStaking>;
-    deployContract(
       name: "MockERC20",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.MockERC20>;
@@ -1210,14 +1162,6 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.OptimizedLDAOToken>;
     deployContract(
-      name: "OptimizedMarketplace",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.OptimizedMarketplace>;
-    deployContract(
-      name: "OptimizedX402PaymentHandler",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.OptimizedX402PaymentHandler>;
-    deployContract(
       name: "PaymentRouter",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.PaymentRouter>;
@@ -1238,6 +1182,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ContractRegistry>;
     deployContract(
+      name: "ReputationBridge",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ReputationBridge>;
+    deployContract(
       name: "ReputationSystem",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ReputationSystem>;
@@ -1245,6 +1193,10 @@ declare module "hardhat/types/runtime" {
       name: "RewardPool",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.RewardPool>;
+    deployContract(
+      name: "SecureBridgeValidator",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.SecureBridgeValidator>;
     deployContract(
       name: "EmergencyPause",
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -1274,10 +1226,6 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ISubDAO>;
     deployContract(
-      name: "MockUSDC",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.MockUSDC>;
-    deployContract(
       name: "IX402PaymentHandler",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IX402PaymentHandler>;
@@ -1286,9 +1234,9 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.TipRouter>;
     deployContract(
-      name: "X402PaymentHandler",
+      name: "OptimizedX402PaymentHandler",
       signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.X402PaymentHandler>;
+    ): Promise<Contracts.OptimizedX402PaymentHandler>;
 
     deployContract(
       name: "AggregatorV3Interface",
@@ -1586,16 +1534,6 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.EnhancedLDAOTreasury>;
     deployContract(
-      name: "EnhancedRewardPool",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.EnhancedRewardPool>;
-    deployContract(
-      name: "FixedLDAOTreasury",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.FixedLDAOTreasury>;
-    deployContract(
       name: "FollowModule",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -1646,11 +1584,6 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.Marketplace>;
     deployContract(
-      name: "MinimalStaking",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.MinimalStaking>;
-    deployContract(
       name: "MockERC20",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -1681,16 +1614,6 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.OptimizedLDAOToken>;
     deployContract(
-      name: "OptimizedMarketplace",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.OptimizedMarketplace>;
-    deployContract(
-      name: "OptimizedX402PaymentHandler",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.OptimizedX402PaymentHandler>;
-    deployContract(
       name: "PaymentRouter",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -1716,6 +1639,11 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ContractRegistry>;
     deployContract(
+      name: "ReputationBridge",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ReputationBridge>;
+    deployContract(
       name: "ReputationSystem",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -1725,6 +1653,11 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.RewardPool>;
+    deployContract(
+      name: "SecureBridgeValidator",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.SecureBridgeValidator>;
     deployContract(
       name: "EmergencyPause",
       args: any[],
@@ -1761,11 +1694,6 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ISubDAO>;
     deployContract(
-      name: "MockUSDC",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.MockUSDC>;
-    deployContract(
       name: "IX402PaymentHandler",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -1776,10 +1704,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.TipRouter>;
     deployContract(
-      name: "X402PaymentHandler",
+      name: "OptimizedX402PaymentHandler",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.X402PaymentHandler>;
+    ): Promise<Contracts.OptimizedX402PaymentHandler>;
 
     // default types
     getContractFactory(

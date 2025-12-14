@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import "./LDAOToken.sol";
 import "./security/MultiSigWallet.sol";
 import "./Governance.sol";
@@ -20,6 +21,7 @@ contract LDAOTreasury is Ownable, ReentrancyGuard, Pausable {
     IERC20 public immutable usdcToken;
     MultiSigWallet public multiSigWallet;
     Governance public governance; // Governance contract for decentralized control
+    AggregatorV3Interface public immutable ethUsdPriceFeed; // Chainlink ETH/USD price feed
     
     uint256 public ldaoPriceInUSD = 1e16; // $0.01 in 18 decimals (1e16 = 0.01 * 1e18)
     uint256 public totalSold;
@@ -53,6 +55,21 @@ contract LDAOTreasury is Ownable, ReentrancyGuard, Pausable {
     // Multi-sig controls
     mapping(bytes32 => bool) public executedTransactions;
     uint256 public constant MULTI_SIG_THRESHOLD = 2; // Require 2 signatures for admin functions
+    
+    // Timelock for critical operations
+    struct TimelockRequest {
+        address target;
+        uint256 value;
+        bytes data;
+        uint256 timestamp;
+        uint256 delay;
+        bool executed;
+        string operationType;
+    }
+    
+    mapping(bytes32 => TimelockRequest) public timelockRequests;
+    uint256 public constant TIMELOCK_DELAY = 48 hours; // 48 hour delay for critical operations
+    uint256 public constant EMERGENCY_TIMELOCK_DELAY = 24 hours; // 24 hour delay for emergencies
     
     // Pricing tiers based on volume
     struct PricingTier {
@@ -161,6 +178,16 @@ contract LDAOTreasury is Ownable, ReentrancyGuard, Pausable {
     event GovernanceUpdated(address indexed newGovernance);
     event GovernanceOperationExecuted(address indexed target, uint256 value, bytes data);
     
+    // Timelock events
+    event TimelockRequestCreated(
+        bytes32 indexed requestId,
+        address indexed target,
+        string operationType,
+        uint256 executableTime
+    );
+    event TimelockRequestExecuted(bytes32 indexed requestId);
+    event TimelockRequestCancelled(bytes32 indexed requestId);
+    
     // Charity-specific events
     event CharityDisbursement(
         uint256 indexed donationId,
@@ -215,12 +242,14 @@ contract LDAOTreasury is Ownable, ReentrancyGuard, Pausable {
         address _ldaoToken,
         address _usdcToken,
         address payable _multiSigWallet,
-        address _governance
+        address _governance,
+        address _ethUsdPriceFeed
     ) Ownable(msg.sender) {
         ldaoToken = LDAOToken(_ldaoToken);
         usdcToken = IERC20(_usdcToken);
         multiSigWallet = MultiSigWallet(_multiSigWallet);
         governance = Governance(_governance);
+        ethUsdPriceFeed = AggregatorV3Interface(_ethUsdPriceFeed);
         
         // Initialize timestamps
         lastResetDay = block.timestamp / 1 days;
@@ -654,18 +683,83 @@ contract LDAOTreasury is Ownable, ReentrancyGuard, Pausable {
     }
 
     /**
-     * @notice Emergency withdraw LDAO (owner only)
+     * @notice Emergency withdraw LDAO (requires timelock)
      * @param amount Amount to withdraw
      * @param recipient Recipient address
      */
     function emergencyWithdrawLDAO(uint256 amount, address recipient) external onlyOwner {
-        // Add additional security checks
-        require(recipient != address(0), "Invalid recipient address");
-        require(amount > 0, "Amount must be greater than 0");
-        require(ldaoToken.balanceOf(address(this)) >= amount, "Insufficient LDAO balance");
+        // Create timelock request for emergency withdrawal
+        bytes32 requestId = keccak256(abi.encodePacked(
+            block.timestamp,
+            "EMERGENCY_WITHDRAW",
+            amount,
+            recipient
+        ));
         
-        ldaoToken.transfer(recipient, amount);
-        emit FundsWithdrawn(address(ldaoToken), amount, recipient);
+        require(timelockRequests[requestId].timestamp == 0, "Request already exists");
+        
+        timelockRequests[requestId] = TimelockRequest({
+            target: address(ldaoToken),
+            value: 0,
+            data: abi.encodeWithSignature("transfer(address,uint256)", recipient, amount),
+            timestamp: block.timestamp,
+            delay: EMERGENCY_TIMELOCK_DELAY,
+            executed: false,
+            operationType: "EMERGENCY_WITHDRAW"
+        });
+        
+        emit TimelockRequestCreated(
+            requestId,
+            address(ldaoToken),
+            "EMERGENCY_WITHDRAW",
+            block.timestamp + EMERGENCY_TIMELOCK_DELAY
+        );
+    }
+
+    /**
+     * @notice Execute a timelocked request
+     * @param requestId The ID of the request to execute
+     */
+    function executeTimelockRequest(bytes32 requestId) external onlyOwner {
+        TimelockRequest storage request = timelockRequests[requestId];
+        require(request.timestamp > 0, "Request does not exist");
+        require(!request.executed, "Request already executed");
+        require(block.timestamp >= request.timestamp + request.delay, "Timelock not expired");
+        
+        request.executed = true;
+        
+        // Execute the call
+        (bool success, ) = request.target.call{value: request.value}(request.data);
+        require(success, "Execution failed");
+        
+        emit TimelockRequestExecuted(requestId);
+    }
+
+    /**
+     * @notice Cancel a timelocked request
+     * @param requestId The ID of the request to cancel
+     */
+    function cancelTimelockRequest(bytes32 requestId) external onlyOwner {
+        TimelockRequest storage request = timelockRequests[requestId];
+        require(request.timestamp > 0, "Request does not exist");
+        require(!request.executed, "Request already executed");
+        
+        request.executed = true; // Mark as executed to prevent reuse
+        
+        emit TimelockRequestCancelled(requestId);
+    }
+
+    /**
+     * @notice Check if a timelock request is ready to execute
+     * @param requestId The ID of the request
+     * @return ready Whether the request is ready to execute
+     */
+    function isTimelockReady(bytes32 requestId) external view returns (bool ready) {
+        TimelockRequest storage request = timelockRequests[requestId];
+        if (request.timestamp == 0 || request.executed) {
+            return false;
+        }
+        return block.timestamp >= request.timestamp + request.delay;
     }
 
     // Internal functions
@@ -832,9 +926,14 @@ contract LDAOTreasury is Ownable, ReentrancyGuard, Pausable {
         emit PricingTierAdded(tierId, threshold, discountBps);
     }
 
-    function _getETHPrice() internal pure returns (uint256) {
-        // Simplified ETH price - use Chainlink oracle in production
-        return 2000 * 1e18; // $2000 per ETH
+    function _getETHPrice() internal view returns (uint256) {
+        // Get latest price data from Chainlink oracle
+        (, int256 price, , , ) = ethUsdPriceFeed.latestRoundData();
+        
+        // Chainlink ETH/USD price feed has 8 decimals
+        // Convert to 18 decimals for consistency
+        require(price > 0, "Invalid ETH price");
+        return uint256(price) * 1e10;
     }
 
     // View functions
@@ -842,6 +941,26 @@ contract LDAOTreasury is Ownable, ReentrancyGuard, Pausable {
         ldaoBalance = ldaoToken.balanceOf(address(this));
         ethBalance = address(this).balance;
         usdcBalance = usdcToken.balanceOf(address(this));
+    }
+
+    /**
+     * @notice Get current ETH price from oracle
+     * @return ethPrice Current ETH price in USD (18 decimals)
+     */
+    function getETHPrice() external view returns (uint256 ethPrice) {
+        return _getETHPrice();
+    }
+
+    /**
+     * @notice Update ETH/USD price feed (owner only)
+     * @param newPriceFeed Address of the new price feed contract
+     */
+    function updateEthUsdPriceFeed(address newPriceFeed) external onlyOwner {
+        require(newPriceFeed != address(0), "Invalid price feed address");
+        // Note: Since ethUsdPriceFeed is immutable, this would need to be implemented
+        // via a proxy pattern in production. For now, this is a placeholder.
+        // In a real upgrade scenario, deploy a new contract with the new price feed.
+        revert("Use proxy upgrade to change price feed");
     }
 
     function getUserPurchaseHistory(address user) external view returns (uint256) {

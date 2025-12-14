@@ -59,7 +59,7 @@ export const authMiddleware: RequestHandler = async (req: Request, res: Response
       }
     } else {
       // Verify JWT token for production
-      decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
+      decoded = jwt.verify(token, process.env.JWT_SECRET || 'development-secret-key-change-in-production') as any;
     }
 
     // Get user role and other details from database

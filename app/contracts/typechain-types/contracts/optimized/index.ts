@@ -2,4 +2,3 @@
 /* tslint:disable */
 /* eslint-disable */
 export type { OptimizedLDAOToken } from "./OptimizedLDAOToken";
-export type { OptimizedMarketplace } from "./OptimizedMarketplace";

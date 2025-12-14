@@ -157,7 +157,7 @@ export function createDefaultAuthRoutes(): Router {
     }
   }
 
-  const authService = new AuthenticationService(connectionString, jwtSecret || 'development-secret-key-change-in-production');
+  const authService = new AuthenticationService(connectionString, jwtSecret || process.env.JWT_SECRET || 'development-secret-key-change-in-production');
   const authMiddleware = new AuthenticationMiddleware(authService);
 
   return createAuthenticationRoutes(authService, authMiddleware);

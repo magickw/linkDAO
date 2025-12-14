@@ -3,8 +3,9 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 
-contract SocialReputationToken is ERC20, Ownable {
+contract SocialReputationToken is ERC20, Ownable, Pausable {
     // Mapping of user reputation scores
     mapping(address => uint256) public reputationScores;
     
@@ -12,6 +13,11 @@ contract SocialReputationToken is ERC20, Ownable {
     address public profileRegistry;
     address public followModule;
     address public tipRouter;
+    address public reputationBridge; // Bridge contract for decentralized validation
+    
+    // Access control
+    mapping(address => bool) public authorizedUpdaters;
+    uint256 public constant MAX_REPUTATION_SCORE = 1000000 * 1e18; // 1M max reputation
     
     // Reputation multipliers
     uint256 public constant PROFILE_MULTIPLIER = 10;
@@ -62,26 +68,64 @@ contract SocialReputationToken is ERC20, Ownable {
     }
     
     /**
-     * @dev Update reputation score for a user
+     * @dev Update reputation score for a user (requires authorization)
      * @param user The user address
      * @param score The new reputation score
      */
-    function updateReputation(address user, uint256 score) external onlyOwner {
+    function updateReputation(address user, uint256 score) external whenNotPaused {
+        require(
+            msg.sender == owner() || 
+            msg.sender == reputationBridge || 
+            authorizedUpdaters[msg.sender],
+            "Not authorized to update reputation"
+        );
+        require(score <= MAX_REPUTATION_SCORE, "Reputation score exceeds maximum");
+        
+        uint256 oldScore = reputationScores[user];
         reputationScores[user] = score;
-        _mint(user, score); // Mint tokens equal to reputation score
+        
+        // Mint new tokens if score increased
+        if (score > oldScore) {
+            _mint(user, score - oldScore);
+        }
+        // Burn tokens if score decreased
+        else if (score < oldScore) {
+            _burn(user, oldScore - score);
+        }
+        
         emit ReputationUpdated(user, score, balanceOf(user));
     }
     
     /**
-     * @dev Batch update reputation scores
+     * @dev Batch update reputation scores (requires authorization)
      * @param users Array of user addresses
      * @param scores Array of reputation scores
      */
-    function batchUpdateReputation(address[] memory users, uint256[] memory scores) external onlyOwner {
+    function batchUpdateReputation(address[] memory users, uint256[] memory scores) external whenNotPaused {
+        require(
+            msg.sender == owner() || 
+            msg.sender == reputationBridge || 
+            authorizedUpdaters[msg.sender],
+            "Not authorized to update reputation"
+        );
         require(users.length == scores.length, "Array length mismatch");
+        require(users.length <= 100, "Batch size too large");
+        
         for (uint i = 0; i < users.length; i++) {
+            require(scores[i] <= MAX_REPUTATION_SCORE, "Reputation score exceeds maximum");
+            
+            uint256 oldScore = reputationScores[users[i]];
             reputationScores[users[i]] = scores[i];
-            _mint(users[i], scores[i]);
+            
+            // Mint new tokens if score increased
+            if (scores[i] > oldScore) {
+                _mint(users[i], scores[i] - oldScore);
+            }
+            // Burn tokens if score decreased
+            else if (scores[i] < oldScore) {
+                _burn(users[i], oldScore - scores[i]);
+            }
+            
             emit ReputationUpdated(users[i], scores[i], balanceOf(users[i]));
         }
     }
@@ -93,5 +137,36 @@ contract SocialReputationToken is ERC20, Ownable {
      */
     function getReputation(address user) external view returns (uint256) {
         return reputationScores[user];
+    }
+    
+    /**
+     * @dev Set authorized updater (owner only)
+     * @param updater Address to authorize
+     * @param authorized Whether to authorize or revoke
+     */
+    function setAuthorizedUpdater(address updater, bool authorized) external onlyOwner {
+        authorizedUpdaters[updater] = authorized;
+    }
+    
+    /**
+     * @dev Set reputation bridge address (owner only)
+     * @param bridge Address of the ReputationBridge contract
+     */
+    function setReputationBridge(address bridge) external onlyOwner {
+        reputationBridge = bridge;
+    }
+    
+    /**
+     * @dev Emergency pause reputation updates (owner only)
+     */
+    function emergencyPause() external onlyOwner {
+        _pause();
+    }
+    
+    /**
+     * @dev Unpause reputation updates (owner only)
+     */
+    function unpause() external onlyOwner {
+        _unpause();
     }
 }

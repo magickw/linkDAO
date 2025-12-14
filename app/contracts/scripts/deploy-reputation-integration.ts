@@ -55,10 +55,8 @@ async function main() {
   // 5. Initial Setup
   console.log("\n5️⃣ Setting up initial configuration...");
 
-  // Add deployer as moderator
-  console.log("   Adding moderator...");
-  await reputationSystem.addModerator(deployerAddress);
-  console.log("   ✅ Moderator added");
+  // Skip adding moderator for now - would need reputation first
+  console.log("   ⚠️ Skipping moderator addition (requires reputation)");
 
   // Update SocialReputationToken contracts
   console.log("   Updating contract addresses...");

@@ -23,25 +23,82 @@ import type {
   TypedContractMethod,
 } from "../common";
 
+export declare namespace LDAOTreasury {
+  export type CharityDonationStruct = {
+    id: BigNumberish;
+    recipient: AddressLike;
+    amount: BigNumberish;
+    timestamp: BigNumberish;
+    description: string;
+    proposalId: BigNumberish;
+    isVerified: boolean;
+    verificationReceipt: string;
+  };
+
+  export type CharityDonationStructOutput = [
+    id: bigint,
+    recipient: string,
+    amount: bigint,
+    timestamp: bigint,
+    description: string,
+    proposalId: bigint,
+    isVerified: boolean,
+    verificationReceipt: string
+  ] & {
+    id: bigint;
+    recipient: string;
+    amount: bigint;
+    timestamp: bigint;
+    description: string;
+    proposalId: bigint;
+    isVerified: boolean;
+    verificationReceipt: string;
+  };
+}
+
 export interface LDAOTreasuryInterface extends Interface {
   getFunction(
     nameOrSignature:
+      | "EMERGENCY_TIMELOCK_DELAY"
       | "MULTI_SIG_THRESHOLD"
+      | "TIMELOCK_DELAY"
       | "addPricingTier"
       | "basePriceInUSD"
       | "batchUpdateKYC"
+      | "cancelTimelockRequest"
+      | "charityApprovalThreshold"
+      | "charityDisbursementProposals"
+      | "charityDonations"
+      | "charityDonationsHistory"
+      | "charityFund"
+      | "charityFundAllocation"
+      | "charityQuorum"
+      | "charityVerificationProposals"
+      | "charityVotes"
+      | "charityVotingPeriod"
+      | "currentDayCharityDisbursements"
       | "currentDayPurchases"
+      | "dailyCharityDisbursementLimit"
       | "dailyPurchaseLimit"
       | "dailyPurchases"
       | "demandMultiplier"
+      | "disburseCharityFunds"
       | "emergencyPause"
       | "emergencyStopThreshold"
       | "emergencyWithdrawLDAO"
+      | "ethUsdPriceFeed"
+      | "executeCharityDisbursement"
+      | "executeCharityVerification"
       | "executeGovernanceOperation"
+      | "executeTimelockRequest"
       | "executedTransactions"
+      | "getCharityDonation"
+      | "getCharityDonationsHistory"
+      | "getCharityFund"
       | "getCircuitBreakerStatus"
       | "getCurrentDayPurchases"
       | "getDynamicPricingInfo"
+      | "getETHPrice"
       | "getPricingTier"
       | "getQuote"
       | "getTreasuryBalance"
@@ -49,22 +106,32 @@ export interface LDAOTreasuryInterface extends Interface {
       | "getUserPurchaseHistory"
       | "governance"
       | "governanceWithdraw"
+      | "isCharityVerified"
+      | "isTimelockReady"
       | "kycApproved"
       | "kycRequired"
+      | "lastCharityDisbursementDay"
       | "lastPriceUpdate"
       | "lastPurchaseDay"
       | "lastResetDay"
       | "ldaoPriceInUSD"
       | "ldaoToken"
+      | "maxCharityDisbursement"
       | "maxPriceMultiplier"
       | "maxPurchaseAmount"
+      | "minCharityDonationAmount"
+      | "minCharityVerificationStake"
       | "minPurchaseAmount"
       | "multiSigWallet"
+      | "nextCharityDonationId"
+      | "nextCharityProposalId"
       | "nextTierId"
       | "owner"
       | "paused"
       | "priceUpdateInterval"
       | "pricingTiers"
+      | "proposeCharityDisbursement"
+      | "proposeCharityVerification"
       | "purchaseHistory"
       | "purchaseWithETH"
       | "purchaseWithUSDC"
@@ -72,20 +139,30 @@ export interface LDAOTreasuryInterface extends Interface {
       | "salesActive"
       | "setKYCRequired"
       | "setSalesActive"
+      | "timelockRequests"
       | "totalRevenue"
       | "totalSold"
       | "transferOwnership"
       | "unpause"
+      | "updateCharityFundAllocation"
+      | "updateCharityGovernanceParams"
       | "updateCircuitBreakerParams"
       | "updateDynamicPricingParams"
+      | "updateEthUsdPriceFeed"
       | "updateGovernance"
       | "updateKYCStatus"
       | "updateLDAOPrice"
+      | "updateMinCharityDonationAmount"
       | "updateMultiSigWallet"
       | "updatePricingTier"
       | "updatePurchaseLimits"
       | "updateWhitelist"
       | "usdcToken"
+      | "verifiedCharities"
+      | "verifyCharity"
+      | "verifyCharityDonation"
+      | "voteCharityDisbursement"
+      | "voteCharityVerification"
       | "whitelist"
       | "withdrawETH"
       | "withdrawToken"
@@ -93,6 +170,16 @@ export interface LDAOTreasuryInterface extends Interface {
 
   getEvent(
     nameOrSignatureOrTopic:
+      | "CharityDisbursement"
+      | "CharityDisbursementProposalCreated"
+      | "CharityDisbursementProposalExecuted"
+      | "CharityDisbursementVoteCast"
+      | "CharityDonationVerified"
+      | "CharityFundUpdated"
+      | "CharityVerificationProposalCreated"
+      | "CharityVerificationProposalExecuted"
+      | "CharityVerificationVoteCast"
+      | "CharityVerified"
       | "CircuitBreakerTriggered"
       | "DynamicPriceUpdated"
       | "EmergencyStop"
@@ -107,12 +194,23 @@ export interface LDAOTreasuryInterface extends Interface {
       | "PriceUpdated"
       | "PricingTierAdded"
       | "SalesStatusUpdated"
+      | "TimelockRequestCancelled"
+      | "TimelockRequestCreated"
+      | "TimelockRequestExecuted"
       | "Unpaused"
       | "WhitelistUpdated"
   ): EventFragment;
 
   encodeFunctionData(
+    functionFragment: "EMERGENCY_TIMELOCK_DELAY",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "MULTI_SIG_THRESHOLD",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "TIMELOCK_DELAY",
     values?: undefined
   ): string;
   encodeFunctionData(
@@ -128,7 +226,59 @@ export interface LDAOTreasuryInterface extends Interface {
     values: [AddressLike[], boolean]
   ): string;
   encodeFunctionData(
+    functionFragment: "cancelTimelockRequest",
+    values: [BytesLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "charityApprovalThreshold",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "charityDisbursementProposals",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "charityDonations",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "charityDonationsHistory",
+    values: [AddressLike, BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "charityFund",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "charityFundAllocation",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "charityQuorum",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "charityVerificationProposals",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "charityVotes",
+    values: [AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "charityVotingPeriod",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "currentDayCharityDisbursements",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "currentDayPurchases",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "dailyCharityDisbursementLimit",
     values?: undefined
   ): string;
   encodeFunctionData(
@@ -144,6 +294,10 @@ export interface LDAOTreasuryInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
+    functionFragment: "disburseCharityFunds",
+    values: [AddressLike, BigNumberish, string]
+  ): string;
+  encodeFunctionData(
     functionFragment: "emergencyPause",
     values: [string]
   ): string;
@@ -156,12 +310,40 @@ export interface LDAOTreasuryInterface extends Interface {
     values: [BigNumberish, AddressLike]
   ): string;
   encodeFunctionData(
+    functionFragment: "ethUsdPriceFeed",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "executeCharityDisbursement",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "executeCharityVerification",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "executeGovernanceOperation",
     values: [AddressLike, BigNumberish, BytesLike]
   ): string;
   encodeFunctionData(
+    functionFragment: "executeTimelockRequest",
+    values: [BytesLike]
+  ): string;
+  encodeFunctionData(
     functionFragment: "executedTransactions",
     values: [BytesLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getCharityDonation",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getCharityDonationsHistory",
+    values: [AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getCharityFund",
+    values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "getCircuitBreakerStatus",
@@ -173,6 +355,10 @@ export interface LDAOTreasuryInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "getDynamicPricingInfo",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getETHPrice",
     values?: undefined
   ): string;
   encodeFunctionData(
@@ -204,11 +390,23 @@ export interface LDAOTreasuryInterface extends Interface {
     values: [AddressLike, BigNumberish, AddressLike]
   ): string;
   encodeFunctionData(
+    functionFragment: "isCharityVerified",
+    values: [AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "isTimelockReady",
+    values: [BytesLike]
+  ): string;
+  encodeFunctionData(
     functionFragment: "kycApproved",
     values: [AddressLike]
   ): string;
   encodeFunctionData(
     functionFragment: "kycRequired",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "lastCharityDisbursementDay",
     values?: undefined
   ): string;
   encodeFunctionData(
@@ -229,6 +427,10 @@ export interface LDAOTreasuryInterface extends Interface {
   ): string;
   encodeFunctionData(functionFragment: "ldaoToken", values?: undefined): string;
   encodeFunctionData(
+    functionFragment: "maxCharityDisbursement",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "maxPriceMultiplier",
     values?: undefined
   ): string;
@@ -237,11 +439,27 @@ export interface LDAOTreasuryInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
+    functionFragment: "minCharityDonationAmount",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "minCharityVerificationStake",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "minPurchaseAmount",
     values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "multiSigWallet",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "nextCharityDonationId",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "nextCharityProposalId",
     values?: undefined
   ): string;
   encodeFunctionData(
@@ -257,6 +475,14 @@ export interface LDAOTreasuryInterface extends Interface {
   encodeFunctionData(
     functionFragment: "pricingTiers",
     values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "proposeCharityDisbursement",
+    values: [AddressLike, BigNumberish, string]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "proposeCharityVerification",
+    values: [AddressLike, string, string, string]
   ): string;
   encodeFunctionData(
     functionFragment: "purchaseHistory",
@@ -287,6 +513,10 @@ export interface LDAOTreasuryInterface extends Interface {
     values: [boolean]
   ): string;
   encodeFunctionData(
+    functionFragment: "timelockRequests",
+    values: [BytesLike]
+  ): string;
+  encodeFunctionData(
     functionFragment: "totalRevenue",
     values?: undefined
   ): string;
@@ -297,12 +527,24 @@ export interface LDAOTreasuryInterface extends Interface {
   ): string;
   encodeFunctionData(functionFragment: "unpause", values?: undefined): string;
   encodeFunctionData(
+    functionFragment: "updateCharityFundAllocation",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "updateCharityGovernanceParams",
+    values: [BigNumberish, BigNumberish, BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "updateCircuitBreakerParams",
     values: [BigNumberish, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "updateDynamicPricingParams",
     values: [BigNumberish, BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "updateEthUsdPriceFeed",
+    values: [AddressLike]
   ): string;
   encodeFunctionData(
     functionFragment: "updateGovernance",
@@ -314,6 +556,10 @@ export interface LDAOTreasuryInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "updateLDAOPrice",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "updateMinCharityDonationAmount",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
@@ -334,6 +580,26 @@ export interface LDAOTreasuryInterface extends Interface {
   ): string;
   encodeFunctionData(functionFragment: "usdcToken", values?: undefined): string;
   encodeFunctionData(
+    functionFragment: "verifiedCharities",
+    values: [AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "verifyCharity",
+    values: [AddressLike, boolean]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "verifyCharityDonation",
+    values: [BigNumberish, string]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "voteCharityDisbursement",
+    values: [BigNumberish, boolean]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "voteCharityVerification",
+    values: [BigNumberish, boolean]
+  ): string;
+  encodeFunctionData(
     functionFragment: "whitelist",
     values: [AddressLike]
   ): string;
@@ -347,7 +613,15 @@ export interface LDAOTreasuryInterface extends Interface {
   ): string;
 
   decodeFunctionResult(
+    functionFragment: "EMERGENCY_TIMELOCK_DELAY",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "MULTI_SIG_THRESHOLD",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "TIMELOCK_DELAY",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -363,7 +637,59 @@ export interface LDAOTreasuryInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "cancelTimelockRequest",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "charityApprovalThreshold",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "charityDisbursementProposals",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "charityDonations",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "charityDonationsHistory",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "charityFund",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "charityFundAllocation",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "charityQuorum",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "charityVerificationProposals",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "charityVotes",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "charityVotingPeriod",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "currentDayCharityDisbursements",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "currentDayPurchases",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "dailyCharityDisbursementLimit",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -379,6 +705,10 @@ export interface LDAOTreasuryInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "disburseCharityFunds",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "emergencyPause",
     data: BytesLike
   ): Result;
@@ -391,11 +721,39 @@ export interface LDAOTreasuryInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "ethUsdPriceFeed",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "executeCharityDisbursement",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "executeCharityVerification",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "executeGovernanceOperation",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "executeTimelockRequest",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "executedTransactions",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getCharityDonation",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getCharityDonationsHistory",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getCharityFund",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -408,6 +766,10 @@ export interface LDAOTreasuryInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "getDynamicPricingInfo",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getETHPrice",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -433,11 +795,23 @@ export interface LDAOTreasuryInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "isCharityVerified",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "isTimelockReady",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "kycApproved",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
     functionFragment: "kycRequired",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "lastCharityDisbursementDay",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -458,6 +832,10 @@ export interface LDAOTreasuryInterface extends Interface {
   ): Result;
   decodeFunctionResult(functionFragment: "ldaoToken", data: BytesLike): Result;
   decodeFunctionResult(
+    functionFragment: "maxCharityDisbursement",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "maxPriceMultiplier",
     data: BytesLike
   ): Result;
@@ -466,11 +844,27 @@ export interface LDAOTreasuryInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "minCharityDonationAmount",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "minCharityVerificationStake",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "minPurchaseAmount",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
     functionFragment: "multiSigWallet",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "nextCharityDonationId",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "nextCharityProposalId",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "nextTierId", data: BytesLike): Result;
@@ -482,6 +876,14 @@ export interface LDAOTreasuryInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "pricingTiers",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "proposeCharityDisbursement",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "proposeCharityVerification",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -513,6 +915,10 @@ export interface LDAOTreasuryInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "timelockRequests",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "totalRevenue",
     data: BytesLike
   ): Result;
@@ -523,11 +929,23 @@ export interface LDAOTreasuryInterface extends Interface {
   ): Result;
   decodeFunctionResult(functionFragment: "unpause", data: BytesLike): Result;
   decodeFunctionResult(
+    functionFragment: "updateCharityFundAllocation",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "updateCharityGovernanceParams",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "updateCircuitBreakerParams",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
     functionFragment: "updateDynamicPricingParams",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "updateEthUsdPriceFeed",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -540,6 +958,10 @@ export interface LDAOTreasuryInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "updateLDAOPrice",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "updateMinCharityDonationAmount",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -559,6 +981,26 @@ export interface LDAOTreasuryInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "usdcToken", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "verifiedCharities",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "verifyCharity",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "verifyCharityDonation",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "voteCharityDisbursement",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "voteCharityVerification",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "whitelist", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "withdrawETH",
@@ -568,6 +1010,226 @@ export interface LDAOTreasuryInterface extends Interface {
     functionFragment: "withdrawToken",
     data: BytesLike
   ): Result;
+}
+
+export namespace CharityDisbursementEvent {
+  export type InputTuple = [
+    donationId: BigNumberish,
+    recipient: AddressLike,
+    amount: BigNumberish,
+    proposalId: BigNumberish,
+    description: string
+  ];
+  export type OutputTuple = [
+    donationId: bigint,
+    recipient: string,
+    amount: bigint,
+    proposalId: bigint,
+    description: string
+  ];
+  export interface OutputObject {
+    donationId: bigint;
+    recipient: string;
+    amount: bigint;
+    proposalId: bigint;
+    description: string;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace CharityDisbursementProposalCreatedEvent {
+  export type InputTuple = [
+    proposalId: BigNumberish,
+    recipient: AddressLike,
+    amount: BigNumberish,
+    endTime: BigNumberish
+  ];
+  export type OutputTuple = [
+    proposalId: bigint,
+    recipient: string,
+    amount: bigint,
+    endTime: bigint
+  ];
+  export interface OutputObject {
+    proposalId: bigint;
+    recipient: string;
+    amount: bigint;
+    endTime: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace CharityDisbursementProposalExecutedEvent {
+  export type InputTuple = [
+    proposalId: BigNumberish,
+    passed: boolean,
+    votesFor: BigNumberish,
+    votesAgainst: BigNumberish
+  ];
+  export type OutputTuple = [
+    proposalId: bigint,
+    passed: boolean,
+    votesFor: bigint,
+    votesAgainst: bigint
+  ];
+  export interface OutputObject {
+    proposalId: bigint;
+    passed: boolean;
+    votesFor: bigint;
+    votesAgainst: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace CharityDisbursementVoteCastEvent {
+  export type InputTuple = [
+    proposalId: BigNumberish,
+    voter: AddressLike,
+    support: boolean,
+    votingPower: BigNumberish
+  ];
+  export type OutputTuple = [
+    proposalId: bigint,
+    voter: string,
+    support: boolean,
+    votingPower: bigint
+  ];
+  export interface OutputObject {
+    proposalId: bigint;
+    voter: string;
+    support: boolean;
+    votingPower: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace CharityDonationVerifiedEvent {
+  export type InputTuple = [donationId: BigNumberish, receiptHash: string];
+  export type OutputTuple = [donationId: bigint, receiptHash: string];
+  export interface OutputObject {
+    donationId: bigint;
+    receiptHash: string;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace CharityFundUpdatedEvent {
+  export type InputTuple = [
+    newAllocation: BigNumberish,
+    availableBalance: BigNumberish
+  ];
+  export type OutputTuple = [newAllocation: bigint, availableBalance: bigint];
+  export interface OutputObject {
+    newAllocation: bigint;
+    availableBalance: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace CharityVerificationProposalCreatedEvent {
+  export type InputTuple = [
+    proposalId: BigNumberish,
+    charityAddress: AddressLike,
+    name: string,
+    endTime: BigNumberish
+  ];
+  export type OutputTuple = [
+    proposalId: bigint,
+    charityAddress: string,
+    name: string,
+    endTime: bigint
+  ];
+  export interface OutputObject {
+    proposalId: bigint;
+    charityAddress: string;
+    name: string;
+    endTime: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace CharityVerificationProposalExecutedEvent {
+  export type InputTuple = [
+    proposalId: BigNumberish,
+    passed: boolean,
+    votesFor: BigNumberish,
+    votesAgainst: BigNumberish
+  ];
+  export type OutputTuple = [
+    proposalId: bigint,
+    passed: boolean,
+    votesFor: bigint,
+    votesAgainst: bigint
+  ];
+  export interface OutputObject {
+    proposalId: bigint;
+    passed: boolean;
+    votesFor: bigint;
+    votesAgainst: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace CharityVerificationVoteCastEvent {
+  export type InputTuple = [
+    proposalId: BigNumberish,
+    voter: AddressLike,
+    support: boolean,
+    votingPower: BigNumberish
+  ];
+  export type OutputTuple = [
+    proposalId: bigint,
+    voter: string,
+    support: boolean,
+    votingPower: bigint
+  ];
+  export interface OutputObject {
+    proposalId: bigint;
+    voter: string;
+    support: boolean;
+    votingPower: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace CharityVerifiedEvent {
+  export type InputTuple = [charityAddress: AddressLike, verified: boolean];
+  export type OutputTuple = [charityAddress: string, verified: boolean];
+  export interface OutputObject {
+    charityAddress: string;
+    verified: boolean;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
 }
 
 export namespace CircuitBreakerTriggeredEvent {
@@ -786,6 +1448,55 @@ export namespace SalesStatusUpdatedEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
+export namespace TimelockRequestCancelledEvent {
+  export type InputTuple = [requestId: BytesLike];
+  export type OutputTuple = [requestId: string];
+  export interface OutputObject {
+    requestId: string;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace TimelockRequestCreatedEvent {
+  export type InputTuple = [
+    requestId: BytesLike,
+    target: AddressLike,
+    operationType: string,
+    executableTime: BigNumberish
+  ];
+  export type OutputTuple = [
+    requestId: string,
+    target: string,
+    operationType: string,
+    executableTime: bigint
+  ];
+  export interface OutputObject {
+    requestId: string;
+    target: string;
+    operationType: string;
+    executableTime: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace TimelockRequestExecutedEvent {
+  export type InputTuple = [requestId: BytesLike];
+  export type OutputTuple = [requestId: string];
+  export interface OutputObject {
+    requestId: string;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
 export namespace UnpausedEvent {
   export type InputTuple = [account: AddressLike];
   export type OutputTuple = [account: string];
@@ -854,7 +1565,11 @@ export interface LDAOTreasury extends BaseContract {
     event?: TCEvent
   ): Promise<this>;
 
+  EMERGENCY_TIMELOCK_DELAY: TypedContractMethod<[], [bigint], "view">;
+
   MULTI_SIG_THRESHOLD: TypedContractMethod<[], [bigint], "view">;
+
+  TIMELOCK_DELAY: TypedContractMethod<[], [bigint], "view">;
 
   addPricingTier: TypedContractMethod<
     [threshold: BigNumberish, discountBps: BigNumberish],
@@ -870,13 +1585,137 @@ export interface LDAOTreasury extends BaseContract {
     "nonpayable"
   >;
 
+  cancelTimelockRequest: TypedContractMethod<
+    [requestId: BytesLike],
+    [void],
+    "nonpayable"
+  >;
+
+  charityApprovalThreshold: TypedContractMethod<[], [bigint], "view">;
+
+  charityDisbursementProposals: TypedContractMethod<
+    [arg0: BigNumberish],
+    [
+      [
+        bigint,
+        string,
+        bigint,
+        string,
+        bigint,
+        bigint,
+        bigint,
+        bigint,
+        boolean,
+        boolean
+      ] & {
+        proposalId: bigint;
+        recipient: string;
+        amount: bigint;
+        description: string;
+        votesFor: bigint;
+        votesAgainst: bigint;
+        startTime: bigint;
+        endTime: bigint;
+        executed: boolean;
+        passed: boolean;
+      }
+    ],
+    "view"
+  >;
+
+  charityDonations: TypedContractMethod<
+    [arg0: BigNumberish],
+    [
+      [bigint, string, bigint, bigint, string, bigint, boolean, string] & {
+        id: bigint;
+        recipient: string;
+        amount: bigint;
+        timestamp: bigint;
+        description: string;
+        proposalId: bigint;
+        isVerified: boolean;
+        verificationReceipt: string;
+      }
+    ],
+    "view"
+  >;
+
+  charityDonationsHistory: TypedContractMethod<
+    [arg0: AddressLike, arg1: BigNumberish],
+    [bigint],
+    "view"
+  >;
+
+  charityFund: TypedContractMethod<
+    [],
+    [
+      [bigint, bigint, bigint, bigint] & {
+        totalDisbursed: bigint;
+        totalReceived: bigint;
+        availableBalance: bigint;
+        charityCount: bigint;
+      }
+    ],
+    "view"
+  >;
+
+  charityFundAllocation: TypedContractMethod<[], [bigint], "view">;
+
+  charityQuorum: TypedContractMethod<[], [bigint], "view">;
+
+  charityVerificationProposals: TypedContractMethod<
+    [arg0: BigNumberish],
+    [
+      [
+        bigint,
+        string,
+        string,
+        string,
+        string,
+        bigint,
+        bigint,
+        bigint,
+        bigint,
+        boolean,
+        boolean
+      ] & {
+        proposalId: bigint;
+        charityAddress: string;
+        name: string;
+        description: string;
+        ipfsHash: string;
+        votesFor: bigint;
+        votesAgainst: bigint;
+        startTime: bigint;
+        endTime: bigint;
+        executed: boolean;
+        passed: boolean;
+      }
+    ],
+    "view"
+  >;
+
+  charityVotes: TypedContractMethod<[arg0: AddressLike], [bigint], "view">;
+
+  charityVotingPeriod: TypedContractMethod<[], [bigint], "view">;
+
+  currentDayCharityDisbursements: TypedContractMethod<[], [bigint], "view">;
+
   currentDayPurchases: TypedContractMethod<[], [bigint], "view">;
+
+  dailyCharityDisbursementLimit: TypedContractMethod<[], [bigint], "view">;
 
   dailyPurchaseLimit: TypedContractMethod<[], [bigint], "view">;
 
   dailyPurchases: TypedContractMethod<[arg0: AddressLike], [bigint], "view">;
 
   demandMultiplier: TypedContractMethod<[], [bigint], "view">;
+
+  disburseCharityFunds: TypedContractMethod<
+    [recipient: AddressLike, amount: BigNumberish, description: string],
+    [bigint],
+    "nonpayable"
+  >;
 
   emergencyPause: TypedContractMethod<[reason: string], [void], "nonpayable">;
 
@@ -888,15 +1727,60 @@ export interface LDAOTreasury extends BaseContract {
     "nonpayable"
   >;
 
+  ethUsdPriceFeed: TypedContractMethod<[], [string], "view">;
+
+  executeCharityDisbursement: TypedContractMethod<
+    [proposalId: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
+  executeCharityVerification: TypedContractMethod<
+    [proposalId: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
   executeGovernanceOperation: TypedContractMethod<
     [target: AddressLike, value: BigNumberish, data: BytesLike],
     [boolean],
     "nonpayable"
   >;
 
+  executeTimelockRequest: TypedContractMethod<
+    [requestId: BytesLike],
+    [void],
+    "nonpayable"
+  >;
+
   executedTransactions: TypedContractMethod<
     [arg0: BytesLike],
     [boolean],
+    "view"
+  >;
+
+  getCharityDonation: TypedContractMethod<
+    [donationId: BigNumberish],
+    [LDAOTreasury.CharityDonationStructOutput],
+    "view"
+  >;
+
+  getCharityDonationsHistory: TypedContractMethod<
+    [charityAddress: AddressLike],
+    [bigint[]],
+    "view"
+  >;
+
+  getCharityFund: TypedContractMethod<
+    [],
+    [
+      [bigint, bigint, bigint, bigint] & {
+        totalDisbursed: bigint;
+        totalReceived: bigint;
+        availableBalance: bigint;
+        charityCount: bigint;
+      }
+    ],
     "view"
   >;
 
@@ -927,6 +1811,8 @@ export interface LDAOTreasury extends BaseContract {
     ],
     "view"
   >;
+
+  getETHPrice: TypedContractMethod<[], [bigint], "view">;
 
   getPricingTier: TypedContractMethod<
     [tierId: BigNumberish],
@@ -985,9 +1871,23 @@ export interface LDAOTreasury extends BaseContract {
     "nonpayable"
   >;
 
+  isCharityVerified: TypedContractMethod<
+    [charityAddress: AddressLike],
+    [boolean],
+    "view"
+  >;
+
+  isTimelockReady: TypedContractMethod<
+    [requestId: BytesLike],
+    [boolean],
+    "view"
+  >;
+
   kycApproved: TypedContractMethod<[arg0: AddressLike], [boolean], "view">;
 
   kycRequired: TypedContractMethod<[], [boolean], "view">;
+
+  lastCharityDisbursementDay: TypedContractMethod<[], [bigint], "view">;
 
   lastPriceUpdate: TypedContractMethod<[], [bigint], "view">;
 
@@ -999,13 +1899,23 @@ export interface LDAOTreasury extends BaseContract {
 
   ldaoToken: TypedContractMethod<[], [string], "view">;
 
+  maxCharityDisbursement: TypedContractMethod<[], [bigint], "view">;
+
   maxPriceMultiplier: TypedContractMethod<[], [bigint], "view">;
 
   maxPurchaseAmount: TypedContractMethod<[], [bigint], "view">;
 
+  minCharityDonationAmount: TypedContractMethod<[], [bigint], "view">;
+
+  minCharityVerificationStake: TypedContractMethod<[], [bigint], "view">;
+
   minPurchaseAmount: TypedContractMethod<[], [bigint], "view">;
 
   multiSigWallet: TypedContractMethod<[], [string], "view">;
+
+  nextCharityDonationId: TypedContractMethod<[], [bigint], "view">;
+
+  nextCharityProposalId: TypedContractMethod<[], [bigint], "view">;
 
   nextTierId: TypedContractMethod<[], [bigint], "view">;
 
@@ -1025,6 +1935,23 @@ export interface LDAOTreasury extends BaseContract {
       }
     ],
     "view"
+  >;
+
+  proposeCharityDisbursement: TypedContractMethod<
+    [recipient: AddressLike, amount: BigNumberish, description: string],
+    [bigint],
+    "nonpayable"
+  >;
+
+  proposeCharityVerification: TypedContractMethod<
+    [
+      charityAddress: AddressLike,
+      name: string,
+      description: string,
+      ipfsHash: string
+    ],
+    [bigint],
+    "nonpayable"
   >;
 
   purchaseHistory: TypedContractMethod<[arg0: AddressLike], [bigint], "view">;
@@ -1053,6 +1980,22 @@ export interface LDAOTreasury extends BaseContract {
 
   setSalesActive: TypedContractMethod<[active: boolean], [void], "nonpayable">;
 
+  timelockRequests: TypedContractMethod<
+    [arg0: BytesLike],
+    [
+      [string, bigint, string, bigint, bigint, boolean, string] & {
+        target: string;
+        value: bigint;
+        data: string;
+        timestamp: bigint;
+        delay: bigint;
+        executed: boolean;
+        operationType: string;
+      }
+    ],
+    "view"
+  >;
+
   totalRevenue: TypedContractMethod<[], [bigint], "view">;
 
   totalSold: TypedContractMethod<[], [bigint], "view">;
@@ -1065,6 +2008,22 @@ export interface LDAOTreasury extends BaseContract {
 
   unpause: TypedContractMethod<[], [void], "nonpayable">;
 
+  updateCharityFundAllocation: TypedContractMethod<
+    [newAllocation: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
+  updateCharityGovernanceParams: TypedContractMethod<
+    [
+      _votingPeriod: BigNumberish,
+      _quorum: BigNumberish,
+      _approvalThreshold: BigNumberish
+    ],
+    [void],
+    "nonpayable"
+  >;
+
   updateCircuitBreakerParams: TypedContractMethod<
     [_dailyLimit: BigNumberish, _emergencyThreshold: BigNumberish],
     [void],
@@ -1073,6 +2032,12 @@ export interface LDAOTreasury extends BaseContract {
 
   updateDynamicPricingParams: TypedContractMethod<
     [_maxPriceMultiplier: BigNumberish, _priceUpdateInterval: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
+  updateEthUsdPriceFeed: TypedContractMethod<
+    [newPriceFeed: AddressLike],
     [void],
     "nonpayable"
   >;
@@ -1091,6 +2056,12 @@ export interface LDAOTreasury extends BaseContract {
 
   updateLDAOPrice: TypedContractMethod<
     [newPriceInUSD: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
+  updateMinCharityDonationAmount: TypedContractMethod<
+    [newMinimum: BigNumberish],
     [void],
     "nonpayable"
   >;
@@ -1126,6 +2097,36 @@ export interface LDAOTreasury extends BaseContract {
 
   usdcToken: TypedContractMethod<[], [string], "view">;
 
+  verifiedCharities: TypedContractMethod<
+    [arg0: AddressLike],
+    [boolean],
+    "view"
+  >;
+
+  verifyCharity: TypedContractMethod<
+    [charityAddress: AddressLike, verify: boolean],
+    [void],
+    "nonpayable"
+  >;
+
+  verifyCharityDonation: TypedContractMethod<
+    [donationId: BigNumberish, receiptHash: string],
+    [void],
+    "nonpayable"
+  >;
+
+  voteCharityDisbursement: TypedContractMethod<
+    [proposalId: BigNumberish, support: boolean],
+    [void],
+    "nonpayable"
+  >;
+
+  voteCharityVerification: TypedContractMethod<
+    [proposalId: BigNumberish, support: boolean],
+    [void],
+    "nonpayable"
+  >;
+
   whitelist: TypedContractMethod<[arg0: AddressLike], [boolean], "view">;
 
   withdrawETH: TypedContractMethod<
@@ -1145,7 +2146,13 @@ export interface LDAOTreasury extends BaseContract {
   ): T;
 
   getFunction(
+    nameOrSignature: "EMERGENCY_TIMELOCK_DELAY"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
     nameOrSignature: "MULTI_SIG_THRESHOLD"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "TIMELOCK_DELAY"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "addPricingTier"
@@ -1165,7 +2172,134 @@ export interface LDAOTreasury extends BaseContract {
     "nonpayable"
   >;
   getFunction(
+    nameOrSignature: "cancelTimelockRequest"
+  ): TypedContractMethod<[requestId: BytesLike], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "charityApprovalThreshold"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "charityDisbursementProposals"
+  ): TypedContractMethod<
+    [arg0: BigNumberish],
+    [
+      [
+        bigint,
+        string,
+        bigint,
+        string,
+        bigint,
+        bigint,
+        bigint,
+        bigint,
+        boolean,
+        boolean
+      ] & {
+        proposalId: bigint;
+        recipient: string;
+        amount: bigint;
+        description: string;
+        votesFor: bigint;
+        votesAgainst: bigint;
+        startTime: bigint;
+        endTime: bigint;
+        executed: boolean;
+        passed: boolean;
+      }
+    ],
+    "view"
+  >;
+  getFunction(
+    nameOrSignature: "charityDonations"
+  ): TypedContractMethod<
+    [arg0: BigNumberish],
+    [
+      [bigint, string, bigint, bigint, string, bigint, boolean, string] & {
+        id: bigint;
+        recipient: string;
+        amount: bigint;
+        timestamp: bigint;
+        description: string;
+        proposalId: bigint;
+        isVerified: boolean;
+        verificationReceipt: string;
+      }
+    ],
+    "view"
+  >;
+  getFunction(
+    nameOrSignature: "charityDonationsHistory"
+  ): TypedContractMethod<
+    [arg0: AddressLike, arg1: BigNumberish],
+    [bigint],
+    "view"
+  >;
+  getFunction(
+    nameOrSignature: "charityFund"
+  ): TypedContractMethod<
+    [],
+    [
+      [bigint, bigint, bigint, bigint] & {
+        totalDisbursed: bigint;
+        totalReceived: bigint;
+        availableBalance: bigint;
+        charityCount: bigint;
+      }
+    ],
+    "view"
+  >;
+  getFunction(
+    nameOrSignature: "charityFundAllocation"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "charityQuorum"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "charityVerificationProposals"
+  ): TypedContractMethod<
+    [arg0: BigNumberish],
+    [
+      [
+        bigint,
+        string,
+        string,
+        string,
+        string,
+        bigint,
+        bigint,
+        bigint,
+        bigint,
+        boolean,
+        boolean
+      ] & {
+        proposalId: bigint;
+        charityAddress: string;
+        name: string;
+        description: string;
+        ipfsHash: string;
+        votesFor: bigint;
+        votesAgainst: bigint;
+        startTime: bigint;
+        endTime: bigint;
+        executed: boolean;
+        passed: boolean;
+      }
+    ],
+    "view"
+  >;
+  getFunction(
+    nameOrSignature: "charityVotes"
+  ): TypedContractMethod<[arg0: AddressLike], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "charityVotingPeriod"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "currentDayCharityDisbursements"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
     nameOrSignature: "currentDayPurchases"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "dailyCharityDisbursementLimit"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "dailyPurchaseLimit"
@@ -1176,6 +2310,13 @@ export interface LDAOTreasury extends BaseContract {
   getFunction(
     nameOrSignature: "demandMultiplier"
   ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "disburseCharityFunds"
+  ): TypedContractMethod<
+    [recipient: AddressLike, amount: BigNumberish, description: string],
+    [bigint],
+    "nonpayable"
+  >;
   getFunction(
     nameOrSignature: "emergencyPause"
   ): TypedContractMethod<[reason: string], [void], "nonpayable">;
@@ -1190,6 +2331,15 @@ export interface LDAOTreasury extends BaseContract {
     "nonpayable"
   >;
   getFunction(
+    nameOrSignature: "ethUsdPriceFeed"
+  ): TypedContractMethod<[], [string], "view">;
+  getFunction(
+    nameOrSignature: "executeCharityDisbursement"
+  ): TypedContractMethod<[proposalId: BigNumberish], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "executeCharityVerification"
+  ): TypedContractMethod<[proposalId: BigNumberish], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "executeGovernanceOperation"
   ): TypedContractMethod<
     [target: AddressLike, value: BigNumberish, data: BytesLike],
@@ -1197,8 +2347,35 @@ export interface LDAOTreasury extends BaseContract {
     "nonpayable"
   >;
   getFunction(
+    nameOrSignature: "executeTimelockRequest"
+  ): TypedContractMethod<[requestId: BytesLike], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "executedTransactions"
   ): TypedContractMethod<[arg0: BytesLike], [boolean], "view">;
+  getFunction(
+    nameOrSignature: "getCharityDonation"
+  ): TypedContractMethod<
+    [donationId: BigNumberish],
+    [LDAOTreasury.CharityDonationStructOutput],
+    "view"
+  >;
+  getFunction(
+    nameOrSignature: "getCharityDonationsHistory"
+  ): TypedContractMethod<[charityAddress: AddressLike], [bigint[]], "view">;
+  getFunction(
+    nameOrSignature: "getCharityFund"
+  ): TypedContractMethod<
+    [],
+    [
+      [bigint, bigint, bigint, bigint] & {
+        totalDisbursed: bigint;
+        totalReceived: bigint;
+        availableBalance: bigint;
+        charityCount: bigint;
+      }
+    ],
+    "view"
+  >;
   getFunction(
     nameOrSignature: "getCircuitBreakerStatus"
   ): TypedContractMethod<
@@ -1230,6 +2407,9 @@ export interface LDAOTreasury extends BaseContract {
     ],
     "view"
   >;
+  getFunction(
+    nameOrSignature: "getETHPrice"
+  ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "getPricingTier"
   ): TypedContractMethod<
@@ -1287,11 +2467,20 @@ export interface LDAOTreasury extends BaseContract {
     "nonpayable"
   >;
   getFunction(
+    nameOrSignature: "isCharityVerified"
+  ): TypedContractMethod<[charityAddress: AddressLike], [boolean], "view">;
+  getFunction(
+    nameOrSignature: "isTimelockReady"
+  ): TypedContractMethod<[requestId: BytesLike], [boolean], "view">;
+  getFunction(
     nameOrSignature: "kycApproved"
   ): TypedContractMethod<[arg0: AddressLike], [boolean], "view">;
   getFunction(
     nameOrSignature: "kycRequired"
   ): TypedContractMethod<[], [boolean], "view">;
+  getFunction(
+    nameOrSignature: "lastCharityDisbursementDay"
+  ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "lastPriceUpdate"
   ): TypedContractMethod<[], [bigint], "view">;
@@ -1308,10 +2497,19 @@ export interface LDAOTreasury extends BaseContract {
     nameOrSignature: "ldaoToken"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
+    nameOrSignature: "maxCharityDisbursement"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
     nameOrSignature: "maxPriceMultiplier"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "maxPurchaseAmount"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "minCharityDonationAmount"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "minCharityVerificationStake"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "minPurchaseAmount"
@@ -1319,6 +2517,12 @@ export interface LDAOTreasury extends BaseContract {
   getFunction(
     nameOrSignature: "multiSigWallet"
   ): TypedContractMethod<[], [string], "view">;
+  getFunction(
+    nameOrSignature: "nextCharityDonationId"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "nextCharityProposalId"
+  ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "nextTierId"
   ): TypedContractMethod<[], [bigint], "view">;
@@ -1345,6 +2549,25 @@ export interface LDAOTreasury extends BaseContract {
     "view"
   >;
   getFunction(
+    nameOrSignature: "proposeCharityDisbursement"
+  ): TypedContractMethod<
+    [recipient: AddressLike, amount: BigNumberish, description: string],
+    [bigint],
+    "nonpayable"
+  >;
+  getFunction(
+    nameOrSignature: "proposeCharityVerification"
+  ): TypedContractMethod<
+    [
+      charityAddress: AddressLike,
+      name: string,
+      description: string,
+      ipfsHash: string
+    ],
+    [bigint],
+    "nonpayable"
+  >;
+  getFunction(
     nameOrSignature: "purchaseHistory"
   ): TypedContractMethod<[arg0: AddressLike], [bigint], "view">;
   getFunction(
@@ -1366,6 +2589,23 @@ export interface LDAOTreasury extends BaseContract {
     nameOrSignature: "setSalesActive"
   ): TypedContractMethod<[active: boolean], [void], "nonpayable">;
   getFunction(
+    nameOrSignature: "timelockRequests"
+  ): TypedContractMethod<
+    [arg0: BytesLike],
+    [
+      [string, bigint, string, bigint, bigint, boolean, string] & {
+        target: string;
+        value: bigint;
+        data: string;
+        timestamp: bigint;
+        delay: bigint;
+        executed: boolean;
+        operationType: string;
+      }
+    ],
+    "view"
+  >;
+  getFunction(
     nameOrSignature: "totalRevenue"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
@@ -1377,6 +2617,20 @@ export interface LDAOTreasury extends BaseContract {
   getFunction(
     nameOrSignature: "unpause"
   ): TypedContractMethod<[], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "updateCharityFundAllocation"
+  ): TypedContractMethod<[newAllocation: BigNumberish], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "updateCharityGovernanceParams"
+  ): TypedContractMethod<
+    [
+      _votingPeriod: BigNumberish,
+      _quorum: BigNumberish,
+      _approvalThreshold: BigNumberish
+    ],
+    [void],
+    "nonpayable"
+  >;
   getFunction(
     nameOrSignature: "updateCircuitBreakerParams"
   ): TypedContractMethod<
@@ -1392,6 +2646,9 @@ export interface LDAOTreasury extends BaseContract {
     "nonpayable"
   >;
   getFunction(
+    nameOrSignature: "updateEthUsdPriceFeed"
+  ): TypedContractMethod<[newPriceFeed: AddressLike], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "updateGovernance"
   ): TypedContractMethod<[newGovernance: AddressLike], [void], "nonpayable">;
   getFunction(
@@ -1404,6 +2661,9 @@ export interface LDAOTreasury extends BaseContract {
   getFunction(
     nameOrSignature: "updateLDAOPrice"
   ): TypedContractMethod<[newPriceInUSD: BigNumberish], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "updateMinCharityDonationAmount"
+  ): TypedContractMethod<[newMinimum: BigNumberish], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "updateMultiSigWallet"
   ): TypedContractMethod<
@@ -1441,6 +2701,37 @@ export interface LDAOTreasury extends BaseContract {
     nameOrSignature: "usdcToken"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
+    nameOrSignature: "verifiedCharities"
+  ): TypedContractMethod<[arg0: AddressLike], [boolean], "view">;
+  getFunction(
+    nameOrSignature: "verifyCharity"
+  ): TypedContractMethod<
+    [charityAddress: AddressLike, verify: boolean],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
+    nameOrSignature: "verifyCharityDonation"
+  ): TypedContractMethod<
+    [donationId: BigNumberish, receiptHash: string],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
+    nameOrSignature: "voteCharityDisbursement"
+  ): TypedContractMethod<
+    [proposalId: BigNumberish, support: boolean],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
+    nameOrSignature: "voteCharityVerification"
+  ): TypedContractMethod<
+    [proposalId: BigNumberish, support: boolean],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
     nameOrSignature: "whitelist"
   ): TypedContractMethod<[arg0: AddressLike], [boolean], "view">;
   getFunction(
@@ -1458,6 +2749,76 @@ export interface LDAOTreasury extends BaseContract {
     "nonpayable"
   >;
 
+  getEvent(
+    key: "CharityDisbursement"
+  ): TypedContractEvent<
+    CharityDisbursementEvent.InputTuple,
+    CharityDisbursementEvent.OutputTuple,
+    CharityDisbursementEvent.OutputObject
+  >;
+  getEvent(
+    key: "CharityDisbursementProposalCreated"
+  ): TypedContractEvent<
+    CharityDisbursementProposalCreatedEvent.InputTuple,
+    CharityDisbursementProposalCreatedEvent.OutputTuple,
+    CharityDisbursementProposalCreatedEvent.OutputObject
+  >;
+  getEvent(
+    key: "CharityDisbursementProposalExecuted"
+  ): TypedContractEvent<
+    CharityDisbursementProposalExecutedEvent.InputTuple,
+    CharityDisbursementProposalExecutedEvent.OutputTuple,
+    CharityDisbursementProposalExecutedEvent.OutputObject
+  >;
+  getEvent(
+    key: "CharityDisbursementVoteCast"
+  ): TypedContractEvent<
+    CharityDisbursementVoteCastEvent.InputTuple,
+    CharityDisbursementVoteCastEvent.OutputTuple,
+    CharityDisbursementVoteCastEvent.OutputObject
+  >;
+  getEvent(
+    key: "CharityDonationVerified"
+  ): TypedContractEvent<
+    CharityDonationVerifiedEvent.InputTuple,
+    CharityDonationVerifiedEvent.OutputTuple,
+    CharityDonationVerifiedEvent.OutputObject
+  >;
+  getEvent(
+    key: "CharityFundUpdated"
+  ): TypedContractEvent<
+    CharityFundUpdatedEvent.InputTuple,
+    CharityFundUpdatedEvent.OutputTuple,
+    CharityFundUpdatedEvent.OutputObject
+  >;
+  getEvent(
+    key: "CharityVerificationProposalCreated"
+  ): TypedContractEvent<
+    CharityVerificationProposalCreatedEvent.InputTuple,
+    CharityVerificationProposalCreatedEvent.OutputTuple,
+    CharityVerificationProposalCreatedEvent.OutputObject
+  >;
+  getEvent(
+    key: "CharityVerificationProposalExecuted"
+  ): TypedContractEvent<
+    CharityVerificationProposalExecutedEvent.InputTuple,
+    CharityVerificationProposalExecutedEvent.OutputTuple,
+    CharityVerificationProposalExecutedEvent.OutputObject
+  >;
+  getEvent(
+    key: "CharityVerificationVoteCast"
+  ): TypedContractEvent<
+    CharityVerificationVoteCastEvent.InputTuple,
+    CharityVerificationVoteCastEvent.OutputTuple,
+    CharityVerificationVoteCastEvent.OutputObject
+  >;
+  getEvent(
+    key: "CharityVerified"
+  ): TypedContractEvent<
+    CharityVerifiedEvent.InputTuple,
+    CharityVerifiedEvent.OutputTuple,
+    CharityVerifiedEvent.OutputObject
+  >;
   getEvent(
     key: "CircuitBreakerTriggered"
   ): TypedContractEvent<
@@ -1557,6 +2918,27 @@ export interface LDAOTreasury extends BaseContract {
     SalesStatusUpdatedEvent.OutputObject
   >;
   getEvent(
+    key: "TimelockRequestCancelled"
+  ): TypedContractEvent<
+    TimelockRequestCancelledEvent.InputTuple,
+    TimelockRequestCancelledEvent.OutputTuple,
+    TimelockRequestCancelledEvent.OutputObject
+  >;
+  getEvent(
+    key: "TimelockRequestCreated"
+  ): TypedContractEvent<
+    TimelockRequestCreatedEvent.InputTuple,
+    TimelockRequestCreatedEvent.OutputTuple,
+    TimelockRequestCreatedEvent.OutputObject
+  >;
+  getEvent(
+    key: "TimelockRequestExecuted"
+  ): TypedContractEvent<
+    TimelockRequestExecutedEvent.InputTuple,
+    TimelockRequestExecutedEvent.OutputTuple,
+    TimelockRequestExecutedEvent.OutputObject
+  >;
+  getEvent(
     key: "Unpaused"
   ): TypedContractEvent<
     UnpausedEvent.InputTuple,
@@ -1572,6 +2954,116 @@ export interface LDAOTreasury extends BaseContract {
   >;
 
   filters: {
+    "CharityDisbursement(uint256,address,uint256,uint256,string)": TypedContractEvent<
+      CharityDisbursementEvent.InputTuple,
+      CharityDisbursementEvent.OutputTuple,
+      CharityDisbursementEvent.OutputObject
+    >;
+    CharityDisbursement: TypedContractEvent<
+      CharityDisbursementEvent.InputTuple,
+      CharityDisbursementEvent.OutputTuple,
+      CharityDisbursementEvent.OutputObject
+    >;
+
+    "CharityDisbursementProposalCreated(uint256,address,uint256,uint256)": TypedContractEvent<
+      CharityDisbursementProposalCreatedEvent.InputTuple,
+      CharityDisbursementProposalCreatedEvent.OutputTuple,
+      CharityDisbursementProposalCreatedEvent.OutputObject
+    >;
+    CharityDisbursementProposalCreated: TypedContractEvent<
+      CharityDisbursementProposalCreatedEvent.InputTuple,
+      CharityDisbursementProposalCreatedEvent.OutputTuple,
+      CharityDisbursementProposalCreatedEvent.OutputObject
+    >;
+
+    "CharityDisbursementProposalExecuted(uint256,bool,uint256,uint256)": TypedContractEvent<
+      CharityDisbursementProposalExecutedEvent.InputTuple,
+      CharityDisbursementProposalExecutedEvent.OutputTuple,
+      CharityDisbursementProposalExecutedEvent.OutputObject
+    >;
+    CharityDisbursementProposalExecuted: TypedContractEvent<
+      CharityDisbursementProposalExecutedEvent.InputTuple,
+      CharityDisbursementProposalExecutedEvent.OutputTuple,
+      CharityDisbursementProposalExecutedEvent.OutputObject
+    >;
+
+    "CharityDisbursementVoteCast(uint256,address,bool,uint256)": TypedContractEvent<
+      CharityDisbursementVoteCastEvent.InputTuple,
+      CharityDisbursementVoteCastEvent.OutputTuple,
+      CharityDisbursementVoteCastEvent.OutputObject
+    >;
+    CharityDisbursementVoteCast: TypedContractEvent<
+      CharityDisbursementVoteCastEvent.InputTuple,
+      CharityDisbursementVoteCastEvent.OutputTuple,
+      CharityDisbursementVoteCastEvent.OutputObject
+    >;
+
+    "CharityDonationVerified(uint256,string)": TypedContractEvent<
+      CharityDonationVerifiedEvent.InputTuple,
+      CharityDonationVerifiedEvent.OutputTuple,
+      CharityDonationVerifiedEvent.OutputObject
+    >;
+    CharityDonationVerified: TypedContractEvent<
+      CharityDonationVerifiedEvent.InputTuple,
+      CharityDonationVerifiedEvent.OutputTuple,
+      CharityDonationVerifiedEvent.OutputObject
+    >;
+
+    "CharityFundUpdated(uint256,uint256)": TypedContractEvent<
+      CharityFundUpdatedEvent.InputTuple,
+      CharityFundUpdatedEvent.OutputTuple,
+      CharityFundUpdatedEvent.OutputObject
+    >;
+    CharityFundUpdated: TypedContractEvent<
+      CharityFundUpdatedEvent.InputTuple,
+      CharityFundUpdatedEvent.OutputTuple,
+      CharityFundUpdatedEvent.OutputObject
+    >;
+
+    "CharityVerificationProposalCreated(uint256,address,string,uint256)": TypedContractEvent<
+      CharityVerificationProposalCreatedEvent.InputTuple,
+      CharityVerificationProposalCreatedEvent.OutputTuple,
+      CharityVerificationProposalCreatedEvent.OutputObject
+    >;
+    CharityVerificationProposalCreated: TypedContractEvent<
+      CharityVerificationProposalCreatedEvent.InputTuple,
+      CharityVerificationProposalCreatedEvent.OutputTuple,
+      CharityVerificationProposalCreatedEvent.OutputObject
+    >;
+
+    "CharityVerificationProposalExecuted(uint256,bool,uint256,uint256)": TypedContractEvent<
+      CharityVerificationProposalExecutedEvent.InputTuple,
+      CharityVerificationProposalExecutedEvent.OutputTuple,
+      CharityVerificationProposalExecutedEvent.OutputObject
+    >;
+    CharityVerificationProposalExecuted: TypedContractEvent<
+      CharityVerificationProposalExecutedEvent.InputTuple,
+      CharityVerificationProposalExecutedEvent.OutputTuple,
+      CharityVerificationProposalExecutedEvent.OutputObject
+    >;
+
+    "CharityVerificationVoteCast(uint256,address,bool,uint256)": TypedContractEvent<
+      CharityVerificationVoteCastEvent.InputTuple,
+      CharityVerificationVoteCastEvent.OutputTuple,
+      CharityVerificationVoteCastEvent.OutputObject
+    >;
+    CharityVerificationVoteCast: TypedContractEvent<
+      CharityVerificationVoteCastEvent.InputTuple,
+      CharityVerificationVoteCastEvent.OutputTuple,
+      CharityVerificationVoteCastEvent.OutputObject
+    >;
+
+    "CharityVerified(address,bool)": TypedContractEvent<
+      CharityVerifiedEvent.InputTuple,
+      CharityVerifiedEvent.OutputTuple,
+      CharityVerifiedEvent.OutputObject
+    >;
+    CharityVerified: TypedContractEvent<
+      CharityVerifiedEvent.InputTuple,
+      CharityVerifiedEvent.OutputTuple,
+      CharityVerifiedEvent.OutputObject
+    >;
+
     "CircuitBreakerTriggered(uint256,uint256)": TypedContractEvent<
       CircuitBreakerTriggeredEvent.InputTuple,
       CircuitBreakerTriggeredEvent.OutputTuple,
@@ -1724,6 +3216,39 @@ export interface LDAOTreasury extends BaseContract {
       SalesStatusUpdatedEvent.InputTuple,
       SalesStatusUpdatedEvent.OutputTuple,
       SalesStatusUpdatedEvent.OutputObject
+    >;
+
+    "TimelockRequestCancelled(bytes32)": TypedContractEvent<
+      TimelockRequestCancelledEvent.InputTuple,
+      TimelockRequestCancelledEvent.OutputTuple,
+      TimelockRequestCancelledEvent.OutputObject
+    >;
+    TimelockRequestCancelled: TypedContractEvent<
+      TimelockRequestCancelledEvent.InputTuple,
+      TimelockRequestCancelledEvent.OutputTuple,
+      TimelockRequestCancelledEvent.OutputObject
+    >;
+
+    "TimelockRequestCreated(bytes32,address,string,uint256)": TypedContractEvent<
+      TimelockRequestCreatedEvent.InputTuple,
+      TimelockRequestCreatedEvent.OutputTuple,
+      TimelockRequestCreatedEvent.OutputObject
+    >;
+    TimelockRequestCreated: TypedContractEvent<
+      TimelockRequestCreatedEvent.InputTuple,
+      TimelockRequestCreatedEvent.OutputTuple,
+      TimelockRequestCreatedEvent.OutputObject
+    >;
+
+    "TimelockRequestExecuted(bytes32)": TypedContractEvent<
+      TimelockRequestExecutedEvent.InputTuple,
+      TimelockRequestExecutedEvent.OutputTuple,
+      TimelockRequestExecutedEvent.OutputObject
+    >;
+    TimelockRequestExecuted: TypedContractEvent<
+      TimelockRequestExecutedEvent.InputTuple,
+      TimelockRequestExecutedEvent.OutputTuple,
+      TimelockRequestExecutedEvent.OutputObject
     >;
 
     "Unpaused(address)": TypedContractEvent<

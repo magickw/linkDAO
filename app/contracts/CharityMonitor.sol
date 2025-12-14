@@ -120,7 +120,7 @@ contract CharityMonitor is Ownable, ReentrancyGuard {
         address charity,
         uint256 amount,
         string calldata description
-    ) external {
+    ) external nonReentrant {
         require(msg.sender == address(treasury), "Only treasury can call");
         
         uint256 currentDate = block.timestamp / 1 days;
@@ -158,7 +158,7 @@ contract CharityMonitor is Ownable, ReentrancyGuard {
         address charity,
         string calldata name,
         bool verified
-    ) external {
+    ) external nonReentrant {
         require(msg.sender == address(treasury), "Only treasury can call");
         
         if (verified && charityMetrics[charity].charityAddress == address(0)) {
