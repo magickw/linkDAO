@@ -21,35 +21,12 @@ const marketplaceRateLimit = rateLimit({
 
 const router = express.Router();
 
-// GET /api/marketplace/listings/:id - Get individual product details
-router.get('/listings/:id', 
-  marketplaceRateLimit,
-  validateRequest({
-    params: {
-      id: { type: 'string', required: true }
-    }
-  }),
-  marketplaceController.getListingById
-);
+// REMOVED: Conflicting /listings/:id route that duplicates functionality in marketplaceListingsRoutes.ts
+// Individual listing details are now handled by marketplaceListingsRoutes.ts which is mounted at /api/marketplace/listings
 
-// GET /api/marketplace/listings - Get product listings with filtering and pagination
-router.get('/listings',
-  marketplaceRateLimit,
-  validateRequest({
-    query: {
-      page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, max: 100 },
-      category: { type: 'string', optional: true },
-      minPrice: { type: 'number', optional: true, min: 0 },
-      maxPrice: { type: 'number', optional: true, min: 0 },
-      sellerId: { type: 'string', optional: true },
-      search: { type: 'string', optional: true }
-    }
-  }),
-  marketplaceController.getListings
-);
-
-// GET /api/marketplace/sellers/:id - Get seller profile information
+/**
+ * @route GET /marketplace/sellers/:id - Get seller profile information
+ */
 router.get('/sellers/:id',
   marketplaceRateLimit,
   validateRequest({

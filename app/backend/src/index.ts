@@ -80,7 +80,7 @@ import { securityHeaders } from './middleware/securityEnhancementsMiddleware';
 const helmetMiddleware = securityHeaders;
 
 import { metricsTrackingMiddleware } from './middleware/metricsMiddleware';
-import { marketplaceSecurity, generalRateLimit } from './middleware/marketplaceSecurity';
+import { marketplaceCors, generalRateLimit } from './middleware/marketplaceSecurity';
 
 // Import security middleware from securityMiddleware.ts
 import {
@@ -993,8 +993,12 @@ app.use('/api/marketplace/seller/verification', sellerVerificationRoutes);
 // ENS validation routes
 app.use('/api/marketplace/ens', ensValidationRoutes);
 
-// Register main marketplace routes at different path to avoid conflicts
-app.use('/api/marketplace/core', marketplaceRoutes);
+// Marketplace search routes
+app.use('/api/marketplace/search', marketplaceSearchRoutes);
+
+// Register main marketplace routes - ONLY for endpoints NOT covered by specific routes above
+// This should NOT include /listings as that's handled by marketplaceListingsRoutes
+app.use('/api/marketplace', marketplaceRoutes);
 
 // Seller profile API routes - Primary seller endpoints
 // sellerProfileRoutes defines routes like /seller/:walletAddress, so mounting at /api/marketplace
