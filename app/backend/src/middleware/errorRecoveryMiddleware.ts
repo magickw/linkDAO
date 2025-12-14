@@ -1,5 +1,5 @@
-
 import { Request, Response, NextFunction } from 'express';
+import { ApiResponse } from '../utils/apiResponse';
 
 /**
  * Error Recovery Middleware
@@ -38,18 +38,7 @@ export const errorRecoveryMiddleware = (error: any, req: Request, res: Response,
   }
   
   if (path.includes('/api/profiles')) {
-    return res.status(503).json({
-      success: false,
-      error: {
-        code: 'SERVICE_UNAVAILABLE',
-        message: 'Profile service temporarily unavailable',
-        details: {
-          userFriendlyMessage: 'We are experiencing technical difficulties. Please try again later.',
-          suggestions: ['Try refreshing the page', 'Check back in a few minutes'],
-          timestamp: new Date().toISOString()
-        }
-      }
-    });
+    return ApiResponse.serviceUnavailable(res, 'Profile service temporarily unavailable');
   }
   
   if (path.includes('/api/feed')) {
@@ -76,48 +65,18 @@ export const errorRecoveryMiddleware = (error: any, req: Request, res: Response,
   
   // Generic API error response
   if (path.startsWith('/api/')) {
-    return res.status(503).json({
-      success: false,
-      error: {
-        code: 'SERVICE_UNAVAILABLE',
-        message: 'Service temporarily unavailable',
-        details: {
-          userFriendlyMessage: 'We are experiencing technical difficulties. Please try again later.',
-          timestamp: new Date().toISOString()
-        }
-      }
-    });
+    return ApiResponse.serviceUnavailable(res, 'Service temporarily unavailable');
   }
   
   // Default error response
-  res.status(500).json({
-    success: false,
-    error: {
-      code: 'INTERNAL_ERROR',
-      message: 'An unexpected error occurred',
-      details: {
-        userFriendlyMessage: 'Something went wrong. Please try again.',
-        timestamp: new Date().toISOString()
-      }
-    }
-  });
+  return ApiResponse.serverError(res, 'An unexpected error occurred');
 };
 
 export const serviceUnavailableHandler = (req: Request, res: Response, next: NextFunction) => {
   // Add a timeout to prevent hanging requests
   const timeout = setTimeout(() => {
     if (!res.headersSent) {
-      res.status(503).json({
-        success: false,
-        error: {
-          code: 'REQUEST_TIMEOUT',
-          message: 'Request timed out',
-          details: {
-            userFriendlyMessage: 'The request took too long to process. Please try again.',
-            timestamp: new Date().toISOString()
-          }
-        }
-      });
+      ApiResponse.serverError(res, 'Request timed out');
     }
   }, 30000); // 30 second timeout
   

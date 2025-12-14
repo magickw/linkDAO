@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { validateJWTSecret } from '../utils/securityUtils';
+import { ApiResponse } from '../utils/apiResponse';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -18,20 +19,20 @@ export const authenticateToken = (req: AuthenticatedRequest, res: Response, next
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    res.status(401).json({ error: 'Access token required' });
+    ApiResponse.unauthorized(res, 'Access token required');
     return;
   }
 
   try {
     validateJWTSecret(process.env.JWT_SECRET);
   } catch (error) {
-    res.status(500).json({ error: 'Server configuration error' });
+    ApiResponse.serverError(res, 'Server configuration error');
     return;
   }
 
   jwt.verify(token, process.env.JWT_SECRET!, (err: any, user: any) => {
     if (err) {
-      res.status(403).json({ error: 'Invalid token' });
+      ApiResponse.forbidden(res, 'Invalid token');
       return;
     }
     

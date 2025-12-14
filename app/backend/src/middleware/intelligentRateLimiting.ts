@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { safeLogger } from '../utils/safeLogger';
+import { ApiResponse } from '../utils/apiResponse';
 
 interface RateLimitConfig {
   windowMs: number;
@@ -205,16 +206,14 @@ export class IntelligentRateLimiter {
           if (config.onLimitReached) {
             config.onLimitReached(req, res);
           } else {
-            res.status(429).json({
-              success: false,
-              error: {
-                code: 'RATE_LIMIT_EXCEEDED',
-                message: `Too many requests. Limit: ${maxRequests} per ${Math.floor(windowMs / 1000)}s`,
-                retryAfter,
-                tier: userTier.tier,
-                upgradeMessage: userTier.tier === 'free' ? 'Upgrade to premium for higher limits' : undefined
-              }
-            });
+            const message = `Too many requests. Limit: ${maxRequests} per ${Math.floor(windowMs / 1000)}s`;
+            const details = {
+              retryAfter,
+              tier: userTier.tier,
+              upgradeMessage: userTier.tier === 'free' ? 'Upgrade to premium for higher limits' : undefined
+            };
+            
+            ApiResponse.tooManyRequests(res, message, details);
           }
           return;
         }

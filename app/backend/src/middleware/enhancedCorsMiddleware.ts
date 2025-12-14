@@ -627,17 +627,7 @@ export class EnhancedCorsMiddleware {
       'X-CORS-Timestamp': context.timestamp.toISOString()
     });
 
-    res.status(403).json({
-      success: false,
-      error: {
-        code: 'CORS_ERROR',
-        message,
-        corsError: true,
-        origin: context.origin,
-        timestamp: context.timestamp.toISOString(),
-        requestId: res.get('X-Request-ID') || 'unknown'
-      }
-    });
+    ApiResponse.forbidden(res, message);
   }
 
   /**

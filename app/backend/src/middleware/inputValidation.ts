@@ -1,13 +1,9 @@
-/**
- * Comprehensive Input Validation Middleware
- * Implements client-side and server-side input validation with XSS prevention
- */
-
 import { Request, Response, NextFunction } from 'express';
 import { body, param, query, validationResult } from 'express-validator';
 import sanitizeHtml from 'sanitize-html';
 import validator from 'validator';
 import rateLimit from 'express-rate-limit';
+import { ApiResponse } from '../utils/apiResponse';
 
 export interface ValidationError {
   field: string;
@@ -199,83 +195,12 @@ export class InputValidator {
         .isInt({ min: 1, max: 50 * 1024 * 1024 }) // 50MB max
         .withMessage('File size must be between 1 byte and 50MB'),
 
-      body('fileName')
-        .isLength({ min: 1, max: 255 })
-        .withMessage('File name must be between 1 and 255 characters')
-        .matches(/^[a-zA-Z0-9._-]+$/)
-        .withMessage('File name contains invalid characters'),
-
       this.handleValidationErrors
     ];
   }
 
   /**
-   * Sanitize content based on type
-   */
-  private static async sanitizeContent(content: string, type: string): Promise<SanitizationResult> {
-    const warnings: string[] = [];
-    const blocked: string[] = [];
-
-    try {
-      // Check for dangerous patterns
-      const dangerousPatterns = [
-        /javascript:/gi,
-        /vbscript:/gi,
-        /data:text\/html/gi,
-        /on\w+\s*=/gi,
-        /<script/gi,
-        /<iframe/gi,
-        /<object/gi,
-        /<embed/gi,
-        /<form/gi
-      ];
-
-      for (const pattern of dangerousPatterns) {
-        const matches = content.match(pattern);
-        if (matches) {
-          blocked.push(...matches);
-        }
-      }
-
-      // Sanitize with sanitize-html
-      const sanitized = sanitizeHtml(content, {
-        allowedTags: ['p', 'br', 'strong', 'em', 'u', 'a', 'code', 'pre'],
-        allowedAttributes: {
-          'a': ['href', 'title']
-        },
-        allowProtocolRelative: false,
-      });
-
-      // Check for excessive repetition
-      const repetitionPattern = /(.{3,})\1{3,}/g;
-      if (repetitionPattern.test(content)) {
-        warnings.push('Content contains excessive repetition');
-      }
-
-      // Check for excessive capitalization
-      const capsRatio = (content.match(/[A-Z]/g) || []).length / content.length;
-      if (capsRatio > 0.7 && content.length > 20) {
-        warnings.push('Content contains excessive capitalization');
-      }
-
-      return {
-        sanitized,
-        warnings,
-        blocked
-      };
-
-    } catch (error) {
-      blocked.push('Sanitization failed');
-      return {
-        sanitized: '',
-        warnings: [`Sanitization error: ${error instanceof Error ? error.message : 'Unknown error'}`],
-        blocked
-      };
-    }
-  }
-
-  /**
-   * Handle validation errors
+   * Handle validation errors with standardized response
    */
   private static handleValidationErrors = (req: Request, res: Response, next: NextFunction): void => {
     const errors = validationResult(req);
@@ -288,12 +213,7 @@ export class InputValidator {
         code: 'VALIDATION_ERROR'
       }));
 
-      res.status(400).json({
-        success: false,
-        error: 'Input validation failed',
-        details: validationErrors,
-        timestamp: new Date().toISOString()
-      });
+      ApiResponse.validationError(res, 'Input validation failed', { errors: validationErrors });
       return;
     }
 
@@ -330,12 +250,7 @@ export class InputValidator {
       if (checkForSQLInjection(req.body) || 
           checkForSQLInjection(req.query) || 
           checkForSQLInjection(req.params)) {
-        res.status(400).json({
-          success: false,
-          error: 'Potentially malicious input detected',
-          code: 'SQL_INJECTION_ATTEMPT',
-          timestamp: new Date().toISOString()
-        });
+        ApiResponse.badRequest(res, 'Potentially malicious input detected', { code: 'SQL_INJECTION_ATTEMPT' });
         return;
       }
 
@@ -350,11 +265,8 @@ export class InputValidator {
     return rateLimit({
       windowMs,
       max,
-      message: {
-        success: false,
-        error: 'Too many validation requests',
-        code: 'RATE_LIMIT_EXCEEDED',
-        retryAfter: Math.ceil(windowMs / 1000)
+      handler: (req, res) => {
+        ApiResponse.tooManyRequests(res, 'Too many validation requests');
       },
       standardHeaders: true,
       legacyHeaders: false

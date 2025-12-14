@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
-
+import { ApiResponse } from '../utils/apiResponse';
 /**
  * CSRF Protection Middleware
  * Protects against Cross-Site Request Forgery attacks
@@ -104,8 +104,7 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
   
   // Check if user is authenticated via JWT or wallet signature
   const authHeader = req.headers.authorization;
-  const hasWalletAuth = req.headers['x-wallet-address'] || (req as any).user?.address;
-  
+  const hasWalletAuth = req.headers['x-wallet-address'] || (req as any).user?.walletAddress || (req as any).user?.address;  
   // If authenticated, skip CSRF validation but ensure proper headers are present for logging
   if (authHeader || hasWalletAuth) {
     console.log(`[csrfProtection] Authenticated request - skipping CSRF for ${req.method} ${req.path}`);
@@ -146,11 +145,7 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
   
   if (!sessionId) {
     console.log('[csrfProtection] No session ID in request');
-    res.status(403).json({
-      success: false,
-      message: 'CSRF validation failed: No session. Please authenticate first.',
-      code: 'CSRF_NO_SESSION'
-    });
+    ApiResponse.unauthorized(res, 'CSRF validation failed: No session. Please authenticate first.');
     return;
   }
   
@@ -163,11 +158,7 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
   
   if (!token) {
     console.log('[csrfProtection] No CSRF token in request');
-    res.status(403).json({
-      success: false,
-      message: 'CSRF validation failed: No token provided',
-      code: 'CSRF_NO_TOKEN'
-    });
+    ApiResponse.unauthorized(res, 'CSRF validation failed: No token provided');
     return;
   }
   
@@ -175,11 +166,7 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
   // Verify token
   if (!verifyCSRFToken(normalizedSessionId, token)) {
     console.log('[csrfProtection] CSRF token verification failed');
-    res.status(403).json({
-      success: false,
-      message: 'CSRF validation failed: Invalid token',
-      code: 'CSRF_INVALID_TOKEN'
-    });
+    ApiResponse.unauthorized(res, 'CSRF validation failed: Invalid token');
     return;
   }
   
@@ -194,10 +181,7 @@ export function getCSRFToken(req: Request, res: Response): void {
   const sessionId = req.cookies?.sessionId || req.headers['x-session-id'] as string;
   
   if (!sessionId) {
-    res.status(400).json({
-      success: false,
-      message: 'No session ID'
-    });
+    ApiResponse.badRequest(res, 'No session ID');
     return;
   }
   
@@ -206,8 +190,5 @@ export function getCSRFToken(req: Request, res: Response): void {
   console.log(`[getCSRFToken] Generating token for session: ${normalizedSessionId}`);
   const token = generateCSRFToken(normalizedSessionId);
   
-  res.json({
-    success: true,
-    data: { csrfToken: token }
-  });
+  ApiResponse.success(res, { csrfToken: token });
 }

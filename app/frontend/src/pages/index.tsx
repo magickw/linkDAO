@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, lazy, Suspense, useRef, useCallback, startTransition, useDeferredValue } from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
 import { useWeb3 } from '@/context/Web3Context';
 import { useNavigation } from '@/context/NavigationContext';
@@ -61,6 +62,7 @@ const SidebarSkeleton = () => (
 );
 
 export default function Home() {
+  const router = useRouter();
   const { address, isConnected } = useWeb3();
   const { addToast } = useToast();
   const { createPost, isLoading: isCreatingPost } = useCreatePost();
@@ -157,11 +159,16 @@ export default function Home() {
       return () => {
         clearTimeout(timeoutId);
         timeoutId = setTimeout(() => {
-          handleRefreshFeed();
+          // Use setTimeout to defer the refresh to prevent blocking navigation
+          setTimeout(() => {
+            if (isMounted.current) {
+              handleRefreshFeed();
+            }
+          }, 0);
         }, 500); // 500ms debounce
       };
     })(),
-    [handleRefreshFeed]
+    [handleRefreshFeed, isMounted]
   );
 
   // Keyboard navigation support
@@ -201,8 +208,13 @@ export default function Home() {
         console.log('New post received:', data);
         // Only refresh if it's not the user's own post (to prevent double refresh)
         if (data.author?.toLowerCase() !== address.toLowerCase()) {
-          debouncedRefresh();
-          addToast('New post added to feed', 'success');
+          // Use setTimeout to defer the refresh to prevent blocking navigation
+          setTimeout(() => {
+            if (isMounted.current) {
+              debouncedRefresh();
+              addToast('New post added to feed', 'success');
+            }
+          }, 0);
         }
       };
 
@@ -213,9 +225,29 @@ export default function Home() {
         setWsSubscribed(false);
       };
     }
-  }, [wsConnected, address, wsSubscribed, subscribe, on, off, addToast, debouncedRefresh]);
+  }, [wsConnected, address, wsSubscribed, subscribe, on, off, addToast, debouncedRefresh, isMounted]);
 
-  // Navigation fix is now handled globally in _app.tsx NavigationFixer component
+  // Add navigation event listeners to properly cleanup on route changes
+  useEffect(() => {
+    const handleRouteChange = () => {
+      // Ensure component is unmounted properly to prevent memory leaks
+      isMounted.current = false;
+    };
+
+    const handleRouteChangeStart = () => {
+      // Pause WebSocket subscription when navigating away
+      if (wsSubscribed) {
+        setWsSubscribed(false);
+      }
+    };
+
+    // Listen for route changes to properly cleanup
+    router.events.on('routeChangeStart', handleRouteChangeStart);
+
+    return () => {
+      router.events.off('routeChangeStart', handleRouteChangeStart);
+    };
+  }, [wsSubscribed]);
 
   // Handle post creation with useCallback and mount check
   const handlePostSubmit = useCallback(async (postData: CreatePostInput) => {

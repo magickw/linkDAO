@@ -6,6 +6,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { safeLogger } from '../utils/safeLogger';
 import { SellerError, SellerErrorType } from '../types/sellerError';
+import { ApiResponse } from '../utils/apiResponse';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -28,30 +29,18 @@ export const validateSellerAccess = (
     const { walletAddress } = req.params;
 
     if (!user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required',
-        code: 'AUTH_REQUIRED'
-      });
+      return ApiResponse.unauthorized(res, 'Authentication required', { code: 'AUTH_REQUIRED' });
     }
 
     // If accessing specific seller resources, verify ownership or admin access
     if (walletAddress && walletAddress !== user.walletAddress && user.role !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        error: 'Access denied. You can only access your own seller resources.',
-        code: 'ACCESS_DENIED'
-      });
+      return ApiResponse.forbidden(res, 'Access denied. You can only access your own seller resources.', { code: 'ACCESS_DENIED' });
     }
 
     next();
   } catch (error) {
     safeLogger.error('Seller access validation error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error',
-      code: 'VALIDATION_ERROR'
-    });
+    ApiResponse.serverError(res, 'Internal server error', { code: 'VALIDATION_ERROR' });
   }
 };
 
@@ -64,11 +53,7 @@ export const validateSellerTier = (requiredTier: string) => {
       const { user } = req;
 
       if (!user) {
-        return res.status(401).json({
-          success: false,
-          error: 'Authentication required',
-          code: 'AUTH_REQUIRED'
-        });
+        return ApiResponse.unauthorized(res, 'Authentication required', { code: 'AUTH_REQUIRED' });
       }
 
       // In a real implementation, you would check the user's seller tier
@@ -76,11 +61,7 @@ export const validateSellerTier = (requiredTier: string) => {
       next();
     } catch (error) {
       safeLogger.error('Seller tier validation error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Internal server error',
-        code: 'TIER_VALIDATION_ERROR'
-      });
+      ApiResponse.serverError(res, 'Internal server error', { code: 'TIER_VALIDATION_ERROR' });
     }
   };
 };

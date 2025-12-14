@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { cacheService } from '../services/cacheService';
 import { logger } from '../utils/logger';
 import { productionConfig } from '../config/productionConfig';
+import { ApiResponse } from '../utils/apiResponse';
 
 export interface RateLimitConfig {
   windowMs: number; // Time window in milliseconds
@@ -80,18 +81,7 @@ export class RateLimitingService {
           if (finalConfig.onLimitReached) {
             finalConfig.onLimitReached(req, res);
           } else {
-            res.status(429).json({
-              success: false,
-              error: {
-                code: 'RATE_LIMIT_EXCEEDED',
-                message: finalConfig.message,
-                details: {
-                  limit: finalConfig.maxRequests,
-                  windowMs: finalConfig.windowMs,
-                  retryAfter
-                }
-              }
-            });
+            ApiResponse.tooManyRequests(res, finalConfig.message || 'Too many requests, please try again later.');
           }
           return;
         }
@@ -203,192 +193,25 @@ export class RateLimitingService {
   public async resetRateLimit(key: string): Promise<void> {
     try {
       await cacheService.invalidate(`rate_limit:${key}`);
-      logger.info(`Rate limit reset for key: ${key}`);
     } catch (error) {
       logger.error('Error resetting rate limit:', error);
-      throw error;
     }
   }
 
   /**
-   * Get rate limiting statistics
+   * Get all rate limit keys (for monitoring/debugging)
    */
-  public async getRateLimitStats(): Promise<{
-    totalKeys: number;
-    activeKeys: string[];
-    topConsumers: Array<{ key: string; count: number }>;
-  }> {
+  public async getAllRateLimitKeys(): Promise<string[]> {
     try {
-      // This would need to be implemented based on your cache service capabilities
-      // For now, return basic stats
-      return {
-        totalKeys: 0,
-        activeKeys: [],
-        topConsumers: []
-      };
+      // This would depend on your cache implementation
+      // For Redis, you might use KEYS or SCAN command
+      // For simplicity, we'll return an empty array
+      return [];
     } catch (error) {
-      logger.error('Error getting rate limit stats:', error);
-      return {
-        totalKeys: 0,
-        activeKeys: [],
-        topConsumers: []
-      };
+      logger.error('Error getting rate limit keys:', error);
+      return [];
     }
   }
 }
 
-type LegacyRateLimitOptions = Partial<RateLimitConfig> & { max?: number };
-
-/**
- * Helper exported for existing route imports expecting a function-style middleware factory.
- */
-export function rateLimitingMiddleware(options: LegacyRateLimitOptions = {}) {
-  const { max, ...rest } = options;
-  const config: Partial<RateLimitConfig> = {
-    ...rest,
-    ...(typeof max === 'number' ? { maxRequests: max } : {}),
-  };
-  return RateLimitingService.getInstance().createRateLimit(config);
-}
-
-// Pre-configured rate limiters for different use cases
-export const rateLimitingService = RateLimitingService.getInstance();
-
-// General API rate limiter
-export const generalRateLimit = rateLimitingService.createRateLimit({
-  windowMs: productionConfig.rateLimiting.general.windowMs,
-  maxRequests: productionConfig.rateLimiting.general.max,
-  message: productionConfig.rateLimiting.general.message
-});
-
-// Feed rate limiter
-export const feedRateLimit = rateLimitingService.createRateLimit({
-  windowMs: productionConfig.rateLimiting.feed.windowMs,
-  maxRequests: productionConfig.rateLimiting.feed.max,
-  message: productionConfig.rateLimiting.feed.message
-});
-
-// Create post rate limiter
-export const createPostRateLimit = rateLimitingService.createRateLimit({
-  windowMs: productionConfig.rateLimiting.createPost.windowMs,
-  maxRequests: productionConfig.rateLimiting.createPost.max,
-  message: productionConfig.rateLimiting.createPost.message
-});
-
-// Authentication rate limiter (more restrictive)
-export const authRateLimit = rateLimitingService.createRateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  maxRequests: 10,
-  message: 'Too many authentication attempts, please try again later.',
-  keyGenerator: (req: Request) => {
-    const ip = req.ip || 'unknown';
-    const walletAddress = req.body?.walletAddress || '';
-    return `auth:${ip}:${walletAddress}`;
-  }
-});
-
-// Profile update rate limiter
-export const profileUpdateRateLimit = rateLimitingService.createRateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  maxRequests: 5,
-  message: 'Too many profile updates, please try again later.',
-  keyGenerator: (req: Request) => {
-    const walletAddress = (req as any).walletAddress || req.ip;
-    return `profile_update:${walletAddress}`;
-  }
-});
-
-// Marketplace listing creation rate limiter
-export const listingCreationRateLimit = rateLimitingService.createRateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  maxRequests: 3,
-  message: 'Too many listing creations, please try again later.',
-  keyGenerator: (req: Request) => {
-    const walletAddress = (req as any).walletAddress || req.ip;
-    return `listing_creation:${walletAddress}`;
-  }
-});
-
-// Search rate limiter (higher limit for read operations)
-export const searchRateLimit = rateLimitingService.createRateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  maxRequests: 200,
-  message: 'Too many search requests, please try again later.',
-  skipSuccessfulRequests: true // Don't count successful searches
-});
-
-// Heavy operation rate limiter (very restrictive)
-export const heavyOperationRateLimit = rateLimitingService.createRateLimit({
-  windowMs: 5 * 60 * 1000, // 5 minutes
-  maxRequests: 1,
-  message: 'Heavy operation in progress, please wait before trying again.',
-  keyGenerator: (req: Request) => {
-    const walletAddress = (req as any).walletAddress || req.ip;
-    return `heavy_op:${walletAddress}`;
-  }
-});
-
-// Reputation update rate limiter
-export const reputationRateLimit = rateLimitingService.createRateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  maxRequests: 10,
-  message: 'Too many reputation requests, please try again later.',
-  keyGenerator: (req: Request) => {
-    const walletAddress = req.params?.walletAddress || req.ip;
-    return `reputation:${walletAddress}`;
-  }
-});
-
-// File upload rate limiter
-export const fileUploadRateLimit = rateLimitingService.createRateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  maxRequests: 10,
-  message: 'Too many file uploads, please try again later.',
-  keyGenerator: (req: Request) => {
-    const walletAddress = (req as any).walletAddress || req.ip;
-    return `file_upload:${walletAddress}`;
-  }
-});
-
-// Export rate limit configurations for different tiers
-export const RATE_LIMIT_TIERS = {
-  FREE: {
-    windowMs: 60 * 1000,
-    maxRequests: 50
-  },
-  PREMIUM: {
-    windowMs: 60 * 1000,
-    maxRequests: 200
-  },
-  ENTERPRISE: {
-    windowMs: 60 * 1000,
-    maxRequests: 1000
-  }
-};
-
-// Middleware to apply different rate limits based on user tier
-export const tieredRateLimit = (req: Request, res: Response, next: NextFunction) => {
-  const userTier = (req as any).userTier || 'FREE';
-  const config = RATE_LIMIT_TIERS[userTier as keyof typeof RATE_LIMIT_TIERS] || RATE_LIMIT_TIERS.FREE;
-  
-  const rateLimiter = rateLimitingService.createRateLimit({
-    ...config,
-    keyGenerator: (req: Request) => {
-      const walletAddress = (req as any).walletAddress || req.ip;
-      return `tiered:${userTier}:${walletAddress}`;
-    }
-  });
-  
-  return rateLimiter(req, res, next);
-};
-
-/**
- * Simple rate limiter factory for backward compatibility
- * Usage: rateLimiter(maxRequests, windowSeconds)
- */
-export function rateLimiter(maxRequests: number, windowSeconds: number) {
-  return rateLimitingMiddleware({
-    max: maxRequests,
-    windowMs: windowSeconds * 1000
-  });
-}
+export default RateLimitingService;

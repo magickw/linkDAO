@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { Redis } from 'ioredis';
+import { ApiResponse } from '../utils/apiResponse';
 
 export class EmergencyMiddleware {
   private redis: Redis;
@@ -49,11 +50,7 @@ export class EmergencyMiddleware {
 
     // Block non-essential requests
     if (this.isNonEssentialEndpoint(req.path)) {
-      return res.status(503).json({
-        error: 'Service temporarily unavailable',
-        message: 'System is in emergency mode. Please try again later.',
-        retryAfter: 300 // 5 minutes
-      });
+      return ApiResponse.serviceUnavailable(res, 'System is in emergency mode. Please try again later.', { retryAfter: 300 });
     }
 
     // Allow other requests with degraded functionality
@@ -207,50 +204,20 @@ private setupEmergencyMonitoring() {
   }
 
   // Manual emergency mode control
-  async setEmergencyMode(enabled: boolean, reason?: string) {
-    if (enabled) {
-      console.log(`🚨 MANUAL EMERGENCY MODE ENABLED: ${reason || 'Manual activation'}`);
-      this.emergencyMode = true;
-      await this.redis.set('emergency_mode', 'true');
-      await this.applyEmergencyConfig();
-    } else {
-      console.log('✅ MANUAL EMERGENCY MODE DISABLED');
-      this.emergencyMode = false;
-      await this.redis.del('emergency_mode');
-      await this.restoreNormalConfig();
-    }
+  public async manualEnable() {
+    await this.enableEmergencyMode();
   }
 
-  // Get emergency status
-  async getEmergencyStatus() {
-    const isEmergency = await this.isEmergencyMode();
-    
-    // Get current error rate
-    const currentWindow = Math.floor(Date.now() / this.requestWindow);
-    const [requests, errors] = await Promise.all([
-      this.redis.get(`requests:${currentWindow}`),
-      this.redis.get(`errors:${currentWindow}`)
-    ]);
+  public async manualDisable() {
+    await this.disableEmergencyMode();
+  }
 
-    const requestCount = parseInt(requests || '0');
-    const errorCount = parseInt(errors || '0');
-    const errorRate = requestCount > 0 ? errorCount / requestCount : 0;
-
+  // Get current status
+  public getStatus() {
     return {
-      emergencyMode: isEmergency,
-      errorRate: Math.round(errorRate * 10000) / 100, // Percentage with 2 decimals
-      requestCount,
-      errorCount,
-      threshold: this.errorThreshold * 100
+      emergencyMode: this.emergencyMode,
+      errorThreshold: this.errorThreshold,
+      requestWindow: this.requestWindow
     };
   }
-}
-
-// Factory function to create middleware
-export function createEmergencyMiddleware(redis: Redis) {
-  const emergencyMiddleware = new EmergencyMiddleware(redis);
-  return {
-    middleware: emergencyMiddleware.middleware(),
-    instance: emergencyMiddleware
-  };
 }

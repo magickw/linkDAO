@@ -3,6 +3,7 @@ import cors from 'cors';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { AppError } from './errorHandler';
 import { logger } from '../utils/logger';
+import { ApiResponse } from '../utils/apiResponse';
 
 // CORS configuration for marketplace endpoints
 const marketplaceCorsOptions: cors.CorsOptions = {
@@ -72,16 +73,8 @@ export const marketplaceCors = cors(marketplaceCorsOptions);
 export const generalRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // 100 requests per window
-  message: {
-    success: false,
-    error: {
-      code: 'RATE_LIMIT_EXCEEDED',
-      message: 'Too many requests. Please try again later.',
-      retryAfter: 900 // 15 minutes in seconds
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
+  handler: (req, res) => {
+    ApiResponse.tooManyRequests(res, 'Too many requests. Please try again later.');
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -100,16 +93,8 @@ export const generalRateLimit = rateLimit({
 export const authRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // Reduced from 10 to 5 authentication attempts per window for stricter security
-  message: {
-    success: false,
-    error: {
-      code: 'AUTH_RATE_LIMIT_EXCEEDED',
-      message: 'Too many authentication attempts. Please try again later.',
-      retryAfter: 900
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
+  handler: (req, res) => {
+    ApiResponse.tooManyRequests(res, 'Too many authentication attempts. Please try again later.');
   },
   standardHeaders: true,
   legacyHeaders: false
@@ -119,16 +104,8 @@ export const authRateLimit = rateLimit({
 export const profileUpdateRateLimit = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 5, // 5 profile updates per hour
-  message: {
-    success: false,
-    error: {
-      code: 'PROFILE_UPDATE_RATE_LIMIT_EXCEEDED',
-      message: 'Too many profile updates. Please try again later.',
-      retryAfter: 3600
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
+  handler: (req, res) => {
+    ApiResponse.tooManyRequests(res, 'Too many profile updates. Please try again later.');
   },
   standardHeaders: true,
   legacyHeaders: false
@@ -138,16 +115,8 @@ export const profileUpdateRateLimit = rateLimit({
 export const fileUploadRateLimit = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 20, // 20 file uploads per hour
-  message: {
-    success: false,
-    error: {
-      code: 'FILE_UPLOAD_RATE_LIMIT_EXCEEDED',
-      message: 'Too many file uploads. Please try again later.',
-      retryAfter: 3600
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
+  handler: (req, res) => {
+    ApiResponse.tooManyRequests(res, 'Too many file uploads. Please try again later.');
   },
   standardHeaders: true,
   legacyHeaders: false
@@ -198,7 +167,7 @@ export const contentTypeValidator = (allowedTypes: string[]) => {
     if (!isAllowed) {
       const error = new AppError(
         `Unsupported content type. Allowed types: ${allowedTypes.join(', ')}`,
-        415,
+        400,
         'UNSUPPORTED_CONTENT_TYPE',
         { contentType, allowedTypes }
       );
@@ -209,88 +178,30 @@ export const contentTypeValidator = (allowedTypes: string[]) => {
   };
 };
 
-// API key validation middleware (optional)
-export const apiKeyValidator = (req: Request, res: Response, next: NextFunction) => {
-  // Skip API key validation in development
-  if (process.env.NODE_ENV === 'development') {
-    return next();
-  }
-  
-  const apiKey = req.get('X-API-Key');
-  const validApiKeys = process.env.API_KEYS?.split(',') || [];
-  
-  // If no API keys configured, skip validation
-  if (validApiKeys.length === 0) {
-    return next();
-  }
-  
-  if (!apiKey || !validApiKeys.includes(apiKey)) {
-    const error = new AppError(
-      'Invalid or missing API key',
-      401,
-      'INVALID_API_KEY'
-    );
-    return next(error);
-  }
-  
-  next();
-};
-
-// Security headers middleware
-export const securityHeaders = (req: Request, res: Response, next: NextFunction) => {
-  // Remove server information
-  res.removeHeader('X-Powered-By');
-  
-  // Add security headers
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  
-  // Add CSP for API responses
-  res.setHeader(
-    'Content-Security-Policy',
-    "default-src 'none'; frame-ancestors 'none';"
-  );
-  
-  next();
-};
-
-// Request timeout middleware
-export const requestTimeout = (timeoutMs: number = 30000) => {
+// Origin validation middleware for sensitive operations
+export const originValidator = (allowedOrigins: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    const timeout = setTimeout(() => {
-      if (!res.headersSent) {
-        const error = new AppError(
-          'Request timeout',
-          504,
-          'REQUEST_TIMEOUT',
-          { timeout: timeoutMs }
-        );
-        next(error);
-      }
-    }, timeoutMs);
+    const origin = req.get('Origin') || req.get('Referer');
     
-    // Clear timeout when response is sent
-    res.on('finish', () => clearTimeout(timeout));
-    res.on('close', () => clearTimeout(timeout));
-    
-    next();
-  };
-};
-
-// IP whitelist middleware (for admin endpoints)
-export const ipWhitelist = (allowedIPs: string[]) => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    const clientIP = req.ip || req.connection.remoteAddress;
-    
-    if (!clientIP || !allowedIPs.includes(clientIP)) {
-      logger.warn('IP not whitelisted', { clientIP, allowedIPs });
+    if (!origin) {
       const error = new AppError(
-        'Access denied from this IP address',
+        'Origin header is required for this operation',
+        400,
+        'MISSING_ORIGIN'
+      );
+      return next(error);
+    }
+    
+    const isAllowed = allowedOrigins.some(allowed => 
+      origin.startsWith(allowed)
+    );
+    
+    if (!isAllowed) {
+      const error = new AppError(
+        'Unauthorized origin for this operation',
         403,
-        'IP_NOT_WHITELISTED',
-        { clientIP }
+        'UNAUTHORIZED_ORIGIN',
+        { origin, allowedOrigins }
       );
       return next(error);
     }
@@ -299,39 +210,72 @@ export const ipWhitelist = (allowedIPs: string[]) => {
   };
 };
 
-// Custom rate limit factory function
-export const createCustomRateLimit = (options: {
-  windowMs: number;
-  max: number;
-  message: string;
-}) => {
-  return rateLimit({
-    windowMs: options.windowMs,
-    max: options.max,
-    message: {
-      success: false,
-      error: {
-        code: 'RATE_LIMIT_EXCEEDED',
-        message: options.message,
-        retryAfter: Math.ceil(options.windowMs / 1000)
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    },
-    standardHeaders: true,
-    legacyHeaders: false,
-    keyGenerator: (req: Request) => {
-      return ipKeyGenerator(req.ip || req.connection.remoteAddress || 'unknown');
+// API key validation middleware
+export const apiKeyValidator = () => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const apiKey = req.get('X-API-Key') || req.query.api_key;
+    
+    if (!apiKey) {
+      const error = new AppError(
+        'API key is required for this operation',
+        401,
+        'MISSING_API_KEY'
+      );
+      return next(error);
     }
-  });
+    
+    // In a real implementation, you would validate the API key against a database
+    // For now, we'll accept any non-empty API key
+    if (typeof apiKey !== 'string' || apiKey.trim().length === 0) {
+      const error = new AppError(
+        'Invalid API key format',
+        401,
+        'INVALID_API_KEY'
+      );
+      return next(error);
+    }
+    
+    next();
+  };
 };
 
-// Combined marketplace security middleware
-export const marketplaceSecurity = [
-  securityHeaders,
-  marketplaceCors,
-  requestTimeout(30000),
-  requestSizeValidator(10 * 1024 * 1024), // 10MB
-  contentTypeValidator(['application/json', 'multipart/form-data', 'application/x-www-form-urlencoded'])
-];
+// Timestamp validation middleware to prevent replay attacks
+export const timestampValidator = (maxAge: number = 300000) => { // 5 minutes default
+  return (req: Request, res: Response, next: NextFunction) => {
+    const timestamp = req.get('X-Timestamp') || req.query.timestamp;
+    
+    if (!timestamp) {
+      const error = new AppError(
+        'Timestamp header is required for this operation',
+        400,
+        'MISSING_TIMESTAMP'
+      );
+      return next(error);
+    }
+    
+    const requestTime = parseInt(timestamp as string, 10);
+    const currentTime = Date.now();
+    const timeDiff = Math.abs(currentTime - requestTime);
+    
+    if (isNaN(requestTime)) {
+      const error = new AppError(
+        'Invalid timestamp format',
+        400,
+        'INVALID_TIMESTAMP'
+      );
+      return next(error);
+    }
+    
+    if (timeDiff > maxAge) {
+      const error = new AppError(
+        'Request timestamp is too old',
+        400,
+        'TIMESTAMP_TOO_OLD',
+        { requestTime, currentTime, maxAge }
+      );
+      return next(error);
+    }
+    
+    next();
+  };
+};

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { selfHostedStorageService } from '../services/selfHostedStorageService';
 import { safeLogger } from '../utils/safeLogger';
+import { ApiResponse } from '../utils/apiResponse';
 
 // Define user roles for access control
 export type UserRole = 'admin' | 'user' | 'moderator' | 'guest';
@@ -25,10 +26,7 @@ export const storageAuthMiddleware = async (req: Request, res: Response, next: N
     const token = authHeader && authHeader.split(' ')[1];
 
     if (!token) {
-      res.status(401).json({
-        success: false,
-        error: 'Authentication token required'
-      });
+      ApiResponse.unauthorized(res, 'Authentication token required');
       return;
     }
 
@@ -49,10 +47,7 @@ export const storageAuthMiddleware = async (req: Request, res: Response, next: N
     next();
   } catch (error) {
     safeLogger.error('Storage authentication error:', error);
-    res.status(401).json({
-      success: false,
-      error: 'Authentication failed'
-    });
+    ApiResponse.unauthorized(res, 'Authentication failed');
   }
 };
 
@@ -63,29 +58,20 @@ export const storagePermissionMiddleware = (requiredPermission: Permission) => {
       const user = (req as any).storageUser as StorageUser;
       
       if (!user || !user.isAuthenticated) {
-        res.status(401).json({
-          success: false,
-          error: 'Authentication required'
-        });
+        ApiResponse.unauthorized(res, 'Authentication required');
         return;
       }
 
       // Check if user has required permission
       if (!user.permissions.includes(requiredPermission) && user.role !== 'admin') {
-        res.status(403).json({
-          success: false,
-          error: 'Insufficient permissions'
-        });
+        ApiResponse.forbidden(res, 'Insufficient permissions');
         return;
       }
 
       next();
     } catch (error) {
       safeLogger.error('Permission check error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Permission check failed'
-      });
+      ApiResponse.serverError(res, 'Permission check failed');
     }
   };
 };
@@ -110,18 +96,12 @@ export const fileAccessMiddleware = (accessType: 'read' | 'write' | 'delete') =>
       const fileId = req.params.fileId;
 
       if (!user || !user.isAuthenticated) {
-        res.status(401).json({
-          success: false,
-          error: 'Authentication required'
-        });
+        ApiResponse.unauthorized(res, 'Authentication required');
         return;
       }
 
       if (!fileId) {
-        res.status(400).json({
-          success: false,
-          error: 'File ID required'
-        });
+        ApiResponse.badRequest(res, 'File ID required');
         return;
       }
 
@@ -146,10 +126,7 @@ export const fileAccessMiddleware = (accessType: 'read' | 'write' | 'delete') =>
         }
 
         if (!hasPermission) {
-          res.status(403).json({
-            success: false,
-            error: 'Access denied'
-          });
+          ApiResponse.forbidden(res, 'Access denied');
           return;
         }
       } catch (error) {
@@ -162,10 +139,7 @@ export const fileAccessMiddleware = (accessType: 'read' | 'write' | 'delete') =>
       next();
     } catch (error) {
       safeLogger.error('File access check error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Access check failed'
-      });
+      ApiResponse.serverError(res, 'Access check failed');
     }
   };
 };
@@ -198,81 +172,16 @@ export const storageRateLimiter = (maxRequests: number = 100, windowMs: number =
 
       // Check rate limit
       if (requestCounts[userId].count > maxRequests) {
-        res.status(429).json({
-          success: false,
-          error: 'Rate limit exceeded'
-        });
+        const retryAfter = Math.ceil((requestCounts[userId].resetTime - now) / 1000);
+        ApiResponse.tooManyRequests(res, 'Too many requests', { retryAfter });
         return;
       }
 
       next();
     } catch (error) {
-      safeLogger.error('Rate limiting error:', error);
-      next(); // Don't block requests on rate limiting errors
-    }
-  };
-};
-
-// Content validation middleware
-export const contentValidationMiddleware = (maxFileSize: number = 100 * 1024 * 1024) => { // 100MB default
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      // Check content length header
-      const contentLength = req.headers['content-length'];
-      if (contentLength && parseInt(contentLength) > maxFileSize) {
-        res.status(413).json({
-          success: false,
-          error: `File too large. Maximum size is ${maxFileSize} bytes`
-        });
-        return;
-      }
-
+      safeLogger.error('Storage rate limiting error:', error);
+      // Don't block requests if rate limiting fails
       next();
-    } catch (error) {
-      safeLogger.error('Content validation error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Content validation failed'
-      });
     }
   };
-};
-
-// Security headers middleware
-export const storageSecurityHeaders = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    // Add security headers
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'DENY');
-    res.setHeader('X-XSS-Protection', '1; mode=block');
-    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-    res.setHeader('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'");
-    
-    next();
-  } catch (error) {
-    safeLogger.error('Security headers error:', error);
-    next();
-  }
-};
-
-// Audit logging middleware
-export const storageAuditLogger = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const userId = (req as any).storageUser?.id || 'anonymous';
-    const operation = `${req.method} ${req.path}`;
-    const timestamp = new Date().toISOString();
-    
-    safeLogger.info('Storage operation', {
-      userId,
-      operation,
-      timestamp,
-      ip: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-    
-    next();
-  } catch (error) {
-    safeLogger.error('Audit logging error:', error);
-    next();
-  }
 };

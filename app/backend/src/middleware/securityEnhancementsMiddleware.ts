@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { safeLogger } from '../utils/safeLogger';
+import { ApiResponse } from '../utils/apiResponse';
 import helmet from 'helmet';
 
 // Security Headers
@@ -51,10 +52,7 @@ export const csrfProtection = (req: Request, res: Response, next: NextFunction) 
     ].filter(Boolean);
 
     if (origin && !allowedOrigins.some(allowed => origin.startsWith(allowed!))) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'CSRF validation failed' 
-      });
+      return ApiResponse.forbidden(res, 'CSRF validation failed');
     }
   }
   next();
@@ -66,10 +64,7 @@ export const requestSizeLimits = (req: Request, res: Response, next: NextFunctio
   const MAX_SIZE = 1024 * 1024; // 1MB
 
   if (contentLength > MAX_SIZE) {
-    return res.status(413).json({ 
-      success: false, 
-      message: 'Request too large' 
-    });
+    return ApiResponse.serverError(res, 'Request too large');
   }
 
   next();
@@ -82,10 +77,7 @@ export const validateContentType = (req: Request, res: Response, next: NextFunct
     // Allow JSON, form-data, and urlencoded
     const validTypes = ['application/json', 'multipart/form-data', 'application/x-www-form-urlencoded'];
     if (contentType && !validTypes.some(type => contentType.includes(type))) {
-      return res.status(415).json({ 
-        success: false, 
-        message: 'Invalid Content-Type' 
-      });
+      return ApiResponse.serverError(res, 'Invalid Content-Type');
     }
   }
   next();

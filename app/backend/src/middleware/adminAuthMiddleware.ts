@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { safeLogger } from '../utils/safeLogger';
+import { ApiResponse } from '../utils/apiResponse';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -16,18 +17,13 @@ export const validateAdminRole = (req: AuthenticatedRequest, res: Response, next
     const user = req.user;
     
     if (!user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required'
-      });
+      return ApiResponse.unauthorized(res, 'Authentication required');
     }
 
     // Check if user has admin role
     const adminRoles = ['super_admin', 'admin', 'moderator', 'analyst'];
     if (!adminRoles.includes(user.role)) {
-      return res.status(403).json({
-        success: false,
-        error: 'Admin access required',
+      return ApiResponse.forbidden(res, 'Admin access required', {
         details: `Role '${user.role}' is not authorized for admin operations`
       });
     }
@@ -53,10 +49,7 @@ export const validateAdminRole = (req: AuthenticatedRequest, res: Response, next
     next();
   } catch (error) {
     safeLogger.error('Admin role validation error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error during role validation'
-    });
+    ApiResponse.serverError(res, 'Internal server error during role validation');
   }
 };
 
@@ -67,10 +60,7 @@ export const requirePermission = (permission: string) => {
       const user = req.user;
 
       if (!user) {
-        return res.status(401).json({
-          success: false,
-          error: 'Authentication required'
-        });
+        return ApiResponse.unauthorized(res, 'Authentication required');
       }
 
       // Super admins have all permissions
@@ -85,9 +75,7 @@ export const requirePermission = (permission: string) => {
 
       // Check if user has the required permission
       if (!user.permissions || !user.permissions.includes(permission)) {
-        return res.status(403).json({
-          success: false,
-          error: 'Insufficient permissions',
+        return ApiResponse.forbidden(res, 'Insufficient permissions', {
           details: `Permission '${permission}' is required for this operation`
         });
       }
@@ -95,10 +83,7 @@ export const requirePermission = (permission: string) => {
       next();
     } catch (error) {
       safeLogger.error('Permission validation error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Internal server error during permission validation'
-      });
+      ApiResponse.serverError(res, 'Internal server error during permission validation');
     }
   };
 };
@@ -112,17 +97,12 @@ export const requireRole = (roles: string | string[]) => {
       const user = req.user;
       
       if (!user) {
-        return res.status(401).json({
-          success: false,
-          error: 'Authentication required'
-        });
+        return ApiResponse.unauthorized(res, 'Authentication required');
       }
 
       // Check if user has one of the required roles
       if (!allowedRoles.includes(user.role)) {
-        return res.status(403).json({
-          success: false,
-          error: 'Insufficient role privileges',
+        return ApiResponse.forbidden(res, 'Insufficient role privileges', {
           details: `One of the following roles is required: ${allowedRoles.join(', ')}`
         });
       }
@@ -130,10 +110,7 @@ export const requireRole = (roles: string | string[]) => {
       next();
     } catch (error) {
       safeLogger.error('Role validation error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Internal server error during role validation'
-      });
+      ApiResponse.serverError(res, 'Internal server error during role validation');
     }
   };
 };
@@ -197,121 +174,31 @@ export const adminRateLimit = (maxRequests: number = 100, windowMs: number = 15 
           requests.delete(k);
         }
       }
+
+      // Get or create request count
+      const requestInfo = requests.get(key) || { count: 0, resetTime: now + windowMs };
       
-      const userRequests = requests.get(key);
-      
-      if (!userRequests) {
-        requests.set(key, { count: 1, resetTime: now + windowMs });
-        return next();
+      // Reset count if window has passed
+      if (now > requestInfo.resetTime) {
+        requestInfo.count = 0;
+        requestInfo.resetTime = now + windowMs;
       }
       
-      if (userRequests.resetTime < now) {
-        // Reset the window
-        requests.set(key, { count: 1, resetTime: now + windowMs });
-        return next();
+      // Increment count
+      requestInfo.count++;
+      requests.set(key, requestInfo);
+      
+      // Check if limit exceeded
+      if (requestInfo.count > maxRequests) {
+        const retryAfter = Math.ceil((requestInfo.resetTime - now) / 1000);
+        return ApiResponse.tooManyRequests(res, 'Too many admin requests', { retryAfter });
       }
       
-      if (userRequests.count >= maxRequests) {
-        return res.status(429).json({
-          success: false,
-          error: 'Too many requests',
-          details: `Rate limit exceeded. Maximum ${maxRequests} requests per ${windowMs / 1000} seconds.`,
-          retryAfter: Math.ceil((userRequests.resetTime - now) / 1000)
-        });
-      }
-      
-      userRequests.count++;
       next();
     } catch (error) {
       safeLogger.error('Admin rate limiting error:', error);
-      // Don't fail the request due to rate limiting issues
+      // Don't block requests if rate limiting fails
       next();
     }
   };
 };
-
-// IP whitelist middleware for admin access
-export const adminIPWhitelist = (allowedIPs: string[] = []) => {
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-      // Skip IP checking if no whitelist is configured
-      if (allowedIPs.length === 0) {
-        return next();
-      }
-
-      const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
-      
-      if (!clientIP || !allowedIPs.includes(clientIP)) {
-        safeLogger.warn(`Admin access denied from IP: ${clientIP}`);
-        return res.status(403).json({
-          success: false,
-          error: 'Access denied',
-          details: 'Admin access is restricted to authorized IP addresses'
-        });
-      }
-
-      next();
-    } catch (error) {
-      safeLogger.error('IP whitelist validation error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Internal server error during IP validation'
-      });
-    }
-  };
-};
-
-// Session validation for admin users
-export const validateAdminSession = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  try {
-    const user = req.user;
-    
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required'
-      });
-    }
-
-    // Add session validation logic here
-    // This could check session expiry, concurrent sessions, etc.
-    
-    // For now, just validate that we have required user fields
-    if (!user.id || !user.email || !user.role) {
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid session data'
-      });
-    }
-
-    next();
-  } catch (error) {
-    safeLogger.error('Session validation error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error during session validation'
-    });
-  }
-};
-
-// Combine multiple admin middlewares for convenience
-export const adminAuth = {
-  validateRole: validateAdminRole,
-  requirePermission,
-  requireRole,
-  auditAction: auditAdminAction,
-  rateLimit: adminRateLimit,
-  ipWhitelist: adminIPWhitelist,
-  validateSession: validateAdminSession
-};
-
-// Default admin middleware stack
-export const defaultAdminMiddleware = [
-  validateAdminSession,
-  validateAdminRole,
-  adminRateLimit(),
-  auditAdminAction('admin_operation')
-];
-
-// Backward compatibility aliases
-export const adminAuthMiddleware = validateAdminRole;

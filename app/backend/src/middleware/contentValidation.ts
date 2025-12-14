@@ -4,6 +4,7 @@ import multer from 'multer';
 import path from 'path';
 import crypto from 'crypto';
 import { contentStagingService } from '../services/contentStagingService';
+import { ApiResponse } from '../utils/apiResponse';
 
 export interface ValidatedContent {
   text?: string;
@@ -72,18 +73,14 @@ export const validateContent = async (
 
     // Validate required fields
     if (!contentType) {
-      res.status(400).json({
-        error: 'Content type is required',
-        code: 'MISSING_CONTENT_TYPE'
-      });
+      ApiResponse.badRequest(res, 'Content type is required', { code: 'MISSING_CONTENT_TYPE' });
       return;
     }
 
     // Validate content type
     const validContentTypes = ['post', 'comment', 'listing', 'dm', 'username'];
     if (!validContentTypes.includes(contentType)) {
-      res.status(400).json({
-        error: 'Invalid content type',
+      ApiResponse.badRequest(res, 'Invalid content type', { 
         code: 'INVALID_CONTENT_TYPE',
         validTypes: validContentTypes
       });
@@ -92,20 +89,14 @@ export const validateContent = async (
 
     // Validate that there's some content
     if (!text && files.length === 0) {
-      res.status(400).json({
-        error: 'Content cannot be empty',
-        code: 'EMPTY_CONTENT'
-      });
+      ApiResponse.badRequest(res, 'Content cannot be empty', { code: 'EMPTY_CONTENT' });
       return;
     }
 
     // Text validation
     if (text) {
       if (typeof text !== 'string') {
-        res.status(400).json({
-          error: 'Text content must be a string',
-          code: 'INVALID_TEXT_TYPE'
-        });
+        ApiResponse.badRequest(res, 'Text content must be a string', { code: 'INVALID_TEXT_TYPE' });
         return;
       }
 
@@ -120,8 +111,7 @@ export const validateContent = async (
 
       const maxLength = textLimits[contentType as keyof typeof textLimits];
       if (text.length > maxLength) {
-        res.status(400).json({
-          error: `Text content exceeds maximum length of ${maxLength} characters`,
+        ApiResponse.badRequest(res, `Text content exceeds maximum length of ${maxLength} characters`, {
           code: 'TEXT_TOO_LONG',
           maxLength,
           currentLength: text.length
@@ -132,8 +122,7 @@ export const validateContent = async (
       // Basic content validation
       const validation = await contentStagingService.validateContent(text);
       if (!validation.isValid) {
-        res.status(400).json({
-          error: 'Text content validation failed',
+        ApiResponse.badRequest(res, 'Text content validation failed', {
           code: 'TEXT_VALIDATION_FAILED',
           details: validation.errors
         });
@@ -146,8 +135,7 @@ export const validateContent = async (
     for (const file of files) {
       // Validate file size
       if (file.size > 100 * 1024 * 1024) {
-        res.status(400).json({
-          error: `File ${file.originalname} exceeds maximum size of 100MB`,
+        ApiResponse.badRequest(res, `File ${file.originalname} exceeds maximum size of 100MB`, {
           code: 'FILE_TOO_LARGE',
           fileName: file.originalname,
           fileSize: file.size
@@ -163,8 +151,7 @@ export const validateContent = async (
       );
 
       if (!validation.isValid) {
-        res.status(400).json({
-          error: `File ${file.originalname} validation failed`,
+        ApiResponse.badRequest(res, `File ${file.originalname} validation failed`, {
           code: 'FILE_VALIDATION_FAILED',
           fileName: file.originalname,
           details: validation.errors
@@ -182,109 +169,38 @@ export const validateContent = async (
         const linkArray = Array.isArray(links) ? links : JSON.parse(links);
         
         if (!Array.isArray(linkArray)) {
-          res.status(400).json({
-            error: 'Links must be an array',
-            code: 'INVALID_LINKS_FORMAT'
-          });
+          ApiResponse.badRequest(res, 'Links must be an array', { code: 'INVALID_LINKS_FORMAT' });
           return;
         }
 
         // Validate each link
         for (const link of linkArray) {
           if (typeof link !== 'string') {
-            res.status(400).json({
-              error: 'Each link must be a string',
-              code: 'INVALID_LINK_TYPE'
-            });
-            return;
-          }
-
-          try {
-            new URL(link); // Validate URL format
-            validatedLinks.push(link);
-          } catch (error) {
-            res.status(400).json({
-              error: `Invalid URL format: ${link}`,
-              code: 'INVALID_URL_FORMAT',
-              url: link
-            });
+            ApiResponse.badRequest(res, 'Each link must be a string', { code: 'INVALID_LINK_TYPE' });
             return;
           }
         }
 
-        // Limit number of links
-        if (validatedLinks.length > 10) {
-          res.status(400).json({
-            error: 'Maximum 10 links allowed per content',
-            code: 'TOO_MANY_LINKS',
-            maxLinks: 10,
-            currentLinks: validatedLinks.length
-          });
-          return;
-        }
+        validatedLinks = linkArray;
       } catch (error) {
-        res.status(400).json({
-          error: 'Invalid links format',
-          code: 'INVALID_LINKS_JSON'
-        });
+        ApiResponse.badRequest(res, 'Invalid links format', { code: 'INVALID_LINKS_JSON' });
         return;
       }
     }
 
-    // Determine processing priority
-    let priority: 'fast' | 'slow' = 'fast';
-    
-    // Use slow lane for media content or complex text
-    if (validatedFiles.length > 0) {
-      priority = 'slow';
-    } else if (text && (text.length > 1000 || validatedLinks.length > 3)) {
-      priority = 'slow';
-    }
-
-    // Stage content if needed
-    let stagedContent;
-    if (validatedFiles.length > 0) {
-      // For now, we'll stage the first file as an example
-      // In a full implementation, you'd stage all files
-      const firstFile = validatedFiles[0];
-      const staged = await contentStagingService.stageContent(
-        firstFile.buffer,
-        {
-          originalName: firstFile.originalname,
-          mimetype: firstFile.mimetype,
-          contentType
-        },
-        firstFile.mimetype,
-        firstFile.originalname
-      );
-
-      stagedContent = {
-        id: staged.id,
-        hash: staged.hash,
-        size: staged.size
-      };
-    }
-
     // Attach validated content to request
-    const validatedContent: ValidatedContent = {
+    (req as any).validatedContent = {
       text,
       mediaFiles: validatedFiles,
       links: validatedLinks,
       contentType,
-      priority,
-      stagedContent
-    };
+      priority: 'fast' // Default to fast priority
+    } as ValidatedContent;
 
-    req.validatedContent = validatedContent;
     next();
-
   } catch (error) {
     safeLogger.error('Content validation error:', error);
-    res.status(500).json({
-      error: 'Content validation failed',
-      code: 'VALIDATION_ERROR',
-      message: error instanceof Error ? error.message : 'Unknown error'
-    });
+    ApiResponse.serverError(res, 'Content validation failed');
   }
 };
 

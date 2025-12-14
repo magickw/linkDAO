@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
+import { ApiResponse } from '../utils/apiResponse';
 
 // Interface for validation schema
 interface ValidationSchema {
@@ -52,11 +53,7 @@ export const validateRequest = (schema: ValidationSchema) => {
     }
 
     if (errors.length > 0) {
-      res.status(400).json({
-        success: false,
-        error: 'Validation failed',
-        details: errors
-      });
+      ApiResponse.validationError(res, 'Validation failed', errors);
       return;
     }
 
@@ -138,11 +135,7 @@ function validateField(key: string, value: any, rule: ValidationRule, location: 
 export const validateRequestExpressValidator = (req: Request, res: Response, next: NextFunction): void => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    res.status(400).json({
-      success: false,
-      error: 'Validation failed',
-      details: errors.array()
-    });
+    ApiResponse.validationError(res, 'Validation failed', errors.array());
     return;
   }
   next();

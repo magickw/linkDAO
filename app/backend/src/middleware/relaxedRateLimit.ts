@@ -1,6 +1,6 @@
-
 import rateLimit from 'express-rate-limit';
 import { Request, Response } from 'express';
+import { ApiResponse } from '../utils/apiResponse';
 
 /**
  * Relaxed rate limiting configuration
@@ -11,16 +11,8 @@ import { Request, Response } from 'express';
 export const emergencyRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10000, // Very high limit
-  message: {
-    success: false,
-    error: {
-      code: 'RATE_LIMIT_EXCEEDED',
-      message: 'Too many requests, please try again later',
-      details: {
-        userFriendlyMessage: 'You are making requests too quickly. Please wait a moment and try again.',
-        retryAfter: '15 minutes'
-      }
-    }
+  handler: (req, res) => {
+    ApiResponse.tooManyRequests(res, 'Too many requests, please try again later');
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -39,16 +31,8 @@ export const emergencyRateLimit = rateLimit({
 export const apiRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5000, // High limit for API calls
-  message: {
-    success: false,
-    error: {
-      code: 'API_RATE_LIMIT_EXCEEDED',
-      message: 'API rate limit exceeded',
-      details: {
-        userFriendlyMessage: 'You are making API requests too quickly. Please slow down.',
-        retryAfter: '15 minutes'
-      }
-    }
+  handler: (req, res) => {
+    ApiResponse.tooManyRequests(res, 'API rate limit exceeded');
   },
   skip: (req: Request) => {
     // Skip for health and auth endpoints
@@ -61,16 +45,8 @@ export const apiRateLimit = rateLimit({
 export const authRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Reasonable limit for auth attempts
-  message: {
-    success: false,
-    error: {
-      code: 'AUTH_RATE_LIMIT_EXCEEDED',
-      message: 'Too many authentication attempts',
-      details: {
-        userFriendlyMessage: 'Too many login attempts. Please wait before trying again.',
-        retryAfter: '15 minutes'
-      }
-    }
+  handler: (req, res) => {
+    ApiResponse.tooManyRequests(res, 'Too many authentication attempts');
   }
 });
 

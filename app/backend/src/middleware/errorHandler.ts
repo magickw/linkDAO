@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { safeLogger } from '../utils/safeLogger';
+import { ApiResponse } from '../utils/apiResponse';
 
 export interface ApiError extends Error {
   statusCode?: number;
@@ -157,18 +158,11 @@ export const errorHandler = (
     message = `File upload error: ${error.message}`;
   }
 
-  // Prepare error response
-  const errorResponse: any = {
-    success: false,
-    error: {
-      code,
-      message,
-      ...(process.env.NODE_ENV === 'development' && { 
-        stack: error.stack,
-        details 
-      }),
-      ...(details && { details })
-    },
+  // Prepare error response using ApiResponse
+  const errorResponse = {
+    code,
+    message,
+    ...(details && { details }),
     timestamp: new Date().toISOString(),
     path: req.originalUrl,
     method: req.method
@@ -176,10 +170,38 @@ export const errorHandler = (
 
   // Add request ID if available
   if (req.headers['x-request-id']) {
-    errorResponse.requestId = req.headers['x-request-id'];
+    (errorResponse as any).requestId = req.headers['x-request-id'];
   }
 
-  res.status(statusCode).json(errorResponse);
+  // Send standardized error response
+  switch (statusCode) {
+    case 400:
+      ApiResponse.badRequest(res, message, details);
+      break;
+    case 401:
+      ApiResponse.unauthorized(res, message);
+      break;
+    case 403:
+      ApiResponse.forbidden(res, message);
+      break;
+    case 404:
+      ApiResponse.notFound(res, message);
+      break;
+    case 409:
+      ApiResponse.conflict(res, message, details);
+      break;
+    case 422:
+      ApiResponse.validationError(res, message, details);
+      break;
+    case 429:
+      ApiResponse.tooManyRequests(res, message);
+      break;
+    case 503:
+      ApiResponse.serviceUnavailable(res, message);
+      break;
+    default:
+      ApiResponse.serverError(res, message, details);
+  }
 };
 
 // 404 handler for unmatched routes
