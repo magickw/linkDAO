@@ -226,6 +226,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.BurnToDonate__factory>;
     getContractFactory(
+      name: "CharityGovernance",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.CharityGovernance__factory>;
+    getContractFactory(
       name: "CharityVerificationSystem",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.CharityVerificationSystem__factory>;
@@ -285,6 +289,10 @@ declare module "hardhat/types/runtime" {
       name: "LDAOTreasury",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.LDAOTreasury__factory>;
+    getContractFactory(
+      name: "LDAOTreasuryOptimized",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.LDAOTreasuryOptimized__factory>;
     getContractFactory(
       name: "Marketplace",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -656,6 +664,11 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.BurnToDonate>;
     getContractAt(
+      name: "CharityGovernance",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.CharityGovernance>;
+    getContractAt(
       name: "CharityVerificationSystem",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -730,6 +743,11 @@ declare module "hardhat/types/runtime" {
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.LDAOTreasury>;
+    getContractAt(
+      name: "LDAOTreasuryOptimized",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.LDAOTreasuryOptimized>;
     getContractAt(
       name: "Marketplace",
       address: string | ethers.Addressable,
@@ -1074,6 +1092,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.BurnToDonate>;
     deployContract(
+      name: "CharityGovernance",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.CharityGovernance>;
+    deployContract(
       name: "CharityVerificationSystem",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.CharityVerificationSystem>;
@@ -1133,6 +1155,10 @@ declare module "hardhat/types/runtime" {
       name: "LDAOTreasury",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.LDAOTreasury>;
+    deployContract(
+      name: "LDAOTreasuryOptimized",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.LDAOTreasuryOptimized>;
     deployContract(
       name: "Marketplace",
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -1504,6 +1530,11 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.BurnToDonate>;
     deployContract(
+      name: "CharityGovernance",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.CharityGovernance>;
+    deployContract(
       name: "CharityVerificationSystem",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -1578,6 +1609,11 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.LDAOTreasury>;
+    deployContract(
+      name: "LDAOTreasuryOptimized",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.LDAOTreasuryOptimized>;
     deployContract(
       name: "Marketplace",
       args: any[],

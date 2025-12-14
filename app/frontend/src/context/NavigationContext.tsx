@@ -109,6 +109,14 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
           activeCommunity: typeof community === 'string' ? community : undefined,
           activePost: typeof post === 'string' ? post : undefined,
         }));
+      } else if (pathname === '/communities') {
+        // Handle the main communities page
+        setNavigationState(prev => ({
+          ...prev,
+          activeView: 'community',
+          activeCommunity: undefined, // No specific community selected
+          activePost: undefined,
+        }));
       } else if (pathname.startsWith('/communities/')) {
         // Extract community ID from path
         const pathParts = pathname.split('/');

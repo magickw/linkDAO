@@ -15,7 +15,7 @@ export class FeedController {
   async getEnhancedFeed(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       // Get user address from either authenticated session or query parameter
-      const authenticatedAddress = req.user?.address;
+      const authenticatedAddress = req.user?.walletAddress;
       const queryUserAddress = req.query.userAddress as string | undefined;
       const userAddress = authenticatedAddress || queryUserAddress || null;
 
@@ -156,7 +156,7 @@ export class FeedController {
   // Create new post
   async createPost(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -196,7 +196,7 @@ export class FeedController {
   // Update post
   async updatePost(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -229,7 +229,7 @@ export class FeedController {
   // Delete post
   async deletePost(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -258,7 +258,7 @@ export class FeedController {
   // Add reaction to post
   async addReaction(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -290,7 +290,7 @@ export class FeedController {
   // Send tip to post author
   async sendTip(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -336,7 +336,7 @@ export class FeedController {
   // Share post
   async sharePost(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -396,7 +396,7 @@ export class FeedController {
   // Add comment to post
   async addComment(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -549,12 +549,11 @@ export class FeedController {
   // Share post
   async sharePostEnhanced(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
       }
-
       const { postId } = req.params;
       const { platform, message } = req.body;
 
@@ -575,14 +574,13 @@ export class FeedController {
   // Toggle bookmark
   async toggleBookmark(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
       }
 
       const { postId } = req.params;
-
       const bookmarkResult = await feedService.toggleBookmark({
         postId,
         userAddress
@@ -670,12 +668,11 @@ export class FeedController {
   // Upvote post
   async upvotePost(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
       }
-
       const { id: postId } = req.params;
 
       const result = await feedService.upvotePost({
@@ -693,7 +690,7 @@ export class FeedController {
   // Downvote post
   async downvotePost(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;

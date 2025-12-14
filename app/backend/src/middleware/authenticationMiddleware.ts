@@ -4,6 +4,7 @@ import { AuthenticationService } from '../services/authenticationService';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
+    address: string;
     walletAddress: string;
     sessionId: string;
     role?: string;
@@ -56,6 +57,7 @@ export class AuthenticationMiddleware {
 
       // Add user info to request
       req.user = {
+        address: sessionInfo.walletAddress,
         walletAddress: sessionInfo.walletAddress,
         sessionId: sessionInfo.id,
         role: sessionInfo.role,
@@ -94,6 +96,7 @@ export class AuthenticationMiddleware {
 
         if (sessionInfo) {
           req.user = {
+            address: sessionInfo.walletAddress,
             walletAddress: sessionInfo.walletAddress,
             sessionId: sessionInfo.id,
             role: sessionInfo.role,

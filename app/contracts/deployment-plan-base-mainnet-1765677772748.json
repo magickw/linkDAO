@@ -1,0 +1,119 @@
+{
+  "network": "base-mainnet",
+  "chainId": "8453",
+  "estimatedCost": {
+    "minimum": "0.0",
+    "recommended": "0.0",
+    "inUSD": "0.00"
+  },
+  "contracts": [
+    {
+      "name": "LDAOToken",
+      "gas": 2000000,
+      "desc": "Core LDAO token"
+    },
+    {
+      "name": "MockERC20",
+      "gas": 1000000,
+      "desc": "USDC mock for testing (optional on mainnet)"
+    },
+    {
+      "name": "MultiSigWallet",
+      "gas": 1500000,
+      "desc": "Multi-signature wallet"
+    },
+    {
+      "name": "Governance",
+      "gas": 2500000,
+      "desc": "Governance contract"
+    },
+    {
+      "name": "LDAOTreasuryOptimized",
+      "gas": 3000000,
+      "desc": "Main treasury with security fixes"
+    },
+    {
+      "name": "CharityGovernance",
+      "gas": 2500000,
+      "desc": "Charity governance (separate from treasury)"
+    },
+    {
+      "name": "ReputationSystem",
+      "gas": 2000000,
+      "desc": "Reputation tracking system"
+    },
+    {
+      "name": "SocialReputationToken",
+      "gas": 2500000,
+      "desc": "Tokenized reputation"
+    },
+    {
+      "name": "ReputationBridge",
+      "gas": 1500000,
+      "desc": "Bridge between reputation systems"
+    },
+    {
+      "name": "ProfileRegistry",
+      "gas": 3000000,
+      "desc": "User profile registry"
+    },
+    {
+      "name": "FollowModule",
+      "gas": 2500000,
+      "desc": "Social follow module"
+    },
+    {
+      "name": "TipRouter",
+      "gas": 2500000,
+      "desc": "Tip routing system"
+    },
+    {
+      "name": "PaymentRouter",
+      "gas": 1500000,
+      "desc": "Payment processing"
+    },
+    {
+      "name": "EnhancedEscrow",
+      "gas": 3000000,
+      "desc": "Enhanced escrow system"
+    },
+    {
+      "name": "DisputeResolution",
+      "gas": 2500000,
+      "desc": "Dispute resolution"
+    },
+    {
+      "name": "Marketplace",
+      "gas": 4000000,
+      "desc": "NFT marketplace"
+    },
+    {
+      "name": "NFTMarketplace",
+      "gas": 4000000,
+      "desc": "NFT marketplace v2"
+    },
+    {
+      "name": "NFTCollectionFactory",
+      "gas": 3000000,
+      "desc": "NFT collection factory"
+    },
+    {
+      "name": "RewardPool",
+      "gas": 1500000,
+      "desc": "Reward distribution pool"
+    },
+    {
+      "name": "SecureBridgeValidator",
+      "gas": 2500000,
+      "desc": "Bridge security validator"
+    },
+    {
+      "name": "CharityMonitor",
+      "gas": 2000000,
+      "desc": "Charity monitoring system"
+    }
+  ],
+  "gasPrice": "0.1",
+  "deployer": "0xEe034b53D4cCb101b2a4faec27708be507197350",
+  "createdAt": "2025-12-14T02:02:52.748Z"
+}
