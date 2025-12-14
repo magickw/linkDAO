@@ -2,24 +2,24 @@ import { Router } from 'express';
 import { csrfProtection } from '../middleware/csrfProtection';
 import { supportTicketingController } from '../controllers/supportTicketingController';
 import { authMiddleware } from '../middleware/authMiddleware';
-import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
+import { validateAdminRole } from '../middleware/adminAuthMiddleware';
 
 const router = Router();
 
 // Public routes (no authentication required)
-router.post('/tickets', csrfProtection,  supportTicketingController.createTicket);
-router.post('/interactions', csrfProtection,  supportTicketingController.recordDocumentationInteraction);
+router.post('/tickets', csrfProtection, supportTicketingController.createTicket.bind(supportTicketingController));
+router.post('/interactions', csrfProtection, supportTicketingController.recordDocumentationInteraction.bind(supportTicketingController));
 
 // User routes (authentication required)
-router.get('/tickets/user/:userEmail', authMiddleware, supportTicketingController.getUserTickets);
-router.get('/tickets/:ticketId', authMiddleware, supportTicketingController.getTicket);
+router.get('/tickets/user/:userEmail', authMiddleware, supportTicketingController.getUserTickets.bind(supportTicketingController));
+router.get('/tickets/:ticketId', authMiddleware, supportTicketingController.getTicket.bind(supportTicketingController));
 
 // Admin routes (admin authentication required)
-router.put('/tickets/:ticketId', csrfProtection,  adminAuthMiddleware, supportTicketingController.updateTicket);
-router.get('/tickets', adminAuthMiddleware, supportTicketingController.searchTickets);
-router.get('/analytics', adminAuthMiddleware, supportTicketingController.getSupportAnalytics);
-router.get('/analytics/statistics', adminAuthMiddleware, supportTicketingController.getTicketStatistics);
-router.get('/analytics/documentation-effectiveness', adminAuthMiddleware, supportTicketingController.getDocumentationEffectiveness);
-router.post('/integrations/configure', csrfProtection,  adminAuthMiddleware, supportTicketingController.configureIntegrations);
+router.put('/tickets/:ticketId', csrfProtection, validateAdminRole, supportTicketingController.updateTicket.bind(supportTicketingController));
+router.get('/tickets', validateAdminRole, supportTicketingController.searchTickets.bind(supportTicketingController));
+router.get('/analytics', validateAdminRole, supportTicketingController.getSupportAnalytics.bind(supportTicketingController));
+router.get('/analytics/statistics', validateAdminRole, supportTicketingController.getTicketStatistics.bind(supportTicketingController));
+router.get('/analytics/documentation-effectiveness', validateAdminRole, supportTicketingController.getDocumentationEffectiveness.bind(supportTicketingController));
+router.post('/integrations/configure', csrfProtection, validateAdminRole, supportTicketingController.configureIntegrations.bind(supportTicketingController));
 
 export { router as supportTicketingRoutes };

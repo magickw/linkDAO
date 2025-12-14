@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { ldaoPostLaunchMonitoringController } from '../controllers/ldaoPostLaunchMonitoringController';
 import { authMiddleware } from '../middleware/authMiddleware';
-import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
+import { validateAdminRole } from '../middleware/adminAuthMiddleware';
 
 const router = Router();
 
@@ -18,7 +18,7 @@ router.get('/dashboard', ldaoPostLaunchMonitoringController.getDashboardData);
 router.get('/health', ldaoPostLaunchMonitoringController.getHealthStatus);
 
 // Admin-only endpoints
-router.use(adminAuthMiddleware);
+router.use(validateAdminRole);
 
 router.get('/recommendations', ldaoPostLaunchMonitoringController.getOptimizationRecommendations);
 router.get('/roadmap', ldaoPostLaunchMonitoringController.getFeatureRoadmap);

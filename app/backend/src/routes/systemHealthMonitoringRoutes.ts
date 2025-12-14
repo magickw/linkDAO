@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { csrfProtection } from '../middleware/csrfProtection';
 import { systemHealthMonitoringController } from '../controllers/systemHealthMonitoringController';
-import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
+// Removed duplicate auth middleware imports since they're applied in index.ts
 
 const router = Router();
 
-// Apply admin authentication middleware to all routes
-router.use(adminAuthMiddleware);
+// Removed duplicate middleware application since it's applied in index.ts
+// router.use(authMiddleware, validateAdminRole);
 
 /**
  * System Health Overview Routes

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { customerExperienceController } from '../controllers/customerExperienceController';
 import { authMiddleware } from '../middleware/authMiddleware';
-import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
+import { validateAdminRole } from '../middleware/adminAuthMiddleware';
 import { csrfProtection } from '../middleware/csrfProtection';
 import { apiLimiter } from '../middleware/rateLimiter';
 
@@ -17,7 +17,7 @@ router.use(apiLimiter);
  * @query startDate - Optional start date for filtering
  * @query endDate - Optional end date for filtering
  */
-router.get('/satisfaction', adminAuthMiddleware, customerExperienceController.getSatisfactionMetrics.bind(customerExperienceController));
+router.get('/satisfaction', authMiddleware, validateAdminRole, customerExperienceController.getSatisfactionMetrics.bind(customerExperienceController));
 
 /**
  * @route POST /api/customer-experience/analyze-feedback
@@ -25,7 +25,7 @@ router.get('/satisfaction', adminAuthMiddleware, customerExperienceController.ge
  * @access Private (Admin)
  * @body feedbackTexts - Array of feedback texts to analyze
  */
-router.post('/analyze-feedback', adminAuthMiddleware, csrfProtection, customerExperienceController.analyzeFeedback.bind(customerExperienceController));
+router.post('/analyze-feedback', authMiddleware, validateAdminRole, csrfProtection, customerExperienceController.analyzeFeedback.bind(customerExperienceController));
 
 /**
  * @route GET /api/customer-experience/score
@@ -34,7 +34,7 @@ router.post('/analyze-feedback', adminAuthMiddleware, csrfProtection, customerEx
  * @query startDate - Optional start date for filtering
  * @query endDate - Optional end date for filtering
  */
-router.get('/score', adminAuthMiddleware, customerExperienceController.getExperienceScore.bind(customerExperienceController));
+router.get('/score', authMiddleware, validateAdminRole, customerExperienceController.getExperienceScore.bind(customerExperienceController));
 
 /**
  * @route GET /api/customer-experience/issues
@@ -43,7 +43,7 @@ router.get('/score', adminAuthMiddleware, customerExperienceController.getExperi
  * @query startDate - Optional start date for filtering
  * @query endDate - Optional end date for filtering
  */
-router.get('/issues', adminAuthMiddleware, customerExperienceController.getIssueCorrelations.bind(customerExperienceController));
+router.get('/issues', authMiddleware, validateAdminRole, customerExperienceController.getIssueCorrelations.bind(customerExperienceController));
 
 /**
  * @route GET /api/customer-experience/report
@@ -52,7 +52,7 @@ router.get('/issues', adminAuthMiddleware, customerExperienceController.getIssue
  * @query startDate - Optional start date for filtering
  * @query endDate - Optional end date for filtering
  */
-router.get('/report', adminAuthMiddleware, customerExperienceController.generateExperienceReport.bind(customerExperienceController));
+router.get('/report', authMiddleware, validateAdminRole, customerExperienceController.generateExperienceReport.bind(customerExperienceController));
 
 /**
  * @route GET /api/customer-experience/recommendations
@@ -61,6 +61,6 @@ router.get('/report', adminAuthMiddleware, customerExperienceController.generate
  * @query startDate - Optional start date for filtering
  * @query endDate - Optional end date for filtering
  */
-router.get('/recommendations', adminAuthMiddleware, customerExperienceController.getImprovementRecommendations.bind(customerExperienceController));
+router.get('/recommendations', authMiddleware, validateAdminRole, customerExperienceController.getImprovementRecommendations.bind(customerExperienceController));
 
 export default router;

@@ -7,22 +7,22 @@ import {
   errorResponse,
   validationErrorResponse,
 } from '../utils/apiResponse';
-import { createCustomRateLimit } from '../middleware/marketplaceSecurity';
+import { rateLimitingMiddleware } from '../middleware/rateLimitingMiddleware';
 
 const router = Router();
 
 /**
  * Rate limiters for ENS validation endpoints
  */
-const ensValidationRateLimit = createCustomRateLimit({
+const ensValidationRateLimit = rateLimitingMiddleware({
   windowMs: 60 * 1000, // 1 minute
-  max: 20, // 20 requests per minute
+  maxRequests: 20, // 20 requests per minute
   message: 'Too many ENS validation requests, please try again later',
 });
 
-const ensVerificationRateLimit = createCustomRateLimit({
+const ensVerificationRateLimit = rateLimitingMiddleware({
   windowMs: 60 * 1000, // 1 minute
-  max: 10, // 10 requests per minute (stricter for verification)
+  maxRequests: 10, // 10 requests per minute (stricter for verification)
   message: 'Too many ENS verification requests, please try again later',
 });
 
@@ -202,25 +202,16 @@ router.get(
         res,
         {
           walletAddress,
-          verifications: verifications.map((v) => ({
-            id: v.id,
-            ensHandle: v.ensHandle,
-            verificationMethod: v.verificationMethod,
-            verificationData: v.verificationData ? JSON.parse(v.verificationData) : null,
-            verifiedAt: v.verifiedAt,
-            expiresAt: v.expiresAt,
-            isActive: v.isActive,
-          })),
-          count: verifications.length,
+          verifications,
         },
         200
       );
     } catch (error) {
-      safeLogger.error('Error fetching ENS verifications:', error);
+      safeLogger.error('Error in ENS verifications fetch endpoint:', error);
 
       return errorResponse(
         res,
-        'ENS_FETCH_ERROR',
+        'ENS_VERIFICATIONS_FETCH_ERROR',
         'Failed to fetch ENS verifications',
         500,
         { error: error instanceof Error ? error.message : 'Unknown error' }
@@ -231,7 +222,7 @@ router.get(
 
 /**
  * DELETE /api/marketplace/seller/ens/verifications/:walletAddress/:ensName
- * Revoke an ENS verification
+ * Remove an ENS verification for a wallet address
  */
 router.delete(
   '/seller/ens/verifications/:walletAddress/:ensName',
@@ -240,12 +231,58 @@ router.delete(
     try {
       const { walletAddress, ensName } = req.params;
 
-      // Validate wallet address
+      // Validate parameters
+      const errors = [];
       if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
-        return validationErrorResponse(res, [
-          { field: 'walletAddress', message: 'Invalid wallet address format' },
-        ]);
+        errors.push({ field: 'walletAddress', message: 'Invalid wallet address format' });
       }
+      if (!ensName) {
+        errors.push({ field: 'ensName', message: 'ENS name is required' });
+      }
+
+      if (errors.length > 0) {
+        return validationErrorResponse(res, errors);
+      }
+
+      // Remove verification
+      const result = await ensValidationService.revokeENSVerification(
+        walletAddress,
+        ensName
+      );
+
+      return successResponse(
+        res,
+        {
+          removed: result,
+          walletAddress,
+          ensName,
+        },
+        200
+      );
+    } catch (error) {
+      safeLogger.error('Error in ENS verification removal endpoint:', error);
+
+      return errorResponse(
+        res,
+        'ENS_VERIFICATION_REMOVAL_ERROR',
+        'Failed to remove ENS verification',
+        500,
+        { error: error instanceof Error ? error.message : 'Unknown error' }
+      );
+    }
+  }
+);
+
+/**
+ * GET /api/marketplace/seller/ens/profile/:ensName
+ * Get ENS profile information
+ */
+router.get(
+  '/seller/ens/profile/:ensName',
+  ensValidationRateLimit,
+  async (req: Request, res: Response) => {
+    try {
+      const { ensName } = req.params;
 
       // Validate ENS name
       if (!ensName) {
@@ -254,37 +291,31 @@ router.delete(
         ]);
       }
 
-      // Revoke verification
-      const revoked = await ensValidationService.revokeENSVerification(
-        walletAddress,
-        ensName
-      );
-
-      if (!revoked) {
-        return errorResponse(
-          res,
-          'ENS_REVOKE_ERROR',
-          'Failed to revoke ENS verification',
-          500
-        );
-      }
+      // Fetch ENS profile by validating the ENS name and getting its text records
+      const validationResult = await ensValidationService.validateENS(ensName);
 
       return successResponse(
         res,
         {
-          message: 'ENS verification revoked successfully',
-          walletAddress,
           ensName,
+          profile: {
+            avatar: validationResult.avatar,
+            twitter: validationResult.twitter,
+            github: validationResult.github,
+            email: validationResult.email,
+            url: validationResult.url,
+            description: validationResult.description,
+          },
         },
         200
       );
     } catch (error) {
-      safeLogger.error('Error revoking ENS verification:', error);
+      safeLogger.error('Error in ENS profile fetch endpoint:', error);
 
       return errorResponse(
         res,
-        'ENS_REVOKE_ERROR',
-        'Failed to revoke ENS verification',
+        'ENS_PROFILE_FETCH_ERROR',
+        'Failed to fetch ENS profile',
         500,
         { error: error instanceof Error ? error.message : 'Unknown error' }
       );
@@ -293,107 +324,72 @@ router.delete(
 );
 
 /**
- * GET /api/marketplace/seller/ens/resolve/:ensName
- * Quick endpoint to resolve ENS name to address
+ * POST /api/marketplace/seller/ens/bulk-validate
+ * Bulk validate multiple ENS names
  */
-router.get(
-  '/seller/ens/resolve/:ensName',
+router.post(
+  '/seller/ens/bulk-validate',
   ensValidationRateLimit,
   async (req: Request, res: Response) => {
     try {
-      const { ensName } = req.params;
+      const { ensNames } = req.body;
 
-      if (!ensName) {
+      // Validate required fields
+      if (!ensNames || !Array.isArray(ensNames) || ensNames.length === 0) {
         return validationErrorResponse(res, [
-          { field: 'ensName', message: 'ENS name is required' },
+          { field: 'ensNames', message: 'ENS names array is required and cannot be empty' },
         ]);
       }
 
-      const address = await ensValidationService.resolveENSToAddress(ensName);
+      // Limit batch size
+      if (ensNames.length > 50) {
+        return validationErrorResponse(res, [
+          { field: 'ensNames', message: 'Maximum 50 ENS names per request' },
+        ]);
+      }
 
-      if (!address) {
-        return successResponse(
-          res,
-          {
-            resolved: false,
-            ensName,
-            error: 'ENS name does not resolve to an address',
-          },
-          200
-        );
+      // Validate each ENS name format
+      const validationErrors = [];
+      for (let i = 0; i < ensNames.length; i++) {
+        const ensName = ensNames[i];
+        if (typeof ensName !== 'string' || !ensName.trim()) {
+          validationErrors.push({ 
+            field: `ensNames[${i}]`, 
+            message: `ENS name at index ${i} must be a non-empty string` 
+          });
+        }
+      }
+
+      if (validationErrors.length > 0) {
+        return validationErrorResponse(res, validationErrors);
+      }
+
+      // Perform bulk validation by validating each ENS name individually
+      const results = [];
+      for (const ensName of ensNames.map(name => name.trim())) {
+        const result = await ensValidationService.validateENS(ensName);
+        results.push({
+          ensName,
+          isValid: result.isValid,
+          address: result.address,
+          error: result.error,
+        });
       }
 
       return successResponse(
         res,
         {
-          resolved: true,
-          ensName,
-          address,
+          results,
         },
         200
       );
     } catch (error) {
-      safeLogger.error('Error resolving ENS name:', error);
+      safeLogger.error('Error in ENS bulk validation endpoint:', error);
 
       return errorResponse(
         res,
-        'ENS_RESOLVE_ERROR',
-        'Failed to resolve ENS name',
-        500,
-        { error: error instanceof Error ? error.message : 'Unknown error' }
-      );
-    }
-  }
-);
-
-/**
- * GET /api/marketplace/seller/ens/reverse/:walletAddress
- * Quick endpoint to reverse resolve address to ENS name
- */
-router.get(
-  '/seller/ens/reverse/:walletAddress',
-  ensValidationRateLimit,
-  async (req: Request, res: Response) => {
-    try {
-      const { walletAddress } = req.params;
-
-      // Validate wallet address
-      if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
-        return validationErrorResponse(res, [
-          { field: 'walletAddress', message: 'Invalid wallet address format' },
-        ]);
-      }
-
-      const ensName = await ensValidationService.resolveAddressToENS(walletAddress);
-
-      if (!ensName) {
-        return successResponse(
-          res,
-          {
-            resolved: false,
-            walletAddress,
-            error: 'Address does not have a reverse ENS record',
-          },
-          200
-        );
-      }
-
-      return successResponse(
-        res,
-        {
-          resolved: true,
-          walletAddress,
-          ensName,
-        },
-        200
-      );
-    } catch (error) {
-      safeLogger.error('Error reverse resolving address:', error);
-
-      return errorResponse(
-        res,
-        'ENS_REVERSE_RESOLVE_ERROR',
-        'Failed to reverse resolve address',
+        'ENS_BULK_VALIDATION_ERROR',
+        'Failed to validate ENS names',
         500,
         { error: error instanceof Error ? error.message : 'Unknown error' }
       );

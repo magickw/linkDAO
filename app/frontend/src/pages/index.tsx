@@ -121,15 +121,24 @@ export default function Home() {
 
   useEffect(() => {
     if (isConnected) {
-      // Small delay to allow main thread to process navigation clicks
-      // before rendering heavy feed components
-      setIsContentReady(false);
-      setIsConnectionStabilized(false);
+      // Use requestIdleCallback to defer rendering until navigation is complete
+      const scheduleContentLoad = () => {
+        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+          requestIdleCallback(() => {
+            setIsContentReady(true);
+            setIsConnectionStabilized(true);
+          }, { timeout: 100 });
+        } else {
+          // Fallback for browsers without requestIdleCallback
+          setTimeout(() => {
+            setIsContentReady(true);
+            setIsConnectionStabilized(true);
+          }, 100);
+        }
+      };
 
-      const timer = setTimeout(() => {
-        setIsContentReady(true);
-        setIsConnectionStabilized(true);
-      }, 50); // 50ms is enough to yield to the event loop
+      // Defer the content loading to prevent blocking navigation
+      const timer = setTimeout(scheduleContentLoad, 10);
 
       return () => clearTimeout(timer);
     } else {
@@ -138,7 +147,7 @@ export default function Home() {
     }
   }, [isConnected]);
 
-  // Initialize WebSocket for real-time updates
+  // Initialize WebSocket for real-time updates with proper cleanup
   const { isConnected: wsConnected, subscribe, on, off } = useWebSocket({
     walletAddress: address || '',
     autoConnect: isConnected && !!address && isConnectionStabilized,
@@ -159,12 +168,12 @@ export default function Home() {
       return () => {
         clearTimeout(timeoutId);
         timeoutId = setTimeout(() => {
-          // Use setTimeout to defer the refresh to prevent blocking navigation
-          setTimeout(() => {
+          // Use requestAnimationFrame to defer the refresh to prevent blocking navigation
+          requestAnimationFrame(() => {
             if (isMounted.current) {
               handleRefreshFeed();
             }
-          }, 0);
+          });
         }, 500); // 500ms debounce
       };
     })(),
@@ -193,7 +202,7 @@ export default function Home() {
     setMounted(true);
   }, []);
 
-  // Subscribe to feed updates when connected
+  // Subscribe to feed updates when connected with proper cleanup
   useEffect(() => {
     if (wsConnected && address && !wsSubscribed) {
       // Subscribe to global feed updates
@@ -208,13 +217,13 @@ export default function Home() {
         console.log('New post received:', data);
         // Only refresh if it's not the user's own post (to prevent double refresh)
         if (data.author?.toLowerCase() !== address.toLowerCase()) {
-          // Use setTimeout to defer the refresh to prevent blocking navigation
-          setTimeout(() => {
+          // Defer the refresh to prevent blocking navigation
+          requestAnimationFrame(() => {
             if (isMounted.current) {
               debouncedRefresh();
               addToast('New post added to feed', 'success');
             }
-          }, 0);
+          });
         }
       };
 
@@ -229,25 +238,37 @@ export default function Home() {
 
   // Add navigation event listeners to properly cleanup on route changes
   useEffect(() => {
-    const handleRouteChange = () => {
-      // Ensure component is unmounted properly to prevent memory leaks
+    const handleRouteChangeStart = (url: string) => {
+      console.log('Route change start:', url);
+      // Mark as unmounted to prevent further updates
       isMounted.current = false;
-    };
-
-    const handleRouteChangeStart = () => {
+      
       // Pause WebSocket subscription when navigating away
       if (wsSubscribed) {
         setWsSubscribed(false);
       }
+      
+      // Clear any pending timeouts to prevent blocking
+      // This ensures navigation can complete without interference
+    };
+
+    const handleRouteChangeComplete = (url: string) => {
+      console.log('Route change complete:', url);
+      // Remount the component for the new route
+      setTimeout(() => {
+        isMounted.current = true;
+      }, 0);
     };
 
     // Listen for route changes to properly cleanup
     router.events.on('routeChangeStart', handleRouteChangeStart);
+    router.events.on('routeChangeComplete', handleRouteChangeComplete);
 
     return () => {
       router.events.off('routeChangeStart', handleRouteChangeStart);
+      router.events.off('routeChangeComplete', handleRouteChangeComplete);
     };
-  }, [wsSubscribed]);
+  }, [wsSubscribed, router.events]);
 
   // Handle post creation with useCallback and mount check
   const handlePostSubmit = useCallback(async (postData: CreatePostInput) => {
@@ -271,14 +292,24 @@ export default function Home() {
       // Check if component is still mounted before updating state
       if (!isMounted.current) return;
 
-      addToast('Post created successfully!', 'success');
-      closeModal('postCreation');
-      // Set hasNewPosts to trigger the refresh banner (but don't double refresh)
-      setHasNewPosts(true);
+      // Defer state updates to prevent blocking navigation
+      requestAnimationFrame(() => {
+        if (isMounted.current) {
+          addToast('Post created successfully!', 'success');
+          closeModal('postCreation');
+          // Set hasNewPosts to trigger the refresh banner (but don't double refresh)
+          setHasNewPosts(true);
+        }
+      });
     } catch (error) {
       console.error('Error creating post:', error);
       if (!isMounted.current) return;
-      addToast('Failed to create post', 'error');
+      // Defer error handling to prevent blocking navigation
+      requestAnimationFrame(() => {
+        if (isMounted.current) {
+          addToast('Failed to create post', 'error');
+        }
+      });
     }
   }, [isConnected, address, createPost, addToast, closeModal]);
 
