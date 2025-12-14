@@ -264,9 +264,12 @@ class EnhancedAuthService {
     timeout: number
   ): Promise<AuthResponse & { refreshToken?: string }> {
     // Validate inputs
-    if (!address || !connector || status !== 'connected') {
+    if (!address || !connector) {
       throw new Error('Invalid authentication parameters');
     }
+
+    // Log status for debugging but don't fail on it
+    console.log('Authentication status:', status);
 
     // Ensure wallet is ready
     await this.ensureWalletReady(connector, timeout);

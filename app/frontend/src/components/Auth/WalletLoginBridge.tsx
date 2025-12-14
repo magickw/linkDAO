@@ -81,8 +81,15 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
     }
 
     // Don't block on isAuthLoading - let auth happen in background
-    if (!autoLogin || !isConnected || !address || !connector || isAuthenticated) {
+    // Only skip if NOT authenticated and we have all required connection info
+    if (!autoLogin || !isConnected || !address || !connector) {
       console.log('WalletLoginBridge: Skipping login, conditions not met');
+      return;
+    }
+
+    // If already authenticated, skip login
+    if (isAuthenticated) {
+      console.log('WalletLoginBridge: Already authenticated, skipping login');
       return;
     }
 
