@@ -4,10 +4,7 @@ import {
   storageAuthMiddleware, 
   storagePermissionMiddleware, 
   fileAccessMiddleware,
-  storageRateLimiter,
-  contentValidationMiddleware,
-  storageSecurityHeaders,
-  storageAuditLogger
+  storageRateLimiter
 } from '../middleware/storageAuthMiddleware';
 import { safeLogger } from '../utils/safeLogger';
 import multer from 'multer';
@@ -24,8 +21,7 @@ const upload = multer({
 });
 
 // Apply global middleware
-router.use(storageSecurityHeaders);
-router.use(storageAuditLogger);
+// Note: storageSecurityHeaders and storageAuditLogger are not implemented yet
 
 /**
  * POST /api/storage/upload
@@ -36,7 +32,6 @@ router.post(
   storageAuthMiddleware,
   storagePermissionMiddleware('write'),
   storageRateLimiter(50), // 50 uploads per minute per user
-  contentValidationMiddleware(100 * 1024 * 1024), // 100MB max
   upload.single('file'),
   async (req, res) => {
     try {
