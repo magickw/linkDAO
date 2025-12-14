@@ -5,14 +5,13 @@ import { validateRequest } from '../middleware/validation';
 import { AuthenticationMiddleware } from '../middleware/authenticationMiddleware';
 import { createDefaultAuthRoutes } from './authenticationRoutes';
 import { feedRateLimit } from '../middleware/rateLimitingMiddleware';
+// Import the AuthenticationService directly
+import { AuthenticationService } from '../services/authenticationService';
 
 const router = express.Router();
 
 // Apply rate limiting to all routes
 router.use(feedRateLimit);
-
-// Import the AuthenticationService directly
-import { AuthenticationService } from '../services/authenticationService';
 
 // Create authentication middleware instance
 const connectionString = process.env.DATABASE_URL || '';

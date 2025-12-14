@@ -214,4 +214,19 @@ export class RateLimitingService {
   }
 }
 
+// Create a default instance and export commonly used rate limiters
+const rateLimitingService = RateLimitingService.getInstance();
+
+// Default feed rate limiter
+export const feedRateLimit = rateLimitingService.createRateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  maxRequests: 100
+});
+
+// Default rate limiting middleware
+export const rateLimitingMiddleware = (config: Partial<RateLimitConfig> = {}) => {
+  const defaultRateLimiter = rateLimitingService.createRateLimit(config);
+  return defaultRateLimiter;
+};
+
 export default RateLimitingService;
