@@ -1,6 +1,6 @@
 /**
  * Enhanced Tipping System
- * Replaces plain text tipping with ETH/SOL icons and animations
+ * Replaces plain text tipping with token icons and animations
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -9,7 +9,7 @@ import { useAnimation } from '../SharedComponents/AnimationProvider';
 export interface TipData {
   id: string;
   amount: number;
-  token: 'ETH' | 'SOL' | 'MATIC' | 'BTC' | string;
+  token: 'LDAO' | 'USDC' | string;
   tipper: string;
   tipperName?: string;
   timestamp: Date;
@@ -28,21 +28,13 @@ export interface EnhancedTippingSystemProps {
 }
 
 const TOKEN_ICONS = {
-  ETH: '⟠',
-  SOL: '◎',
-  MATIC: '⬟',
-  BTC: '₿',
+  LDAO: 'L',
   USDC: '$',
-  USDT: '$',
 } as const;
 
 const TOKEN_COLORS = {
-  ETH: '#627eea',
-  SOL: '#9945ff',
-  MATIC: '#8247e5',
-  BTC: '#f7931a',
+  LDAO: '#627eea',
   USDC: '#2775ca',
-  USDT: '#26a17b',
 } as const;
 
 const EnhancedTippingSystem: React.FC<EnhancedTippingSystemProps> = ({
@@ -56,7 +48,7 @@ const EnhancedTippingSystem: React.FC<EnhancedTippingSystemProps> = ({
   className = '',
 }) => {
   const [showTipModal, setShowTipModal] = useState(false);
-  const [selectedToken, setSelectedToken] = useState<string>('ETH');
+  const [selectedToken, setSelectedToken] = useState<string>('USDC');
   const [tipAmount, setTipAmount] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [recentTips, setRecentTips] = useState<TipData[]>([]);
@@ -68,11 +60,8 @@ const EnhancedTippingSystem: React.FC<EnhancedTippingSystemProps> = ({
   const tipStats = React.useMemo(() => {
     const totalTips = tips.length;
     const totalValue = tips.reduce((sum, tip) => {
-      // Convert all to USD equivalent for total (simplified)
-      const usdValue = tip.token === 'ETH' ? tip.amount * 2000 : 
-                     tip.token === 'SOL' ? tip.amount * 100 :
-                     tip.amount;
-      return sum + usdValue;
+      // For simplicity, we're treating all tokens as having the same value
+      return sum + tip.amount;
     }, 0);
     
     const tokenBreakdown = tips.reduce((acc, tip) => {
@@ -258,7 +247,7 @@ const EnhancedTippingSystem: React.FC<EnhancedTippingSystemProps> = ({
               <div className="ce-token-selection">
                 <label>Token:</label>
                 <div className="ce-token-options">
-                  {Object.keys(TOKEN_ICONS).map((token) => (
+                  {['LDAO', 'USDC'].map((token) => (
                     <button
                       key={token}
                       className={`ce-token-option ${selectedToken === token ? 'selected' : ''}`}

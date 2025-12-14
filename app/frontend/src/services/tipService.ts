@@ -11,7 +11,7 @@ export interface Tip {
   postId?: string;
   commentId?: string;
   amount: string;
-  currency: 'LDAO' | 'USDC' | 'USDT' | 'ETH';
+  currency: 'LDAO' | 'USDC' | 'USDT';
   message?: string;
   timestamp: Date;
   isPublic: boolean;
@@ -44,7 +44,6 @@ export interface UserEarnings {
     LDAO: string;
     USDC: string;
     USDT: string;
-    ETH: string;
   };
 }
 
@@ -112,7 +111,7 @@ export class TipService {
     postId: string,
     creatorAddress: string,
     amount: string,
-    currency: 'LDAO' | 'USDC' | 'USDT' | 'ETH' = 'LDAO',
+    currency: 'LDAO' | 'USDC' | 'USDT' = 'LDAO',
     message?: string,
     fromAddress?: string
   ): Promise<any> {
@@ -143,9 +142,13 @@ export class TipService {
 
       // Send tip through TipRouter contract
       const tipRouterContract = await TipService.getTipRouterContract();
+      
+      // Get the correct decimals for the token (USDC and USDT use 6 decimals, others use 18)
+      const tokenDecimals = currency === 'USDC' || currency === 'USDT' ? 6 : 18;
+      
       const tipTx = await (tipRouterContract.connect(signer) as any).sendTip(
         creatorAddress,
-        ethers.parseUnits(amount, 18), // Assuming 18 decimals for simplicity, should use token decimals
+        ethers.parseUnits(amount, tokenDecimals),
         currency,
         postId,
         message || ''
@@ -265,7 +268,7 @@ export class TipService {
   /**
    * Get detailed earnings for a user including currency breakdown
    */
-  static async getUserDetailedEarnings(userId: string): Promise<UserEarnings> {
+  static async getUserDetailedEarnings(userId: string): Promise<Omit<UserEarnings, 'totalEarnedByCurrency'> & { totalEarnedByCurrency: { LDAO: string; USDC: string; USDT: string } }> {
     try {
       const [earnings, totalTips] = await Promise.all([
         TipService.getUserEarnings(userId),
@@ -276,8 +279,7 @@ export class TipService {
       const totalEarnedByCurrency = {
         LDAO: '0',
         USDC: '0',
-        USDT: '0',
-        ETH: '0'
+        USDT: '0'
       };
 
       // This would need to be calculated from the backend
@@ -291,15 +293,12 @@ export class TipService {
       if (totalTips.USDT !== '0') {
         totalEarnedByCurrency.USDT = totalTips.USDT;
       }
-      if (totalTips.ETH !== '0') {
-        totalEarnedByCurrency.ETH = totalTips.ETH;
-      }
 
       return {
         ...earnings,
         totalTips: parseInt(totalTips.LDAO) || 0,
         totalEarnedByCurrency
-      };
+      } as Omit<UserEarnings, 'totalEarnedByCurrency'> & { totalEarnedByCurrency: { LDAO: string; USDC: string; USDT: string } };
     } catch (error) {
       console.error('Error fetching user detailed earnings:', error);
       throw error;
@@ -407,13 +406,10 @@ export class TipService {
     const tokenAddresses = {
       LDAO: process.env.NEXT_PUBLIC_LDAO_TOKEN_ADDRESS,
       USDC: process.env.NEXT_PUBLIC_USDC_TOKEN_ADDRESS,
-      USDT: process.env.NEXT_PUBLIC_USDT_TOKEN_ADDRESS,
-      ETH: null
+      USDT: process.env.NEXT_PUBLIC_USDT_TOKEN_ADDRESS
     };
 
-    if (currency === 'ETH') {
-      throw new Error('ETH tipping not yet implemented');
-    }
+
 
     const address = tokenAddresses[currency as keyof typeof tokenAddresses];
     if (!address) {
@@ -539,7 +535,7 @@ export class TipService {
   /**
    * Get total tips received by a user
    */
-  static async getUserTotalTips(address: string): Promise<{ LDAO: string; USDC: string; USDT: string; ETH: string }> {
+  static async getUserTotalTips(address: string): Promise<{ LDAO: string; USDC: string; USDT: string }> {
     try {
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/tips/total/${address}`, {
         method: 'GET',
@@ -553,10 +549,10 @@ export class TipService {
       }
 
       const data = await response.json();
-      return data.totals || { LDAO: '0', USDC: '0', USDT: '0', ETH: '0' };
+      return data.totals || { LDAO: '0', USDC: '0', USDT: '0' };
     } catch (error) {
       console.error('Error fetching user total tips:', error);
-      return { LDAO: '0', USDC: '0', USDT: '0', ETH: '0' };
+      return { LDAO: '0', USDC: '0', USDT: '0' };
     }
   }
 }

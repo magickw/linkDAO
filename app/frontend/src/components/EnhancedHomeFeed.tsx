@@ -19,6 +19,7 @@ import { useInView } from 'react-intersection-observer';
 import { FeedService } from '@/services/feedService';
 import { FeedFilter, FeedSortType, EnhancedPost } from '@/types/feed';
 import EnhancedPostCard from '@/components/EnhancedPostCard/EnhancedPostCard';
+import { useWeb3 } from '@/context/Web3Context';
 
 interface EnhancedHomeFeedProps {
   userProfile?: any;
@@ -40,6 +41,7 @@ export default function EnhancedHomeFeed({
   const [isLoading, setIsLoading] = useState(false);
   const LIMIT = 10;
   const { addToast } = useToast();
+  const { address: userAddress, isConnected } = useWeb3();
 
   // Refs to prevent concurrent requests
   const fetchRequestRef = useRef<string | null>(null);

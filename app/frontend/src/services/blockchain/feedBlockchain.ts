@@ -6,10 +6,11 @@
 import { ethers } from 'ethers';
 import { getProvider, getSigner } from '@/utils/web3';
 
-// Contract addresses from deployed-addresses-localhost.json
-const LDAO_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_LDAO_TOKEN_ADDRESS || '0x5FbDB2315678afecb367f032d93F642f64180aa3';
-const REPUTATION_ADDRESS = process.env.NEXT_PUBLIC_REPUTATION_ADDRESS || '0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9';
-const GOVERNANCE_ADDRESS = process.env.NEXT_PUBLIC_GOVERNANCE_ADDRESS || '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9';
+// Use environment configuration for contract addresses
+import { ENV_CONFIG } from '@/config/environment';
+const LDAO_TOKEN_ADDRESS = ENV_CONFIG.LDAO_TOKEN_ADDRESS;
+const REPUTATION_ADDRESS = ENV_CONFIG.REPUTATION_SYSTEM_ADDRESS;
+const GOVERNANCE_ADDRESS = ENV_CONFIG.GOVERNANCE_ADDRESS;
 
 // Contract ABIs
 const ERC20_ABI = [

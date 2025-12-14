@@ -23,7 +23,7 @@ import type {
   TypedContractMethod,
 } from "../common";
 
-export declare namespace X402PaymentHandler {
+export declare namespace OptimizedX402PaymentHandler {
   export type PaymentStruct = {
     id: BytesLike;
     resourceId: BytesLike;
@@ -32,7 +32,7 @@ export declare namespace X402PaymentHandler {
     status: BigNumberish;
     timestamp: BigNumberish;
     completedAt: BigNumberish;
-    offchainTransactionId: string;
+    exists: boolean;
   };
 
   export type PaymentStructOutput = [
@@ -43,7 +43,7 @@ export declare namespace X402PaymentHandler {
     status: bigint,
     timestamp: bigint,
     completedAt: bigint,
-    offchainTransactionId: string
+    exists: boolean
   ] & {
     id: string;
     resourceId: string;
@@ -52,37 +52,36 @@ export declare namespace X402PaymentHandler {
     status: bigint;
     timestamp: bigint;
     completedAt: bigint;
-    offchainTransactionId: string;
+    exists: boolean;
   };
 }
 
-export interface X402PaymentHandlerInterface extends Interface {
+export interface OptimizedX402PaymentHandlerInterface extends Interface {
   getFunction(
     nameOrSignature:
+      | "batchConfirmPayments"
       | "confirmPayment"
       | "emergencyWithdraw"
+      | "getMetrics"
       | "getPayment"
+      | "getPaymentStatus"
       | "markPaymentFailed"
       | "minPaymentAmount"
       | "owner"
       | "pause"
       | "paused"
-      | "payments"
       | "processX402Payment"
-      | "processedPaymentIds"
       | "refundPayment"
       | "renounceOwnership"
       | "tipRouter"
       | "transferOwnership"
       | "unpause"
       | "updateMinPaymentAmount"
-      | "updateTipRouter"
       | "verifyPayment"
   ): FunctionFragment;
 
   getEvent(
     nameOrSignatureOrTopic:
-      | "HandlerUpdated"
       | "OwnershipTransferred"
       | "Paused"
       | "PaymentCompleted"
@@ -93,6 +92,10 @@ export interface X402PaymentHandlerInterface extends Interface {
   ): EventFragment;
 
   encodeFunctionData(
+    functionFragment: "batchConfirmPayments",
+    values: [BytesLike[], string[]]
+  ): string;
+  encodeFunctionData(
     functionFragment: "confirmPayment",
     values: [BytesLike, string]
   ): string;
@@ -101,7 +104,15 @@ export interface X402PaymentHandlerInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
+    functionFragment: "getMetrics",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "getPayment",
+    values: [BytesLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getPaymentStatus",
     values: [BytesLike]
   ): string;
   encodeFunctionData(
@@ -115,14 +126,9 @@ export interface X402PaymentHandlerInterface extends Interface {
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
   encodeFunctionData(functionFragment: "pause", values?: undefined): string;
   encodeFunctionData(functionFragment: "paused", values?: undefined): string;
-  encodeFunctionData(functionFragment: "payments", values: [BytesLike]): string;
   encodeFunctionData(
     functionFragment: "processX402Payment",
     values: [BytesLike, BigNumberish]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "processedPaymentIds",
-    values: [BytesLike]
   ): string;
   encodeFunctionData(
     functionFragment: "refundPayment",
@@ -143,14 +149,14 @@ export interface X402PaymentHandlerInterface extends Interface {
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
-    functionFragment: "updateTipRouter",
-    values: [AddressLike]
-  ): string;
-  encodeFunctionData(
     functionFragment: "verifyPayment",
     values: [BytesLike, BytesLike]
   ): string;
 
+  decodeFunctionResult(
+    functionFragment: "batchConfirmPayments",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "confirmPayment",
     data: BytesLike
@@ -159,7 +165,12 @@ export interface X402PaymentHandlerInterface extends Interface {
     functionFragment: "emergencyWithdraw",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "getMetrics", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "getPayment", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "getPaymentStatus",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "markPaymentFailed",
     data: BytesLike
@@ -171,13 +182,8 @@ export interface X402PaymentHandlerInterface extends Interface {
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "pause", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "paused", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "payments", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "processX402Payment",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "processedPaymentIds",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -199,25 +205,9 @@ export interface X402PaymentHandlerInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "updateTipRouter",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
     functionFragment: "verifyPayment",
     data: BytesLike
   ): Result;
-}
-
-export namespace HandlerUpdatedEvent {
-  export type InputTuple = [newHandler: AddressLike];
-  export type OutputTuple = [newHandler: string];
-  export interface OutputObject {
-    newHandler: string;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
 }
 
 export namespace OwnershipTransferredEvent {
@@ -277,21 +267,21 @@ export namespace PaymentProcessedEvent {
     resourceId: BytesLike,
     payer: AddressLike,
     amount: BigNumberish,
-    offchainTransactionId: string
+    timestamp: BigNumberish
   ];
   export type OutputTuple = [
     paymentId: string,
     resourceId: string,
     payer: string,
     amount: bigint,
-    offchainTransactionId: string
+    timestamp: bigint
   ];
   export interface OutputObject {
     paymentId: string;
     resourceId: string;
     payer: string;
     amount: bigint;
-    offchainTransactionId: string;
+    timestamp: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -324,11 +314,11 @@ export namespace UnpausedEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
-export interface X402PaymentHandler extends BaseContract {
-  connect(runner?: ContractRunner | null): X402PaymentHandler;
+export interface OptimizedX402PaymentHandler extends BaseContract {
+  connect(runner?: ContractRunner | null): OptimizedX402PaymentHandler;
   waitForDeployment(): Promise<this>;
 
-  interface: X402PaymentHandlerInterface;
+  interface: OptimizedX402PaymentHandlerInterface;
 
   queryFilter<TCEvent extends TypedContractEvent>(
     event: TCEvent,
@@ -367,6 +357,12 @@ export interface X402PaymentHandler extends BaseContract {
     event?: TCEvent
   ): Promise<this>;
 
+  batchConfirmPayments: TypedContractMethod<
+    [paymentIds: BytesLike[], offchainTransactionIds: string[]],
+    [void],
+    "nonpayable"
+  >;
+
   confirmPayment: TypedContractMethod<
     [paymentId: BytesLike, offchainTransactionId: string],
     [void],
@@ -375,9 +371,29 @@ export interface X402PaymentHandler extends BaseContract {
 
   emergencyWithdraw: TypedContractMethod<[], [void], "nonpayable">;
 
+  getMetrics: TypedContractMethod<
+    [],
+    [
+      [bigint, bigint, bigint, bigint, bigint] & {
+        totalPayments: bigint;
+        pendingPayments: bigint;
+        completedPayments: bigint;
+        failedPayments: bigint;
+        refundedPayments: bigint;
+      }
+    ],
+    "view"
+  >;
+
   getPayment: TypedContractMethod<
     [paymentId: BytesLike],
-    [X402PaymentHandler.PaymentStructOutput],
+    [OptimizedX402PaymentHandler.PaymentStructOutput],
+    "view"
+  >;
+
+  getPaymentStatus: TypedContractMethod<
+    [paymentId: BytesLike],
+    [bigint],
     "view"
   >;
 
@@ -395,33 +411,10 @@ export interface X402PaymentHandler extends BaseContract {
 
   paused: TypedContractMethod<[], [boolean], "view">;
 
-  payments: TypedContractMethod<
-    [arg0: BytesLike],
-    [
-      [string, string, string, bigint, bigint, bigint, bigint, string] & {
-        id: string;
-        resourceId: string;
-        payer: string;
-        amount: bigint;
-        status: bigint;
-        timestamp: bigint;
-        completedAt: bigint;
-        offchainTransactionId: string;
-      }
-    ],
-    "view"
-  >;
-
   processX402Payment: TypedContractMethod<
     [resourceId: BytesLike, amount: BigNumberish],
     [string],
     "nonpayable"
-  >;
-
-  processedPaymentIds: TypedContractMethod<
-    [arg0: BytesLike],
-    [boolean],
-    "view"
   >;
 
   refundPayment: TypedContractMethod<
@@ -448,12 +441,6 @@ export interface X402PaymentHandler extends BaseContract {
     "nonpayable"
   >;
 
-  updateTipRouter: TypedContractMethod<
-    [newTipRouter: AddressLike],
-    [void],
-    "nonpayable"
-  >;
-
   verifyPayment: TypedContractMethod<
     [paymentId: BytesLike, resourceId: BytesLike],
     [boolean],
@@ -465,6 +452,13 @@ export interface X402PaymentHandler extends BaseContract {
   ): T;
 
   getFunction(
+    nameOrSignature: "batchConfirmPayments"
+  ): TypedContractMethod<
+    [paymentIds: BytesLike[], offchainTransactionIds: string[]],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
     nameOrSignature: "confirmPayment"
   ): TypedContractMethod<
     [paymentId: BytesLike, offchainTransactionId: string],
@@ -475,12 +469,30 @@ export interface X402PaymentHandler extends BaseContract {
     nameOrSignature: "emergencyWithdraw"
   ): TypedContractMethod<[], [void], "nonpayable">;
   getFunction(
+    nameOrSignature: "getMetrics"
+  ): TypedContractMethod<
+    [],
+    [
+      [bigint, bigint, bigint, bigint, bigint] & {
+        totalPayments: bigint;
+        pendingPayments: bigint;
+        completedPayments: bigint;
+        failedPayments: bigint;
+        refundedPayments: bigint;
+      }
+    ],
+    "view"
+  >;
+  getFunction(
     nameOrSignature: "getPayment"
   ): TypedContractMethod<
     [paymentId: BytesLike],
-    [X402PaymentHandler.PaymentStructOutput],
+    [OptimizedX402PaymentHandler.PaymentStructOutput],
     "view"
   >;
+  getFunction(
+    nameOrSignature: "getPaymentStatus"
+  ): TypedContractMethod<[paymentId: BytesLike], [bigint], "view">;
   getFunction(
     nameOrSignature: "markPaymentFailed"
   ): TypedContractMethod<
@@ -501,33 +513,12 @@ export interface X402PaymentHandler extends BaseContract {
     nameOrSignature: "paused"
   ): TypedContractMethod<[], [boolean], "view">;
   getFunction(
-    nameOrSignature: "payments"
-  ): TypedContractMethod<
-    [arg0: BytesLike],
-    [
-      [string, string, string, bigint, bigint, bigint, bigint, string] & {
-        id: string;
-        resourceId: string;
-        payer: string;
-        amount: bigint;
-        status: bigint;
-        timestamp: bigint;
-        completedAt: bigint;
-        offchainTransactionId: string;
-      }
-    ],
-    "view"
-  >;
-  getFunction(
     nameOrSignature: "processX402Payment"
   ): TypedContractMethod<
     [resourceId: BytesLike, amount: BigNumberish],
     [string],
     "nonpayable"
   >;
-  getFunction(
-    nameOrSignature: "processedPaymentIds"
-  ): TypedContractMethod<[arg0: BytesLike], [boolean], "view">;
   getFunction(
     nameOrSignature: "refundPayment"
   ): TypedContractMethod<[paymentId: BytesLike], [void], "nonpayable">;
@@ -547,9 +538,6 @@ export interface X402PaymentHandler extends BaseContract {
     nameOrSignature: "updateMinPaymentAmount"
   ): TypedContractMethod<[newMinAmount: BigNumberish], [void], "nonpayable">;
   getFunction(
-    nameOrSignature: "updateTipRouter"
-  ): TypedContractMethod<[newTipRouter: AddressLike], [void], "nonpayable">;
-  getFunction(
     nameOrSignature: "verifyPayment"
   ): TypedContractMethod<
     [paymentId: BytesLike, resourceId: BytesLike],
@@ -557,13 +545,6 @@ export interface X402PaymentHandler extends BaseContract {
     "view"
   >;
 
-  getEvent(
-    key: "HandlerUpdated"
-  ): TypedContractEvent<
-    HandlerUpdatedEvent.InputTuple,
-    HandlerUpdatedEvent.OutputTuple,
-    HandlerUpdatedEvent.OutputObject
-  >;
   getEvent(
     key: "OwnershipTransferred"
   ): TypedContractEvent<
@@ -615,17 +596,6 @@ export interface X402PaymentHandler extends BaseContract {
   >;
 
   filters: {
-    "HandlerUpdated(address)": TypedContractEvent<
-      HandlerUpdatedEvent.InputTuple,
-      HandlerUpdatedEvent.OutputTuple,
-      HandlerUpdatedEvent.OutputObject
-    >;
-    HandlerUpdated: TypedContractEvent<
-      HandlerUpdatedEvent.InputTuple,
-      HandlerUpdatedEvent.OutputTuple,
-      HandlerUpdatedEvent.OutputObject
-    >;
-
     "OwnershipTransferred(address,address)": TypedContractEvent<
       OwnershipTransferredEvent.InputTuple,
       OwnershipTransferredEvent.OutputTuple,
@@ -648,7 +618,7 @@ export interface X402PaymentHandler extends BaseContract {
       PausedEvent.OutputObject
     >;
 
-    "PaymentCompleted(bytes32,uint256)": TypedContractEvent<
+    "PaymentCompleted(bytes32,uint40)": TypedContractEvent<
       PaymentCompletedEvent.InputTuple,
       PaymentCompletedEvent.OutputTuple,
       PaymentCompletedEvent.OutputObject
@@ -670,7 +640,7 @@ export interface X402PaymentHandler extends BaseContract {
       PaymentFailedEvent.OutputObject
     >;
 
-    "PaymentProcessed(bytes32,bytes32,address,uint256,string)": TypedContractEvent<
+    "PaymentProcessed(bytes32,bytes32,address,uint128,uint40)": TypedContractEvent<
       PaymentProcessedEvent.InputTuple,
       PaymentProcessedEvent.OutputTuple,
       PaymentProcessedEvent.OutputObject
@@ -681,7 +651,7 @@ export interface X402PaymentHandler extends BaseContract {
       PaymentProcessedEvent.OutputObject
     >;
 
-    "PaymentRefunded(bytes32,uint256)": TypedContractEvent<
+    "PaymentRefunded(bytes32,uint40)": TypedContractEvent<
       PaymentRefundedEvent.InputTuple,
       PaymentRefundedEvent.OutputTuple,
       PaymentRefundedEvent.OutputObject

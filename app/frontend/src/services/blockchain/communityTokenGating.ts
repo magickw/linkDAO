@@ -6,8 +6,9 @@
 import { ethers } from 'ethers';
 import { getProvider, getSigner } from '@/utils/web3';
 
-// Contract addresses from deployed-addresses-localhost.json
-const LDAO_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_LDAO_TOKEN_ADDRESS || '0xc9F690B45e33ca909bB9ab97836091673232611B';
+// Use environment configuration for contract addresses
+import { ENV_CONFIG } from '@/config/environment';
+const LDAO_TOKEN_ADDRESS = ENV_CONFIG.LDAO_TOKEN_ADDRESS;
 
 // ERC20 ABI - minimal interface for balance checking
 const ERC20_ABI = [

@@ -6,9 +6,10 @@
 import { ethers } from 'ethers';
 import { getProvider, getSigner } from '@/utils/web3';
 
-// Contract addresses from deployed-addresses-localhost.json
-const GOVERNANCE_ADDRESS = process.env.NEXT_PUBLIC_GOVERNANCE_ADDRESS || '0x27a78A860445DFFD9073aFd7065dd421487c0F8A';
-const LDAO_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_LDAO_TOKEN_ADDRESS || '0xc9F690B45e33ca909bB9ab97836091673232611B';
+// Use environment configuration for contract addresses
+import { ENV_CONFIG } from '@/config/environment';
+const GOVERNANCE_ADDRESS = ENV_CONFIG.GOVERNANCE_ADDRESS;
+const LDAO_TOKEN_ADDRESS = ENV_CONFIG.LDAO_TOKEN_ADDRESS;
 
 // Governance contract ABI - for proposal and execution
 const GOVERNANCE_ABI = [

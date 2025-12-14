@@ -269,9 +269,9 @@ export class CommunityService {
 
       const total = totalResult[0]?.count || 0;
 
-      // Platform-wide blockchain addresses
-      const PLATFORM_TREASURY_ADDRESS = '0x27a78A860445DFFD9073aFd7065dd421487c0F8A';
-      const PLATFORM_GOVERNANCE_TOKEN = '0xc9F690B45e33ca909bB9ab97836091673232611B';
+      // Platform-wide blockchain addresses from environment variables
+      const PLATFORM_TREASURY_ADDRESS = process.env.GOVERNANCE_ADDRESS || '0x27a78A860445DFFD9073aFd7065dd421487c0F8A';
+      const PLATFORM_GOVERNANCE_TOKEN = process.env.LDAO_TOKEN_ADDRESS || '0xc9F690B45e33ca909bB9ab97836091673232611B';
 
       // Transform to expected format
       const transformedCommunities = communityList.map(item => ({

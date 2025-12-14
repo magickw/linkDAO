@@ -129,6 +129,20 @@ const config: HardhatUserConfig = {
   mocha: {
     timeout: 60000,
   },
+  tasks: {
+    "deploy-reputation-integration": {
+      description: "Deploy reputation system integration to testnet",
+      tags: ["testnet", "reputation", "integration"],
+    },
+    "deploy-charity-monitor": {
+      description: "Deploy charity monitoring system",
+      tags: ["testnet", "charity", "monitoring"],
+    },
+    "verify-deployments": {
+      "description": "Verify all deployed contracts",
+      tags: ["testnet", "verification"],
+    },
+  },
 };
 
 export default config;

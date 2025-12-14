@@ -80,31 +80,36 @@ export default function PostInteractionBar({
   const handleQuickTip = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!isConnected) {
+    if (!isConnected || !address) {
       addToast('Please connect your wallet to tip', 'error');
       return;
     }
-
+    
     if (!tipAmount || parseFloat(tipAmount) <= 0) {
       addToast('Please enter a valid tip amount', 'error');
       return;
     }
-
+    
     if (address?.toLowerCase() === post.author.toLowerCase()) {
       addToast('You cannot tip yourself', 'error');
       return;
     }
-
+    
     try {
       if (onTip) {
+        // Let the parent component handle the success message
         await onTip(post.id, tipAmount, selectedToken);
+        // Don't show success message here since the parent component will handle it
+      } else {
+        // Only show success message if there's no parent handler
+        addToast(`Successfully tipped ${tipAmount} ${selectedToken}!`, 'success');
       }
       
-      addToast(`Successfully tipped ${tipAmount} ${selectedToken}!`, 'success');
       setTipAmount('');
       setShowTipInput(false);
     } catch (error) {
       console.error('Error sending tip:', error);
+      // Only show error message here
       addToast('Failed to send tip. Please try again.', 'error');
     }
   };

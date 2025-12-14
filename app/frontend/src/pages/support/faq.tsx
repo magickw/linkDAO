@@ -45,7 +45,7 @@ const FAQPage: NextPage = () => {
         },
         {
           question: "Do I need cryptocurrency to use LinkDAO?",
-          answer: "While you can browse some content without cryptocurrency, you'll need ETH or other supported tokens to fully participate - posting, following, tipping, and voting all require small transaction fees."
+          answer: "While you can browse some content without cryptocurrency, you'll need supported tokens like LDAO or USDC to fully participate - posting, following, tipping, and voting all require small transaction fees."
         }
       ]
     },

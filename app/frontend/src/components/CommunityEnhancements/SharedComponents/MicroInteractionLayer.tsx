@@ -200,7 +200,7 @@ export const TipAnimation: React.FC<TipAnimationProps> = ({
     tipIndicator.className = 'ce-tip-indicator';
     tipIndicator.innerHTML = `
       <div class="ce-tip-amount">+${amount} ${token}</div>
-      <div class="ce-tip-icon">${token === 'ETH' ? '⟠' : token === 'SOL' ? '◎' : '🪙'}</div>
+      <div class="ce-tip-icon">${token === 'SOL' ? '◎' : '🪙'}</div>
     `;
     
     // Position relative to the element

@@ -6,10 +6,10 @@ import { getProvider, getSigner } from '@/utils/web3';
 import { Governance__factory, LDAOToken__factory } from '@/types/typechain';
 import { Governance, LDAOToken } from '@/types/typechain';
 
-// Contract addresses (these should be configured in environment variables)
-// Fallback to testnet addresses if not configured
-const GOVERNANCE_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_GOVERNANCE_CONTRACT_ADDRESS || '0x27a78A860445DFFD9073aFd7065dd421487c0F8A';
-const LDAO_TOKEN_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_LDAO_TOKEN_CONTRACT_ADDRESS || '0xc9F690B45e33ca909bB9ab97836091673232611B';
+// Use environment configuration for contract addresses
+import { ENV_CONFIG } from '@/config/environment';
+const GOVERNANCE_CONTRACT_ADDRESS = ENV_CONFIG.GOVERNANCE_ADDRESS;
+const LDAO_TOKEN_CONTRACT_ADDRESS = ENV_CONFIG.LDAO_TOKEN_ADDRESS;
 
 export interface StakeVoteInput {
   postId: string;
@@ -227,18 +227,26 @@ export class CommunityWeb3Service {
   /**
    * Send a tip to a community post creator
    */
-  async tipCommunityPost(input: CommunityTipInput): Promise<string> {
+  async tipCommunityPost(input: {
+    postId: string;
+    recipientAddress: string;
+    amount: string;
+    token: string;
+    message?: string;
+  }): Promise<string> {
     try {
       const signer = await getSigner();
       if (!signer) throw new Error('No signer available');
 
-      // Get network to determine which contract addresses to use
-      const network = await signer.provider?.getNetwork();
-      const chainId = network?.chainId;
+      // Use environment configuration for contract addresses
+      const { ENV_CONFIG } = await import('@/config/environment');
+      const TIP_ROUTER_ADDRESS = ENV_CONFIG.TIP_ROUTER_ADDRESS;
+      const LDAO_TOKEN_ADDRESS = ENV_CONFIG.LDAO_TOKEN_ADDRESS;
 
-      // Contract addresses for Sepolia testnet
-      const TIP_ROUTER_ADDRESS = '0x755Fe81411c86019fff6033E0567A4D93b57281b';
-      const LDAO_TOKEN_ADDRESS = '0xc9F690B45e33ca909bB9ab97836091673232611B';
+      // Validate contract addresses
+      if (!TIP_ROUTER_ADDRESS || !LDAO_TOKEN_ADDRESS) {
+        throw new Error('Contract addresses not configured');
+      }
 
       // For now, we only support LDAO token
       if (input.token !== 'LDAO') {
@@ -400,7 +408,7 @@ export class CommunityWeb3Service {
     communityId: string,
     userAddress: string,
     action: 'post' | 'comment' | 'vote'
-  ): Promise<{ canPerform: boolean; requiredStake: string; currentStake: string }> {
+  ): Promise<{ canPerform: boolean; requiredStake: string; currentStake: string; error?: string }> {
     try {
       if (!this.tokenContract) {
         throw new Error('Token contract not initialized');
@@ -419,7 +427,7 @@ export class CommunityWeb3Service {
         requiredStake: ethers.formatEther(requiredStake),
         currentStake: ethers.formatEther(stakedAmount)
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error checking staking requirement:', error);
       // Return fallback values instead of throwing error
       return {

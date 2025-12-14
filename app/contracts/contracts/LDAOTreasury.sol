@@ -64,6 +64,82 @@ contract LDAOTreasury is Ownable, ReentrancyGuard, Pausable {
     mapping(uint256 => PricingTier) public pricingTiers;
     uint256 public nextTierId = 1;
     
+    // Charity-specific structures
+    struct CharityDonation {
+        uint256 id;
+        address recipient;
+        uint256 amount;
+        uint256 timestamp;
+        string description;
+        uint256 proposalId; // Link to governance proposal
+        bool isVerified;
+        string verificationReceipt; // IPFS hash of receipt
+    }
+    
+    struct CharityFund {
+        uint256 totalDisbursed;
+        uint256 totalReceived;
+        uint256 availableBalance; // For future donations
+        uint256 charityCount;
+    }
+    
+    // Charity mappings and counters
+    mapping(uint256 => CharityDonation) public charityDonations;
+    mapping(address => bool) public verifiedCharities;
+    mapping(address => uint256[]) public charityDonationsHistory;
+    uint256 public nextCharityDonationId = 1;
+    CharityFund public charityFund;
+    
+    // Charity-specific parameters
+    uint256 public minCharityDonationAmount = 100 * 1e18; // 100 LDAO minimum for charity donations
+    uint256 public charityFundAllocation = 0; // Amount allocated for charity disbursements
+    
+    // Charity governance structures
+    struct CharityVerificationProposal {
+        uint256 proposalId;
+        address charityAddress;
+        string name;
+        string description;
+        string ipfsHash; // Documentation
+        uint256 votesFor;
+        uint256 votesAgainst;
+        uint256 startTime;
+        uint256 endTime;
+        bool executed;
+        bool passed;
+        mapping(address => bool) hasVoted;
+    }
+    
+    struct CharityDisbursementProposal {
+        uint256 proposalId;
+        address recipient;
+        uint256 amount;
+        string description;
+        uint256 votesFor;
+        uint256 votesAgainst;
+        uint256 startTime;
+        uint256 endTime;
+        bool executed;
+        bool passed;
+        mapping(address => bool) hasVoted;
+    }
+    
+    // Governance mappings
+    mapping(uint256 => CharityVerificationProposal) public charityVerificationProposals;
+    mapping(uint256 => CharityDisbursementProposal) public charityDisbursementProposals;
+    mapping(address => uint256) public charityVotes; // Track voting power for charity proposals
+    uint256 public nextCharityProposalId = 1;
+    
+    // Governance parameters
+    uint256 public charityVotingPeriod = 7 days;
+    uint256 public charityQuorum = 1000000 * 1e18; // 1M LDAO tokens quorum
+    uint256 public charityApprovalThreshold = 51; // 51% approval required
+    uint256 public minCharityVerificationStake = 10000 * 1e18; // 10k LDAO min to propose
+    uint256 public maxCharityDisbursement = 100000 * 1e18; // 100k LDAO max per proposal
+    uint256 public dailyCharityDisbursementLimit = 500000 * 1e18; // 500k LDAO daily limit
+    uint256 public currentDayCharityDisbursements;
+    uint256 public lastCharityDisbursementDay;
+    
     // Events
     event LDAOPurchased(
         address indexed buyer,
@@ -84,6 +160,56 @@ contract LDAOTreasury is Ownable, ReentrancyGuard, Pausable {
     event MultiSigWalletUpdated(address indexed oldWallet, address indexed newWallet);
     event GovernanceUpdated(address indexed newGovernance);
     event GovernanceOperationExecuted(address indexed target, uint256 value, bytes data);
+    
+    // Charity-specific events
+    event CharityDisbursement(
+        uint256 indexed donationId,
+        address indexed recipient,
+        uint256 amount,
+        uint256 proposalId,
+        string description
+    );
+    event CharityFundUpdated(uint256 newAllocation, uint256 availableBalance);
+    event CharityVerified(address indexed charityAddress, bool verified);
+    event CharityDonationVerified(uint256 indexed donationId, string receiptHash);
+    
+    // Charity governance events
+    event CharityVerificationProposalCreated(
+        uint256 indexed proposalId,
+        address indexed charityAddress,
+        string name,
+        uint256 endTime
+    );
+    event CharityVerificationVoteCast(
+        uint256 indexed proposalId,
+        address indexed voter,
+        bool support,
+        uint256 votingPower
+    );
+    event CharityVerificationProposalExecuted(
+        uint256 indexed proposalId,
+        bool passed,
+        uint256 votesFor,
+        uint256 votesAgainst
+    );
+    event CharityDisbursementProposalCreated(
+        uint256 indexed proposalId,
+        address indexed recipient,
+        uint256 amount,
+        uint256 endTime
+    );
+    event CharityDisbursementVoteCast(
+        uint256 indexed proposalId,
+        address indexed voter,
+        bool support,
+        uint256 votingPower
+    );
+    event CharityDisbursementProposalExecuted(
+        uint256 indexed proposalId,
+        bool passed,
+        uint256 votesFor,
+        uint256 votesAgainst
+    );
 
     constructor(
         address _ldaoToken,
@@ -777,5 +903,429 @@ contract LDAOTreasury is Ownable, ReentrancyGuard, Pausable {
     ) {
         PricingTier storage tier = pricingTiers[tierId];
         return (tier.threshold, tier.discountBps, tier.active);
+    }
+    
+    // Charity-specific functions
+    
+    /**
+     * @notice Direct disbursement to verified charity (with limits)
+     * @param recipient Address of the charity recipient
+     * @param amount Amount of LDAO tokens to disburse
+     * @param description Description of the donation
+     * @return donationId ID of the created donation record
+     */
+    function disburseCharityFunds(
+        address recipient,
+        uint256 amount,
+        string calldata description
+    ) external nonReentrant returns (uint256) {
+        require(recipient != address(0), "Invalid recipient address");
+        require(amount > 0, "Amount must be greater than 0");
+        require(amount <= maxCharityDisbursement, "Amount exceeds maximum limit");
+        require(verifiedCharities[recipient], "Recipient must be a verified charity");
+        require(amount >= minCharityDonationAmount, "Amount below minimum charity donation");
+        
+        // Check daily limit
+        _checkDailyCharityLimit(amount);
+        
+        // Check that the treasury has sufficient balance
+        require(ldaoToken.balanceOf(address(this)) >= amount, "Insufficient treasury balance");
+        
+        // Multi-sig check for charity disbursements
+        bytes32 transactionHash = keccak256(abi.encodePacked(
+            "CHARITY_DONATION",
+            recipient,
+            amount,
+            block.timestamp
+        ));
+        
+        require(!executedTransactions[transactionHash], "Transaction already executed");
+        executedTransactions[transactionHash] = true;
+        
+        uint256 donationId = nextCharityDonationId++;
+        
+        // Create donation record
+        CharityDonation storage newDonation = charityDonations[donationId];
+        newDonation.id = donationId;
+        newDonation.recipient = recipient;
+        newDonation.amount = amount;
+        newDonation.timestamp = block.timestamp;
+        newDonation.description = description;
+        newDonation.proposalId = 0; // Direct disbursement
+        newDonation.isVerified = false;
+        newDonation.verificationReceipt = "";
+        
+        // Transfer tokens to recipient
+        require(
+            ldaoToken.transfer(recipient, amount),
+            "LDAO transfer failed"
+        );
+        
+        // Update charity fund stats
+        charityFund.totalDisbursed = charityFund.totalDisbursed + amount;
+        if (charityFund.availableBalance >= amount) {
+            charityFund.availableBalance = charityFund.availableBalance - amount;
+        }
+        
+        // Update recipient's donation history
+        charityDonationsHistory[recipient].push(donationId);
+        
+        emit CharityDisbursement(donationId, recipient, amount, 0, description);
+        
+        return donationId;
+    }
+    
+    /**
+     * @notice Create a proposal for charity disbursement (governance)
+     * @param recipient Address of the charity recipient
+     * @param amount Amount of LDAO tokens to disburse
+     * @param description Description of the donation
+     * @return proposalId ID of the created proposal
+     */
+    function proposeCharityDisbursement(
+        address recipient,
+        uint256 amount,
+        string calldata description
+    ) external returns (uint256) {
+        require(recipient != address(0), "Invalid recipient address");
+        require(amount > 0 && amount <= maxCharityDisbursement * 2, "Invalid amount");
+        require(verifiedCharities[recipient], "Recipient must be a verified charity");
+        require(ldaoToken.balanceOf(address(this)) >= amount, "Insufficient treasury balance");
+        
+        uint256 proposalId = nextCharityProposalId++;
+        
+        CharityDisbursementProposal storage proposal = charityDisbursementProposals[proposalId];
+        proposal.proposalId = proposalId;
+        proposal.recipient = recipient;
+        proposal.amount = amount;
+        proposal.description = description;
+        proposal.startTime = block.timestamp;
+        proposal.endTime = block.timestamp + charityVotingPeriod;
+        
+        emit CharityDisbursementProposalCreated(proposalId, recipient, amount, proposal.endTime);
+        
+        return proposalId;
+    }
+    
+    /**
+     * @notice Vote on a charity disbursement proposal
+     * @param proposalId ID of the proposal
+     * @param support Whether to support the proposal
+     */
+    function voteCharityDisbursement(uint256 proposalId, bool support) external {
+        CharityDisbursementProposal storage proposal = charityDisbursementProposals[proposalId];
+        require(proposal.proposalId != 0, "Proposal does not exist");
+        require(block.timestamp < proposal.endTime, "Voting period ended");
+        require(!proposal.executed, "Proposal already executed");
+        require(!proposal.hasVoted[msg.sender], "Already voted");
+        
+        uint256 votingPower = ldaoToken.balanceOf(msg.sender);
+        require(votingPower > 0, "No voting power");
+        
+        proposal.hasVoted[msg.sender] = true;
+        
+        if (support) {
+            proposal.votesFor += votingPower;
+        } else {
+            proposal.votesAgainst += votingPower;
+        }
+        
+        emit CharityDisbursementVoteCast(proposalId, msg.sender, support, votingPower);
+    }
+    
+    /**
+     * @notice Execute a charity disbursement proposal after voting ends
+     * @param proposalId ID of the proposal
+     */
+    function executeCharityDisbursement(uint256 proposalId) external nonReentrant {
+        CharityDisbursementProposal storage proposal = charityDisbursementProposals[proposalId];
+        require(proposal.proposalId != 0, "Proposal does not exist");
+        require(block.timestamp >= proposal.endTime, "Voting period not ended");
+        require(!proposal.executed, "Proposal already executed");
+        
+        uint256 totalVotes = proposal.votesFor + proposal.votesAgainst;
+        require(totalVotes >= charityQuorum, "Quorum not reached");
+        
+        bool passed = (proposal.votesFor * 100) / totalVotes >= charityApprovalThreshold;
+        proposal.passed = passed;
+        proposal.executed = true;
+        
+        if (passed) {
+            // Check daily limit
+            _checkDailyCharityLimit(proposal.amount);
+            
+            uint256 donationId = nextCharityDonationId++;
+            
+            // Create donation record
+            CharityDonation storage newDonation = charityDonations[donationId];
+            newDonation.id = donationId;
+            newDonation.recipient = proposal.recipient;
+            newDonation.amount = proposal.amount;
+            newDonation.timestamp = block.timestamp;
+            newDonation.description = proposal.description;
+            newDonation.proposalId = proposalId;
+            newDonation.isVerified = false;
+            newDonation.verificationReceipt = "";
+            
+            // Transfer tokens
+            require(
+                ldaoToken.transfer(proposal.recipient, proposal.amount),
+                "LDAO transfer failed"
+            );
+            
+            // Update stats
+            charityFund.totalDisbursed = charityFund.totalDisbursed + proposal.amount;
+            if (charityFund.availableBalance >= proposal.amount) {
+                charityFund.availableBalance = charityFund.availableBalance - proposal.amount;
+            }
+            
+            charityDonationsHistory[proposal.recipient].push(donationId);
+            
+            emit CharityDisbursement(donationId, proposal.recipient, proposal.amount, proposalId, proposal.description);
+        }
+        
+        emit CharityDisbursementProposalExecuted(proposalId, passed, proposal.votesFor, proposal.votesAgainst);
+    }
+    
+    /**
+     * @notice Verify that a charity received their donation
+     * @param donationId ID of the donation to verify
+     * @param receiptHash IPFS hash of the donation receipt
+     */
+    function verifyCharityDonation(
+        uint256 donationId,
+        string calldata receiptHash
+    ) external onlyOwner {
+        require(donationId > 0 && donationId < nextCharityDonationId, "Invalid donation ID");
+        require(bytes(receiptHash).length > 0, "Receipt hash required");
+        
+        CharityDonation storage donation = charityDonations[donationId];
+        require(!donation.isVerified, "Donation already verified");
+        
+        donation.isVerified = true;
+        donation.verificationReceipt = receiptHash;
+        
+        emit CharityDonationVerified(donationId, receiptHash);
+    }
+    
+    /**
+     * @notice Create a proposal to verify a charity address (governance)
+     * @param charityAddress Address of the charity to verify
+     * @param name Name of the charity
+     * @param description Description of the charity
+     * @param ipfsHash IPFS hash of charity documentation
+     * @return proposalId ID of the created proposal
+     */
+    function proposeCharityVerification(
+        address charityAddress,
+        string calldata name,
+        string calldata description,
+        string calldata ipfsHash
+    ) external returns (uint256) {
+        require(charityAddress != address(0), "Invalid charity address");
+        require(bytes(name).length > 0, "Name required");
+        require(bytes(description).length > 0, "Description required");
+        require(ldaoToken.balanceOf(msg.sender) >= minCharityVerificationStake, "Insufficient stake to propose");
+        
+        uint256 proposalId = nextCharityProposalId++;
+        
+        CharityVerificationProposal storage proposal = charityVerificationProposals[proposalId];
+        proposal.proposalId = proposalId;
+        proposal.charityAddress = charityAddress;
+        proposal.name = name;
+        proposal.description = description;
+        proposal.ipfsHash = ipfsHash;
+        proposal.startTime = block.timestamp;
+        proposal.endTime = block.timestamp + charityVotingPeriod;
+        
+        emit CharityVerificationProposalCreated(proposalId, charityAddress, name, proposal.endTime);
+        
+        return proposalId;
+    }
+    
+    /**
+     * @notice Vote on a charity verification proposal
+     * @param proposalId ID of the proposal
+     * @param support Whether to support the proposal
+     */
+    function voteCharityVerification(uint256 proposalId, bool support) external {
+        CharityVerificationProposal storage proposal = charityVerificationProposals[proposalId];
+        require(proposal.proposalId != 0, "Proposal does not exist");
+        require(block.timestamp < proposal.endTime, "Voting period ended");
+        require(!proposal.executed, "Proposal already executed");
+        require(!proposal.hasVoted[msg.sender], "Already voted");
+        
+        uint256 votingPower = ldaoToken.balanceOf(msg.sender);
+        require(votingPower > 0, "No voting power");
+        
+        proposal.hasVoted[msg.sender] = true;
+        
+        if (support) {
+            proposal.votesFor += votingPower;
+        } else {
+            proposal.votesAgainst += votingPower;
+        }
+        
+        emit CharityVerificationVoteCast(proposalId, msg.sender, support, votingPower);
+    }
+    
+    /**
+     * @notice Execute a charity verification proposal after voting ends
+     * @param proposalId ID of the proposal
+     */
+    function executeCharityVerification(uint256 proposalId) external {
+        CharityVerificationProposal storage proposal = charityVerificationProposals[proposalId];
+        require(proposal.proposalId != 0, "Proposal does not exist");
+        require(block.timestamp >= proposal.endTime, "Voting period not ended");
+        require(!proposal.executed, "Proposal already executed");
+        
+        uint256 totalVotes = proposal.votesFor + proposal.votesAgainst;
+        require(totalVotes >= charityQuorum, "Quorum not reached");
+        
+        bool passed = (proposal.votesFor * 100) / totalVotes >= charityApprovalThreshold;
+        proposal.passed = passed;
+        proposal.executed = true;
+        
+        if (passed && !verifiedCharities[proposal.charityAddress]) {
+            verifiedCharities[proposal.charityAddress] = true;
+            charityFund.charityCount = charityFund.charityCount + 1;
+            emit CharityVerified(proposal.charityAddress, true);
+        } else if (!passed && verifiedCharities[proposal.charityAddress]) {
+            // Only unverify if proposal explicitly rejects and had enough votes
+            verifiedCharities[proposal.charityAddress] = false;
+            if (charityFund.charityCount > 0) {
+                charityFund.charityCount = charityFund.charityCount - 1;
+            }
+            emit CharityVerified(proposal.charityAddress, false);
+        }
+        
+        emit CharityVerificationProposalExecuted(proposalId, passed, proposal.votesFor, proposal.votesAgainst);
+    }
+    
+    /**
+     * @notice Legacy function - only owner can verify in emergency (time-locked)
+     * @param charityAddress Address of the charity
+     * @param verify Whether to verify or unverify
+     */
+    function verifyCharity(address charityAddress, bool verify) external onlyOwner {
+        require(block.timestamp > (lastCharityDisbursementDay + 90 days), "Emergency verification time-locked");
+        require(charityAddress != address(0), "Invalid charity address");
+        
+        verifiedCharities[charityAddress] = verify;
+        if (verify && !verifiedCharities[charityAddress]) {
+            charityFund.charityCount = charityFund.charityCount + 1;
+        } else if (!verify && charityFund.charityCount > 0) {
+            charityFund.charityCount = charityFund.charityCount - 1;
+        }
+        
+        emit CharityVerified(charityAddress, verify);
+    }
+    
+    /**
+     * @notice Get charity donation details
+     * @param donationId ID of the donation
+     * @return donation Charity donation details
+     */
+    function getCharityDonation(uint256 donationId) external view returns (CharityDonation memory) {
+        require(donationId > 0 && donationId < nextCharityDonationId, "Invalid donation ID");
+        return charityDonations[donationId];
+    }
+    
+    /**
+     * @notice Get charity donations history for an address
+     * @param charityAddress Address of the charity
+     * @return donationIds Array of donation IDs
+     */
+    function getCharityDonationsHistory(address charityAddress) external view returns (uint256[] memory) {
+        return charityDonationsHistory[charityAddress];
+    }
+    
+    /**
+     * @notice Get charity fund information
+     * @return totalDisbursed Total amount disbursed
+     * @return totalReceived Total amount received
+     * @return availableBalance Available balance for donations
+     * @return charityCount Number of verified charities
+     */
+    function getCharityFund() external view returns (
+        uint256 totalDisbursed,
+        uint256 totalReceived,
+        uint256 availableBalance,
+        uint256 charityCount
+    ) {
+        return (
+            charityFund.totalDisbursed,
+            charityFund.totalReceived,
+            charityFund.availableBalance,
+            charityFund.charityCount
+        );
+    }
+    
+    /**
+     * @notice Check if an address is a verified charity
+     * @param charityAddress Address to check
+     * @return isVerified Whether the address is verified
+     */
+    function isCharityVerified(address charityAddress) external view returns (bool) {
+        return verifiedCharities[charityAddress];
+    }
+    
+    /**
+     * @notice Update charity fund allocation (with safeguards)
+     * @param newAllocation New allocation amount
+     */
+    function updateCharityFundAllocation(uint256 newAllocation) external onlyOwner {
+        uint256 totalSupply = ldaoToken.totalSupply();
+        require(newAllocation <= totalSupply / 10, "Allocation cannot exceed 10% of total supply"); // Max 10%
+        require(newAllocation >= charityFundAllocation / 2, "Cannot reduce by more than 50%");
+        
+        charityFundAllocation = newAllocation;
+        charityFund.availableBalance = newAllocation; // Update available balance
+        
+        emit CharityFundUpdated(newAllocation, newAllocation);
+    }
+    
+    /**
+     * @notice Update charity governance parameters
+     * @param _votingPeriod New voting period in seconds
+     * @param _quorum New quorum amount
+     * @param _approvalThreshold New approval threshold (percentage)
+     */
+    function updateCharityGovernanceParams(
+        uint256 _votingPeriod,
+        uint256 _quorum,
+        uint256 _approvalThreshold
+    ) external onlyOwner {
+        require(_votingPeriod >= 1 days && _votingPeriod <= 30 days, "Invalid voting period");
+        require(_approvalThreshold >= 51 && _approvalThreshold <= 90, "Invalid threshold");
+        
+        charityVotingPeriod = _votingPeriod;
+        charityQuorum = _quorum;
+        charityApprovalThreshold = _approvalThreshold;
+    }
+    
+    // Internal helper function
+    function _checkDailyCharityLimit(uint256 amount) internal {
+        uint256 currentDay = block.timestamp / 1 days;
+        
+        if (currentDay > lastCharityDisbursementDay) {
+            currentDayCharityDisbursements = 0;
+            lastCharityDisbursementDay = currentDay;
+        }
+        
+        require(
+            currentDayCharityDisbursements + amount <= dailyCharityDisbursementLimit,
+            "Daily charity limit exceeded"
+        );
+        
+        currentDayCharityDisbursements += amount;
+    }
+    
+    /**
+     * @notice Update minimum charity donation amount
+     * @param newMinimum New minimum amount
+     */
+    function updateMinCharityDonationAmount(uint256 newMinimum) external onlyOwner {
+        minCharityDonationAmount = newMinimum;
     }
 }

@@ -12,7 +12,7 @@ const FirstLDAOPurchasePage: NextPage = () => {
     {
       title: "Connect Your Wallet",
       content: "First, you'll need to connect your Web3 wallet to the platform. We support MetaMask, Coinbase Wallet, and other popular wallets.",
-      tips: ["Make sure you have some ETH or USDC for gas fees", "Use Polygon network for lower fees"],
+      tips: ["Make sure you have some USDC for gas fees", "Use Polygon network for lower fees"],
       image: "/images/tutorials/connect-wallet.png"
     },
     {
@@ -29,7 +29,7 @@ const FirstLDAOPurchasePage: NextPage = () => {
     },
     {
       title: "Select Payment Method",
-      content: "Choose between cryptocurrency (ETH, USDC) or credit card payment. Crypto payments have lower fees.",
+      content: "Choose between cryptocurrency (USDC) or credit card payment. Crypto payments have lower fees.",
       tips: ["Crypto payments are usually cheaper", "Credit cards are more familiar but have higher fees"],
       image: "/images/tutorials/payment-method.png"
     },

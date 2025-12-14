@@ -1138,7 +1138,7 @@ export default function Profile() {
                       <p className="text-2xl font-bold text-gray-900 dark:text-white">
                         {earnings ? `${(parseFloat(earnings.totalEarned) / 1e18).toFixed(2)}` : '0.00'}
                       </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Tips Earned (ETH)</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Tips Earned</p>
                     </div>
                   </div>
                 </div>

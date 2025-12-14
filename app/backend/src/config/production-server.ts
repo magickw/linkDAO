@@ -49,7 +49,7 @@ class ProductionServerManager {
       gracefulShutdownTimeout: parseInt(process.env.GRACEFUL_SHUTDOWN_TIMEOUT || '30000'),
       cluster: {
         // Enable clustering by default on Render Pro (2 CPUs available)
-        enabled: (process.env.CLUSTER_ENABLED === 'true') || isRenderPro,
+        enabled: (process.env.CLUSTER_ENABLED === 'true') || !!isRenderPro,
         workers: parseInt(process.env.CLUSTER_WORKERS || '0') || defaultWorkers
       }
     };
@@ -135,8 +135,9 @@ class ProductionServerManager {
       const { default: sellerVerificationRoutes } = await import('../routes/sellerVerificationRoutes');
       const { sellerImageRoutes } = await import('../routes/sellerImageRoutes');
       const { default: listingRoutes } = await import('../routes/marketplaceListingsRoutes');
+      const { default: marketplaceRoutes } = await import('../routes/marketplaceRoutes');
       // Import documentation routes
-      const { default: docsRoutes } = await import('../routes/docsRoutes');
+      const { docsRoutes } = await import('../routes/docsRoutes');
       const { default: authRoutes } = await import('../routes/authRoutes');
       const { default: reputationRoutes } = await import('../routes/reputationRoutes');
       const { default: healthRoutes } = await import('../routes/healthRoutes');
@@ -171,7 +172,7 @@ class ProductionServerManager {
       const { default: newsletterRoutes } = await import('../routes/newsletterRoutes');
       const { default: enhancedFiatPaymentRoutes } = await import('../routes/enhancedFiatPaymentRoutes');
 
-      // Mount routes
+      // Mount routes - ORDER MATTERS! More specific routes must come before general ones
       this.app.use('/api/marketplace', marketplaceSellerRoutes);
       this.app.use('/api/marketplace', sellerProfileRoutes);
       this.app.use('/api/marketplace', sellerDashboardRoutes);
@@ -180,8 +181,17 @@ class ProductionServerManager {
       this.app.use('/api/marketplace', sellerImageUploadRoutes);
       this.app.use('/api/marketplace', sellerVerificationRoutes);
       this.app.use('/api/marketplace/seller/images', sellerImageRoutes);
-      this.app.use('/api/marketplace', listingRoutes);
-      this.app.use('/marketplace', listingRoutes); // Alternative path
+      // Mount specific marketplace routes that have named endpoints FIRST
+      // This ensures routes like /health, /test don't get caught by the generic /:id route in listingRoutes
+      safeLogger.info('Mounting marketplace routes...');
+      this.app.use('/api/marketplace', marketplaceRoutes);
+      safeLogger.info('Marketplace routes mounted successfully');
+      // Mount listing routes AFTER specific named routes
+      // BUT we need to be careful about the parameterized route /:id in listingRoutes
+      // To avoid conflicts, we'll mount listing routes under a sub-path
+      this.app.use('/api/marketplace/listings', listingRoutes);
+      // Mount alternative path for legacy compatibility
+      this.app.use('/marketplace/listings', listingRoutes);
       this.app.use('/api/auth', authRoutes);
       this.app.use('/marketplace/reputation', reputationRoutes);
       this.app.use('/health', healthRoutes);

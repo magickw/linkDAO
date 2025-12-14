@@ -13,8 +13,7 @@ interface CommunityTipButtonProps {
 
 const SUPPORTED_TOKENS = [
   { symbol: 'LDAO', name: 'LinkDAO Token', decimals: 18 },
-  { symbol: 'USDC', name: 'USD Coin', decimals: 6 },
-  { symbol: 'ETH', name: 'Ethereum', decimals: 18 }
+  { symbol: 'USDC', name: 'USD Coin', decimals: 6 }
 ];
 
 const QUICK_AMOUNTS = ['1', '5', '10', '25', '50'];
@@ -70,7 +69,10 @@ export default function CommunityTipButton({
         message: message.trim() || undefined
       });
 
-      addToast(`Successfully tipped ${tipAmount} ${selectedToken.symbol}!`, 'success');
+      // Only show success message here if there's no parent handler
+      if (!onTip) {
+        addToast(`Successfully tipped ${tipAmount} ${selectedToken.symbol}!`, 'success');
+      }
       
       // Call parent handler if provided
       if (onTip) {
@@ -83,6 +85,7 @@ export default function CommunityTipButton({
       setShowTipModal(false);
     } catch (error) {
       console.error('Error sending tip:', error);
+      // Only show error message here
       addToast('Failed to send tip. Please try again.', 'error');
     } finally {
       setIsTipping(false);

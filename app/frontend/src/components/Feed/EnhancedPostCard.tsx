@@ -252,9 +252,10 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
   const handleTip = async (amount?: string, token?: string, message?: string) => {
     try {
       if (onTip) {
+        // Let the parent component handle the success message
         await onTip(post.id, amount, token, message);
-        safeAddToast('Tip sent successfully!', 'success');
-
+        // Don't show success message here since the parent component will handle it
+        
         // Invalidate feed cache to reflect updated tip counts
         await invalidateFeedCache();
 
@@ -267,9 +268,13 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
         if (post.communityId) {
           await invalidateCommunityCache(post.communityId, ['posts', 'activity']);
         }
+      } else {
+        // Only show success message if there's no parent handler
+        safeAddToast('Tip sent successfully!', 'success');
       }
       setShowTipModal(false);
     } catch (error) {
+      // Only show error message here
       safeAddToast('Failed to send tip', 'error');
     }
   };

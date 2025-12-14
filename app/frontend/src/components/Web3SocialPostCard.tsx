@@ -318,12 +318,15 @@ export default function Web3SocialPostCard({
       // In a real implementation, this would call the backend API
       if (onTip) {
         await onTip(post.id, tipAmount.toString(), 'USDC');
+      } else {
+        // Only show success message if there's no parent handler
+        addToast(`Successfully tipped ${tipAmount} USDC!`, 'success');
       }
-      addToast(`Successfully tipped ${tipAmount} USDC!`, 'success');
       setTipAmount(0);
       setShowTipInput(false);
     } catch (error) {
       console.error('Error tipping:', error);
+      // Only show error message here
       addToast('Failed to send tip. Please try again.', 'error');
     }
   };

@@ -1059,46 +1059,124 @@ export class FeedService {
   // Send tip to post author
   static async sendTip(postId: string, amount: number, tokenType: string, message?: string): Promise<any> {
     try {
-      const authHeaders = enhancedAuthService.getAuthHeaders();
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/tip`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders
-        },
-        body: JSON.stringify({
-          amount,
-          tokenType,
-          message
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const error: FeedError = {
-          code: `HTTP_${response.status}`,
-          message: errorData.error || `Failed to send tip: ${response.statusText}`,
-          timestamp: new Date(),
-          retryable: response.status >= 500 || response.status === 429
-        };
+      // For LDAO tokens, we need to interact with the blockchain
+      if (tokenType === 'LDAO') {
+        // Dynamically import web3 services to avoid circular dependencies
+        const { communityWeb3Service } = await import('@/services/communityWeb3Service');
         
-        throw error;
-      }
+        // First, get the post details to get the author address
+        const postResponse = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (!postResponse.ok) {
+          throw new Error('Failed to fetch post details');
+        }
+        
+        const postData = await postResponse.json();
+        const authorAddress = postData.data?.author?.address || postData.data?.authorAddress;
+        
+        if (!authorAddress) {
+          throw new Error('Could not determine post author address');
+        }
+        
+        // Send tip through blockchain (the service will check the sender's balance)
+        const txHash = await communityWeb3Service.tipCommunityPost({
+          postId,
+          recipientAddress: authorAddress,
+          amount: amount.toString(),
+          token: tokenType,
+          message: message || ''
+        });
+        
+        // Record the tip in the database for tracking
+        const authHeaders = enhancedAuthService.getAuthHeaders();
+        const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/tip`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authHeaders
+          },
+          body: JSON.stringify({
+            amount,
+            tokenType,
+            message,
+            txHash // Include transaction hash for reference
+          }),
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          const error: FeedError = {
+            code: `HTTP_${response.status}`,
+            message: errorData.error || `Failed to record tip: ${response.statusText}`,
+            timestamp: new Date(),
+            retryable: response.status >= 500 || response.status === 429
+          };
+          
+          throw error;
+        }
+        
+        const tip = await response.json();
+        
+        // Track success event
+        feedAnalytics.trackEvent({
+          eventType: 'tip_send',
+          postId,
+          timestamp: new Date(),
+          metadata: { amount, tokenType, hasMessage: !!message, txHash }
+        });
+        
+        // Invalidate feed cache to ensure updated tip counts appear
+        cacheUtils.invalidate(/^feed_/); // Clear all feed cache entries to ensure fresh data
+        
+        return { ...tip, txHash };
+      } else {
+        // For other token types, use the existing backend-only approach
+        const authHeaders = enhancedAuthService.getAuthHeaders();
+        const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/tip`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authHeaders
+          },
+          body: JSON.stringify({
+            amount,
+            tokenType,
+            message
+          }),
+        });
 
-      const tip = await response.json();
-      
-      // Track success event
-      feedAnalytics.trackEvent({
-        eventType: 'tip_send',
-        postId,
-        timestamp: new Date(),
-        metadata: { amount, tokenType, hasMessage: !!message }
-      });
-      
-      // Invalidate feed cache to ensure updated tip counts appear
-      cacheUtils.invalidate(/^feed_/); // Clear all feed cache entries to ensure fresh data
-      
-      return tip;
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          const error: FeedError = {
+            code: `HTTP_${response.status}`,
+            message: errorData.error || `Failed to send tip: ${response.statusText}`,
+            timestamp: new Date(),
+            retryable: response.status >= 500 || response.status === 429
+          };
+          
+          throw error;
+        }
+
+        const tip = await response.json();
+        
+        // Track success event
+        feedAnalytics.trackEvent({
+          eventType: 'tip_send',
+          postId,
+          timestamp: new Date(),
+          metadata: { amount, tokenType, hasMessage: !!message }
+        });
+        
+        // Invalidate feed cache to ensure updated tip counts appear
+        cacheUtils.invalidate(/^feed_/); // Clear all feed cache entries to ensure fresh data
+        
+        return tip;
+      }
     } catch (error: any) {
       console.error('Error sending tip:', error);
       
