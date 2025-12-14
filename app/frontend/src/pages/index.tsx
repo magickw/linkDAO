@@ -213,7 +213,8 @@ export default function Home() {
 
   // Subscribe to feed updates when connected with proper cleanup
   useEffect(() => {
-    if (wsConnected && address && !wsSubscribed) {
+    // Only subscribe if mounted, connected, and not currently navigating
+    if (isMounted.current && wsConnected && address && !wsSubscribed && shouldConnectWebSocket) {
       // Subscribe to global feed updates
       subscribe('feed', 'all', {
         eventTypes: ['feed_update', 'new_post']
@@ -243,53 +244,64 @@ export default function Home() {
         setWsSubscribed(false);
       };
     }
-  }, [wsConnected, address, wsSubscribed, subscribe, on, off, addToast, debouncedRefresh, isMounted]);
+  }, [wsConnected, address, wsSubscribed, subscribe, on, off, addToast, debouncedRefresh, isMounted, shouldConnectWebSocket]);
 
   // Add navigation event listeners to properly cleanup on route changes
   useEffect(() => {
     const handleRouteChangeStart = (url: string) => {
-      console.log('Route change start:', url);
-      // Immediately mark as unmounted to prevent further updates
+      console.log('[HomePage] Route change start:', url);
+      // Immediately mark as unmounted and disable all operations
       isMounted.current = false;
-      
-      // Disable WebSocket connection during navigation to prevent blocking
       setShouldConnectWebSocket(false);
-      
-      // Pause WebSocket subscription when navigating away
-      if (wsSubscribed) {
-        setWsSubscribed(false);
-      }
-      
-      // Reset connection stabilization to prevent reconnection during navigation
+      setWsSubscribed(false);
       setIsConnectionStabilized(false);
+      
+      // Force cleanup all WebSocket operations
+      try {
+        off('feed_update');
+      } catch (error) {
+        // Ignore cleanup errors
+      }
     };
 
     const handleRouteChangeComplete = (url: string) => {
-      console.log('Route change complete:', url);
-      // Delay remounting to ensure the new page has started rendering
-      setTimeout(() => {
-        if (isConnected) {
+      console.log('[HomePage] Route change complete:', url);
+      // Only remount if we're still on the home page
+      if (router.pathname === '/') {
+        setTimeout(() => {
           isMounted.current = true;
-          // Re-enable WebSocket connection after navigation is complete
-          setTimeout(() => {
-            if (isMounted.current) {
-              setIsConnectionStabilized(true);
-              setShouldConnectWebSocket(true);
-            }
-          }, 100); // Small delay to ensure page is stable
-        }
-      }, 50);
+          if (isConnected) {
+            setTimeout(() => {
+              if (isMounted.current) {
+                setIsConnectionStabilized(true);
+                setShouldConnectWebSocket(true);
+              }
+            }, 200);
+          }
+        }, 100);
+      }
+    };
+
+    const handleRouteChangeError = (err: any, url: string) => {
+      console.error('[HomePage] Route change error for', url, ':', err);
+      // Reset everything on error
+      isMounted.current = false;
+      setShouldConnectWebSocket(false);
+      setWsSubscribed(false);
+      setIsConnectionStabilized(false);
     };
 
     // Listen for route changes to properly cleanup
     router.events.on('routeChangeStart', handleRouteChangeStart);
     router.events.on('routeChangeComplete', handleRouteChangeComplete);
+    router.events.on('routeChangeError', handleRouteChangeError);
 
     return () => {
       router.events.off('routeChangeStart', handleRouteChangeStart);
       router.events.off('routeChangeComplete', handleRouteChangeComplete);
+      router.events.off('routeChangeError', handleRouteChangeError);
     };
-  }, [wsSubscribed, router.events, isConnected]);
+  }, [router.pathname, router.events, isConnected]);
 
   // Handle post creation with useCallback and mount check
   const handlePostSubmit = useCallback(async (postData: CreatePostInput) => {
