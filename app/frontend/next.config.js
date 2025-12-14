@@ -74,6 +74,29 @@ const nextConfig = {
       '@': path.resolve(__dirname, 'src'),
     };
 
+    // Exclude generated files from babel processing to prevent build errors
+    config.module.rules.forEach(rule => {
+      if (rule.test && rule.test.toString().includes('tsx?')) {
+        if (rule.use && rule.use.loader && rule.use.loader.includes('babel-loader')) {
+          rule.exclude = [
+            ...(rule.exclude || []),
+            /node_modules/,
+            /src\/generated/
+          ];
+        } else if (Array.isArray(rule.use)) {
+          rule.use.forEach(useRule => {
+            if (useRule.loader && useRule.loader.includes('babel-loader')) {
+              useRule.exclude = [
+                ...(useRule.exclude || []),
+                /node_modules/,
+                /src\/generated/
+              ];
+            }
+          });
+        }
+      }
+    });
+
     // Use IgnorePlugin to completely ignore playwright modules
     config.plugins.push(
       new webpack.IgnorePlugin({
