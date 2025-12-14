@@ -84,15 +84,15 @@ function AppContent({ children }: { children: React.ReactNode }) {
         if (typeof window !== 'undefined' && window.ethereum) {
           await contractRegistryService.initialize(window.ethereum);
 
-          // FORCE UNREGISTER SERVICE WORKER FOR DEBUGGING
-          if ('serviceWorker' in navigator) {
-            console.log('Force unregistering Service Worker for navigation debugging...');
-            const registrations = await navigator.serviceWorker.getRegistrations();
-            for (const registration of registrations) {
-              await registration.unregister();
-              console.log('Unregistered SW:', registration.scope);
-            }
-          }
+          // TEMPORARILY DISABLED: Service worker unregistration was causing continuous reloads
+          // if ('serviceWorker' in navigator) {
+          //   console.log('Force unregistering Service Worker for navigation debugging...');
+          //   const registrations = await navigator.serviceWorker.getRegistrations();
+          //   for (const registration of registrations) {
+          //     await registration.unregister();
+          //     console.log('Unregistered SW:', registration.scope);
+          //   }
+          // }
 
           // Defer heavy preloading to avoid blocking initial navigation
           if ('requestIdleCallback' in window) {
@@ -344,16 +344,16 @@ function AppContent({ children }: { children: React.ReactNode }) {
 }
 
 export default function App({ Component, pageProps, router }: AppProps) {
-  // Disable Service Worker in development to avoid CSP issues
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development' && 'serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(registrations => {
-        registrations.forEach(registration => {
-          registration.unregister();
-        });
-      });
-    }
-  }, []);
+  // TEMPORARILY DISABLED: Service worker unregistration was causing continuous reloads
+  // useEffect(() => {
+  //   if (process.env.NODE_ENV === 'development' && 'serviceWorker' in navigator) {
+  //     navigator.serviceWorker.getRegistrations().then(registrations => {
+  //       registrations.forEach(registration => {
+  //         registration.unregister();
+  //       });
+  //     });
+  //   }
+  // }, []);
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => setMounted(true), []);
