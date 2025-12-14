@@ -35,9 +35,9 @@ export class ContractRegistryService {
 
     this.provider = publicClient;
     
-    // Get registry address from deployed addresses
-    // TODO: Update this with actual deployed ContractRegistry address
-    const registryAddress = process.env.NEXT_PUBLIC_CONTRACT_REGISTRY_ADDRESS || 
+    // Get registry address from environment config
+    const registryAddress = ENV_CONFIG.CONTRACT_REGISTRY_ADDRESS || 
+      process.env.NEXT_PUBLIC_CONTRACT_REGISTRY_ADDRESS || 
       '0x0000000000000000000000000000000000000000'; // Placeholder
 
     if (registryAddress === ethers.ZeroAddress) {

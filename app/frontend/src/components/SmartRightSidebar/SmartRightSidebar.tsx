@@ -11,6 +11,10 @@ import TrendingContentWidget from './TrendingContentWidget';
 import WalletDashboard from './WalletDashboard';
 import TransactionMiniFeed from './TransactionMiniFeed';
 import PortfolioModal from './PortfolioModal';
+import SendTokenModal from '@/components/WalletActions/SendTokenModal';
+import ReceiveTokenModal from '@/components/WalletActions/ReceiveTokenModal';
+import SwapTokenModal from '@/components/WalletActions/SwapTokenModal';
+import StakeTokenModal from '@/components/WalletActions/StakeTokenModal';
 
 interface SmartRightSidebarProps {
   context: 'feed' | 'community';
