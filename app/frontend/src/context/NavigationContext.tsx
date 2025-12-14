@@ -129,6 +129,14 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
           activeCommunity: communityId,
           activePost: typeof post === 'string' ? post : undefined,
         }));
+      } else {
+        // For all other pages, reset to feed view and clear community/post
+        setNavigationState(prev => ({
+          ...prev,
+          activeView: 'feed',
+          activeCommunity: undefined,
+          activePost: undefined,
+        }));
       }
     };
 
