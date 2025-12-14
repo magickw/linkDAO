@@ -91,31 +91,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Don't need to set isLoading(false) since we didn't set it to true
   }, []);
 
-  // Only sync auth state on mount and when wallet connects/disconnects
+  // Only sync auth state once on mount to prevent continuous reloads
   useEffect(() => {
-    // Use a flag to prevent multiple simultaneous calls
-    let isSyncing = false;
+    let mounted = true;
     
     const syncOnce = async () => {
-      if (!isSyncing) {
-        isSyncing = true;
+      if (mounted) {
         try {
           await syncAuthState();
         } catch (error) {
           console.error('Auth sync error:', error);
-        } finally {
-          isSyncing = false;
         }
       }
     };
     
-    // Small delay to let the page stabilize before syncing
-    const timeoutId = setTimeout(syncOnce, 100);
+    // Defer sync to prevent blocking initial render
+    const timeoutId = setTimeout(syncOnce, 500);
     
     return () => {
+      mounted = false;
       clearTimeout(timeoutId);
     };
-  }, [address]); // Only re-sync when address changes
+  }, []); // Empty dependency array - only run once on mount
 
   useEffect(() => {
     enhancedAuthService.handleWalletChange(address);
