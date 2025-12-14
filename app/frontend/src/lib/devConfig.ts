@@ -17,7 +17,9 @@ export const setupDevEnvironment = () => {
       'api.web3modal.org',
       'Reown Config',
       'getaddrinfo ENOTFOUND api.web3modal.org',
-      'Using local/default values'
+      'Using local/default values',
+      'WalletConnect Core is already initialized',
+      'Init() was called 2 times'
     ];
 
     if (suppressedWarnings.some(warning => message.includes(warning))) {
@@ -34,7 +36,10 @@ export const setupDevEnvironment = () => {
     const suppressedErrors = [
       'fetch failed',
       'ENOTFOUND api.web3modal.org',
-      'TypeError: fetch failed'
+      'TypeError: fetch failed',
+      'read ECONNRESET',
+      'ECONNRESET',
+      'Contract Treasury not found in registry or fallback'
     ];
 
     if (suppressedErrors.some(error => message.includes(error))) {

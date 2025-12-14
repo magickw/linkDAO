@@ -533,9 +533,10 @@ export default function Wallet() {
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               {(() => {
-                                // Find the token in the tokens array to get its logoUrl
+                                // Find the token in the tokens array to get its logo
                                 const tokenItem = tokens.find(t => t.symbol === asset.name);
-                                const logoUrl = tokenItem ? getTokenLogoWithFallback(tokenItem.symbol, tokenItem.logoUrl) : null;
+                                // Tokens don't have a logoUrl property, so we only pass the symbol
+                                const logoUrl = tokenItem ? getTokenLogoWithFallback(tokenItem.symbol) : null;
                                 
                                 return logoUrl ? (
                                   <img 

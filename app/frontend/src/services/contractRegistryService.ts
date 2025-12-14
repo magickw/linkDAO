@@ -47,9 +47,8 @@ export class ContractRegistryService {
     }
 
     // Convert PublicClient to ethers provider for contract interactions
-    const { fallbackTransport } = await import('viem');
     const ethersProvider = new ethers.BrowserProvider(
-      publicClient.transport || fallbackTransport
+      publicClient.transport
     );
     
     this.registry = new Contract(registryAddress, CONTRACT_REGISTRY_ABI, ethersProvider);
@@ -137,7 +136,8 @@ export class ContractRegistryService {
       throw new Error('ContractRegistry not available');
     }
 
-    const contractWithSigner = this.registry.connect(signer);
+    // Cast to any to bypass type checking for dynamic contract methods
+    const contractWithSigner = this.registry.connect(signer) as any;
     const tx = await contractWithSigner.setContract(name, address);
     await tx.wait();
     
@@ -221,14 +221,14 @@ export class ContractRegistryService {
     const commonContracts = [
       'LDAOToken',
       'TipRouter',
-      'Treasury',
+      'LDAOTreasury',
       'Marketplace',
       'Governance',
       'EnhancedEscrow',
       'ReputationSystem',
       'NFTMarketplace',
       'ProfileRegistry',
-      'SubDAOFactory'
+      'CharitySubDAOFactory'
     ];
 
     await this.getContractAddresses(commonContracts);

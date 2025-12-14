@@ -13,7 +13,7 @@ if (!projectId) {
 const getRpcUrl = (chainId: number): string => {
   switch (chainId) {
     case mainnet.id:
-      return process.env.NEXT_PUBLIC_MAINNET_RPC_URL || 'https://eth-mainnet.g.alchemy.com/v2/demo';
+      return process.env.NEXT_PUBLIC_MAINNET_RPC_URL || 'https://eth-mainnet.g.alchemy.com/v2/5qxkwSO4d_0qE4wjQPIrp';
     case base.id:
       return process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org';
     case baseSepolia.id:
@@ -29,20 +29,37 @@ const getRpcUrl = (chainId: number): string => {
   }
 };
 
-export const config = getDefaultConfig({
-  appName: 'LinkDAO Marketplace',
-  projectId,
-  chains: [base, baseSepolia, mainnet, polygon, arbitrum, sepolia],
-  transports: {
-    [mainnet.id]: http(getRpcUrl(mainnet.id)),
-    [base.id]: http(getRpcUrl(base.id)),
-    [baseSepolia.id]: http(getRpcUrl(baseSepolia.id)),
-    [polygon.id]: http(getRpcUrl(polygon.id)),
-    [arbitrum.id]: http(getRpcUrl(arbitrum.id)),
-    [sepolia.id]: http(getRpcUrl(sepolia.id)),
-  },
-  ssr: true,
-  appDescription: 'Decentralized Web3 Marketplace and DAO Platform',
-  appUrl: typeof window !== 'undefined' ? window.location.origin : 'https://linkdao.io',
-  appIcon: 'https://linkdao.io/icon.png',
-});
+// Create a singleton instance to prevent multiple initializations
+let cachedConfig: ReturnType<typeof getDefaultConfig> | null = null;
+
+export const config = (() => {
+  if (cachedConfig) {
+    return cachedConfig;
+  }
+
+  cachedConfig = getDefaultConfig({
+    appName: 'LinkDAO Marketplace',
+    projectId,
+    chains: [base, baseSepolia, mainnet, polygon, arbitrum, sepolia],
+    transports: {
+      [mainnet.id]: http(getRpcUrl(mainnet.id)),
+      [base.id]: http(getRpcUrl(base.id)),
+      [baseSepolia.id]: http(getRpcUrl(baseSepolia.id)),
+      [polygon.id]: http(getRpcUrl(polygon.id)),
+      [arbitrum.id]: http(getRpcUrl(arbitrum.id)),
+      [sepolia.id]: http(getRpcUrl(sepolia.id)),
+    },
+    ssr: true,
+    appDescription: 'Decentralized Web3 Marketplace and DAO Platform',
+    appUrl: typeof window !== 'undefined' ? window.location.origin : 'https://linkdao.io',
+    appIcon: 'https://linkdao.io/icon.png',
+    // Disable remote config fetching to prevent network errors
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    // Disable analytics and other network requests
+    appInfo: {
+      projectName: 'LinkDAO Marketplace',
+    },
+  });
+
+  return cachedConfig;
+})();

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "FAST_REFRESH=false next dev",
     "prebuild": "rm -rf node_modules/playwright node_modules/playwright-core node_modules/@playwright",
     "build": "NODE_OPTIONS=--max-old-space-size=8192 next build",
     "start": "next start",
@@ -23,7 +23,9 @@
     "test:seller-cache": "jest --config jest.seller-integration.config.js --testNamePattern=\"Cache\"",
     "test:seller-performance": "jest --config jest.seller-integration.config.js --testNamePattern=\"Performance\"",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "generate:wagmi": "cd ../.. && npx @wagmi/cli generate --config ./app/frontend/wagmi.config.ts",
+    "generate:wagmi:all": "cd ../.. && npx @wagmi/cli generate --config ./app/frontend/wagmi.config.ts"
   },
   "dependencies": {
     "@coinbase/onchainkit": "^1.1.2",
@@ -132,12 +134,14 @@
     "@typescript-eslint/eslint-plugin": "^8.46.3",
     "@typescript-eslint/parser": "^8.46.3",
     "@wagmi/cli": "^2.8.0",
+    "babel-loader": "^10.0.0",
     "identity-obj-proxy": "^3.0.0",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "jest-html-reporters": "^3.1.7",
     "jest-junit": "^16.0.0",
     "madge": "^8.0.0",
+    "null-loader": "^4.0.1",
     "ts-jest": "^29.4.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"

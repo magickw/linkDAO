@@ -83,8 +83,13 @@ export const config = createConfig({
         icons: ['https://linkdao.io/icon.png'],
       },
       showQrModal: true,
-      // Disable remote config fetching in development
-      disableProviderPing: process.env.NODE_ENV === 'development',
+      // Disable remote config fetching to prevent network errors
+      disableProviderPing: true,
+      // Disable analytics and other network requests
+      qrModalOptions: {
+        themeMode: 'system',
+        defaultNetwork: 'base',
+      },
     }),
     injected({
       target() {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Layout from '@/components/Layout';
-import { useWriteProfileRegistryCreateProfile } from '@/generated';
+import { useWriteProfileRegistryCreateProfile } from '@/generated/social';
 import { useWeb3 } from '@/context/Web3Context';
 import { useToast } from '@/context/ToastContext';
 import { useRouter } from 'next/router';

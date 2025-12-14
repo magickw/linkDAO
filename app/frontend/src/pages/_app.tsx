@@ -1,5 +1,6 @@
 // Import Web3 polyfills first to ensure compatibility
 import '@/utils/web3Polyfills';
+import '@/lib/devConfig';
 
 import React, { useEffect, useRef, useCallback } from 'react';
 import type { AppProps } from 'next/app';
@@ -36,6 +37,10 @@ import '../styles/tiptap.css';
 import '@rainbow-me/rainbowkit/styles.css';
 
 const queryClient = new QueryClient();
+
+// Track initialization state to prevent multiple initializations
+let isContractRegistryInitializing = false;
+let isContractRegistryInitialized = false;
 
 function AppContent({ children }: { children: React.ReactNode }) {
   const [isOnline, setIsOnline] = React.useState(true);
@@ -77,22 +82,26 @@ function AppContent({ children }: { children: React.ReactNode }) {
     performanceMonitor.mark('app_init_start');
     memoryMonitor.start();
 
-
     // Initialize ContractRegistry with provider
     const initializeContractRegistry = async () => {
+      // Prevent multiple concurrent initializations
+      if (isContractRegistryInitializing) {
+        console.debug('ContractRegistry initialization already in progress, skipping...');
+        return;
+      }
+      
+      // Prevent multiple initializations
+      if (isContractRegistryInitialized) {
+        console.debug('ContractRegistry already initialized, skipping...');
+        return;
+      }
+
       try {
+        isContractRegistryInitializing = true;
+        
         if (typeof window !== 'undefined' && window.ethereum) {
           await contractRegistryService.initialize(window.ethereum);
-
-          // TEMPORARILY DISABLED: Service worker unregistration was causing continuous reloads
-          // if ('serviceWorker' in navigator) {
-          //   console.log('Force unregistering Service Worker for navigation debugging...');
-          //   const registrations = await navigator.serviceWorker.getRegistrations();
-          //   for (const registration of registrations) {
-          //     await registration.unregister();
-          //     console.log('Unregistered SW:', registration.scope);
-          //   }
-          // }
+          isContractRegistryInitialized = true;
 
           // Defer heavy preloading to avoid blocking initial navigation
           if ('requestIdleCallback' in window) {
@@ -107,137 +116,21 @@ function AppContent({ children }: { children: React.ReactNode }) {
         }
       } catch (error) {
         console.warn('Failed to initialize ContractRegistry:', error);
+      } finally {
+        isContractRegistryInitializing = false;
       }
     };
-    initializeContractRegistry();
+    
+    // Only initialize contract registry in browser environment
+    if (typeof window !== 'undefined') {
+      initializeContractRegistry();
+    }
 
-    // IMMEDIATE: Set up chrome.runtime error suppression before anything else
-    const immediateErrorSuppressor = (event: any) => {
-      if (event && (event.message || event.reason || event.error)) {
-        const errorText = String(event.message || event.reason || event.error?.message || '').toLowerCase();
-        const errorSource = event.filename || event.source || '';
-        if (errorText.includes('chrome.runtime.sendmessage') ||
-          errorText.includes('opfgelmcmbiajamepnmloijbpoleiama') ||
-          errorText.includes('extension id') ||
-          errorText.includes('runtime.sendmessage(optional string extensionid') ||
-          errorText.includes('cannot redefine property: ethereum') ||
-          errorSource.includes('background-redux-new.js')) {
-          console.debug('🚫 IMMEDIATE: Chrome/extension runtime error blocked');
-          event.preventDefault?.();
-          // Don't stop propagation to allow navigation
-          return false;
-        }
-      }
-    };
-
-    // Apply immediately with highest priority
-    window.addEventListener('error', immediateErrorSuppressor, { capture: true, passive: false });
-    window.addEventListener('unhandledrejection', immediateErrorSuppressor, { capture: true, passive: false });
+    // Initialize extension error suppression with a single handler
+    const cleanupExtensionErrorSuppression = initializeExtensionErrorSuppression();
 
     // Enable debug mode for extension errors in development
     debugExtensionErrors(process.env.NODE_ENV === 'development');
-
-    // Initialize extension error suppression
-    const cleanupExtensionErrorSuppression = initializeExtensionErrorSuppression();
-
-    // More aggressive error handling for chrome.runtime.sendMessage specifically
-    const chromeRuntimeErrorHandler = (event: ErrorEvent) => {
-      const message = event.message || '';
-      const filename = event.filename || '';
-      const stack = event.error?.stack || '';
-
-      // Very specific patterns for chrome.runtime.sendMessage errors
-      const chromeRuntimePatterns = [
-        'chrome.runtime.sendMessage',
-        'Error in invocation of runtime.sendMessage',
-        'runtime.sendMessage(optional string extensionId',
-        'must specify an Extension ID',
-        'called from a webpage must specify an Extension ID',
-        'for its first argument',
-        'opfgelmcmbiajamepnmloijbpoleiama',
-        'Cannot redefine property: ethereum'
-      ];
-
-      // Check all error information
-      const allErrorText = `${message} ${filename} ${stack}`.toLowerCase();
-
-      // Look for the specific error pattern
-      const isChromeRuntimeError = chromeRuntimePatterns.some(pattern =>
-        allErrorText.includes(pattern.toLowerCase())
-      ) || allErrorText.includes('chrome-extension://opfgelmcmbiajamepnmloijbpoleiama');
-
-      if (isChromeRuntimeError) {
-        console.debug('🔇 Chrome runtime error suppressed:', {
-          message: message.substring(0, 200),
-          filename,
-          extensionId: 'opfgelmcmbiajamepnmloijbpoleiama',
-          timestamp: new Date().toISOString()
-        });
-
-        // Only suppress the error, don't stop propagation to allow navigation
-        event.preventDefault();
-        // Don't call stopImmediatePropagation() to allow navigation events
-        return false; // Don't prevent default actions like navigation
-      }
-    };
-
-    // Handle promise rejections for chrome runtime errors
-    const chromeRuntimeRejectionHandler = (event: PromiseRejectionEvent) => {
-      const reason = event.reason || '';
-      let message = '';
-
-      if (typeof reason === 'string') {
-        message = reason;
-      } else if (reason && typeof reason === 'object') {
-        message = reason.message || reason.toString() || '';
-      }
-
-      const chromeRuntimePatterns = [
-        'chrome.runtime.sendMessage',
-        'Error in invocation of runtime.sendMessage',
-        'runtime.sendMessage(optional string extensionId',
-        'must specify an Extension ID',
-        'called from a webpage must specify an Extension ID',
-        'opfgelmcmbiajamepnmloijbpoleiama',
-        'Cannot redefine property: ethereum'
-      ];
-
-      const isChromeRuntimeError = chromeRuntimePatterns.some(pattern =>
-        message.toLowerCase().includes(pattern.toLowerCase())
-      );
-
-      if (isChromeRuntimeError) {
-        console.debug('🔇 Chrome runtime promise rejection suppressed:', {
-          reason: message.substring(0, 200),
-          extensionId: 'opfgelmcmbiajamepnmloijbpoleiama',
-          timestamp: new Date().toISOString()
-        });
-
-        // Only suppress the error, don't stop propagation to allow navigation
-        event.preventDefault();
-        // Don't call stopImmediatePropagation() to allow navigation events
-        return false; // Don't prevent default actions like navigation
-      }
-    };
-
-    // Add Chrome runtime specific handlers with highest priority (capture phase, first)
-    window.addEventListener('error', chromeRuntimeErrorHandler, { capture: true, passive: false });
-    window.addEventListener('unhandledrejection', chromeRuntimeRejectionHandler, { capture: true, passive: false });
-
-    // Also override console.error temporarily to catch any console-level errors
-    const originalConsoleError = console.error;
-    console.error = (...args: any[]) => {
-      const message = args.join(' ');
-      const source = args.find(arg => typeof arg === 'string' && arg.includes('background-redux-new.js')) || '';
-      if (message.toLowerCase().includes('chrome.runtime.sendmessage') ||
-        message.toLowerCase().includes('opfgelmcmbiajamepnmloijbpoleiama') ||
-        message.toLowerCase().includes('cannot redefine property: ethereum') ||
-        source.includes('background-redux-new.js')) {
-        console.debug('🔇 Console error suppressed (chrome/runtime extension):', message.substring(0, 200));
-        return;
-      }
-      originalConsoleError.apply(console, args);
-    };
 
     const initializeServices = async () => {
       try {
@@ -280,12 +173,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
     initializeServices();
 
     return () => {
-      window.removeEventListener('error', immediateErrorSuppressor, true);
-      window.removeEventListener('unhandledrejection', immediateErrorSuppressor, true);
       cleanupExtensionErrorSuppression();
-      window.removeEventListener('error', chromeRuntimeErrorHandler, true);
-      window.removeEventListener('unhandledrejection', chromeRuntimeRejectionHandler, true);
-      console.error = originalConsoleError; // Restore original console.error
       memoryMonitor.stop();
       clearInterval(healthCheckInterval);
     };
@@ -344,16 +232,6 @@ function AppContent({ children }: { children: React.ReactNode }) {
 }
 
 export default function App({ Component, pageProps, router }: AppProps) {
-  // TEMPORARILY DISABLED: Service worker unregistration was causing continuous reloads
-  // useEffect(() => {
-  //   if (process.env.NODE_ENV === 'development' && 'serviceWorker' in navigator) {
-  //     navigator.serviceWorker.getRegistrations().then(registrations => {
-  //       registrations.forEach(registration => {
-  //         registration.unregister();
-  //       });
-  //     });
-  //   }
-  // }, []);
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => setMounted(true), []);

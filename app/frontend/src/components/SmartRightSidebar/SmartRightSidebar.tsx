@@ -1,20 +1,11 @@
-import React, { useState, useCallback } from 'react';
-import WalletDashboard from './WalletDashboard';
-import TransactionMiniFeed from './TransactionMiniFeed';
-import PortfolioModal from './PortfolioModal';
-import TrendingContentWidget from './TrendingContentWidget';
-import { SendTokenModal, ReceiveTokenModal, SwapTokenModal, StakeTokenModal } from '../WalletActions';
+import React, { useCallback, useState } from 'react';
 import { QuickAction, Transaction } from '../../types/wallet';
 import { useWalletData } from '../../hooks/useWalletData';
 import { useCryptoPayment } from '../../hooks/useCryptoPayment';
-import {
-  useWritePaymentRouterSendTokenPayment,
-  useWritePaymentRouterSendEthPayment
-} from '@/generated';
 import { useChainId } from 'wagmi';
 import { useToast } from '@/context/ToastContext';
 import { useRouter } from 'next/router';
-import { paymentRouterAddress } from '../../generated';
+import { paymentRouterAddress, useWritePaymentRouterSendEthPayment, useWritePaymentRouterSendTokenPayment } from '@/generated';
 import { dexService } from '@/services/dexService';
 
 interface SmartRightSidebarProps {
