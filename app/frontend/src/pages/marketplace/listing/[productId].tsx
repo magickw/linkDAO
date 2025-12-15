@@ -204,8 +204,8 @@ const ProductDetailPageRoute: React.FC = () => {
             // Enhance seller information by fetching full profile if needed
             let enhancedSeller = {
               id: productData.seller?.id || productData.sellerId || '',
-              name: productData.seller?.storeName || productData.seller?.displayName || productData.seller?.name || 'Unknown Seller',
-              avatar: productData.seller?.avatar || productData.seller?.profileImageUrl || productData.seller?.profileImageCdn || '',
+              name: productData.seller?.storeName || productData.seller?.name || 'Unknown Seller',
+              avatar: productData.seller?.profileImageCdn || productData.seller?.profileImageUrl || productData.seller?.avatar || '',
               verified: productData.seller?.verified || false,
               reputation: productData.seller?.reputation || productData.seller?.rating || 0,
               daoApproved: productData.seller?.daoApproved || false,
@@ -214,43 +214,46 @@ const ProductDetailPageRoute: React.FC = () => {
               responseTime: '< 24 hours' // Default value
             };
 
-            // If we have a seller ID but incomplete seller information, try to get the full profile
-            if (productData.sellerId && productData.sellerId !== 'unknown' && (!enhancedSeller.name || enhancedSeller.name === 'Unknown Seller' || enhancedSeller.avatar === '')) {
+            // Always try to fetch full seller profile for complete information
+            if (productData.sellerId && productData.sellerId !== 'unknown') {
               try {
                 const { sellerService } = await import('@/services/sellerService');
                 const sellerProfile = await sellerService.getSellerProfile(productData.sellerId);
                 
                 if (sellerProfile) {
+                  // Prioritize storeName from profile, fallback to existing data
+                  const storeName = sellerProfile.storeName || enhancedSeller.name;
+                  const avatarUrl = sellerProfile.profileImageCdn || sellerProfile.profileImageUrl || sellerProfile.avatar;
+                  
                   enhancedSeller = {
                     ...enhancedSeller,
-                    name: sellerProfile.storeName || enhancedSeller.name,
-                    avatar: sellerProfile.profileImageCdn || sellerProfile.profileImageUrl || enhancedSeller.avatar || 
-                      `https://api.dicebear.com/7.x/identicon/svg?seed=${productData.sellerId}&backgroundColor=b6e3f4`,
+                    name: storeName !== 'Unknown Seller' ? storeName : `Store ${productData.sellerId.substring(0, 8)}`,
+                    avatar: avatarUrl || `https://api.dicebear.com/7.x/identicon/svg?seed=${productData.sellerId}&backgroundColor=b6e3f4`,
                     verified: sellerProfile.isVerified || enhancedSeller.verified,
-                    reputation: sellerProfile.daoReputation?.governanceParticipation || enhancedSeller.reputation,
+                    reputation: sellerProfile.daoReputation?.governanceParticipation || sellerProfile.rating || enhancedSeller.reputation,
                     daoApproved: sellerProfile.daoApproved || enhancedSeller.daoApproved,
                     totalSales: sellerProfile.totalSales || enhancedSeller.totalSales,
                     memberSince: sellerProfile.joinedDate || sellerProfile.createdAt || enhancedSeller.memberSince
                   };
+                  
+                  console.log('Enhanced seller profile:', {
+                    sellerId: productData.sellerId,
+                    storeName: enhancedSeller.name,
+                    hasAvatar: !!enhancedSeller.avatar,
+                    avatarUrl: enhancedSeller.avatar
+                  });
                 }
               } catch (sellerError) {
                 console.warn('Failed to fetch enhanced seller profile:', sellerError);
-                
-                // Use fallback if we don't have name or avatar
-                if (!enhancedSeller.name || enhancedSeller.name === 'Unknown Seller') {
-                  enhancedSeller.name = `Seller ${productData.sellerId.substring(0, 6)}...`;
-                }
-                if (!enhancedSeller.avatar) {
-                  enhancedSeller.avatar = `https://api.dicebear.com/7.x/identicon/svg?seed=${productData.sellerId}&backgroundColor=b6e3f4`;
-                }
               }
-            } else if (!enhancedSeller.name || enhancedSeller.name === 'Unknown Seller') {
-              // Fallback for seller name
-              enhancedSeller.name = productData.sellerId ? `Seller ${productData.sellerId.substring(0, 6)}...` : 'Unknown Seller';
+            }
+            
+            // Final fallbacks if still missing data
+            if (!enhancedSeller.name || enhancedSeller.name === 'Unknown Seller') {
+              enhancedSeller.name = productData.sellerId ? `Store ${productData.sellerId.substring(0, 8)}` : 'Unknown Seller';
             }
             
             if (!enhancedSeller.avatar) {
-              // Use DiceBear avatar based on sellerId if available, otherwise default
               enhancedSeller.avatar = productData.sellerId ? 
                 `https://api.dicebear.com/7.x/identicon/svg?seed=${productData.sellerId}&backgroundColor=b6e3f4` : 
                 '/images/default-avatar.png';
@@ -289,6 +292,7 @@ const ProductDetailPageRoute: React.FC = () => {
                 average: productData.seller?.rating || 0,
                 count: productData.seller?.totalReviews || 0
               },
+              soldCount: productData.sales_count || productData.salesCount || productData.soldCount || 0,
               media: imageUrls.length > 0 ? imageUrls.map((url: string) => ({
                 type: 'image' as const,
                 url,

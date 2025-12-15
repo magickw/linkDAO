@@ -80,6 +80,7 @@ interface ProductDetailPageProps {
       count: number;
     };
     views?: number;
+    soldCount?: number;
     media: Array<{
       type: 'image' | 'video' | '3d' | 'ar';
       url: string;
@@ -255,6 +256,12 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                 <span className="ml-2 text-sm font-medium text-white">{product.reviews.average}</span>
                 <span className="mx-2 text-white/40">|</span>
                 <span className="text-sm text-white/70">{product.reviews.count} reviews</span>
+                {product.soldCount !== undefined && (
+                  <>
+                    <span className="mx-2 text-white/40">|</span>
+                    <span className="text-sm text-white/70">{product.soldCount} sold</span>
+                  </>
+                )}
                 {product.views !== undefined && (
                   <>
                     <span className="mx-2 text-white/40">|</span>
@@ -532,7 +539,13 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                     <img
                       src={product.seller.avatar}
                       alt={product.seller.name}
-                      className="w-12 h-12 rounded-full mr-3"
+                      className="w-12 h-12 rounded-full mr-3 object-cover"
+                      onError={(e) => {
+                        // Fallback to generated avatar if image fails to load
+                        const target = e.target as HTMLImageElement;
+                        target.onerror = null; // Prevent infinite loop
+                        target.src = `https://api.dicebear.com/7.x/identicon/svg?seed=${product.seller.id}&backgroundColor=b6e3f4`;
+                      }}
                     />
                     <div>
                       <div className="font-medium text-white">{product.seller.name}</div>

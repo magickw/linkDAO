@@ -10,8 +10,10 @@ import {
   ChevronDown,
   ChevronUp,
   Calculator,
-  MapPin
+  MapPin,
+  Repeat
 } from 'lucide-react';
+import { DimensionConverter } from '@/utils/dimensionConverter';
 
 // Shipping configuration interface
 export interface ShippingConfiguration {
@@ -39,11 +41,13 @@ export interface ShippingConfiguration {
   returnWindow?: number;
   packageDetails: {
     weight: number;
+    weightUnit: 'kg' | 'lbs';
     dimensions: {
       length: number;
       width: number;
       height: number;
     };
+    dimensionUnit: 'cm' | 'in';
   };
 }
 
@@ -101,11 +105,13 @@ const ShippingConfigurationForm: React.FC<ShippingConfigurationFormProps> = ({
     returnWindow: 30,
     packageDetails: {
       weight: 1,
+      weightUnit: 'kg',
       dimensions: {
         length: 10,
         width: 8,
         height: 4
-      }
+      },
+      dimensionUnit: 'cm'
     }
   };
 
@@ -121,11 +127,13 @@ const ShippingConfigurationForm: React.FC<ShippingConfigurationFormProps> = ({
     returnWindow: value.returnWindow ?? defaultConfig.returnWindow,
     packageDetails: {
       weight: value.packageDetails?.weight ?? defaultConfig.packageDetails.weight,
+      weightUnit: value.packageDetails?.weightUnit ?? defaultConfig.packageDetails.weightUnit,
       dimensions: {
         length: value.packageDetails?.dimensions?.length ?? defaultConfig.packageDetails.dimensions.length,
         width: value.packageDetails?.dimensions?.width ?? defaultConfig.packageDetails.dimensions.width,
         height: value.packageDetails?.dimensions?.height ?? defaultConfig.packageDetails.dimensions.height,
       },
+      dimensionUnit: value.packageDetails?.dimensionUnit ?? defaultConfig.packageDetails.dimensionUnit,
     },
   } : defaultConfig;
 
@@ -163,6 +171,44 @@ const ShippingConfigurationForm: React.FC<ShippingConfigurationFormProps> = ({
       : [...currentRegions, regionCode];
     
     updateShippingMethod('international', { regions: newRegions });
+  };
+
+  // Toggle unit system
+  const toggleWeightUnit = () => {
+    const newUnit = config.packageDetails.weightUnit === 'kg' ? 'lbs' : 'kg';
+    const newWeight = newUnit === 'kg' 
+      ? DimensionConverter.convertWeightToMetric(config.packageDetails.weight)
+      : DimensionConverter.convertWeightToImperial(config.packageDetails.weight);
+    
+    updateConfig({
+      packageDetails: {
+        ...config.packageDetails,
+        weight: parseFloat(DimensionConverter.formatNumber(newWeight, 2)),
+        weightUnit: newUnit
+      }
+    });
+  };
+
+  // Toggle dimension unit
+  const toggleDimensionUnit = () => {
+    const newUnit = config.packageDetails.dimensionUnit === 'cm' ? 'in' : 'cm';
+    const converter = newUnit === 'cm' 
+      ? DimensionConverter.convertDimensionsToMetric 
+      : DimensionConverter.convertDimensionsToImperial;
+    
+    const newDimensions = converter(config.packageDetails.dimensions);
+    
+    updateConfig({
+      packageDetails: {
+        ...config.packageDetails,
+        dimensions: {
+          length: parseFloat(DimensionConverter.formatNumber(newDimensions.length, 2)),
+          width: parseFloat(DimensionConverter.formatNumber(newDimensions.width, 2)),
+          height: parseFloat(DimensionConverter.formatNumber(newDimensions.height, 2))
+        },
+        dimensionUnit: newUnit
+      }
+    });
   };
 
   // Calculate total package dimensions (girth + length)
@@ -462,101 +508,141 @@ const ShippingConfigurationForm: React.FC<ShippingConfigurationFormProps> = ({
         </button>
 
         {expandedSections.package && (
-          <div className="px-6 pb-6 space-y-4">
+          <div className="px-6 pb-6 space-y-6">
+            {/* Weight Section */}
             <div>
-              <label className="block text-sm text-white/70 mb-1">Weight (lbs)</label>
-              <input
-                type="number"
-                step="0.1"
-                min="0.1"
-                max="150"
-                value={config.packageDetails.weight}
-                onChange={(e) => updateConfig({
-                  packageDetails: {
-                    ...config.packageDetails,
-                    weight: parseFloat(e.target.value) || 1
-                  }
-                })}
-                className={`w-full px-3 py-2 bg-white/10 border ${errors.weight ? 'border-red-500' : 'border-white/20'} rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                placeholder="1.0"
-              />
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm text-white/70">Weight</label>
+                <button
+                  type="button"
+                  onClick={toggleWeightUnit}
+                  className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300"
+                >
+                  <Repeat className="w-3 h-3" />
+                  Switch to {config.packageDetails.weightUnit === 'kg' ? 'lbs' : 'kg'}
+                </button>
+              </div>
+              <div className="relative">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={config.packageDetails.weight}
+                  onChange={(e) => updateConfig({
+                    packageDetails: {
+                      ...config.packageDetails,
+                      weight: parseFloat(e.target.value) || 0.01
+                    }
+                  })}
+                  className={`w-full px-3 py-2 bg-white/10 border ${errors.weight ? 'border-red-500' : 'border-white/20'} rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                  placeholder="1.00"
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <span className="text-white/60 text-sm">{config.packageDetails.weightUnit}</span>
+                </div>
+              </div>
               {errors.weight && <p className="text-red-400 text-xs mt-1">{errors.weight}</p>}
             </div>
 
+            {/* Dimensions Section */}
             <div>
-              <label className="block text-sm text-white/70 mb-2">Dimensions (inches)</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm text-white/70">Dimensions</label>
+                <button
+                  type="button"
+                  onClick={toggleDimensionUnit}
+                  className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300"
+                >
+                  <Repeat className="w-3 h-3" />
+                  Switch to {config.packageDetails.dimensionUnit === 'cm' ? 'inches' : 'cm'}
+                </button>
+              </div>
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs text-white/50 mb-1">Length</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0.1"
-                    max="108"
-                    value={config.packageDetails.dimensions.length}
-                    onChange={(e) => updateConfig({
-                      packageDetails: {
-                        ...config.packageDetails,
-                        dimensions: {
-                          ...config.packageDetails.dimensions,
-                          length: parseFloat(e.target.value) || 1
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      value={config.packageDetails.dimensions.length}
+                      onChange={(e) => updateConfig({
+                        packageDetails: {
+                          ...config.packageDetails,
+                          dimensions: {
+                            ...config.packageDetails.dimensions,
+                            length: parseFloat(e.target.value) || 0.01
+                          }
                         }
-                      }
-                    })}
-                    className={`w-full px-3 py-2 bg-white/10 border ${errors.length ? 'border-red-500' : 'border-white/20'} rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                    placeholder="10"
-                  />
+                      })}
+                      className={`w-full px-3 py-2 bg-white/10 border ${errors.length ? 'border-red-500' : 'border-white/20'} rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                      placeholder="10"
+                    />
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <span className="text-white/60 text-sm">{config.packageDetails.dimensionUnit}</span>
+                    </div>
+                  </div>
                   {errors.length && <p className="text-red-400 text-xs mt-1">{errors.length}</p>}
                 </div>
                 <div>
                   <label className="block text-xs text-white/50 mb-1">Width</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0.1"
-                    max="108"
-                    value={config.packageDetails.dimensions.width}
-                    onChange={(e) => updateConfig({
-                      packageDetails: {
-                        ...config.packageDetails,
-                        dimensions: {
-                          ...config.packageDetails.dimensions,
-                          width: parseFloat(e.target.value) || 1
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      value={config.packageDetails.dimensions.width}
+                      onChange={(e) => updateConfig({
+                        packageDetails: {
+                          ...config.packageDetails,
+                          dimensions: {
+                            ...config.packageDetails.dimensions,
+                            width: parseFloat(e.target.value) || 0.01
+                          }
                         }
-                      }
-                    })}
-                    className={`w-full px-3 py-2 bg-white/10 border ${errors.width ? 'border-red-500' : 'border-white/20'} rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                    placeholder="8"
-                  />
+                      })}
+                      className={`w-full px-3 py-2 bg-white/10 border ${errors.width ? 'border-red-500' : 'border-white/20'} rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                      placeholder="8"
+                    />
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <span className="text-white/60 text-sm">{config.packageDetails.dimensionUnit}</span>
+                    </div>
+                  </div>
                   {errors.width && <p className="text-red-400 text-xs mt-1">{errors.width}</p>}
                 </div>
                 <div>
                   <label className="block text-xs text-white/50 mb-1">Height</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0.1"
-                    max="108"
-                    value={config.packageDetails.dimensions.height}
-                    onChange={(e) => updateConfig({
-                      packageDetails: {
-                        ...config.packageDetails,
-                        dimensions: {
-                          ...config.packageDetails.dimensions,
-                          height: parseFloat(e.target.value) || 1
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      value={config.packageDetails.dimensions.height}
+                      onChange={(e) => updateConfig({
+                        packageDetails: {
+                          ...config.packageDetails,
+                          dimensions: {
+                            ...config.packageDetails.dimensions,
+                            height: parseFloat(e.target.value) || 0.01
+                          }
                         }
-                      }
-                    })}
-                    className={`w-full px-3 py-2 bg-white/10 border ${errors.height ? 'border-red-500' : 'border-white/20'} rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                    placeholder="4"
-                  />
+                      })}
+                      className={`w-full px-3 py-2 bg-white/10 border ${errors.height ? 'border-red-500' : 'border-white/20'} rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                      placeholder="4"
+                    />
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <span className="text-white/60 text-sm">{config.packageDetails.dimensionUnit}</span>
+                    </div>
+                  </div>
                   {errors.height && <p className="text-red-400 text-xs mt-1">{errors.height}</p>}
                 </div>
               </div>
               <div className="mt-3 p-3 bg-white/5 rounded-lg">
                 <div className="flex items-center gap-2 text-sm text-white/60">
                   <Calculator className="w-4 h-4" />
-                  <span>Total dimensions (length + girth): {calculateTotalDimensions().toFixed(1)} inches</span>
+                  <span>
+                    Total dimensions (length + girth): {DimensionConverter.formatNumber(calculateTotalDimensions(), 2)} {config.packageDetails.dimensionUnit}
+                  </span>
                 </div>
               </div>
             </div>

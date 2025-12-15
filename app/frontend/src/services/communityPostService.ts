@@ -373,11 +373,21 @@ export class CommunityPostService {
   static async createComment(data: CreateCommentInput): Promise<Comment> {
     try {
       let authHeaders = enhancedAuthService.getAuthHeaders();
+      const hasAuthToken = authHeaders['Authorization'] && authHeaders['Authorization'] !== 'Bearer null';
+
+      // Debug logging
+      console.log('Creating comment:', {
+        postId: data.postId,
+        hasAuthToken,
+        tokenPreview: hasAuthToken ? authHeaders['Authorization']?.substring(0, 20) + '...' : 'none',
+        isAuthenticated: enhancedAuthService.isAuthenticated()
+      });
 
       // Add development token if needed
       if (!authHeaders['Authorization'] && ENV_CONFIG.IS_DEVELOPMENT) {
         const devToken = `dev_session_${Date.now()}_0xee034b53d4ccb101b2a4faec27708be507197350_${Date.now()}`;
         authHeaders['Authorization'] = `Bearer ${devToken}`;
+        console.log('Using development token');
       }
 
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${data.postId}/comments`, {
@@ -395,8 +405,27 @@ export class CommunityPostService {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || `Failed to create comment: ${response.statusText}`);
+        const error = await response.json().catch(() => ({}));
+        console.error('Comment creation failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error,
+          hasAuthToken
+        });
+
+        // Provide helpful error messages
+        if (response.status === 401) {
+          const errorCode = error.error?.code || error.code;
+          if (errorCode === 'MISSING_TOKEN') {
+            throw new Error('Please sign in to comment on posts. Click the wallet icon in the header to connect and authenticate.');
+          } else if (errorCode === 'INVALID_TOKEN') {
+            throw new Error('Your session has expired. Please refresh the page and sign in again to comment.');
+          } else {
+            throw new Error('Authentication required. Please sign in to comment on posts.');
+          }
+        }
+
+        throw new Error(error.error || error.message || `Failed to create comment: ${response.statusText}`);
       }
 
       const result = await response.json();

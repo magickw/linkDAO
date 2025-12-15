@@ -31,6 +31,24 @@ interface Conversation {
   isOnline: boolean;
 }
 
+function getAvatarUrl(profileCid: string | undefined): string | undefined {
+  if (!profileCid) return undefined;
+
+  // Check if it's a valid IPFS CID
+  if (profileCid.startsWith('Qm') || profileCid.startsWith('bafy')) {
+    return `https://ipfs.io/ipfs/${profileCid}`;
+  }
+
+  // Check if it's already a full URL
+  try {
+    new URL(profileCid);
+    return profileCid;
+  } catch {
+    // Not a valid URL, return undefined
+    return undefined;
+  }
+}
+
 const MessagesPage: React.FC = () => {
   const router = useRouter();
   const { to } = router.query;
@@ -79,10 +97,12 @@ const MessagesPage: React.FC = () => {
                 const userResponse = await fetch(`/api/users/${otherParticipant}`);
                 if (userResponse.ok) {
                   const userData = await userResponse.json();
-                  console.log('User data:', userData);
+                  console.log('User data for ' + otherParticipant + ':', userData.data);
                   participantName = userData.data?.displayName || userData.data?.storeName || formatAddress(otherParticipant);
-                  participantAvatar = userData.data?.profileImageUrl || '/images/default-avatar.png';
-                  console.log('Participant avatar:', participantAvatar);
+                  const rawAvatarUrl = userData.data?.avatarCid || userData.data?.profileImageUrl;
+                  participantAvatar = getAvatarUrl(rawAvatarUrl) || '/images/default-avatar.png';
+                  console.log('Raw avatar URL for ' + otherParticipant + ':', rawAvatarUrl);
+                  console.log('Resolved avatar for ' + otherParticipant + ':', participantAvatar);
                 } else {
                   participantName = formatAddress(otherParticipant);
                 }

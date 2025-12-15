@@ -321,13 +321,30 @@ const CreateListingPage: React.FC = () => {
     if (!formData.shipping.packageDetails) {
       errors.packageDetails = 'Package details are required';
     } else {
-      if (formData.shipping.packageDetails.weight <= 0 || formData.shipping.packageDetails.weight > 150) {
-        errors.weight = 'Package weight must be between 0 and 150 lbs';
+      // Validate weight based on unit
+      const weight = formData.shipping.packageDetails.weight;
+      if (weight <= 0) {
+        errors.weight = 'Package weight must be greater than 0';
+      } else if (formData.shipping.packageDetails.weightUnit === 'kg' && weight > 100) {
+        errors.weight = 'Package weight must be less than 100 kg';
+      } else if (formData.shipping.packageDetails.weightUnit === 'lbs' && weight > 220) {
+        errors.weight = 'Package weight must be less than 220 lbs';
       }
 
+      // Validate dimensions based on unit
       const { length, width, height } = formData.shipping.packageDetails.dimensions;
-      if (length <= 0 || length > 108 || width <= 0 || width > 108 || height <= 0 || height > 108) {
-        errors.dimensions = 'Package dimensions must be between 0 and 108 inches';
+      const unit = formData.shipping.packageDetails.dimensionUnit;
+      
+      if (length <= 0 || width <= 0 || height <= 0) {
+        errors.dimensions = 'All dimensions must be greater than 0';
+      } else if (unit === 'cm') {
+        if (length > 150 || width > 150 || height > 150) {
+          errors.dimensions = 'Package dimensions must be less than 150 cm';
+        }
+      } else if (unit === 'in') {
+        if (length > 60 || width > 60 || height > 60) {
+          errors.dimensions = 'Package dimensions must be less than 60 inches';
+        }
       }
     }
 
