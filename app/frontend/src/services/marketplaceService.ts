@@ -528,11 +528,7 @@ export class UnifiedMarketplaceService {
             daoApproved: false,
             isOnline: true
           },
-          category: listing.category || {
-            id: listing.categoryId || 'unknown',
-            name: listing.categoryId || 'General',
-            slug: listing.categoryId || 'general'
-          },
+          category: listing.category || this.createCategoryObject(listing.categoryId),
           trust: listing.trust || {
             verified: true,
             escrowProtected: true,
@@ -559,6 +555,36 @@ export class UnifiedMarketplaceService {
   }
 
   // Create a fallback product when API calls fail
+  private createCategoryObject(categoryId?: string): CategoryInfo {
+    if (!categoryId) {
+      return {
+        id: 'unknown',
+        name: 'General',
+        slug: 'general'
+      };
+    }
+
+    // Map common category IDs to readable names
+    const categoryMap: Record<string, string> = {
+      '71ca3e53-1e18-4482-b214-ef7f228afd87': 'Digital Assets',
+      '1710bad2-ebd0-4a0d-b707-4b729bfa12eb': 'Electronics',
+      '2cb41c1b-7318-4bd1-8352-948f6ef64b00': 'Fashion',
+      '5d517645-201a-4bb1-bf5c-8f92d0c30405': 'Home & Garden',
+      '8b31a8cc-d37e-4b65-b545-98b1f71a7350': 'Books & Media',
+      '042019d5-5793-4a55-a99c-edfe60fa2b32': 'Sports & Outdoors',
+    };
+
+    const name = categoryMap[categoryId] || 
+                 (categoryId.includes('-') ? 'Category' : categoryId) || 
+                 'General';
+
+    return {
+      id: categoryId,
+      name: name,
+      slug: name.toLowerCase().replace(/\s+/g, '-')
+    };
+  }
+
   private createFallbackProduct(id: string): Product {
     return {
       id: id,

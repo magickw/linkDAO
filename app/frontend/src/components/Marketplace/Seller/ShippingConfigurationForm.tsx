@@ -109,7 +109,25 @@ const ShippingConfigurationForm: React.FC<ShippingConfigurationFormProps> = ({
     }
   };
 
-  const config = value || defaultConfig;
+  const config = value ? {
+    methods: {
+      standard: value.methods?.standard || defaultConfig.methods.standard,
+      express: value.methods?.express || defaultConfig.methods.express,
+      international: value.methods?.international || defaultConfig.methods.international,
+    },
+    processingTime: value.processingTime ?? defaultConfig.processingTime,
+    freeShippingThreshold: value.freeShippingThreshold ?? defaultConfig.freeShippingThreshold,
+    returnsAccepted: value.returnsAccepted ?? defaultConfig.returnsAccepted,
+    returnWindow: value.returnWindow ?? defaultConfig.returnWindow,
+    packageDetails: {
+      weight: value.packageDetails?.weight ?? defaultConfig.packageDetails.weight,
+      dimensions: {
+        length: value.packageDetails?.dimensions?.length ?? defaultConfig.packageDetails.dimensions.length,
+        width: value.packageDetails?.dimensions?.width ?? defaultConfig.packageDetails.dimensions.width,
+        height: value.packageDetails?.dimensions?.height ?? defaultConfig.packageDetails.dimensions.height,
+      },
+    },
+  } : defaultConfig;
 
   // Update configuration
   const updateConfig = (updates: Partial<ShippingConfiguration>) => {

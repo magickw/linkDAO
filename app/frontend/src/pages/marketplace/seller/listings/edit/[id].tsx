@@ -125,7 +125,8 @@ const EditListingPage: React.FC = () => {
     quantity: 1,
     unlimitedQuantity: false,
     escrowEnabled: true,
-    tokenAddress: ''
+    tokenAddress: '',
+    shipping: undefined
   });
 
   // Image management
@@ -169,21 +170,52 @@ const EditListingPage: React.FC = () => {
         const transformedData: EnhancedFormData = {
           title: listing.title,
           description: listing.description,
-          category: listing.category,
+          category: listing.categoryId || (typeof listing.category === 'string' ? listing.category : listing.category?.id || ''),
           tags: listing.tags || [],
           seoTitle: '',
           seoDescription: '',
-          itemType: 'DIGITAL', // Default value since SellerListing doesn't have this field
-          condition: listing.condition,
+          itemType: listing.metadata?.itemType || 'DIGITAL',
+          condition: listing.metadata?.condition || listing.condition || 'new',
           price: listing.price.toString(),
           currency: (listing.currency as 'USDC' | 'USDT' | 'ETH' | 'USD') || 'USD',
           listingType: 'FIXED_PRICE', // Default value since SellerListing doesn't have this field
           duration: 86400, // Default value since SellerListing doesn't have this field
           royalty: 0, // Default value since SellerListing doesn't have this field
-          quantity: listing.quantity,
-          unlimitedQuantity: listing.quantity >= 999999,
-          escrowEnabled: listing.escrowEnabled,
-          shipping: listing.shipping, // Load existing shipping configuration
+          quantity: listing.inventory || listing.quantity || 1,
+          unlimitedQuantity: (listing.inventory || listing.quantity || 1) >= 999999,
+          escrowEnabled: listing.metadata?.escrowEnabled ?? listing.escrowEnabled ?? true,
+          shipping: listing.shipping || {
+            methods: {
+              standard: {
+                enabled: false,
+                cost: 0,
+                estimatedDays: '3-5 business days'
+              },
+              express: {
+                enabled: false,
+                cost: 0,
+                estimatedDays: '1-2 business days'
+              },
+              international: {
+                enabled: false,
+                cost: 0,
+                estimatedDays: '10-15 business days',
+                regions: []
+              }
+            },
+            processingTime: 1,
+            freeShippingThreshold: undefined,
+            returnsAccepted: false,
+            returnWindow: 30,
+            packageDetails: {
+              weight: 0,
+              dimensions: {
+                length: 0,
+                width: 0,
+                height: 0
+              }
+            }
+          }, // Load existing shipping configuration or provide defaults
           tokenAddress: '' // Default value since SellerListing doesn't have this field
         };        
         setFormData(transformedData);

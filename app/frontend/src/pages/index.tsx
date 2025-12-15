@@ -213,8 +213,8 @@ export default function Home() {
 
   // Subscribe to feed updates when connected with proper cleanup
   useEffect(() => {
-    // Only subscribe if mounted, connected, and not currently navigating
-    if (isMounted.current && wsConnected && address && !wsSubscribed && shouldConnectWebSocket) {
+    // Only subscribe if connected and WebSocket should be active
+    if (wsConnected && address && !wsSubscribed && shouldConnectWebSocket) {
       // Subscribe to global feed updates
       subscribe('feed', 'all', {
         eventTypes: ['feed_update', 'new_post']
@@ -223,16 +223,13 @@ export default function Home() {
 
       // Listen for new posts with stable callback
       const handleFeedUpdate = (data: any) => {
-        if (!isMounted.current) return;
         console.log('New post received:', data);
         // Only refresh if it's not the user's own post (to prevent double refresh)
         if (data.author?.toLowerCase() !== address.toLowerCase()) {
           // Defer the refresh to prevent blocking navigation
           requestAnimationFrame(() => {
-            if (isMounted.current) {
-              debouncedRefresh();
-              addToast('New post added to feed', 'success');
-            }
+            debouncedRefresh();
+            addToast('New post added to feed', 'success');
           });
         }
       };
@@ -244,36 +241,23 @@ export default function Home() {
         setWsSubscribed(false);
       };
     }
-  }, [wsConnected, address, wsSubscribed, subscribe, on, off, addToast, debouncedRefresh, isMounted, shouldConnectWebSocket]);
+  }, [wsConnected, address, wsSubscribed, subscribe, on, off, addToast, debouncedRefresh, shouldConnectWebSocket]);
 
   // Add navigation event listeners to properly cleanup on route changes
   useEffect(() => {
     const handleRouteChangeStart = (url: string) => {
       console.log('[HomePage] Route change start:', url);
-      // Don't immediately mark as unmounted - let navigation complete first
-      // Just disable WebSocket operations to prevent interference
+      // Only disable WebSocket operations - don't touch isMounted
       setShouldConnectWebSocket(false);
     };
 
     const handleRouteChangeComplete = (url: string) => {
       console.log('[HomePage] Route change complete:', url);
       
-      // Only mark as unmounted and cleanup if we've navigated away from home
-      if (router.pathname !== '/') {
-        isMounted.current = false;
-        setWsSubscribed(false);
-        setIsConnectionStabilized(false);
-        
-        // Cleanup WebSocket operations
-        try {
-          off('feed_update');
-        } catch (error) {
-          // Ignore cleanup errors
-        }
-      } else {
-        // We're still on home page, ensure everything is properly set up
+      // Re-enable WebSocket if we're back on home page
+      if (router.pathname === '/') {
         setTimeout(() => {
-          if (isConnected && isMounted.current) {
+          if (isConnected) {
             setIsConnectionStabilized(true);
             setShouldConnectWebSocket(true);
           }
@@ -283,13 +267,7 @@ export default function Home() {
 
     const handleRouteChangeError = (err: any, url: string) => {
       console.error('[HomePage] Route change error for', url, ':', err);
-      // Only cleanup on error if we're not on home page
-      if (router.pathname !== '/') {
-        isMounted.current = false;
-        setShouldConnectWebSocket(false);
-        setWsSubscribed(false);
-        setIsConnectionStabilized(false);
-      }
+      // Don't change isMounted on error either
     };
 
     // Listen for route changes to properly cleanup
@@ -304,48 +282,75 @@ export default function Home() {
     };
   }, [router.pathname, router.events, isConnected]);
 
-  // Handle post creation with useCallback and mount check
-  const handlePostSubmit = useCallback(async (postData: CreatePostInput) => {
-    if (!isConnected || !address) {
-      addToast('Please connect your wallet to post', 'error');
-      return;
-    }
+  // Handle post creation with useCallback
 
-    try {
-      let newPost;
-      // If no communityId is provided, create a quick post
-      if (!postData.communityId) {
-        // Import QuickPostService dynamically to avoid circular dependencies
-        const { QuickPostService } = await import('@/services/quickPostService');
-        newPost = await QuickPostService.createQuickPost({ ...postData, author: address.toLowerCase() });
-      } else {
-        // Otherwise, create a regular post
-        newPost = await createPost({ ...postData, author: address.toLowerCase() });
+    const handlePostSubmit = useCallback(async (postData: CreatePostInput) => {
+
+      if (!isConnected || !address) {
+
+        addToast('Please connect your wallet to post', 'error');
+
+        return;
+
       }
 
-      // Check if component is still mounted before updating state
-      if (!isMounted.current) return;
+  
 
-      // Defer state updates to prevent blocking navigation
-      requestAnimationFrame(() => {
-        if (isMounted.current) {
+      try {
+
+        let newPost;
+
+        // If no communityId is provided, create a quick post
+
+        if (!postData.communityId) {
+
+          // Import QuickPostService dynamically to avoid circular dependencies
+
+          const { QuickPostService } = await import('@/services/quickPostService');
+
+          newPost = await QuickPostService.createQuickPost({ ...postData, author: address.toLowerCase() });
+
+        } else {
+
+          // Otherwise, create a regular post
+
+          newPost = await createPost({ ...postData, author: address.toLowerCase() });
+
+        }
+
+  
+
+        // Defer state updates to prevent blocking navigation
+
+        requestAnimationFrame(() => {
+
           addToast('Post created successfully!', 'success');
+
           closeModal('postCreation');
+
           // Set hasNewPosts to trigger the refresh banner (but don't double refresh)
+
           setHasNewPosts(true);
-        }
-      });
-    } catch (error) {
-      console.error('Error creating post:', error);
-      if (!isMounted.current) return;
-      // Defer error handling to prevent blocking navigation
-      requestAnimationFrame(() => {
-        if (isMounted.current) {
+
+        });
+
+      } catch (error) {
+
+        console.error('Error creating post:', error);
+
+        
+
+        // Defer error handling to prevent blocking navigation
+
+        requestAnimationFrame(() => {
+
           addToast('Failed to create post', 'error');
-        }
-      });
-    }
-  }, [isConnected, address, createPost, addToast, closeModal]);
+
+        });
+
+      }
+
+    }, [isConnected, address, createPost, addToast, closeModal]);
 
   // If not connected, show enhanced landing page
   if (!isConnected) {

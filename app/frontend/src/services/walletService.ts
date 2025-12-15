@@ -165,13 +165,21 @@ const getTokensForChain = (chainId: number) => {
         }] : []),
       ];
     case 11155111: // Sepolia Testnet
+      const ldaoSepoliaAddress = process.env.NEXT_PUBLIC_LDAO_TOKEN_ADDRESS as `0x${string}` | undefined;
       return [
         {
           symbol: 'USDC',
           name: 'USD Coin (Sepolia)',
           address: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238' as Address,
           decimals: 6
-        }
+        },
+        // LDAO Token
+        ...(ldaoSepoliaAddress ? [{
+          symbol: 'LDAO',
+          name: 'LinkDAO Token',
+          address: ldaoSepoliaAddress as Address,
+          decimals: 18
+        }] : []),
       ];
     case 137: // Polygon
       return [
@@ -576,24 +584,26 @@ export class WalletService {
 
           const balance = balanceResult as bigint;
 
-          if (balance && balance > 0n) {
-            const balanceFormatted = this.formatTokenBalance(balance, token.decimals);
-            const price = await this.getTokenPrice(token.symbol);
-            const valueUSD = parseFloat(balanceFormatted) * price;
+          // Always include the token in the list, even if balance is 0 or very large
+          const balanceFormatted = this.formatTokenBalance(balance, token.decimals);
+          const price = await this.getTokenPrice(token.symbol);
+          
+          // Calculate actual value from raw balance, not formatted string
+          const actualBalance = Number(balance) / Number(BigInt(10 ** token.decimals));
+          const valueUSD = actualBalance * price;
 
-            return {
-              symbol: token.symbol,
-              name: token.name,
-              address: token.address,
-              balance: balance.toString(),
-              balanceFormatted,
-              decimals: token.decimals,
-              valueUSD,
-              change24h: await this.getTokenChange24h(token.symbol),
-              priceUSD: price,
-              isNative: false
-            } as TokenBalance;
-          }
+          return {
+            symbol: token.symbol,
+            name: token.name,
+            address: token.address,
+            balance: balance.toString(),
+            balanceFormatted,
+            decimals: token.decimals,
+            valueUSD,
+            change24h: await this.getTokenChange24h(token.symbol),
+            priceUSD: price,
+            isNative: false
+          } as TokenBalance;
         } catch (tokenError) {
           console.warn(`Failed to fetch balance for ${token.symbol}:`, tokenError);
           // Don't throw error, just return null to filter out later
@@ -609,7 +619,13 @@ export class WalletService {
       // Add valid token balances to the result
       balances.push(...validTokenBalances);
 
-      return balances.sort((a, b) => b.valueUSD - a.valueUSD);
+      // Sort by valueUSD, but ensure all tokens are included
+      return balances.sort((a, b) => {
+        // Handle NaN or infinite values
+        const aValue = isNaN(a.valueUSD) ? 0 : a.valueUSD;
+        const bValue = isNaN(b.valueUSD) ? 0 : b.valueUSD;
+        return bValue - aValue;
+      });
     } catch (error) {
       console.error('Error fetching token balances:', error);
       return [];
@@ -871,16 +887,57 @@ export class WalletService {
     const wholePart = balance / divisor;
     const fractionalPart = balance % divisor;
     
+    // Convert to string for easier manipulation
+    const wholePartStr = wholePart.toString();
+    
+    // Format very large numbers with suffixes
+    if (wholePartStr.length > 12) { // Trillions or more
+      const trillion = wholePart / BigInt(10 ** 12);
+      const remainder = wholePart % BigInt(10 ** 12);
+      const trillionStr = trillion.toString();
+      
+      // Calculate the remainder as a decimal with up to 3 digits
+      const remainderDecimal = Number(remainder) / (10 ** 12);
+      const formattedRemainder = remainderDecimal.toFixed(3).replace(/\.?0+$/, '');
+      
+      return formattedRemainder ? 
+        `${trillionStr}.${formattedRemainder}T` : 
+        `${trillionStr}T`;
+    } else if (wholePartStr.length > 9) { // Billions
+      const billion = wholePart / BigInt(10 ** 9);
+      const remainder = wholePart % BigInt(10 ** 9);
+      const billionStr = billion.toString();
+      
+      const remainderDecimal = Number(remainder) / (10 ** 9);
+      const formattedRemainder = remainderDecimal.toFixed(3).replace(/\.?0+$/, '');
+      
+      return formattedRemainder ? 
+        `${billionStr}.${formattedRemainder}B` : 
+        `${billionStr}B`;
+    } else if (wholePartStr.length > 6) { // Millions
+      const million = wholePart / BigInt(10 ** 6);
+      const remainder = wholePart % BigInt(10 ** 6);
+      const millionStr = million.toString();
+      
+      const remainderDecimal = Number(remainder) / (10 ** 6);
+      const formattedRemainder = remainderDecimal.toFixed(3).replace(/\.?0+$/, '');
+      
+      return formattedRemainder ? 
+        `${millionStr}.${formattedRemainder}M` : 
+        `${millionStr}M`;
+    }
+    
+    // For smaller numbers, show the full value with appropriate decimal places
     if (fractionalPart === 0n) {
-      return wholePart.toString();
+      return wholePartStr;
     }
     
     const fractionalStr = fractionalPart.toString().padStart(decimals, '0');
     const trimmedFractional = fractionalStr.replace(/0+$/, '');
     
     return trimmedFractional ? 
-      `${wholePart}.${trimmedFractional}` : 
-      wholePart.toString();
+      `${wholePartStr}.${trimmedFractional}` : 
+      wholePartStr;
   }
 
   /**

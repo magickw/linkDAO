@@ -198,7 +198,7 @@ const nextConfig = {
         permanent: true,
       },
       {
-        source: '/marketplace/:path((?!seller/store/).*)+',
+        source: '/marketplace/:path((?!seller/store/|listing/).*)+',
         destination: '/marketplace',
         permanent: false,
       },

@@ -23,6 +23,7 @@ const ProductDetailPageRoute: React.FC = () => {
   useEffect(() => {
     const fetchProduct = async () => {
       if (productId && typeof productId === 'string') {
+        console.log('[ProductDetailPage] Fetching product for ID:', productId);
         try {
           setLoading(true);
           setError(null);
@@ -30,9 +31,11 @@ const ProductDetailPageRoute: React.FC = () => {
           // First try to fetch from marketplace service
           let productData = null;
           try {
+            console.log('[ProductDetailPage] Calling getListingByIdWithRetry...');
             productData = await marketplaceService.getListingByIdWithRetry(productId);
+            console.log('[ProductDetailPage] Got product data:', productData);
           } catch (serviceError) {
-            console.warn('Marketplace service unavailable, trying mock API:', serviceError);
+            console.error('[ProductDetailPage] Marketplace service error:', serviceError);
           }
 
           if (productData) {
@@ -110,34 +113,28 @@ const ProductDetailPageRoute: React.FC = () => {
             const rawInventory = productData.inventory ?? productData.quantity ?? 0;
             const inventory = typeof rawInventory === 'string' ? parseInt(rawInventory, 10) : Number(rawInventory);
 
-            // Determine category name - try to get from API, fallback to ID if it's not a UUID
+            // Determine category name - use category object from API or create a readable name
             let categoryName = 'General';
-            if (productData.category?.name) {
+            if (productData.category?.name && productData.category.name !== productData.category.id) {
+              // If the category has a proper name different from ID, use it
               categoryName = productData.category.name;
             } else if (typeof productData.categoryId === 'string') {
-              // Check if the category ID is a UUID (contains hyphens) - if so, try to fetch category name
-              if (productData.categoryId.includes('-')) {
-                try {
-                  // Try to fetch the category name from API
-                  const categoryResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/marketplace/listings/categories/${productData.categoryId}`);
-                  if (categoryResponse.ok) {
-                    const categoryResult = await categoryResponse.json();
-                    if (categoryResult.success && categoryResult.data?.name) {
-                      categoryName = categoryResult.data.name;
-                    } else {
-                      categoryName = productData.categoryId; // fallback to ID if API doesn't return name
-                    }
-                  } else {
-                    categoryName = productData.categoryId; // fallback to ID if API fails
-                  }
-                } catch (categoryError) {
-                  console.warn('Failed to fetch category name, using ID:', categoryError);
-                  categoryName = productData.categoryId; // fallback to ID
-                }
-              } else {
-                // If it's not a UUID, it might already be a name
-                categoryName = productData.categoryId;
-              }
+              // Create a readable category name from the ID or use a default mapping
+              const categoryId = productData.categoryId;
+              
+              // Map common category IDs to readable names
+              const categoryMap: Record<string, string> = {
+                '71ca3e53-1e18-4482-b214-ef7f228afd87': 'Digital Assets',
+                '1710bad2-ebd0-4a0d-b707-4b729bfa12eb': 'Electronics',
+                '2cb41c1b-7318-4bd1-8352-948f6ef64b00': 'Fashion',
+                '5d517645-201a-4bb1-bf5c-8f92d0c30405': 'Home & Garden',
+                '8b31a8cc-d37e-4b65-b545-98b1f71a7350': 'Books & Media',
+                '042019d5-5793-4a55-a99c-edfe60fa2b32': 'Sports & Outdoors',
+              };
+              
+              categoryName = categoryMap[categoryId] || 
+                           (categoryId.includes('-') ? 'Category' : categoryId) || 
+                           'General';
             }
 
             console.log('ProductDetail Debug:', {
