@@ -14,6 +14,7 @@ import { getDisplayName, getUserAddress } from '../../utils/userDisplay';
 import DOMPurify from 'dompurify';
 import VideoEmbed from '../VideoEmbed';
 import { extractVideoUrls, VideoInfo } from '../../utils/videoUtils';
+import { communityWeb3Service } from '../../services/communityWeb3Service';
 
 interface EnhancedPostCardProps {
   post: any;
@@ -251,6 +252,20 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
 
   const handleTip = async (amount?: string, token?: string, message?: string) => {
     try {
+      if (!amount || parseFloat(amount) <= 0) {
+        safeAddToast('Please enter a valid tip amount', 'error');
+        return;
+      }
+
+      // Use real blockchain tipping functionality
+      const txHash = await communityWeb3Service.tipCommunityPost({
+        postId: post.id,
+        recipientAddress: post.author,
+        amount: amount,
+        token: token || 'LDAO',
+        message: message || ''
+      });
+
       if (onTip) {
         // Let the parent component handle the success message
         await onTip(post.id, amount, token, message);
@@ -270,12 +285,12 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
         }
       } else {
         // Only show success message if there's no parent handler
-        safeAddToast('Tip sent successfully!', 'success');
+        safeAddToast(`Successfully tipped ${amount} ${token || 'LDAO'}! Transaction: ${txHash.substring(0, 10)}...`, 'success');
       }
       setShowTipModal(false);
-    } catch (error) {
+    } catch (error: any) {
       // Only show error message here
-      safeAddToast('Failed to send tip', 'error');
+      safeAddToast(`Failed to send tip: ${error.message || 'Please try again.'}`, 'error');
     }
   };
 

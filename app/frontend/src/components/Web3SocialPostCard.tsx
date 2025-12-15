@@ -16,6 +16,7 @@ import PostModal from '@/components/PostModal';
 import { CommunityPostService } from '@/services/communityPostService';
 import { ldaoTokenService } from '@/services/web3/ldaoTokenService';
 import { tokenReactionService } from '@/services/tokenReactionService';
+import { communityWeb3Service } from '@/services/communityWeb3Service';
 import { generateAvatarPlaceholder, generateSVGPlaceholder } from '../utils/placeholderService';
 
 interface Reaction {
@@ -315,19 +316,34 @@ export default function Web3SocialPostCard({
     }
 
     try {
-      // In a real implementation, this would call the backend API
+      // Prevent self-tipping
+      if (address?.toLowerCase() === post.author?.toLowerCase()) {
+        addToast('You cannot tip yourself', 'error');
+        return;
+      }
+
+      // Use real blockchain tipping functionality
+      const txHash = await communityWeb3Service.tipCommunityPost({
+        postId: post.id,
+        recipientAddress: post.author,
+        amount: tipAmount.toString(),
+        token: 'LDAO',
+        message: ''
+      });
+
+      // Call the onTip callback if provided
       if (onTip) {
-        await onTip(post.id, tipAmount.toString(), 'USDC');
+        await onTip(post.id, tipAmount.toString(), 'LDAO');
       } else {
         // Only show success message if there's no parent handler
-        addToast(`Successfully tipped ${tipAmount} USDC!`, 'success');
+        addToast(`Successfully tipped ${tipAmount} LDAO! Transaction: ${txHash.substring(0, 10)}...`, 'success');
       }
       setTipAmount(0);
       setShowTipInput(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error tipping:', error);
       // Only show error message here
-      addToast('Failed to send tip. Please try again.', 'error');
+      addToast(`Failed to send tip: ${error.message || 'Please try again.'}`, 'error');
     }
   };
 

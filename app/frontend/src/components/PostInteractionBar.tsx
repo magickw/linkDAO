@@ -4,6 +4,7 @@ import { useToast } from '@/context/ToastContext';
 import EnhancedReactionSystem from './EnhancedReactionSystem';
 import SharePostModal from './SharePostModal';
 import CommunityTipButton from './CommunityTipButton';
+import { communityWeb3Service } from '@/services/communityWeb3Service';
 
 interface PostInteractionBarProps {
   post: {
@@ -96,21 +97,30 @@ export default function PostInteractionBar({
     }
     
     try {
+      // Use real blockchain tipping functionality
+      const txHash = await communityWeb3Service.tipCommunityPost({
+        postId: post.id,
+        recipientAddress: post.author,
+        amount: tipAmount,
+        token: selectedToken,
+        message: ''
+      });
+
       if (onTip) {
         // Let the parent component handle the success message
         await onTip(post.id, tipAmount, selectedToken);
         // Don't show success message here since the parent component will handle it
       } else {
         // Only show success message if there's no parent handler
-        addToast(`Successfully tipped ${tipAmount} ${selectedToken}!`, 'success');
+        addToast(`Successfully tipped ${tipAmount} ${selectedToken}! Transaction: ${txHash.substring(0, 10)}...`, 'success');
       }
       
       setTipAmount('');
       setShowTipInput(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending tip:', error);
       // Only show error message here
-      addToast('Failed to send tip. Please try again.', 'error');
+      addToast(`Failed to send tip: ${error.message || 'Please try again.'}`, 'error');
     }
   };
 

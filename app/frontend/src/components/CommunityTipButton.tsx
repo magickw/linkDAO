@@ -83,10 +83,10 @@ export default function CommunityTipButton({
       setTipAmount('');
       setMessage('');
       setShowTipModal(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending tip:', error);
       // Only show error message here
-      addToast('Failed to send tip. Please try again.', 'error');
+      addToast(`Failed to send tip: ${error.message || 'Please try again.'}`, 'error');
     } finally {
       setIsTipping(false);
     }

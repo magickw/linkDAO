@@ -1250,7 +1250,7 @@ export default function Profile() {
                 <div className="mt-8">
                   <TipBar postId="user-profile" creatorAddress={targetUserAddress || ''} />
                 </div>
-              )
+              )}
             </div>
           )}
 
