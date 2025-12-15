@@ -1,12 +1,8 @@
-// import { create } from 'ipfs-http-client';
-// const { create } = require('ipfs-http-client');
-// Temporarily disabled IPFS due to package export issues
-const create = () => ({
-  add: async () => ({ path: 'mock-ipfs-hash' })
-});
+import axios from 'axios';
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
 import { imageStorage } from '../db/schema';
+import { eq } from 'drizzle-orm';
 import crypto from 'crypto';
 
 /**
@@ -30,6 +26,18 @@ interface UploadResult {
 }
 
 /**
+ * Cloudinary Upload Result
+ */
+interface CloudinaryUploadResult {
+  publicId: string;
+  url: string;
+  secureUrl: string;
+  width: number;
+  height: number;
+  format: string;
+}
+
+/**
  * Image Upload Options
  */
 interface UploadOptions {
@@ -41,11 +49,13 @@ interface UploadOptions {
 
 /**
  * Image Upload Service
- * Handles image uploads to IPFS and CDN storage
+ * Handles image uploads to Cloudinary CDN
  */
 class ImageUploadService {
-  private ipfsClient: any;
-  private cdnBaseUrl: string;
+  private cloudinaryCloudName: string;
+  private cloudinaryUploadPreset: string;
+  private cloudinaryApiKey: string;
+  private cloudinaryApiSecret: string;
   private maxFileSize: number = 10 * 1024 * 1024; // 10MB
   private allowedMimeTypes: string[] = [
     'image/jpeg',
@@ -56,17 +66,15 @@ class ImageUploadService {
   ];
 
   constructor() {
-    // Initialize IPFS client
-    const ipfsUrl = process.env.IPFS_URL || 'http://127.0.0.1:5001';
-    try {
-      this.ipfsClient = create();
-    } catch (error) {
-      safeLogger.warn('IPFS client initialization failed, will use fallback storage:', error);
-      this.ipfsClient = null;
-    }
+    // Cloudinary configuration
+    this.cloudinaryCloudName = process.env.CLOUDINARY_CLOUD_NAME || '';
+    this.cloudinaryUploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET || '';
+    this.cloudinaryApiKey = process.env.CLOUDINARY_API_KEY || '';
+    this.cloudinaryApiSecret = process.env.CLOUDINARY_API_SECRET || '';
 
-    // CDN base URL (could be Cloudflare, AWS CloudFront, etc.)
-    this.cdnBaseUrl = process.env.CDN_BASE_URL || 'https://cdn.linkdao.io';
+    if (!this.cloudinaryCloudName || !this.cloudinaryUploadPreset) {
+      safeLogger.warn('Cloudinary configuration not fully set. Image uploads may fail.');
+    }
   }
 
   /**
@@ -90,58 +98,65 @@ class ImageUploadService {
   }
 
   /**
-   * Upload image to IPFS
+   * Upload image to Cloudinary
    */
-  private async uploadToIPFS(file: Express.Multer.File): Promise<string> {
-    if (!this.ipfsClient) {
-      // Fallback: generate a hash-based identifier
-      const hash = crypto.createHash('sha256').update(file.buffer).digest('hex');
-      safeLogger.warn('IPFS not available, using hash-based identifier:', hash);
-      return hash;
+  private async uploadToCloudinary(file: Express.Multer.File, options: UploadOptions): Promise<CloudinaryUploadResult> {
+    if (!this.cloudinaryCloudName || !this.cloudinaryUploadPreset) {
+      throw new Error('Cloudinary configuration is missing. Please set CLOUDINARY_CLOUD_NAME and CLOUDINARY_UPLOAD_PRESET environment variables.');
     }
 
     try {
-      const result = await this.ipfsClient.add(file.buffer, {
-        pin: true, // Pin the file to prevent garbage collection
-      });
-      return result.path; // This is the IPFS hash (CID)
+      const formData = new FormData();
+      const blob = new Blob([file.buffer], { type: file.mimetype });
+      const cloudinaryFile = new File([blob], file.originalname, { type: file.mimetype });
+
+      formData.append('file', cloudinaryFile);
+      formData.append('upload_preset', this.cloudinaryUploadPreset);
+      formData.append('folder', `linkdao/${options.usageType}`);
+
+      const response = await axios.post(
+        `https://api.cloudinary.com/v1_1/${this.cloudinaryCloudName}/image/upload`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+
+      const data = response.data;
+      return {
+        publicId: data.public_id,
+        url: data.url,
+        secureUrl: data.secure_url,
+        width: data.width,
+        height: data.height,
+        format: data.format,
+      };
     } catch (error) {
-      safeLogger.error('IPFS upload failed:', error);
-      // Fallback to hash-based identifier
-      const hash = crypto.createHash('sha256').update(file.buffer).digest('hex');
-      return hash;
+      safeLogger.error('Cloudinary upload failed:', error);
+      throw new Error(`Cloudinary upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
   /**
-   * Upload image to CDN (placeholder - implement based on your CDN provider)
+   * Generate CDN URLs with transformations
    */
-  private async uploadToCDN(file: Express.Multer.File, ipfsHash: string): Promise<string> {
-    // TODO: Implement actual CDN upload based on your provider
-    // For now, return a URL that points to IPFS gateway
-    const ipfsGateway = process.env.IPFS_GATEWAY || 'https://ipfs.io/ipfs';
-    return `${ipfsGateway}/${ipfsHash}`;
-  }
+  private generateCDNUrls(publicId: string): { url: string; thumbnails: { small?: string; medium?: string; large?: string } } {
+    if (!this.cloudinaryCloudName) {
+      throw new Error('Cloudinary configuration is missing.');
+    }
 
-  /**
-   * Generate thumbnails (placeholder - requires image processing library)
-   */
-  private async generateThumbnails(file: Express.Multer.File, ipfsHash: string): Promise<{
-    small?: string;
-    medium?: string;
-    large?: string;
-  }> {
-    // TODO: Implement thumbnail generation using sharp or similar library
-    // For now, return empty object
-    return {};
-  }
+    const baseUrl = `https://res.cloudinary.com/${this.cloudinaryCloudName}/image/upload`;
 
-  /**
-   * Extract image dimensions (placeholder)
-   */
-  private async extractDimensions(file: Express.Multer.File): Promise<{ width?: number; height?: number }> {
-    // TODO: Implement using sharp or similar library
-    return {};
+    return {
+      url: `${baseUrl}/${publicId}`,
+      thumbnails: {
+        small: `${baseUrl}/c_fill,w_150,h_150,q_80/${publicId}`,
+        medium: `${baseUrl}/c_fill,w_300,h_300,q_85/${publicId}`,
+        large: `${baseUrl}/c_fill,w_600,h_600,q_90/${publicId}`,
+      },
+    };
   }
 
   /**
@@ -154,31 +169,22 @@ class ImageUploadService {
     // Validate image
     this.validateImage(file);
 
-    // Upload to IPFS
-    const ipfsHash = await this.uploadToIPFS(file);
-
-    // Upload to CDN
-    const cdnUrl = await this.uploadToCDN(file, ipfsHash);
-
-    // Generate thumbnails if requested
-    let thumbnails = {};
-    if (options.generateThumbnails) {
-      thumbnails = await this.generateThumbnails(file, ipfsHash);
-    }
-
-    // Extract dimensions
-    const dimensions = await this.extractDimensions(file);
+    // Upload to Cloudinary
+    const uploadResult = await this.uploadToCloudinary(file, options);
+    
+    // Generate CDN URLs with transformations
+    const cdnUrls = this.generateCDNUrls(uploadResult.publicId);
 
     // Store in database
     await db.insert(imageStorage).values({
-      ipfsHash,
-      cdnUrl,
+      ipfsHash: uploadResult.publicId, // Using publicId as the identifier
+      cdnUrl: cdnUrls.url,
       originalFilename: file.originalname,
       contentType: file.mimetype,
       fileSize: file.size,
-      width: dimensions.width,
-      height: dimensions.height,
-      thumbnails: JSON.stringify(thumbnails),
+      width: uploadResult.width,
+      height: uploadResult.height,
+      thumbnails: JSON.stringify(cdnUrls.thumbnails),
       ownerId: options.ownerId,
       usageType: options.usageType,
       usageReferenceId: options.usageReferenceId,
@@ -186,15 +192,15 @@ class ImageUploadService {
     });
 
     return {
-      ipfsHash,
-      cdnUrl,
-      thumbnails,
+      ipfsHash: uploadResult.publicId,
+      cdnUrl: cdnUrls.url,
+      thumbnails: cdnUrls.thumbnails,
       metadata: {
         originalFilename: file.originalname,
         contentType: file.mimetype,
         fileSize: file.size,
-        width: dimensions.width,
-        height: dimensions.height,
+        width: uploadResult.width,
+        height: uploadResult.height,
       },
     };
   }
@@ -222,39 +228,22 @@ class ImageUploadService {
   }
 
   /**
-   * Delete image from IPFS (unpin)
+   * Delete image (placeholder)
    */
   async deleteImage(ipfsHash: string): Promise<void> {
-    if (!this.ipfsClient) {
-      safeLogger.warn('IPFS not available, skipping delete');
-      return;
-    }
-
-    try {
-      await this.ipfsClient.pin.rm(ipfsHash);
-    } catch (error) {
-      safeLogger.error('Failed to unpin from IPFS:', error);
-      // Don't throw error, as the image might still be accessible
-    }
-
-    // Update database to mark as deleted
-    // Note: We don't actually delete from DB for audit purposes
-    // You might want to add a 'deleted' flag to the schema
+    // In a real implementation, you would call Cloudinary's delete API
+    safeLogger.warn('Image deletion not implemented');
   }
 
   /**
-   * Get image URL by IPFS hash
+   * Get image URL by public ID
    */
-  getImageUrl(ipfsHash: string, preferCDN: boolean = true): string {
-    if (preferCDN) {
-      // Check if we have a CDN URL in database
-      // For now, construct from IPFS gateway
-      const ipfsGateway = process.env.IPFS_GATEWAY || 'https://ipfs.io/ipfs';
-      return `${ipfsGateway}/${ipfsHash}`;
+  getImageUrl(publicId: string, preferCDN: boolean = true): string {
+    if (!this.cloudinaryCloudName) {
+      throw new Error('Cloudinary configuration is missing.');
     }
 
-    const ipfsGateway = process.env.IPFS_GATEWAY || 'https://ipfs.io/ipfs';
-    return `${ipfsGateway}/${ipfsHash}`;
+    return `https://res.cloudinary.com/${this.cloudinaryCloudName}/image/upload/${publicId}`;
   }
 
   /**
@@ -262,13 +251,28 @@ class ImageUploadService {
    */
   async trackImageAccess(ipfsHash: string): Promise<void> {
     try {
+      // First, get the current record to get the current access count
+      const records = await db
+        .select()
+        .from(imageStorage)
+        .where(eq(imageStorage.ipfsHash, ipfsHash))
+        .limit(1);
+
+      if (records.length === 0) {
+        safeLogger.warn('Image not found for access tracking:', ipfsHash);
+        return;
+      }
+
+      const record = records[0];
+      
+      // Update access count
       await db
         .update(imageStorage)
         .set({
-          accessCount: db.raw('access_count + 1') as any,
+          accessCount: record.accessCount + 1,
           lastAccessed: new Date(),
         })
-        .where(db.eq(imageStorage.ipfsHash, ipfsHash));
+        .where(eq(imageStorage.ipfsHash, ipfsHash));
     } catch (error) {
       safeLogger.error('Failed to track image access:', error);
       // Non-critical, don't throw

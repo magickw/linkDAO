@@ -79,7 +79,7 @@ class CryptoPriceService {
     ['LTC', 'litecoin'],
     ['BCH', 'bitcoin-cash'],
     ['ETC', 'ethereum-classic'],
-    ['LDAO', 'linkdao'] // LDAO token mapping
+// LDAO token removed from CoinGecko mapping as it's not listed on the exchange
   ]);
 
   constructor() {
@@ -99,7 +99,7 @@ class CryptoPriceService {
       { symbol: 'USDT', price: 1.00, change: 0.0 },
       { symbol: 'LINK', price: 14.50, change: -1.2 },
       { symbol: 'UNI', price: 7.20, change: 3.1 },
-      { symbol: 'LDAO', price: 0.50, change: 5.0 }, // LDAO token default price
+      { symbol: 'LDAO', price: 0.01, change: 5.0 }, // LDAO token initial price
       { symbol: 'AAVE', price: 95.00, change: -0.8 }
     ];
 
@@ -176,8 +176,55 @@ class CryptoPriceService {
    * Get price for a single token
    */
   async getPrice(symbol: string): Promise<CryptoPriceData | null> {
+    // Special handling for LDAO token
+    if (symbol.toUpperCase() === 'LDAO') {
+      return await this.getLDAOPriceFromContract();
+    }
+    
     const prices = await this.getPrices([symbol]);
     return prices.get(symbol.toUpperCase()) || null;
+  }
+
+  /**
+   * Get LDAO price from the Treasury contract
+   */
+  private async getLDAOPriceFromContract(): Promise<CryptoPriceData | null> {
+    try {
+      // Import the contract service to get the price
+      const { ldaoTokenService } = await import('./web3/ldaoTokenService');
+      const { ldaoAcquisitionService } = await import('./ldaoAcquisitionService');
+      
+      // Try to get price from LDAO Treasury contract
+      const quote = await ldaoAcquisitionService.getQuote('1');
+      
+      if (quote && quote.usdAmount) {
+        return {
+          id: 'ldao',
+          symbol: 'LDAO',
+          name: 'LinkDAO Token',
+          current_price: parseFloat(quote.usdAmount),
+          price_change_percentage_24h: 0, // Will need to be calculated separately
+          market_cap: 0,
+          total_volume: 0,
+          last_updated: new Date().toISOString()
+        };
+      }
+      
+      // Fallback to a reasonable default if contract call fails
+      return {
+        id: 'ldao',
+        symbol: 'LDAO',
+        name: 'LinkDAO Token',
+        current_price: 0.01, // Conservative fallback price
+        price_change_percentage_24h: 0,
+        market_cap: 0,
+        total_volume: 0,
+        last_updated: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('Failed to fetch LDAO price from contract:', error);
+      return null;
+    }
   }
 
   /**
