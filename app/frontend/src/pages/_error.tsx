@@ -13,7 +13,9 @@ function Error({ statusCode, err }: ErrorPageProps) {
     err.message.toLowerCase().includes('chrome.runtime.sendmessage') ||
     err.message.toLowerCase().includes('opfgelmcmbiajamepnmloijbpoleiama') ||
     err.message.toLowerCase().includes('extension id') ||
-    err.message.toLowerCase().includes('runtime.sendmessage(optional string extensionid')
+    err.message.toLowerCase().includes('runtime.sendmessage(optional string extensionid') ||
+    err.message.toLowerCase().includes('invalid frameid for foreground frameid') ||
+    err.message.toLowerCase().includes('no tab with id')
   );
 
   // For extension errors, don't show error page - just return empty

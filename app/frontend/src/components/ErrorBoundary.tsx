@@ -25,6 +25,13 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
       return { hasError: false };
     }
     
+    // Special handling for frameId errors which are definitely extension-related
+    if (error.message && (error.message.includes('Invalid frameId for foreground frameId') || 
+                         error.message.includes('No tab with id'))) {
+      console.debug('ErrorBoundary: Ignored frameId extension error:', error);
+      return { hasError: false };
+    }
+    
     // Update state for actual application errors
     return { hasError: true, error };
   }

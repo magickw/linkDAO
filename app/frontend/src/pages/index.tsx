@@ -250,33 +250,32 @@ export default function Home() {
   useEffect(() => {
     const handleRouteChangeStart = (url: string) => {
       console.log('[HomePage] Route change start:', url);
-      // Immediately mark as unmounted and disable all operations
-      isMounted.current = false;
+      // Don't immediately mark as unmounted - let navigation complete first
+      // Just disable WebSocket operations to prevent interference
       setShouldConnectWebSocket(false);
-      setWsSubscribed(false);
-      setIsConnectionStabilized(false);
-      
-      // Force cleanup all WebSocket operations
-      try {
-        off('feed_update');
-      } catch (error) {
-        // Ignore cleanup errors
-      }
     };
 
     const handleRouteChangeComplete = (url: string) => {
       console.log('[HomePage] Route change complete:', url);
-      // Only remount if we're still on the home page
-      if (router.pathname === '/') {
+      
+      // Only mark as unmounted and cleanup if we've navigated away from home
+      if (router.pathname !== '/') {
+        isMounted.current = false;
+        setWsSubscribed(false);
+        setIsConnectionStabilized(false);
+        
+        // Cleanup WebSocket operations
+        try {
+          off('feed_update');
+        } catch (error) {
+          // Ignore cleanup errors
+        }
+      } else {
+        // We're still on home page, ensure everything is properly set up
         setTimeout(() => {
-          isMounted.current = true;
-          if (isConnected) {
-            setTimeout(() => {
-              if (isMounted.current) {
-                setIsConnectionStabilized(true);
-                setShouldConnectWebSocket(true);
-              }
-            }, 200);
+          if (isConnected && isMounted.current) {
+            setIsConnectionStabilized(true);
+            setShouldConnectWebSocket(true);
           }
         }, 100);
       }
@@ -284,11 +283,13 @@ export default function Home() {
 
     const handleRouteChangeError = (err: any, url: string) => {
       console.error('[HomePage] Route change error for', url, ':', err);
-      // Reset everything on error
-      isMounted.current = false;
-      setShouldConnectWebSocket(false);
-      setWsSubscribed(false);
-      setIsConnectionStabilized(false);
+      // Only cleanup on error if we're not on home page
+      if (router.pathname !== '/') {
+        isMounted.current = false;
+        setShouldConnectWebSocket(false);
+        setWsSubscribed(false);
+        setIsConnectionStabilized(false);
+      }
     };
 
     // Listen for route changes to properly cleanup

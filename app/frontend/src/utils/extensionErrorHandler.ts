@@ -63,6 +63,8 @@ const EXTENSION_ERROR_PATTERNS = [
   'Cannot find menu item with id',
   'Add Item',
   'background-redux-new.js',
+  'Invalid frameId for foreground frameId',
+  'No tab with id',
 ] as const;
 
 /**

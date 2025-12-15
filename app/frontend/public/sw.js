@@ -272,7 +272,12 @@ self.addEventListener('fetch', (event) => {
   // This prevents wallet-connected users from being unable to navigate
   if (isEnhancedNavigation(request)) {
     console.log('SW: Bypassing navigation request:', request.url);
-    event.respondWith(fetch(request)); // MUST call event.respondWith for navigation
+    // CRITICAL: Always respond with fetch for navigation requests to prevent frameId errors
+    event.respondWith(fetch(request).catch(error => {
+      console.error('Navigation request failed:', error);
+      // Even on failure, we must respond to prevent service worker errors
+      return new Response('Navigation failed', { status: 500 });
+    }));
     return; // Early return to bypass service worker completely
   }
 
@@ -1734,6 +1739,31 @@ function isEnhancedNavigation(request) {
   
   return false;
 }
+
+// Global error handlers to catch extension-related errors
+self.addEventListener('error', (event) => {
+  // Suppress extension-related errors that don't affect functionality
+  if (event.error && event.error.message && 
+      (event.error.message.includes('Invalid frameId for foreground frameId') ||
+       event.error.message.includes('No tab with id') ||
+       event.error.message.includes('background-redux-new.js'))) {
+    console.debug('Service Worker: Ignored extension error:', event.error.message);
+    event.preventDefault();
+    return;
+  }
+});
+
+self.addEventListener('unhandledrejection', (event) => {
+  // Suppress extension-related promise rejections
+  if (event.reason && 
+      (event.reason.includes('Invalid frameId for foreground frameId') ||
+       event.reason.includes('No tab with id') ||
+       event.reason.includes('background-redux-new.js'))) {
+    console.debug('Service Worker: Ignored extension promise rejection:', event.reason);
+    event.preventDefault();
+    return;
+  }
+});
 
 // Message handler for offline actions
 self.addEventListener('message', (event) => {
