@@ -593,6 +593,7 @@ export class ProductService {
       productId,
       views: product.views,
       favorites: product.favorites,
+      salesCount: product.salesCount,
       orders: 0, // Would be calculated from orders table
       revenue: '0',
       conversionRate: 0,
@@ -603,6 +604,15 @@ export class ProductService {
         end: endDate,
       },
     };
+  }
+
+  async getSalesCount(productId: string): Promise<number> {
+    const db = this.databaseService.getDatabase();
+    const result = await db.select({ salesCount: schema.products.salesCount })
+      .from(schema.products)
+      .where(eq(schema.products.id, productId));
+
+    return result[0]?.salesCount || 0;
   }
 
   // Helper methods
@@ -748,6 +758,7 @@ export class ProductService {
       nft: dbProduct.nft ? JSON.parse(dbProduct.nft) : undefined,
       views: dbProduct.views || 0,
       favorites: dbProduct.favorites || 0,
+      salesCount: dbProduct.salesCount || 0,
       createdAt: dbProduct.createdAt,
       updatedAt: dbProduct.updatedAt,
     };

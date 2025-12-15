@@ -181,6 +181,12 @@ export class ProductController {
         throw new NotFoundError('Product not found');
       }
 
+      // Increment view count asynchronously (don't wait for it to complete)
+      // This ensures the product detail loads quickly while still tracking views
+      productService.incrementViews(id).catch(error => {
+        console.error('Error incrementing product views:', error);
+      });
+
       return res.json(product);
     } catch (error: any) {
       if (error instanceof AppError) {

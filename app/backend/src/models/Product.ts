@@ -184,6 +184,7 @@ export interface Product {
   nft?: NFTInfo;
   views: number;
   favorites: number;
+  salesCount: number;
   createdAt: Date;
   updatedAt: Date;
 }

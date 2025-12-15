@@ -900,6 +900,19 @@ export class DatabaseService {
               })
               .where(eq(schema.products.id, inventoryHold.productId));
           }
+        } else {
+          // When order is completed, increment sales count for the product
+          const product = await tx.select().from(schema.products).where(eq(schema.products.id, inventoryHold.productId));
+          
+          if (product.length > 0) {
+            // Product - increment sales count
+            await tx.update(schema.products)
+              .set({ 
+                salesCount: sql`${schema.products.salesCount} + 1`
+              })
+              .where(eq(schema.products.id, inventoryHold.productId));
+          }
+          // Note: For legacy listings, no sales count tracking is implemented
         }
       });
     } catch (error) {

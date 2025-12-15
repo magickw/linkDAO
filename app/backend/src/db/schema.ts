@@ -648,6 +648,7 @@ export const products = pgTable("products", {
   nft: text("nft"), // JSON NFTInfo
   views: integer("views").default(0),
   favorites: integer("favorites").default(0),
+  salesCount: integer("sales_count").default(0),
   // Enhanced fields for better listing management
   listingStatus: varchar("listing_status", { length: 20 }).default("draft"),
   publishedAt: timestamp("published_at"),
