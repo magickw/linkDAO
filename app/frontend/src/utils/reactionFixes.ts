@@ -61,12 +61,24 @@ export const handleReactionWithAuth = async (
   const validPostId = ensureValidPostId(postId);
   
   try {
+    // Get auth headers
+    const authHeaders = enhancedAuthService.getAuthHeaders();
+    const hasAuthHeader = authHeaders.Authorization && authHeaders.Authorization !== 'Bearer null';
+    
+    // Debug logging
+    console.log('Reaction request:', {
+      postId: validPostId,
+      reactionType,
+      hasAuthHeader,
+      tokenPreview: hasAuthHeader ? authHeaders.Authorization?.substring(0, 20) + '...' : 'none'
+    });
+    
     // Try the feed service endpoint first
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.linkdao.io'}/api/feed/${validPostId}/react`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...enhancedAuthService.getAuthHeaders()
+        ...authHeaders
       },
       body: JSON.stringify({
         type: reactionType,
@@ -77,15 +89,26 @@ export const handleReactionWithAuth = async (
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
       
-      // Provide more specific error messages
+      // Provide more specific error messages based on error code
       if (response.status === 401) {
-        throw new Error('Your session has expired. Please sign in again to react to posts.');
+        // Check the specific error code from backend
+        const errorCode = error.error?.code || error.code;
+        console.error('Authentication error:', { status: 401, errorCode, error });
+        
+        if (errorCode === 'MISSING_TOKEN') {
+          throw new Error('Please sign in to react to posts. Click the wallet icon in the header to connect and authenticate.');
+        } else if (errorCode === 'INVALID_TOKEN') {
+          throw new Error('Your session has expired. Please refresh the page and sign in again.');
+        } else {
+          throw new Error('Authentication required. Please sign in to react to posts.');
+        }
       } else if (response.status === 403) {
         throw new Error('You do not have permission to react to this post.');
       } else if (response.status === 404) {
         throw new Error('This post may have been removed or is no longer available.');
       } else {
-        throw new Error(error.error || `Failed to react: ${response.statusText}`);
+        const errorMessage = error.error?.message || error.message || error.error || `Failed to react: ${response.statusText}`;
+        throw new Error(errorMessage);
       }
     }
     

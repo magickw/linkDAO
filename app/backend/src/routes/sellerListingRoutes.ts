@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { safeLogger } from '../utils/safeLogger';
 import { csrfProtection } from '../middleware/csrfProtection';
+import { authenticateToken } from '../middleware/auth';
 import { sellerListingService } from '../services/sellerListingService';
 import { successResponse, errorResponse, notFoundResponse, validationErrorResponse } from '../utils/apiResponse';
 import { cachingMiddleware, rateLimitWithCache } from '../middleware/cachingMiddleware';
@@ -82,7 +83,7 @@ router.get('/:walletAddress',
  *
  * Note: This router is mounted at /api/marketplace/seller/listings
  */
-router.post('/', csrfProtection, 
+router.post('/', authenticateToken, csrfProtection, 
   rateLimitWithCache(req => `create_listing:${req.ip}`, 10, 60), // 10 requests per minute
   cachingMiddleware.invalidate('sellerListings'),
   async (req: Request, res: Response) => {
@@ -160,7 +161,7 @@ router.post('/', csrfProtection,
  *
  * Note: This router is mounted at /api/marketplace/seller/listings
  */
-router.put('/:listingId', csrfProtection, 
+router.put('/:listingId', authenticateToken, csrfProtection, 
   rateLimitWithCache(req => `update_listing:${req.ip}`, 30, 60), // 30 requests per minute
   cachingMiddleware.invalidate('sellerListings'),
   async (req: Request, res: Response) => {
@@ -227,7 +228,7 @@ router.put('/:listingId', csrfProtection,
  *
  * Note: This router is mounted at /api/marketplace/seller/listings
  */
-router.delete('/:listingId', csrfProtection, 
+router.delete('/:listingId', authenticateToken, csrfProtection, 
   rateLimitWithCache(req => `delete_listing:${req.ip}`, 20, 60), // 20 requests per minute
   cachingMiddleware.invalidate('sellerListings'),
   async (req: Request, res: Response) => {
