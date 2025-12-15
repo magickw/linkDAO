@@ -43,12 +43,22 @@ export class UnifiedSellerVerificationService {
     await SellerVerificationAuditService.logVerificationSubmission(userId, verification.id);
 
     // Notify admins about new verification request
-    await this.notifyAdminsOfNewRequest(verification);
+    await this.notifyAdminsOfNewRequest({
+      ...verification,
+      sellerId: verification.userId
+    });
 
     // Trigger automated verification process
-    this.processVerification(verification.id);
+    this.processVerification({
+      ...verification,
+      sellerId: verification.userId
+    }.id);
 
-    return verification;
+    // Map userId to sellerId for interface compatibility
+    return {
+      ...verification,
+      sellerId: verification.userId
+    };
   }
 
   /**
@@ -60,7 +70,13 @@ export class UnifiedSellerVerificationService {
       .orderBy(desc(sellerVerifications.submittedAt))
       .limit(1);
 
-    return verifications[0] || null;
+    if (verifications[0]) {
+      return {
+        ...verifications[0],
+        sellerId: verifications[0].userId
+      };
+    }
+    return null;
   }
 
   /**
@@ -70,7 +86,13 @@ export class UnifiedSellerVerificationService {
     const verifications = await db.select().from(sellerVerifications)
       .where(eq(sellerVerifications.id, verificationId));
 
-    return verifications[0] || null;
+    if (verifications[0]) {
+      return {
+        ...verifications[0],
+        sellerId: verifications[0].userId
+      };
+    }
+    return null;
   }
 
   /**
@@ -208,7 +230,10 @@ export class UnifiedSellerVerificationService {
       metadata
     );
 
-    return result;
+    return {
+      ...updated,
+      sellerId: updated.userId
+    };
   }
 
   /**
@@ -227,7 +252,10 @@ export class UnifiedSellerVerificationService {
       .where(eq(sellerVerifications.id, verificationId))
       .returning();
 
-return result;
+    return {
+      ...updated,
+      sellerId: updated.userId
+    };
   }
 
   /**

@@ -5752,7 +5752,7 @@ export const supportTickets = pgTable("support_tickets", {
   category: varchar("category", { length: 100 }).default("general"),
   priority: varchar("priority", { length: 20 }).default("medium"),
   status: varchar("status", { length: 20 }).default("open"), // open, in_progress, resolved, closed
-  assignedTo: uuid("assigned_to").references(() => users.id).onDelete('set null'),
+  assignedTo: uuid("assigned_to").references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (t) => ({

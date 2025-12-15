@@ -302,8 +302,6 @@ export class UserProfileService {
         website: dbUser.website || '', // Website is now stored in database column
         physicalAddress: decryptedData,
         email: decryptedData.email || '',
-        emailVerified: dbUser.emailVerified || false,
-        permissions: dbUser.permissions || [],
         lastLogin: dbUser.lastLogin ? new Date(dbUser.lastLogin) : undefined,
         loginAttempts: dbUser.loginAttempts || 0,
         lockedUntil: dbUser.lockedUntil ? new Date(dbUser.lockedUntil) : undefined,
@@ -382,7 +380,7 @@ export class UserProfileService {
     let existingAdditionalData: any = {};
     try {
       if (existingProfile.physicalAddress) {
-        existingAdditionalData = await decryptAddressData(existingProfile.physicalAddress);
+        existingAdditionalData = await decryptAddressData(existingProfile.physicalAddress as unknown as string);
       }
     } catch (error) {
       safeLogger.error('Error decrypting existing user additional data:', error);
