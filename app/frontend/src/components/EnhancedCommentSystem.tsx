@@ -33,7 +33,7 @@ export default function EnhancedCommentSystem({
   onCommentCountChange,
   className = ''
 }: EnhancedCommentSystemProps) {
-  const { address, isConnected } = useWeb3();
+  const { address, isConnected, hasWallet, requestConnection } = useWeb3();
   const { ensureAuthenticated } = useAuth();
   const { addToast } = useToast();
 
@@ -135,15 +135,39 @@ export default function EnhancedCommentSystem({
 
     if (!newComment.trim() && !selectedMedia) return;
 
-    if (!isConnected || !address) {
+    // Check wallet connection with more detailed error handling
+    if (!hasWallet) {
+      addToast('No wallet detected. Please install a wallet like MetaMask.', 'error');
+      return;
+    }
+
+    if (!isConnected) {
       addToast('Please connect your wallet to comment', 'error');
+      // Try to request connection
+      try {
+        await requestConnection();
+      } catch (error) {
+        console.error('Failed to request wallet connection:', error);
+      }
+      return;
+    }
+
+    if (!address) {
+      addToast('Wallet address not detected. Please reconnect your wallet.', 'error');
       return;
     }
 
     // Ensure user is authenticated before submitting comment
     const authResult = await ensureAuthenticated();
     if (!authResult.success) {
-      addToast(authResult.error || 'Please authenticate to comment', 'error');
+      // If authentication failed, provide specific error message
+      const errorMessage = authResult.error || 'Please authenticate to comment';
+      addToast(errorMessage, 'error');
+      
+      // If it's a wallet connection issue, suggest reconnecting
+      if (errorMessage.includes('connect') || errorMessage.includes('wallet')) {
+        addToast('Try disconnecting and reconnecting your wallet', 'info');
+      }
       return;
     }
 
@@ -215,6 +239,11 @@ export default function EnhancedCommentSystem({
 
   // Handle comment vote
   const handleCommentVote = async (commentId: string, voteType: 'upvote' | 'downvote') => {
+    if (!hasWallet) {
+      addToast('No wallet detected. Please install a wallet like MetaMask.', 'error');
+      return;
+    }
+
     if (!isConnected || !address) {
       addToast('Please connect your wallet to vote', 'error');
       return;
@@ -345,7 +374,7 @@ export default function EnhancedCommentSystem({
                             disabled={commentSubmitting}
                           />
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                           </svg>
                         </label>
 

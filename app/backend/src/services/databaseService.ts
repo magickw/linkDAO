@@ -750,10 +750,38 @@ export class DatabaseService {
   }
 
   async createOrder(listingId: string, buyerId: string, sellerId: string, amount: string,
-    paymentToken: string, escrowId?: string) {
+    paymentToken: string, escrowId?: string, variantId?: string) {
     try {
       return await this.db.transaction(async (tx: any) => {
-        // 1. Check and hold inventory with pessimistic locking
+        // 1a. Handle variant inventory if variant is specified
+        if (variantId) {
+          const variantResult = await tx.execute(sql`
+            SELECT inventory, reserved_inventory, is_available
+            FROM product_variants
+            WHERE id = ${variantId}
+            FOR UPDATE
+          `);
+          
+          if (variantResult.rows.length === 0) {
+            throw new Error('Product variant not found');
+          }
+          
+          const variant = variantResult.rows[0];
+          const availableInventory = variant.inventory - variant.reserved_inventory;
+          
+          if (!variant.is_available || availableInventory < 1) {
+            throw new Error('Selected variant is out of stock');
+          }
+          
+          // Reserve inventory for this variant
+          await tx.execute(sql`
+            UPDATE product_variants
+            SET reserved_inventory = reserved_inventory + 1
+            WHERE id = ${variantId}
+          `);
+        }
+        
+        // 1b. Check and hold inventory with pessimistic locking
         const product = await tx.select().from(schema.products).where(eq(schema.products.id, listingId));
         
         if (product.length === 0) {
@@ -1025,6 +1053,30 @@ export class DatabaseService {
             completedAt: new Date()
           })
           .where(eq(schema.orders.id, orderId));
+
+        // Increment sales_count for the product/listing
+        await tx.execute(sql`
+          UPDATE products 
+          SET sales_count = COALESCE(sales_count, 0) + 1
+          WHERE id = ${orderData.listingId}
+        `);
+        
+        await tx.execute(sql`
+          UPDATE listings 
+          SET sales_count = COALESCE(sales_count, 0) + 1
+          WHERE id = ${orderData.listingId}
+        `);
+
+        // If order has a variant, decrement variant inventory and increment its sales
+        if (orderData.variant_id) {
+          await tx.execute(sql`
+            UPDATE product_variants
+            SET 
+              reserved_inventory = GREATEST(reserved_inventory - 1, 0),
+              inventory = GREATEST(inventory - 1, 0)
+            WHERE id = ${orderData.variant_id}
+          `);
+        }
 
         // Release inventory hold as consumed
         if (orderData.inventoryHoldId) {

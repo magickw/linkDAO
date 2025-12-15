@@ -249,6 +249,26 @@ export class UnifiedSellerAPIClient {
         if (walletAddress) {
           headers['X-Wallet-Address'] = walletAddress;
         }
+
+        // Debug logging for authentication
+        const hasAuthToken = headers['Authorization'] && headers['Authorization'] !== 'Bearer null';
+        console.log('[SellerAPI] Auth check:', {
+          hasAuthToken,
+          tokenPreview: hasAuthToken ? headers['Authorization']?.substring(0, 25) + '...' : 'none',
+          hasWalletAddress: !!walletAddress,
+          isAuthenticated: enhancedAuthService.isAuthenticated()
+        });
+
+        // If no auth token, throw a clear error before making the request
+        if (!hasAuthToken) {
+          throw new SellerAPIError(
+            SellerErrorType.PERMISSION_ERROR,
+            'Please sign in to perform this action. Connect your wallet and authenticate.',
+            'MISSING_AUTH',
+            { requireAuth: true },
+            401
+          );
+        }
       }
 
       const response = await fetch(endpoint, {

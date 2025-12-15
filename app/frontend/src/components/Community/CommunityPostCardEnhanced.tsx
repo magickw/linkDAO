@@ -60,7 +60,7 @@ function CommunityPostCardEnhanced({
   isLoading = false
 }: CommunityPostCardEnhancedProps) {
   const router = useRouter();
-  const { address, isConnected } = useWeb3();
+  const { address, isConnected, hasWallet, requestConnection } = useWeb3();
   const { ensureAuthenticated } = useAuth();
   const { addToast } = useToast();
 
@@ -146,6 +146,11 @@ function CommunityPostCardEnhanced({
 
   // Handle voting with staking
   const handleVote = useCallback((postId: string, voteType: 'upvote' | 'downvote', stakeAmount?: string) => {
+    if (!hasWallet) {
+      addToast('No wallet detected. Please install a wallet like MetaMask.', 'error');
+      return;
+    }
+
     if (!isConnected || !address) {
       addToast('Please connect your wallet to vote', 'error');
       return;
@@ -168,7 +173,7 @@ function CommunityPostCardEnhanced({
     if (stakeAmount) {
       addToast(`Voted with ${stakeAmount} tokens staked!`, 'success');
     }
-  }, [isConnected, address, userMembership, userVote, onVote, addToast]);
+  }, [hasWallet, isConnected, address, userMembership, userVote, onVote, addToast]);
 
   // Load comments
   const loadComments = useCallback(async () => {
@@ -205,15 +210,39 @@ function CommunityPostCardEnhanced({
 
     if (!newComment.trim()) return;
 
-    if (!isConnected || !address) {
+    // Check wallet connection with more detailed error handling
+    if (!hasWallet) {
+      addToast('No wallet detected. Please install a wallet like MetaMask.', 'error');
+      return;
+    }
+
+    if (!isConnected) {
       addToast('Please connect your wallet to comment', 'error');
+      // Try to request connection
+      try {
+        await requestConnection();
+      } catch (error) {
+        console.error('Failed to request wallet connection:', error);
+      }
+      return;
+    }
+
+    if (!address) {
+      addToast('Wallet address not detected. Please reconnect your wallet.', 'error');
       return;
     }
 
     // Ensure user is authenticated before submitting comment
     const authResult = await ensureAuthenticated();
     if (!authResult.success) {
-      addToast(authResult.error || 'Please authenticate to comment', 'error');
+      // If authentication failed, provide specific error message
+      const errorMessage = authResult.error || 'Please authenticate to comment';
+      addToast(errorMessage, 'error');
+      
+      // If it's a wallet connection issue, suggest reconnecting
+      if (errorMessage.includes('connect') || errorMessage.includes('wallet')) {
+        addToast('Try disconnecting and reconnecting your wallet', 'info');
+      }
       return;
     }
 
@@ -256,6 +285,11 @@ function CommunityPostCardEnhanced({
 
   // Handle web3 reactions (staking tokens)
   const handleReaction = async (reactionType: string, amount: number) => {
+    if (!hasWallet) {
+      addToast('No wallet detected. Please install a wallet like MetaMask.', 'error');
+      return;
+    }
+
     if (!isConnected || !address) {
       addToast('Please connect your wallet to react', 'error');
       return;
@@ -303,6 +337,11 @@ function CommunityPostCardEnhanced({
 
   // Handle comment vote
   const handleCommentVote = async (commentId: string, voteType: 'upvote' | 'downvote') => {
+    if (!hasWallet) {
+      addToast('No wallet detected. Please install a wallet like MetaMask.', 'error');
+      return;
+    }
+
     if (!isConnected || !address) {
       addToast('Please connect your wallet to vote', 'error');
       return;

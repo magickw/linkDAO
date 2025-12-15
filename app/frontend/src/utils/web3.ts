@@ -2,6 +2,7 @@ import { getPublicClient, getWalletClient } from '@wagmi/core'
 import { config } from '@/lib/wagmi'
 import { ethers } from 'ethers'
 import { getChainRpcUrl } from '@/lib/wagmi'
+import { hasInjectedProvider, getInjectedProvider } from '@/utils/walletConnector'
 
 /**
  * Get the public client for read operations
@@ -22,6 +23,20 @@ export async function getProvider() {
         const provider = new ethers.BrowserProvider(injectedProvider as any);
         console.log('Created BrowserProvider');
         return provider;
+      }
+    }
+
+    // Try to use the injected provider directly if available
+    if (hasInjectedProvider()) {
+      const injectedProvider = getInjectedProvider();
+      if (injectedProvider) {
+        try {
+          const provider = new ethers.BrowserProvider(injectedProvider);
+          console.log('Created BrowserProvider from direct injected provider');
+          return provider;
+        } catch (e) {
+          console.warn('Failed to create provider from injected provider:', e);
+        }
       }
     }
 
@@ -74,11 +89,27 @@ export async function getSigner() {
     if (!client) return null;
 
     const injectedProvider = (client as any).transport?.provider;
-    if (!injectedProvider) return null;
+    if (injectedProvider) {
+      const provider = new ethers.BrowserProvider(injectedProvider as any);
+      const signer = await provider.getSigner();
+      return signer;
+    }
 
-    const provider = new ethers.BrowserProvider(injectedProvider as any);
-    const signer = provider.getSigner();
-    return signer;
+    // Fallback to direct injected provider
+    if (hasInjectedProvider()) {
+      const injectedProvider = getInjectedProvider();
+      if (injectedProvider) {
+        try {
+          const provider = new ethers.BrowserProvider(injectedProvider);
+          const signer = await provider.getSigner();
+          return signer;
+        } catch (e) {
+          console.warn('Failed to create signer from injected provider:', e);
+        }
+      }
+    }
+
+    return null;
   } catch (error) {
     console.error('Error getting signer:', error);
     return null;

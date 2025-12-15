@@ -289,8 +289,8 @@ const ProductDetailPageRoute: React.FC = () => {
                 cost: productData.shipping?.cost
               },
               reviews: {
-                average: productData.seller?.rating || 0,
-                count: productData.seller?.totalReviews || 0
+                average: productData.average_rating || productData.averageRating || 0,
+                count: productData.review_count || productData.reviewCount || 0
               },
               soldCount: productData.sales_count || productData.salesCount || productData.soldCount || 0,
               media: imageUrls.length > 0 ? imageUrls.map((url: string) => ({

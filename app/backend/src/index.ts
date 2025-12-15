@@ -972,6 +972,10 @@ app.use('/api/orders', orderCreationRoutes);
 // Frontend expects: GET /api/marketplace/listings
 app.use('/api/marketplace/listings', marketplaceListingsRoutes);
 
+// Product variant routes
+const productVariantRoutes = require('./routes/productVariantRoutes').default;
+app.use('/api/marketplace', productVariantRoutes);
+
 // Seller dashboard routes
 app.use('/api/marketplace/seller/dashboard', sellerDashboardRoutes);
 
