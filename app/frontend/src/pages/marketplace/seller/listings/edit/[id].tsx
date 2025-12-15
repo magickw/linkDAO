@@ -64,26 +64,98 @@ interface EnhancedFormData {
 
 // Available categories
 const CATEGORIES = [
+  // Digital & NFT Categories
   { value: 'art', label: '🎨 Art & Collectibles' },
   { value: 'music', label: '🎵 Music & Audio' },
   { value: 'gaming', label: '🎮 Gaming & Virtual Worlds' },
   { value: 'photography', label: '📸 Photography' },
   { value: 'domain', label: '🌐 Domain Names' },
   { value: 'utility', label: '⚡ Utility & Access' },
-  { value: 'sports', label: '⚽ Sports & Recreation' },
   { value: 'memes', label: '😄 Memes & Fun' },
-  { value: 'fashion', label: '👕 Fashion & Wearables' },
+  { value: 'nft', label: '🖼️ NFTs & Digital Art' },
+  { value: 'metaverse', label: '🌍 Metaverse Assets' },
+  { value: 'virtual-land', label: '🏞️ Virtual Land' },
+  { value: 'digital-fashion', label: '👗 Digital Fashion' },
+  { value: 'trading-cards', label: '🃏 Trading Cards' },
+  { value: 'tickets', label: '🎫 Tickets & Events' },
+  
+  // Physical Products
   { value: 'electronics', label: '📱 Electronics' },
+  { value: 'fashion', label: '👕 Fashion & Wearables' },
+  { value: 'home', label: '🏠 Home & Garden' },
   { value: 'books', label: '📚 Books & Media' },
+  { value: 'sports', label: '⚽ Sports & Recreation' },
+  { value: 'toys', label: '🧸 Toys & Games' },
+  { value: 'automotive', label: '🚗 Automotive' },
+  { value: 'health', label: '💊 Health & Beauty' },
+  { value: 'jewelry', label: '💍 Jewelry & Accessories' },
+  { value: 'collectibles', label: '🏆 Collectibles' },
+  { value: 'vintage', label: '🕰️ Vintage & Antiques' },
+  { value: 'crafts', label: '🎨 Handmade Crafts' },
+  { value: 'pet-supplies', label: '🐾 Pet Supplies' },
+  { value: 'food', label: '🍔 Food & Beverages' },
+  { value: 'office', label: '📎 Office Supplies' },
+  { value: 'tools', label: '🔧 Tools & Hardware' },
+  { value: 'baby', label: '👶 Baby Products' },
+  { value: 'outdoor', label: '🏕️ Outdoor & Camping' },
+  { value: 'fitness', label: '💪 Fitness & Exercise' },
+  
+  // Services & Experiences
   { value: 'services', label: '🛠️ Services' },
+  { value: 'education', label: '🎓 Education & Courses' },
+  { value: 'consulting', label: '💼 Consulting' },
+  { value: 'software', label: '💻 Software & Apps' },
+  { value: 'design', label: '🎨 Design Services' },
+  { value: 'writing', label: '✍️ Writing & Content' },
+  { value: 'marketing', label: '📢 Marketing & Promotion' },
+  { value: 'legal', label: '⚖️ Legal Services' },
+  { value: 'wellness', label: '🧘 Wellness & Health' },
+  { value: 'travel', label: '✈️ Travel & Experiences' },
+  { value: 'subscription', label: '🔄 Subscriptions' },
+  
+  // Real Estate & Property
+  { value: 'real-estate', label: '🏡 Real Estate' },
+  { value: 'rental', label: '🔑 Rentals' },
+  { value: 'timeshare', label: '📅 Timeshares' },
+  
+  // Business & Industrial
+  { value: 'business', label: '🏢 Business & Industrial' },
+  { value: 'equipment', label: '🏭 Equipment & Machinery' },
+  { value: 'wholesale', label: '📦 Wholesale & Bulk' },
+  { value: 'manufacturing', label: '🏭 Manufacturing' },
+  
+  // Other
   { value: 'other', label: '📦 Other' }
 ];
 
 // Popular tags
 const POPULAR_TAGS = [
+  // General tags
   'rare', 'limited-edition', 'handmade', 'vintage', 'premium',
-  'exclusive', 'collectible', 'digital-art', 'gaming', 'music',
-  'photography', 'utility', 'access-token', 'membership'
+  'exclusive', 'collectible', 'new', 'trending', 'popular',
+  
+  // Digital & NFT tags
+  'digital-art', 'nft', 'gaming', 'music', 'photography', 'utility',
+  'access-token', 'membership', 'metaverse', 'virtual-land', 'domain',
+  'trading-cards', 'tickets', 'digital-fashion', 'memes',
+  
+  // Physical product tags
+  'electronics', 'fashion', 'home', 'books', 'sports', 'toys',
+  'automotive', 'health', 'beauty', 'jewelry', 'collectibles', 'crafts',
+  'pet-supplies', 'food', 'organic', 'eco-friendly', 'sustainable',
+  
+  // Service tags
+  'services', 'education', 'consulting', 'software', 'design',
+  'writing', 'marketing', 'legal', 'wellness', 'travel', 'online',
+  'professional', 'expert', 'certified',
+  
+  // Business tags
+  'business', 'wholesale', 'bulk', 'manufacturing', 'equipment',
+  'real-estate', 'rental', 'investment', 'commercial',
+  
+  // Other tags
+  'free-shipping', 'fast-delivery', 'local', 'international',
+  'customizable', 'personalized', 'gift', 'sale', 'discount'
 ];
 
 // Step definitions

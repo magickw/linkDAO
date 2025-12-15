@@ -165,7 +165,7 @@ const getTokensForChain = (chainId: number) => {
         }] : []),
       ];
     case 11155111: // Sepolia Testnet
-      const ldaoSepoliaAddress = process.env.NEXT_PUBLIC_LDAO_TOKEN_ADDRESS as `0x${string}` | undefined;
+      const ethSepoliaLdaoAddress = process.env.NEXT_PUBLIC_LDAO_TOKEN_ADDRESS as `0x${string}` | undefined;
       return [
         {
           symbol: 'USDC',
@@ -174,10 +174,10 @@ const getTokensForChain = (chainId: number) => {
           decimals: 6
         },
         // LDAO Token
-        ...(ldaoSepoliaAddress ? [{
+        ...(ethSepoliaLdaoAddress ? [{
           symbol: 'LDAO',
           name: 'LinkDAO Token',
-          address: ldaoSepoliaAddress as Address,
+          address: ethSepoliaLdaoAddress as Address,
           decimals: 18
         }] : []),
       ];
@@ -887,57 +887,13 @@ export class WalletService {
     const wholePart = balance / divisor;
     const fractionalPart = balance % divisor;
     
-    // Convert to string for easier manipulation
-    const wholePartStr = wholePart.toString();
-    
-    // Format very large numbers with suffixes
-    if (wholePartStr.length > 12) { // Trillions or more
-      const trillion = wholePart / BigInt(10 ** 12);
-      const remainder = wholePart % BigInt(10 ** 12);
-      const trillionStr = trillion.toString();
-      
-      // Calculate the remainder as a decimal with up to 3 digits
-      const remainderDecimal = Number(remainder) / (10 ** 12);
-      const formattedRemainder = remainderDecimal.toFixed(3).replace(/\.?0+$/, '');
-      
-      return formattedRemainder ? 
-        `${trillionStr}.${formattedRemainder}T` : 
-        `${trillionStr}T`;
-    } else if (wholePartStr.length > 9) { // Billions
-      const billion = wholePart / BigInt(10 ** 9);
-      const remainder = wholePart % BigInt(10 ** 9);
-      const billionStr = billion.toString();
-      
-      const remainderDecimal = Number(remainder) / (10 ** 9);
-      const formattedRemainder = remainderDecimal.toFixed(3).replace(/\.?0+$/, '');
-      
-      return formattedRemainder ? 
-        `${billionStr}.${formattedRemainder}B` : 
-        `${billionStr}B`;
-    } else if (wholePartStr.length > 6) { // Millions
-      const million = wholePart / BigInt(10 ** 6);
-      const remainder = wholePart % BigInt(10 ** 6);
-      const millionStr = million.toString();
-      
-      const remainderDecimal = Number(remainder) / (10 ** 6);
-      const formattedRemainder = remainderDecimal.toFixed(3).replace(/\.?0+$/, '');
-      
-      return formattedRemainder ? 
-        `${millionStr}.${formattedRemainder}M` : 
-        `${millionStr}M`;
-    }
-    
-    // For smaller numbers, show the full value with appropriate decimal places
     if (fractionalPart === 0n) {
-      return wholePartStr;
+      return wholePart.toString();
     }
     
     const fractionalStr = fractionalPart.toString().padStart(decimals, '0');
-    const trimmedFractional = fractionalStr.replace(/0+$/, '');
-    
-    return trimmedFractional ? 
-      `${wholePartStr}.${trimmedFractional}` : 
-      wholePartStr;
+    // Keep all decimal places for maximum precision
+    return `${wholePart.toString()}.${fractionalStr}`;
   }
 
   /**
