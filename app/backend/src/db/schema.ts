@@ -5682,3 +5682,90 @@ export const userFraudProfiles = pgTable("user_fraud_profiles", {
   isBlacklistedIdx: index("idx_user_fraud_profiles_is_blacklisted").on(t.isBlacklisted),
 }));
 
+// Support Chat Sessions
+export const supportChatSessions = pgTable("support_chat_sessions", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  agentId: uuid("agent_id").references(() => users.id).onDelete('set null'),
+  status: varchar("status", { length: 20 }).default("waiting"), // waiting, active, closed
+  initialMessage: text("initial_message"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({
+  userFk: foreignKey({
+    columns: [t.userId],
+    foreignColumns: [users.id]
+  }),
+  agentFk: foreignKey({
+    columns: [t.agentId],
+    foreignColumns: [users.id]
+  }),
+  statusIdx: index("idx_support_chat_sessions_status").on(t.status),
+  createdAtIdx: index("idx_support_chat_sessions_created_at").on(t.createdAt),
+}));
+
+// Support Chat Messages
+export const supportChatMessages = pgTable("support_chat_messages", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  chatSessionId: varchar("chat_session_id", { length: 36 }).notNull().references(() => supportChatSessions.id, { onDelete: 'cascade' }),
+  senderId: uuid("sender_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  content: text("content").notNull(),
+  isAgent: boolean("is_agent").default(false),
+  read: boolean("read").default(false),
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+}, (t) => ({
+  chatSessionFk: foreignKey({
+    columns: [t.chatSessionId],
+    foreignColumns: [supportChatSessions.id]
+  }),
+  senderFk: foreignKey({
+    columns: [t.senderId],
+    foreignColumns: [users.id]
+  }),
+  timestampIdx: index("idx_support_chat_messages_timestamp").on(t.timestamp),
+  readIdx: index("idx_support_chat_messages_read").on(t.read),
+}));
+
+// Support FAQ
+export const supportFAQ = pgTable("support_faq", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  question: text("question").notNull(),
+  answer: text("answer").notNull(),
+  category: varchar("category", { length: 100 }).default("general"),
+  priority: integer("priority").default(1),
+  isActive: boolean("is_active").default(true),
+  viewCount: integer("view_count").default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({
+  categoryIdx: index("idx_support_faq_category").on(t.category),
+  priorityIdx: index("idx_support_faq_priority").on(t.priority),
+  isActiveIdx: index("idx_support_faq_is_active").on(t.isActive),
+}));
+
+// Support Tickets
+export const supportTickets = pgTable("support_tickets", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  subject: varchar("subject", { length: 255 }).notNull(),
+  description: text("description").notNull(),
+  category: varchar("category", { length: 100 }).default("general"),
+  priority: varchar("priority", { length: 20 }).default("medium"),
+  status: varchar("status", { length: 20 }).default("open"), // open, in_progress, resolved, closed
+  assignedTo: uuid("assigned_to").references(() => users.id).onDelete('set null'),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({
+  userFk: foreignKey({
+    columns: [t.userId],
+    foreignColumns: [users.id]
+  }),
+  assignedToFk: foreignKey({
+    columns: [t.assignedTo],
+    foreignColumns: [users.id]
+  }),
+  statusIdx: index("idx_support_tickets_status").on(t.status),
+  priorityIdx: index("idx_support_tickets_priority").on(t.priority),
+  categoryIdx: index("idx_support_tickets_category").on(t.category),
+}));
+

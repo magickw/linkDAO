@@ -253,17 +253,14 @@ const CommunitiesPage: React.FC = () => {
         // Check both wallet connection and backend authentication to avoid 401 errors
         if (address && isConnected && isAuthenticated) {
           try {
-            // Fetch both memberships and created communities (same approach as /create-post page)
-            const [memberCommunitiesResponse, createdCommunitiesResponse] = await Promise.all([
-              CommunityService.getMyCommunities(1, 100).catch(() => ({ communities: [], pagination: null })),
-              CommunityService.getMyCreatedCommunities(1, 100).catch(() => ({ communities: [], pagination: null }))
-            ]);
+            // Fetch user's communities (both created and joined)
+            const myCommunitiesResponse = await CommunityService.getMyCommunities(1, 100).catch(() => ({ communities: [], pagination: null }));
 
             if (!isMounted.current) return;
 
-            // Merge and deduplicate community IDs
+            // Set community IDs
             const allUserCommunityIds = new Set<string>();
-            [...memberCommunitiesResponse.communities, ...createdCommunitiesResponse.communities].forEach(c => {
+            myCommunitiesResponse.communities.forEach(c => {
               if (c && c.id) {
                 allUserCommunityIds.add(c.id);
               }
@@ -274,7 +271,7 @@ const CommunitiesPage: React.FC = () => {
             // Merge user communities into the main list so they appear in the sidebar
             // The sidebar filters 'communities' based on 'joinedCommunities', so we need to ensure
             // all joined/created communities are actually present in the 'communities' array.
-            const allUserCommunities = [...memberCommunitiesResponse.communities, ...createdCommunitiesResponse.communities];
+            const allUserCommunities = myCommunitiesResponse.communities;
             setCommunities(prev => {
               const existingIds = new Set(prev.map(c => c.id));
               const newCommunities = [...prev];
@@ -294,16 +291,16 @@ const CommunitiesPage: React.FC = () => {
             const adminRoles: Record<string, string> = {};
             const allCommunitiesToCheck = [...communitiesData, ...allUserCommunities];
 
-            // First, mark all created communities as admin (user is always admin of communities they created)
-            createdCommunitiesResponse.communities.forEach(community => {
-              if (community && community.id) {
-                adminRoles[community.id] = 'admin';
-              }
-            });
-
-            // Then check other communities for admin/moderator status
+            // Check all communities for admin/moderator status
             allCommunitiesToCheck.forEach(community => {
               if (!community || !community.id) return;
+
+              // Check if user is the creator (case-insensitive) - creators are always admins
+              if (community.creatorAddress && address &&
+                community.creatorAddress.toLowerCase() === address.toLowerCase()) {
+                adminRoles[community.id] = 'admin';
+                return; // Skip further checks for creators
+              }
 
               // Skip if already marked as admin
               if (adminRoles[community.id]) return;
@@ -311,11 +308,6 @@ const CommunitiesPage: React.FC = () => {
               // Check if user is an admin/moderator of this community (based on moderators field)
               if (community.moderators && Array.isArray(community.moderators) &&
                 address && community.moderators.some(mod => mod.toLowerCase() === address.toLowerCase())) {
-                adminRoles[community.id] = 'admin';
-              }
-              // Also check if user is the creator (case-insensitive)
-              if (community.creatorAddress && address &&
-                community.creatorAddress.toLowerCase() === address.toLowerCase()) {
                 adminRoles[community.id] = 'admin';
               }
             });

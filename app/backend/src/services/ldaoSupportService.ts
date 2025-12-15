@@ -1,7 +1,7 @@
 import { eq, desc, and, gte, like } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
-import { supportTickets, supportFAQ, supportCategories, ticketResponses } from '../db/schema/supportSchema';
+import { supportTickets, supportFAQ, supportCategories, ticketResponses, supportChatSessions, supportChatMessages } from '../db/schema/supportSchema';
 import emailService from './emailService';
 import { createNotification } from './notificationHelper';
 import { escapeLikePattern, generateSecureId } from '../utils/securityUtils';
@@ -458,13 +458,116 @@ class LDAOSupportService {
     try {
       const chatSessionId = generateSecureId('chat');
       
-      // In production, this would integrate with a live chat service
-      // like Intercom, Zendesk Chat, or custom WebSocket implementation
+      // Store chat session in database
+      const [chatSession] = await db.insert(supportChatSessions).values({
+        id: chatSessionId,
+        userId,
+        status: 'waiting',
+        initialMessage: initialMessage || '',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }).returning();
+
+      // Notify support agents via WebSocket if available
+      const { getWebSocketService } = await import('../services/webSocketService');
+      const wsService = getWebSocketService();
       
+      if (wsService) {
+        wsService.broadcastToAll('new_chat_request', {
+          chatSessionId,
+          userId,
+          initialMessage,
+          timestamp: new Date().toISOString()
+        });
+      }
+
       return chatSessionId;
     } catch (error) {
       safeLogger.error('Error initiating live chat:', error);
       throw new Error('Failed to initiate live chat');
+    }
+  }
+
+  // Send message in live chat
+  async sendChatMessage(chatSessionId: string, senderId: string, content: string, isAgent: boolean = false): Promise<void> {
+    try {
+      // Store message in database
+      const [message] = await db.insert(supportChatMessages).values({
+        id: generateSecureId('message'),
+        chatSessionId,
+        senderId,
+        content,
+        isAgent,
+        timestamp: new Date(),
+        read: false
+      }).returning();
+
+      // Update session last activity
+      await db.update(supportChatSessions)
+        .set({ updatedAt: new Date() })
+        .where(eq(supportChatSessions.id, chatSessionId));
+
+      // Broadcast message via WebSocket
+      const { getWebSocketService } = await import('../services/webSocketService');
+      const wsService = getWebSocketService();
+      
+      if (wsService) {
+        wsService.broadcastToAll('chat_message', {
+          chatSessionId,
+          messageId: message.id,
+          senderId,
+          content,
+          isAgent,
+          timestamp: message.timestamp.toISOString()
+        });
+      }
+    } catch (error) {
+      safeLogger.error('Error sending chat message:', error);
+      throw new Error('Failed to send message');
+    }
+  }
+
+  // Get chat session messages
+  async getChatMessages(chatSessionId: string): Promise<any[]> {
+    try {
+      const messages = await db.select()
+        .from(supportChatMessages)
+        .where(eq(supportChatMessages.chatSessionId, chatSessionId))
+        .orderBy(supportChatMessages.timestamp);
+
+      return messages;
+    } catch (error) {
+      safeLogger.error('Error fetching chat messages:', error);
+      throw new Error('Failed to fetch messages');
+    }
+  }
+
+  // Join chat session as agent
+  async joinChatSession(chatSessionId: string, agentId: string): Promise<void> {
+    try {
+      // Update session with agent
+      await db.update(supportChatSessions)
+        .set({ 
+          agentId,
+          status: 'active',
+          updatedAt: new Date()
+        })
+        .where(eq(supportChatSessions.id, chatSessionId));
+
+      // Notify user via WebSocket
+      const { getWebSocketService } = await import('../services/webSocketService');
+      const wsService = getWebSocketService();
+      
+      if (wsService) {
+        wsService.sendToUser(agentId, 'agent_joined', {
+          chatSessionId,
+          agentId,
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      safeLogger.error('Error joining chat session:', error);
+      throw new Error('Failed to join chat session');
     }
   }
 

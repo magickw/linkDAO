@@ -1465,7 +1465,7 @@ export class CommunityService {
       const communityMap = new Map(communitiesData.map(c => [c.id, c]));
 
       // Query posts from these communities
-      let postsResult = await db
+      const postsResult = await db
         .select({
           id: posts.id,
           authorId: posts.authorId,
@@ -1492,39 +1492,6 @@ export class CommunityService {
         .orderBy(orderBy)
         .limit(limit)
         .offset(offset);
-
-      // Debug: If no posts found with community filter, try without it
-      if (postsResult.length === 0) {
-        console.log(`[COMMUNITY FEED DEBUG] No posts found with community filter, trying without filter`);
-        postsResult = await db
-          .select({
-            id: posts.id,
-            authorId: posts.authorId,
-            title: posts.title,
-            contentCid: posts.contentCid,
-            parentId: posts.parentId,
-            mediaCids: posts.mediaCids,
-            tags: posts.tags,
-            stakedValue: posts.stakedValue,
-            reputationScore: posts.reputationScore,
-            dao: posts.dao,
-            communityId: posts.communityId,
-            createdAt: posts.createdAt,
-            authorAddress: users.walletAddress,
-            authorHandle: users.handle,
-          })
-          .from(posts)
-          .leftJoin(users, eq(posts.authorId, users.id))
-          .where(and(
-            timeFilter,
-            isNull(posts.parentId) // Only top-level posts
-          ))
-          .orderBy(orderBy)
-          .limit(limit)
-          .offset(offset);
-        
-        console.log(`[COMMUNITY FEED DEBUG] Query without filter returned ${postsResult.length} posts`);
-      }
 
       // Debug logging
       console.log(`[COMMUNITY FEED DEBUG] Query returned ${postsResult.length} posts for user ${userAddress}`);
@@ -5290,94 +5257,6 @@ export class CommunityService {
     }
   }
 
-  // Get all communities for "My Communities" (created + member of)
-  async getMyCommunities(userAddress: string, page: number = 1, limit: number = 20) {
-    try {
-      // Get communities created by user
-      const createdCommunities = await this.getCommunitiesCreatedByUser(userAddress, 1, 100);
-
-      // Get communities user is member of
-      const memberCommunities = await this.getCommunitiesUserIsMemberOf(userAddress, 1, 100);
-
-      // Combine and sort by creation date (newest first)
-      const allCommunities = [
-        ...createdCommunities.communities,
-        ...memberCommunities.communities
-      ].sort((a, b) => {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      });
-
-      // Apply pagination
-      const offset = (page - 1) * limit;
-      const paginatedCommunities = allCommunities.slice(offset, offset + limit);
-
-      return {
-        communities: paginatedCommunities,
-        pagination: {
-          page,
-          limit,
-          total: allCommunities.length,
-          totalPages: Math.ceil(allCommunities.length / limit)
-        }
-      };
-    } catch (error) {
-      safeLogger.error('Error getting my communities:', error);
-      throw new Error('Failed to retrieve my communities');
-    }
-  }
-
-  // Get communities the user is a member of (following)
-  async getCommunitiesFollowedByUser(userAddress: string, page: number = 1, limit: number = 20) {
-    try {
-      const offset = (page - 1) * limit;
-
-      // Get communities the user is a member of
-      const followedCommunities = await db
-        .select({
-          id: communities.id,
-          name: communities.name,
-          slug: communities.slug,
-          displayName: communities.displayName,
-          description: communities.description,
-          category: communities.category,
-          tags: communities.tags,
-          isPublic: communities.isPublic,
-          memberCount: communities.memberCount,
-          postCount: communities.postCount,
-          avatar: communities.avatar,
-          banner: communities.banner,
-          createdAt: communities.createdAt,
-          updatedAt: communities.updatedAt,
-          creatorAddress: communities.creatorAddress
-        })
-        .from(communities)
-        .innerJoin(communityMembers, eq(communities.id, communityMembers.communityId))
-        .where(eq(communityMembers.userAddress, userAddress))
-        .orderBy(desc(communities.createdAt))
-        .limit(limit)
-        .offset(offset);
-
-      // Get total count for pagination
-      const totalCount = await db
-        .select({ count: sql<number>`COUNT(*)` })
-        .from(communities)
-        .innerJoin(communityMembers, eq(communities.id, communityMembers.communityId))
-        .where(eq(communityMembers.userAddress, userAddress));
-
-      return {
-        communities: followedCommunities,
-        pagination: {
-          page,
-          limit,
-          total: totalCount[0]?.count || 0,
-          totalPages: Math.ceil((totalCount[0]?.count || 0) / limit)
-        }
-      };
-    } catch (error) {
-      safeLogger.error('Error getting communities followed by user:', error);
-      throw new Error('Failed to retrieve followed communities');
-    }
-  }
 
   // Get all communities for the user (both created and followed)
   async getMyCommunities(userAddress: string, page: number = 1, limit: number = 20) {

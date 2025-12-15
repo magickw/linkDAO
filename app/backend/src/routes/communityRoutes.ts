@@ -947,41 +947,6 @@ router.get('/health/dashboard',
   communityController.getAllCommunitiesHealthMetrics
 );
 
-// Get aggregated feed from followed communities
-router.get('/feed',
-  authRequired,
-  validateRequest({
-    query: {
-      page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, max: 50 },
-      sort: { type: 'string', optional: true, enum: ['new', 'hot', 'top', 'rising'] },
-      timeRange: { type: 'string', optional: true, enum: ['hour', 'day', 'week', 'month', 'year', 'all'] }
-    }
-  }),
-  async (req, res) => {
-    try {
-      const userAddress = req.user?.walletAddress;
-      if (!userAddress) {
-        return res.status(401).json({ error: 'Authentication required' });
-      }
 
-      const { page = 1, limit = 20, sort = 'new', timeRange = 'all' } = req.query;
-
-      const { communityService } = await import('../services/communityService');
-      const result = await communityService.getFollowedCommunitiesPosts({
-        userAddress,
-        page: Number(page),
-        limit: Number(limit),
-        sort: String(sort),
-        timeRange: String(timeRange)
-      });
-
-      res.json(result);
-    } catch (error) {
-      console.error('Error fetching community feed:', error);
-      res.status(500).json({ error: 'Failed to fetch community feed' });
-    }
-  }
-);
 
 export default router;

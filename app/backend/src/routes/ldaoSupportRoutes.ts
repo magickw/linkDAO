@@ -337,6 +337,155 @@ router.post('/chat/initiate', csrfProtection,
   }
 );
 
+// Send message in chat
+router.post('/chat/message',
+  csrfProtection,
+  authMiddleware,
+  rateLimitingMiddleware({ windowMs: 60 * 1000, max: 30 }), // 30 messages per minute
+  [
+    body('chatSessionId')
+      .isLength({ min: 36, max: 36 })
+      .withMessage('Chat session ID is required'),
+    body('message')
+      .isLength({ min: 1, max: 1000 })
+      .withMessage('Message must be between 1 and 1000 characters')
+  ],
+  validateRequest,
+  async (req: any, res: any) => {
+    try {
+      const userId = req.user.id;
+      const { chatSessionId, message } = req.body;
+
+      // Verify user is part of the chat session or is staff
+      const session = await db.select()
+        .from(supportChatSessions)
+        .where(and(
+          eq(supportChatSessions.id, chatSessionId),
+          or(
+            eq(supportChatSessions.userId, userId),
+            eq(supportChatSessions.agentId, userId)
+          )
+        ))
+        .limit(1);
+
+      if (!session) {
+        return res.status(404).json({
+          success: false,
+          message: 'Chat session not found'
+        });
+      }
+
+      const isAgent = session.agentId === userId;
+      await ldaoSupportService.sendChatMessage(chatSessionId, userId, message, isAgent);
+
+      res.json({
+        success: true,
+        message: 'Message sent successfully'
+      });
+    } catch (error) {
+      safeLogger.error('Error sending chat message:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to send message'
+      });
+    }
+  }
+);
+
+// Get chat messages
+router.get('/chat/:chatSessionId/messages',
+  authMiddleware,
+  async (req: any, res: any) => {
+    try {
+      const userId = req.user.id;
+      const { chatSessionId } = req.params;
+
+      // Verify user is part of the chat session or is staff
+      const session = await db.select()
+        .from(supportChatSessions)
+        .where(and(
+          eq(supportChatSessions.id, chatSessionId),
+          or(
+            eq(supportChatSessions.userId, userId),
+            eq(supportChatSessions.agentId, userId)
+          )
+        ))
+        .limit(1);
+
+      if (!session) {
+        return res.status(404).json({
+          success: false,
+          message: 'Chat session not found'
+        });
+      }
+
+      const messages = await ldaoSupportService.getChatMessages(chatSessionId);
+
+      res.json({
+        success: true,
+        data: messages
+      });
+    } catch (error) {
+      safeLogger.error('Error fetching chat messages:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch messages'
+      });
+    }
+  }
+);
+
+// Join chat session (for agents)
+router.post('/chat/:chatSessionId/join',
+  csrfProtection,
+  authMiddleware,
+  rateLimitingMiddleware({ windowMs: 60 * 1000, max: 5 }), // 5 joins per minute
+  validateRequest,
+  async (req: any, res: any) => {
+    try {
+      const agentId = req.user.id;
+      const { chatSessionId } = req.params;
+
+      // Verify user is staff
+      if (!req.user.isStaff) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied - Staff only'
+        });
+      }
+
+      // Verify chat session exists and is waiting
+      const session = await db.select()
+        .from(supportChatSessions)
+        .where(and(
+          eq(supportChatSessions.id, chatSessionId),
+          eq(supportChatSessions.status, 'waiting')
+        ))
+        .limit(1);
+
+      if (!session) {
+        return res.status(404).json({
+          success: false,
+          message: 'Chat session not found or already active'
+        });
+      }
+
+      await ldaoSupportService.joinChatSession(chatSessionId, agentId);
+
+      res.json({
+        success: true,
+        message: 'Joined chat session successfully'
+      });
+    } catch (error) {
+      safeLogger.error('Error joining chat session:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to join chat session'
+      });
+    }
+  }
+);
+
 // Support Metrics (Staff only)
 router.get('/metrics',
   authMiddleware,
