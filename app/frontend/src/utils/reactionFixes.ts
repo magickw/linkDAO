@@ -48,7 +48,13 @@ export const handleReactionWithAuth = async (
 ) => {
   // Check authentication (wallet connection should be checked by the caller)
   if (!checkAuthentication()) {
-    throw new Error('Please authenticate to react. Try refreshing the page.');
+    // Check if user has a wallet connected but not authenticated
+    const hasWallet = checkWalletConnection();
+    if (hasWallet) {
+      throw new Error('Please sign in with your wallet to react to posts. Look for the "Sign In" button in the header.');
+    } else {
+      throw new Error('Please connect your wallet and sign in to react to posts.');
+    }
   }
   
   // Ensure valid post ID
@@ -70,7 +76,17 @@ export const handleReactionWithAuth = async (
     
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || `Failed to react: ${response.statusText}`);
+      
+      // Provide more specific error messages
+      if (response.status === 401) {
+        throw new Error('Your session has expired. Please sign in again to react to posts.');
+      } else if (response.status === 403) {
+        throw new Error('You do not have permission to react to this post.');
+      } else if (response.status === 404) {
+        throw new Error('This post may have been removed or is no longer available.');
+      } else {
+        throw new Error(error.error || `Failed to react: ${response.statusText}`);
+      }
     }
     
     const responseData = await response.json();
