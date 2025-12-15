@@ -835,7 +835,7 @@ const DashboardRightSidebar = memo(() => {
                   <div className="flex items-center space-x-3">
                     <div className="relative">
                       <img
-                        src={user.avatarCid ? `https://ipfs.io/ipfs/${user.avatarCid}` : '/default-avatar.png'}
+                        src={user.avatarCid ? `https://ipfs.io/ipfs/${user.avatarCid}` : '/images/default-avatar.png'}
                         alt={user.handle}
                         className="w-10 h-10 rounded-full"
                       />

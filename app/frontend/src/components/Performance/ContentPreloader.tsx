@@ -189,7 +189,7 @@ export function ContentPreloader({
     });
 
     // Preload critical images
-    const criticalImages = ['/logo.svg', '/hero-bg.jpg', '/default-avatar.png'];
+    const criticalImages = ['/logo.svg', '/hero-bg.jpg', '/images/default-avatar.png'];
     criticalImages.forEach(image => {
       if (!activePreloads.has(image)) {
         queuePreload({

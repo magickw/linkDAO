@@ -133,7 +133,7 @@ const NotificationCategorization: React.FC<NotificationCategorizationProps> = ({
         return (
           <div className="flex items-start space-x-3">
             <img 
-              src={mentionNotif.metadata.mentionedByAvatar || '/default-avatar.png'} 
+              src={mentionNotif.metadata.mentionedByAvatar || '/images/default-avatar.png'} 
               alt={mentionNotif.metadata.mentionedByUsername}
               className="w-8 h-8 rounded-full"
             />
@@ -154,7 +154,7 @@ const NotificationCategorization: React.FC<NotificationCategorizationProps> = ({
         return (
           <div className="flex items-start space-x-3">
             <img 
-              src={tipNotif.metadata.tipperAvatar || '/default-avatar.png'} 
+              src={tipNotif.metadata.tipperAvatar || '/images/default-avatar.png'} 
               alt={tipNotif.metadata.tipperUsername}
               className="w-8 h-8 rounded-full"
             />
@@ -228,7 +228,7 @@ const NotificationCategorization: React.FC<NotificationCategorizationProps> = ({
         return (
           <div className="flex items-start space-x-3">
             <img 
-              src={reactionNotif.metadata.reactorAvatar || '/default-avatar.png'} 
+              src={reactionNotif.metadata.reactorAvatar || '/images/default-avatar.png'} 
               alt={reactionNotif.metadata.reactorUsername}
               className="w-8 h-8 rounded-full"
             />

@@ -213,7 +213,7 @@ const LiveCommentUpdates: React.FC<LiveCommentUpdatesProps> = ({
       `}
     >
       <img 
-        src={comment.authorAvatar || '/default-avatar.png'} 
+        src={comment.authorAvatar || '/images/default-avatar.png'} 
         alt={comment.authorUsername}
         className="w-8 h-8 rounded-full flex-shrink-0"
       />

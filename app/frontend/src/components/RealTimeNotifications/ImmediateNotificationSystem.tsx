@@ -69,11 +69,11 @@ const ImmediateNotificationToast: React.FC<{
   const getNotificationIcon = () => {
     switch (notification.category) {
       case NotificationCategory.MENTION:
-        return notification.metadata.mentionedByAvatar || '/default-avatar.png';
+        return notification.metadata.mentionedByAvatar || '/images/default-avatar.png';
       case NotificationCategory.TIP:
-        return notification.metadata.tipperAvatar || '/default-avatar.png';
+        return notification.metadata.tipperAvatar || '/images/default-avatar.png';
       case NotificationCategory.REACTION:
-        return notification.metadata.reactorAvatar || '/default-avatar.png';
+        return notification.metadata.reactorAvatar || '/images/default-avatar.png';
       default:
         return '/icons/notification-default.png';
     }

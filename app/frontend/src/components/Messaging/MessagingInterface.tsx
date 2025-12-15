@@ -31,7 +31,7 @@ import {
   BellOff,
   Loader2
 } from 'lucide-react';
-import { useAccount } from 'wagmi';
+import { useAccount, useSigner } from 'wagmi';
 import { GlassPanel, Button } from '../../design-system';
 import { useToast } from '@/context/ToastContext';
 import { MessageItem } from './MessageItem';
@@ -67,6 +67,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   initialConversationId
 }) => {
   const { address, isConnected } = useAccount();
+  const { data: signer } = useSigner();
   // Local UI state (kept for selection and UI flags). Actual data comes from useChatHistory.
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(
@@ -422,12 +423,17 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   }, [messages]);
 
   const initializeMessaging = async () => {
+    if (!signer) {
+      console.error("Signer not available, can't initialize messaging service.");
+      addToast("Cannot initialize messaging service. Please connect your wallet.", "error");
+      return;
+    }
+
     try {
       setIsLoading(true);
       
       // Initialize the messaging service with current wallet
-      // Note: In a real implementation, you'd pass the actual wallet/signer
-      // await messagingService.initialize(wallet);
+      await messagingService.initialize(signer);
       
       // Initialize notification service
       // Service is initialized automatically
@@ -443,6 +449,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       setIsLoading(false);
     } catch (error) {
       console.error('Failed to initialize messaging:', error);
+      addToast("Failed to initialize messaging service.", "error");
       setIsLoading(false);
     }
   };

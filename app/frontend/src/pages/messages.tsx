@@ -36,6 +36,11 @@ const MessagesPage: React.FC = () => {
   const { to } = router.query;
   const { address: account } = useWeb3();
   
+  const formatAddress = (addr: string) => {
+    if (!addr) return '';
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  };
+
   // Helper function to generate conversation ID (same logic as messaging service)
   const getConversationId = (addr1: string, addr2: string): string => {
     const [a1, a2] = [addr1.toLowerCase(), addr2.toLowerCase()].sort();
@@ -74,11 +79,16 @@ const MessagesPage: React.FC = () => {
                 const userResponse = await fetch(`/api/users/${otherParticipant}`);
                 if (userResponse.ok) {
                   const userData = await userResponse.json();
-                  participantName = userData.data?.displayName || userData.data?.storeName || otherParticipant;
+                  console.log('User data:', userData);
+                  participantName = userData.data?.displayName || userData.data?.storeName || formatAddress(otherParticipant);
                   participantAvatar = userData.data?.profileImageUrl || '/images/default-avatar.png';
+                  console.log('Participant avatar:', participantAvatar);
+                } else {
+                  participantName = formatAddress(otherParticipant);
                 }
               } catch (error) {
                 console.warn('Could not fetch user details:', error);
+                participantName = formatAddress(otherParticipant);
               }
             }
             
@@ -112,7 +122,7 @@ const MessagesPage: React.FC = () => {
             const newConv: Conversation = {
               id: conversationId,
               participants: [account!, to as string],
-              participantName: `User ${to as string}`,
+              participantName: formatAddress(to as string),
               participantAvatar: '/images/default-avatar.png',
               lastMessage: undefined,
               lastActivity: new Date(),

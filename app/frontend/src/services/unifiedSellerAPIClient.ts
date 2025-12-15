@@ -15,6 +15,7 @@ import {
   TierProgress,
   TierUpgradeInfo
 } from '../types/sellerTier';
+import { enhancedAuthService } from './enhancedAuthService';
 
 // Standardized API endpoint pattern using `/api/marketplace/seller` base
 // Always use the full backend URL to avoid relative path issues
@@ -239,18 +240,12 @@ export class UnifiedSellerAPIClient {
 
       // Add authentication headers only if required
       if (requireAuth) {
-        // Get authentication token if available
-        const token = localStorage.getItem('linkdao_access_token') ||
-          localStorage.getItem('token') ||
-          localStorage.getItem('authToken');
+        // Use enhancedAuthService for consistent authentication
+        const authHeaders = enhancedAuthService.getAuthHeaders();
+        Object.assign(headers, authHeaders);
 
         // Get wallet address for authentication
         const walletAddress = localStorage.getItem('linkdao_wallet_address');
-
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
-        }
-
         if (walletAddress) {
           headers['X-Wallet-Address'] = walletAddress;
         }
