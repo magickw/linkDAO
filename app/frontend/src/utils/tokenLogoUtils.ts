@@ -27,8 +27,8 @@ const TOKEN_LOGOS: Record<string, string> = {
   'YFI': '/tokens/yfi.png',
   
   // LinkDAO token
-  'LDAO': '/logo.png',
-  'LINKDAO': '/logo.png',
+  'LDAO': '/tokens/ldao.png',
+  'LINKDAO': '/tokens/ldao.png',
   
   // Default fallback
   'DEFAULT': '/images/default-token.png'

@@ -7,66 +7,7 @@
 import { fetchWithRetry } from '../utils/apiUtils';
 import { API_BASE_URL } from '../config/api';
 
-// Fallback data for offline/error scenarios
-const MOCK_PRODUCTS: Product[] = [
-  {
-    id: '550e8400-e29b-41d4-a716-446655440001',
-    sellerId: '0xc4f4cb013c4121d2dbd5b063eefe074f0ebc03f3',
-    title: 'Premium Digital Art Collection',
-    description: 'A curated collection of digital artworks',
-    priceAmount: 299.99,
-    priceCurrency: 'USDC',
-    categoryId: 'cat_001',
-    images: ['https://placeholder.com/art1.jpg'],
-    metadata: {},
-    inventory: 1,
-    status: 'active',
-    tags: ['art', 'digital', 'premium'],
-    views: 100,
-    favorites: 50,
-    listingStatus: 'active',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: '550e8400-e29b-41d4-a716-446655440002',
-    sellerId: '0x72f58fe0e30a3f2fa96720d7ad85b4a8ef767d05',
-    title: 'Blockchain Development Course',
-    description: 'Comprehensive course on blockchain development',
-    priceAmount: 49.99,
-    priceCurrency: 'USDC',
-    categoryId: 'cat_002',
-    images: ['https://placeholder.com/course1.jpg'],
-    metadata: {},
-    inventory: 5,
-    status: 'active',
-    tags: ['education', 'blockchain', 'course'],
-    views: 250,
-    favorites: 75,
-    listingStatus: 'active',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: '550e8400-e29b-41d4-a716-446655440003',
-    sellerId: '0xc4f4cb013c4121d2dbd5b063eefe074f0ebc03f3',
-    title: 'Web3 Design Template Pack',
-    description: 'Professional design templates for Web3 projects',
-    priceAmount: 149.99,
-    priceCurrency: 'USDC',
-    categoryId: 'cat_003',
-    images: ['https://placeholder.com/template1.jpg'],
-    metadata: {},
-    inventory: 3,
-    status: 'active',
-    tags: ['design', 'web3', 'templates'],
-    views: 180,
-    favorites: 60,
-    listingStatus: 'active',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  }
-];
+
 
 // Core interfaces
 export interface Product {
@@ -431,84 +372,39 @@ export class UnifiedMarketplaceService {
   // ============================================================================
 
   async getProducts(filters?: ProductFilters): Promise<ProductPage> {
-    try {
-      const params = new URLSearchParams();
-      if (filters) {
-        Object.entries(filters).forEach(([key, value]) => {
-          if (value !== undefined && value !== null) {
-            if (Array.isArray(value)) {
-              params.append(key, value.join(','));
-            } else {
-              params.append(key, value.toString());
-            }
-          }
-        });
-      }
-
-      // Try marketplace/listings endpoint first
-      // Add cache-busting parameter to prevent service worker caching issues
-      const cacheBuster = `_=${Date.now()}`;
-      const paramsString = params.toString();
-      const separator = paramsString ? '&' : '';
-      const endpoint = `/api/marketplace/listings?${paramsString}${separator}${cacheBuster}`;
-      const response = await this.makeApiRequest(endpoint);
-      if (!response.ok) {
-        console.warn('Marketplace API unavailable, using mock data');
-        return this.getMockProducts(filters);
-      }
-
-      const result = await response.json();
-      if (result.success) {
-        return result.data;
-      } else {
-        throw new Error(result.message || 'Failed to fetch products');
-      }
-    } catch (error) {
-      console.warn('Error fetching products, using mock data:', error);
-      return this.getMockProducts(filters);
-    }
-  }
-
-  private getMockProducts(filters?: ProductFilters): ProductPage {
-    // Return mock products when API is unavailable
-    let filteredProducts = MOCK_PRODUCTS;
-
-    // Apply filters if provided
+    const params = new URLSearchParams();
     if (filters) {
-      if (filters.category) {
-        filteredProducts = filteredProducts.filter(p => p.categoryId === filters.category);
-      }
-      if (filters.search) {
-        const searchLower = filters.search.toLowerCase();
-        filteredProducts = filteredProducts.filter(p =>
-          p.title.toLowerCase().includes(searchLower) ||
-          p.description.toLowerCase().includes(searchLower) ||
-          p.tags?.some(tag => tag.toLowerCase().includes(searchLower))
-        );
-      }
-      if (filters.minPrice) {
-        filteredProducts = filteredProducts.filter(p => p.priceAmount >= filters.minPrice!);
-      }
-      if (filters.maxPrice) {
-        filteredProducts = filteredProducts.filter(p => p.priceAmount <= filters.maxPrice!);
-      }
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          if (Array.isArray(value)) {
+            params.append(key, value.join(','));
+          } else {
+            params.append(key, value.toString());
+          }
+        }
+      });
     }
 
-    // Apply pagination
-    const page = filters?.page || 1;
-    const limit = filters?.limit || 20;
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-    const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
+    // Add cache-busting parameter to prevent service worker caching issues
+    const cacheBuster = `_=${Date.now()}`;
+    const paramsString = params.toString();
+    const separator = paramsString ? '&' : '';
+    const endpoint = `/api/marketplace/listings?${paramsString}${separator}${cacheBuster}`;
+    
+    const response = await this.makeApiRequest(endpoint);
+    if (!response.ok) {
+      throw new Error(`API request failed with status: ${response.status}`);
+    }
 
-    return {
-      products: paginatedProducts,
-      total: filteredProducts.length,
-      page,
-      limit,
-      hasMore: endIndex < filteredProducts.length
-    };
+    const result = await response.json();
+    if (result.success) {
+      return result.data;
+    } else {
+      throw new Error(result.message || 'Failed to fetch products');
+    }
   }
+
+  
 
   async getProductById(id: string): Promise<Product | null> {
     try {
@@ -1005,85 +901,47 @@ export class UnifiedMarketplaceService {
   }
 
   private async makeApiRequest(endpoint: string, options: RequestInit = {}): Promise<Response> {
-    // Add timestamp to bypass any cached responses
     const timestamp = Date.now();
     const separator = endpoint.includes('?') ? '&' : '?';
     const endpointWithTimestamp = `${endpoint}${separator}_t=${timestamp}`;
 
-    // First try the primary URL with bypass header
-    let response = await this.attemptApiRequest(`${this.primaryBaseUrl}${endpointWithTimestamp}`, options);
-
-    // If primary fails with network error or 503, try without bypass header as fallback
-    if (!response.ok || response.status === 503) {
-      console.log(`[MarketplaceService] Primary request failed (status: ${response.status}), trying without bypass header`);
-
-      // Remove bypass header and try again
-      const optionsWithoutBypass = {
-        ...options,
-        headers: { ...options.headers }
-      };
-      delete (optionsWithoutBypass.headers as Record<string, string>)['X-Service-Worker-Bypass'];
-
-      try {
-        response = await this.attemptApiRequest(`${this.primaryBaseUrl}${endpointWithTimestamp}`, optionsWithoutBypass);
-      } catch (error) {
-        console.error('[MarketplaceService] Fallback request also failed:', error);
-      }
-
-      // If still failing, implement retry with backoff
-      if (!response.ok || response.status === 503) {
-        console.log(`[MarketplaceService] Still failing, implementing retry strategy`);
-
-        // Wait 800ms before retrying (reduced from 3s for faster feedback)
-        await new Promise(resolve => setTimeout(resolve, 800));
-
-        // Retry the request with new timestamp
-        try {
-          response = await this.attemptApiRequest(`${this.primaryBaseUrl}${endpointWithTimestamp}`, optionsWithoutBypass);
-        } catch (error) {
-          console.error('[MarketplaceService] Retry failed:', error);
-        }
-
-        // If still 503, try one more time after 1.5 seconds
-        if (!response.ok || response.status === 503) {
-          console.log(`[MarketplaceService] Second attempt also returned ${response.status}, trying final retry`);
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          try {
-            response = await this.attemptApiRequest(`${this.primaryBaseUrl}${endpointWithTimestamp}`, optionsWithoutBypass);
-          } catch (error) {
-            console.error('[MarketplaceService] Final retry failed:', error);
-            // Return a mock response to prevent complete failure
-            return new Response(JSON.stringify({ success: false, data: [] }), {
-              status: 200,
-              headers: { 'Content-Type': 'application/json' }
-            });
-          }
-        }
-      }
-    }
-
-    // If primary still fails and we're in development, try fallback
-    if (!response.ok && this.primaryBaseUrl !== this.fallbackBaseUrl &&
-      typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-      console.log(`[MarketplaceService] Primary API failed, trying fallback: ${this.fallbackBaseUrl}${endpoint}`);
-      response = await this.attemptApiRequest(`${this.fallbackBaseUrl}${endpoint}`, options);
-
-      // If fallback succeeds, temporarily switch to using fallback as primary
+    // Try the primary URL first
+    try {
+      const response = await this.attemptApiRequest(`${this.primaryBaseUrl}${endpointWithTimestamp}`, options);
       if (response.ok) {
-        this.currentBaseUrl = this.fallbackBaseUrl;
-        console.log('[MarketplaceService] Switched to fallback API temporarily');
+        this.currentBaseUrl = this.primaryBaseUrl;
+        return response;
       }
-    } else if (response.ok) {
-      // If primary succeeded, ensure we're using it
-      this.currentBaseUrl = this.primaryBaseUrl;
+      
+      // If we get a non-OK response, log it and continue to fallback
+      console.warn(`[MarketplaceService] Primary request failed with status: ${response.status}`);
+    } catch (error) {
+      console.warn('[MarketplaceService] Primary request failed:', error);
     }
 
-    return response;
+    // If primary fails and we're in development, try fallback
+    if (this.primaryBaseUrl !== this.fallbackBaseUrl &&
+      typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      console.log(`[MarketplaceService] Trying fallback API: ${this.fallbackBaseUrl}${endpoint}`);
+      try {
+        const response = await this.attemptApiRequest(`${this.fallbackBaseUrl}${endpoint}`, options);
+        if (response.ok) {
+          this.currentBaseUrl = this.fallbackBaseUrl;
+          console.log('[MarketplaceService] Switched to fallback API temporarily');
+          return response;
+        }
+      } catch (error) {
+        console.warn('[MarketplaceService] Fallback request also failed:', error);
+      }
+    }
+
+    // If all attempts fail, throw an error
+    throw new Error('All API attempts failed');
   }
 
   private async attemptApiRequest(url: string, options: RequestInit = {}): Promise<Response> {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout for faster feedback
 
     try {
       // Check if we're trying to connect to localhost in production
@@ -1093,26 +951,25 @@ export class UnifiedMarketplaceService {
         throw new Error('Cannot connect to localhost in production due to CSP restrictions');
       }
 
-      // Prepare headers - be more careful with CORS headers
+      // Simplified headers to avoid CORS issues
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-        // NOTE: Removed 'X-Service-Worker-Bypass' header - let SW handle caching via networkFirst strategy
-        // The bypass was causing "Failed to fetch" errors in production
+        'Accept': 'application/json',
         ...options.headers,
       };
 
-      // Remove conflicting headers that might cause CORS issues
+      // Remove problematic headers
+      delete (headers as Record<string, string>)['Cache-Control'];
+      delete (headers as Record<string, string>)['Pragma'];
       delete (headers as Record<string, string>)['Referrer-Policy'];
 
       const fetchOptions: RequestInit = {
         ...options,
         signal: controller.signal,
         headers,
-        // Use more permissive CORS settings
+        // Standard CORS settings
         mode: 'cors',
-        credentials: 'include',
+        credentials: 'omit', // Changed to omit to reduce CORS issues
         redirect: 'follow'
       };
 
@@ -1143,106 +1000,51 @@ export class UnifiedMarketplaceService {
     }
   }
   async getMarketplaceListings(filters?: any): Promise<MarketplaceListing[]> {
-    try {
-      const params = new URLSearchParams();
-      if (filters) {
-        Object.entries(filters).forEach(([key, value]) => {
-          if (value !== undefined && value !== null) {
-            params.append(key, value.toString());
-          }
-        });
-      }
-
-      // Add cache-busting parameter to prevent service worker caching issues
-      const cacheBuster = `_=${Date.now()}`;
-      const paramsString = params.toString();
-      const separator = paramsString ? '&' : '';
-      const endpoint = `/api/marketplace/listings?${paramsString}${separator}${cacheBuster}`;
-      console.log('[MarketplaceService] Fetching listings from primary URL:', `${this.primaryBaseUrl}${endpoint}`); const response = await this.makeApiRequest(endpoint, {
-        method: 'GET'
-        // NOTE: Removed X-Service-Worker-Bypass header - let SW handle via networkFirst strategy
+    const params = new URLSearchParams();
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          params.append(key, value.toString());
+        }
       });
+    }
 
-      if (!response.ok) {
-        console.warn('[MarketplaceService] Listings request was not ok:', response.status, response.statusText);
+    // Add cache-busting parameter to prevent service worker caching issues
+    const cacheBuster = `_=${Date.now()}`;
+    const paramsString = params.toString();
+    const separator = paramsString ? '&' : '';
+    const endpoint = `/api/marketplace/listings?${paramsString}${separator}${cacheBuster}`;
+    
+    console.log('[MarketplaceService] Fetching listings from primary URL:', `${this.primaryBaseUrl}${endpoint}`);
+    
+    const response = await this.makeApiRequest(endpoint, { method: 'GET' });
 
-        // Handle 503 Service Unavailable specifically
-        if (response.status === 503) {
-          console.warn('[MarketplaceService] Service temporarily unavailable (503). Using mock data.');
-          // Show user-friendly message
-          if (typeof window !== 'undefined' && window.dispatchEvent) {
-            window.dispatchEvent(new CustomEvent('marketplace-service-unavailable', {
-              detail: {
-                message: 'Marketplace service is temporarily unavailable. Showing sample products.'
-              }
-            }));
-          }
-          // Return mock data instead of empty array
-          return this.getMockProducts(filters);
-        }
+    if (!response.ok) {
+      throw new Error(`API request failed with status: ${response.status}`);
+    }
 
-        // Try to get error details from response
-        try {
-          const errorData = await response.json();
-          console.warn('[MarketplaceService] API error response:', errorData);
-        } catch (e) {
-          console.warn('[MarketplaceService] Could not parse error response:', e);
-        }
+    const result = await response.json();
+    console.log('[MarketplaceService] Raw API result:', result);
 
-        // For other errors, also return mock data as fallback
-        console.warn('[MarketplaceService] API error, using mock data as fallback');
-        return this.getMockProducts(filters);
-      }
+    if (!result.success) {
+      throw new Error(result.message || 'API returned failure');
+    }
 
-      const result = await response.json().catch((parseError) => {
-        console.error('[MarketplaceService] Failed to parse JSON response:', parseError);
-        return { success: false, data: null };
-      });
+    const data = result.data;
+    console.log('[MarketplaceService] Extracted data:', data);
 
-      console.log('[MarketplaceService] Raw API result:', result);
-
-      if (result && result.success) {
-        // Handle the actual response format from the backend
-        // API returns: { success: true, data: { listings: [...], pagination: {...} } }
-        const data = result.data;
-        console.log('[MarketplaceService] Extracted data:', data);
-
-        // Check if data is directly an array (seller service format)
-        if (Array.isArray(data)) {
-          console.log('[MarketplaceService] Data is array, returning directly:', data.length, 'items');
-          return data;
-        }
-        // Check if data is an object with listings property (marketplace controller format)
-        else if (data && Array.isArray(data.listings)) {
-          console.log('[MarketplaceService] Data has listings array, returning:', data.listings.length, 'items');
-          return data.listings;
-        }
-        // Handle nested data structure
-        else if (data && data.data && Array.isArray(data.data.listings)) {
-          console.log('[MarketplaceService] Data has nested listings array, returning:', data.data.listings.length, 'items');
-          return data.data.listings;
-        }
-        console.log('[MarketplaceService] No valid listings array found in data');
-        return [];
-      } else {
-        console.warn('[MarketplaceService] Response indicated failure:', result?.message);
-        return [];
-      }
-    } catch (error: any) {
-      console.error('[MarketplaceService] Error fetching listings:', error);
-
-      // Provide more specific error information
-      if (error.name === 'AbortError') {
-        console.error('[MarketplaceService] Request timed out');
-      } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
-        console.error('[MarketplaceService] Network error - could not connect to API');
-        console.error('[MarketplaceService] This might be due to CORS policy, network connectivity, or the server being down');
-      } else {
-        console.error('[MarketplaceService] Unexpected error:', error.message);
-      }
-
-      // Return empty array as fallback
-      return [];
+    // Handle different response formats
+    if (Array.isArray(data)) {
+      console.log('[MarketplaceService] Data is array, returning directly:', data.length, 'items');
+      return data;
+    } else if (data && Array.isArray(data.listings)) {
+      console.log('[MarketplaceService] Data has listings array, returning:', data.listings.length, 'items');
+      return data.listings;
+    } else if (data && data.data && Array.isArray(data.data.listings)) {
+      console.log('[MarketplaceService] Data has nested listings array, returning:', data.data.listings.length, 'items');
+      return data.data.listings;
+    } else {
+      throw new Error('Invalid response format: no listings array found');
     }
   }
 
@@ -1476,76 +1278,24 @@ export class UnifiedMarketplaceService {
       return false;
     }
   } async getCategories(): Promise<CategoryInfo[]> {
-    try {
-      // Add cache-busting parameter to prevent service worker caching issues
-      const cacheBuster = `_=${Date.now()}`;
-      const endpoint = `/api/marketplace/listings/categories?${cacheBuster}`;
-      const response = await this.makeApiRequest(endpoint);
+    // Add cache-busting parameter to prevent service worker caching issues
+    const cacheBuster = `_=${Date.now()}`;
+    const endpoint = `/api/marketplace/listings/categories?${cacheBuster}`;
+    const response = await this.makeApiRequest(endpoint);
 
-      if (!response.ok) {
-        console.warn('Categories API unavailable, using mock data');
-        return this.getMockCategories();
-      }
+    if (!response.ok) {
+      throw new Error(`Categories API request failed with status: ${response.status}`);
+    }
 
-      const result = await response.json();
-      if (result.success) {
-        return result.data || [];
-      } else {
-        throw new Error(result.message || 'Failed to fetch categories');
-      }
-    } catch (error) {
-      console.warn('Error fetching categories, using mock data:', error);
-      return this.getMockCategories();
+    const result = await response.json();
+    if (result.success) {
+      return result.data || [];
+    } else {
+      throw new Error(result.message || 'Failed to fetch categories');
     }
   }
 
-  private getMockCategories(): CategoryInfo[] {
-    // Return mock categories when API is unavailable
-    return [
-      {
-        id: 'cat_001',
-        name: 'Digital Art',
-        slug: 'digital-art',
-        description: 'Digital artworks and NFTs',
-        imageUrl: 'https://placeholder.com/categories/digital-art.jpg'
-      },
-      {
-        id: 'cat_002',
-        name: 'Education',
-        slug: 'education',
-        description: 'Courses and educational content',
-        imageUrl: 'https://placeholder.com/categories/education.jpg'
-      },
-      {
-        id: 'cat_003',
-        name: 'Software',
-        slug: 'software',
-        description: 'Software tools and applications',
-        imageUrl: 'https://placeholder.com/categories/software.jpg'
-      },
-      {
-        id: 'cat_004',
-        name: 'Gaming',
-        slug: 'gaming',
-        description: 'Gaming items and virtual goods',
-        imageUrl: 'https://placeholder.com/categories/gaming.jpg'
-      },
-      {
-        id: 'cat_005',
-        name: 'Music',
-        slug: 'music',
-        description: 'Music tracks and audio content',
-        imageUrl: 'https://placeholder.com/categories/music.jpg'
-      },
-      {
-        id: 'cat_006',
-        name: 'Videos',
-        slug: 'videos',
-        description: 'Video content and streaming',
-        imageUrl: 'https://placeholder.com/categories/videos.jpg'
-      }
-    ];
-  }
+  
 
   // ============================================================================
   // SELLER MANAGEMENT (for breadcrumbs)

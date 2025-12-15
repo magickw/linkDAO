@@ -78,7 +78,8 @@ class CryptoPriceService {
     ['ZEC', 'zcash'],
     ['LTC', 'litecoin'],
     ['BCH', 'bitcoin-cash'],
-    ['ETC', 'ethereum-classic']
+    ['ETC', 'ethereum-classic'],
+    ['LDAO', 'linkdao'] // LDAO token mapping
   ]);
 
   constructor() {
@@ -98,6 +99,7 @@ class CryptoPriceService {
       { symbol: 'USDT', price: 1.00, change: 0.0 },
       { symbol: 'LINK', price: 14.50, change: -1.2 },
       { symbol: 'UNI', price: 7.20, change: 3.1 },
+      { symbol: 'LDAO', price: 0.50, change: 5.0 }, // LDAO token default price
       { symbol: 'AAVE', price: 95.00, change: -0.8 }
     ];
 

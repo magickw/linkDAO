@@ -110,6 +110,7 @@ const getTokensForChain = (chainId: number) => {
       // Optionally include DAI/WBTC via env-configured addresses to avoid hardcoding incorrect addresses
       const baseDai = process.env.NEXT_PUBLIC_BASE_DAI_ADDRESS as `0x${string}` | undefined;
       const baseWbtc = process.env.NEXT_PUBLIC_BASE_WBTC_ADDRESS as `0x${string}` | undefined;
+      const ldaoAddress = process.env.NEXT_PUBLIC_LDAO_TOKEN_ADDRESS as `0x${string}` | undefined;
       return [
         {
           symbol: 'USDC',
@@ -130,10 +131,18 @@ const getTokensForChain = (chainId: number) => {
           address: '0x88Fb150BDc53A65fe94Dea0c9BA0a6dAf8C6e196' as Address,
           decimals: 18
         },
+        // LDAO Token
+        ...(ldaoAddress ? [{
+          symbol: 'LDAO',
+          name: 'LinkDAO Token',
+          address: ldaoAddress as Address,
+          decimals: 18
+        }] : []),
         ...(baseDai ? [{ symbol: 'DAI', name: 'Dai (Base)', address: baseDai as Address, decimals: 18 }] : []),
         ...(baseWbtc ? [{ symbol: 'WBTC', name: 'Wrapped Bitcoin (Base)', address: baseWbtc as Address, decimals: 8 }] : []),
       ];
     case 84532: // Base Sepolia
+      const ldaoSepoliaAddress = process.env.NEXT_PUBLIC_LDAO_TOKEN_ADDRESS as `0x${string}` | undefined;
       return [
         {
           symbol: 'USDC',
@@ -146,7 +155,14 @@ const getTokensForChain = (chainId: number) => {
           name: 'Wrapped Ether',
           address: '0x4200000000000000000000000000000000000006' as Address,
           decimals: 18
-        }
+        },
+        // LDAO Token
+        ...(ldaoSepoliaAddress ? [{
+          symbol: 'LDAO',
+          name: 'LinkDAO Token',
+          address: ldaoSepoliaAddress as Address,
+          decimals: 18
+        }] : []),
       ];
     case 11155111: // Sepolia Testnet
       return [
