@@ -9,9 +9,10 @@ interface TipBarProps {
   postId: string;
   creatorAddress: string;
   onTipSuccess?: () => void;
+  currency?: 'LDAO' | 'USDC' | 'USDT'; // Add currency support
 }
 
-const TipBar: React.FC<TipBarProps> = ({ postId, creatorAddress, onTipSuccess }) => {
+const TipBar: React.FC<TipBarProps> = ({ postId, creatorAddress, onTipSuccess, currency = 'LDAO' }) => {
   const { address, isConnected } = useWeb3();
   const { addToast } = useToast();
   const [tipAmount, setTipAmount] = useState('');
@@ -34,6 +35,13 @@ const TipBar: React.FC<TipBarProps> = ({ postId, creatorAddress, onTipSuccess })
       return;
     }
 
+    // Validate environment variables
+    const envValidation = TipService.validateEnvironment();
+    if (!envValidation.isValid) {
+      addToast(`Missing configuration: ${envValidation.missingVars.join(', ')}`, 'error');
+      return;
+    }
+
     setIsTipping(true);
     try {
       // Initialize the TipService with the provider
@@ -51,7 +59,7 @@ const TipBar: React.FC<TipBarProps> = ({ postId, creatorAddress, onTipSuccess })
         postId,
         creatorAddress,
         tipAmount,
-        'LDAO',
+        currency, // Use the currency prop
         ''
       );
       
@@ -60,7 +68,22 @@ const TipBar: React.FC<TipBarProps> = ({ postId, creatorAddress, onTipSuccess })
       if (onTipSuccess) onTipSuccess();
     } catch (error: any) {
       console.error('Error tipping:', error);
-      addToast(`Failed to send tip: ${error.message || 'Please try again.'}`, 'error');
+      let errorMessage = 'Failed to send tip. Please try again.';
+      
+      // Provide more specific error messages based on the error type
+      if (error.message) {
+        if (error.message.includes('user rejected')) {
+          errorMessage = 'Transaction rejected by user';
+        } else if (error.message.includes('insufficient funds')) {
+          errorMessage = 'Insufficient funds for tip and gas fees';
+        } else if (error.message.includes('timeout')) {
+          errorMessage = 'Transaction timed out. Please check your wallet.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      addToast(errorMessage, 'error');
     } finally {
       setIsTipping(false);
     }
@@ -75,7 +98,7 @@ const TipBar: React.FC<TipBarProps> = ({ postId, creatorAddress, onTipSuccess })
       <div className="flex items-center space-x-2 mb-3">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Tip Creator</h3>
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-800 dark:from-purple-900/30 dark:to-indigo-900/30 dark:text-purple-200">
-          LDAO
+          {currency}
         </span>
       </div>
       

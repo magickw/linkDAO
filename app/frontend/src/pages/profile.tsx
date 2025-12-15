@@ -1248,7 +1248,7 @@ export default function Profile() {
               {/* Tip Creator Section - Only show if viewing another user's profile */}
               {currentUserAddress && targetUserAddress && currentUserAddress !== targetUserAddress && (
                 <div className="mt-8">
-                  <TipBar postId="user-profile" creatorAddress={targetUserAddress || ''} />
+                  <TipBar postId="user-profile" creatorAddress={targetUserAddress || ''} currency="LDAO" />
                 </div>
               )}
             </div>

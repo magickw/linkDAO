@@ -91,15 +91,55 @@ export class TipService {
   private static provider: ethers.BrowserProvider | null = null;
 
   /**
+   * Validate that all required environment variables are present
+   */
+  static validateEnvironment(): { isValid: boolean; missingVars: string[] } {
+    const requiredVars = [
+      'NEXT_PUBLIC_TIP_ROUTER_ADDRESS',
+      'NEXT_PUBLIC_LDAO_TOKEN_ADDRESS'
+    ];
+
+    // Check USDC and USDT only if they are intended to be supported
+    // For now, we'll make them optional but log warnings
+    const optionalVars = [
+      'NEXT_PUBLIC_USDC_ADDRESS',
+      'NEXT_PUBLIC_USDT_TOKEN_ADDRESS'
+    ];
+
+    const missingVars = requiredVars.filter(varName => !process.env[varName]);
+    
+    // Warn about missing optional vars
+    const missingOptionalVars = optionalVars.filter(varName => !process.env[varName]);
+    if (missingOptionalVars.length > 0) {
+      console.warn('Missing optional environment variables:', missingOptionalVars);
+    }
+    
+    return {
+      isValid: missingVars.length === 0,
+      missingVars
+    };
+  }
+
+  /**
    * Initialize the service with wallet connection
    */
   static async initialize(provider: ethers.BrowserProvider): Promise<void> {
     try {
+      if (!provider) {
+        throw new Error('Provider is required');
+      }
+      
       TipService.provider = provider;
       const signer = await provider.getSigner();
-      TipService.currentAddress = (await signer.getAddress()).toLowerCase();
+      const address = await signer.getAddress();
+      TipService.currentAddress = address.toLowerCase();
+      
+      console.log('TipService initialized with address:', TipService.currentAddress);
     } catch (error) {
       console.error('Failed to initialize tip service:', error);
+      // Reset state on error
+      TipService.currentAddress = null;
+      TipService.provider = null;
       throw error;
     }
   }
@@ -127,32 +167,85 @@ export class TipService {
       const feeAmount = TipService.calculateFee(amount, currency);
       const netAmount = TipService.subtractFee(amount, feeAmount, currency);
 
-      // Get token contract
-      const tokenContract = (await TipService.getTokenContract(currency)) as any;
-
       // Get signer
       const signer = await TipService.provider.getSigner();
 
-      // Approve and transfer tokens
-      const approveTx = await tokenContract.connect(signer).approve(
-        process.env.NEXT_PUBLIC_TIP_ROUTER_ADDRESS,
-        amount
-      );
-      await approveTx.wait();
-
-      // Send tip through TipRouter contract
-      const tipRouterContract = await TipService.getTipRouterContract();
+      // Get token contract
+      const tokenContract = (await TipService.getTokenContract(currency)) as any;
       
       // Get the correct decimals for the token (USDC and USDT use 6 decimals, others use 18)
       const tokenDecimals = currency === 'USDC' || currency === 'USDT' ? 6 : 18;
       
-      const tipTx = await (tipRouterContract.connect(signer) as any).sendTip(
-        creatorAddress,
-        ethers.parseUnits(amount, tokenDecimals),
-        currency,
-        postId,
-        message || ''
+      // Convert amount to proper units
+      const amountInUnits = ethers.parseUnits(amount, tokenDecimals);
+
+      // Approve tokens for spending by the TipRouter contract
+      console.log('Approving tokens for spending...', {
+        spender: process.env.NEXT_PUBLIC_TIP_ROUTER_ADDRESS,
+        amount: amountInUnits.toString()
+      });
+      
+      const approveTx = await tokenContract.connect(signer).approve(
+        process.env.NEXT_PUBLIC_TIP_ROUTER_ADDRESS,
+        amountInUnits
       );
+      console.log('Approval transaction sent:', approveTx.hash);
+      await approveTx.wait();
+      console.log('Approval confirmed');
+
+      // Send tip through TipRouter contract
+      const tipRouterContract = await TipService.getTipRouterContract();
+      
+      // Convert currency string to PaymentMethod enum (0 = LDAO, 1 = USDC, 2 = USDT)
+      let paymentMethod = 0; // Default to LDAO
+      if (currency === 'USDC') {
+        paymentMethod = 1;
+      } else if (currency === 'USDT') {
+        paymentMethod = 2;
+      }
+      
+      // Convert postId string to bytes32
+      const postIdBytes32 = ethers.id(postId);
+      
+      // Use the correct contract method with individual parameters
+      let tipTx;
+      if (message && message.trim()) {
+        console.log('Sending tip with comment...', {
+          postId: postIdBytes32,
+          creatorAddress,
+          amount: amountInUnits.toString(),
+          paymentMethod,
+          comment: message.trim()
+        });
+        
+        tipTx = await (tipRouterContract.connect(signer) as any).tipWithComment(
+          postIdBytes32,
+          creatorAddress,
+          amountInUnits,
+          paymentMethod,
+          message.trim()
+        );
+      } else {
+        console.log('Sending tip...', {
+          postId: postIdBytes32,
+          creatorAddress,
+          amount: amountInUnits.toString(),
+          paymentMethod
+        });
+        
+        tipTx = await (tipRouterContract.connect(signer) as any).tip(
+          postIdBytes32,
+          creatorAddress,
+          amountInUnits,
+          paymentMethod
+        );
+      }
+      
+      console.log('Tip transaction sent:', tipTx.hash);
+
+      // Wait for transaction confirmation
+      const receipt = await tipTx.wait();
+      console.log('Tip transaction confirmed:', receipt);
 
       // Create tip record in database
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/tips`, {
@@ -202,6 +295,7 @@ export class TipService {
         throw new Error('Request timeout');
       }
 
+      console.error('Error in createTip:', error);
       throw error;
     }
   }
@@ -403,22 +497,34 @@ export class TipService {
    * Get token contract instance
    */
   private static async getTokenContract(currency: string): Promise<ethers.Contract> {
-    const tokenAddresses = {
-      LDAO: process.env.NEXT_PUBLIC_LDAO_TOKEN_ADDRESS,
-      USDC: process.env.NEXT_PUBLIC_USDC_TOKEN_ADDRESS,
-      USDT: process.env.NEXT_PUBLIC_USDT_TOKEN_ADDRESS
+    // Map currency to environment variable names
+    const tokenEnvVars = {
+      LDAO: 'NEXT_PUBLIC_LDAO_TOKEN_ADDRESS',
+      USDC: 'NEXT_PUBLIC_USDC_ADDRESS', // Changed from NEXT_PUBLIC_USDC_TOKEN_ADDRESS
+      USDT: 'NEXT_PUBLIC_USDT_TOKEN_ADDRESS'
     };
 
-
-
-    const address = tokenAddresses[currency as keyof typeof tokenAddresses];
-    if (!address) {
-      throw new Error(`Token address not found for ${currency}`);
+    const envVarName = tokenEnvVars[currency as keyof typeof tokenEnvVars];
+    if (!envVarName) {
+      throw new Error(`Unsupported currency: ${currency}`);
     }
 
+    const address = process.env[envVarName];
+    if (!address) {
+      throw new Error(`Token address not configured for ${currency} (${envVarName})`);
+    }
+
+    // Standard ERC20 ABI with common functions needed for tipping
     return new ethers.Contract(
       address,
-      ['function approve(address spender, uint256 amount) returns (bool)', 'function transfer(address to, uint256 amount) returns (bool)'],
+      [
+        'function approve(address spender, uint256 amount) returns (bool)',
+        'function allowance(address owner, address spender) view returns (uint256)',
+        'function balanceOf(address account) view returns (uint256)',
+        'function decimals() view returns (uint8)',
+        'function transfer(address to, uint256 amount) returns (bool)',
+        'function transferFrom(address from, address to, uint256 amount) returns (bool)'
+      ],
       TipService.provider!
     );
   }
@@ -432,12 +538,15 @@ export class TipService {
       throw new Error('TipRouter contract address not configured');
     }
 
+    // Make sure the ABI matches the actual contract methods
     return new ethers.Contract(
       address,
       [
-        'function sendTip((address to, string postId, uint256 amount, string currency, string message) calldata params)',
+        'function tip(bytes32 postId, address creator, uint256 amount, uint8 paymentMethod) payable',
+        'function tipWithComment(bytes32 postId, address creator, uint256 amount, uint8 paymentMethod, string comment) payable',
         'function getTipCount(address user) view returns (uint256)',
-        'function getTotalTips(address user) view returns (uint256)'
+        'function getTotalTipsReceived(address user) view returns (uint256)',
+        'function getTotalTipsSent(address user) view returns (uint256)'
       ],
       TipService.provider!
     );

@@ -8,13 +8,20 @@ import { getChainRpcUrl } from '@/lib/wagmi'
  */
 export async function getProvider() {
   try {
+    console.log('Getting provider...');
     const client = getPublicClient(config);
+    console.log('Public client:', client);
+    
     // Check if client is available before accessing transport
     if (client) {
       // If wagmi transport exposes an injected provider, use it.
       const injectedProvider = (client as any).transport?.provider;
+      console.log('Injected provider:', injectedProvider);
+      
       if (injectedProvider) {
-        return new ethers.BrowserProvider(injectedProvider as any);
+        const provider = new ethers.BrowserProvider(injectedProvider as any);
+        console.log('Created BrowserProvider');
+        return provider;
       }
     }
 
@@ -22,9 +29,12 @@ export async function getProvider() {
     // deployments control which RPC the app uses during SSR/build.
     const envRpc = process.env.NEXT_PUBLIC_RPC_URL;
     const envChainId = process.env.NEXT_PUBLIC_RPC_CHAIN_ID;
+    console.log('Environment RPC:', envRpc, 'Chain ID:', envChainId);
+    
     if (envRpc) {
       try {
         const chainId = envChainId ? parseInt(envChainId, 10) : undefined;
+        console.log('Creating JsonRpcProvider with RPC:', envRpc, 'Chain ID:', chainId);
         return new ethers.JsonRpcProvider(envRpc, chainId);
       } catch (e) {
         console.warn('Invalid NEXT_PUBLIC_RPC_URL or NEXT_PUBLIC_RPC_CHAIN_ID, falling back to configured chain RPC', e);
@@ -35,14 +45,18 @@ export async function getProvider() {
     try {
       const chainId = envChainId ? parseInt(envChainId, 10) : 1;
       const rpcUrl = getChainRpcUrl(chainId);
+      console.log('Using chain RPC URL:', rpcUrl);
+      
       if (rpcUrl) {
         return new ethers.JsonRpcProvider(rpcUrl);
       }
     } catch (e) {
       // ignore and use default provider below
+      console.warn('Error getting chain RPC URL:', e);
     }
 
     // Last-resort: use ethers default provider (may require API keys)
+    console.log('Using default provider');
     return ethers.getDefaultProvider();
   } catch (error) {
     console.error('Error getting provider:', error);

@@ -537,7 +537,7 @@ export default function PublicProfile() {
 
         {/* Tip Bar - Only show if viewing another user's profile */}
         {currentUserAddress && walletAddress && currentUserAddress !== (typeof walletAddress === 'string' ? walletAddress : '') && (
-          <TipBar postId="user-profile" creatorAddress={profile.walletAddress} />
+          <TipBar postId="user-profile" creatorAddress={profile.walletAddress} currency="LDAO" />
         )}
 
         {/* Tabs */}
