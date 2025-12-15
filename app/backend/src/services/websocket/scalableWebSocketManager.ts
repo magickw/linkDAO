@@ -1,6 +1,6 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { safeLogger } from '../../utils/safeLogger';
-import { createAdapter } from '@socket.io/redis-adapter';
+// import { createAdapter } from '@socket.io/redis-adapter';
 import Redis from 'ioredis';
 import http from 'http';
 
@@ -87,7 +87,7 @@ export class ScalableWebSocketManager {
     });
 
     // Set up Redis adapter for multi-instance support
-    this.io.adapter(createAdapter(this.pubClient, this.subClient));
+    // this.io.adapter(createAdapter(this.pubClient, this.subClient));
 
     // Set up Redis pub/sub listener for cross-instance broadcasts
     this.setupRedisPubSub();

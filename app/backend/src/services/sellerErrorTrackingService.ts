@@ -379,8 +379,10 @@ export class SellerErrorTrackingService {
           AND resolved = true
       `);
 
-      return result.rowCount || 0;
-
+      // In Drizzle ORM, we need to check the result differently
+      // The result is a RowList, not a standard result with rowCount
+      // Drizzle ORM execute returns RowList, we need to check the result differently
+      return (result as any).rowCount || 0;
     } catch (error) {
       safeLogger.error('Error cleaning up old errors:', error);
       return 0;

@@ -176,7 +176,10 @@ export class UnifiedSellerVerificationService {
       }
     });
 
-    return updated;
+    return {
+      ...updated,
+      sellerId: updated.userId
+    };
   }
 
   /**

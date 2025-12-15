@@ -302,8 +302,6 @@ export class UserProfileService {
         website: dbUser.website || '', // Website is now stored in database column
         physicalAddress: decryptedData,
         email: decryptedData.email || '',
-        lastLogin: dbUser.lastLogin ? new Date(dbUser.lastLogin) : undefined,
-        loginAttempts: dbUser.loginAttempts || 0,
         lockedUntil: dbUser.lockedUntil ? new Date(dbUser.lockedUntil) : undefined,
         // Read billing/shipping fields from database columns with fallback to decryptedData
         billingFirstName: dbUser.billingFirstName || decryptedData.billingFirstName || '',

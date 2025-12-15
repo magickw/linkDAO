@@ -130,18 +130,16 @@ class SellerListingService {
     const normalizedAddress = walletAddress.toLowerCase();
 
     // Verify seller exists and get seller ID
-    const seller = await db.query.sellers.findFirst({
-      where: eq(sellers.walletAddress, normalizedAddress),
-    });
+    const sellerResult = await db.select().from(sellers).where(eq(sellers.walletAddress, normalizedAddress));
+    const seller = sellerResult[0];
 
     if (!seller) {
       throw new Error('Seller not found');
     }
 
     // Get user ID for seller
-    const user = await db.query.users.findFirst({
-      where: eq(users.walletAddress, normalizedAddress),
-    });
+    const userResult = await db.select().from(users).where(eq(users.walletAddress, normalizedAddress));
+    const user = userResult[0];
 
     if (!user) {
       throw new Error('User not found');
@@ -163,9 +161,7 @@ class SellerListingService {
     }
 
     // Get total count
-    const productsList = await db.query.products.findMany({
-      where: and(...conditions),
-    });
+    const productsList = await db.select().from(products).where(and(...conditions));
 
     const total = productsList.length;
 
@@ -174,12 +170,7 @@ class SellerListingService {
     const orderByDirection = sortOrder === 'asc' ? asc(orderByColumn) : desc(orderByColumn);
 
     // Get listings
-    const listings = await db.query.products.findMany({
-      where: and(...conditions),
-      orderBy: [orderByDirection],
-      limit,
-      offset,
-    });
+    const listings = await db.select().from(products).where(and(...conditions)).orderBy(orderByDirection).limit(limit).offset(offset);
 
     return {
       listings: listings.map(listing => ({
@@ -215,18 +206,16 @@ class SellerListingService {
    * Get a single listing by ID
    */
   async getListingById(listingId: string): Promise<ProductListing> {
-    const listing = await db.query.products.findFirst({
-      where: eq(products.id, listingId),
-    });
+    const listingResult = await db.select().from(products).where(eq(products.id, listingId));
+    const listing = listingResult[0];
 
     if (!listing) {
       throw new Error('Listing not found');
     }
 
     // Get seller info
-    const user = await db.query.users.findFirst({
-      where: eq(users.id, listing.sellerId),
-    });
+    const userResult = await db.select().from(users).where(eq(users.id, listing.sellerId));
+    const user = userResult[0];
 
     return {
       id: listing.id,
@@ -340,18 +329,16 @@ class SellerListingService {
     const normalizedAddress = data.walletAddress.toLowerCase();
 
     // Get user ID for seller
-    const user = await db.query.users.findFirst({
-      where: eq(users.walletAddress, normalizedAddress),
-    });
+    const userResult = await db.select().from(users).where(eq(users.walletAddress, normalizedAddress));
+    const user = userResult[0];
 
     if (!user) {
       throw new Error('User not found');
     }
 
     // Verify seller profile exists
-    const seller = await db.query.sellers.findFirst({
-      where: eq(sellers.walletAddress, normalizedAddress),
-    });
+    const sellerResult = await db.select().from(sellers).where(eq(sellers.walletAddress, normalizedAddress));
+    const seller = sellerResult[0];
 
     if (!seller) {
       throw new Error('Seller profile not found. Please complete seller onboarding first.');
@@ -369,12 +356,11 @@ class SellerListingService {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(data.categoryId)) {
       // Not a UUID, try to look up by slug or name
-      let category = await db.query.categories.findFirst({
-        where: or(
-          eq(categories.slug, data.categoryId),
-          eq(categories.name, data.categoryId)
-        ),
-      });
+      const categoryResult = await db.select().from(categories).where(or(
+        eq(categories.slug, data.categoryId),
+        eq(categories.name, data.categoryId)
+      ));
+      let category = categoryResult[0];
 
       // If category doesn't exist, create it dynamically
       if (!category) {
@@ -467,9 +453,8 @@ class SellerListingService {
    */
   async updateListing(listingId: string, data: UpdateListingData): Promise<ProductListing> {
     // Verify listing exists
-    const existing = await db.query.products.findFirst({
-      where: eq(products.id, listingId),
-    });
+    const existingResult = await db.select().from(products).where(eq(products.id, listingId));
+    const existing = existingResult[0];
 
     if (!existing) {
       throw new Error('Listing not found');
@@ -507,9 +492,8 @@ class SellerListingService {
       .returning();
 
     // Get seller address
-    const user = await db.query.users.findFirst({
-      where: eq(users.id, updated.sellerId),
-    });
+    const userResult = await db.select().from(users).where(eq(users.id, updated.sellerId));
+    const user = userResult[0];
 
     return {
       id: updated.id,
@@ -541,9 +525,8 @@ class SellerListingService {
    */
   async deleteListing(listingId: string): Promise<void> {
     // Verify listing exists
-    const listing = await db.query.products.findFirst({
-      where: eq(products.id, listingId),
-    });
+    const listingResult = await db.select().from(products).where(eq(products.id, listingId));
+    const listing = listingResult[0];
 
     if (!listing) {
       throw new Error('Listing not found');
@@ -568,12 +551,27 @@ class SellerListingService {
    */
   async rejectListing(listingId: string, reason?: string): Promise<void> {
     // Verify listing exists
-    const listing = await db.query.products.findFirst({
-      where: eq(products.id, listingId),
-    });
+    const listingResult = await db.select().from(products).where(eq(products.id, listingId));
+    const listing = listingResult[0];
 
     if (!listing) {
       throw new Error('Listing not found');
+    }
+
+    // Prepare metadata with rejection reason
+    let updatedMetadata = {};
+    if (listing.metadata) {
+      try {
+        updatedMetadata = JSON.parse(listing.metadata);
+      } catch (e) {
+        // If parsing fails, start with empty object
+        updatedMetadata = {};
+      }
+    }
+    
+    // Add rejection reason to metadata if provided
+    if (reason) {
+      (updatedMetadata as any).rejectionReason = reason;
     }
 
     // Update listing status to rejected with reason
@@ -581,9 +579,8 @@ class SellerListingService {
       .update(products)
       .set({
         listingStatus: 'rejected',
-        rejectionReason: reason || 'Not specified',
-        rejectedAt: new Date().toISOString(),
         updatedAt: new Date(),
+        metadata: JSON.stringify(updatedMetadata)
       })
       .where(eq(products.id, listingId));
   }

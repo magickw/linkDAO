@@ -977,7 +977,7 @@ export const aiModeration = pgTable("ai_moderation", {
 // Order Events
 export const orderEvents = pgTable("order_events", {
   id: serial("id").primaryKey(),
-  orderId: integer("order_id").references(() => orders.id),
+  orderId: uuid("order_id").references(() => orders.id),
   eventType: varchar("event_type", { length: 64 }).notNull(),
   description: text("description"),
   metadata: text("metadata"),

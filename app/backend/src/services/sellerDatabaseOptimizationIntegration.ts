@@ -6,7 +6,7 @@
 
 import { Pool } from 'pg';
 import { safeLogger } from '../utils/safeLogger';
-import DatabaseOptimizationService from './databaseOptimizationService';
+import EnhancedDatabaseOptimizationService from './enhancedDatabaseOptimizationService';
 import DatabaseConnectionOptimizer from './databaseConnectionOptimizer';
 import SellerQueryOptimizer from './sellerQueryOptimizer';
 
@@ -60,7 +60,7 @@ interface SellerOptimizationReport {
  */
 export class SellerDatabaseOptimizationIntegration {
   private pool: Pool;
-  private databaseOptimizer: DatabaseOptimizationService;
+  private databaseOptimizer: EnhancedDatabaseOptimizationService;
   private connectionOptimizer: DatabaseConnectionOptimizer;
   private sellerQueryOptimizer: SellerQueryOptimizer;
   private monitoringInterval?: NodeJS.Timeout;
@@ -68,7 +68,7 @@ export class SellerDatabaseOptimizationIntegration {
 
   constructor(pool: Pool) {
     this.pool = pool;
-    this.databaseOptimizer = new DatabaseOptimizationService(pool);
+    this.databaseOptimizer = new EnhancedDatabaseOptimizationService(pool);
     this.connectionOptimizer = new DatabaseConnectionOptimizer(pool);
     this.sellerQueryOptimizer = new SellerQueryOptimizer(pool);
     
@@ -324,12 +324,12 @@ export class SellerDatabaseOptimizationIntegration {
           );
           
           if (matchingRec) {
-            const success = await this.databaseOptimizer.createIndex(matchingRec);
-            if (success) {
-              safeLogger.info(`Automatically applied index optimization: ${matchingRec.createStatement}`);
+            // Execute index optimizations for the table
+            const result = await this.databaseOptimizer.executeIndexOptimizations(matchingRec.table);
+            if (result.created > 0 || result.dropped > 0) {
+              safeLogger.info(`Automatically applied index optimizations for table ${matchingRec.table}: ${result.created} created, ${result.dropped} dropped`);
             }
-          }
-        }
+          }        }
 
         if (recommendation.category === 'connection') {
           // Apply connection optimizations

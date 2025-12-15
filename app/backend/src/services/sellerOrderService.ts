@@ -27,7 +27,7 @@ interface TrackingInfo {
  * Order with Buyer Information
  */
 interface OrderWithBuyer {
-  id: number;
+  id: string;
   buyerId: string;
   buyerAddress?: string;
   amount: string;
@@ -41,7 +41,7 @@ interface OrderWithBuyer {
   billingAddress?: any;
   orderNotes?: string;
   createdAt: Date;
-  listingId?: number;
+  listingId?: string;
   escrowId?: number;
   checkoutSessionId?: string;
   paymentMethod?: string;
@@ -58,12 +58,11 @@ class SellerOrderService {
     walletAddress: string,
     options: OrderQueryOptions = {}
   ): Promise<{ orders: OrderWithBuyer[]; total: number; page: number; pageSize: number }> {
-    // Verify seller exists and get seller ID
-    const seller = await db.query.sellers.findFirst({
-      where: eq(sellers.walletAddress, walletAddress.toLowerCase()),
-    });
+    // Verify seller exists and get user ID
+    const userResult = await db.select().from(users).where(eq(users.walletAddress, walletAddress.toLowerCase()));
+    const user = userResult[0];
 
-    if (!seller) {
+    if (!user) {
       throw new Error('Seller not found');
     }
 
@@ -76,7 +75,7 @@ class SellerOrderService {
     } = options;
 
     // Build query conditions
-    const conditions = [eq(orders.sellerId, seller.id as any)];
+    const conditions = [eq(orders.sellerId, user.id)];
 
     if (status) {
       conditions.push(eq(orders.status, status));
@@ -153,22 +152,17 @@ class SellerOrderService {
   /**
    * Get a single order by ID
    */
-  async getOrderById(orderId: number): Promise<OrderWithBuyer> {
-    const order = await db.query.orders.findFirst({
-      where: eq(orders.id, orderId),
-      with: {
-        buyer: true,
-      },
-    });
+  async getOrderById(orderId: string): Promise<OrderWithBuyer> {
+    const orderResult = await db.select().from(orders).where(eq(orders.id, orderId as any));
+    const order = orderResult[0];
 
     if (!order) {
       throw new Error('Order not found');
     }
 
     // Get buyer wallet address
-    const buyer = await db.query.users.findFirst({
-      where: eq(users.id, order.buyerId as any),
-    });
+    const buyerResult = await db.select().from(users).where(eq(users.id, order.buyerId));
+    const buyer = buyerResult[0];
 
     return {
       id: order.id,
@@ -195,11 +189,10 @@ class SellerOrderService {
   /**
    * Update order status
    */
-  async updateOrderStatus(orderId: number, status: string, notes?: string): Promise<void> {
+  async updateOrderStatus(orderId: string, status: string, notes?: string): Promise<void> {
     // Verify order exists
-    const order = await db.query.orders.findFirst({
-      where: eq(orders.id, orderId),
-    });
+    const orderResult = await db.select().from(orders).where(eq(orders.id, orderId as any));
+    const order = orderResult[0];
 
     if (!order) {
       throw new Error('Order not found');
@@ -216,7 +209,6 @@ class SellerOrderService {
 
     // Log order event
     await db.insert(orderEvents).values({
-      orderId,
       eventType: 'status_changed',
       description: `Order status changed to ${status}`,
       metadata: JSON.stringify({
@@ -230,11 +222,10 @@ class SellerOrderService {
   /**
    * Update order tracking information
    */
-  async updateOrderTracking(orderId: number, trackingInfo: TrackingInfo): Promise<void> {
+  async updateOrderTracking(orderId: string, trackingInfo: TrackingInfo): Promise<void> {
     // Verify order exists
-    const order = await db.query.orders.findFirst({
-      where: eq(orders.id, orderId),
-    });
+    const orderResult = await db.select().from(orders).where(eq(orders.id, orderId as any));
+    const order = orderResult[0];
 
     if (!order) {
       throw new Error('Order not found');
@@ -269,7 +260,6 @@ class SellerOrderService {
 
     // Log order event
     await db.insert(orderEvents).values({
-      orderId,
       eventType: 'tracking_updated',
       description: `Tracking information updated: ${trackingInfo.trackingCarrier} - ${trackingInfo.trackingNumber}`,
       metadata: JSON.stringify(trackingInfo),

@@ -375,7 +375,7 @@ export class SellerVerificationService {
       // Find the seller record using userId
       const [seller] = await db.select()
         .from(sellers)
-        .where(eq(sellers.walletAddress, updated.userId))
+        .where(eq(sellers.walletAddress, (updated as any).userId))
         .limit(1);
       
       if (seller) {
@@ -468,7 +468,7 @@ export class SellerVerificationService {
       // Find the seller record using userId
       const [seller] = await db.select()
         .from(sellers)
-        .where(eq(sellers.walletAddress, verification.userId))
+        .where(eq(sellers.walletAddress, (verification as any).userId))
         .limit(1);
       
       // Update seller status

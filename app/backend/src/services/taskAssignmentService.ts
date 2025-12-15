@@ -10,7 +10,6 @@ import {
 } from '../types/workflow';
 import { logger } from '../utils/logger';
 import { EventEmitter } from 'events';
-import { db } from '../db';
 import { workflowTaskAssignments } from '../db/schema';
 
 export interface UserWorkload {
