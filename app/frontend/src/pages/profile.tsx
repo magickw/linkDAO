@@ -1245,10 +1245,12 @@ export default function Profile() {
                 <p className="mt-8 text-lg text-gray-700 dark:text-gray-300 text-center lg:text-left">{profile.bio}</p>
               )}
 
-              {/* Tip Creator Section */}
-              <div className="mt-8">
-                <TipBar postId="user-profile" creatorAddress={targetUserAddress || ''} />
-              </div>
+              {/* Tip Creator Section - Only show if viewing another user's profile */}
+              {currentUserAddress && targetUserAddress && currentUserAddress !== targetUserAddress && (
+                <div className="mt-8">
+                  <TipBar postId="user-profile" creatorAddress={targetUserAddress || ''} />
+                </div>
+              )
             </div>
           )}
 

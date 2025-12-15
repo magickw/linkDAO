@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { useWeb3 } from '@/context/Web3Context';
 import { useToast } from '@/context/ToastContext';
+import { TipService } from '@/services/tipService';
+import { getProvider } from '@/utils/web3';
+import { ethers } from 'ethers';
 
 interface TipBarProps {
   postId: string;
@@ -25,21 +28,39 @@ const TipBar: React.FC<TipBarProps> = ({ postId, creatorAddress, onTipSuccess })
       return;
     }
 
+    // Prevent users from tipping themselves
+    if (address.toLowerCase() === creatorAddress.toLowerCase()) {
+      addToast('You cannot tip yourself', 'error');
+      return;
+    }
+
     setIsTipping(true);
     try {
-      // In a real implementation, this would call the backend API to process the tip
-      // and handle the token transfer through the TipRouter contract
-      console.log(`Tipping ${tipAmount} LDAO on post ${postId} to creator ${creatorAddress}`);
+      // Initialize the TipService with the provider
+      const provider = await getProvider();
+      if (!provider) {
+        throw new Error('Failed to get provider');
+      }
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Initialize TipService with the provider
+      // The provider should be a BrowserProvider when wallet is connected
+      await TipService.initialize(provider as any);
       
-      addToast(`Successfully tipped ${tipAmount} LDAO!`, 'success');
+      // Use the real TipService to process the tip
+      const result = await TipService.createTip(
+        postId,
+        creatorAddress,
+        tipAmount,
+        'LDAO',
+        ''
+      );
+      
+      addToast(`Successfully tipped ${tipAmount} LDAO! Transaction: ${result.transactionHash.substring(0, 10)}...`, 'success');
       setTipAmount('');
       if (onTipSuccess) onTipSuccess();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error tipping:', error);
-      addToast('Failed to send tip. Please try again.', 'error');
+      addToast(`Failed to send tip: ${error.message || 'Please try again.'}`, 'error');
     } finally {
       setIsTipping(false);
     }

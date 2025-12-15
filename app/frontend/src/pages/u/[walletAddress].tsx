@@ -535,8 +535,10 @@ export default function PublicProfile() {
           </div>
         </div>
 
-        {/* Tip Bar */}
-        <TipBar postId="user-profile" creatorAddress={profile.walletAddress} />
+        {/* Tip Bar - Only show if viewing another user's profile */}
+        {currentUserAddress && walletAddress && currentUserAddress !== (typeof walletAddress === 'string' ? walletAddress : '') && (
+          <TipBar postId="user-profile" creatorAddress={profile.walletAddress} />
+        )}
 
         {/* Tabs */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
