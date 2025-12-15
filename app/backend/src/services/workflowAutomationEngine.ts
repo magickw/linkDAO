@@ -32,6 +32,7 @@ import {
   StepExecutionStatus,
   TaskStatus,
   WorkflowAnalytics,
+  EnhancedWorkflowAnalytics,
   AssignmentRule,
   RuleCondition,
   RuleAction,
@@ -136,7 +137,14 @@ export class WorkflowAutomationEngine extends EventEmitter {
         .where(eq(workflowTemplates.id, templateId))
         .limit(1);
 
-      return template || null;
+      if (!template) return null;
+
+      return {
+        ...template,
+        category: template.category as WorkflowCategory,
+        triggerType: template.triggerType as TriggerType,
+        triggerConfig: template.triggerConfig as unknown as TriggerConfig
+      };
     } catch (error) {
       logger.error('Failed to get workflow template', { error, templateId });
       throw new Error(`Failed to get workflow template: ${error.message} `);
@@ -253,7 +261,13 @@ export class WorkflowAutomationEngine extends EventEmitter {
         .where(eq(workflowInstances.id, instanceId))
         .limit(1);
 
-      return instance || null;
+      if (!instance) return null;
+
+      return {
+        ...instance,
+        status: instance.status as WorkflowStatus,
+        contextData: instance.contextData as unknown as Record<string, any>
+      };
     } catch (error) {
       logger.error('Failed to get workflow instance', { error, instanceId });
       throw new Error(`Failed to get workflow instance: ${error.message} `);
@@ -289,9 +303,15 @@ export class WorkflowAutomationEngine extends EventEmitter {
             })
             .where(eq(workflowStepExecutions.id, taskAssignment.stepExecutionId));
 
+          // Get step execution to access instanceId
+          const [stepExecution] = await tx.select()
+            .from(workflowStepExecutions)
+            .where(eq(workflowStepExecutions.id, taskAssignment.stepExecutionId))
+            .limit(1);
+
           // Continue workflow execution if task completed successfully
-          if (request.status === 'completed') {
-            this.continueWorkflowExecution(taskAssignment.stepExecution.instanceId);
+          if (request.status === 'completed' && stepExecution) {
+            this.continueWorkflowExecution(stepExecution.instanceId);
           }
         }
       });
@@ -321,7 +341,11 @@ export class WorkflowAutomationEngine extends EventEmitter {
         .where(and(...conditions))
         .orderBy(desc(workflowTaskAssignments.priority), asc(workflowTaskAssignments.dueDate));
 
-      return tasks;
+      return tasks.map(task => ({
+        ...task,
+        status: task.status as TaskStatus,
+        taskType: task.taskType as TaskType
+      }));
     } catch (error) {
       logger.error('Failed to get user tasks', { error, userId, status });
       throw new Error(`Failed to get user tasks: ${error.message} `);
@@ -374,7 +398,11 @@ export class WorkflowAutomationEngine extends EventEmitter {
         entityType: criteria.entityType 
       });
       
-      return newCriteria;
+      return {
+        ...newCriteria,
+        entityType: newCriteria.entityType as 'return' | 'dispute' | 'refund' | 'verification',
+        maxAmount: newCriteria.maxAmount ? parseFloat(newCriteria.maxAmount) : 0
+      };
     } catch (error) {
       logger.error('Failed to create approval criteria', { error, criteria });
       throw new Error(`Failed to create approval criteria: ${error.message}`);
@@ -391,7 +419,11 @@ export class WorkflowAutomationEngine extends EventEmitter {
         ))
         .orderBy(desc(workflowApprovalCriteria.priority));
       
-      return criteria;
+      return criteria.map(c => ({
+        ...c,
+        entityType: c.entityType as 'return' | 'dispute' | 'refund' | 'verification',
+        maxAmount: c.maxAmount ? parseFloat(c.maxAmount) : 0
+      }));
     } catch (error) {
       logger.error('Failed to get approval criteria', { error, entityType });
       throw new Error(`Failed to get approval criteria: ${error.message}`);
@@ -622,19 +654,19 @@ export class WorkflowAutomationEngine extends EventEmitter {
   ): Promise<void> {
     try {
       await db.insert(workflowDecisions).values({
-        entityType: context.entityType,
-        entityId: context.entityId,
-        decisionType: decision.approved ? 'auto_approved' : 'auto_rejected',
-        reason: decision.reason,
-        confidence: decision.confidence,
-        riskScore: context.riskScore,
-        riskLevel: context.riskLevel,
-        criteria: decision.appliedCriteria,
+        entityType: context.entityType as any,
+        entityId: context.entityId as any,
+        decisionType: (decision.approved ? 'auto_approved' : 'auto_rejected') as any,
+        reason: decision.reason as any,
+        confidence: decision.confidence as any,
+        riskScore: context.riskScore as any,
+        riskLevel: context.riskLevel as any,
+        criteria: decision.appliedCriteria as any,
         metadata: {
           score: decision.score,
           maxScore: decision.maxScore,
           requiresManualReview: decision.requiresManualReview
-        }
+        } as any
       });
 
       logger.info(`Auto-approval decision logged: ${context.entityId}`, {
@@ -868,11 +900,12 @@ export class WorkflowAutomationEngine extends EventEmitter {
   ): Promise<boolean> {
     try {
       // Create escalation task
-      await taskAssignmentService.createEscalationTask({
+      await taskAssignmentService.escalateTask(instanceId, {
         taskId: instanceId,
         currentAssignee: 'system',
         escalationReason: 'manual',
-        originalDueDate: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+        originalDueDate: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+        attempts: 1
       });
 
       // Mark workflow as escalated
@@ -927,7 +960,7 @@ export class WorkflowAutomationEngine extends EventEmitter {
   }
 
   // Enhanced Analytics and Monitoring
-  async getWorkflowAnalytics(templateId?: string, timeRange?: { start: Date; end: Date }): Promise<WorkflowAnalytics> {
+  async getWorkflowAnalytics(templateId?: string, timeRange?: { start: Date; end: Date }): Promise<EnhancedWorkflowAnalytics> {
     try {
       const conditions = [];
       if (templateId) conditions.push(eq(workflowInstances.templateId, templateId));
@@ -1248,18 +1281,23 @@ export class WorkflowAutomationEngine extends EventEmitter {
         estimatedDuration: contextData?.estimatedDuration
       };
 
+      // Generate a temporary step execution ID for task assignment
+      const tempStepExecutionId = `temp_${Date.now()}`;
+
       // Delegate to task assignment service for intelligent routing
-      const assignedUser = await taskAssignmentService.assignTask(
+      const assignedTask = await taskAssignmentService.assignTask(
+        tempStepExecutionId,
+        assignmentRules,
         assignmentContext,
-        contextData?.assignmentStrategy || 'intelligent'
+        'system'
       );
 
-      if (assignedUser) {
-        logger.info(`Task assigned intelligently to user: ${assignedUser}`, {
+      if (assignedTask) {
+        logger.info(`Task assigned intelligently to user: ${assignedTask.assignedTo}`, {
           assignmentContext,
           strategy: contextData?.assignmentStrategy || 'intelligent'
         });
-        return assignedUser;
+        return assignedTask.assignedTo;
       }
 
       // Fallback to simple assignment rules

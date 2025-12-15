@@ -304,7 +304,6 @@ export class AuthenticationController {
       // Get full user profile with avatar from database
       const userProfileServiceInstance = new UserProfileService();
       const fullProfile = await userProfileServiceInstance.getProfileByAddress(req.user.walletAddress);
-      const fullProfile = await userProfileService.getProfileByAddress(req.user.walletAddress);
       
       // Return user profile information from database
       const userProfile = {
