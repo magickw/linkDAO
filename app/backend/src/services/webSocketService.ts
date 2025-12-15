@@ -277,7 +277,8 @@ export class WebSocketService {
       walletAddress,
       lastSeen: new Date(),
       connectionState: 'connected',
-      ip: socket.handshake.address
+      ip: socket.handshake.address,
+      subscriptions: new Set()
     };
 
         this.connectedUsers.set(socket.id, user);
@@ -402,7 +403,6 @@ export class WebSocketService {
         }
 
         // Update user registration
-        user.userId = data.address;
         safeLogger.info(`User registered: ${data.address}`);
       });
 

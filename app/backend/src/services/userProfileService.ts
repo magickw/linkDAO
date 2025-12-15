@@ -301,7 +301,6 @@ export class UserProfileService {
         socialLinks: dbUser.socialLinks || [], // Social links are now stored in database column
         website: dbUser.website || '', // Website is now stored in database column
         physicalAddress: decryptedData,
-        role: dbUser.role || 'user',
         email: decryptedData.email || '',
         emailVerified: dbUser.emailVerified || false,
         permissions: dbUser.permissions || [],
@@ -391,7 +390,7 @@ export class UserProfileService {
 
     // Prepare updated address data (all private information)
     const addressData = {
-      physicalAddress: input.physicalAddress ? JSON.stringify(input.physicalAddress) : existingAdditionalData.physicalAddress,
+      physicalAddress: input.physicalAddress || existingAdditionalData.physicalAddress,
       email: input.email || existingAdditionalData.email,
       preferences: existingAdditionalData.preferences,
       privacySettings: existingAdditionalData.privacySettings,

@@ -522,8 +522,7 @@ class SellerRiskAssessmentService {
       let score = 0;
 
       // Basic profile completion (40 points)
-      if (profile.displayName) score += 10;
-      if (profile.storeName) score += 10;
+      if (profile.storeName) score += 20;
       if (profile.bio) score += 10;
       if (profile.profileImageCdn) score += 10;
 

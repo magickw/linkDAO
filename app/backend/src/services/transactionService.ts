@@ -86,13 +86,13 @@ class TransactionService {
 
       if (counterpartyAddress) {
         const counterparty = await db
-          .select({ displayName: sellers.displayName })
+          .select({ storeName: sellers.storeName })
           .from(sellers)
           .where(eq(sellers.walletAddress, counterpartyAddress))
           .limit(1);
         
         if (counterparty.length > 0) {
-          counterpartyName = counterparty[0].displayName || undefined;
+          counterpartyName = counterparty[0].storeName || undefined;
         }
       }
 
@@ -181,13 +181,13 @@ class TransactionService {
         // Get counterparty name
         if (tx.counterpartyAddress) {
           const counterparty = await db
-            .select({ displayName: sellers.displayName })
+            .select({ storeName: sellers.storeName })
             .from(sellers)
             .where(eq(sellers.walletAddress, tx.counterpartyAddress))
             .limit(1);
           
           if (counterparty.length > 0) {
-            counterpartyName = counterparty[0].displayName || undefined;
+            counterpartyName = counterparty[0].storeName || undefined;
           }
         }
 
@@ -364,13 +364,13 @@ class TransactionService {
         let name: string | undefined;
         if (cp.address) {
           const seller = await db
-            .select({ displayName: sellers.displayName })
+            .select({ storeName: sellers.storeName })
             .from(sellers)
             .where(eq(sellers.walletAddress, cp.address))
             .limit(1);
           
           if (seller.length > 0) {
-            name = seller[0].displayName || undefined;
+            name = seller[0].storeName || undefined;
           }
         }
 

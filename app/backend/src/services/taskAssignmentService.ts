@@ -10,6 +10,8 @@ import {
 } from '../types/workflow';
 import { logger } from '../utils/logger';
 import { EventEmitter } from 'events';
+import { db } from '../db';
+import { workflowTaskAssignments } from '../db/schema';
 
 export interface UserWorkload {
   userId: string;
@@ -197,14 +199,16 @@ export class TaskAssignmentService extends EventEmitter {
       }
 
       // Create escalation record
-      const [escalation] = await db.insert(workflowEscalations).values({
-        assignmentId: taskId,
-        escalationLevel: escalationContext.attempts + 1,
-        escalatedTo,
-        escalatedBy,
-        escalationReason: escalationContext.escalationReason,
-        escalationData: escalationContext
-      }).returning();
+      // TODO: Create workflowEscalations table in schema
+      // const [escalation] = await db.insert(workflowEscalations).values({
+      //   assignmentId: taskId,
+      //   escalationLevel: escalationContext.attempts + 1,
+      //   escalatedTo,
+      //   escalatedBy,
+      //   escalationReason: escalationContext.escalationReason,
+      //   escalationData: escalationContext
+      // }).returning();
+      const escalation = { id: 'temp' }; // Temporary placeholder
 
       // Update task assignment
       await db.update(workflowTaskAssignments)
@@ -615,9 +619,5 @@ class RoundRobinAssignmentStrategy implements AssignmentStrategy {
     return null;
   }
 }
-
-// Import statements for database tables (these would be defined in the schema)
-const workflowTaskAssignments = {} as any;
-const workflowEscalations = {} as any;
 
 export default TaskAssignmentService;

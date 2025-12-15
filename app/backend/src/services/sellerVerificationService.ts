@@ -43,7 +43,7 @@ export class SellerVerificationService {
    */
   async getActiveVerification(sellerId: string): Promise<SellerVerification | null> {
     const verifications = await db.select().from(sellerVerifications)
-      .where(eq(sellerVerifications.sellerId, sellerId))
+      .where(eq(sellerVerifications.userId, sellerId))
       .orderBy(sellerVerifications.submittedAt, 'desc')
       .limit(1);
 
@@ -350,7 +350,7 @@ export class SellerVerificationService {
   async approveVerification(
     verificationId: string, 
     metadata?: { 
-      verificationMethod?: string; 
+      verificationMethod?: 'irs_tin_match' | 'trulioo' | 'manual_review' | 'open_corporates' | 'other'; 
       verificationReference?: string;
       riskScore?: 'low' | 'medium' | 'high';
     }
@@ -372,9 +372,17 @@ export class SellerVerificationService {
 
     // Update seller status in marketplace schema
     if (updated) {
-      await db.update(sellers)
-        .set({ isVerified: true })
-        .where(eq(sellers.id, updated.sellerId));
+      // Find the seller record using userId
+      const [seller] = await db.select()
+        .from(sellers)
+        .where(eq(sellers.walletAddress, updated.userId))
+        .limit(1);
+      
+      if (seller) {
+        await db.update(sellers)
+          .set({ isVerified: true })
+          .where(eq(sellers.id, seller.id));
+      }
     }
 
     return updated;
@@ -457,10 +465,18 @@ export class SellerVerificationService {
         .set({ status: 'expired' })
         .where(eq(sellerVerifications.id, verification.id));
       
+      // Find the seller record using userId
+      const [seller] = await db.select()
+        .from(sellers)
+        .where(eq(sellers.walletAddress, verification.userId))
+        .limit(1);
+      
       // Update seller status
-      await db.update(sellers)
-        .set({ isVerified: false })
-        .where(eq(sellers.id, verification.sellerId));
+      if (seller) {
+        await db.update(sellers)
+          .set({ isVerified: false })
+          .where(eq(sellers.id, seller.id));
+      }
     }
   }
 }

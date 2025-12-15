@@ -326,7 +326,7 @@ export class SystemStatusDashboardService {
 
     // Get vendor cost breakdown
     const vendorCosts = await db.select({
-      vendor: system_metrics.tags,
+      tags: system_metrics.tags,
       cost: sum(system_metrics.metricValue)
     })
     .from(system_metrics)

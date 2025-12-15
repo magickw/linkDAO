@@ -68,6 +68,7 @@ export class TokenReactionController {
   async getReactions(req: AuthenticatedRequest, res: Response) {
     try {
       const { postId, reactionType, limit = '20', offset = '0' } = req.query;
+      const userId = req.user?.id;
 
       if (!postId) {
         return res.status(400).json({
@@ -91,7 +92,7 @@ export class TokenReactionController {
 
       // Get analytics
       const analytics = await tokenReactionService.getReactionAnalytics(
-        parseInt(postId as string)
+        postId as string
       );
 
       res.json({
@@ -173,7 +174,7 @@ export class TokenReactionController {
       }
 
       const reactions = await tokenReactionService.getUserReactions(
-        parseInt(postId),
+        postId as string,
         userId
       );
 
