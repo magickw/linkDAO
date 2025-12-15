@@ -1,8 +1,14 @@
 import { Request, Response } from 'express';
 import { dataExportService, ExportRequest, ExportFormat, ScheduledExport } from '../services/dataExportService';
-import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
+import { adminAuthMiddleware } from '../middleware/authenticationSecurityMiddleware';
 import { csrfProtection } from '../middleware/csrfProtection';
-import { rateLimiter } from '../middleware/rateLimitingMiddleware';
+import { rateLimiter } from '../middleware/rateLimiter';
+
+type ExportStatus = "pending" | "completed" | "processing" | "cancelled" | "failed";
+
+function isValidExportStatus(status: any): status is ExportStatus {
+  return ["pending", "completed", "processing", "cancelled", "failed"].includes(status);
+}
 
 export class DataExportController {
   /**
@@ -89,12 +95,12 @@ export class DataExportController {
     try {
       const { userId, status } = req.query;
 
-      const filters: { userId?: string; status?: string } = {};
+      const filters: { userId?: string; status?: ExportStatus } = {};
       if (userId && typeof userId === 'string') {
         filters.userId = userId;
       }
-      if (status && typeof status === 'string') {
-        filters.status = status as string;
+      if (status && typeof status === 'string' && isValidExportStatus(status)) {
+        filters.status = status;
       }
 
       const jobs = dataExportService.listExportJobs(filters);

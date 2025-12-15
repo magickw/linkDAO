@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { safeLogger } from '../utils/safeLogger';
-import communityHealthService from '../services/communityHealthService';
+import { communityHealthService } from '../services/communityHealthService';
 
 /**
  * Get community health metrics

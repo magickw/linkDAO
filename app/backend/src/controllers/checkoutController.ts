@@ -85,7 +85,7 @@ export class CheckoutController {
             const buyerAddress = req.user?.address || userAddress;
 
             // Calculate totals
-            const subtotal = items.reduce((sum: number, item: CartItem) => sum + (item.price * item.quantity), 0);
+            const subtotal = items.reduce((sum: number, item: CartItem) => sum + (parseFloat(item.priceAtTime) * item.quantity), 0);
             const shipping = this.calculateShipping(items);
             const tax = this.calculateTax(subtotal, shipping);
             const platformFee = subtotal * 0.025; // 2.5% platform fee
@@ -195,11 +195,11 @@ export class CheckoutController {
                 items: cart.items.map(item => ({
                     productId: item.productId,
                     quantity: item.quantity,
-                    price: item.price
+                    price: parseFloat(item.priceAtTime)
                 })),
                 totalAmount: total.toString(),
                 shippingAddress: {
-                    fullName: shippingAddress.fullName,
+                    name: shippingAddress.fullName,
                     street: shippingAddress.addressLine1,
                     city: shippingAddress.city,
                     state: shippingAddress.state,
@@ -216,12 +216,12 @@ export class CheckoutController {
             let paymentResult;
             if (paymentMethod === 'fiat') {
                 // Process Stripe payment
-                paymentResult = await stripePaymentServiceInstance.createPaymentIntent({
+                paymentResult = await stripePaymentServiceInstance.getPaymentIntent({
                     amount: Math.round(total * 100), // Convert to cents
                     currency: 'usd',
                     orderId: order.id,
                     buyerAddress: req.user.address,
-                    sellerAddress: cart.items[0].sellerId,
+                    sellerAddress: cart.items[0].product?.sellerId,
                     metadata: {
                         orderId: order.id,
                         sessionId

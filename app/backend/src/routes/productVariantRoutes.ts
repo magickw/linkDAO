@@ -4,7 +4,7 @@ import express from 'express';
 import { AuthenticationMiddleware } from '../middleware/authenticationMiddleware';
 import { AuthenticationService } from '../services/authenticationService';
 import { validateRequest } from '../middleware/validation';
-import { db } from '../config/database';
+import { db } from '../db';
 import { sql } from 'drizzle-orm';
 
 const router = express.Router();

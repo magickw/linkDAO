@@ -3,6 +3,7 @@ import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/
 import { safeLogger } from '../utils/safeLogger';
 import { communityService } from '../services/communityService';
 import { apiResponse, createSuccessResponse, createErrorResponse } from '../utils/apiResponse';
+import { Community } from '../types/community';
 import { openaiService } from '../services/ai/openaiService';
 import { aiModerationService } from '../services/aiModerationService';
 
@@ -536,7 +537,7 @@ export class CommunityController {
   }): Promise<{ success: boolean; data?: any; message?: string }> {
     try {
       // Get community details for context
-      const community = await communityService.getCommunityDetails(data.communityId, data.userAddress);
+      const community: Community | null = await communityService.getCommunityDetails(data.communityId, data.userAddress);
 
       if (!community) {
         return { success: false, message: 'Community not found' };
@@ -1500,18 +1501,6 @@ export class CommunityController {
     }
   }
 
-  // Get community rules for moderation
-  private async getCommunityRules(communityId: string): Promise<string[]> {
-    try {
-      const community = await communityService.getCommunityDetails(communityId);
-      return community?.rules || [];
-    } catch (error) {
-      safeLogger.error('Error getting community rules:', error);
-      return [];
-    }
-  }
-
-  // Get user reputation for moderation context
   private async getUserReputation(userAddress: string): Promise<number> {
     try {
       // This would typically query your user reputation system
@@ -1520,69 +1509,6 @@ export class CommunityController {
     } catch (error) {
       safeLogger.error('Error getting user reputation:', error);
       return 50;
-    }
-  }
-
-  // Moderate content manually (for admins/moderators)
-  async moderateContent(req: Request, res: Response): Promise<void> {
-    try {
-      const userAddress = (req as AuthenticatedRequest).user?.address;
-      if (!userAddress) {
-        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
-        return;
-      }
-
-      const { content, type, communityId } = req.body;
-
-      if (!content || !type) {
-        res.status(400).json(createErrorResponse('BAD_REQUEST', 'Content and type are required', 400));
-        return;
-      }
-
-      const moderationResult = await aiModerationService.moderateContent({
-        type,
-        content,
-        authorAddress: userAddress,
-        communityId,
-        context: {
-          communityRules: await this.getCommunityRules(communityId),
-          userReputation: await this.getUserReputation(userAddress)
-        }
-      });
-
-      // Get suggested actions
-      const suggestedActions = await aiModerationService.getSuggestedActions({
-        type,
-        content,
-        authorAddress: userAddress,
-        communityId
-      }, moderationResult);
-
-      res.json(createSuccessResponse({
-        ...moderationResult,
-        suggestedActions
-      }, {}));
-    } catch (error) {
-      safeLogger.error('Error moderating content:', error);
-      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to moderate content'));
-    }
-  }
-
-  // Get community moderation statistics
-  async getModerationStats(req: Request, res: Response): Promise<void> {
-    try {
-      const { id } = req.params;
-      const { timeRange = 'week' } = req.query;
-
-      const stats = await aiModerationService.getCommunityModerationStats(
-        id,
-        timeRange as 'day' | 'week' | 'month'
-      );
-
-      res.json(createSuccessResponse(stats, {}));
-    } catch (error) {
-      safeLogger.error('Error getting moderation stats:', error);
-      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get moderation stats'));
     }
   }
 
@@ -1915,7 +1841,7 @@ export class CommunityController {
       }
 
       const { bulkMemberManagementService } = await import('../services/bulkMemberManagementService');
-      const result = await bulkMemberManagementService.importMembersFromCSV(id, req.file.buffer, {
+      const result = await bulkMemberManagementService.importMembersFromCSV(id, req.file.buffer.toString('utf-8'), {
         defaultRole,
         defaultReputation,
         sendWelcomeMessage,

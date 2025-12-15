@@ -352,11 +352,11 @@ export class PerformanceOptimizationManager {
     }
 
     if (this.monitor) {
-      const metrics = this.monitor.getMetrics();
+      const performanceReport = this.monitor.getPerformanceReport();
       report.monitoring = {
-        summary: metrics.overall,
-        activeAlerts: metrics.alerts,
-        metrics: metrics,
+        summary: performanceReport.summary,
+        activeAlerts: performanceReport.alerts,
+        metrics: this.monitor.getMetrics(),
       };
     }
 

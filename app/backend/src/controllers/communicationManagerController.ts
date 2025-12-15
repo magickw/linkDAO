@@ -53,7 +53,15 @@ export class CommunicationManagerController {
    */
   async logCommunication(req: Request, res: Response): Promise<void> {
     try {
-      const communicationData = communicationLogSchema.parse(req.body);
+      const communicationData: {
+        conversationId: string;
+        messageId: string;
+        senderAddress: string;
+        recipientAddress: string;
+        contentPreview: string;
+        messageType: string;
+        metadata?: any;
+      } = communicationLogSchema.parse(req.body);
 
       const logEntry = await communicationManagerService.logCommunication(communicationData);
 
@@ -129,7 +137,14 @@ export class CommunicationManagerController {
    */
   async createEscalationTrigger(req: Request, res: Response): Promise<void> {
     try {
-      const triggerData = escalationTriggerSchema.parse(req.body);
+      const triggerData: {
+        conversationId: string;
+        messageId?: string;
+        triggerType: 'high_volume' | 'negative_sentiment' | 'keywords' | 'manual' | 'timeout';
+        thresholdValue?: number;
+        currentValue?: number;
+        notes?: string;
+      } = escalationTriggerSchema.parse(req.body);
 
       const trigger = await communicationManagerService.createEscalationTrigger(triggerData);
 

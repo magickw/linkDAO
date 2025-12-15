@@ -4,6 +4,18 @@ import { AdvancedAnalyticsService } from '../services/advancedAnalyticsService';
 
 const advancedAnalyticsService = new AdvancedAnalyticsService();
 
+type AnalyticsPeriod = "24h" | "7d" | "30d" | "90d" | "1y";
+
+interface AnalyticsTimeRange {
+  start: Date;
+  end: Date;
+  period: AnalyticsPeriod;
+}
+
+function isValidAnalyticsPeriod(period: any): period is AnalyticsPeriod {
+  return ["24h", "7d", "30d", "90d", "1y"].includes(period);
+}
+
 export class AdvancedAnalyticsController {
   /**
    * Get comprehensive marketplace analytics
@@ -20,10 +32,18 @@ export class AdvancedAnalyticsController {
         return;
       }
 
-      const timeRange = {
+      if (!isValidAnalyticsPeriod(period)) {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid period. Must be one of: "24h", "7d", "30d", "90d", "1y"'
+        });
+        return;
+      }
+
+      const timeRange: AnalyticsTimeRange = {
         start: new Date(start as string),
         end: new Date(end as string),
-        period: period as any
+        period: period
       };
 
       const analytics = await advancedAnalyticsService.getMarketplaceAnalytics(timeRange);
@@ -48,20 +68,28 @@ export class AdvancedAnalyticsController {
    */
   async getTimeSeriesData(req: Request, res: Response): Promise<void> {
     try {
-      const { metric, start, end, granularity } = req.query;
+      const { metric, start, end, granularity, period } = req.query;
       
-      if (!metric || !start || !end) {
+      if (!metric || !start || !end || !period) {
         res.status(400).json({
           success: false,
-          error: 'Missing required parameters: metric, start, end'
+          error: 'Missing required parameters: metric, start, end, period'
         });
         return;
       }
 
-      const timeRange = {
+      if (!isValidAnalyticsPeriod(period)) {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid period. Must be one of: "24h", "7d", "30d", "90d", "1y"'
+        });
+        return;
+      }
+
+      const timeRange: AnalyticsTimeRange = {
         start: new Date(start as string),
         end: new Date(end as string),
-        period: '7d' // Default period
+        period: period
       };
 
       const data = await advancedAnalyticsService.getTimeSeriesData(
@@ -90,20 +118,28 @@ export class AdvancedAnalyticsController {
    */
   async generateInsights(req: Request, res: Response): Promise<void> {
     try {
-      const { start, end } = req.query;
+      const { start, end, period } = req.query;
       
-      if (!start || !end) {
+      if (!start || !end || !period) {
         res.status(400).json({
           success: false,
-          error: 'Missing required parameters: start, end'
+          error: 'Missing required parameters: start, end, period'
         });
         return;
       }
 
-      const timeRange = {
+      if (!isValidAnalyticsPeriod(period)) {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid period. Must be one of: "24h", "7d", "30d", "90d", "1y"'
+        });
+        return;
+      }
+
+      const timeRange: AnalyticsTimeRange = {
         start: new Date(start as string),
         end: new Date(end as string),
-        period: '7d' // Default period
+        period: period
       };
 
       const insights = await advancedAnalyticsService.generateInsights(timeRange);
@@ -150,12 +186,20 @@ export class AdvancedAnalyticsController {
    */
   async getUserBehaviorAnalytics(req: Request, res: Response): Promise<void> {
     try {
-      const { start, end } = req.query;
+      const { start, end, period } = req.query;
+
+      if (!isValidAnalyticsPeriod(period)) {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid period. Must be one of: "24h", "7d", "30d", "90d", "1y"'
+        });
+        return;
+      }
       
-      const timeRange = {
+      const timeRange: AnalyticsTimeRange = {
         start: start ? new Date(start as string) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
         end: end ? new Date(end as string) : new Date(),
-        period: '7d'
+        period: period || '7d'
       };
 
       const analytics = await advancedAnalyticsService.getUserBehaviorAnalytics(timeRange);
@@ -226,20 +270,28 @@ export class AdvancedAnalyticsController {
    */
   async exportAnalyticsData(req: Request, res: Response): Promise<void> {
     try {
-      const { start, end, format } = req.query;
+      const { start, end, format, period } = req.query;
       
-      if (!start || !end) {
+      if (!start || !end || !period) {
         res.status(400).json({
           success: false,
-          error: 'Missing required parameters: start, end'
+          error: 'Missing required parameters: start, end, period'
         });
         return;
       }
 
-      const timeRange = {
+      if (!isValidAnalyticsPeriod(period)) {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid period. Must be one of: "24h", "7d", "30d", "90d", "1y"'
+        });
+        return;
+      }
+
+      const timeRange: AnalyticsTimeRange = {
         start: new Date(start as string),
         end: new Date(end as string),
-        period: '7d'
+        period: period
       };
 
       const exportData = await advancedAnalyticsService.exportAnalyticsData(

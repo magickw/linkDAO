@@ -70,13 +70,13 @@ class BookmarkController {
   async checkBookmark(req: Request, res: Response) {
     try {
       const userId = (req as any).user?.id;
-      const postId = req.params.postId;
+      const postId = parseInt(req.params.postId, 10);
 
       if (!userId) {
         return res.status(401).json({ error: 'Authentication required' });
       }
 
-      if (!postId || typeof postId !== 'string' || postId.length === 0) {
+      if (isNaN(postId)) {
         return res.status(400).json({ error: 'Invalid post ID' });
       }
 
@@ -95,9 +95,9 @@ class BookmarkController {
    */
   async getBookmarkCount(req: Request, res: Response) {
     try {
-      const postId = req.params.postId;
+      const postId = parseInt(req.params.postId, 10);
 
-      if (!postId || typeof postId !== 'string' || postId.length === 0) {
+      if (isNaN(postId)) {
         return res.status(400).json({ error: 'Invalid post ID' });
       }
 
