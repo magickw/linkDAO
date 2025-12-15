@@ -187,7 +187,7 @@ export class UserProfileService {
       shippingPhone: additionalData.shippingPhone || '',
       shippingSameAsBilling: dbUser.shippingSameAsBilling !== null && dbUser.shippingSameAsBilling !== undefined ? dbUser.shippingSameAsBilling : (additionalData.shippingSameAsBilling ?? true),
       createdAt,
-      updatedAt
+      updatedAt: new Date()
     };
     
     // Make the user follow themselves to ensure their own posts appear in their following feed
@@ -391,7 +391,7 @@ export class UserProfileService {
 
     // Prepare updated address data (all private information)
     const addressData = {
-      physicalAddress: input.physicalAddress || existingAdditionalData.physicalAddress,
+      physicalAddress: input.physicalAddress ? JSON.stringify(input.physicalAddress) : existingAdditionalData.physicalAddress,
       email: input.email || existingAdditionalData.email,
       preferences: existingAdditionalData.preferences,
       privacySettings: existingAdditionalData.privacySettings,

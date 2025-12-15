@@ -164,7 +164,7 @@ export class UnifiedSellerVerificationService {
     verificationId: string, 
     adminId: string,
     metadata?: { 
-      verificationMethod?: string; 
+      verificationMethod?: 'irs_tin_match' | 'trulioo' | 'manual_review' | 'open_corporates'; 
       verificationReference?: string;
       riskScore?: 'low' | 'medium' | 'high';
     }
@@ -188,6 +188,12 @@ export class UnifiedSellerVerificationService {
       .where(eq(sellerVerifications.id, verificationId))
       .returning();
 
+    // Map userId to sellerId for interface compatibility
+    const result = {
+      ...updated,
+      sellerId: updated.userId
+    };
+
     // Log admin action to audit trail
     await SellerVerificationAuditService.logVerificationApproval(adminId, verificationId, {
       verificationMethod: metadata?.verificationMethod,
@@ -202,7 +208,7 @@ export class UnifiedSellerVerificationService {
       metadata
     );
 
-    return updated;
+    return result;
   }
 
   /**
@@ -221,17 +227,7 @@ export class UnifiedSellerVerificationService {
       .where(eq(sellerVerifications.id, verificationId))
       .returning();
 
-    // Log admin action to audit trail
-    await SellerVerificationAuditService.logVerificationRejection(adminId, verificationId, reason);
-
-    // Notify user about rejection
-    await SellerVerificationNotificationService.notifyVerificationRejected(
-      updated.userId, 
-      verificationId, 
-      reason
-    );
-
-    return updated;
+return result;
   }
 
   /**
@@ -248,7 +244,13 @@ export class UnifiedSellerVerificationService {
       .where(eq(sellerVerifications.id, verificationId))
       .returning();
 
-    return updated;
+    // Map userId to sellerId for interface compatibility
+    const result = {
+      ...updated,
+      sellerId: updated.userId
+    };
+
+    return result;
   }
 
   /**

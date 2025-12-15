@@ -8,6 +8,7 @@ interface ConnectedUser {
   lastSeen: Date;
   connectionState: 'connected' | 'reconnecting' | 'disconnected';
   ip?: string;
+  subscriptions: Set<string>;
 }
 
 interface NotificationData {
@@ -53,7 +54,7 @@ interface WebSocketServiceConfig {
 
 export class WebSocketService {
   private io: Server;
-  private connectedUsers: Map<string, WebSocketUser> = new Map();
+  private connectedUsers: Map<string, ConnectedUser> = new Map();
   private userSockets: Map<string, Set<string>> = new Map(); // walletAddress -> Set of socketIds
   private subscriptions: Map<string, Subscription> = new Map(); // subscriptionId -> Subscription
   private userSubscriptions: Map<string, Set<string>> = new Map(); // walletAddress -> Set of subscriptionIds
@@ -910,7 +911,7 @@ export class WebSocketService {
   }
 
   // Get all connected users with enhanced info
-  getConnectedUsers(): WebSocketUser[] {
+  getConnectedUsers(): ConnectedUser[] {
     return Array.from(this.connectedUsers.values());
   }
 

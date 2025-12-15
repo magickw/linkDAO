@@ -243,7 +243,7 @@ export class UserPreferenceService {
           )
         );
 
-      return result.rowCount || 0;
+      return (result as any).rowCount || 0;
     } catch (error) {
       safeLogger.error('Failed to cleanup expired overrides:', error);
       return 0;
@@ -345,7 +345,7 @@ export class UserPreferenceService {
     try {
       const key = this.generateEncryptionKey(userId);
       const iv = crypto.randomBytes(16);
-      const cipher = crypto.createCipher(this.ENCRYPTION_ALGORITHM, key);
+      const cipher = crypto.createCipheriv(this.ENCRYPTION_ALGORITHM, key, iv);
       
       let encrypted = cipher.update(JSON.stringify(preferences), 'utf8', 'hex');
       encrypted += cipher.final('hex');
@@ -368,7 +368,7 @@ export class UserPreferenceService {
       const key = this.generateEncryptionKey(userId);
       const data = JSON.parse(encryptedData);
       
-      const decipher = crypto.createDecipher(this.ENCRYPTION_ALGORITHM, key);
+      const decipher = crypto.createDecipheriv(this.ENCRYPTION_ALGORITHM, key, Buffer.from(data.iv, 'hex'));
       decipher.setAuthTag(Buffer.from(data.authTag, 'hex'));
       
       let decrypted = decipher.update(data.encrypted, 'hex', 'utf8');

@@ -31,7 +31,12 @@ interface AggregationJobData {
 
 // Create the queue
 export const returnAggregationQueue = new Queue<AggregationJobData>(QUEUE_NAME, {
-    connection: redisService.getClient(),
+    connection: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+        password: process.env.REDIS_PASSWORD,
+        db: parseInt(process.env.REDIS_DB || '0')
+    },
     defaultJobOptions: {
         attempts: 3,
         backoff: {
@@ -82,7 +87,12 @@ export const returnAggregationWorker = new Worker<AggregationJobData>(
         }
     },
     {
-        connection: redisService.getClient(),
+        connection: {
+            host: process.env.REDIS_HOST || 'localhost',
+            port: parseInt(process.env.REDIS_PORT || '6379'),
+            password: process.env.REDIS_PASSWORD,
+            db: parseInt(process.env.REDIS_DB || '0')
+        },
         concurrency: 1, // Run aggregations sequentially to avoid race conditions
     }
 );
@@ -642,8 +652,7 @@ export const scheduleAggregationJobs = async () => {
 
         // Schedule hourly aggregation (every hour at minute 5)
         await returnAggregationQueue.add(
-            'aggregate_hourly',
-            { type: 'aggregate_hourly' },
+            { type: 'aggregate_hourly' } as any,
             {
                 repeat: {
                     pattern: '5 * * * *', // At minute 5 past every hour
@@ -653,8 +662,7 @@ export const scheduleAggregationJobs = async () => {
 
         // Schedule daily aggregation (every day at 01:00 UTC)
         await returnAggregationQueue.add(
-            'aggregate_daily',
-            { type: 'aggregate_daily' },
+            { type: 'aggregate_daily' } as any,
             {
                 repeat: {
                     pattern: '0 1 * * *', // At 01:00
@@ -664,8 +672,7 @@ export const scheduleAggregationJobs = async () => {
 
         // Schedule weekly aggregation (every Monday at 02:00 UTC)
         await returnAggregationQueue.add(
-            'aggregate_weekly',
-            { type: 'aggregate_weekly' },
+            { type: 'aggregate_weekly' } as any,
             {
                 repeat: {
                     pattern: '0 2 * * 1', // At 02:00 on Monday
@@ -675,8 +682,7 @@ export const scheduleAggregationJobs = async () => {
 
         // Schedule monthly aggregation (1st of every month at 03:00 UTC)
         await returnAggregationQueue.add(
-            'aggregate_monthly',
-            { type: 'aggregate_monthly' },
+            { type: 'aggregate_monthly' } as any,
             {
                 repeat: {
                     pattern: '0 3 1 * *', // At 03:00 on the 1st of every month

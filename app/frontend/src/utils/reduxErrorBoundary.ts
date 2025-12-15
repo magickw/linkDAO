@@ -45,7 +45,17 @@ if (typeof window !== 'undefined') {
   window.addEventListener('unhandledrejection', (event) => {
     console.error('Unhandled promise rejection:', event.reason);
     
-    // Prevent default browser behavior
+    // Check if this is a known extension-related error
+    const reason = event.reason?.message || event.reason?.toString() || '';
+    if (reason.includes('Invalid frameId for foreground frameId') || 
+        reason.includes('No tab with id') ||
+        reason.includes('background-redux-new.js')) {
+      console.debug('Ignoring known extension error:', reason);
+      event.preventDefault();
+      return;
+    }
+    
+    // Prevent default browser behavior for unknown errors
     event.preventDefault();
     
     // Log to error tracking service if available

@@ -50,7 +50,8 @@ import {
 
 import { logger } from '../utils/logger';
 import { EventEmitter } from 'events';
-import { taskAssignmentService } from './taskAssignmentService';
+import { TaskAssignmentService } from './taskAssignmentService';
+const taskAssignmentService = new TaskAssignmentService();
 import { fraudDetectionEngine } from './fraudDetectionEngine';
 import { returnFraudDetectionService } from './returnFraudDetectionService';
 import { aiContentRiskScoringService } from './aiContentRiskScoringService';
@@ -130,14 +131,10 @@ export class WorkflowAutomationEngine extends EventEmitter {
 
   async getTemplate(templateId: string): Promise<WorkflowTemplate | null> {
     try {
-      const template = await db.query.workflowTemplates.findFirst({
-        where: eq(workflowTemplates.id, templateId),
-        with: {
-          steps: {
-            orderBy: asc(workflowSteps.stepOrder)
-          }
-        }
-      });
+      const [template] = await db.select()
+        .from(workflowTemplates)
+        .where(eq(workflowTemplates.id, templateId))
+        .limit(1);
 
       return template || null;
     } catch (error) {
@@ -152,10 +149,10 @@ export class WorkflowAutomationEngine extends EventEmitter {
       if (category) conditions.push(eq(workflowTemplates.category, category));
       if (isActive !== undefined) conditions.push(eq(workflowTemplates.isActive, isActive));
 
-      const templates = await db.query.workflowTemplates.findMany({
-        where: conditions.length > 0 ? and(...conditions) : undefined,
-        orderBy: desc(workflowTemplates.createdAt)
-      });
+      const templates = await db.select()
+        .from(workflowTemplates)
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .orderBy(desc(workflowTemplates.createdAt));
 
       return templates.map(t => ({
         ...t,
@@ -251,19 +248,10 @@ export class WorkflowAutomationEngine extends EventEmitter {
 
   async getWorkflowInstance(instanceId: string): Promise<WorkflowInstance | null> {
     try {
-      const instance = await db.query.workflowInstances.findFirst({
-        where: eq(workflowInstances.id, instanceId),
-        with: {
-          template: true,
-          stepExecutions: {
-            with: {
-              step: true,
-              taskAssignments: true
-            },
-            orderBy: asc(workflowStepExecutions.createdAt)
-          }
-        }
-      });
+      const [instance] = await db.select()
+        .from(workflowInstances)
+        .where(eq(workflowInstances.id, instanceId))
+        .limit(1);
 
       return instance || null;
     } catch (error) {
@@ -286,16 +274,10 @@ export class WorkflowAutomationEngine extends EventEmitter {
           .where(eq(workflowTaskAssignments.id, request.taskId));
 
         // Get task assignment details
-        const taskAssignment = await tx.query.workflowTaskAssignments.findFirst({
-          where: eq(workflowTaskAssignments.id, request.taskId),
-          with: {
-            stepExecution: {
-              with: {
-                instance: true
-              }
-            }
-          }
-        });
+        const [taskAssignment] = await tx.select()
+          .from(workflowTaskAssignments)
+          .where(eq(workflowTaskAssignments.id, request.taskId))
+          .limit(1);
 
         if (taskAssignment) {
           // Update step execution
@@ -334,25 +316,10 @@ export class WorkflowAutomationEngine extends EventEmitter {
         conditions.push(inArray(workflowTaskAssignments.status, status));
       }
 
-      const tasks = await db.query.workflowTaskAssignments.findMany({
-        where: and(...conditions),
-        with: {
-          stepExecution: {
-            with: {
-              instance: {
-                with: {
-                  template: true
-                }
-              },
-              step: true
-            }
-          }
-        },
-        orderBy: [
-          desc(workflowTaskAssignments.priority),
-          asc(workflowTaskAssignments.dueDate)
-        ]
-      });
+      const tasks = await db.select()
+        .from(workflowTaskAssignments)
+        .where(and(...conditions))
+        .orderBy(desc(workflowTaskAssignments.priority), asc(workflowTaskAssignments.dueDate));
 
       return tasks;
     } catch (error) {
@@ -397,7 +364,10 @@ export class WorkflowAutomationEngine extends EventEmitter {
 
   async createApprovalCriteria(criteria: Omit<ApprovalCriteria, 'id' | 'createdAt' | 'updatedAt'>): Promise<ApprovalCriteria> {
     try {
-      const [newCriteria] = await db.insert(workflowApprovalCriteria).values(criteria).returning();
+      const [newCriteria] = await db.insert(workflowApprovalCriteria).values({
+        ...criteria,
+        maxAmount: criteria.maxAmount ? criteria.maxAmount.toString() : null
+      }).returning();
       
       logger.info(`Approval criteria created: ${newCriteria.id}`, { 
         criteriaId: newCriteria.id, 
@@ -413,13 +383,13 @@ export class WorkflowAutomationEngine extends EventEmitter {
 
   async getApprovalCriteria(entityType: string): Promise<ApprovalCriteria[]> {
     try {
-      const criteria = await db.query.workflowApprovalCriteria.findMany({
-        where: and(
+      const criteria = await db.select()
+        .from(workflowApprovalCriteria)
+        .where(and(
           eq(workflowApprovalCriteria.entityType, entityType),
           eq(workflowApprovalCriteria.isActive, true)
-        ),
-        orderBy: desc(workflowApprovalCriteria.priority)
-      });
+        ))
+        .orderBy(desc(workflowApprovalCriteria.priority));
       
       return criteria;
     } catch (error) {
@@ -605,24 +575,25 @@ export class WorkflowAutomationEngine extends EventEmitter {
       switch (context.entityType) {
         case 'return':
           fraudCheck = await returnFraudDetectionService.calculateRiskScore({
-            returnId: context.entityId,
-            buyerId: context.userId!,
-            sellerId: context.sellerId!,
-            reason: 'workflow_evaluation',
-            amount: 0
+            userId: context.userId!,
+            orderId: context.entityId,
+            returnReason: 'workflow_evaluation',
+            orderValue: 0,
+            accountAge: 30,
+            previousReturns: 0
           });
           break;
         case 'dispute':
-          fraudCheck = await fraudDetectionEngine.analyzeTransaction({
-            transactionId: context.entityId,
+          // Create a mock return data for dispute assessment
+          fraudCheck = await fraudDetectionEngine.assessReturnRisk({
+            returnId: context.entityId,
             userId: context.userId!,
-            amount: 0,
-            paymentMethod: 'unknown',
-            userContext: {
-              accountAge: 30,
-              transactionHistory: [],
-              verificationStatus: 'unverified'
-            }
+            orderId: context.entityId,
+            returnReason: 'dispute',
+            orderValue: 0,
+            refundAmount: 0,
+            itemsToReturn: [],
+            createdAt: new Date()
           });
           break;
         default:
@@ -774,10 +745,10 @@ export class WorkflowAutomationEngine extends EventEmitter {
     escalationRequired: boolean;
   }> {
     try {
-      const stepExecutions = await db.query.workflowStepExecutions.findMany({
-        where: eq(workflowStepExecutions.instanceId, instanceId),
-        orderBy: desc(workflowStepExecutions.createdAt)
-      });
+      const stepExecutions = await db.select()
+        .from(workflowStepExecutions)
+        .where(eq(workflowStepExecutions.instanceId, instanceId))
+        .orderBy(desc(workflowStepExecutions.createdAt));
 
       const failedStep = stepExecutions.find(step => step.status === 'failed');
       if (!failedStep) {

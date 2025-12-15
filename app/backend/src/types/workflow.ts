@@ -310,6 +310,11 @@ export interface WorkflowAnalytics {
   bottlenecks: BottleneckAnalysis[];
   slaBreaches: number;
   topFailureReasons: FailureReason[];
+  efficiency?: {
+    averageSteps: number;
+    averageTaskCompletionTime: number;
+    automationRate: number;
+  };
 }
 
 export interface BottleneckAnalysis {

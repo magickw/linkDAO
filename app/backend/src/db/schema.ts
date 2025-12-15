@@ -5686,7 +5686,7 @@ export const userFraudProfiles = pgTable("user_fraud_profiles", {
 export const supportChatSessions = pgTable("support_chat_sessions", {
   id: varchar("id", { length: 36 }).primaryKey(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  agentId: uuid("agent_id").references(() => users.id).onDelete('set null'),
+  agentId: uuid("agent_id").references(() => users.id, { onDelete: 'set null' }),
   status: varchar("status", { length: 20 }).default("waiting"), // waiting, active, closed
   initialMessage: text("initial_message"),
   createdAt: timestamp("created_at").notNull().defaultNow(),

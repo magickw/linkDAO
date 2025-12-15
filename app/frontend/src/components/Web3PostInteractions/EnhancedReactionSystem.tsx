@@ -145,6 +145,8 @@ const EnhancedReactionSystem: React.FC<EnhancedReactionSystemProps> = ({
 
     } catch (error) {
       console.error('Reaction failed:', error);
+      // Remove floating reaction on error
+      setFloatingReactions(prev => prev.filter(f => f.id !== floatingId));
       addToast('Failed to add reaction. Please try again.', 'error');
     } finally {
       setIsProcessing(false);

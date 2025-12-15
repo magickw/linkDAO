@@ -39,7 +39,7 @@ class TokenReactionService {
       const token = this.getAuthToken();
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
-        ...options.headers,
+        ...((options.headers as Record<string, string>) || {})
       };
 
       if (token) {
@@ -104,7 +104,7 @@ class TokenReactionService {
   }
 
   /**
-   * Create a new token reaction
+   * Create a new token reaction with improved error handling
    */
   async createReaction(request: CreateReactionRequest): Promise<CreateReactionResponse> {
     // Validate reaction type
@@ -118,14 +118,20 @@ class TokenReactionService {
       throw new Error(`Minimum amount for ${request.type} reaction is ${minAmount} tokens`);
     }
 
-    return this.makeRequest<CreateReactionResponse>('/api/reactions', {
-      method: 'POST',
-      body: JSON.stringify(request),
-    });
+    try {
+      return await this.makeRequest<CreateReactionResponse>('/api/reactions', {
+        method: 'POST',
+        body: JSON.stringify(request),
+      });
+    } catch (error) {
+      console.error('Failed to create reaction:', error);
+      // Re-throw to let caller handle it
+      throw error;
+    }
   }
 
   /**
-   * Get reactions for a post
+   * Get reactions for a post with improved error handling
    */
   async getReactions(request: GetReactionsRequest): Promise<GetReactionsResponse> {
     const params = new URLSearchParams({
@@ -135,21 +141,66 @@ class TokenReactionService {
       ...(request.offset && { offset: request.offset.toString() }),
     });
 
-    return this.makeRequest<GetReactionsResponse>(`/api/reactions?${params}`);
+    try {
+      return await this.makeRequest<GetReactionsResponse>(`/api/reactions?${params}`);
+    } catch (error) {
+      console.error('Failed to get reactions:', error);
+      // Return empty response instead of throwing to prevent UI crashes
+      return {
+        reactions: [],
+        summaries: [],
+        analytics: {
+          postId: request.postId,
+          totalReactions: 0,
+          totalTokensStaked: 0,
+          totalRewardsDistributed: 0,
+          reactionBreakdown: {
+            '🔥': { count: 0, totalAmount: 0, averageAmount: 0 },
+            '🚀': { count: 0, totalAmount: 0, averageAmount: 0 },
+            '💎': { count: 0, totalAmount: 0, averageAmount: 0 }
+          }
+        },
+        hasMore: false
+      } as GetReactionsResponse;
+    }
   }
 
   /**
-   * Get reaction summaries for a post
+   * Get reaction summaries for a post with improved error handling
    */
   async getReactionSummaries(postId: string): Promise<ReactionSummary[]> {
-    return this.makeRequest<ReactionSummary[]>(`/api/reactions/${postId}/summaries`);
+    try {
+      return await this.makeRequest<ReactionSummary[]>(`/api/reactions/${postId}/summaries`);
+    } catch (error) {
+      console.error('Failed to get reaction summaries:', error);
+      // Return empty array instead of throwing to prevent UI crashes
+      return [];
+    }
   }
 
   /**
-   * Get reaction analytics for a post
+   * Get reaction analytics for a post with improved error handling
    */
   async getReactionAnalytics(postId: string): Promise<ReactionAnalytics> {
-    return this.makeRequest<ReactionAnalytics>(`/api/reactions/${postId}/analytics`);
+    try {
+      return await this.makeRequest<ReactionAnalytics>(`/api/reactions/${postId}/analytics`);
+    } catch (error) {
+      console.error('Failed to get reaction analytics:', error);
+      // Return empty object instead of throwing to prevent UI crashes
+      return {
+        postId,
+        totalReactions: 0,
+        totalTokensStaked: 0,
+        totalRewardsDistributed: 0,
+        reactionBreakdown: {
+          '🔥': { count: 0, totalAmount: 0, averageAmount: 0 },
+          '🚀': { count: 0, totalAmount: 0, averageAmount: 0 },
+          '💎': { count: 0, totalAmount: 0, averageAmount: 0 }
+        },
+        topReactors: [],
+        milestoneProgress: []
+      } as ReactionAnalytics;
+    }
   }
 
   /**

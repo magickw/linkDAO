@@ -376,8 +376,8 @@ export class UserJourneyService {
         sessions.push({
           sessionId: String(row.session_id),
           userId: String(row.user_id),
-          startTime: new Date(row.start_time),
-          endTime: row.end_time ? new Date(row.end_time) : undefined,
+          startTime: new Date(row.start_time as string),
+          endTime: row.end_time ? new Date(row.end_time as string) : undefined,
           totalDuration: Number(row.duration_seconds),
           pageViews: Number(row.page_views),
           events,
@@ -532,7 +532,7 @@ export class UserJourneyService {
       return eventData.map(row => ({
         eventType: String(row.event_type),
         pageUrl: String(row.page_url),
-        timestamp: new Date(row.timestamp),
+        timestamp: new Date(row.timestamp as string),
         eventData: row.event_data,
         timeFromStart: Number(row.time_from_start)
       }));

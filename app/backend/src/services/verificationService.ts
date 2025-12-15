@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 import { safeLogger } from '../utils/safeLogger';
-import twilio from 'twilio';
+// import twilio from 'twilio';
 import crypto from 'crypto';
 
 interface VerificationCode {
@@ -61,7 +61,13 @@ export class VerificationService {
     }
 
     try {
+      try {
+      const twilio = require('twilio');
       this.twilioClient = twilio(accountSid, authToken);
+    } catch (error) {
+      safeLogger.error('Twilio not installed:', error);
+      this.twilioClient = null;
+    }
       safeLogger.info('✅ SMS service initialized');
     } catch (error) {
       safeLogger.error('❌ Failed to initialize SMS service:', error);

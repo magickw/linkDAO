@@ -7,6 +7,8 @@ export interface UserProfile {
   avatarCid?: string;
   bioCid?: string;
   email?: string;
+  socialLinks?: any[]; // Social links are public
+  website?: string; // Website is public
   physicalAddress?: PhysicalAddress;
   createdAt: Date;
   updatedAt: Date;
@@ -52,6 +54,8 @@ export interface CreateUserProfileInput {
   ens?: string;
   avatarCid?: string;
   bioCid?: string;
+  socialLinks?: any[]; // Social links are public
+  website?: string; // Website is public
   physicalAddress?: PhysicalAddress;
   // Billing address fields
   billingFirstName?: string;
@@ -85,6 +89,8 @@ export interface UpdateUserProfileInput {
   avatarCid?: string;
   bioCid?: string;
   email?: string;
+  socialLinks?: any[]; // Social links are public
+  website?: string; // Website is public
   physicalAddress?: PhysicalAddress;
   // Billing address fields
   billingFirstName?: string;
