@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { commentService } from '../services/commentService';
 import { safeLogger } from '../utils/safeLogger';
+import { authMiddleware } from '../middleware/authMiddleware';
+import { csrfProtection } from '../middleware/csrfProtection';
 
 const router = Router();
 
@@ -8,25 +10,38 @@ const router = Router();
  * POST /community-posts/:postId/comments
  * Create a new comment on a post
  */
-router.post('/community-posts/:postId/comments', async (req: Request, res: Response) => {
+router.post('/community-posts/:postId/comments', csrfProtection, authMiddleware, async (req: Request, res: Response) => {
   try {
     const { postId } = req.params;
-    const { author, content, parentCommentId } = req.body;
+    const { content, parentCommentId } = req.body;
+    
+    // Extract user address from authenticated request
+    const userAddress = (req as any).user?.address || (req as any).user?.walletAddress;
+    
+    if (!userAddress) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
 
-    if (!author || !content) {
+    if (!content) {
       return res.status(400).json({
         success: false,
-        error: 'Author and content are required'
+        error: 'Content is required'
       });
     }
 
     // Check if it's a quick post (UUID) or regular post (integer)
+    // Community posts use integer IDs, quick posts use UUIDs
     const isQuickPost = postId.includes('-'); // UUIDs contain dashes
-
+    
+    // For community posts, we need to use the posts table with integer ID
+    // For quick posts, we use the quickPosts table with UUID
     const comment = await commentService.createComment({
       postId: isQuickPost ? undefined : parseInt(postId),
       quickPostId: isQuickPost ? postId : undefined,
-      authorAddress: author,
+      authorAddress: userAddress,
       content,
       // Explicitly set to undefined (not null) for top-level comments
       // This ensures the database stores NULL and isNull() queries work correctly
@@ -139,21 +154,31 @@ router.get('/comments/:commentId/replies', async (req: Request, res: Response) =
  * PUT /comments/:commentId
  * Update a comment
  */
-router.put('/comments/:commentId', async (req: Request, res: Response) => {
+router.put('/comments/:commentId', csrfProtection, authMiddleware, async (req: Request, res: Response) => {
   try {
     const { commentId } = req.params;
-    const { author, content } = req.body;
+    const { content } = req.body;
+    
+    // Extract user address from authenticated request
+    const userAddress = (req as any).user?.address || (req as any).user?.walletAddress;
+    
+    if (!userAddress) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
 
-    if (!author || !content) {
+    if (!content) {
       return res.status(400).json({
         success: false,
-        error: 'Author and content are required'
+        error: 'Content is required'
       });
     }
 
     const comment = await commentService.updateComment(
       commentId,
-      author,
+      userAddress,
       { content }
     );
 
@@ -174,19 +199,21 @@ router.put('/comments/:commentId', async (req: Request, res: Response) => {
  * DELETE /comments/:commentId
  * Delete a comment
  */
-router.delete('/comments/:commentId', async (req: Request, res: Response) => {
+router.delete('/comments/:commentId', csrfProtection, authMiddleware, async (req: Request, res: Response) => {
   try {
     const { commentId } = req.params;
-    const { author } = req.body;
-
-    if (!author) {
-      return res.status(400).json({
+    
+    // Extract user address from authenticated request
+    const userAddress = (req as any).user?.address || (req as any).user?.walletAddress;
+    
+    if (!userAddress) {
+      return res.status(401).json({
         success: false,
-        error: 'Author is required'
+        error: 'Authentication required'
       });
     }
 
-    await commentService.deleteComment(commentId, author);
+    await commentService.deleteComment(commentId, userAddress);
 
     return res.json({
       success: true,
@@ -205,7 +232,7 @@ router.delete('/comments/:commentId', async (req: Request, res: Response) => {
  * POST /comments/:commentId/vote
  * Vote on a comment
  */
-router.post('/comments/:commentId/vote', async (req: Request, res: Response) => {
+router.post('/comments/:commentId/vote', csrfProtection, authMiddleware, async (req: Request, res: Response) => {
   try {
     const { commentId } = req.params;
     const { voteType } = req.body;

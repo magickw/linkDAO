@@ -272,14 +272,32 @@ self.addEventListener('fetch', (event) => {
   if (url.hostname === 'placehold.co' || url.hostname === 'via.placeholder.com') {
     event.respondWith(handlePlaceholderRequest(url).catch(error => {
       console.warn('Failed to generate placeholder:', error);
-      // Return a simple fallback SVG
-      return new Response(
-        `<svg width="40" height="40" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" fill="#ccc"/><text x="20" y="25" text-anchor="middle" fill="#666">?</text></svg>`,
-        {
-          headers: { 'Content-Type': 'image/svg+xml' },
+      // Return a simple fallback PNG using canvas
+      const canvas = new OffscreenCanvas(40, 40);
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = '#ccc';
+        ctx.fillRect(0, 0, 40, 40);
+        ctx.fillStyle = '#666';
+        ctx.font = '20px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('?', 20, 25);
+        const blob = await canvas.convertToBlob('image/png');
+        return new Response(blob, {
+          headers: { 'Content-Type': 'image/png' },
           status: 200
-        }
-      );
+        });
+      } else {
+        // Fallback to SVG if canvas is not available
+        return new Response(
+          `<svg width="40" height="40" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" fill="#ccc"/><text x="20" y="25" text-anchor="middle" fill="#666">?</text></svg>`,
+          {
+            headers: { 'Content-Type': 'image/svg+xml' },
+            status: 200
+          }
+        );
+      }
     }));
     return;
   }
@@ -1397,7 +1415,7 @@ async function handlePlaceholderRequest(url) {
     const pathParts = url.pathname.split('/').filter(Boolean);
 
     if (pathParts.length < 1) {
-      return generatePlaceholderSVG(40, 40, '?');
+      return generatePlaceholderPNG(40, 40, '?');
     }
 
     const dimensions = pathParts[0];
@@ -1421,14 +1439,62 @@ async function handlePlaceholderRequest(url) {
     // Extract text from query params
     const text = url.searchParams.get('text')?.replace(/\+/g, ' ');
 
-    return generatePlaceholderSVG(width, height, text, backgroundColor);
+    return generatePlaceholderPNG(width, height, text, backgroundColor);
   } catch (error) {
     console.warn('Failed to generate placeholder:', error);
-    return generatePlaceholderSVG(40, 40, '?');
+    return generatePlaceholderPNG(40, 40, '?');
   }
 }
 
-// Generate SVG placeholder response
+// Generate PNG placeholder response using Canvas API
+async function generatePlaceholderPNG(width, height, text, backgroundColor) {
+  // Generate deterministic color if not provided
+  if (!backgroundColor) {
+    const str = text || `${width}x${height}`;
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const hue = Math.abs(hash) % 360;
+    backgroundColor = `hsl(${hue}, 65%, 50%)`;
+  }
+
+  // Create a canvas element
+  const canvas = new OffscreenCanvas(width, height);
+  const ctx = canvas.getContext('2d');
+  
+  if (!ctx) {
+    // Fallback to SVG if canvas is not available
+    return generatePlaceholderSVG(width, height, text, backgroundColor);
+  }
+
+  // Fill background
+  ctx.fillStyle = backgroundColor;
+  ctx.fillRect(0, 0, width, height);
+
+  // Draw text
+  ctx.fillStyle = '#ffffff';
+  const displayText = text || `${width}×${height}`;
+  const fontSize = Math.max(12, Math.min(width, height) * 0.2);
+  ctx.font = `${fontSize}px Arial, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(displayText, width / 2, height / 2);
+
+  // Convert to PNG blob
+  const blob = await canvas.convertToBlob('image/png');
+  
+  return new Response(blob, {
+    status: 200,
+    headers: {
+      'Content-Type': 'image/png',
+      'Cache-Control': 'public, max-age=31536000', // Cache for 1 year
+      'Access-Control-Allow-Origin': '*'
+    }
+  });
+}
+
+// Generate SVG placeholder response (fallback)
 function generatePlaceholderSVG(width, height, text, backgroundColor) {
   // Generate deterministic color if not provided
   if (!backgroundColor) {
