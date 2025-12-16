@@ -1,12 +1,12 @@
 import { Request, Response } from 'express';
 import { safeLogger } from '../utils/safeLogger';
 import { SearchService, AdvancedSearchFilters } from '../services/searchService';
-import { RedisService } from '../services/redisService';
+import { redisService } from '../services/redisService';
 import { ProductSortOptions } from '../models/Product';
 
 export class MarketplaceSearchController {
   private static searchService = new SearchService();
-  private static redisService = new RedisService();
+  private static redisService = redisService;
 
   /**
    * Enhanced product search with advanced filtering and sorting

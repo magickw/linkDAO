@@ -43,7 +43,7 @@ export class SellerVerificationService {
    */
   async getActiveVerification(sellerId: string): Promise<SellerVerification | null> {
     const verifications = await db.select().from(sellerVerifications)
-      .where(eq(sellerVerifications.userId, sellerId))
+      .where(eq(sellerVerifications.sellerId, sellerId))
       .orderBy(sellerVerifications.submittedAt, 'desc')
       .limit(1);
 
@@ -350,7 +350,7 @@ export class SellerVerificationService {
   async approveVerification(
     verificationId: string, 
     metadata?: { 
-      verificationMethod?: 'irs_tin_match' | 'trulioo' | 'manual_review' | 'open_corporates' | 'other'; 
+      verificationMethod?: 'irs_tin_match' | 'trulioo' | 'manual_review' | 'open_corporates'; 
       verificationReference?: string;
       riskScore?: 'low' | 'medium' | 'high';
     }

@@ -1066,7 +1066,7 @@ const CreateListingPage: React.FC = () => {
                                 unit: formData.specifications?.weight?.unit || 'g'
                               }
                             })}
-                            className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                            className="flex-1 min-w-0 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-400"
                             placeholder="0.00"
                           />
                           <select
@@ -1078,7 +1078,7 @@ const CreateListingPage: React.FC = () => {
                                 unit: e.target.value as 'g' | 'kg' | 'oz' | 'lbs'
                               }
                             })}
-                            className="w-24 px-2 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                            className="w-20 px-2 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
                           >
                             <option value="g">g</option>
                             <option value="kg">kg</option>
@@ -1091,7 +1091,7 @@ const CreateListingPage: React.FC = () => {
                       {/* Dimension Inputs */}
                       <div>
                         <label className="block text-sm text-white/70 mb-1">Dimensions</label>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           <input
                             type="number"
                             step="0.01"
@@ -1104,7 +1104,7 @@ const CreateListingPage: React.FC = () => {
                                 length: parseFloat(e.target.value) || 0
                               }
                             })}
-                            className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                            className="flex-1 min-w-0 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-400"
                             placeholder="L"
                           />
                           <input
@@ -1119,7 +1119,7 @@ const CreateListingPage: React.FC = () => {
                                 width: parseFloat(e.target.value) || 0
                               }
                             })}
-                            className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                            className="flex-1 min-w-0 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-400"
                             placeholder="W"
                           />
                           <input
@@ -1134,7 +1134,7 @@ const CreateListingPage: React.FC = () => {
                                 height: parseFloat(e.target.value) || 0
                               }
                             })}
-                            className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                            className="flex-1 min-w-0 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-400"
                             placeholder="H"
                           />
                           <select

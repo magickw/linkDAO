@@ -358,13 +358,13 @@ export class SearchService {
     
     // Get seller suggestions (new)
     const sellerSuggestions = await db.select({
-      displayName: schema.sellers.displayName,
+      displayName: schema.sellers.storeName, // Use storeName as displayName
       storeName: schema.sellers.storeName,
     })
       .from(schema.sellers)
       .where(
         or(
-          like(schema.sellers.displayName, `%${query}%`),
+          like(schema.sellers.storeName, `%${query}%`),
           like(schema.sellers.storeName, `%${query}%`)
         )
       )
@@ -1225,33 +1225,33 @@ export class SearchService {
 
       if (isWalletAddress) {
         // Exact wallet address match (case-insensitive)
-        whereClause = sql`LOWER(${schema.userProfiles.walletAddress}) = LOWER(${query})`;
+        whereClause = sql`LOWER(${schema.users.walletAddress}) = LOWER(${query})`;
       } else if (isPartialWalletAddress) {
         // Partial wallet address match (starts with)
-        whereClause = sql`LOWER(${schema.userProfiles.walletAddress}) LIKE LOWER(${query + '%'})`;
+        whereClause = sql`LOWER(${schema.users.walletAddress}) LIKE LOWER(${query + '%'})`;
       } else {
         // Search by handle, display name, or ENS
         whereClause = or(
-          like(sql`LOWER(${schema.userProfiles.handle})`, `%${query.toLowerCase()}%`),
-          like(sql`LOWER(${schema.userProfiles.displayName})`, `%${query.toLowerCase()}%`),
-          like(sql`LOWER(${schema.userProfiles.ens})`, `%${query.toLowerCase()}%`)
+          like(sql`LOWER(${schema.users.handle})`, `%${query.toLowerCase()}%`),
+          like(sql`LOWER(${schema.users.displayName})`, `%${query.toLowerCase()}%`),
+          like(sql`LOWER(${schema.users.ens})`, `%${query.toLowerCase()}%`)
         );
       }
 
       // Get total count
       const totalResult = await db.select({ count: sql`count(*)` })
-        .from(schema.userProfiles)
+        .from(schema.users)
         .where(whereClause);
 
       const total = parseInt(totalResult[0]?.count || '0');
 
       // Get users with pagination
       const users = await db.select()
-        .from(schema.userProfiles)
+        .from(schema.users)
         .where(whereClause)
         .limit(limit)
         .offset(offset)
-        .orderBy(desc(schema.userProfiles.createdAt));
+        .orderBy(desc(schema.users.createdAt));
 
       return {
         users: users.map(user => ({
@@ -1289,8 +1289,9 @@ export class SearchService {
       const conditions = [];
 
       if (isWalletAddress) {
-        // Search posts by author wallet address
-        conditions.push(sql`LOWER(${schema.posts.walletAddress}) = LOWER(${query})`);
+        // Search posts by author wallet address - need to join with users
+        conditions.push(sql`LOWER(${schema.users.walletAddress}) = LOWER(${query})`);
+        // Note: This requires joining posts with users table
       } else {
         // Search by content
         conditions.push(

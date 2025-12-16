@@ -6,6 +6,9 @@ import { apiResponse, createSuccessResponse, createErrorResponse } from '../util
 import { Community } from '../types/community';
 import { openaiService } from '../services/ai/openaiService';
 import { aiModerationService } from '../services/aiModerationService';
+import { db } from '../db';
+import { communityRules, userReputation } from '../db/schema';
+import { eq } from 'drizzle-orm';
 
 // Extend Request type to include user property
 interface AuthenticatedRequest extends Request {
@@ -2223,6 +2226,40 @@ export class CommunityController {
     } catch (error) {
       safeLogger.error('Error getting moderation stats:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get moderation stats'));
+    }
+  }
+
+  /**
+   * Get community rules
+   */
+  private async getCommunityRules(communityId: string): Promise<any[]> {
+    try {
+      const rules = await db.select()
+        .from(communityRules)
+        .where(eq(communityRules.communityId, communityId))
+        .orderBy(communityRules.createdAt);
+      
+      return rules || [];
+    } catch (error) {
+      safeLogger.error('Error getting community rules:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get user reputation
+   */
+  private async getUserReputation(userAddress: string): Promise<number> {
+    try {
+      const reputation = await db.select()
+        .from(userReputation)
+        .where(eq(userReputation.walletAddress, userAddress))
+        .limit(1);
+      
+      return reputation[0]?.reputationScore || 0;
+    } catch (error) {
+      safeLogger.error('Error getting user reputation:', error);
+      return 0;
     }
   }
 }

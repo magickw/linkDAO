@@ -55,7 +55,7 @@ class ViewController {
         return res.status(400).json({ error: 'Invalid post ID' });
       }
 
-      const count = await viewService.getViewCount(postId);
+      const count = await viewService.getViewCount(parseInt(postId));
 
       res.json({ postId, viewCount: count });
     } catch (error) {
@@ -76,7 +76,7 @@ class ViewController {
         return res.status(400).json({ error: 'Invalid post ID' });
       }
 
-      const analytics = await viewService.getViewAnalytics(postId);
+      const analytics = await viewService.getViewAnalytics(parseInt(postId));
 
       res.json({ postId, ...analytics });
     } catch (error) {

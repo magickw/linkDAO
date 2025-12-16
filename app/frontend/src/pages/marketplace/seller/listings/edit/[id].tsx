@@ -285,21 +285,15 @@ const EditListingPage: React.FC = () => {
           escrowEnabled: listing.escrowEnabled ?? true,
           specifications: {
             weight: {
-              value: listing.specifications?.weight?.value || 0,
-              unit: listing.specifications?.weight?.unit || 'g'
+              value: 0,
+              unit: 'g' as 'g' | 'kg' | 'oz' | 'lbs'
             },
             dimensions: {
-              length: listing.specifications?.dimensions?.length || 0,
-              width: listing.specifications?.dimensions?.width || 0,
-              height: listing.specifications?.dimensions?.height || 0,
-              unit: listing.specifications?.dimensions?.unit || 'cm'
-            },
-            // Preserve any other specification properties
-            ...(listing.specifications ? Object.fromEntries(
-              Object.entries(listing.specifications).filter(([key]) => 
-                !['weight', 'dimensions'].includes(key)
-              )
-            ) : {})
+              length: 0,
+              width: 0,
+              height: 0,
+              unit: 'cm' as 'mm' | 'cm' | 'm' | 'in' | 'ft'
+            }
           },
           shipping: listing.shippingOptions ? {
             methods: {
@@ -1220,7 +1214,7 @@ const EditListingPage: React.FC = () => {
                               unit: formData.specifications?.weight?.unit || 'g'
                             }
                           })}
-                          className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                          className="flex-1 min-w-0 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-400"
                           placeholder="0.00"
                         />
                         <select
@@ -1232,7 +1226,7 @@ const EditListingPage: React.FC = () => {
                               unit: e.target.value as 'g' | 'kg' | 'oz' | 'lbs'
                             }
                           })}
-                          className="w-24 px-2 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                          className="w-20 px-2 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
                         >
                           <option value="g">g</option>
                           <option value="kg">kg</option>
@@ -1245,7 +1239,7 @@ const EditListingPage: React.FC = () => {
                     {/* Dimension Inputs */}
                     <div>
                       <label className="block text-sm text-white/70 mb-1">Dimensions</label>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         <input
                           type="number"
                           step="0.01"
@@ -1258,7 +1252,7 @@ const EditListingPage: React.FC = () => {
                               length: parseFloat(e.target.value) || 0
                             }
                           })}
-                          className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                          className="flex-1 min-w-0 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-400"
                           placeholder="L"
                         />
                         <input
@@ -1273,7 +1267,7 @@ const EditListingPage: React.FC = () => {
                               width: parseFloat(e.target.value) || 0
                             }
                           })}
-                          className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                          className="flex-1 min-w-0 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-400"
                           placeholder="W"
                         />
                         <input
@@ -1288,7 +1282,7 @@ const EditListingPage: React.FC = () => {
                               height: parseFloat(e.target.value) || 0
                             }
                           })}
-                          className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                          className="flex-1 min-w-0 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-400"
                           placeholder="H"
                         />
                         <select

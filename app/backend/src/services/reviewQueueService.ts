@@ -2,11 +2,7 @@ import { databaseService } from './databaseService';
 import { sql, eq } from 'drizzle-orm';
 import * as schema from '../db/schema';
 import { safeLogger } from '../utils/safeLogger';
-import { RedisService } from './redisService';
-import { ModerationCase, ContentReport } from '../models/ModerationModels';
-import { ModeratorProfile } from './moderatorAuthService';
-
-const redisService = new RedisService();
+import { redisService } from './redisService';
 
 export interface QueueFilters {
   status?: string[];

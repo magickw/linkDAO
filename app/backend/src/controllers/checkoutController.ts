@@ -190,14 +190,11 @@ export class CheckoutController {
 
             // Create order
             const order = await orderServiceInstance.createOrder({
+                listingId: cart.items[0].productId, // Simplified - assumes single item
                 buyerAddress: req.user.address,
                 sellerAddress: cart.items[0].product?.sellerId || '', // Simplified - assumes single seller
-                items: cart.items.map(item => ({
-                    productId: item.productId,
-                    quantity: item.quantity,
-                    price: parseFloat(item.priceAtTime)
-                })),
-                totalAmount: total.toString(),
+                amount: total.toString(),
+                paymentToken: 'USDC', // Default payment token
                 shippingAddress: {
                     name: shippingAddress.fullName,
                     street: shippingAddress.addressLine1,
@@ -205,27 +202,25 @@ export class CheckoutController {
                     state: shippingAddress.state,
                     postalCode: shippingAddress.postalCode,
                     country: shippingAddress.country
-                },
-                paymentMethod: paymentMethod === 'crypto' ? 'cryptocurrency' : 'credit_card'
+                }
             });
 
             // Initialize payment service
-            const stripePaymentServiceInstance = new StripePaymentService();
+            const stripePaymentServiceInstance = new StripePaymentService({
+                secretKey: process.env.STRIPE_SECRET_KEY || '',
+                publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
+                webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+                apiVersion: '2023-10-16'
+            });
 
             // Process payment based on method
             let paymentResult;
             if (paymentMethod === 'fiat') {
                 // Process Stripe payment
-                paymentResult = await stripePaymentServiceInstance.getPaymentIntent({
+                paymentResult = await stripePaymentServiceInstance.processPayment({
                     amount: Math.round(total * 100), // Convert to cents
-                    currency: 'usd',
-                    orderId: order.id,
-                    buyerAddress: req.user.address,
-                    sellerAddress: cart.items[0].product?.sellerId,
-                    metadata: {
-                        orderId: order.id,
-                        sessionId
-                    }
+                    paymentMethod: 'fiat',
+                    userAddress: req.user.address
                 });
             } else {
                 // Crypto payment - return instructions for frontend to complete

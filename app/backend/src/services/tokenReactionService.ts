@@ -121,7 +121,7 @@ class TokenReactionService {
       }
     } else {
       // Query posts table for integer ID
-      const post = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
+      const post = await db.select().from(posts).where(eq(posts.id, parseInt(postId))).limit(1);
       if (post.length > 0) {
         postExists = true;
       }
@@ -540,7 +540,7 @@ class TokenReactionService {
         allReactions = await db
           .select()
           .from(reactions)
-          .where(eq(reactions.postId, postId));
+          .where(eq(reactions.postId, parseInt(postId)));
       }
 
       const totalReactions = allReactions.length;

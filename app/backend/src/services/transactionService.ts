@@ -103,7 +103,7 @@ class TransactionService {
           })
           .from(orders)
           .innerJoin(marketplaceListings, eq(orders.listingId, marketplaceListings.id))
-          .where(eq(orders.id, parseInt(orderId)))
+          .where(eq(orders.id, orderId))
           .limit(1);
 
         if (order.length > 0) {
@@ -453,7 +453,7 @@ class TransactionService {
         })
         .from(orders)
         .innerJoin(marketplaceListings, eq(orders.listingId, marketplaceListings.id))
-        .where(eq(orders.id, parseInt(orderId)))
+        .where(eq(orders.id, orderId))
         .limit(1);
 
       if (order.length === 0) {

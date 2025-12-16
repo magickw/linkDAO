@@ -6,7 +6,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { db } from '../db';
 import { notificationPreferences } from '../db/schema';
 import { eq } from 'drizzle-orm';
-import pushNotificationService from '../services/pushNotificationService';
+import { pushNotificationService } from '../services/pushNotificationService';
 
 /**
  * Get notification preferences for a user

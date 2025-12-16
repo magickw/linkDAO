@@ -70,14 +70,22 @@ export class UserController {
       }
       
       // Apply sorting
-      let sortColumn = users.createdAt;
-      if (sortBy === 'handle') sortColumn = users.handle;
-      else if (sortBy === 'lastLogin') sortColumn = users.lastLogin;
-      
       if (sortOrder === 'asc') {
-        query = query.orderBy(sortColumn);
+        if (sortBy === 'handle') {
+          query = query.orderBy(asc(users.handle));
+        } else if (sortBy === 'lastLogin') {
+          query = query.orderBy(asc(users.lastLogin));
+        } else {
+          query = query.orderBy(asc(users.createdAt));
+        }
       } else {
-        query = query.orderBy(desc(sortColumn));
+        if (sortBy === 'handle') {
+          query = query.orderBy(desc(users.handle));
+        } else if (sortBy === 'lastLogin') {
+          query = query.orderBy(desc(users.lastLogin));
+        } else {
+          query = query.orderBy(desc(users.createdAt));
+        }
       }
       
       // Apply pagination
@@ -137,24 +145,24 @@ export class UserController {
       const totalUsersResult = await db.select({ count: sql<number>`count(*)` }).from(users);
       const totalUsers = totalUsersResult[0].count || 0;
       
-      // Get active users count
-      const activeUsersResult = await db.select({ count: sql<number>`count(*)` })
-        .from(users)
-        .where(eq(users.isActive, true));
-      const activeUsers = activeUsersResult[0].count || 0;
+      // Get active users count - TODO: Implement user status field
+      // const activeUsersResult = await db.select({ count: sql<number>`count(*)` })
+      //   .from(users)
+      //   .where(eq(users.isActive, true));
+      const activeUsers = 0; // TODO: Implement when isActive field exists
       
-      // Get suspended users count
-      const suspendedUsersResult = await db.select({ count: sql<number>`count(*)` })
-        .from(users)
-        .where(eq(users.isSuspended, true));
-      const suspendedUsers = suspendedUsersResult[0].count || 0;
+      // Get suspended users count - TODO: Implement user status field
+      // const suspendedUsersResult = await db.select({ count: sql<number>`count(*)` })
+      //   .from(users)
+      //   .where(eq(users.isSuspended, true));
+      const suspendedUsers = 0; // TODO: Implement when isSuspended field exists
       
       // Get new users this month
       const monthAgo = new Date();
       monthAgo.setMonth(monthAgo.getMonth() - 1);
       const newUsersThisMonthResult = await db.select({ count: sql<number>`count(*)` })
         .from(users)
-        .where(gte(users.createdAt, monthAgo.toISOString()));
+        .where(gte(users.createdAt, monthAgo));
       const newUsersThisMonth = newUsersThisMonthResult[0].count || 0;
       
       // Get new users this week
@@ -162,7 +170,7 @@ export class UserController {
       weekAgo.setDate(weekAgo.getDate() - 7);
       const newUsersThisWeekResult = await db.select({ count: sql<number>`count(*)` })
         .from(users)
-        .where(gte(users.createdAt, weekAgo.toISOString()));
+        .where(gte(users.createdAt, weekAgo));
       const newUsersThisWeek = newUsersThisWeekResult[0].count || 0;
       
       // Calculate growth rate (simplified)

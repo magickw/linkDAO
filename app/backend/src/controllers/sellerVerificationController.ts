@@ -302,7 +302,7 @@ export class SellerVerificationController {
       for (const id of ids) {
         try {
           const verification = await verificationService.approveVerification(id, adminId, {
-            verificationMethod: 'bulk_manual_review',
+            verificationMethod: 'manual_review',
             riskScore: 'low'
           });
           

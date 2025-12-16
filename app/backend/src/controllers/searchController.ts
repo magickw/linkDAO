@@ -2,13 +2,13 @@ import { Request, Response } from 'express';
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { safeLogger } from '../utils/safeLogger';
 import { SearchService } from '../services/searchService';
-import { RedisService } from '../services/redisService';
+import { redisService } from '../services/redisService';
 import { eq, and, or } from 'drizzle-orm';
 import * as schema from '../db/schema';
 
 export class SearchController {
   private static searchService = new SearchService();
-  private static redisService = new RedisService();
+  private static redisService = redisService;
 
   /**
    * Comprehensive search across posts, communities, and users

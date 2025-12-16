@@ -6,7 +6,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { db } from '../db';
 import { pushTokens, notificationPreferences } from '../db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
-import pushNotificationService from '../services/pushNotificationService';
+import { pushNotificationService } from '../services/pushNotificationService';
 import { posts, communities, communityMembers } from '../db/schema';
 import mobileOfflineService from '../services/mobileOfflineService';
 import offlineService from '../services/offlineService';

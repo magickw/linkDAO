@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { Pool } from 'pg';
 import { Redis } from 'ioredis';
 import { safeLogger } from '../utils/safeLogger';
-import PerformanceBenchmarkService from '../services/performanceBenchmarkService';
+import { performanceBenchmarkService } from '../services/performanceBenchmarkService';
 import RenderPerformanceMonitoringService from '../services/renderPerformanceMonitoringService';
 import ErrorRecoveryCacheProfiler from '../services/errorRecoveryCacheProfiler';
 import CriticalPathPerformanceOptimizer from '../services/criticalPathPerformanceOptimizer';
@@ -14,13 +14,11 @@ import { memoryMonitoringService } from '../services/memoryMonitoringService';
  * Provides comprehensive performance monitoring and optimization endpoints
  */
 export class PerformanceMonitoringController {
-  private benchmarkService: PerformanceBenchmarkService;
   private renderMonitoringService: RenderPerformanceMonitoringService;
   private errorRecoveryProfiler: ErrorRecoveryCacheProfiler;
   private criticalPathOptimizer: CriticalPathPerformanceOptimizer;
 
   constructor(pool: Pool, redis: Redis) {
-    this.benchmarkService = new PerformanceBenchmarkService(pool, redis);
     this.renderMonitoringService = new RenderPerformanceMonitoringService(pool, redis);
     this.errorRecoveryProfiler = new ErrorRecoveryCacheProfiler(redis);
     this.criticalPathOptimizer = new CriticalPathPerformanceOptimizer(pool, redis);
@@ -42,7 +40,7 @@ export class PerformanceMonitoringController {
         systemMetrics,
         memoryStats
       ] = await Promise.all([
-        this.benchmarkService.getBenchmarkSummary(),
+        performanceBenchmarkService.getBenchmarkSummary(),
         this.renderMonitoringService.getCurrentMetrics(),
         this.errorRecoveryProfiler.getProfilerSummary(timeWindow),
         this.criticalPathOptimizer.getPerformanceSummary(),
@@ -108,7 +106,7 @@ export class PerformanceMonitoringController {
       const { type } = req.query;
 
       if (type === 'comprehensive') {
-        const results = await this.benchmarkService.runComprehensiveBenchmarks();
+        const results = await performanceBenchmarkService.runComprehensiveBenchmarks();
         
         res.json({
           success: true,
@@ -123,7 +121,7 @@ export class PerformanceMonitoringController {
         });
       } else {
         // Return benchmark history
-        const history = this.benchmarkService.getBenchmarkHistory();
+        const history = performanceBenchmarkService.getBenchmarkHistory();
         
         res.json({
           success: true,
@@ -384,7 +382,7 @@ export class PerformanceMonitoringController {
         criticalPathSummary,
         systemReport
       ] = await Promise.all([
-        this.benchmarkService.getBenchmarkSummary(),
+        performanceBenchmarkService.getBenchmarkSummary(),
         this.renderMonitoringService.getPerformanceSummary(),
         this.errorRecoveryProfiler.getProfilerSummary(timeWindow),
         this.criticalPathOptimizer.getPerformanceSummary(),
