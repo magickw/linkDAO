@@ -276,7 +276,8 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(fetch(request).catch(error => {
       console.error('Navigation request failed:', error);
       // Even on failure, we must respond to prevent service worker errors
-      return new Response('Navigation failed', { status: 500 });
+      // Return the original request to let the browser handle it
+      return fetch(request);
     }));
     return; // Early return to bypass service worker completely
   }
@@ -1746,7 +1747,10 @@ self.addEventListener('error', (event) => {
   if (event.error && event.error.message && 
       (event.error.message.includes('Invalid frameId for foreground frameId') ||
        event.error.message.includes('No tab with id') ||
-       event.error.message.includes('background-redux-new.js'))) {
+       event.error.message.includes('background-redux-new.js') ||
+       event.error.message.includes('chrome.runtime.sendMessage') ||
+       event.error.message.includes('Assign to read only property') ||
+       event.error.message.includes('_eventsCount'))) {
     console.debug('Service Worker: Ignored extension error:', event.error.message);
     event.preventDefault();
     return;
@@ -1755,11 +1759,15 @@ self.addEventListener('error', (event) => {
 
 self.addEventListener('unhandledrejection', (event) => {
   // Suppress extension-related promise rejections
-  if (event.reason && 
-      (event.reason.includes('Invalid frameId for foreground frameId') ||
-       event.reason.includes('No tab with id') ||
-       event.reason.includes('background-redux-new.js'))) {
-    console.debug('Service Worker: Ignored extension promise rejection:', event.reason);
+  const reason = event.reason?.message || event.reason?.toString() || '';
+  if (reason && 
+      (reason.includes('Invalid frameId for foreground frameId') ||
+       reason.includes('No tab with id') ||
+       reason.includes('background-redux-new.js') ||
+       reason.includes('chrome.runtime.sendMessage') ||
+       reason.includes('Assign to read only property') ||
+       reason.includes('_eventsCount'))) {
+    console.debug('Service Worker: Ignored extension promise rejection:', reason);
     event.preventDefault();
     return;
   }

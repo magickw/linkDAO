@@ -17,7 +17,7 @@ export class EncryptionService {
       const iv = crypto.randomBytes(this.ivLength);
       
       // Create cipher
-      const cipher = crypto.createCipher(this.algorithm, encryptionKey);
+      const cipher = crypto.createCipheriv(this.algorithm, encryptionKey, iv);
       cipher.setAAD(Buffer.from('digital-asset-drm'));
       
       // Encrypt content
@@ -53,7 +53,7 @@ export class EncryptionService {
       const encrypted = encryptedContent.subarray(this.ivLength + this.tagLength);
       
       // Create decipher
-      const decipher = crypto.createDecipher(this.algorithm, Buffer.from(encryptionKey, 'hex'));
+      const decipher = crypto.createDecipheriv(this.algorithm, Buffer.from(encryptionKey, 'hex'), iv);
       decipher.setAAD(Buffer.from('digital-asset-drm'));
       decipher.setAuthTag(tag);
       
@@ -78,7 +78,7 @@ export class EncryptionService {
       const masterKey = this.getMasterKey();
       const iv = crypto.randomBytes(this.ivLength);
       
-      const cipher = crypto.createCipher(this.algorithm, masterKey);
+      const cipher = crypto.createCipheriv(this.algorithm, masterKey, iv);
       const encrypted = Buffer.concat([
         cipher.update(Buffer.from(key, 'utf8')),
         cipher.final()
@@ -106,7 +106,7 @@ export class EncryptionService {
       const tag = data.subarray(this.ivLength, this.ivLength + this.tagLength);
       const encrypted = data.subarray(this.ivLength + this.tagLength);
       
-      const decipher = crypto.createDecipher(this.algorithm, masterKey);
+      const decipher = crypto.createDecipheriv(this.algorithm, masterKey, iv);
       decipher.setAuthTag(tag);
       
       const decrypted = Buffer.concat([

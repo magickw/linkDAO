@@ -845,10 +845,11 @@ class SecurityAuditLoggingService extends EventEmitter {
   }
 
   private encryptData(data: string): string {
-    const cipher = crypto.createCipher('aes-256-cbc', this.encryptionKey);
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipheriv('aes-256-cbc', this.encryptionKey, iv);
     let encrypted = cipher.update(data, 'utf8', 'hex');
     encrypted += cipher.final('hex');
-    return encrypted;
+    return iv.toString('hex') + ':' + encrypted;
   }
 
   private generateEncryptionKey(): string {

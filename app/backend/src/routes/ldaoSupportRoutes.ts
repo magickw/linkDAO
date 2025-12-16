@@ -5,6 +5,9 @@ import { body, param, query, validationResult } from 'express-validator';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { ldaoSupportService } from '../services/ldaoSupportService';
 import { rateLimitingMiddleware } from '../middleware/rateLimitingMiddleware';
+import { db } from '../db';
+import { supportChatSessions } from '../db/schema/supportSchema';
+import { eq, and, or } from 'drizzle-orm';
 
 const router = Router();
 

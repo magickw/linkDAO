@@ -1,4 +1,4 @@
-import { createHash, createCipher, createDecipher, randomBytes } from 'crypto';
+import { createHash, createCipheriv, createDecipheriv, randomBytes } from 'crypto';
 import { safeLogger } from '../utils/safeLogger';
 import { piiDetectionService } from './piiDetectionService';
 import { geofencingComplianceService } from './geofencingComplianceService';
@@ -385,15 +385,21 @@ export class PrivacyEvidenceStorageService {
   }
 
   private encryptContent(content: string, key: string): string {
-    const cipher = createCipher('aes-256-cbc', key);
+    const iv = randomBytes(16);
+    const keyBuffer = Buffer.from(key.padEnd(32, '0').slice(0, 32));
+    const cipher = createCipheriv('aes-256-cbc', keyBuffer, iv);
     let encrypted = cipher.update(content, 'utf8', 'hex');
     encrypted += cipher.final('hex');
-    return encrypted;
+    return iv.toString('hex') + ':' + encrypted;
   }
 
   private decryptContent(encryptedContent: string, key: string): string {
-    const decipher = createDecipher('aes-256-cbc', key);
-    let decrypted = decipher.update(encryptedContent, 'hex', 'utf8');
+    const parts = encryptedContent.split(':');
+    const iv = Buffer.from(parts[0], 'hex');
+    const encrypted = parts[1];
+    const keyBuffer = Buffer.from(key.padEnd(32, '0').slice(0, 32));
+    const decipher = createDecipheriv('aes-256-cbc', keyBuffer, iv);
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
     return decrypted;
   }

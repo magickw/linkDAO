@@ -4,7 +4,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { createReadStream, createWriteStream } from 'fs';
 import { createGzip, createGunzip } from 'zlib';
-import { createCipher, createDecipher } from 'crypto';
+import { createCipheriv, createDecipheriv } from 'crypto';
 import { pipeline } from 'stream';
 import { Redis } from 'ioredis';
 import { Logger } from '@nestjs/common';

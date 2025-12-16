@@ -142,26 +142,37 @@ function AppContent({ children }: { children: React.ReactNode }) {
           memoryMonitor.start();
         }
 
-        // Initialize service worker (production only to avoid dev interference)
-        if (process.env.NODE_ENV === 'production') {
-          swUtilRef.current = new ServiceWorkerUtil({
-            onUpdate: (registration) => {
-              console.log('App update available');
-              setUpdateAvailable(true);
-            },
-            onSuccess: (registration) => {
-              console.log('Service worker registered successfully');
-            },
-            onError: (error) => {
-              console.error('Service worker registration failed:', error);
+        // Initialize service worker with enhanced error handling
+        try {
+          if (process.env.NODE_ENV === 'production') {
+            swUtilRef.current = new ServiceWorkerUtil({
+              onUpdate: (registration) => {
+                console.log('App update available');
+                setUpdateAvailable(true);
+              },
+              onSuccess: (registration) => {
+                console.log('Service worker registered successfully');
+              },
+              onError: (error) => {
+                console.error('Service worker registration failed:', error);
+              }
+            });
+
+            await swUtilRef.current.register();
+          } else {
+            console.log('Service Worker disabled in development');
+            
+            // Unregister any existing service workers in development to prevent conflicts
+            if ('serviceWorker' in navigator) {
+              const registrations = await navigator.serviceWorker.getRegistrations();
+              for (const registration of registrations) {
+                await registration.unregister();
+              }
             }
-          });
-
-          await swUtilRef.current.register();
-
-          // Removed network status monitoring as it's not available in ServiceWorkerUtil
-        } else {
-          console.log('Service Worker disabled in development');
+          }
+        } catch (swError) {
+          console.warn('Service worker initialization failed, continuing without it:', swError);
+          // Continue without service worker if initialization fails
         }
 
         performanceMonitor.measure('app_init');

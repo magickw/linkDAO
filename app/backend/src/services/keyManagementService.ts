@@ -608,7 +608,7 @@ class KeyManagementService {
   private async encryptKeyMaterial(keyMaterial: Buffer): Promise<Buffer> {
     const masterKey = Buffer.from(process.env.MASTER_ENCRYPTION_KEY || '', 'hex');
     const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipher('aes-256-gcm', masterKey);
+    const cipher = crypto.createCipheriv('aes-256-gcm', masterKey, iv);
     
     const encrypted = Buffer.concat([
       cipher.update(keyMaterial),
@@ -625,7 +625,7 @@ class KeyManagementService {
     const tag = encryptedKey.subarray(16, 32);
     const encrypted = encryptedKey.subarray(32);
     
-    const decipher = crypto.createDecipher('aes-256-gcm', masterKey);
+    const decipher = crypto.createDecipheriv('aes-256-gcm', masterKey, iv);
     decipher.setAuthTag(tag);
     
     return Buffer.concat([

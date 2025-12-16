@@ -202,3 +202,5 @@ export const adminRateLimit = (maxRequests: number = 100, windowMs: number = 15 
     }
   };
 };
+
+export const adminAuthMiddleware = validateAdminRole;

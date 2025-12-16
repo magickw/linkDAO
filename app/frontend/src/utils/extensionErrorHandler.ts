@@ -173,7 +173,9 @@ export function createExtensionSafeRejectionHandler(
       'must specify an Extension ID',
       'called from a webpage must specify an Extension ID',
       'opfgelmcmbiajamepnmloijbpoleiama',
-      'Cannot redefine property: ethereum' // Add ethereum redefinition check
+      'Cannot redefine property: ethereum',
+      'Assign to read only property',
+      '_eventsCount'
     ];
     
     const isChromeRuntimeError = chromeRuntimePatterns.some(pattern => 

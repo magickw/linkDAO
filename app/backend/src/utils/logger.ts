@@ -276,6 +276,7 @@ class EnhancedLogger {
 
 // Export singleton instance
 export const logger = new EnhancedLogger();
+export const safeLogger = logger;
 
 // Export types for use in other modules
 export type { LogEntry, AlertConfig };

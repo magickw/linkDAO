@@ -40,11 +40,9 @@ export class ContractRegistryService {
       process.env.NEXT_PUBLIC_CONTRACT_REGISTRY_ADDRESS || 
       '0x0000000000000000000000000000000000000000'; // Placeholder
 
-    if (registryAddress === ethers.ZeroAddress) {
-      console.warn('ContractRegistry address not configured, using fallback addresses');
-      this.initialized = true;
-      return;
-    }
+    // Always initialize with fallback addresses, even if registry address is set but not deployed
+    console.warn('ContractRegistry address not configured or not deployed, using fallback addresses');
+    this.initialized = true;
 
     // Convert PublicClient to ethers provider for contract interactions
     const ethersProvider = new ethers.BrowserProvider(
@@ -83,6 +81,16 @@ export class ContractRegistryService {
         this.cache.set(name, fallbackAddress);
         return fallbackAddress;
       }
+    }
+
+    // If registry is not available or not properly initialized, use fallback addresses
+    if (!this.registry) {
+      const fallbackAddress = this.getFallbackAddress(name);
+      if (fallbackAddress) {
+        this.cache.set(name, fallbackAddress);
+        return fallbackAddress;
+      }
+      throw new Error(`Contract ${name} not found in fallback addresses`);
     }
 
     try {
@@ -158,6 +166,7 @@ export class ContractRegistryService {
   private getFallbackAddress(name: string): string | null {
     // Deployed addresses from deployedAddresses-sepolia.json (updated 2025-10-22)
     const deployedAddresses: Record<string, string> = {
+      'ContractRegistry': '0x0000000000000000000000000000000000000000', // Placeholder - not deployed yet
       'LDAOToken': '0xc9F690B45e33ca909bB9ab97836091673232611B',
       'MockERC20': '0xA31D2faD2B1Ab84Fb420824A5CF3aB5a272782CC',
       'Counter': '0x980A1498987F6e24C0d680519696cE8B10B40860',

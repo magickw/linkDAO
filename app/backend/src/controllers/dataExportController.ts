@@ -180,7 +180,6 @@ export class DataExportController {
         emailRecipients: emailRecipients || [],
         archiveExports: archiveExports || false,
         isActive: true,
-        nextRun: new Date() // Will be recalculated by the service
       });
 
       res.status(201).json({

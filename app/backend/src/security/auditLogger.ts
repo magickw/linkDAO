@@ -646,7 +646,7 @@ export class AuditLogger {
 
     try {
       const iv = crypto.randomBytes(16);
-      const cipher = crypto.createCipher('aes-256-cbc', this.encryptionKey);
+      const cipher = crypto.createCipheriv('aes-256-cbc', this.encryptionKey, iv);
       let encrypted = cipher.update(data, 'utf8', 'hex');
       encrypted += cipher.final('hex');
       return iv.toString('hex') + ':' + encrypted;

@@ -117,6 +117,7 @@
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "csurf": "^1.11.0",
+    "date-fns": "^4.1.0",
     "discord.js": "^14.24.2",
     "dotenv": "^16.3.1",
     "drizzle-orm": "^0.44.5",
