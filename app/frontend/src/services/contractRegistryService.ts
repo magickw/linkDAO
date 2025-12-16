@@ -33,6 +33,11 @@ export class ContractRegistryService {
   async initialize(publicClient: any): Promise<void> {
     if (this.initialized) return;
 
+    if (!publicClient) {
+      console.warn('ContractRegistry initialization skipped: no provider available');
+      return;
+    }
+
     this.provider = publicClient;
     
     // Get registry address from environment config

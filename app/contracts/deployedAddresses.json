@@ -1,8 +1,8 @@
 {
   "network": "sepolia",
-  "chainId": 11155111,
+  "chainId": "11155111",
   "deployer": "0xEe034b53D4cCb101b2a4faec27708be507197350",
-  "deployedAt": "2025-10-20T22:02:44.098Z",
+  "deployedAt": "2025-12-16T00:37:49.297Z",
   "multiSigAddress": "",
   "contracts": {
     "LDAOToken": {
@@ -85,5 +85,6 @@
       "owner": "0xEe034b53D4cCb101b2a4faec27708be507197350",
       "deploymentTx": "0xdea058a96113c2fa8bfde847d76c332d84424c41ac324ad4d0ad5c986362f48e"
     }
-  }
+  },
+  "CONTRACT_REGISTRY_ADDRESS": "0x4269c6F29013c6e84f3AF5A1d64c88225df4Cc46"
 }
