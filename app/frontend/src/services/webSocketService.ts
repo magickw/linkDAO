@@ -64,6 +64,8 @@ class WebSocketService {
       ...config
     };
 
+    console.log('WebSocketService initialized with config:', this.config);
+
     this.connectionState = {
       isConnected: false,
       isReconnecting: false,
@@ -150,23 +152,52 @@ class WebSocketService {
   }
 
   connect(): Promise<void> {
+    console.log('WebSocket connect() called');
+    console.log('Current socket state:', this.socket?.connected);
+    
     if (this.socket?.connected) {
+      console.log('Socket already connected, resolving immediately');
       return Promise.resolve();
     }
 
     // If connection is already in progress, return the existing promise
     if (this.connectionPromise) {
+      console.log('Connection already in progress, returning existing promise');
       return this.connectionPromise;
     }
 
     // Skip connection if resource-constrained and WebSocket is optional
     if (this.isOptional && this.config.resourceAware) {
+      console.log('WebSocket connection skipped due to resource constraints');
       // Silently skip connection
       this.emit('connection_skipped', { reason: 'resource_constraints' });
       return Promise.resolve();
     }
 
+    // Check if WebSocket URL is properly configured
+    if (!this.config.url) {
+      console.warn('WebSocket URL not properly configured');
+      // Reject with error to prevent indefinite hanging
+      return Promise.reject(new Error('WebSocket URL not configured'));
+    }
+
+    console.log('Creating new connection promise');
     this.connectionPromise = new Promise<void>((resolve, reject) => {
+      // Add timeout to prevent indefinite hanging
+      const timeoutId = setTimeout(() => {
+        console.warn('WebSocket connection timeout');
+        this.handleConnectionError(new Error('WebSocket connection timeout'));
+        reject(new Error('WebSocket connection timeout'));
+        this.connectionPromise = null;
+        
+        // Clean up socket if it exists
+        if (this.socket) {
+          this.socket.removeAllListeners();
+          this.socket.close();
+          this.socket = null;
+        }
+      }, this.config.connectionTimeout);
+      
       try {
         this.connectionState.isReconnecting = false;
         
@@ -176,6 +207,7 @@ class WebSocketService {
         
         try {
           const parsedUrl = new URL(this.config.url!);
+          console.log('Parsed WebSocket URL:', parsedUrl);
           // If the URL already includes the socket.io path, extract it
           if (parsedUrl.pathname && parsedUrl.pathname.includes('socket.io')) {
             socketPath = parsedUrl.pathname;
@@ -188,6 +220,7 @@ class WebSocketService {
           console.warn('Failed to parse WebSocket URL, using defaults');
         }
 
+        console.log('Connecting to WebSocket with:', { socketUrl, socketPath });
         // Add additional options for better connection handling
         this.socket = io(socketUrl, {
           path: socketPath,
@@ -205,9 +238,20 @@ class WebSocketService {
           }
         });
 
-        this.setupSocketEventHandlers(resolve, reject);
+        console.log('Setting up socket event handlers');
+        this.setupSocketEventHandlers(() => {
+          clearTimeout(timeoutId);
+          resolve();
+          this.connectionPromise = null;
+        }, (error) => {
+          clearTimeout(timeoutId);
+          reject(error);
+          this.connectionPromise = null;
+        });
 
       } catch (error) {
+        clearTimeout(timeoutId);
+        console.error('Error creating WebSocket connection:', error);
         this.handleConnectionError(error as Error);
         reject(error);
         this.connectionPromise = null; // Clear the connection promise on error
@@ -220,7 +264,10 @@ class WebSocketService {
   private setupSocketEventHandlers(resolve?: () => void, reject?: (error: Error) => void): void {
     if (!this.socket) return;
 
+    console.log('Setting up socket event handlers');
+
     this.socket.on('connect', () => {
+      console.log('WebSocket connected');
       // Silently connect without logging
       this.connectionState.isConnected = true;
       this.connectionState.isReconnecting = false;
@@ -236,6 +283,7 @@ class WebSocketService {
     });
 
     this.socket.on('disconnect', (reason) => {
+      console.log('WebSocket disconnected:', reason);
       // Silently disconnect without logging
       this.connectionState.isConnected = false;
       this.stopHeartbeat();
@@ -249,6 +297,7 @@ class WebSocketService {
     });
 
     this.socket.on('connect_error', (error) => {
+      console.log('WebSocket connection error:', error);
       // Only log first error to reduce console spam
       if (this.connectionState.reconnectAttempts === 0) {
         console.warn('WebSocket connection error:', error.message);
@@ -261,17 +310,20 @@ class WebSocketService {
     });
 
     this.socket.on('reconnect_failed', () => {
+      console.log('WebSocket reconnection failed');
       // Silently handle reconnection failure
       this.handleReconnectionFailure();
     });
 
     // Listen for all custom events and emit them to local listeners
     this.socket.onAny((event, ...args) => {
+      console.log('WebSocket event received:', event, args);
       this.emit(event, ...args);
     });
 
     // Handle heartbeat responses
     this.socket.on('pong', () => {
+      console.log('WebSocket pong received');
       this.updateConnectionQuality();
     });
   }
@@ -577,6 +629,10 @@ class WebSocketService {
 
   getQueuedMessageCount(): number {
     return 0; // Not implemented in this version
+  }
+
+  getUrl(): string | undefined {
+    return this.config.url;
   }
 }
 

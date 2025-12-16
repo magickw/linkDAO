@@ -1691,7 +1691,7 @@ export class DatabaseService {
   async createTrackingRecord(orderId: string, trackingNumber: string, carrier: string) {
     return this.executeQuery(async () => {
       const [record] = await this.db.insert(schema.trackingRecords).values({
-        orderId: parseInt(orderId),
+        orderId: orderId,
         trackingNumber,
         carrier,
         createdAt: new Date()
@@ -1708,13 +1708,13 @@ export class DatabaseService {
           lastUpdated: new Date(),
           events: JSON.stringify(trackingInfo.events)
         })
-        .where(eq(schema.trackingRecords.orderId, parseInt(orderId)))
+        .where(eq(schema.trackingRecords.orderId, orderId))
         .returning();
       return updated !== null;
     });
   }
 
-  async getTrackingRecord(orderId: number) {
+  async getTrackingRecord(orderId: string) {
     return this.executeQuery(async () => {
       const result = await this.db.select()
         .from(schema.trackingRecords)

@@ -254,8 +254,8 @@ export class HybridPaymentOrchestrator {
       );
 
       // Update order with escrow details
-      await this.databaseService.updateOrder(parseInt(request.orderId), {
-        escrowId: parseInt(escrowId),
+      await this.databaseService.updateOrder(request.orderId, {
+        escrowId: escrowId,
         paymentMethod: 'crypto',
         status: 'pending'
       });
@@ -290,7 +290,7 @@ export class HybridPaymentOrchestrator {
 
       // Update order with Stripe details
       if (orderRecord) {
-        await this.databaseService.updateOrder(parseInt(request.orderId), {
+        await this.databaseService.updateOrder(request.orderId, {
           paymentMethod: 'fiat',
           stripePaymentIntentId: stripeResult.paymentIntentId,
           stripeTransferGroup: stripeResult.transferGroup,
@@ -476,7 +476,7 @@ export class HybridPaymentOrchestrator {
   ): Promise<void> {
     try {
       // Get order details
-      const order = await this.databaseService.getOrderById(parseInt(orderId));
+      const order = await this.databaseService.getOrderById(orderId);
       if (!order) {
         throw new Error('Order not found');
       }
@@ -513,7 +513,7 @@ export class HybridPaymentOrchestrator {
       const newStatus = action === 'release_funds' ? 'completed' :
         action === 'dispute' ? 'disputed' : 'processing';
 
-      await this.databaseService.updateOrder(parseInt(orderId), { status: newStatus });
+      await this.databaseService.updateOrder(orderId, { status: newStatus });
 
     } catch (error) {
       safeLogger.error('Error handling order fulfillment:', error);
@@ -536,7 +536,7 @@ export class HybridPaymentOrchestrator {
     estimatedDelivery?: Date;
   }> {
     try {
-      const order = await this.databaseService.getOrderById(parseInt(orderId));
+      const order = await this.databaseService.getOrderById(orderId);
       if (!order) {
         throw new Error('Order not found');
       }

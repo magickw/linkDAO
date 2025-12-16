@@ -72,18 +72,43 @@ const MessagesPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [messagingInitialized, setMessagingInitialized] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Initialize messaging service when account/signer changes
   useEffect(() => {
     const initializeMessaging = async () => {
+      console.log('Initializing messaging service...', { account, signer: !!signer });
+      
       if (account && signer) {
         try {
-          await messagingService.initialize(signer);
+          setLoading(true);
+          setMessagingInitialized(false);
+          setError(null);
+          
+          console.log('Starting messaging service initialization');
+          
+          // Add timeout to prevent infinite loading
+          const initPromise = messagingService.initialize(signer);
+          const timeoutPromise = new Promise<void>((_, reject) => 
+            setTimeout(() => reject(new Error('Messaging service initialization timeout')), 15000)
+          );
+          
+          console.log('Waiting for initialization or timeout');
+          await Promise.race([initPromise, timeoutPromise]);
+          console.log('Messaging service initialization completed');
+          
           setMessagingInitialized(true);
+          setError(null);
         } catch (error) {
           console.error('Failed to initialize messaging service:', error);
-          setMessagingInitialized(false);
+          setMessagingInitialized(true); // Set to true to stop loading, but show error
+          setError(error instanceof Error ? error.message : 'Failed to initialize messaging service');
+        } finally {
+          setLoading(false);
+          console.log('Finished messaging service initialization attempt');
         }
+      } else {
+        console.log('Skipping messaging initialization - missing account or signer', { account, signer: !!signer });
       }
     };
 
@@ -282,7 +307,21 @@ const MessagesPage: React.FC = () => {
         <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <p className="text-white">{!messagingInitialized ? 'Initializing messaging service...' : 'Loading messages...'}</p>
+            <p className="text-white">
+              {error ? (
+                <span className="text-red-400">Error: {error}</span>
+              ) : (
+                'Initializing messaging service...'
+              )}
+            </p>
+            {error && (
+              <button 
+                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                onClick={() => window.location.reload()}
+              >
+                Retry
+              </button>
+            )}
           </div>
         </div>
       </Layout>

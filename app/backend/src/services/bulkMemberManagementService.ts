@@ -195,9 +195,10 @@ export class BulkMemberManagementService {
                 eq(communityMembers.communityId, communityId),
                 eq(communityMembers.userAddress, address)
               )
-            );
+            )
+            .returning();
 
-          if (deleteResult.rowCount > 0) {
+          if (deleteResult.length > 0) {
             result.successful.push(address);
 
             // Send notification if requested
@@ -264,9 +265,10 @@ export class BulkMemberManagementService {
                 eq(communityMembers.userAddress, address),
                 eq(communityMembers.isActive, true)
               )
-            );
+            )
+            .returning();
 
-          if (updateResult.rowCount > 0) {
+          if (updateResult.length > 0) {
             result.successful.push(address);
             
             // Log role change for audit
@@ -342,9 +344,10 @@ export class BulkMemberManagementService {
                 eq(communityMembers.userAddress, address),
                 eq(communityMembers.isActive, true)
               )
-            );
+            )
+            .returning();
 
-          if (updateResult.rowCount > 0) {
+          if (updateResult.length > 0) {
             result.successful.push(address);
             
             // Log reputation change for audit
@@ -426,9 +429,10 @@ export class BulkMemberManagementService {
                 eq(communityMembers.userAddress, address),
                 eq(communityMembers.isActive, true)
               )
-            );
+            )
+            .returning();
 
-          if (updateResult.rowCount > 0) {
+          if (updateResult.length > 0) {
             result.successful.push(address);
             
             // Log ban for audit
@@ -501,9 +505,10 @@ export class BulkMemberManagementService {
                 eq(communityMembers.userAddress, address),
                 eq(communityMembers.isActive, false)
               )
-            );
+            )
+            .returning();
 
-          if (updateResult.rowCount > 0) {
+          if (updateResult.length > 0) {
             result.successful.push(address);
             
             // Log unban for audit

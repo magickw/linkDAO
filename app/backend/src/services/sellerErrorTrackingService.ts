@@ -377,12 +377,12 @@ export class SellerErrorTrackingService {
         DELETE FROM seller_errors 
         WHERE last_seen < NOW() - INTERVAL '${sql.raw(this.ERROR_RETENTION_DAYS.toString())} days'
           AND resolved = true
+        RETURNING 1 as count
       `);
 
-      // In Drizzle ORM, we need to check the result differently
-      // The result is a RowList, not a standard result with rowCount
-      // Drizzle ORM execute returns RowList, we need to check the result differently
-      return (result as any).rowCount || 0;
+      // In Drizzle ORM, the result is an array of rows
+      // For DELETE with RETURNING, we get the returned rows
+      return result.length;
     } catch (error) {
       safeLogger.error('Error cleaning up old errors:', error);
       return 0;

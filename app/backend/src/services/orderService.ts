@@ -305,7 +305,7 @@ export class OrderService {
    */
   async getOrderHistory(orderId: string): Promise<OrderEvent[]> {
     try {
-      return await databaseService.getOrderEvents(parseInt(orderId));
+      return await databaseService.getOrderEvents(orderId);
     } catch (error) {
       safeLogger.error('Error getting order history:', error);
       throw error;
@@ -477,7 +477,7 @@ export class OrderService {
   }
 
   private async createOrderEvent(orderId: string, eventType: string, description: string, metadata?: any): Promise<void> {
-    await databaseService.createOrderEvent(parseInt(orderId), eventType, description, metadata ? JSON.stringify(metadata) : undefined);
+    await databaseService.createOrderEvent(orderId, eventType, description, metadata ? JSON.stringify(metadata) : undefined);
   }
 
   private async handleStatusChangeNotifications(orderId: string, status: OrderStatus): Promise<void> {

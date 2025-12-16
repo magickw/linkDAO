@@ -241,9 +241,10 @@ export class UserPreferenceService {
             lt(paymentMethodPreferenceOverrides.expiresAt, new Date()),
             isNull(paymentMethodPreferenceOverrides.expiresAt)
           )
-        );
+        )
+        .returning();
 
-      return (result as any).rowCount || 0;
+      return result.length;
     } catch (error) {
       safeLogger.error('Failed to cleanup expired overrides:', error);
       return 0;

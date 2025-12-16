@@ -988,7 +988,7 @@ export const orderEvents = pgTable("order_events", {
 // Tracking Records
 export const trackingRecords = pgTable("tracking_records", {
   id: serial("id").primaryKey(),
-  orderId: integer("order_id").references(() => orders.id),
+  orderId: uuid("order_id").references(() => orders.id),
   trackingNumber: varchar("tracking_number", { length: 128 }).notNull(),
   carrier: varchar("carrier", { length: 32 }).notNull(),
   status: varchar("status", { length: 64 }),
@@ -1970,7 +1970,7 @@ export const reviews = pgTable("reviews", {
   id: uuid("id").defaultRandom().primaryKey(),
   reviewerId: uuid("reviewer_id").references(() => users.id).notNull(),
   revieweeId: uuid("reviewee_id").references(() => users.id).notNull(),
-  orderId: integer("order_id").references(() => orders.id).notNull(),
+  orderId: uuid("order_id").references(() => orders.id).notNull(),
   rating: integer("rating").notNull(),
   title: varchar("title", { length: 255 }),
   comment: text("comment"),
@@ -3248,7 +3248,7 @@ export const {
 
 export const paymentTransactions = pgTable("payment_transactions", {
   id: varchar("id", { length: 255 }).primaryKey(),
-  orderId: integer("order_id").references(() => orders.id).notNull(),
+  orderId: uuid("order_id").references(() => orders.id).notNull(),
   paymentMethod: varchar("payment_method", { length: 20 }).notNull(),
   transactionHash: varchar("transaction_hash", { length: 66 }),
   paymentIntentId: varchar("payment_intent_id", { length: 255 }),
@@ -3282,7 +3282,7 @@ export const paymentTransactions = pgTable("payment_transactions", {
 export const paymentReceipts = pgTable("payment_receipts", {
   id: varchar("id", { length: 255 }).primaryKey(),
   transactionId: varchar("transaction_id", { length: 255 }).references(() => paymentTransactions.id).notNull(),
-  orderId: integer("order_id").references(() => orders.id).notNull(),
+  orderId: uuid("order_id").references(() => orders.id).notNull(),
   receiptNumber: varchar("receipt_number", { length: 100 }).notNull().unique(),
   paymentMethod: varchar("payment_method", { length: 20 }).notNull(),
   amount: numeric("amount", { precision: 20, scale: 8 }).notNull(),
@@ -3302,7 +3302,7 @@ export const paymentReceipts = pgTable("payment_receipts", {
 
 export const orderPaymentEvents = pgTable("order_payment_events", {
   id: serial("id").primaryKey(),
-  orderId: integer("order_id").references(() => orders.id).notNull(),
+  orderId: uuid("order_id").references(() => orders.id).notNull(),
   transactionId: varchar("transaction_id", { length: 255 }).references(() => paymentTransactions.id),
   eventType: varchar("event_type", { length: 50 }).notNull(),
   eventDescription: text("event_description").notNull(),

@@ -535,16 +535,16 @@ app.get('/health', async (req, res) => {
   let databaseStatus: any = { enabled: false, connected: false };
   try {
     // Test database connection
-    if (dbPool) {
+    if (db) {
       const startTime = Date.now();
-      const result = await dbPool.query('SELECT 1');
+      const result = await db.execute(sql`SELECT 1 as test`);
       const queryTime = Date.now() - startTime;
       
       databaseStatus = {
         enabled: true,
         connected: true,
         latency: queryTime,
-        rows: result.rowCount
+        rows: result.length
       };
     }
   } catch (error) {

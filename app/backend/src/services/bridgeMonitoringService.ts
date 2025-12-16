@@ -1058,9 +1058,10 @@ export class BridgeMonitoringService extends EventEmitter {
             eq(bridgeTransactions.status, 'completed'),
             lte(bridgeTransactions.createdAt, thirtyDaysAgo)
           )
-        );
+        )
+        .returning();
 
-      safeLogger.info(`Cleaned up ${deletedCount.rowCount} old bridge transactions`);
+      safeLogger.info(`Cleaned up ${deletedCount.length} old bridge transactions`);
     } catch (error) {
       safeLogger.error('Error cleaning up old transactions:', error);
     }

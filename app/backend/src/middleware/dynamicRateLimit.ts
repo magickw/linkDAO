@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { rateLimitingService } from './rateLimitingMiddleware';
+import { RateLimitingService } from './rateLimitingMiddleware';
 import { rateLimitConfigService } from '../services/rateLimitConfigService';
 import { logger } from '../utils/logger';
 
@@ -26,6 +26,7 @@ export const dynamicRateLimit = async (req: Request, res: Response, next: NextFu
     const adjustedRule = rateLimitConfigService.applyTierAdjustments(rule, userTier);
 
     // Create rate limiter with the rule configuration
+    const rateLimitingService = RateLimitingService.getInstance();
     const rateLimiter = rateLimitingService.createRateLimit({
       windowMs: adjustedRule.windowMs,
       maxRequests: adjustedRule.maxRequests,
@@ -160,6 +161,7 @@ export const createEndpointRateLimit = (config: {
   message?: string;
   keyGenerator?: (req: Request) => string;
 }) => {
+  const rateLimitingService = RateLimitingService.getInstance();
   return rateLimitingService.createRateLimit({
     windowMs: config.windowMs,
     maxRequests: config.maxRequests,
@@ -205,6 +207,7 @@ export const emergencyRateLimitOverride = (req: Request, res: Response, next: Ne
   
   if (emergencyMode === 'STRICT') {
     // Apply very strict rate limiting
+    const rateLimitingService = RateLimitingService.getInstance();
     const strictLimiter = rateLimitingService.createRateLimit({
       windowMs: 60 * 1000,
       maxRequests: 10,

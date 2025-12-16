@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, useSigner } from 'wagmi';
 import { hasInjectedProvider, requestWalletConnection, onAccountsChanged, onChainChanged } from '@/utils/walletConnector';
 
 interface Web3ContextType {
   address: string | undefined;
   isConnected: boolean;
   hasWallet: boolean;
+  signer: any;
   connect: (connectorId?: string) => void;
   disconnect: () => void;
   switchNetwork: (chainId: number) => void;
@@ -20,6 +21,7 @@ interface Web3ProviderProps {
 
 export function Web3Provider({ children }: Web3ProviderProps) {
   const { address, isConnected, connector } = useAccount();
+  const { data: signer } = useSigner();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
 
@@ -88,6 +90,7 @@ export function Web3Provider({ children }: Web3ProviderProps) {
     address,
     isConnected,
     hasWallet,
+    signer,
     connect: handleConnect,
     disconnect,
     switchNetwork: handleSwitchNetwork,

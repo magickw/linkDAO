@@ -171,6 +171,7 @@ class MessagingService {
    * Initialize the messaging service with a wallet
    */
   async initialize(wallet: ethers.Wallet | ethers.Signer): Promise<void> {
+    console.log('Starting messaging service initialization...');
     try {
       if (wallet instanceof ethers.Wallet) {
         this.wallet = wallet;
@@ -184,20 +185,51 @@ class MessagingService {
         this.currentAddress = this.wallet.address.toLowerCase();
       }
 
+      console.log('Wallet address:', this.currentAddress);
+
       if (!this.currentAddress) {
         throw new Error('Unable to get wallet address');
       }
 
       // Generate or retrieve encryption key
+      console.log('Initializing encryption...');
       await this.initializeEncryption();
+      console.log('Encryption initialized');
 
-      // Connect to WebSocket and authenticate
-      await webSocketServiceInstance.connect();
-      webSocketServiceInstance.send('authenticate', { walletAddress: this.currentAddress });
+      // Connect to WebSocket and authenticate with timeout
+      console.log('Connecting to WebSocket...');
+      
+      // Check if WebSocket URL is configured
+      const wsUrl = webSocketServiceInstance.getUrl();
+      console.log('WebSocket URL:', wsUrl);
+      
+      if (!wsUrl) {
+        console.warn('WebSocket URL not configured, skipping WebSocket connection');
+      } else {
+        const connectPromise = webSocketServiceInstance.connect();
+        const timeoutPromise = new Promise<void>((_, reject) => 
+          setTimeout(() => reject(new Error('WebSocket connection timeout')), 10000)
+        );
+        
+        try {
+          await Promise.race([connectPromise, timeoutPromise]);
+          console.log('WebSocket connected, authenticating...');
+          webSocketServiceInstance.send('authenticate', { walletAddress: this.currentAddress });
+          console.log('Authentication sent');
+        } catch (connectionError) {
+          console.warn('WebSocket connection failed, continuing with offline mode:', connectionError);
+          // Continue initialization even if WebSocket fails
+        }
+      }
 
       // Load existing data
+      console.log('Loading conversations...');
       await this.loadConversations();
+      console.log('Conversations loaded');
+      
+      console.log('Loading blocked users...');
       await this.loadBlockedUsers();
+      console.log('Blocked users loaded');
 
       this.isInitialized = true;
       this.emit('initialized');
@@ -205,6 +237,9 @@ class MessagingService {
       console.log('Messaging service initialized for address:', this.currentAddress);
     } catch (error) {
       console.error('Failed to initialize messaging service:', error);
+      // Even if initialization fails, mark as initialized to prevent infinite loading
+      this.isInitialized = true;
+      this.emit('initialized');
       throw error;
     }
   }
@@ -945,16 +980,21 @@ class MessagingService {
 
   private async loadConversations(): Promise<void> {
     try {
+      console.log('Loading conversations from secure storage...');
       const data = await this.loadFromSecureStorage('conversations');
+      console.log('Conversations data loaded:', !!data);
       if (data?.conversations) {
+        console.log('Processing conversation data...');
         data.conversations.forEach((conv: any) => {
           this.conversations.set(conv.id, {
             ...conv,
             lastActivity: new Date(conv.lastActivity)
           });
         });
+        console.log('Processed', data.conversations.length, 'conversations');
       }
       if (data?.messages) {
+        console.log('Processing message data...');
         data.messages.forEach((msgData: any) => {
           this.messages.set(msgData.conversationId,
             msgData.messages.map((msg: any) => ({
@@ -963,6 +1003,7 @@ class MessagingService {
             }))
           );
         });
+        console.log('Processed messages for', data.messages.length, 'conversations');
       }
     } catch (error) {
       console.error('Failed to load conversations:', error);
@@ -971,9 +1012,12 @@ class MessagingService {
 
   private async loadBlockedUsers(): Promise<void> {
     try {
+      console.log('Loading blocked users from secure storage...');
       const blockedList = await this.loadFromSecureStorage('blocked_users');
+      console.log('Blocked users data loaded:', !!blockedList);
       if (blockedList) {
         this.blockedUsers = new Set(blockedList);
+        console.log('Loaded', blockedList.length, 'blocked users');
       }
     } catch (error) {
       console.error('Failed to load blocked users:', error);
@@ -1211,11 +1255,19 @@ class MessagingService {
   }
 
   private async loadFromSecureStorage(key: string): Promise<any> {
-    const encrypted = await this.loadFromIndexedDB(key);
-    if (!encrypted) return null;
-
-    const decrypted = await this.decryptFromStorage(encrypted);
-    return JSON.parse(decrypted);
+    try {
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise<null>((_, reject) => 
+        setTimeout(() => reject(new Error(`Timeout loading ${key} from secure storage`)), 5000)
+      );
+      const loadPromise = this.loadFromIndexedDB(key);
+      
+      const result = await Promise.race([loadPromise, timeoutPromise]);
+      return result;
+    } catch (error) {
+      console.error(`Failed to load ${key} from secure storage:`, error);
+      return null;
+    }
   }
 
   private async encryptForStorage(data: string): Promise<string> {
@@ -1256,23 +1308,48 @@ class MessagingService {
 
   private async storeInIndexedDB(key: string, data: any): Promise<void> {
     return new Promise((resolve, reject) => {
+      // Add overall timeout
+      const timeoutId = setTimeout(() => {
+        reject(new Error(`Timeout storing ${key} to IndexedDB`));
+      }, 5000);
+      
       const request = indexedDB.open('LinkDAOMessaging', 1);
 
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        clearTimeout(timeoutId);
+        reject(request.error);
+      };
+      
       request.onsuccess = () => {
-        const db = request.result;
-        const transaction = db.transaction(['secure_storage'], 'readwrite');
-        const store = transaction.objectStore('secure_storage');
+        try {
+          const db = request.result;
+          const transaction = db.transaction(['secure_storage'], 'readwrite');
+          const store = transaction.objectStore('secure_storage');
 
-        const putRequest = store.put({ id: `${this.currentAddress}_${key}`, data });
-        putRequest.onsuccess = () => resolve();
-        putRequest.onerror = () => reject(putRequest.error);
+          const putRequest = store.put({ id: `${this.currentAddress}_${key}`, data });
+          putRequest.onsuccess = () => {
+            clearTimeout(timeoutId);
+            resolve();
+          };
+          putRequest.onerror = () => {
+            clearTimeout(timeoutId);
+            reject(putRequest.error);
+          };
+        } catch (error) {
+          clearTimeout(timeoutId);
+          reject(error);
+        }
       };
 
-      request.onupgradeneeded = () => {
-        const db = request.result;
-        if (!db.objectStoreNames.contains('secure_storage')) {
-          db.createObjectStore('secure_storage', { keyPath: 'id' });
+      request.onupgradeneeded = (event) => {
+        try {
+          const db = (event.target as IDBOpenDBRequest).result;
+          if (!db.objectStoreNames.contains('secure_storage')) {
+            db.createObjectStore('secure_storage', { keyPath: 'id' });
+          }
+        } catch (error) {
+          clearTimeout(timeoutId);
+          reject(error);
         }
       };
     });
@@ -1280,25 +1357,48 @@ class MessagingService {
 
   private async loadFromIndexedDB(key: string): Promise<any> {
     return new Promise((resolve, reject) => {
+      // Add overall timeout
+      const timeoutId = setTimeout(() => {
+        reject(new Error(`Timeout loading ${key} from IndexedDB`));
+      }, 5000);
+      
       const request = indexedDB.open('LinkDAOMessaging', 1);
 
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        clearTimeout(timeoutId);
+        reject(request.error);
+      };
+      
       request.onsuccess = () => {
-        const db = request.result;
-        const transaction = db.transaction(['secure_storage'], 'readonly');
-        const store = transaction.objectStore('secure_storage');
+        try {
+          const db = request.result;
+          const transaction = db.transaction(['secure_storage'], 'readonly');
+          const store = transaction.objectStore('secure_storage');
 
-        const getRequest = store.get(`${this.currentAddress}_${key}`);
-        getRequest.onsuccess = () => {
-          resolve(getRequest.result?.data || null);
-        };
-        getRequest.onerror = () => reject(getRequest.error);
+          const getRequest = store.get(`${this.currentAddress}_${key}`);
+          getRequest.onsuccess = () => {
+            clearTimeout(timeoutId);
+            resolve(getRequest.result?.data || null);
+          };
+          getRequest.onerror = () => {
+            clearTimeout(timeoutId);
+            reject(getRequest.error);
+          };
+        } catch (error) {
+          clearTimeout(timeoutId);
+          reject(error);
+        }
       };
 
-      request.onupgradeneeded = () => {
-        const db = request.result;
-        if (!db.objectStoreNames.contains('secure_storage')) {
-          db.createObjectStore('secure_storage', { keyPath: 'id' });
+      request.onupgradeneeded = (event) => {
+        try {
+          const db = (event.target as IDBOpenDBRequest).result;
+          if (!db.objectStoreNames.contains('secure_storage')) {
+            db.createObjectStore('secure_storage', { keyPath: 'id' });
+          }
+        } catch (error) {
+          clearTimeout(timeoutId);
+          reject(error);
         }
       };
     });

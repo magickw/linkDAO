@@ -1327,7 +1327,7 @@ export class CommunityController {
     try {
       const { postId } = req.params;
 
-      const content = await communityService.getTokenGatedContentByPost(Number(postId));
+      const content = await communityService.getTokenGatedContentByPost(postId);
 
       if (!content) {
         res.status(404).json(createErrorResponse('NOT_FOUND', 'Token-gated content not found', 404));

@@ -373,7 +373,7 @@ export class CommunityPostService {
   static async createComment(data: CreateCommentInput): Promise<Comment> {
     try {
       let authHeaders = enhancedAuthService.getAuthHeaders();
-      const hasAuthToken = authHeaders['Authorization'] && authHeaders['Authorization'] !== 'Bearer null';
+      let hasAuthToken = authHeaders['Authorization'] && authHeaders['Authorization'] !== 'Bearer null';
 
       // Debug logging
       console.log('Creating comment:', {
@@ -385,11 +385,17 @@ export class CommunityPostService {
         allHeaders: authHeaders
       });
 
-      // Add development token if needed
-      if (!authHeaders['Authorization'] && ENV_CONFIG.IS_DEVELOPMENT) {
+      // Add development token if needed or if auth is invalid
+      if ((!hasAuthToken || authHeaders['Authorization'] === 'Bearer null') && ENV_CONFIG.IS_DEVELOPMENT) {
         const devToken = `dev_session_${data.author || '0xee034b53d4ccb101b2a4faec27708be507197350'}_${Date.now()}`;
         authHeaders['Authorization'] = `Bearer ${devToken}`;
+        hasAuthToken = true;
         console.log('Using development token');
+      }
+
+      // If still no valid auth headers, throw error
+      if (!hasAuthToken) {
+        throw new Error('No valid authentication token available');
       }
 
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${data.postId}/comments`, {
@@ -422,7 +428,40 @@ export class CommunityPostService {
           }
         });
 
-        // Use global fetch wrapper which handles token refresh automatically
+        // If it's a 401 error, try to refresh the session and retry
+        if (response.status === 401) {
+          try {
+            console.log('Attempting to refresh authentication...');
+            await enhancedAuthService.refreshToken();
+            
+            // Get new auth headers after refresh
+            const newAuthHeaders = enhancedAuthService.getAuthHeaders();
+            
+            // Retry the request with fresh token
+            const retryResponse = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${data.postId}/comments`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...newAuthHeaders
+              },
+              body: JSON.stringify({
+                author: data.author,
+                content: data.content,
+                parentCommentId: data.parentId,
+                media: data.media
+              })
+            });
+
+            if (retryResponse.ok) {
+              const result = await retryResponse.json();
+              return result.data || result;
+            }
+          } catch (refreshError) {
+            console.error('Token refresh failed:', refreshError);
+          }
+        }
+
+        // Use global fetch wrapper as final fallback
         try {
           const { post } = await import('./globalFetchWrapper');
           const fallbackResponse = await post(`${BACKEND_API_BASE_URL}/api/feed/${data.postId}/comments`, {
