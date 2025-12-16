@@ -2198,6 +2198,33 @@ export class CommunityController {
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get all communities health metrics'));
     }
   }
+
+  async getModerationStats(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { id } = req.params;
+      const { timeRange = 'week' } = req.query;
+
+      const hasPermission = await communityService.hasModeratorPermission(id, userAddress);
+      if (!hasPermission) {
+        res.status(403).json(createErrorResponse('FORBIDDEN', 'Only admins or moderators can view moderation stats', 403));
+        return;
+      }
+
+      const { communityAIModerationService } = await import('../services/communityAIModerationService');
+      const stats = await communityAIModerationService.getModerationStats(id, timeRange as string);
+
+      res.json(createSuccessResponse(stats, {}));
+    } catch (error) {
+      safeLogger.error('Error getting moderation stats:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get moderation stats'));
+    }
+  }
 }
 
 export const communityController = new CommunityController();
