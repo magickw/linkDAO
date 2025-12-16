@@ -741,6 +741,40 @@ export class ProductService {
       }
     }
 
+    // Parse images - prioritize CDN URLs over IPFS hashes
+    let images: string[] = [];
+    
+    // First try to get CDN URLs
+    if (dbProduct.imageCdnUrls) {
+      try {
+        const cdnUrls = JSON.parse(dbProduct.imageCdnUrls);
+        // If CDN URLs is an object with URLs, extract them
+        if (typeof cdnUrls === 'object' && cdnUrls !== null) {
+          images = Object.values(cdnUrls).filter(url => typeof url === 'string' && url.length > 0);
+        } else if (Array.isArray(cdnUrls)) {
+          images = cdnUrls;
+        }
+      } catch (error) {
+        safeLogger.warn('Failed to parse CDN URLs:', error);
+      }
+    }
+    
+    // Fallback to IPFS hashes if no CDN URLs
+    if (images.length === 0) {
+      try {
+        images = JSON.parse(dbProduct.images || '[]');
+        // Convert IPFS hashes to gateway URLs if needed
+        images = images.map((hash: string) => {
+          if (hash.startsWith('http')) return hash;
+          if (hash.startsWith('ipfs://')) return hash;
+          return `https://ipfs.io/ipfs/${hash}`;
+        });
+      } catch (error) {
+        safeLogger.warn('Failed to parse images:', error);
+        images = [];
+      }
+    }
+
     return {
       id: dbProduct.id,
       sellerId: dbProduct.sellerId,
@@ -749,7 +783,7 @@ export class ProductService {
       description: dbProduct.description,
       price: priceData,
       category,
-      images: JSON.parse(dbProduct.images || '[]'),
+      images,
       metadata: JSON.parse(dbProduct.metadata || '{}'),
       inventory: dbProduct.inventory,
       status: dbProduct.status,

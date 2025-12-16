@@ -44,6 +44,16 @@ export interface MarketplaceChallengeData {
   maxParticipants?: number;
 }
 
+export interface ChallengeWithProgress extends MarketplaceChallengeData {
+  id: string;
+  activityType: string;
+  userProgress?: {
+    currentProgress: number;
+    isCompleted: boolean;
+    rewardClaimed: boolean;
+  } | null;
+}
+
 export interface MarketplaceStats {
   totalTransactions: number;
   totalVolume: number;
@@ -513,7 +523,7 @@ class MarketplaceRewardsService {
   /**
    * Get active marketplace challenges
    */
-  async getActiveMarketplaceChallenges(userId?: string) {
+  async getActiveMarketplaceChallenges(userId?: string): Promise<ChallengeWithProgress[]> {
     try {
       const challenges = await db
         .select()

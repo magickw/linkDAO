@@ -6,7 +6,8 @@ import {
   AssignmentRule,
   TaskStatus,
   EscalationRule,
-  NotificationTemplate
+  NotificationTemplate,
+  TaskType
 } from '../types/workflow';
 import { logger } from '../utils/logger';
 import { EventEmitter } from 'events';
@@ -77,7 +78,7 @@ export class TaskAssignmentService extends EventEmitter {
         stepExecutionId,
         assignedTo,
         assignedBy,
-        taskType: context.taskType,
+        taskType: context.taskType as TaskType,
         taskData: context,
         priority: context.priority,
         dueDate,
@@ -97,7 +98,7 @@ export class TaskAssignmentService extends EventEmitter {
         taskId: taskAssignment.id,
         assignedTo,
         assignedBy,
-        taskType: context.taskType
+        taskType: context.taskType as TaskType
       });
 
       this.emit('taskAssigned', { taskAssignment, context });
@@ -207,7 +208,12 @@ export class TaskAssignmentService extends EventEmitter {
       //   escalationReason: escalationContext.escalationReason,
       //   escalationData: escalationContext
       // }).returning();
-      const escalation = { id: 'temp' }; // Temporary placeholder
+      const escalation: WorkflowEscalation = {
+        assignmentId: taskId,
+        escalationLevel: escalationContext.level || 1,
+        escalatedTo,
+        escalatedAt: new Date()
+      }; // Temporary placeholder
 
       // Update task assignment
       await db.update(workflowTaskAssignments)
@@ -428,12 +434,11 @@ export class TaskAssignmentService extends EventEmitter {
 
   private async checkPendingEscalations(): Promise<void> {
     try {
-      const overdueTasks = await db.query.workflowTaskAssignments.findMany({
-        where: and(
+      const overdueTasks = await db.select().from(workflowTaskAssignments)
+        .where(and(
           inArray(workflowTaskAssignments.status, ['assigned', 'in_progress']),
           lt(workflowTaskAssignments.dueDate, new Date())
-        )
-      });
+        ));
 
       for (const task of overdueTasks) {
         await this.trackSLACompliance(task.id);
@@ -454,9 +459,10 @@ export class TaskAssignmentService extends EventEmitter {
 
   private async getTaskAssignment(taskId: string): Promise<WorkflowTaskAssignment | null> {
     try {
-      return await db.query.workflowTaskAssignments.findFirst({
-        where: eq(workflowTaskAssignments.id, taskId)
-      });
+      const [task] = await db.select().from(workflowTaskAssignments)
+        .where(eq(workflowTaskAssignments.id, taskId))
+        .limit(1);
+      return task || null;
     } catch (error) {
       logger.error('Failed to get task assignment', { error, taskId });
       return null;
@@ -488,14 +494,13 @@ export class TaskAssignmentService extends EventEmitter {
 
   private async getReassignableTasks(userId: string, limit: number): Promise<WorkflowTaskAssignment[]> {
     try {
-      return await db.query.workflowTaskAssignments.findMany({
-        where: and(
+      return await db.select().from(workflowTaskAssignments)
+        .where(and(
           eq(workflowTaskAssignments.assignedTo, userId),
           eq(workflowTaskAssignments.status, 'assigned')
-        ),
-        orderBy: asc(workflowTaskAssignments.priority),
-        limit
-      });
+        ))
+        .orderBy(asc(workflowTaskAssignments.priority))
+        .limit(limit);
     } catch (error) {
       logger.error('Failed to get reassignable tasks', { error, userId });
       return [];

@@ -53,15 +53,16 @@ export class CommunicationManagerController {
    */
   async logCommunication(req: Request, res: Response): Promise<void> {
     try {
-      const communicationData: {
-        conversationId: string;
-        messageId: string;
-        senderAddress: string;
-        recipientAddress: string;
-        contentPreview: string;
-        messageType: string;
-        metadata?: any;
-      } = communicationLogSchema.parse(req.body);
+      const parsed = communicationLogSchema.parse(req.body);
+      const communicationData = {
+        conversationId: parsed.conversationId,
+        messageId: parsed.messageId,
+        senderAddress: parsed.senderAddress,
+        recipientAddress: parsed.recipientAddress,
+        contentPreview: parsed.contentPreview,
+        messageType: parsed.messageType,
+        metadata: parsed.metadata
+      };
 
       const logEntry = await communicationManagerService.logCommunication(communicationData);
 
@@ -137,14 +138,15 @@ export class CommunicationManagerController {
    */
   async createEscalationTrigger(req: Request, res: Response): Promise<void> {
     try {
-      const triggerData: {
-        conversationId: string;
-        messageId?: string;
-        triggerType: 'high_volume' | 'negative_sentiment' | 'keywords' | 'manual' | 'timeout';
-        thresholdValue?: number;
-        currentValue?: number;
-        notes?: string;
-      } = escalationTriggerSchema.parse(req.body);
+      const parsed = escalationTriggerSchema.parse(req.body);
+      const triggerData = {
+        conversationId: parsed.conversationId,
+        messageId: parsed.messageId,
+        triggerType: parsed.triggerType,
+        thresholdValue: parsed.thresholdValue,
+        currentValue: parsed.currentValue,
+        notes: parsed.notes
+      };
 
       const trigger = await communicationManagerService.createEscalationTrigger(triggerData);
 

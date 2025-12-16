@@ -301,8 +301,8 @@ const ProductDetailPageRoute: React.FC = () => {
               })) : [
                 {
                   type: 'image' as const,
-                  url: 'https://placehold.co/600x400/667eea/ffffff?text=Product',
-                  thumbnail: 'https://placehold.co/150x150/667eea/ffffff?text=Product',
+                  url: `https://via.placeholder.com/600x400/4B2E83/FFFFFF?text=${encodeURIComponent(productData.title || 'Product')}`,
+                  thumbnail: `https://via.placeholder.com/150x150/4B2E83/FFFFFF?text=${encodeURIComponent(productData.title || 'Product')}`,
                   alt: productData.title || 'Product'
                 }
               ]

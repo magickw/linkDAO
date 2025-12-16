@@ -998,6 +998,27 @@ export class CommunityHealthService {
       overallScores: Array.from({ length: 100 }, () => 40 + Math.random() * 40)
     };
   }
+
+  // Public wrapper methods for controller compatibility
+  async getCommunityHealthMetrics(communityId: string): Promise<HealthMetrics> {
+    return this.calculateHealthMetrics(communityId);
+  }
+
+  async getCommunityHealthTrends(communityId: string): Promise<HistoricalMetrics[]> {
+    return this.getHistoricalMetrics(communityId, 30);
+  }
+
+  async getCommunityComparisons(communityId: string): Promise<ComparisonMetrics> {
+    return this.compareWithBenchmarks(communityId);
+  }
+
+  async getHealthAlerts(communityId: string): Promise<HealthAlert[]> {
+    return this.generateHealthAlerts(communityId);
+  }
+
+  async getRealTimeHealthSnapshot(communityId: string): Promise<HealthMetrics> {
+    return this.calculateHealthMetrics(communityId);
+  }
 }
 
 export const communityHealthService = CommunityHealthService.getInstance();

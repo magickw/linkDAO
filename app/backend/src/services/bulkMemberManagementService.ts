@@ -30,6 +30,7 @@ interface MemberImportData {
   defaultRole?: 'member' | 'moderator' | 'admin';
   defaultReputation?: number;
   sendWelcomeMessage?: boolean;
+  skipExisting?: boolean;
 }
 
 interface MemberExportOptions {

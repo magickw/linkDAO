@@ -2,7 +2,7 @@
 import { Request, Response } from 'express';
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { safeLogger } from '../utils/safeLogger';
-import { marketplaceRewardsService, MarketplaceChallengeData } from '../services/marketplaceRewardsService';
+import { marketplaceRewardsService, MarketplaceChallengeData, ChallengeWithProgress } from '../services/marketplaceRewardsService';
 import { z } from 'zod';
 
 // Validation schemas
@@ -229,7 +229,7 @@ export class MarketplaceRewardsController {
       }
 
       const stats = await marketplaceRewardsService.getUserMarketplaceStats(userId);
-      const challenges = await marketplaceRewardsService.getActiveMarketplaceChallenges(userId);
+      const challenges: ChallengeWithProgress[] = await marketplaceRewardsService.getActiveMarketplaceChallenges(userId);
       const recentRewards = await marketplaceRewardsService.getMarketplaceRewardsHistory(userId, 10, 0);
       const tiers = marketplaceRewardsService.getVolumeTiers();
 

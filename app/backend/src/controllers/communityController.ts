@@ -7,7 +7,7 @@ import { Community } from '../types/community';
 import { openaiService } from '../services/ai/openaiService';
 import { aiModerationService } from '../services/aiModerationService';
 import { db } from '../db';
-import { communityRules, userReputation } from '../db/schema';
+import { userReputation } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
 // Extend Request type to include user property
@@ -1504,16 +1504,7 @@ export class CommunityController {
     }
   }
 
-  private async getUserReputation(userAddress: string): Promise<number> {
-    try {
-      // This would typically query your user reputation system
-      // For now, return a default value
-      return 50;
-    } catch (error) {
-      safeLogger.error('Error getting user reputation:', error);
-      return 50;
-    }
-  }
+  
 
   // Update moderation feedback (auth required)
   async updateModerationFeedback(req: Request, res: Response): Promise<void> {
@@ -1766,7 +1757,7 @@ export class CommunityController {
       }
 
       const { bulkMemberManagementService } = await import('../services/bulkMemberManagementService');
-      const result = await bulkMemberManagementService.unbanMembers(id, memberAddresses, reason);
+      const result = await bulkMemberManagementService.unbanMembers(id, memberAddresses);
 
       res.json(createSuccessResponse(result, {}));
     } catch (error) {
@@ -2211,9 +2202,9 @@ export class CommunityController {
       }
 
       const { id } = req.params;
-      const { timeRange = 'week' } = req.query;
+      const { timeRange = '7d' } = req.query;
 
-      const hasPermission = await communityService.hasModeratorPermission(id, userAddress);
+      const hasPermission = await communityService.checkModeratorPermission(id, userAddress);
       if (!hasPermission) {
         res.status(403).json(createErrorResponse('FORBIDDEN', 'Only admins or moderators can view moderation stats', 403));
         return;
@@ -2233,17 +2224,9 @@ export class CommunityController {
    * Get community rules
    */
   private async getCommunityRules(communityId: string): Promise<any[]> {
-    try {
-      const rules = await db.select()
-        .from(communityRules)
-        .where(eq(communityRules.communityId, communityId))
-        .orderBy(communityRules.createdAt);
-      
-      return rules || [];
-    } catch (error) {
-      safeLogger.error('Error getting community rules:', error);
-      return [];
-    }
+    // TODO: Implement community rules table
+    // For now, return empty array
+    return [];
   }
 
   /**

@@ -135,10 +135,14 @@ export class MessagingController {
         limit: Number(limit),
         before: before as string,
         after: after as string
-      });
+      }) as {
+        success: boolean;
+        data?: any;
+        message?: string;
+      };
 
       if (!messages.success) {
-        res.status(400).json(apiResponse.error((messages as any).message, 400));
+        res.status(400).json(apiResponse.error(messages.message || 'Failed to get messages', 400));
         return;
       }
 

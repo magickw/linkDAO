@@ -172,6 +172,11 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                 src={selectedImage}
                 alt={product.title}
                 className="w-full h-96 object-contain"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.onerror = null;
+                  target.src = `https://via.placeholder.com/600x400/4B2E83/FFFFFF?text=${encodeURIComponent(product.title)}`;
+                }}
               />
             </GlassPanel>
 
@@ -183,7 +188,16 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                   className={`p-2 cursor-pointer border-2 ${selectedImage === media.url ? 'border-blue-500' : 'border-transparent'}`}
                   onClick={() => setSelectedImage(media.url)}
                 >
-                  <img src={media.thumbnail || media.url} alt={media.alt || `Product view ${index + 1}`} className="w-full h-20 object-contain" />
+                  img
+                  src={media.thumbnail || media.url}
+                  alt={media.alt || `Product view ${index + 1}`}
+                  className="w-full h-20 object-contain"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.onerror = null;
+                    target.src = `https://via.placeholder.com/150x150/4B2E83/FFFFFF?text=${encodeURIComponent(`Img ${index + 1}`)}`;
+                  }}
+                />
                 </GlassPanel>
               ))}
             </div>

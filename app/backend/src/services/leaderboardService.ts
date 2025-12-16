@@ -75,11 +75,11 @@ export class LeaderboardService {
             // Build query
             let query = db
                 .select({
-                    address: posts.authorAddress,
+                    address: posts.authorId,
                     postCount: count(posts.id),
                 })
                 .from(posts)
-                .groupBy(posts.authorAddress)
+                .groupBy(posts.authorId)
                 .orderBy(desc(count(posts.id)))
                 .limit(limit);
 
@@ -200,12 +200,12 @@ export class LeaderboardService {
 
         const results = await db
             .select({
-                address: posts.authorAddress,
+                address: posts.authorId,
                 count: count(posts.id),
             })
             .from(posts)
             .where(conditions.length > 0 ? and(...conditions) : undefined)
-            .groupBy(posts.authorAddress);
+            .groupBy(posts.authorId);
 
         return results.map(r => ({ address: r.address, count: r.count }));
     }
@@ -217,12 +217,12 @@ export class LeaderboardService {
 
             const results = await db
                 .select({
-                    address: comments.authorAddress,
+                    address: comments.authorId,
                     count: count(comments.id),
                 })
                 .from(comments)
                 .where(conditions.length > 0 ? and(...conditions) : undefined)
-                .groupBy(comments.authorAddress);
+                .groupBy(comments.authorId);
 
             return results.map(r => ({ address: r.address, count: r.count }));
         } catch (error) {
@@ -238,12 +238,12 @@ export class LeaderboardService {
 
             const results = await db
                 .select({
-                    address: reactions.userAddress,
+                    address: reactions.userId,
                     count: count(reactions.id),
                 })
                 .from(reactions)
                 .where(conditions.length > 0 ? and(...conditions) : undefined)
-                .groupBy(reactions.userAddress);
+                .groupBy(reactions.userId);
 
             return results.map(r => ({ address: r.address, count: r.count }));
         } catch (error) {
