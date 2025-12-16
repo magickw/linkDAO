@@ -45,24 +45,40 @@ export class ContractRegistryService {
       process.env.NEXT_PUBLIC_CONTRACT_REGISTRY_ADDRESS || 
       '0x0000000000000000000000000000000000000000'; // Placeholder
 
-    // Always initialize with fallback addresses, even if registry address is set but not deployed
-    console.warn('ContractRegistry address not configured or not deployed, using fallback addresses');
-    this.initialized = true;
-
-    // Convert PublicClient to ethers provider for contract interactions
-    const ethersProvider = new ethers.BrowserProvider(
-      publicClient.transport
-    );
-    
-    this.registry = new Contract(registryAddress, CONTRACT_REGISTRY_ABI, ethersProvider);
-    this.initialized = true;
-
-    // Listen for contract updates
-    this.registry.on('ContractUpdated', (name: string, address: string) => {
-      const nameStr = ethers.toUtf8String(name);
-      this.cache.set(nameStr, address);
-      console.log(`Contract ${nameStr} updated to ${address}`);
-    });
+    try {
+      // Convert PublicClient to ethers provider for contract interactions
+      // Handle different provider types properly
+      let ethersProvider;
+      if (publicClient.transport && publicClient.transport.provider) {
+        // wagmi v2 PublicClient
+        ethersProvider = new ethers.BrowserProvider(publicClient.transport.provider);
+      } else if (publicClient.provider) {
+        // Direct provider
+        ethersProvider = new ethers.BrowserProvider(publicClient.provider);
+      } else if (publicClient.request) {
+        // EIP-1193 provider
+        ethersProvider = new ethers.BrowserProvider(publicClient);
+      } else {
+        throw new Error('Invalid provider type');
+      }
+      
+      this.registry = new Contract(registryAddress, CONTRACT_REGISTRY_ABI, ethersProvider);
+      this.initialized = true;
+      
+      // Only listen for contract updates if registry is valid and not zero address
+      if (registryAddress && registryAddress !== ethers.ZeroAddress) {
+        // Listen for contract updates
+        this.registry.on('ContractUpdated', (name: string, address: string) => {
+          const nameStr = ethers.toUtf8String(name);
+          this.cache.set(nameStr, address);
+          console.log(`Contract ${nameStr} updated to ${address}`);
+        });
+      }
+    } catch (error) {
+      console.warn('ContractRegistry initialization failed, using fallback addresses only:', error);
+      // Still mark as initialized so we can use fallback addresses
+      this.initialized = true;
+    }
   }
 
   /**

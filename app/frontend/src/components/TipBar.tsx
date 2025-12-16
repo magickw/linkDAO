@@ -38,7 +38,8 @@ const TipBar: React.FC<TipBarProps> = ({ postId, creatorAddress, onTipSuccess, c
     // Validate environment variables
     const envValidation = TipService.validateEnvironment();
     if (!envValidation.isValid) {
-      addToast(`Missing configuration: ${envValidation.missingVars.join(', ')}`, 'error');
+      console.error('TipService environment validation failed:', envValidation.missingVars);
+      addToast(`Missing configuration: ${envValidation.missingVars.join(', ')}. Please check console for details.`, 'error');
       return;
     }
 

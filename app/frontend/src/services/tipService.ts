@@ -106,7 +106,14 @@ export class TipService {
       'NEXT_PUBLIC_USDT_TOKEN_ADDRESS'
     ];
 
+    // Check if environment variables are available
     const missingVars = requiredVars.filter(varName => !process.env[varName]);
+    
+    // Additional check for empty values
+    const emptyVars = requiredVars.filter(varName => process.env[varName] === '');
+    
+    // Combine missing and empty vars
+    const invalidVars = [...missingVars, ...emptyVars];
     
     // Warn about missing optional vars
     const missingOptionalVars = optionalVars.filter(varName => !process.env[varName]);
@@ -114,9 +121,17 @@ export class TipService {
       console.warn('Missing optional environment variables:', missingOptionalVars);
     }
     
+    // Log environment variables for debugging
+    console.log('Environment check:', {
+      tipRouter: process.env.NEXT_PUBLIC_TIP_ROUTER_ADDRESS,
+      ldaoToken: process.env.NEXT_PUBLIC_LDAO_TOKEN_ADDRESS,
+      usdc: process.env.NEXT_PUBLIC_USDC_ADDRESS,
+      usdt: process.env.NEXT_PUBLIC_USDT_TOKEN_ADDRESS
+    });
+    
     return {
-      isValid: missingVars.length === 0,
-      missingVars
+      isValid: invalidVars.length === 0,
+      missingVars: invalidVars
     };
   }
 

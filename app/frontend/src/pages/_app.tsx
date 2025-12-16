@@ -99,19 +99,26 @@ function AppContent({ children }: { children: React.ReactNode }) {
       try {
         isContractRegistryInitializing = true;
         
-        if (typeof window !== 'undefined' && window.ethereum) {
-          await contractRegistryService.initialize(window.ethereum);
-          isContractRegistryInitialized = true;
+        // Use wagmi's public client for initialization
+        if (typeof window !== 'undefined') {
+          const { getPublicClient } = await import('@wagmi/core');
+          const publicClient = getPublicClient(config);
+          if (publicClient) {
+            await contractRegistryService.initialize(publicClient);
+            isContractRegistryInitialized = true;
 
-          // Defer heavy preloading to avoid blocking initial navigation
-          if ('requestIdleCallback' in window) {
-            (window as any).requestIdleCallback(async () => {
-              await contractRegistryService.preloadCommonContracts();
-            }, { timeout: 5000 });
+            // Defer heavy preloading to avoid blocking initial navigation
+            if ('requestIdleCallback' in window) {
+              (window as any).requestIdleCallback(async () => {
+                await contractRegistryService.preloadCommonContracts();
+              }, { timeout: 5000 });
+            } else {
+              setTimeout(async () => {
+                await contractRegistryService.preloadCommonContracts();
+              }, 1000);
+            }
           } else {
-            setTimeout(async () => {
-              await contractRegistryService.preloadCommonContracts();
-            }, 1000);
+            console.warn('No public client available for ContractRegistry initialization');
           }
         }
       } catch (error) {
@@ -123,7 +130,10 @@ function AppContent({ children }: { children: React.ReactNode }) {
     
     // Only initialize contract registry in browser environment
     if (typeof window !== 'undefined') {
-      initializeContractRegistry();
+      // Delay initialization slightly to ensure wagmi is fully ready
+      setTimeout(() => {
+        initializeContractRegistry();
+      }, 100);
     }
 
     // Initialize extension error suppression with a single handler
@@ -286,9 +296,7 @@ export default function App({ Component, pageProps, router }: AppProps) {
                               <AppContent>
                                 <Component {...pageProps} />
                               </AppContent>
-                              {/* Automatic wallet login bridge - DISABLED to prevent navigation blocking */}
-                              {/* Authentication will trigger when user performs actions requiring auth */}
-                              <WalletLoginBridgeWithToast autoLogin={false} />
+                              <WalletLoginBridgeWithToast autoLogin={true} />
                             </EnhancedThemeProvider>
                           </ContactProvider>
                         </NavigationProvider>
