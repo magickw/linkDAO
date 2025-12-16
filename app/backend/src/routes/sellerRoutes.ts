@@ -82,7 +82,9 @@ router.put('/profile', csrfProtection,
       twitterHandle: { type: 'string', optional: true, maxLength: 50 },
       discordHandle: { type: 'string', optional: true, maxLength: 50 },
       telegramHandle: { type: 'string', optional: true, maxLength: 50 },
-      ensHandle: { type: 'string', optional: true, maxLength: 100 }
+      ensHandle: { type: 'string', optional: true, maxLength: 100 },
+      profileImageIpfs: { type: 'string', optional: true, maxLength: 255 },
+      profileImageCdn: { type: 'string', optional: true, maxLength: 500 }
     }
   }),
   sellerController.updateProfile.bind(sellerController)

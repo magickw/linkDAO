@@ -310,8 +310,36 @@ export class TipService {
         throw new Error('Request timeout');
       }
 
-      console.error('Error in createTip:', error);
-      throw error;
+      // Enhanced error logging
+      console.error('Error in createTip:', {
+        error: error,
+        message: error.message,
+        stack: error.stack,
+        postId,
+        creatorAddress,
+        amount,
+        currency,
+        currentAddress: TipService.currentAddress,
+        providerAvailable: !!TipService.provider,
+        tipRouterAddress: process.env.NEXT_PUBLIC_TIP_ROUTER_ADDRESS,
+        ldaoTokenAddress: process.env.NEXT_PUBLIC_LDAO_TOKEN_ADDRESS
+      });
+      
+      // Provide more user-friendly error messages
+      let userMessage = 'Failed to send tip. Please try again.';
+      if (error.message && error.message.includes('user rejected')) {
+        userMessage = 'Transaction rejected by user';
+      } else if (error.message && error.message.includes('insufficient funds')) {
+        userMessage = 'Insufficient funds for tip and gas fees';
+      } else if (error.message && error.message.includes('timeout')) {
+        userMessage = 'Transaction timed out. Please check your wallet.';
+      } else if (error.message && (error.message.includes('network') || error.message.includes('RPC'))) {
+        userMessage = 'Network error. Please check your connection and try again.';
+      } else if (error.message && error.message.includes('contract')) {
+        userMessage = 'Contract error. Please check console for details.';
+      }
+      
+      throw new Error(userMessage);
     }
   }
 

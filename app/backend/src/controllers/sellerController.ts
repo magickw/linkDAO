@@ -787,6 +787,10 @@ export class SellerController {
       const user = (req as any).user;
       const updates = req.body;
 
+      // Log incoming request for debugging
+      safeLogger.info("Updating seller profile for:", user.walletAddress);
+      safeLogger.info("Profile updates:", updates);
+
       // Use the existing seller service
       const { sellerService } = await import('../services/sellerService');
 
@@ -794,6 +798,7 @@ export class SellerController {
         const updatedProfile = await sellerService.updateSellerProfile(user.walletAddress, updates);
         res.json({ success: true, data: updatedProfile });
       } catch (serviceError: any) {
+        safeLogger.error("Service error updating profile:", serviceError);
         if (serviceError.message.includes('not found')) {
           // Create profile if it doesn't exist
           const newProfile = await sellerService.createSellerProfile({

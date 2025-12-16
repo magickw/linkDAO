@@ -994,6 +994,9 @@ app.use('/api/marketplace/seller/images', sellerImageRoutes);
 // Seller verification routes
 app.use('/api/marketplace/seller/verification', sellerVerificationRoutes);
 
+// Seller profile routes
+app.use('/api/marketplace/seller', marketplaceSellerRoutes);
+
 // ENS validation routes
 app.use('/api/marketplace/ens', ensValidationRoutes);
 

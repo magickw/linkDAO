@@ -30,6 +30,10 @@ const upload = multer({
 // GET profile - Primary endpoint for fetching seller profile
 
 // PUT profile - Update seller profile
+router.put(
+  '/seller/:walletAddress',
+  sellerController.updateProfile.bind(sellerController)
+);
 
 // Enhanced profile update with image support
 router.put(
