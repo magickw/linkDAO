@@ -127,7 +127,7 @@ export class ReturnTrackingService {
         await db
           .update(returns)
           .set({
-            returnReceivedAt: new Date(),
+            receivedAt: new Date(),
             updatedAt: new Date()
           })
           .where(eq(returns.id, returnId));
@@ -139,7 +139,7 @@ export class ReturnTrackingService {
         await db
           .update(returns)
           .set({
-            returnReceivedAt: new Date(),
+            receivedAt: new Date(),
             updatedAt: new Date()
           })
           .where(eq(returns.id, returnId));

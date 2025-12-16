@@ -634,6 +634,12 @@ const EditListingPage: React.FC = () => {
           setImagePreviews(prev => [...prev, e.target!.result as string]);
         }
       };
+      reader.onerror = () => {
+        addToast(`Failed to load image preview: ${file.name}`, 'error');
+      };
+      reader.onabort = () => {
+        addToast(`Image preview loading aborted: ${file.name}`, 'error');
+      };
       reader.readAsDataURL(file);
     });
   };
@@ -1590,6 +1596,10 @@ const EditListingPage: React.FC = () => {
                             src={preview}
                             alt={`Product ${index + 1}`}
                             className="w-full h-32 object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = `https://placehold.co/300x300/4B2E83/FFFFFF?text=Image+${index + 1}`;
+                            }}
                           />
                           <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                             <div className="flex space-x-2">
@@ -1635,6 +1645,10 @@ const EditListingPage: React.FC = () => {
                               src={preview}
                               alt={`New product ${index + 1}`}
                               className="w-full h-32 object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.src = `https://placehold.co/300x300/4B2E83/FFFFFF?text=New+Image+${index + 1}`;
+                              }}
                             />
                             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                               <div className="flex space-x-2">

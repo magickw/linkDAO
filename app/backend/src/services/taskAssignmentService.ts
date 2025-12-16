@@ -36,6 +36,7 @@ export interface EscalationContext {
   escalationReason: 'timeout' | 'no_response' | 'manual' | 'sla_breach' | 'complexity';
   originalDueDate?: Date;
   attempts: number;
+  level?: number;
 }
 
 export class TaskAssignmentService extends EventEmitter {
@@ -78,31 +79,38 @@ export class TaskAssignmentService extends EventEmitter {
         stepExecutionId,
         assignedTo,
         assignedBy,
-        taskType: context.taskType as TaskType,
+        taskType: context.taskType,
         taskData: context,
         priority: context.priority,
         dueDate,
         status: 'assigned'
       }).returning();
 
+      // Cast to WorkflowTaskAssignment with proper type conversion
+      const typedTaskAssignment: WorkflowTaskAssignment = {
+        ...taskAssignment,
+        taskType: taskAssignment.taskType as TaskType,
+        status: taskAssignment.status as TaskStatus
+      };
+
       // Update user workload
       await this.updateUserWorkload(assignedTo, 1);
 
       // Send assignment notification
-      await this.sendAssignmentNotification(taskAssignment);
+      await this.sendAssignmentNotification(typedTaskAssignment);
 
       // Set up escalation monitoring
-      await this.scheduleEscalationCheck(taskAssignment.id, dueDate);
+      await this.scheduleEscalationCheck(typedTaskAssignment.id, dueDate);
 
-      safeLogger.info(`Task assigned: ${taskAssignment.id}`, {
-        taskId: taskAssignment.id,
+      safeLogger.info(`Task assigned: ${typedTaskAssignment.id}`, {
+        taskId: typedTaskAssignment.id,
         assignedTo,
         assignedBy,
         taskType: context.taskType as TaskType
       });
 
-      this.emit('taskAssigned', { taskAssignment, context });
-      return taskAssignment;
+      this.emit('taskAssigned', { taskAssignment: typedTaskAssignment, context });
+      return typedTaskAssignment;
     } catch (error) {
       safeLogger.error('Failed to assign task', { error, stepExecutionId, context });
       throw new Error(`Failed to assign task: ${error.message}`);
@@ -440,7 +448,13 @@ export class TaskAssignmentService extends EventEmitter {
         ));
 
       for (const task of overdueTasks) {
-        await this.trackSLACompliance(task.id);
+        // Cast to WorkflowTaskAssignment with proper type conversion
+        const typedTask: WorkflowTaskAssignment = {
+          ...task,
+          taskType: task.taskType as TaskType,
+          status: task.status as TaskStatus
+        };
+        await this.trackSLACompliance(typedTask.id);
       }
     } catch (error) {
       safeLogger.error('Failed to check pending escalations', { error });
@@ -461,7 +475,15 @@ export class TaskAssignmentService extends EventEmitter {
       const [task] = await db.select().from(workflowTaskAssignments)
         .where(eq(workflowTaskAssignments.id, taskId))
         .limit(1);
-      return task || null;
+      
+      if (!task) return null;
+      
+      // Cast to WorkflowTaskAssignment with proper type conversion
+      return {
+        ...task,
+        taskType: task.taskType as TaskType,
+        status: task.status as TaskStatus
+      };
     } catch (error) {
       safeLogger.error('Failed to get task assignment', { error, taskId });
       return null;
@@ -493,13 +515,20 @@ export class TaskAssignmentService extends EventEmitter {
 
   private async getReassignableTasks(userId: string, limit: number): Promise<WorkflowTaskAssignment[]> {
     try {
-      return await db.select().from(workflowTaskAssignments)
+      const tasks = await db.select().from(workflowTaskAssignments)
         .where(and(
           eq(workflowTaskAssignments.assignedTo, userId),
           eq(workflowTaskAssignments.status, 'assigned')
         ))
         .orderBy(asc(workflowTaskAssignments.priority))
         .limit(limit);
+      
+      // Cast each task to WorkflowTaskAssignment with proper type conversion
+      return tasks.map(task => ({
+        ...task,
+        taskType: task.taskType as TaskType,
+        status: task.status as TaskStatus
+      }));
     } catch (error) {
       safeLogger.error('Failed to get reassignable tasks', { error, userId });
       return [];

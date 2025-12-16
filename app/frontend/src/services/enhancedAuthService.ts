@@ -491,14 +491,36 @@ class EnhancedAuthService {
    * Check if current session is valid for the given address
    */
   private hasValidSession(address: string): boolean {
-    if (!this.sessionData || !this.token) return false;
+    const now = Date.now();
+    
+    if (!this.sessionData || !this.token) {
+      console.log('❌ Session invalid: no session data or token');
+      return false;
+    }
 
-    // Check if session is for the same address
-    if (this.sessionData.user.address !== address) return false;
+    // Check if session is for the same address (case-insensitive)
+    if (this.sessionData.user.address.toLowerCase() !== address.toLowerCase()) {
+      console.log('❌ Session invalid: address mismatch', {
+        sessionAddress: this.sessionData.user.address,
+        requestedAddress: address
+      });
+      return false;
+    }
 
     // Check if session is not expired
-    if (Date.now() >= this.sessionData.expiresAt) return false;
+    if (now >= this.sessionData.expiresAt) {
+      console.log('❌ Session invalid: expired', {
+        now,
+        expiresAt: this.sessionData.expiresAt,
+        timeSinceExpiry: now - this.sessionData.expiresAt
+      });
+      return false;
+    }
 
+    console.log('✅ Session valid:', {
+      address,
+      timeUntilExpiry: this.sessionData.expiresAt - now
+    });
     return true;
   }
 
@@ -509,9 +531,25 @@ class EnhancedAuthService {
     const now = Date.now();
     const expiresAt = now + this.SESSION_EXPIRY;
 
+    // Normalize address to lowercase for consistency
+    const normalizedUser = {
+      ...user,
+      address: user.address.toLowerCase()
+    };
+
+    console.log('📝 Storing session:', {
+      timestamp: now,
+      expiresAt,
+      expiresIn: this.SESSION_EXPIRY,
+      timeUntilExpiry: expiresAt - now,
+      tokenLength: token.length,
+      userAddress: user.address,
+      normalizedAddress: normalizedUser.address
+    });
+
     this.sessionData = {
       token,
-      user,
+      user: normalizedUser,
       timestamp: now,
       expiresAt,
       refreshToken
@@ -706,6 +744,14 @@ class EnhancedAuthService {
 
     if (this.token) {
       headers['Authorization'] = `Bearer ${this.token}`;
+      console.log('🔑 Auth headers prepared:', {
+        hasToken: !!this.token,
+        tokenLength: this.token.length,
+        tokenPreview: this.token.substring(0, 20) + '...',
+        headerPreview: headers['Authorization']?.substring(0, 40) + '...'
+      });
+    } else {
+      console.log('❌ No token available for auth headers');
     }
 
     return headers;

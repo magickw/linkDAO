@@ -78,7 +78,7 @@ const SERVICE_ENDPOINTS = {
 const isDevelopment = self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1';
 
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
-const MAX_REQUESTS_PER_MINUTE = isDevelopment ? 1000 : 400; // Increased to 400 for production to better handle marketplace APIs
+const MAX_REQUESTS_PER_MINUTE = isDevelopment ? 1000 : 500; // Increased to 500 for production to better handle marketplace APIs
 const BACKOFF_MULTIPLIER = isDevelopment ? 1.2 : 1.5; // Lower backoff in development and production
 const MAX_BACKOFF_TIME = isDevelopment ? 5000 : 30000; // Reduced max backoff to 30s in production
 
@@ -97,9 +97,9 @@ const SERVICE_CIRCUIT_BREAKER_CONFIGS = {
     halfOpenMaxCalls: 3
   },
   marketplace: {
-    failureThreshold: 10, // Increase threshold to reduce false positives
-    recoveryTimeout: 5000, // Faster recovery for marketplace
-    halfOpenMaxCalls: 1
+    failureThreshold: 15, // Increase threshold to reduce false positives
+    recoveryTimeout: 3000, // Faster recovery for marketplace
+    halfOpenMaxCalls: 2
   }
 };
 
@@ -133,9 +133,9 @@ const CACHEABLE_APIS = {
   '/api/tips': { ttl: 60000, priority: 'medium', staleTTL: 300000 }, // 1min fresh, 5min stale
   '/api/follow': { ttl: 120000, priority: 'medium', staleTTL: 600000 }, // 2min fresh, 10min stale
   '/api/search': { ttl: 300000, priority: 'low', staleTTL: 1800000 }, // 5min fresh, 30min stale
-  '/api/marketplace/listings': { ttl: 30000, priority: 'high', staleTTL: 60000, skipCacheOnError: true }, // 30s fresh, 1min stale for listings
-  '/api/marketplace/listings/categories': { ttl: 300000, priority: 'medium', staleTTL: 600000, skipCacheOnError: true }, // 5min fresh, 10min stale for categories
-  '/api/marketplace/seller': { ttl: 30000, priority: 'high', staleTTL: 60000, skipCacheOnError: true }, // 30s fresh, 1min stale for seller data
+  '/api/marketplace/listings': { ttl: 60000, priority: 'high', staleTTL: 120000, skipCacheOnError: true }, // 1min fresh, 2min stale for listings
+  '/api/marketplace/listings/categories': { ttl: 600000, priority: 'medium', staleTTL: 1200000, skipCacheOnError: true }, // 10min fresh, 20min stale for categories
+  '/api/marketplace/seller': { ttl: 60000, priority: 'high', staleTTL: 120000, skipCacheOnError: true }, // 1min fresh, 2min stale for seller data
   '/api/governance': { ttl: 180000, priority: 'medium', staleTTL: 900000 }, // 3min fresh, 15min stale
   '/api/messaging': { ttl: 30000, priority: 'high', staleTTL: 120000 }, // 30s fresh, 2min stale
   '/api/chat/conversations': { ttl: 30000, priority: 'high', staleTTL: 120000, skipCacheOnError: true }, // 30s fresh, 2min stale
@@ -268,6 +268,22 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
+  // Handle placeholder requests with local placeholders FIRST
+  if (url.hostname === 'placehold.co' || url.hostname === 'via.placeholder.com') {
+    event.respondWith(handlePlaceholderRequest(url).catch(error => {
+      console.warn('Failed to generate placeholder:', error);
+      // Return a simple fallback SVG
+      return new Response(
+        `<svg width="40" height="40" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" fill="#ccc"/><text x="20" y="25" text-anchor="middle" fill="#666">?</text></svg>`,
+        {
+          headers: { 'Content-Type': 'image/svg+xml' },
+          status: 200
+        }
+      );
+    }));
+    return;
+  }
+
   // CRITICAL FIX: Bypass ALL navigation requests immediately to prevent blocking
   // This prevents wallet-connected users from being unable to navigate
   if (isEnhancedNavigation(request)) {
@@ -303,11 +319,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Handle placehold.co requests with local placeholders
-  if (url.hostname === 'placehold.co') {
-    event.respondWith(handlePlaceholderRequest(url));
-    return;
-  }
+  
 
   // Bypass Google Fonts (opaque responses) to avoid noisy errors in dev
   if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
@@ -542,7 +554,10 @@ async function networkFirst(request, cacheName) {
   const isMarketplaceAPI = url.pathname.includes('/marketplace/');
   // EXCLUDE blockchain API requests from coalescing as they may have different parameters
   const isBlockchainAPI = url.hostname.includes('etherscan.io') || url.hostname.includes('basescan.org') || url.hostname.includes('bscscan.com');
-  if (pendingRequests.has(requestKey) && !isCriticalRequest(request) && !isCommunityAPI && !isMarketplaceAPI && !isBlockchainAPI) {
+  // EXCLUDE image requests from coalescing to prevent loading issues
+  const isImageRequest = isImage(request);
+  
+  if (pendingRequests.has(requestKey) && !isCriticalRequest(request) && !isCommunityAPI && !isMarketplaceAPI && !isBlockchainAPI && !isImageRequest) {
     console.log('Request already pending, coalescing:', requestKey);
     try {
       const sharedPromise = pendingRequests.get(requestKey);
@@ -1637,7 +1652,12 @@ function isCriticalRequest(request) {
 
 function isImage(request) {
   const url = new URL(request.url);
-  return url.pathname.match(/\.(png|jpg|jpeg|gif|svg|webp|avif)$/);
+  // Enhanced image detection including marketplace images
+  const isImageFile = url.pathname.match(/\.(png|jpg|jpeg|gif|svg|webp|avif)$/);
+  const isMarketplaceImage = url.pathname.includes('/_next/image') && url.searchParams.has('url');
+  const isPlaceholdImage = url.hostname.includes('placehold.co');
+  
+  return isImageFile || isMarketplaceImage || isPlaceholdImage;
 }
 
 function isAPI(request) {
@@ -1750,7 +1770,9 @@ self.addEventListener('error', (event) => {
        event.error.message.includes('background-redux-new.js') ||
        event.error.message.includes('chrome.runtime.sendMessage') ||
        event.error.message.includes('Assign to read only property') ||
-       event.error.message.includes('_eventsCount'))) {
+       event.error.message.includes('_eventsCount') ||
+       event.error.message.includes('Unchecked runtime.lastError') ||
+       event.error.message.includes('Cannot create item with duplicate id'))) {
     console.debug('Service Worker: Ignored extension error:', event.error.message);
     event.preventDefault();
     return;
@@ -1766,7 +1788,9 @@ self.addEventListener('unhandledrejection', (event) => {
        reason.includes('background-redux-new.js') ||
        reason.includes('chrome.runtime.sendMessage') ||
        reason.includes('Assign to read only property') ||
-       reason.includes('_eventsCount'))) {
+       reason.includes('_eventsCount') ||
+       reason.includes('Unchecked runtime.lastError') ||
+       reason.includes('Cannot create item with duplicate id'))) {
     console.debug('Service Worker: Ignored extension promise rejection:', reason);
     event.preventDefault();
     return;

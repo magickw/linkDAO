@@ -493,6 +493,12 @@ const CreateListingPage: React.FC = () => {
           setImagePreviews(prev => [...prev, e.target!.result as string]);
         }
       };
+      reader.onerror = () => {
+        addToast(`Failed to load image preview: ${file.name}`, 'error');
+      };
+      reader.onabort = () => {
+        addToast(`Image preview loading aborted: ${file.name}`, 'error');
+      };
       reader.readAsDataURL(file);
     });
   };
@@ -1447,6 +1453,10 @@ const CreateListingPage: React.FC = () => {
                               src={preview}
                               alt={`Preview ${index + 1}`}
                               className="w-full h-32 object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.src = `https://via.placeholder.com/300x300/4B2E83/FFFFFF?text=Image+${index + 1}`;
+                              }}
                             />
 
                             {/* Primary badge */}
@@ -1543,6 +1553,10 @@ const CreateListingPage: React.FC = () => {
                               src={imagePreviews[primaryImageIndex]}
                               alt={formData.title}
                               className="w-full h-64 object-cover rounded-lg"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.src = `https://placehold.co/600x400/4B2E83/FFFFFF?text=Main+Image`;
+                              }}
                             />
                             {imagePreviews.length > 1 && (
                               <div className="flex gap-2 mt-2 overflow-x-auto">
@@ -1554,6 +1568,10 @@ const CreateListingPage: React.FC = () => {
                                     className={`w-16 h-16 object-cover rounded cursor-pointer border-2 ${index === primaryImageIndex ? 'border-indigo-400' : 'border-white/20'
                                       }`}
                                     onClick={() => setPrimaryImageIndex(index)}
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      target.src = `https://placehold.co/100x100/4B2E83/FFFFFF?text=T${index + 1}`;
+                                    }}
                                   />
                                 ))}
                               </div>

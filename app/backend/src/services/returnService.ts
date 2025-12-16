@@ -232,7 +232,7 @@ class ReturnService {
       await db
         .update(returns)
         .set({
-          refundAmount,
+          refundAmount: refundAmount.toString(),
           refundMethod: request.refundMethod,
           refundStatus: 'processing',
           updatedAt: new Date()
@@ -244,7 +244,7 @@ class ReturnService {
         id: uuidv4(),
         returnId: request.returnId,
         orderId: returnRecord.orderId,
-        amount: refundAmount,
+        amount: refundAmount.toString(),
         currency: 'USD', // In a real implementation, this would come from the order
         refundType: 'full',
         provider: 'stripe', // In a real implementation, this would be determined dynamically
