@@ -9,7 +9,7 @@ import {
   NotificationTemplate,
   TaskType
 } from '../types/workflow';
-import { logger } from '../utils/logger';
+import { safeLogger } from '../utils/safeLogger';
 import { EventEmitter } from 'events';
 import { workflowTaskAssignments } from '../db/schema';
 
@@ -94,7 +94,7 @@ export class TaskAssignmentService extends EventEmitter {
       // Set up escalation monitoring
       await this.scheduleEscalationCheck(taskAssignment.id, dueDate);
 
-      logger.info(`Task assigned: ${taskAssignment.id}`, {
+      safeLogger.info(`Task assigned: ${taskAssignment.id}`, {
         taskId: taskAssignment.id,
         assignedTo,
         assignedBy,
@@ -104,7 +104,7 @@ export class TaskAssignmentService extends EventEmitter {
       this.emit('taskAssigned', { taskAssignment, context });
       return taskAssignment;
     } catch (error) {
-      logger.error('Failed to assign task', { error, stepExecutionId, context });
+      safeLogger.error('Failed to assign task', { error, stepExecutionId, context });
       throw new Error(`Failed to assign task: ${error.message}`);
     }
   }
@@ -141,7 +141,7 @@ export class TaskAssignmentService extends EventEmitter {
       // Send reassignment notifications
       await this.sendReassignmentNotification(taskId, oldAssignee, newAssignee, reason);
 
-      logger.info(`Task reassigned: ${taskId}`, {
+      safeLogger.info(`Task reassigned: ${taskId}`, {
         taskId,
         oldAssignee,
         newAssignee,
@@ -151,7 +151,7 @@ export class TaskAssignmentService extends EventEmitter {
 
       this.emit('taskReassigned', { taskId, oldAssignee, newAssignee, reason });
     } catch (error) {
-      logger.error('Failed to reassign task', { error, taskId, newAssignee });
+      safeLogger.error('Failed to reassign task', { error, taskId, newAssignee });
       throw new Error(`Failed to reassign task: ${error.message}`);
     }
   }
@@ -167,7 +167,7 @@ export class TaskAssignmentService extends EventEmitter {
           }
         }
       } catch (error) {
-        logger.warn(`Assignment rule failed: ${rule.type}`, { error, rule, context });
+        safeLogger.warn(`Assignment rule failed: ${rule.type}`, { error, rule, context });
         // Try fallback rule if available
         if (rule.fallback) {
           const fallbackAssignee = await this.resolveAssignment([rule.fallback], context);
@@ -209,6 +209,7 @@ export class TaskAssignmentService extends EventEmitter {
       //   escalationData: escalationContext
       // }).returning();
       const escalation: WorkflowEscalation = {
+        id: `escal-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         assignmentId: taskId,
         escalationLevel: escalationContext.level || 1,
         escalatedTo,
@@ -231,7 +232,7 @@ export class TaskAssignmentService extends EventEmitter {
       // Send escalation notifications
       await this.sendEscalationNotification(escalation, task);
 
-      logger.info(`Task escalated: ${taskId}`, {
+      safeLogger.info(`Task escalated: ${taskId}`, {
         taskId,
         escalatedFrom: task.assignedTo,
         escalatedTo,
@@ -242,7 +243,7 @@ export class TaskAssignmentService extends EventEmitter {
       this.emit('taskEscalated', { escalation, task, context: escalationContext });
       return escalation;
     } catch (error) {
-      logger.error('Failed to escalate task', { error, taskId, escalationContext });
+      safeLogger.error('Failed to escalate task', { error, taskId, escalationContext });
       throw new Error(`Failed to escalate task: ${error.message}`);
     }
   }
@@ -273,7 +274,7 @@ export class TaskAssignmentService extends EventEmitter {
       // Default escalation: find supervisor or admin
       return await this.findSupervisor(task.assignedTo);
     } catch (error) {
-      logger.error('Failed to resolve escalation', { error, task, context });
+      safeLogger.error('Failed to resolve escalation', { error, task, context });
       return null;
     }
   }
@@ -324,7 +325,7 @@ export class TaskAssignmentService extends EventEmitter {
 
       return workload;
     } catch (error) {
-      logger.error('Failed to get user workload', { error, userId });
+      safeLogger.error('Failed to get user workload', { error, userId });
       throw new Error(`Failed to get user workload: ${error.message}`);
     }
   }
@@ -364,12 +365,12 @@ export class TaskAssignmentService extends EventEmitter {
         }
       }
 
-      logger.info('Workload balancing completed', { 
+      safeLogger.info('Workload balancing completed', { 
         overloadedUsers: overloaded.length,
         underloadedUsers: underloaded.length
       });
     } catch (error) {
-      logger.error('Failed to balance workload', { error });
+      safeLogger.error('Failed to balance workload', { error });
     }
   }
 
@@ -397,7 +398,7 @@ export class TaskAssignmentService extends EventEmitter {
         await this.sendDeadlineReminder(task);
       }
     } catch (error) {
-      logger.error('Failed to track SLA compliance', { error, taskId });
+      safeLogger.error('Failed to track SLA compliance', { error, taskId });
     }
   }
 
@@ -416,8 +417,7 @@ export class TaskAssignmentService extends EventEmitter {
       try {
         await this.balanceWorkload();
       } catch (error) {
-        logger.error('Workload monitoring error', { error });
-      }
+            safeLogger.error('Workload monitoring error', { error });      }
     }, 5 * 60 * 1000);
   }
 
@@ -427,8 +427,7 @@ export class TaskAssignmentService extends EventEmitter {
       try {
         await this.checkPendingEscalations();
       } catch (error) {
-        logger.error('Escalation monitoring error', { error });
-      }
+            safeLogger.error('Escalation monitoring error', { error });      }
     }, 60 * 1000);
   }
 
@@ -444,7 +443,7 @@ export class TaskAssignmentService extends EventEmitter {
         await this.trackSLACompliance(task.id);
       }
     } catch (error) {
-      logger.error('Failed to check pending escalations', { error });
+      safeLogger.error('Failed to check pending escalations', { error });
     }
   }
 
@@ -464,7 +463,7 @@ export class TaskAssignmentService extends EventEmitter {
         .limit(1);
       return task || null;
     } catch (error) {
-      logger.error('Failed to get task assignment', { error, taskId });
+      safeLogger.error('Failed to get task assignment', { error, taskId });
       return null;
     }
   }
@@ -502,7 +501,7 @@ export class TaskAssignmentService extends EventEmitter {
         .orderBy(asc(workflowTaskAssignments.priority))
         .limit(limit);
     } catch (error) {
-      logger.error('Failed to get reassignable tasks', { error, userId });
+      safeLogger.error('Failed to get reassignable tasks', { error, userId });
       return [];
     }
   }

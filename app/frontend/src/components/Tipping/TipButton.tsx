@@ -4,6 +4,7 @@ import { Heart, Coins, Gift, Award } from 'lucide-react';
 import { useAccount, useSignMessage } from 'wagmi';
 import { TipService, AWARDS, Award as AwardType, Tip } from '../../services/tipService';
 import { useWalletAuth } from '../../hooks/useWalletAuth';
+import { getProvider } from '@/utils/web3';
 
 interface TipButtonProps {
   toAddress: string;
@@ -28,7 +29,6 @@ const TipButton: React.FC<TipButtonProps> = ({
 }) => {
   const { address: account } = useAccount();
   const { data: signer } = useSignMessage();
-  const provider = signer ? new ethers.BrowserProvider(window.ethereum) : null;
   const [isOpen, setIsOpen] = useState(false);
   const [tipAmount, setTipAmount] = useState('1');
   const [selectedCurrency, setSelectedCurrency] = useState<'LDAO' | 'USDC' | 'USDT'>('LDAO');
@@ -37,6 +37,15 @@ const TipButton: React.FC<TipButtonProps> = ({
   const [isPublic, setIsPublic] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [tipCount, setTipCount] = useState(initialTipCount);
+  const [provider, setProvider] = useState<ethers.BrowserProvider | ethers.JsonRpcProvider | null>(null);
+
+  useEffect(() => {
+    const initProvider = async () => {
+      const p = await getProvider();
+      setProvider(p);
+    };
+    initProvider();
+  }, []);
 
   const sizeClasses = {
     sm: 'px-2 py-1 text-xs',

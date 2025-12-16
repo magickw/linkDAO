@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { useWeb3 } from '@/context/Web3Context';
+import React, { useState, useEffect } from 'react';
+import { useAccount } from 'wagmi';
 import { useToast } from '@/context/ToastContext';
 import { TipService } from '@/services/tipService';
-import { getProvider } from '@/utils/web3';
 import { ethers } from 'ethers';
+import { getProvider } from '@/utils/web3';
 
 interface TipBarProps {
   postId: string;
@@ -13,13 +13,22 @@ interface TipBarProps {
 }
 
 const TipBar: React.FC<TipBarProps> = ({ postId, creatorAddress, onTipSuccess, currency = 'LDAO' }) => {
-  const { address, isConnected } = useWeb3();
+  const { address: account } = useAccount();
   const { addToast } = useToast();
   const [tipAmount, setTipAmount] = useState('');
   const [isTipping, setIsTipping] = useState(false);
+  const [provider, setProvider] = useState<ethers.BrowserProvider | ethers.JsonRpcProvider | null>(null);
+
+  useEffect(() => {
+    const initProvider = async () => {
+      const p = await getProvider();
+      setProvider(p);
+    };
+    initProvider();
+  }, []);
 
   const handleTip = async () => {
-    if (!isConnected || !address) {
+    if (!account) {
       addToast('Please connect your wallet to tip', 'error');
       return;
     }
@@ -30,7 +39,7 @@ const TipBar: React.FC<TipBarProps> = ({ postId, creatorAddress, onTipSuccess, c
     }
 
     // Prevent users from tipping themselves
-    if (address.toLowerCase() === creatorAddress.toLowerCase()) {
+    if (account.toLowerCase() === creatorAddress.toLowerCase()) {
       addToast('You cannot tip yourself', 'error');
       return;
     }
@@ -45,15 +54,12 @@ const TipBar: React.FC<TipBarProps> = ({ postId, creatorAddress, onTipSuccess, c
 
     setIsTipping(true);
     try {
-      // Initialize the TipService with the provider
-      const provider = await getProvider();
+      // Initialize TipService with the wagmi provider
       if (!provider) {
-        throw new Error('Failed to get provider');
+        throw new Error('Provider not available');
       }
       
-      // Initialize TipService with the provider
-      // The provider should be a BrowserProvider when wallet is connected
-      await TipService.initialize(provider as any);
+      await TipService.initialize(provider);
       
       // Use the real TipService to process the tip
       const result = await TipService.createTip(
@@ -64,7 +70,7 @@ const TipBar: React.FC<TipBarProps> = ({ postId, creatorAddress, onTipSuccess, c
         ''
       );
       
-      addToast(`Successfully tipped ${tipAmount} LDAO! Transaction: ${result.transactionHash.substring(0, 10)}...`, 'success');
+      addToast(`Successfully tipped ${tipAmount} ${currency}! Transaction: ${result.transactionHash.substring(0, 10)}...`, 'success');
       setTipAmount('');
       if (onTipSuccess) onTipSuccess();
     } catch (error: any) {

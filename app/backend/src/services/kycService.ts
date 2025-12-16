@@ -52,7 +52,7 @@ export class KYCService {
 
   constructor() {
     this.databaseService = new DatabaseService();
-    this.redisService = new RedisService();
+    this.redisService = RedisService.getInstance();
   }
 
   /**

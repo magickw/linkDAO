@@ -3,7 +3,7 @@ import { safeLogger } from '../utils/safeLogger';
 import { RedisService } from './redisService';
 import { ModeratorProfile } from './moderatorAuthService';
 
-const redisService = new RedisService();
+const redisService = RedisService.getInstance();
 
 export interface ActivityMetrics {
   casesReviewed: number;

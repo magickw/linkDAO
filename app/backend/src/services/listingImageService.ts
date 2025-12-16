@@ -74,7 +74,7 @@ export class ListingImageService {
     this.listingService = new ProductListingService();
     this.imageStorageService = ImageStorageService;
     this.databaseService = new DatabaseService();
-    this.redisService = new RedisService();
+    this.redisService = RedisService.getInstance();
   }
 
   /**

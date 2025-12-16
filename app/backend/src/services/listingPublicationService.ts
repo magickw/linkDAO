@@ -39,7 +39,7 @@ export class ListingPublicationService {
 
   constructor() {
     this.listingService = new ProductListingService();
-    this.redisService = new RedisService();
+    this.redisService = RedisService.getInstance();
     this.databaseService = new DatabaseService();
   }
 

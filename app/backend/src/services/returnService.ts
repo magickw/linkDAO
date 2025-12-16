@@ -7,7 +7,7 @@ import {
 } from '../db/schema';
 import { eq, and, gte, lte, desc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
-import { safeLogger } from '../utils/logger';
+import { safeLogger } from '../utils/safeLogger';
 import { returnTrackingService } from './returnTrackingService';
 import { returnInspectionService } from './returnInspectionService';
 

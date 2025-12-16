@@ -10,7 +10,7 @@ export class AuthService {
   private databaseService: DatabaseService;
 
   constructor() {
-    this.redisService = new RedisService();
+    this.redisService = RedisService.getInstance();
     this.databaseService = new DatabaseService();
   }
 

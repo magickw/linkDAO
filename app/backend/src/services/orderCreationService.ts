@@ -309,7 +309,7 @@ export class OrderCreationService {
    */
   async getOrderSummary(orderId: string): Promise<OrderSummary | null> {
     try {
-      const order = await this.databaseService.getOrderById(parseInt(orderId));
+      const order = await this.databaseService.getOrderById(orderId);
       if (!order) {
         return null;
       }
@@ -345,12 +345,12 @@ export class OrderCreationService {
    */
   async updateOrderStatus(orderId: string, status: string, message?: string, metadata?: any): Promise<boolean> {
     try {
-      const order = await this.databaseService.getOrderById(parseInt(orderId));
+      const order = await this.databaseService.getOrderById(orderId);
       if (!order) {
         return false;
       }
 
-      await this.databaseService.updateOrder(parseInt(orderId), {
+      await this.databaseService.updateOrder(orderId, {
         status
       });
 
@@ -378,13 +378,13 @@ export class OrderCreationService {
    */
   async cancelOrder(orderId: string, reason: string, cancelledBy: string): Promise<any> {
     try {
-      const order = await this.databaseService.getOrderById(parseInt(orderId));
+      const order = await this.databaseService.getOrderById(orderId);
       if (!order) {
         throw new Error('Order not found');
       }
 
       // Update order status to cancelled
-      await this.databaseService.updateOrder(parseInt(orderId), {
+      await this.databaseService.updateOrder(orderId, {
         status: 'cancelled'
       });
 

@@ -59,7 +59,7 @@ export class PriceOracleService {
 
   constructor() {
     this.exchangeRateService = new ExchangeRateService();
-    this.redisService = new RedisService();
+    this.redisService = RedisService.getInstance();
   }
 
   /**

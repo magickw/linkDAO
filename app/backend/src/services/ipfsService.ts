@@ -695,6 +695,15 @@ export class IPFSService {
       return 'unknown';
     }
   }
+
+  /**
+   * Get gateway URL for IPFS hash
+   */
+  getGatewayUrl(ipfsHash?: string): string {
+    // Using Pinata gateway
+    const gateway = 'https://gateway.pinata.cloud/ipfs/';
+    return ipfsHash ? `${gateway}${ipfsHash}` : gateway;
+  }
 }
 
 // Export singleton instance with default configuration
