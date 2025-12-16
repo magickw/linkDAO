@@ -140,6 +140,8 @@ export class TipService {
    */
   static async initialize(provider: ethers.BrowserProvider): Promise<void> {
     try {
+      console.log('Initializing TipService with provider:', provider);
+      
       if (!provider) {
         throw new Error('Provider is required');
       }
@@ -150,12 +152,50 @@ export class TipService {
       TipService.currentAddress = address.toLowerCase();
       
       console.log('TipService initialized with address:', TipService.currentAddress);
+      console.log('Environment variables:', {
+        tipRouter: process.env.NEXT_PUBLIC_TIP_ROUTER_ADDRESS,
+        ldaoToken: process.env.NEXT_PUBLIC_LDAO_TOKEN_ADDRESS,
+        usdc: process.env.NEXT_PUBLIC_USDC_ADDRESS,
+        usdt: process.env.NEXT_PUBLIC_USDT_TOKEN_ADDRESS
+      });
+      
+      // Check network health
+      await TipService.checkNetworkHealth();
     } catch (error) {
       console.error('Failed to initialize tip service:', error);
       // Reset state on error
       TipService.currentAddress = null;
       TipService.provider = null;
       throw error;
+    }
+  }
+
+  /**
+   * Check network health and connectivity
+   */
+  private static async checkNetworkHealth(): Promise<void> {
+    if (!TipService.provider) {
+      console.warn('Cannot check network health: No provider available');
+      return;
+    }
+    
+    try {
+      console.log('Checking network health...');
+      const network = await TipService.provider.getNetwork();
+      console.log('Network info:', network);
+      
+      // Check if we're on the expected network (Sepolia testnet)
+      if (network.chainId !== 11155111n) {
+        console.warn('Unexpected network detected. Expected Sepolia (11155111), got:', network.chainId);
+      }
+      
+      // Check block number
+      const blockNumber = await TipService.provider.getBlockNumber();
+      console.log('Current block number:', blockNumber);
+      
+      console.log('Network health check completed successfully');
+    } catch (error) {
+      console.error('Network health check failed:', error);
     }
   }
 
@@ -200,13 +240,20 @@ export class TipService {
         amount: amountInUnits.toString()
       });
       
-      const approveTx = await tokenContract.connect(signer).approve(
-        process.env.NEXT_PUBLIC_TIP_ROUTER_ADDRESS,
-        amountInUnits
-      );
-      console.log('Approval transaction sent:', approveTx.hash);
-      await approveTx.wait();
-      console.log('Approval confirmed');
+      try {
+        const approveTx = await tokenContract.connect(signer).approve(
+          process.env.NEXT_PUBLIC_TIP_ROUTER_ADDRESS,
+          amountInUnits
+        );
+        console.log('Approval transaction sent:', approveTx.hash);
+        
+        // Wait for approval with better error handling
+        const approvalReceipt = await approveTx.wait();
+        console.log('Approval confirmed:', approvalReceipt);
+      } catch (approvalError: any) {
+        console.error('Token approval failed:', approvalError);
+        throw new Error(`Token approval failed: ${approvalError.message || 'Unknown error'}`);
+      }
 
       // Send tip through TipRouter contract
       const tipRouterContract = await TipService.getTipRouterContract();
@@ -224,39 +271,44 @@ export class TipService {
       
       // Use the correct contract method with individual parameters
       let tipTx;
-      if (message && message.trim()) {
-        console.log('Sending tip with comment...', {
-          postId: postIdBytes32,
-          creatorAddress,
-          amount: amountInUnits.toString(),
-          paymentMethod,
-          comment: message.trim()
-        });
+      try {
+        if (message && message.trim()) {
+          console.log('Sending tip with comment...', {
+            postId: postIdBytes32,
+            creatorAddress,
+            amount: amountInUnits.toString(),
+            paymentMethod,
+            comment: message.trim()
+          });
+          
+          tipTx = await (tipRouterContract.connect(signer) as any).tipWithComment(
+            postIdBytes32,
+            creatorAddress,
+            amountInUnits,
+            paymentMethod,
+            message.trim()
+          );
+        } else {
+          console.log('Sending tip...', {
+            postId: postIdBytes32,
+            creatorAddress,
+            amount: amountInUnits.toString(),
+            paymentMethod
+          });
+          
+          tipTx = await (tipRouterContract.connect(signer) as any).tip(
+            postIdBytes32,
+            creatorAddress,
+            amountInUnits,
+            paymentMethod
+          );
+        }
         
-        tipTx = await (tipRouterContract.connect(signer) as any).tipWithComment(
-          postIdBytes32,
-          creatorAddress,
-          amountInUnits,
-          paymentMethod,
-          message.trim()
-        );
-      } else {
-        console.log('Sending tip...', {
-          postId: postIdBytes32,
-          creatorAddress,
-          amount: amountInUnits.toString(),
-          paymentMethod
-        });
-        
-        tipTx = await (tipRouterContract.connect(signer) as any).tip(
-          postIdBytes32,
-          creatorAddress,
-          amountInUnits,
-          paymentMethod
-        );
+        console.log('Tip transaction sent:', tipTx.hash);
+      } catch (tipError: any) {
+        console.error('Tip transaction failed:', tipError);
+        throw new Error(`Tip transaction failed: ${tipError.message || 'Unknown error'}`);
       }
-      
-      console.log('Tip transaction sent:', tipTx.hash);
 
       // Wait for transaction confirmation
       const receipt = await tipTx.wait();
@@ -303,7 +355,7 @@ export class TipService {
       });
 
       return { ...tip, transactionHash: tipTx.hash };
-    } catch (error) {
+    } catch (error: any) {
       clearTimeout(timeoutId);
 
       if (error instanceof Error && error.name === 'AbortError') {
@@ -548,17 +600,21 @@ export class TipService {
     };
 
     const envVarName = tokenEnvVars[currency as keyof typeof tokenEnvVars];
+    console.log('Getting token contract for currency:', currency, 'using env var:', envVarName);
+    
     if (!envVarName) {
       throw new Error(`Unsupported currency: ${currency}`);
     }
 
     const address = process.env[envVarName];
+    console.log('Token address from env:', address);
+    
     if (!address) {
       throw new Error(`Token address not configured for ${currency} (${envVarName})`);
     }
 
     // Standard ERC20 ABI with common functions needed for tipping
-    return new ethers.Contract(
+    const contract = new ethers.Contract(
       address,
       [
         'function approve(address spender, uint256 amount) returns (bool)',
@@ -570,6 +626,9 @@ export class TipService {
       ],
       TipService.provider!
     );
+    
+    console.log('Token contract created successfully for:', currency);
+    return contract;
   }
 
   /**
@@ -577,12 +636,14 @@ export class TipService {
    */
   private static async getTipRouterContract(): Promise<ethers.Contract> {
     const address = process.env.NEXT_PUBLIC_TIP_ROUTER_ADDRESS;
+    console.log('Getting TipRouter contract with address:', address);
+    
     if (!address) {
       throw new Error('TipRouter contract address not configured');
     }
 
     // Make sure the ABI matches the actual contract methods
-    return new ethers.Contract(
+    const contract = new ethers.Contract(
       address,
       [
         'function tip(bytes32 postId, address creator, uint256 amount, uint8 paymentMethod) payable',
@@ -593,6 +654,9 @@ export class TipService {
       ],
       TipService.provider!
     );
+    
+    console.log('TipRouter contract created successfully');
+    return contract;
   }
 
   /**
