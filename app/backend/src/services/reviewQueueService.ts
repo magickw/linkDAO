@@ -3,6 +3,9 @@ import { sql, eq } from 'drizzle-orm';
 import * as schema from '../db/schema';
 import { safeLogger } from '../utils/safeLogger';
 import { redisService } from './redisService';
+import { ModerationCase } from './advancedModerationWorkflowsService';
+import { ContentReport } from './advancedModeration';
+import { ModeratorProfile } from './moderatorAuthService';
 
 export interface QueueFilters {
   status?: string[];

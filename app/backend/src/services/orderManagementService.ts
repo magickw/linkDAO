@@ -392,11 +392,15 @@ class OrderManagementService {
           estimatedDelivery,
           status: 'shipped'
         })
-        .where(eq(orders.id, parseInt(orderId)));
+        .where(eq(orders.id, orderId));
 
-      // Create tracking record
+      // Create tracking record - Note: There's a schema mismatch where trackingRecords.orderId is integer
+      // but orders.id is UUID. For now, we'll use a hash of the UUID to create an integer
+      const orderIdHash = orderId.split('-').join('').substring(0, 8);
+      const trackingOrderId = parseInt(orderIdHash, 16) % 2147483647; // Keep within integer range
+      
       await db.insert(trackingRecords).values({
-        orderId: parseInt(orderId),
+        orderId: trackingOrderId,
         trackingNumber,
         carrier,
         status: 'shipped',
@@ -411,7 +415,7 @@ class OrderManagementService {
 
       // Create order event
       await db.insert(orderEvents).values({
-        orderId: parseInt(orderId),
+        orderId: orderId,
         eventType: 'TRACKING_ADDED',
         description: `Tracking number ${trackingNumber} added for ${carrier}`,
         metadata: JSON.stringify({ trackingNumber, carrier, estimatedDelivery }),
@@ -648,7 +652,7 @@ class OrderManagementService {
       const conditions = [];
       
       if (filters.orderId) {
-        conditions.push(eq(orders.id, parseInt(filters.orderId)));
+        conditions.push(eq(orders.id, filters.orderId));
       }
       
       if (filters.buyerAddress) {

@@ -453,7 +453,7 @@ class TokenReactionService {
 
       return userReactions.map(r => ({
         id: r.id,
-        postId: r.postId!,
+        postId: (r as any).postId || (r as any).quickPostId, // Handle both postId and quickPostId
         userId: r.userId!,
         type: r.type as ReactionType,
         amount: parseFloat(r.amount),

@@ -177,7 +177,7 @@ export class ResolutionRecommendationService {
             outcome: this.parseDisputeOutcome(resolvedDispute),
             factors: this.extractCaseFactors(resolvedDispute),
             dateResolved: new Date(resolvedDispute.resolvedAt!),
-            arbitrator: resolvedDispute.resolverId || 'system',
+            arbitrator: 'system', // resolverId field doesn't exist in disputes table
             satisfaction: await this.getCaseSatisfactionScore(resolvedDispute.id)
           };
           
@@ -432,7 +432,7 @@ export class ResolutionRecommendationService {
     const [dispute] = await db.select().from(disputes).where(eq(disputes.id, disputeId)).limit(1);
     const evidence = await db.select().from(disputeEvidence).where(eq(disputeEvidence.disputeId, disputeId));
     const [escrow] = dispute?.escrowId ? 
-      await db.select().from(escrows).where(eq(escrows.id, dispute.escrowId)).limit(1) : [null];
+      await db.execute(sql`SELECT * FROM escrows WHERE id = ${dispute.escrowId} LIMIT 1`) : [null];
 
     return { dispute, evidence, escrow };
   }

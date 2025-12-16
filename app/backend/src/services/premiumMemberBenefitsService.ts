@@ -326,13 +326,15 @@ export class PremiumMemberBenefitsService {
       for (const position of positions) {
         const amount = ethers.parseEther(position.amount);
         totalStaked += amount;
-        weightedApr += position.aprRate * parseFloat(position.amount);
+        weightedApr += parseFloat(position.aprRate) * parseFloat(position.amount);
         
-        if (!tierDistribution[position.tierId]) {
-          tierDistribution[position.tierId] = "0";
+        // Use lockPeriod as a proxy for tier
+        const tierId = position.lockPeriod || 1;
+        if (!tierDistribution[tierId]) {
+          tierDistribution[tierId] = "0";
         }
-        tierDistribution[position.tierId] = ethers.formatEther(
-          ethers.parseEther(tierDistribution[position.tierId]) + amount
+        tierDistribution[tierId] = ethers.formatEther(
+          ethers.parseEther(tierDistribution[tierId]) + amount
         );
       }
 
@@ -394,21 +396,21 @@ export class PremiumMemberBenefitsService {
       const optimalRebalancing = [];
       
       // Simple rebalancing logic - move from lowest APR to highest APR tiers
-      const sortedPositions = positions.sort((a, b) => a.aprRate - b.aprRate);
+      const sortedPositions = positions.sort((a, b) => parseFloat(a.aprRate) - parseFloat(b.aprRate));
       if (sortedPositions.length > 1) {
         const lowestApr = sortedPositions[0];
         const highestApr = sortedPositions[sortedPositions.length - 1];
         
-        if (highestApr.aprRate - lowestApr.aprRate > 500) { // 5% difference
+        if (parseFloat(highestApr.aprRate) - parseFloat(lowestApr.aprRate) > 500) { // 5% difference
           const suggestedAmount = ethers.formatEther(
             ethers.parseEther(lowestApr.amount) / BigInt(2)
           );
-          const expectedGain = (parseFloat(suggestedAmount) * (highestApr.aprRate - lowestApr.aprRate)) / 10000;
+          const expectedGain = (parseFloat(suggestedAmount) * (parseFloat(highestApr.aprRate) - parseFloat(lowestApr.aprRate))) / 10000;
           
           optimalRebalancing.push({
             suggested: true,
-            fromTier: lowestApr.tierId,
-            toTier: highestApr.tierId,
+            fromTier: lowestApr.lockPeriod || 1,
+            toTier: highestApr.lockPeriod || 1,
             amount: suggestedAmount,
             expectedGain: expectedGain.toFixed(6)
           });

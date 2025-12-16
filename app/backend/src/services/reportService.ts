@@ -64,11 +64,9 @@ export class ReportService {
     // Insert the report
     const [report] = await db.insert(contentReports).values({
       contentId,
-      contentType,
       reporterId,
       reason,
       details,
-      category,
       weight: weight.toString(),
       status: 'open'
     }).returning();
@@ -361,7 +359,6 @@ export class ReportService {
       .update(contentReports)
       .set({
         status,
-        moderatorId,
         resolution: metadata?.resolution,
         moderatorNotes: metadata?.moderatorNotes,
         updatedAt: sql`NOW()`

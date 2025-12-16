@@ -282,6 +282,7 @@ export interface ProductAnalytics {
   productId: string;
   views: number;
   favorites: number;
+  salesCount: number;
   orders: number;
   revenue: string;
   conversionRate: number;

@@ -272,7 +272,7 @@ export class OrderPaymentIntegrationService {
     try {
       safeLogger.info(`🔄 Syncing order ${orderId} with payment status ${paymentStatus}`);
 
-      const order = await this.databaseService.getOrderById(parseInt(orderId));
+      const order = await this.databaseService.getOrderById(orderId);
       if (!order) {
         throw new Error('Order not found');
       }
@@ -307,7 +307,7 @@ export class OrderPaymentIntegrationService {
 
       // Update order status if changed
       if (newOrderStatus !== order.status) {
-        await this.databaseService.updateOrder(parseInt(orderId), {
+        await this.databaseService.updateOrder(orderId, {
           status: newOrderStatus,
           paymentConfirmationHash: paymentDetails?.transactionHash
         });
@@ -335,7 +335,7 @@ export class OrderPaymentIntegrationService {
    */
   async getOrderPaymentStatus(orderId: string): Promise<OrderPaymentStatus | null> {
     try {
-      const order = await this.databaseService.getOrderById(parseInt(orderId));
+      const order = await this.databaseService.getOrderById(orderId);
       if (!order) {
         return null;
       }
@@ -528,7 +528,7 @@ export class OrderPaymentIntegrationService {
         throw new Error('Payment cannot be retried');
       }
 
-      const order = await this.databaseService.getOrderById(parseInt(orderId));
+      const order = await this.databaseService.getOrderById(orderId);
       if (!order) {
         throw new Error('Order not found');
       }
@@ -753,7 +753,7 @@ export class OrderPaymentIntegrationService {
   }
 
   private async getPaymentTransactionsByOrderId(orderId: string): Promise<PaymentTransaction[]> {
-    const dbTransactions = await this.databaseService.getPaymentTransactionsByOrderId(parseInt(orderId));
+    const dbTransactions = await this.databaseService.getPaymentTransactionsByOrderId(orderId);
     return dbTransactions.map(dbTransaction => ({
       id: dbTransaction.id,
       orderId: dbTransaction.orderId.toString(),
@@ -779,7 +779,7 @@ export class OrderPaymentIntegrationService {
   }
 
   private async updateOrderPaymentInfo(orderId: string, paymentInfo: any): Promise<void> {
-    await this.databaseService.updateOrder(parseInt(orderId), {
+    await this.databaseService.updateOrder(orderId, {
       paymentMethod: paymentInfo.paymentMethod,
       paymentDetails: paymentInfo.paymentDetails,
       paymentConfirmationHash: paymentInfo.transactionHash
@@ -792,7 +792,7 @@ export class OrderPaymentIntegrationService {
     message: string,
     metadata?: any
   ): Promise<void> {
-    await this.databaseService.createOrderEvent(parseInt(orderId), status, message, JSON.stringify(metadata));
+    await this.databaseService.createOrderEvent(orderId, status, message, JSON.stringify(metadata));
   }
 
   private async sendBuyerNotification(
@@ -827,7 +827,7 @@ export class OrderPaymentIntegrationService {
     paymentStatus: PaymentTransactionStatus
   ): Promise<boolean> {
     try {
-      const order = await this.databaseService.getOrderById(parseInt(orderId));
+      const order = await this.databaseService.getOrderById(orderId);
       if (!order) return false;
 
       const notificationType = this.getNotificationTypeForStatus(orderStatus, paymentStatus, 'seller');
@@ -882,7 +882,7 @@ export class OrderPaymentIntegrationService {
   }
 
   private async getPaymentReceiptsByOrderId(orderId: string): Promise<PaymentReceipt[]> {
-    const dbReceipts = await this.databaseService.getPaymentReceiptsByOrderId(parseInt(orderId));
+    const dbReceipts = await this.databaseService.getPaymentReceiptsByOrderId(orderId);
     return dbReceipts.map(dbReceipt => ({
       id: dbReceipt.id,
       transactionId: dbReceipt.transactionId,

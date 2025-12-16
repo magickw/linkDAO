@@ -1,8 +1,9 @@
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
+import { db } from '../db';
 import { 
   orders, 
-  products, 
+  listings, 
   users, 
   trackingRecords,
   disputes,
@@ -21,7 +22,7 @@ export class OrderMessagingAutomation {
   /**
    * Handle order created event
    */
-  async onOrderCreated(orderId: number) {
+  async onOrderCreated(orderId: string) {
     try {
       // 1. Create conversation
       const conversation = await this.marketplaceMessaging.createOrderConversation(orderId);
@@ -32,7 +33,7 @@ export class OrderMessagingAutomation {
         with: {
           buyer: true,
           seller: true,
-          product: true
+          listing: true
         }
       });
 
@@ -89,10 +90,8 @@ export class OrderMessagingAutomation {
         }
       );
 
-      // Link tracking to conversation
-      await db.update(trackingRecords)
-        .set({ conversationId: conversation.id })
-        .where(eq(trackingRecords.id, trackingInfo.id));
+      // Note: trackingRecords doesn't have conversationId column in current schema
+      // The tracking is already linked via orderId
 
       return conversation;
     } catch (error) {
@@ -104,7 +103,7 @@ export class OrderMessagingAutomation {
   /**
    * Handle payment received event
    */
-  async onPaymentReceived(orderId: number, payment: any) {
+  async onPaymentReceived(orderId: string, payment: any) {
     try {
       // Get conversation for order
       const conversation = await this.getOrderConversation(orderId);
@@ -138,15 +137,6 @@ export class OrderMessagingAutomation {
       // Get dispute details
       const dispute = await db.query.disputes.findFirst({
         where: eq(disputes.id, disputeId),
-        with: {
-          order: {
-            with: {
-              buyer: true,
-              seller: true,
-              product: true
-            }
-          }
-        }
       });
 
       if (!dispute || !dispute.orderId) {
@@ -171,10 +161,8 @@ export class OrderMessagingAutomation {
         })
         .where(eq(conversations.id, conversation.id));
 
-      // Link dispute to conversation
-      await db.update(disputes)
-        .set({ conversationId: conversation.id })
-        .where(eq(disputes.id, disputeId));
+      // Note: disputes table doesn't have conversationId column in current schema
+      // The dispute is linked to the conversation via orderId
 
       // Add moderator to conversation (simplified - in practice would assign actual moderator)
       // This would typically involve getting an actual moderator user

@@ -199,7 +199,7 @@ export class OrderTrackingService {
    */
   async getOrderById(orderId: string, userAddress: string): Promise<MarketplaceOrder | null> {
     try {
-      const dbOrder = await this.databaseService.getOrderById(parseInt(orderId));
+      const dbOrder = await this.databaseService.getOrderById(orderId);
       if (!dbOrder) return null;
 
       // Verify user has access to this order
@@ -320,13 +320,13 @@ export class OrderTrackingService {
         throw new ForbiddenError('User not found');
       }
 
-      const dbOrder = await this.databaseService.getOrderById(parseInt(orderId));
+      const dbOrder = await this.databaseService.getOrderById(orderId);
       if (!dbOrder || dbOrder.sellerId !== user.id) {
         throw new ForbiddenError('Only sellers can update order status');
       }
 
       // Update order status
-      await this.databaseService.updateOrder(parseInt(orderId), { 
+      await this.databaseService.updateOrder(orderId, { 
         status: status.toLowerCase() 
       });
 
@@ -373,7 +373,7 @@ export class OrderTrackingService {
         throw new ForbiddenError('User not found');
       }
 
-      const dbOrder = await this.databaseService.getOrderById(parseInt(orderId));
+      const dbOrder = await this.databaseService.getOrderById(orderId);
       if (!dbOrder || dbOrder.sellerId !== user.id) {
         throw new ForbiddenError('Only sellers can add tracking information');
       }
@@ -388,7 +388,7 @@ export class OrderTrackingService {
         updateData.estimatedDelivery = new Date(estimatedDelivery);
       }
 
-      await this.databaseService.updateOrder(parseInt(orderId), updateData);
+      await this.databaseService.updateOrder(orderId, updateData);
 
       // Create tracking record
       await this.databaseService.createTrackingRecord(
@@ -438,13 +438,13 @@ export class OrderTrackingService {
         throw new ForbiddenError('User not found');
       }
 
-      const dbOrder = await this.databaseService.getOrderById(parseInt(orderId));
+      const dbOrder = await this.databaseService.getOrderById(orderId);
       if (!dbOrder || dbOrder.buyerId !== user.id) {
         throw new ForbiddenError('Only buyers can confirm delivery');
       }
 
       // Update order status to delivered
-      await this.databaseService.updateOrder(parseInt(orderId), {
+      await this.databaseService.updateOrder(orderId, {
         status: 'delivered',
         actualDelivery: new Date(),
         deliveryConfirmation: deliveryInfo ? JSON.stringify(deliveryInfo) : undefined

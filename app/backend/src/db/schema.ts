@@ -4559,6 +4559,11 @@ export const returns = pgTable('returns', {
   shippedAt: timestamp('shipped_at'),
   receivedAt: timestamp('received_at'),
   inspectedAt: timestamp('inspected_at'),
+  inspectedBy: uuid('inspected_by'),
+  itemCondition: varchar('item_condition', { length: 20 }), // 'as_new', 'good', 'acceptable', 'damaged', 'unusable'
+  inspectionNotes: text('inspection_notes'),
+  inspectionPhotos: text('inspection_photos'), // JSON string of photo URLs
+  inspectionPassed: boolean('inspection_passed'),
   refundedAt: timestamp('refunded_at'),
   completedAt: timestamp('completed_at'),
   createdAt: timestamp('created_at').defaultNow(),

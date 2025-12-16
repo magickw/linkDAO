@@ -387,7 +387,7 @@ export class CommunityPostService {
 
       // Add development token if needed
       if (!authHeaders['Authorization'] && ENV_CONFIG.IS_DEVELOPMENT) {
-        const devToken = `dev_session_${Date.now()}_0xee034b53d4ccb101b2a4faec27708be507197350_${Date.now()}`;
+        const devToken = `dev_session_${data.author || '0xee034b53d4ccb101b2a4faec27708be507197350'}_${Date.now()}`;
         authHeaders['Authorization'] = `Bearer ${devToken}`;
         console.log('Using development token');
       }
@@ -422,22 +422,25 @@ export class CommunityPostService {
           }
         });
 
-// Use global fetch wrapper which handles token refresh automatically
-        const { post } = await import('./globalFetchWrapper');
-        const response = await post(`${BACKEND_API_BASE_URL}/api/feed/${data.postId}/comments`, {
-          author: data.author,
-          content: data.content,
-          parentCommentId: data.parentId,
-          media: data.media
-        });
+        // Use global fetch wrapper which handles token refresh automatically
+        try {
+          const { post } = await import('./globalFetchWrapper');
+          const fallbackResponse = await post(`${BACKEND_API_BASE_URL}/api/feed/${data.postId}/comments`, {
+            author: data.author,
+            content: data.content,
+            parentCommentId: data.parentId,
+            media: data.media
+          });
 
-        if (!response.success) {
-          throw new Error(response.error || 'Failed to create comment');
+          if (!fallbackResponse.success) {
+            throw new Error(fallbackResponse.error || 'Failed to create comment');
+          }
+
+          return fallbackResponse.data;
+        } catch (fallbackError) {
+          console.error('Fallback request also failed:', fallbackError);
+          throw new Error(error.error || error.message || `Failed to create comment: ${response.statusText}`);
         }
-
-        return response.data;
-
-        throw new Error(error.error || error.message || `Failed to create comment: ${response.statusText}`);
       }
 
       const result = await response.json();

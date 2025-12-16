@@ -257,7 +257,7 @@ export class PreferenceOverrideService {
           )
         );
 
-      const deleted = (result.rowCount || 0) > 0;
+      const deleted = Array.isArray(result) ? result.length > 0 : false;
       
       if (deleted) {
         safeLogger.info(`Removed override ${overrideId} for user ${userId}`);
@@ -279,7 +279,7 @@ export class PreferenceOverrideService {
         .delete(paymentMethodPreferenceOverrides)
         .where(eq(paymentMethodPreferenceOverrides.userId, userId));
 
-      const deletedCount = result.rowCount || 0;
+      const deletedCount = Array.isArray(result) ? result.length : 0;
       safeLogger.info(`Removed ${deletedCount} overrides for user ${userId}`);
       return deletedCount;
     } catch (error) {
@@ -305,7 +305,7 @@ export class PreferenceOverrideService {
           )
         );
 
-      const deletedCount = result.rowCount || 0;
+      const deletedCount = Array.isArray(result) ? result.length : 0;
       safeLogger.info(`Removed ${deletedCount} ${overrideType} overrides for user ${userId}`);
       return deletedCount;
     } catch (error) {
@@ -491,7 +491,7 @@ export class PreferenceOverrideService {
           )
         );
 
-      const deletedCount = result.rowCount || 0;
+      const deletedCount = Array.isArray(result) ? result.length : 0;
       if (deletedCount > 0) {
         safeLogger.info(`Cleaned up ${deletedCount} expired preference overrides`);
       }

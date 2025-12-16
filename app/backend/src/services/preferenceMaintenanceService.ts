@@ -265,7 +265,7 @@ export class PreferenceMaintenanceService {
         .delete(paymentMethodPreferences)
         .where(lt(paymentMethodPreferences.createdAt, cutoffDate));
 
-      const deletedCount = result.rowCount || 0;
+      const deletedCount = Array.isArray(result) ? result.length : 0;
       safeLogger.info(`Cleaned up ${deletedCount} old usage history records`);
       return deletedCount;
     } catch (error) {

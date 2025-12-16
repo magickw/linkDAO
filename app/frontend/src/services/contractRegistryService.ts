@@ -96,7 +96,22 @@ export class ContractRegistryService {
     }
 
     // If registry is not available, use fallback addresses
-    if (!this.registry || (await this.provider.getNetwork()).chainId === 31337) {
+    // Fix: Check if provider has getNetwork method before calling it
+    let isLocalNetwork = false;
+    try {
+      if (this.provider && typeof this.provider.getNetwork === 'function') {
+        const network = await this.provider.getNetwork();
+        isLocalNetwork = network.chainId === 31337n;
+      } else if (this.provider && this.provider.chain) {
+        // Handle wagmi PublicClient
+        isLocalNetwork = this.provider.chain.id === 31337;
+      }
+    } catch (error) {
+      console.warn('Failed to get network info, assuming not local network:', error);
+      isLocalNetwork = false;
+    }
+
+    if (!this.registry || isLocalNetwork) {
       const fallbackAddress = this.getFallbackAddress(name);
       if (fallbackAddress) {
         this.cache.set(name, fallbackAddress);

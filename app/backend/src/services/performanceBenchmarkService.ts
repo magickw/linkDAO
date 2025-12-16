@@ -521,7 +521,7 @@ export class PerformanceBenchmarkService {
       const benchmark = this.getIndustryBenchmark(industrySegment || 'ecommerce_general');
       
       // Calculate benchmark comparisons
-      const metrics = this.calculateBenchmarkComparisons(performanceData, benchmark);
+      const metrics = await this.calculateBenchmarkComparisons(performanceData, benchmark, sellerId);
       
       // Calculate overall score and ranking
       const overallScore = this.calculateOverallScore(metrics);
@@ -555,9 +555,10 @@ export class PerformanceBenchmarkService {
       await this.storeBenchmarkData(benchmarkData);
 
       // Log benchmark generation
-      await comprehensiveAuditService.logEvent({
-        action: 'benchmark_generated',
+      await comprehensiveAuditService.recordAuditEvent({
+        actionType: 'benchmark_generated',
         actorId: 'system',
+        actorType: 'system',
         resourceType: 'SELLER',
         resourceId: sellerId,
         details: {
@@ -614,10 +615,11 @@ export class PerformanceBenchmarkService {
   /**
    * Calculate benchmark comparisons
    */
-  private calculateBenchmarkComparisons(
+  private async calculateBenchmarkComparisons(
     performanceData: Record<string, number>,
-    benchmark: IndustryBenchmark
-  ): BenchmarkMetric[] {
+    benchmark: IndustryBenchmark,
+    sellerId: string
+  ): Promise<BenchmarkMetric[]> {
     const metrics: BenchmarkMetric[] = [];
 
     for (const [metricId, currentValue] of Object.entries(performanceData)) {
@@ -1778,9 +1780,10 @@ export class PerformanceBenchmarkService {
         const updatedBenchmark = { ...existingBenchmark, ...updates };
         this.INDUSTRY_BENCHMARKS.set(benchmarkId, updatedBenchmark);
         
-        await comprehensiveAuditService.logEvent({
-          action: 'industry_benchmark_updated',
+        await comprehensiveAuditService.recordAuditEvent({
+          actionType: 'industry_benchmark_updated',
           actorId: 'system',
+          actorType: 'system',
           resourceType: 'INDUSTRY_BENCHMARK',
           resourceId: benchmarkId,
           details: updates
@@ -1855,9 +1858,10 @@ export class PerformanceBenchmarkService {
       await this.storePerformanceTarget(target);
 
       // Log target creation
-      await comprehensiveAuditService.logEvent({
-        action: 'performance_target_set',
+      await comprehensiveAuditService.recordAuditEvent({
+        actionType: 'performance_target_set',
         actorId: createdBy,
+        actorType: 'user',
         resourceType: 'SELLER',
         resourceId: sellerId,
         details: {
@@ -1972,9 +1976,10 @@ export class PerformanceBenchmarkService {
       await this.storePerformanceTarget(updatedTarget);
 
       // Log target update
-      await comprehensiveAuditService.logEvent({
-        action: 'performance_target_updated',
+      await comprehensiveAuditService.recordAuditEvent({
+        actionType: 'performance_target_updated',
         actorId: updatedBy,
+        actorType: 'user',
         resourceType: 'PERFORMANCE_TARGET',
         resourceId: targetId,
         details: {

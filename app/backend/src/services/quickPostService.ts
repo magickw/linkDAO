@@ -210,7 +210,7 @@ export class QuickPostService {
         .delete(quickPosts)
         .where(eq(quickPosts.id, id));
 
-      if (result.rowCount > 0) {
+      if (result && result.length > 0) {
         safeLogger.info(`Quick post deleted successfully: ${id}`);
 
         // Update trending cache

@@ -3,7 +3,7 @@ import { ethers } from 'ethers';
 import axios from 'axios';
 import { safeLogger } from '../utils/logger';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-11-20.acacia' });
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2023-10-16' });
 
 export interface RefundResult {
   success: boolean;
@@ -29,7 +29,7 @@ export class RefundPaymentService {
       const refund = await stripe.refunds.create({
         payment_intent: paymentIntentId,
         amount: Math.round(amount * 100),
-        reason: reason || 'requested_by_customer'
+        reason: (reason as any) || 'requested_by_customer'
       });
       
       safeLogger.info(`Stripe refund completed: ${refund.id} for amount: ${amount}`);
@@ -135,7 +135,7 @@ export class RefundPaymentService {
         throw new Error('Blockchain configuration not available');
       }
 
-      const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL);
+      const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
       const wallet = new ethers.Wallet(process.env.REFUND_WALLET_PRIVATE_KEY, provider);
 
       let tx;
@@ -245,7 +245,7 @@ export class RefundPaymentService {
           };
         case 'blockchain':
           // Check transaction status on the blockchain
-          const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL);
+          const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
           const receipt = await provider.getTransactionReceipt(refundId);
           
           return {

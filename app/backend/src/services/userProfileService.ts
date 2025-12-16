@@ -302,7 +302,7 @@ export class UserProfileService {
         website: dbUser.website || '', // Website is now stored in database column
         physicalAddress: decryptedData,
         email: decryptedData.email || '',
-        lockedUntil: dbUser.lockedUntil ? new Date(dbUser.lockedUntil) : undefined,
+        // lockedUntil field doesn't exist in UserProfile type
         // Read billing/shipping fields from database columns with fallback to decryptedData
         billingFirstName: dbUser.billingFirstName || decryptedData.billingFirstName || '',
         billingLastName: dbUser.billingLastName || decryptedData.billingLastName || '',

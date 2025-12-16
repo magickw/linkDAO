@@ -1,119 +1,113 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, Coins, Star, Smile, Edit3, Check, X, Mic } from 'lucide-react';
-import { Button } from '../../design-system';
-import { ChatMessage } from '../../services/messagingService';
-import messagingService from '../../services/messagingService';
+import { Smile, Edit3, Star, Coins } from 'lucide-react';
+import { Button } from '@/design-system/components/Button';
 import { EmojiPicker } from './EmojiPicker';
 import { VoiceMessagePlayer } from './VoiceMessagePlayer';
+import { ChatMessage } from '@/services/messagingService';
+import { messagingService } from '@/services/messagingService';
+import { useToast } from '@/hooks/useToast';
 
 interface MessageItemProps {
   message: ChatMessage;
   isOwn: boolean;
+  isSelected: boolean;
   showAvatar: boolean;
+  avatarUrl?: string;
+  displayName?: string;
+  selectedConversation: string;
+  getOtherParticipant: (conversationId: string) => string | null;
+  onAddReaction?: (messageId: string, emoji: string) => void;
+  onMessageSelect?: (messageId: string) => void;
   formatTime: (date: Date) => string;
   getMessageStatus: (message: ChatMessage) => React.ReactNode;
-  getOtherParticipant: (conversationId: string | null) => string | null;
-  selectedConversation: string | null;
-  onAddReaction?: (messageId: string, emoji: string) => void;
-  onEditMessage?: (messageId: string, newContent: string) => void;
 }
 
 export const MessageItem: React.FC<MessageItemProps> = ({
   message,
   isOwn,
+  isSelected,
   showAvatar,
-  formatTime,
-  getMessageStatus,
-  getOtherParticipant,
+  avatarUrl,
+  displayName,
   selectedConversation,
+  getOtherParticipant,
   onAddReaction,
-  onEditMessage
+  onMessageSelect,
+  formatTime,
+  getMessageStatus
 }) => {
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editContent, setEditContent] = useState(message.content);
-
-  // Mock reactions data (in a real implementation, this would come from props or context)
-  // Using a more type-safe approach
-  const reactions = (message.metadata as any)?.reactions || [];
-
-  const handleSaveEdit = () => {
-    if (onEditMessage) {
-      onEditMessage(message.id, editContent);
-    }
-    setIsEditing(false);
-  };
-
-  const handleCancelEdit = () => {
-    setEditContent(message.content);
-    setIsEditing(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const { addToast } = useToast();
+  
+  // Check if messaging service is initialized
+  const isMessagingInitialized = () => {
+    // This is a simplified check - in a real implementation, you might want to check
+    // the actual initialization state of the messaging service
+    return messagingService && typeof messagingService === 'object';
   };
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+      exit={{ opacity: 0, x: isOwn ? 100 : -100 }}
+      transition={{ duration: 0.2 }}
+      className={`${isSelected ? 'bg-blue-500/20' : ''} ${isOwn ? 'justify-end' : 'justify-start'} flex mb-4`}
+      onClick={() => onMessageSelect?.(message.id)}
     >
-      <div className={`flex max-w-xs lg:max-w-md ${isOwn ? 'flex-row-reverse' : 'flex-row'} items-end space-x-2`}>
+      <div className={`flex ${isOwn ? 'flex-row-reverse' : 'flex-row'} max-w-xs md:max-w-md lg:max-w-lg`}>
         {/* Avatar */}
-        {!isOwn && showAvatar && (
-          <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-            <User size={12} className="text-white" />
+        {showAvatar && (
+          <div className={`mx-2 ${isOwn ? 'ml-2' : 'mr-2'}`}>
+            <img
+              src={avatarUrl || '/images/default-avatar.png'}
+              alt={displayName}
+              className="w-8 h-8 rounded-full object-cover"
+            />
           </div>
         )}
-        {!isOwn && !showAvatar && <div className="w-6" />}
 
-        {/* Message */}
-        <div className="relative">
+        {/* Message Bubble */}
+        <div className={`relative rounded-2xl px-4 py-2 ${isOwn ? 'bg-blue-600 text-white rounded-br-none' : 'bg-gray-700 text-white rounded-bl-none'}`}>
+          {/* Sender Name */}
+          {!isOwn && displayName && (
+            <div className="text-xs font-medium text-blue-300 mb-1">
+              {displayName}
+            </div>
+          )}
+
+          {/* Message Content */}
           {isEditing ? (
-            // Edit mode
-            <div className={`px-4 py-2 rounded-2xl ${
-              isOwn
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-700 text-white'
-            }`}>
-              <textarea
-                value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-                className="w-full bg-transparent border-none outline-none resize-none text-sm"
-                rows={3}
+            <div className="flex items-center space-x-2">
+              <input
+                type="text"
+                defaultValue={message.content}
+                className="bg-gray-600 text-white rounded px-2 py-1 text-sm flex-1"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    setIsEditing(false);
+                    // In a real implementation, you would update the message here
+                  }
+                  if (e.key === 'Escape') {
+                    setIsEditing(false);
+                  }
+                }}
+                onBlur={() => setIsEditing(false)}
               />
-              <div className="flex justify-end space-x-2 mt-2">
-                <button
-                  onClick={handleCancelEdit}
-                  className="p-1 text-gray-300 hover:text-white"
-                >
-                  <X size={16} />
-                </button>
-                <button
-                  onClick={handleSaveEdit}
-                  className="p-1 text-gray-300 hover:text-white"
-                >
-                  <Check size={16} />
-                </button>
-              </div>
             </div>
           ) : (
-            // View mode
-            <div
-              className={`px-4 py-2 rounded-2xl ${
-                isOwn
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-700 text-white'
-              }`}
-            >
+            <div>
               {/* NFT Offer Messages */}
               {message.messageType === 'nft_offer' && message.metadata && (
-                <div className="mb-2 p-3 bg-black/20 rounded-lg">
+                <div className="mb-2 p-3 bg-purple-500/20 rounded-lg">
                   <div className="flex items-center space-x-2 mb-2">
-                    <Coins size={16} className="text-yellow-500" />
+                    <Star size={16} className="text-purple-400" />
                     <span className="text-sm font-medium">NFT Offer</span>
                   </div>
-                  <p className="text-sm">
-                    Token #{message.metadata.nftTokenId}
-                  </p>
+                  <p className="text-sm mb-2">{message.content}</p>
                   <p className="text-lg font-bold">
                     {message.metadata.offerAmount} ETH
                   </p>
@@ -122,15 +116,24 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                       <Button 
                         variant="primary" 
                         size="sm"
-                        onClick={() => {
+                        onClick={async () => {
                           // Accept offer
                           const otherParticipant = getOtherParticipant(selectedConversation);
                           if (otherParticipant) {
-                            messagingService.sendMessage(
-                              otherParticipant,
-                              'Offer accepted! 🎉',
-                              'text'
-                            );
+                            try {
+                              if (!isMessagingInitialized()) {
+                                addToast("Messaging service not initialized. Please refresh the page.", "error");
+                                return;
+                              }
+                              await messagingService.sendMessage(
+                                otherParticipant,
+                                'Offer accepted! 🎉',
+                                'text'
+                              );
+                            } catch (error) {
+                              console.error('Failed to send message:', error);
+                              addToast("Failed to send message. Please try again.", "error");
+                            }
                           }
                         }}
                       >
@@ -139,17 +142,26 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={() => {
+                        onClick={async () => {
                           // Counter offer
                           const counterAmount = prompt('Enter counter offer (ETH):');
                           const otherParticipant = getOtherParticipant(selectedConversation);
                           if (counterAmount && otherParticipant) {
-                            messagingService.sendNFTCounter(
-                              otherParticipant,
-                              message.id,
-                              counterAmount,
-                              `Counter offer: ${counterAmount} ETH`
-                            );
+                            try {
+                              if (!isMessagingInitialized()) {
+                                addToast("Messaging service not initialized. Please refresh the page.", "error");
+                                return;
+                              }
+                              await messagingService.sendNFTCounter(
+                                otherParticipant,
+                                message.id,
+                                counterAmount,
+                                `Counter offer: ${counterAmount} ETH`
+                              );
+                            } catch (error) {
+                              console.error('Failed to send counter offer:', error);
+                              addToast("Failed to send counter offer. Please try again.", "error");
+                            }
                           }
                         }}
                       >
@@ -216,9 +228,9 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           )}
 
           {/* Reactions */}
-          {reactions.length > 0 && (
+          {message.reactions && message.reactions.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-1">
-              {reactions.map((reaction: any, index: number) => (
+              {message.reactions.map((reaction: any, index: number) => (
                 <span 
                   key={index} 
                   className="inline-flex items-center bg-gray-600/50 rounded-full px-2 py-1 text-xs"

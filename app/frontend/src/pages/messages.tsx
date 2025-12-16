@@ -52,7 +52,7 @@ function getAvatarUrl(profileCid: string | undefined): string | undefined {
 const MessagesPage: React.FC = () => {
   const router = useRouter();
   const { to } = router.query;
-  const { address: account } = useWeb3();
+  const { address: account, signer } = useWeb3();
   
   const formatAddress = (addr: string) => {
     if (!addr) return '';
@@ -70,13 +70,36 @@ const MessagesPage: React.FC = () => {
   const [newMessage, setNewMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [messagingInitialized, setMessagingInitialized] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Initialize messaging service when account/signer changes
+  useEffect(() => {
+    const initializeMessaging = async () => {
+      if (account && signer) {
+        try {
+          await messagingService.initialize(signer);
+          setMessagingInitialized(true);
+        } catch (error) {
+          console.error('Failed to initialize messaging service:', error);
+          setMessagingInitialized(false);
+        }
+      }
+    };
+
+    initializeMessaging();
+  }, [account, signer]);
 
   // Load conversations and messages
   useEffect(() => {
     const loadConversations = async () => {
       try {
         setLoading(true);
+        
+        // Wait for messaging service to be initialized
+        if (!messagingInitialized) {
+          return;
+        }
         
         // Get all conversations from the messaging service
         const allConversations = messagingService.getConversations();
@@ -160,14 +183,14 @@ const MessagesPage: React.FC = () => {
       }
     };
 
-    if (account) {
+    if (account && messagingInitialized) {
       loadConversations();
     }
-  }, [account, to]);
+  }, [account, to, messagingInitialized]);
 
   // Load messages when active conversation changes
   useEffect(() => {
-    if (activeConversation) {
+    if (activeConversation && messagingInitialized) {
       const convMessages = messagingService.getMessages(activeConversation.id);
       
       // Transform to our format
@@ -189,7 +212,7 @@ const MessagesPage: React.FC = () => {
     } else {
       setMessages([]);
     }
-  }, [activeConversation, account]);
+  }, [activeConversation, account, messagingInitialized]);
 
   // Scroll to bottom of messages
   useEffect(() => {
@@ -197,7 +220,7 @@ const MessagesPage: React.FC = () => {
   }, [messages]);
 
   const handleSendMessage = async () => {
-    if (newMessage.trim() === '' || !activeConversation || !account) return;
+    if (newMessage.trim() === '' || !activeConversation || !account || !messagingInitialized) return;
 
     try {
       // Get the recipient address (the other participant in the conversation)
@@ -253,13 +276,13 @@ const MessagesPage: React.FC = () => {
     }
   };
 
-  if (loading) {
+  if (loading || !messagingInitialized) {
     return (
       <Layout title="Messages | LinkDAO" fullWidth={true}>
         <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <p className="text-white">Loading messages...</p>
+            <p className="text-white">{!messagingInitialized ? 'Initializing messaging service...' : 'Loading messages...'}</p>
           </div>
         </div>
       </Layout>
@@ -427,6 +450,7 @@ const MessagesPage: React.FC = () => {
                         <button
                           className="bg-blue-600 hover:bg-blue-700 rounded-r-lg px-4 py-3 text-white transition-colors"
                           onClick={handleSendMessage}
+                          disabled={!messagingInitialized}
                         >
                           <Send size={20} />
                         </button>

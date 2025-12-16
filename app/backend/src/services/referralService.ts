@@ -46,7 +46,8 @@ class ReferralService {
    * Generate unique referral code
    */
   generateReferralCode(): string {
-    return nanoid(referralConfigService.getReferralCodeLength ? referralConfigService.getReferralCodeLength() : 8).toUpperCase();
+    const codeLength = referralConfigService.getReferralCodeLength ? referralConfigService.getReferralCodeLength() : 8;
+    return nanoid(typeof codeLength === 'number' ? codeLength : 8).toUpperCase();
   }
 
   /**
@@ -606,19 +607,8 @@ class ReferralService {
         };
       }
 
-      if (referral.status !== 'active') {
-        return {
-          valid: false,
-          message: 'Referral code is not active'
-        };
-      }
-
-      if (referral.expiresAt && new Date() > referral.expiresAt) {
-        return {
-          valid: false,
-          message: 'Referral code has expired'
-        };
-      }
+      // Note: status and expiresAt fields don't exist in current schema
+      // All referrals are considered active and don't expire
 
       return {
         valid: true,

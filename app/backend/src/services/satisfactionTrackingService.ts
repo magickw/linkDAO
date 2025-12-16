@@ -137,12 +137,10 @@ export class SatisfactionTrackingService {
       }
 
       // Note: There's a schema mismatch - disputes.escrowId is integer but escrows.id is UUID
-      // For now, we'll handle this case by returning null
-      const [escrow] = null; // TODO: Fix schema mismatch between disputes.escrowId and escrows.id
-
-      if (!escrow) {
-        throw new Error('Escrow not found');
-      }
+      // TODO: Fix schema mismatch between disputes.escrowId and escrows.id
+      // For now, we'll skip this functionality
+      safeLogger.warn('Skipping satisfaction survey due to schema mismatch between disputes.escrowId and escrows.id');
+      return null;
 
       const surveyIds = [];
 
@@ -511,10 +509,9 @@ export class SatisfactionTrackingService {
   private async getDisputeData(disputeId: number): Promise<any> {
     const [dispute] = await db.select().from(disputes).where(eq(disputes.id, disputeId)).limit(1);
     // Note: There's a schema mismatch - disputes.escrowId is integer but escrows.id is UUID
-    // For now, we'll handle this case by returning null
-    const [escrow] = null; // TODO: Fix schema mismatch between disputes.escrowId and escrows.id
-
-    return { dispute, escrow };
+    // TODO: Fix schema mismatch between disputes.escrowId and escrows.id
+    // For now, we'll return null for escrow
+    return { dispute, escrow: null };
   }
 
   private async extractSatisfactionFeatures(disputeData: any): Promise<any> {

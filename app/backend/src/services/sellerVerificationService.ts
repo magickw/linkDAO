@@ -5,6 +5,7 @@ import { sellerVerifications } from '../database/schemas/sellerVerification';
 import { sellers } from '../db/schema';
 import { SellerVerification, VerificationRequest } from '../types/sellerVerification';
 import { ValidationError } from '../models/validation';
+import { desc } from 'drizzle-orm';
 
 export class SellerVerificationService {
   /**
@@ -44,7 +45,7 @@ export class SellerVerificationService {
   async getActiveVerification(sellerId: string): Promise<SellerVerification | null> {
     const verifications = await db.select().from(sellerVerifications)
       .where(eq(sellerVerifications.sellerId, sellerId))
-      .orderBy(sellerVerifications.submittedAt, 'desc')
+      .orderBy(desc(sellerVerifications.submittedAt))
       .limit(1);
 
     return verifications[0] || null;
@@ -88,7 +89,7 @@ export class SellerVerificationService {
       
       if (verificationResult.success) {
         await this.approveVerification(verificationId, {
-          verificationMethod: verificationResult.method,
+          verificationMethod: this.mapVerificationMethod(verificationResult.method),
           verificationReference: verificationResult.reference,
           riskScore: verificationResult.riskScore
         });
@@ -477,6 +478,25 @@ export class SellerVerificationService {
           .set({ isVerified: false })
           .where(eq(sellers.id, seller.id));
       }
+    }
+  }
+
+  private mapVerificationMethod(method: string): 'irs_tin_match' | 'trulioo' | 'manual_review' | 'open_corporates' {
+    switch (method.toLowerCase()) {
+      case 'irs':
+      case 'irs_tin':
+      case 'tin_match':
+        return 'irs_tin_match';
+      case 'trulioo':
+        return 'trulioo';
+      case 'manual':
+      case 'manual_review':
+        return 'manual_review';
+      case 'open_corporates':
+      case 'opencorporates':
+        return 'open_corporates';
+      default:
+        return 'manual_review';
     }
   }
 }

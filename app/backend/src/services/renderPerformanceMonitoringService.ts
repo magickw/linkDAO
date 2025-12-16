@@ -316,10 +316,10 @@ export class RenderPerformanceMonitoringService {
 
     // Performance analysis
     const performanceStats = performanceMonitoringService.getHealthStatus();
-    if (performanceStats.status === 'unhealthy') {
+    if (performanceStats.status === 'critical') {
       this.createAlert('performance', 'high',
-        `Performance degradation detected: ${performanceStats.issues.join(', ')}`,
-        { metrics: performanceStats.metrics });
+        `Performance degradation detected: ${performanceStats.checks?.filter(c => c.status === 'fail').map(c => c.message).join(', ') || 'Unknown issues'}`,
+        { metrics: performanceStats.checks });
     }
 
     // Render-specific analysis

@@ -91,42 +91,32 @@ export class PushNotificationService {
       }
 
       // Check if subscription already exists
-      const existingSubscription = await db
-        .select()
-        .from(sql`push_notification_subscriptions`)
-        .where(
-          and(
-            eq(sql`user_id`, userId),
-            eq(sql`endpoint`, subscription.endpoint)
-          )
-        )
-        .limit(1);
+      // Using raw SQL since table is not in schema
+      const existingSubscription = await db.execute(sql`
+        SELECT * FROM push_notification_subscriptions 
+        WHERE user_id = ${userId} AND endpoint = ${subscription.endpoint}
+        LIMIT 1
+      `);
 
       if (existingSubscription.length > 0) {
         // Update existing subscription
-        await db
-          .update(sql`push_notification_subscriptions`)
-          .set({
-            keys: JSON.stringify(subscription.keys),
-            user_agent: userAgent || '',
-            is_active: true,
-            last_used_at: new Date(),
-            updated_at: new Date()
-          })
-          .where(eq(sql`id`, existingSubscription[0].id));
+        await db.execute(sql`
+          UPDATE push_notification_subscriptions 
+          SET keys = ${JSON.stringify(subscription.keys)},
+              user_agent = ${userAgent || ''},
+              is_active = true,
+              last_used_at = ${new Date()},
+              updated_at = ${new Date()}
+          WHERE id = ${existingSubscription[0]?.id}
+        `);
       } else {
         // Create new subscription
-        await db
-          .insert(sql`push_notification_subscriptions`)
-          .values({
-            user_id: userId,
-            endpoint: subscription.endpoint,
-            keys: JSON.stringify(subscription.keys),
-            user_agent: userAgent || '',
-            is_active: true,
-            created_at: new Date(),
-            last_used_at: new Date()
-          });
+        await db.execute(sql`
+          INSERT INTO push_notification_subscriptions 
+          (user_id, endpoint, keys, user_agent, is_active, created_at, last_used_at)
+          VALUES (${userId}, ${subscription.endpoint}, ${JSON.stringify(subscription.keys)}, 
+                  ${userAgent || ''}, true, ${new Date()}, ${new Date()})
+        `);
       }
 
       safeLogger.info(`Device subscription registered for user: ${userId}`);
@@ -140,18 +130,10 @@ export class PushNotificationService {
   // Unregister a device subscription
   async unregisterDeviceSubscription(userId: string, endpoint: string): Promise<boolean> {
     try {
-      await db
-        .update(sql`push_notification_subscriptions`)
-        .set({
-          is_active: false,
-          updated_at: new Date()
-        })
-        .where(
-          and(
-            eq(sql`user_id`, userId),
-            eq(sql`endpoint`, endpoint)
-          )
-        );
+await db.execute(sql`
+        DELETE FROM push_notification_subscriptions 
+        WHERE user_id = ${userId} AND endpoint = ${endpoint}
+      `);
 
       safeLogger.info(`Device subscription unregistered for user: ${userId}`);
       return true;
@@ -164,10 +146,10 @@ export class PushNotificationService {
   // Get user's notification preferences
   async getUserNotificationPreferences(userId: string): Promise<NotificationPreferences> {
     try {
-      const preferences = await db
-        .select()
-        .from(sql`notification_preferences`)
-        .where(eq(sql`user_id`, userId))
+      const preferences = await db.execute(sql`
+        SELECT * FROM notification_preferences 
+        WHERE user_id = ${userId}
+      `)
         .limit(1);
 
       if (preferences.length === 0) {
@@ -184,14 +166,11 @@ export class PushNotificationService {
           systemUpdates: true
         };
 
-        await db
-          .insert(sql`notification_preferences`)
-          .values({
-            user_id: userId,
-            preferences: JSON.stringify(defaultPreferences),
-            created_at: new Date(),
-            updated_at: new Date()
-          });
+        await db.execute(sql`
+          INSERT INTO notification_preferences 
+          (user_id, preferences, created_at, updated_at)
+          VALUES (${userId}, ${JSON.stringify(defaultPreferences)}, ${new Date()}, ${new Date()})
+        `);
 
         return defaultPreferences;
       }
@@ -220,13 +199,12 @@ export class PushNotificationService {
       const currentPreferences = await this.getUserNotificationPreferences(userId);
       const updatedPreferences = { ...currentPreferences, ...preferences };
 
-      await db
-        .update(sql`notification_preferences`)
-        .set({
-          preferences: JSON.stringify(updatedPreferences),
-          updated_at: new Date()
-        })
-        .where(eq(sql`user_id`, userId));
+      await db.execute(sql`
+        UPDATE notification_preferences 
+        SET preferences = ${JSON.stringify(updatedPreferences)},
+            updated_at = ${new Date()}
+        WHERE user_id = ${userId}
+      `);
 
       safeLogger.info(`Notification preferences updated for user: ${userId}`);
       return true;
@@ -247,15 +225,10 @@ export class PushNotificationService {
       }
 
       // Get user's active device subscriptions
-      const subscriptions = await db
-        .select()
-        .from(sql`push_notification_subscriptions`)
-        .where(
-          and(
-            eq(sql`user_id`, payload.userId),
-            eq(sql`is_active`, true)
-          )
-        );
+      const subscriptions = await db.execute(sql`
+        SELECT * FROM push_notification_subscriptions 
+        WHERE user_id = ${payload.userId} AND is_active = true
+      `);
 
       if (subscriptions.length === 0) {
         safeLogger.info(`No active subscriptions found for user: ${payload.userId}`);
@@ -297,13 +270,11 @@ export class PushNotificationService {
             failedCount++;
             // If subscription is invalid, deactivate it
             if (result.error === 'invalid_subscription') {
-              await db
-                .update(sql`push_notification_subscriptions`)
-                .set({
-                  is_active: false,
-                  updated_at: new Date()
-                })
-                .where(eq(sql`id`, subscription.id));
+              await db.execute(sql`
+                UPDATE push_notification_subscriptions 
+                SET is_active = false, updated_at = ${new Date()}
+                WHERE id = ${subscription.id}
+              `);
             }
           }
         } catch (error) {
@@ -569,19 +540,12 @@ export class PushNotificationService {
   // Log notification for analytics
   private async logNotification(payload: NotificationPayload, successCount: number, failedCount: number): Promise<void> {
     try {
-      await db
-        .insert(sql`notification_logs`)
-        .values({
-          user_id: payload.userId,
-          type: payload.type,
-          community_id: payload.communityId,
-          post_id: payload.postId,
-          title: payload.title,
-          message: payload.message,
-          success_count: successCount,
-          failed_count: failedCount,
-          created_at: new Date()
-        });
+      await db.execute(sql`
+        INSERT INTO notification_logs 
+        (user_id, type, community_id, post_id, title, message, success_count, failed_count, created_at)
+        VALUES (${payload.userId}, ${payload.type}, ${payload.communityId}, ${payload.postId}, 
+                ${payload.title}, ${payload.message}, ${successCount}, ${failedCount}, ${new Date()})
+      `);
     } catch (error) {
       safeLogger.error('Error logging notification:', error);
     }
@@ -593,18 +557,11 @@ export class PushNotificationService {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - daysInactive);
 
-      const result = await db
-        .update(sql`push_notification_subscriptions`)
-        .set({
-          is_active: false,
-          updated_at: new Date()
-        })
-        .where(
-          and(
-            eq(sql`is_active`, true),
-            sql`last_used_at < ${cutoffDate}`
-          )
-        );
+      const result = await db.execute(sql`
+        UPDATE push_notification_subscriptions 
+        SET is_active = false, updated_at = ${new Date()}
+        WHERE is_active = true AND last_used_at < ${cutoffDate}
+      `);
 
       safeLogger.info(`Cleaned up ${result} inactive subscriptions`);
       return result;
@@ -620,21 +577,15 @@ export class PushNotificationService {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - days);
 
-      const stats = await db
-        .select({
-          totalSent: sql<number>`COUNT(*)`,
-          successful: sql<number>`SUM(success_count)`,
-          failed: sql<number>`SUM(failed_count)`,
-          byType: sql<string>`type`
-        })
-        .from(sql`notification_logs`)
-        .where(
-          and(
-            eq(sql`user_id`, userId),
-            sql`created_at >= ${cutoffDate}`
-          )
-        )
-        .groupBy(sql`type`);
+      const stats = await db.execute(sql`
+        SELECT COUNT(*) as totalSent, 
+               SUM(success_count) as successful, 
+               SUM(failed_count) as failed,
+               type as byType
+        FROM notification_logs 
+        WHERE user_id = ${userId} AND created_at >= ${cutoffDate}
+        GROUP BY type
+      `);
 
       return stats;
     } catch (error) {

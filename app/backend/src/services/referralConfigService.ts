@@ -1,7 +1,6 @@
 import { db } from '../db';
 import { eq } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
-import { referralConfig } from '../db/schema';
 
 interface ReferralConfigItem {
   id: string;

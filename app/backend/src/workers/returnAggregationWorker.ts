@@ -652,7 +652,7 @@ export const scheduleAggregationJobs = async () => {
 
         // Schedule hourly aggregation (every hour at minute 5)
         await returnAggregationQueue.add(
-            { type: 'aggregate_hourly' } as any,
+            { type: 'aggregate_hourly' },
             {
                 repeat: {
                     pattern: '5 * * * *', // At minute 5 past every hour
@@ -662,7 +662,7 @@ export const scheduleAggregationJobs = async () => {
 
         // Schedule daily aggregation (every day at 01:00 UTC)
         await returnAggregationQueue.add(
-            { type: 'aggregate_daily' } as any,
+            { type: 'aggregate_daily' },
             {
                 repeat: {
                     pattern: '0 1 * * *', // At 01:00
@@ -672,7 +672,7 @@ export const scheduleAggregationJobs = async () => {
 
         // Schedule weekly aggregation (every Monday at 02:00 UTC)
         await returnAggregationQueue.add(
-            { type: 'aggregate_weekly' } as any,
+            { type: 'aggregate_weekly' },
             {
                 repeat: {
                     pattern: '0 2 * * 1', // At 02:00 on Monday
@@ -682,7 +682,7 @@ export const scheduleAggregationJobs = async () => {
 
         // Schedule monthly aggregation (1st of every month at 03:00 UTC)
         await returnAggregationQueue.add(
-            { type: 'aggregate_monthly' } as any,
+            { type: 'aggregate_monthly' },
             {
                 repeat: {
                     pattern: '0 3 1 * *', // At 03:00 on the 1st of every month

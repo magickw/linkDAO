@@ -1,7 +1,7 @@
 import { Pool } from 'pg';
 import { Redis } from 'ioredis';
 import { safeLogger } from '../utils/safeLogger';
-import PerformanceBenchmarkService from './performanceBenchmarkService';
+import { PerformanceBenchmarkService } from './performanceBenchmarkService';
 import RenderPerformanceMonitoringService from './renderPerformanceMonitoringService';
 import ErrorRecoveryCacheProfiler from './errorRecoveryCacheProfiler';
 import CriticalPathPerformanceOptimizer from './criticalPathPerformanceOptimizer';

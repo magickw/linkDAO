@@ -706,10 +706,11 @@ export class RiskBasedDecisionEngine {
           await db.insert(reputationChangeEvents).values({
             userId: content.userId,
             eventType: 'violation',
-            scoreChange: impactValue,
-            previousScore: content.userReputation,
-            newScore: Math.max(0, content.userReputation + impactValue),
-            description: `${decision.action} action for ${decision.primaryCategory}`
+            scoreChange: impactValue.toString(),
+            previousScore: content.userReputation.toString(),
+            newScore: Math.max(0, content.userReputation + impactValue).toString(),
+            description: `${decision.action} action for ${decision.primaryCategory}`,
+            metadata: JSON.stringify({ decision, content })
           });
         }
       }

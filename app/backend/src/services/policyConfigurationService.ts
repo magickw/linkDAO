@@ -105,6 +105,7 @@ export class PolicyConfigurationService {
       const result = await db
         .insert(policy_configurations)
         .values({
+          name: policy.name || `${policy.category}_${policy.action}_${Date.now()}`,
           category: policy.category,
           severity: policy.severity,
           confidenceThreshold: policy.confidenceThreshold.toString(),
@@ -200,17 +201,23 @@ export class PolicyConfigurationService {
       return vendors.map(vendor => ({
         id: vendor.id,
         vendorName: vendor.vendorName,
-        vendorType: vendor.vendorType as 'text' | 'image' | 'video' | 'link' | 'custom',
+        vendorType: vendor.serviceType as 'text' | 'image' | 'video' | 'link' | 'custom',
         apiEndpoint: vendor.apiEndpoint || undefined,
         isEnabled: vendor.isEnabled ?? true,
-        weight: parseFloat(vendor.weight || '1'),
+        weight: vendor.priority || 1,
         costPerRequest: parseFloat(vendor.costPerRequest || '0'),
-        avgLatencyMs: vendor.avgLatencyMs || 0,
-        successRate: parseFloat(vendor.successRate || '1'),
+        avgLatencyMs: vendor.timeoutMs || 30000,
+        successRate: vendor.healthStatus === 'healthy' ? 1 : 0.5,
         lastHealthCheck: vendor.lastHealthCheck || undefined,
-        configuration: typeof vendor.configuration === 'string' 
-          ? JSON.parse(vendor.configuration) 
-          : vendor.configuration || {}
+        configuration: {
+          apiKeyRef: vendor.apiKeyRef,
+          priority: vendor.priority,
+          timeoutMs: vendor.timeoutMs,
+          retryAttempts: vendor.retryAttempts,
+          rateLimitPerMinute: vendor.rateLimitPerMinute,
+          fallbackVendorId: vendor.fallbackVendorId,
+          healthCheckUrl: vendor.healthCheckUrl
+        }
       }));
     } catch (error) {
       safeLogger.error('Failed to get vendors:', error);

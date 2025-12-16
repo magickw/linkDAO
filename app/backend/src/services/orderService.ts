@@ -108,7 +108,7 @@ export class OrderService {
    */
   async getOrderById(orderId: string): Promise<MarketplaceOrder | null> {
     try {
-      const dbOrder = await databaseService.getOrderById(parseInt(orderId));
+      const dbOrder = await databaseService.getOrderById(orderId);
       if (!dbOrder) return null;
 
       const [buyer, seller] = await Promise.all([
@@ -167,7 +167,7 @@ export class OrderService {
 
       const previousStatus = currentOrder.status;
 
-      const success = await databaseService.updateOrder(parseInt(orderId), { status: status.toLowerCase() });
+      const success = await databaseService.updateOrder(orderId, { status: status.toLowerCase() });
 
       if (success) {
         // Create order event
@@ -216,7 +216,7 @@ export class OrderService {
       });
 
       // Update order with shipping information
-      await databaseService.updateOrder(parseInt(orderId), {
+      await databaseService.updateOrder(orderId, {
         status: 'shipped'
       });
 

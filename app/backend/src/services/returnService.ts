@@ -70,7 +70,7 @@ class ReturnService {
         returnReasonDetails: request.returnReasonDetails,
         itemsToReturn: JSON.stringify(request.itemsToReturn),
         status: initialStatus,
-        originalAmount: request.originalAmount,
+        originalAmount: request.originalAmount.toString(),
         riskScore,
         riskLevel,
         requiresManualReview,
