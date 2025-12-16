@@ -92,15 +92,23 @@ export const getConnectedAccounts = async (provider: ethers.BrowserProvider): Pr
  */
 export const onAccountsChanged = (callback: (accounts: string[]) => void): (() => void) => {
   if (typeof window === 'undefined' || !(window as any).ethereum) {
-    return () => {}; // noop cleanup
+    return () => {};
   }
   
   const ethereum = (window as any).ethereum;
-  ethereum.on('accountsChanged', callback);
+  try {
+    ethereum.on('accountsChanged', callback);
+  } catch (error) {
+    console.debug('Could not attach accountsChanged listener:', error);
+    return () => {};
+  }
   
-  // Return cleanup function
   return () => {
-    ethereum.removeListener('accountsChanged', callback);
+    try {
+      ethereum.removeListener('accountsChanged', callback);
+    } catch (error) {
+      console.debug('Could not remove accountsChanged listener:', error);
+    }
   };
 };
 
@@ -109,15 +117,23 @@ export const onAccountsChanged = (callback: (accounts: string[]) => void): (() =
  */
 export const onChainChanged = (callback: (chainId: string) => void): (() => void) => {
   if (typeof window === 'undefined' || !(window as any).ethereum) {
-    return () => {}; // noop cleanup
+    return () => {};
   }
   
   const ethereum = (window as any).ethereum;
-  ethereum.on('chainChanged', callback);
+  try {
+    ethereum.on('chainChanged', callback);
+  } catch (error) {
+    console.debug('Could not attach chainChanged listener:', error);
+    return () => {};
+  }
   
-  // Return cleanup function
   return () => {
-    ethereum.removeListener('chainChanged', callback);
+    try {
+      ethereum.removeListener('chainChanged', callback);
+    } catch (error) {
+      console.debug('Could not remove chainChanged listener:', error);
+    }
   };
 };
 

@@ -328,13 +328,20 @@ export const EnhancedAuthProvider = ({ children }: { children: ReactNode }) => {
       };
 
       try {
-        // Use try-catch to handle read-only property errors from wallet providers
         const ethereum = window.ethereum;
 
-        // Check if the provider supports event listeners properly
         if (ethereum && typeof ethereum.on === 'function') {
-          ethereum.on('accountsChanged', handleAccountsChanged);
-          ethereum.on('chainChanged', handleChainChanged);
+          try {
+            ethereum.on('accountsChanged', handleAccountsChanged);
+          } catch (err) {
+            console.debug('Could not attach accountsChanged listener:', err);
+          }
+
+          try {
+            ethereum.on('chainChanged', handleChainChanged);
+          } catch (err) {
+            console.debug('Could not attach chainChanged listener:', err);
+          }
 
           return () => {
             try {
@@ -343,13 +350,11 @@ export const EnhancedAuthProvider = ({ children }: { children: ReactNode }) => {
                 ethereum.removeListener('chainChanged', handleChainChanged);
               }
             } catch (error) {
-              // Ignore cleanup errors - wallet provider may have been removed
               console.debug('Error removing ethereum event listeners:', error);
             }
           };
         }
       } catch (error) {
-        // Handle read-only property errors silently
         console.debug('Error setting up ethereum event listeners:', error);
       }
     }
