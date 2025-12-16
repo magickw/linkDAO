@@ -100,20 +100,34 @@ export async function fetchWithRetry(
   options?: RequestInit,
   retryOptions?: RetryOptions
 ): Promise<Response> {
-  return retryWithBackoff(
-    async () => {
-      const response = await fetch(url, options);
-      
-      // Throw error for non-success status codes that should trigger retries
-      if (!response.ok) {
-        const error: any = new Error(`HTTP ${response.status}: ${response.statusText}`);
-        error.response = response;
-        error.status = response.status;
-        throw error;
-      }
-      
-      return response;
-    },
-    retryOptions
-  );
+  // Use global fetch wrapper which already handles token refresh and retries
+  const { globalFetch } = await import('./globalFetchWrapper');
+  
+  const response = await globalFetch(url, {
+    ...options,
+    maxRetries: retryOptions?.maxRetries || 3
+  });
+  
+  // Convert to a Response-like object for compatibility
+  if (response.success) {
+    // Create a Response object from the data
+    const responseData = response.data;
+    const responseText = typeof responseData === 'string' 
+      ? responseData 
+      : JSON.stringify(responseData);
+    
+    return new Response(responseText, {
+      status: response.status,
+      headers: response.headers
+    });
+  } else {
+    // Create an error response
+    const error: any = new Error(response.error || 'Request failed');
+    error.response = {
+      status: response.status,
+      headers: response.headers
+    };
+    error.status = response.status;
+    throw error;
+  }
 }

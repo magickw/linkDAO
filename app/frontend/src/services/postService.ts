@@ -46,37 +46,27 @@ export class PostService {
         ? `${BACKEND_API_BASE_URL}/api/communities/${data.communityId}/posts`
         : `${BACKEND_API_BASE_URL}/api/posts`;
 
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders
-        },
-        body: JSON.stringify({
-          content: data.content,
-          author: data.author,
-          type: 'text', // Default post type
-          visibility: 'public', // Default visibility
-          tags: data.tags,
-          media: data.media,
-          parentId: data.parentId,
-          onchainRef: data.onchainRef,
-          title: data.title,
-          pollData: data.poll,
-          proposalData: data.proposal
-        })
+      // Use global fetch wrapper which handles token refresh automatically
+      const { post } = await import('./globalFetchWrapper');
+      const response = await post(endpoint, {
+        content: data.content,
+        author: data.author,
+        type: 'text', // Default post type
+        visibility: 'public', // Default visibility
+        tags: data.tags,
+        media: data.media,
+        parentId: data.parentId,
+        onchainRef: data.onchainRef,
+        title: data.title,
+        pollData: data.poll,
+        proposalData: data.proposal
       });
 
-      // Handle specific status codes
-      if (response.status === 401) {
-        throw new Error('Authentication required. Please log in again.');
-      }
-      
-      if (response.status === 403) {
-        throw new Error('You do not have permission to create a post.');
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to create post');
       }
 
-      return this.handleResponse(response, 'Failed to create post');
+      return response.data;
     } catch (error) {
       console.error('Error creating post:', error);
       throw error;

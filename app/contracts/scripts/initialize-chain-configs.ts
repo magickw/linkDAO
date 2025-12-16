@@ -42,7 +42,8 @@ async function main() {
   const chainIdMap: { [key: string]: number } = {
     "ethereum": 0,
     "polygon": 1,
-    "arbitrum": 2
+    "arbitrum": 2,
+    "base": 3
   };
   
   // Update chain configurations for each supported chain

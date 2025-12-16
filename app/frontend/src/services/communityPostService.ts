@@ -422,50 +422,20 @@ export class CommunityPostService {
           }
         });
 
-        // If authentication failed, try to refresh the token
-        if ((response.status === 401 || response.status === 403) && enhancedAuthService.isAuthenticated()) {
-          console.log('Attempting to refresh authentication token...');
-          try {
-            const refreshResult = await enhancedAuthService.refreshToken();
-            if (refreshResult.success) {
-              console.log('Token refreshed successfully, retrying comment creation...');
-              // Retry the request with the new token
-              authHeaders = enhancedAuthService.getAuthHeaders();
-              const retryResponse = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${data.postId}/comments`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  ...authHeaders
-                },
-                body: JSON.stringify({
-                  author: data.author,
-                  content: data.content,
-                  parentCommentId: data.parentId,
-                  media: data.media
-                })
-              });
+// Use global fetch wrapper which handles token refresh automatically
+        const { post } = await import('./globalFetchWrapper');
+        const response = await post(`${BACKEND_API_BASE_URL}/api/feed/${data.postId}/comments`, {
+          author: data.author,
+          content: data.content,
+          parentCommentId: data.parentId,
+          media: data.media
+        });
 
-              if (retryResponse.ok) {
-                const result = await retryResponse.json();
-                return result.data || result;
-              }
-            }
-          } catch (refreshError) {
-            console.error('Token refresh failed:', refreshError);
-          }
+        if (!response.success) {
+          throw new Error(response.error || 'Failed to create comment');
         }
 
-        // Provide helpful error messages
-        if (response.status === 401 || response.status === 403) {
-          const errorCode = error.error?.code || error.code;
-          if (errorCode === 'MISSING_TOKEN' || errorCode === 'NO_TOKEN') {
-            throw new Error('Please sign in to comment on posts. Click the wallet icon in the header to connect and authenticate.');
-          } else if (errorCode === 'INVALID_TOKEN' || errorCode === 'TOKEN_EXPIRED' || errorCode === 'TOKEN_INVALID' || errorCode === 'TOKEN_VALIDATION_FAILED') {
-            throw new Error('Your session has expired. Please refresh the page and sign in again to comment.');
-          } else {
-            throw new Error('Authentication required. Please sign in to comment on posts.');
-          }
-        }
+        return response.data;
 
         throw new Error(error.error || error.message || `Failed to create comment: ${response.statusText}`);
       }

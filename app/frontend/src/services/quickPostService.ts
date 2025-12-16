@@ -57,55 +57,23 @@ export class QuickPostService {
         }
       }
 
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/quick-posts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-session-id': sessionId,
-          ...(csrfToken && { 'x-csrf-token': csrfToken }),
-          ...authHeaders // Include auth headers with JWT token
-        },
-        body: JSON.stringify({
-          content: data.content,
-          parentId: data.parentId,
-          media: data.media,
-          tags: data.tags,
-          onchainRef: data.onchainRef,
-          poll: data.poll,
-          proposal: data.proposal
-        }),
-        signal: controller.signal,
+      // Use global fetch wrapper which handles token refresh automatically
+      const { post } = await import('./globalFetchWrapper');
+      const response = await post(`${BACKEND_API_BASE_URL}/api/quick-posts`, {
+        content: data.content,
+        parentId: data.parentId,
+        media: data.media,
+        tags: data.tags,
+        onchainRef: data.onchainRef,
+        poll: data.poll,
+        proposal: data.proposal
       });
 
-      clearTimeout(timeoutId);
-
-      // Handle specific status codes
-      if (response.status === 401) {
-        throw new Error('Authentication required. Please log in again.');
-      }
-      
-      if (response.status === 403) {
-        throw new Error('You do not have permission to create a quick post.');
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to create quick post');
       }
 
-      // Gracefully handle common non-success statuses
-      if (!response.ok) {
-        if (response.status === 503) {
-          // Service unavailable - throw appropriate error to prevent data loss
-          console.warn('QuickPost service unavailable (503), cannot create quick post');
-          throw new Error('Service temporarily unavailable. Please try again later.');
-        }
-        if (response.status === 429) {
-          // Rate limited - throw appropriate error
-          console.warn('QuickPost service rate limited (429), cannot create quick post');
-          throw new Error('Too many requests. Please wait before creating another quick post.');
-        }
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.error || `Failed to create quick post (HTTP ${response.status})`);
-      }
-
-      const result = await response.json();
-      return result.data || result;
+      return response.data;
     } catch (error) {
       clearTimeout(timeoutId);
 

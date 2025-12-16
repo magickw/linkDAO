@@ -600,65 +600,49 @@ class EnhancedAuthService {
     }
 
     try {
-      return await apiCircuitBreaker.execute(
-        async () => {
-          const response = await enhancedRequestManager.request<any>(
-            `${this.baseUrl}/api/auth/refresh`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.token}`
-              },
-              body: JSON.stringify({
-                refreshToken: this.sessionData!.refreshToken
-              })
-            },
-            { timeout: 10000, retries: 2 }
-          );
+      // Use global fetch wrapper with skipAuth to avoid circular dependency
+      const { globalFetch } = await import('./globalFetchWrapper');
+      
+      const response = await globalFetch(`${this.baseUrl}/api/auth/refresh`, {
+        method: 'POST',
+        skipAuth: true, // Don't add auth headers to refresh request
+        body: JSON.stringify({
+          refreshToken: this.sessionData!.refreshToken
+        })
+      });
 
-          if (!response.success) {
-            throw new Error(response.error || 'Token refresh failed');
-          }
+      if (!response.success) {
+        throw new Error(response.error || 'Token refresh failed');
+      }
 
-          // Handle both direct token response and nested data response
-          const token = response.token || (response.data && response.data.token);
-          const refreshToken = response.refreshToken || (response.data && response.data.refreshToken) || undefined;
+      // Handle both direct token response and nested data response
+      const token = (response.data as any)?.token || (response.data as any)?.data?.token;
+      const refreshToken = (response.data as any)?.refreshToken || (response.data as any)?.data?.refreshToken || undefined;
 
-          if (!token) {
-            throw new Error('No token received in refresh response');
-          }
+      if (!token) {
+        throw new Error('No token received in refresh response');
+      }
 
-          // Update session with new token
-          this.storeSession(token, this.sessionData!.user, refreshToken);
+      // Update session with new token
+      this.storeSession(token, this.sessionData!.user, refreshToken);
 
-          return {
-            success: true,
-            token: response.token,
-            user: this.sessionData!.user
-          };
-        },
-        async () => {
-          // If refresh fails, extend current session temporarily
-          console.warn('Token refresh failed, extending current session');
-          if (this.sessionData) {
-            this.sessionData.expiresAt = Date.now() + (30 * 60 * 1000); // Extend by 30 minutes
-            return {
-              success: true,
-              token: this.token!,
-              user: this.sessionData.user
-            };
-          }
-          throw new Error('No session to extend');
-        }
-      );
-    } catch (error: any) {
-      console.error('Token refresh failed:', error);
       return {
-        success: false,
-        error: this.getErrorMessage(error),
-        retryable: this.isRetryableError(error)
+        success: true,
+        token,
+        user: this.sessionData!.user
       };
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      // If refresh fails, extend current session temporarily
+      if (this.sessionData) {
+        this.sessionData.expiresAt = Date.now() + (30 * 60 * 1000); // Extend by 30 minutes
+        return {
+          success: true,
+          token: this.token!,
+          user: this.sessionData.user
+        };
+      }
+      throw new Error('No session to extend');
     }
   }
 

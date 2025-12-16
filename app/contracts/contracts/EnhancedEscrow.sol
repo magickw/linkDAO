@@ -113,6 +113,10 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable {
     uint256 public constant MIN_VOTING_POWER = 100; // Minimum LDAO tokens to vote
     uint256 public constant REPUTATION_DECAY_PERIOD = 365 days;
     
+    // Cross-chain support
+    uint256 public chainId;
+    mapping(uint256 => uint256) public escrowChainId;
+    
     // Contract references
     LDAOToken public ldaoToken;
     Governance public governance;
@@ -174,10 +178,16 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable {
         require(!score.isSuspended || block.timestamp >= score.suspensionEndTime, "User is suspended");
         _;
     }
+    
+    modifier onlySameChain(uint256 escrowId) {
+        require(escrowChainId[escrowId] == chainId, "Escrow not on this chain");
+        _;
+    }
 
     constructor(address _ldaoToken, address _governance) Ownable(msg.sender) {
         ldaoToken = LDAOToken(_ldaoToken);
         governance = Governance(_governance);
+        chainId = block.chainid;
     }
 
     /**
@@ -198,10 +208,70 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable {
         uint256 deliveryDeadline,
         DisputeResolutionMethod resolutionMethod
     ) external payable nonReentrant notSuspended(msg.sender) notSuspended(seller) returns (uint256) {
+        return _createEscrow(listingId, seller, tokenAddress, amount, deliveryDeadline, resolutionMethod, false, 0, 0);
+    }
+    
+    /**
+     * @notice Create a new escrow with multi-signature and time-lock requirements
+     * @param listingId ID of the marketplace listing
+     * @param seller Address of the seller
+     * @param tokenAddress Address of the payment token (address(0) for ETH)
+     * @param amount Amount to be escrowed
+     * @param deliveryDeadline Deadline for delivery
+     * @param resolutionMethod Dispute resolution method
+     * @param requiresMultiSig Whether multi-signature is required
+     * @param multiSigThreshold Number of signatures required to release funds
+     * @param timeLockDuration Duration of time-lock in seconds
+     * @return escrowId ID of the created escrow
+     */
+    function createEscrowWithSecurity(
+        uint256 listingId,
+        address seller,
+        address tokenAddress,
+        uint256 amount,
+        uint256 deliveryDeadline,
+        DisputeResolutionMethod resolutionMethod,
+        bool requiresMultiSig,
+        uint256 multiSigThreshold,
+        uint256 timeLockDuration
+    ) external payable nonReentrant notSuspended(msg.sender) notSuspended(seller) returns (uint256) {
+        return _createEscrow(listingId, seller, tokenAddress, amount, deliveryDeadline, resolutionMethod, requiresMultiSig, multiSigThreshold, timeLockDuration);
+    }
+    
+    /**
+     * @notice Internal function to create a new escrow
+     * @param listingId ID of the marketplace listing
+     * @param seller Address of the seller
+     * @param tokenAddress Address of the payment token (address(0) for ETH)
+     * @param amount Amount to be escrowed
+     * @param deliveryDeadline Deadline for delivery
+     * @param resolutionMethod Dispute resolution method
+     * @param requiresMultiSig Whether multi-signature is required
+     * @param multiSigThreshold Number of signatures required to release funds
+     * @param timeLockDuration Duration of time-lock in seconds
+     * @return escrowId ID of the created escrow
+     */
+    function _createEscrow(
+        uint256 listingId,
+        address seller,
+        address tokenAddress,
+        uint256 amount,
+        uint256 deliveryDeadline,
+        DisputeResolutionMethod resolutionMethod,
+        bool requiresMultiSig,
+        uint256 multiSigThreshold,
+        uint256 timeLockDuration
+    ) internal returns (uint256) {
         require(seller != address(0), "Invalid seller address");
         require(seller != msg.sender, "Buyer and seller cannot be the same");
         require(amount > 0, "Amount must be greater than 0");
         require(deliveryDeadline > block.timestamp, "Delivery deadline must be in the future");
+        
+        // Validate multi-signature parameters
+        if (requiresMultiSig) {
+            require(multiSigThreshold > 0, "Multi-sig threshold must be greater than 0");
+            require(multiSigThreshold <= 2, "Multi-sig threshold cannot exceed 2");
+        }
         
         uint256 escrowId = nextEscrowId++;
         uint256 feeAmount = (amount * platformFeePercentage) / 10000;
@@ -219,6 +289,18 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable {
         newEscrow.status = EscrowStatus.CREATED;
         newEscrow.resolutionMethod = resolutionMethod;
         
+        // Cross-chain support
+        escrowChainId[escrowId] = chainId;
+        
+        // Set security features
+        newEscrow.requiresMultiSig = requiresMultiSig;
+        newEscrow.multiSigThreshold = requiresMultiSig ? multiSigThreshold : 0;
+        
+        // Set time-lock expiry if duration is specified
+        if (timeLockDuration > 0) {
+            newEscrow.timeLockExpiry = block.timestamp + timeLockDuration;
+        }
+        
         userEscrows[msg.sender].push(escrowId);
         userEscrows[seller].push(escrowId);
         
@@ -231,7 +313,7 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable {
      * @notice Lock funds in escrow
      * @param escrowId ID of the escrow
      */
-    function lockFunds(uint256 escrowId) external payable nonReentrant escrowExists(escrowId) {
+    function lockFunds(uint256 escrowId) external payable nonReentrant escrowExists(escrowId) onlySameChain(escrowId) {
         Escrow storage escrow = escrows[escrowId];
         require(msg.sender == escrow.buyer, "Only buyer can lock funds");
         require(escrow.status == EscrowStatus.CREATED, "Invalid escrow status");
@@ -257,13 +339,73 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable {
      * @param escrowId ID of the escrow
      * @param deliveryInfo Delivery confirmation information
      */
-    function confirmDelivery(uint256 escrowId, string calldata deliveryInfo) 
+    function confirmDelivery(uint256 escrowId, string memory deliveryInfo) 
         external 
         escrowExists(escrowId) 
         onlyParticipant(escrowId) 
+        onlySameChain(escrowId)
     {
         Escrow storage escrow = escrows[escrowId];
         require(escrow.status == EscrowStatus.FUNDS_LOCKED, "Invalid escrow status");
+        
+        // If multi-signature is required, record the signature instead of releasing funds
+        if (escrow.requiresMultiSig) {
+            _addSignature(escrowId);
+            
+            // Check if we have enough signatures
+            if (escrow.signatureCount >= escrow.multiSigThreshold) {
+                _finalizeDeliveryConfirmation(escrowId, deliveryInfo);
+            } else {
+                // Just store the delivery info for now
+                escrow.deliveryInfo = deliveryInfo;
+                emit DeliveryConfirmed(escrowId, deliveryInfo);
+            }
+        } else {
+            // Standard delivery confirmation
+            _finalizeDeliveryConfirmation(escrowId, deliveryInfo);
+        }
+    }
+    
+    /**
+     * @notice Add a signature for multi-signature escrow
+     * @param escrowId ID of the escrow
+     */
+    function addSignature(uint256 escrowId) external escrowExists(escrowId) onlyParticipant(escrowId) onlySameChain(escrowId) {
+        Escrow storage escrow = escrows[escrowId];
+        require(escrow.requiresMultiSig, "Multi-signature not required for this escrow");
+        require(escrow.status == EscrowStatus.FUNDS_LOCKED, "Invalid escrow status");
+        require(!escrow.hasSignedRelease[msg.sender], "Already signed");
+        
+        _addSignature(escrowId);
+        
+        // Check if we have enough signatures to finalize
+        if (escrow.signatureCount >= escrow.multiSigThreshold) {
+            _finalizeDeliveryConfirmation(escrowId, escrow.deliveryInfo);
+        }
+    }
+    
+    /**
+     * @notice Internal function to add a signature
+     * @param escrowId ID of the escrow
+     */
+    function _addSignature(uint256 escrowId) internal {
+        Escrow storage escrow = escrows[escrowId];
+        escrow.hasSignedRelease[msg.sender] = true;
+        escrow.signatureCount++;
+    }
+    
+    /**
+     * @notice Finalize delivery confirmation and release funds
+     * @param escrowId ID of the escrow
+     * @param deliveryInfo Delivery confirmation information
+     */
+    function _finalizeDeliveryConfirmation(uint256 escrowId, string memory deliveryInfo) internal {
+        Escrow storage escrow = escrows[escrowId];
+        
+        // Check time-lock if applicable
+        if (escrow.timeLockExpiry > 0) {
+            require(block.timestamp >= escrow.timeLockExpiry, "Time lock not expired");
+        }
         
         escrow.deliveryInfo = deliveryInfo;
         escrow.status = EscrowStatus.DELIVERY_CONFIRMED;
@@ -283,7 +425,7 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable {
      * @notice Open a dispute
      * @param escrowId ID of the escrow
      */
-    function openDispute(uint256 escrowId) external escrowExists(escrowId) onlyParticipant(escrowId) {
+    function openDispute(uint256 escrowId) external escrowExists(escrowId) onlyParticipant(escrowId) onlySameChain(escrowId) {
         Escrow storage escrow = escrows[escrowId];
         require(escrow.status == EscrowStatus.FUNDS_LOCKED, "Invalid escrow status");
         require(block.timestamp <= escrow.deliveryDeadline + 7 days, "Dispute period expired");
@@ -292,13 +434,27 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable {
         
         emit DisputeOpened(escrowId, escrow.resolutionMethod);
     }
+    
+    /**
+     * @notice Automatically resolve a dispute after the voting period
+     * @param escrowId ID of the escrow
+     */
+    function autoResolveDispute(uint256 escrowId) external escrowExists(escrowId) onlySameChain(escrowId) {
+        Escrow storage escrow = escrows[escrowId];
+        require(escrow.status == EscrowStatus.DISPUTE_OPENED, "No active dispute");
+        require(escrow.resolutionMethod == DisputeResolutionMethod.COMMUNITY_VOTING, "Not community voting");
+        require(block.timestamp >= escrow.createdAt + VOTING_PERIOD, "Voting period not expired");
+        
+        // Automatically resolve the dispute based on votes
+        _resolveDisputeByVoting(escrowId);
+    }
 
     /**
      * @notice Cast a vote in community dispute resolution
      * @param escrowId ID of the escrow
      * @param forBuyer True to vote for buyer, false for seller
      */
-    function castVote(uint256 escrowId, bool forBuyer) external escrowExists(escrowId) {
+    function castVote(uint256 escrowId, bool forBuyer) external escrowExists(escrowId) onlySameChain(escrowId) {
         Escrow storage escrow = escrows[escrowId];
         require(escrow.status == EscrowStatus.DISPUTE_OPENED, "No active dispute");
         require(escrow.resolutionMethod == DisputeResolutionMethod.COMMUNITY_VOTING, "Not community voting");
@@ -335,6 +491,7 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable {
         external 
         escrowExists(escrowId) 
         onlyArbitrator(escrowId) 
+        onlySameChain(escrowId)
     {
         Escrow storage escrow = escrows[escrowId];
         require(escrow.status == EscrowStatus.DISPUTE_OPENED, "No active dispute");
@@ -367,7 +524,7 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable {
         uint256 escrowId,
         address reviewee,
         uint8 rating,
-        string calldata reviewText
+        string memory reviewText
     ) external escrowExists(escrowId) returns (uint256) {
         Escrow storage escrow = escrows[escrowId];
         require(
@@ -474,7 +631,7 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable {
      * @param duration Duration of suspension in seconds
      * @param reason Reason for suspension
      */
-    function suspendUser(address user, uint256 duration, string calldata reason) external onlyDAO {
+    function suspendUser(address user, uint256 duration, string memory reason) external onlyDAO {
         DetailedReputationScore storage score = detailedReputationScores[user];
         score.isSuspended = true;
         score.suspensionEndTime = block.timestamp + duration;
@@ -498,6 +655,15 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable {
      */
     function getDetailedReputation(address user) external view returns (DetailedReputationScore memory) {
         return detailedReputationScores[user];
+    }
+    
+    /**
+     * @notice Get the chain ID where an escrow was created
+     * @param escrowId ID of the escrow
+     * @return chainId Chain ID where escrow was created
+     */
+    function getEscrowChainId(uint256 escrowId) external view escrowExists(escrowId) returns (uint256) {
+        return escrowChainId[escrowId];
     }
 
     /**

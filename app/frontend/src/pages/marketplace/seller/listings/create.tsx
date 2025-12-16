@@ -8,6 +8,7 @@ import { Button } from '@/design-system/components/Button';
 import Layout from '@/components/Layout';
 import { ipfsUploadService } from '@/services/ipfsUploadService';
 import ShippingConfigurationForm, { type ShippingConfiguration } from '@/components/Marketplace/Seller/ShippingConfigurationForm';
+import SizeSelector from '@/components/Marketplace/SizeSelector';
 import {
   Upload,
   X,
@@ -156,7 +157,7 @@ const CreateListingPage: React.FC = () => {
   // Image management
   const [images, setImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-  const [primaryImageIndex, setPrimaryImageIndex] = useState(0);
+  const [primaryImageIndex, setPrimaryImageIndex] = useState(-1);
   const [dragActive, setDragActive] = useState(false);
 
   // UI state
@@ -485,6 +486,11 @@ const CreateListingPage: React.FC = () => {
     }
 
     setImages(prev => [...prev, ...filesToAdd]);
+    
+    // Set primary image index to first image if none is set
+    if (primaryImageIndex === -1 && filesToAdd.length > 0) {
+      setPrimaryImageIndex(imagePreviews.length);
+    }
 
     filesToAdd.forEach(file => {
       const reader = new FileReader();
@@ -509,7 +515,8 @@ const CreateListingPage: React.FC = () => {
 
     // Adjust primary image index if needed
     if (primaryImageIndex === index) {
-      setPrimaryImageIndex(0);
+      // If we're removing the primary image, set to first image or -1 if no images left
+      setPrimaryImageIndex(imagePreviews.length > 1 ? 0 : -1);
     } else if (primaryImageIndex > index) {
       setPrimaryImageIndex(prev => prev - 1);
     }
@@ -1040,10 +1047,24 @@ const CreateListingPage: React.FC = () => {
                         <label className="block text-sm font-medium text-white/90 mb-2">
                           Size Options
                         </label>
-                        <input
-                          type="text"
-                          placeholder="e.g., Small (20x15x5cm), Medium (25x20x8cm)"
-                          className="block w-full rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2"
+                        <SizeSelector
+                          selectedSizes={formData.variants?.map(v => v.size || '').filter(Boolean) || []}
+                          onSizesChange={(sizes) => {
+                            // Update variants with selected sizes
+                            const currentVariants = formData.variants || [];
+                            const newVariants = sizes.map((size, index) => {
+                              const existingVariant = currentVariants.find(v => v.size === size);
+                              return existingVariant || {
+                                size,
+                                sku: `${formData.baseSku || 'SKU'}-${size}`,
+                                price: formData.price,
+                                inventory: 0,
+                                images: []
+                              };
+                            });
+                            handleFormChange('variants', newVariants);
+                          }}
+                          className="text-white"
                         />
                       </div>
                     </div>
@@ -1547,7 +1568,7 @@ const CreateListingPage: React.FC = () => {
                     <div className="bg-white/5 rounded-lg p-6 border border-white/20 mb-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Images */}
-                        {imagePreviews.length > 0 && (
+                        {imagePreviews.length > 0 && primaryImageIndex >= 0 && (
                           <div>
                             <img
                               src={imagePreviews[primaryImageIndex]}

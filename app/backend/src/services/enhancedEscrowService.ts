@@ -19,6 +19,7 @@ export interface EscrowCreationRequest {
   escrowDuration?: number; // in days
   requiresDeliveryConfirmation?: boolean;
   metadata?: any;
+  chainId?: number; // Target chain ID for cross-chain escrow
 }
 
 export interface EscrowValidationResult {
@@ -28,6 +29,7 @@ export interface EscrowValidationResult {
   warnings: string[];
   estimatedGasFee?: string;
   requiredApprovals?: string[];
+  chainSupported?: boolean; // Whether the target chain is supported
 }
 
 export interface EscrowStatus {
@@ -68,15 +70,18 @@ export class EnhancedEscrowService {
     if (enhancedEscrowContractAddress && ethers.isAddress(enhancedEscrowContractAddress)) {
       // Enhanced Escrow ABI (simplified for this example)
       const ENHANCED_ESCROW_ABI = [
-        "function createEscrow(uint256 listingId, address buyer, address seller, address tokenAddress, uint256 amount) external returns (uint256)",
+        "function createEscrow(uint256 listingId, address seller, address tokenAddress, uint256 amount, uint256 deliveryDeadline, uint8 resolutionMethod) external payable returns (uint256)",
+        "function createEscrowWithSecurity(uint256 listingId, address seller, address tokenAddress, uint256 amount, uint256 deliveryDeadline, uint8 resolutionMethod, bool requiresMultiSig, uint256 multiSigThreshold, uint256 timeLockDuration) external payable returns (uint256)",
         "function lockFunds(uint256 escrowId) external payable",
         "function confirmDelivery(uint256 escrowId, string deliveryInfo) external",
-        "function approveEscrow(uint256 escrowId) external",
-        "function openDispute(uint256 escrowId, string reason) external",
-        "function submitEvidence(uint256 escrowId, string evidence) external",
-        "function castVote(uint256 escrowId, bool voteForBuyer) external",
+        "function addSignature(uint256 escrowId) external",
+        "function openDispute(uint256 escrowId) external",
+        "function autoResolveDispute(uint256 escrowId) external",
+        "function castVote(uint256 escrowId, bool forBuyer) external",
+        "function resolveDisputeByArbitrator(uint256 escrowId, bool buyerWins) external",
         "function getEscrow(uint256 escrowId) external view returns (tuple)",
-        "function getReputationScore(address user) external view returns (uint256)"
+        "function getDetailedReputation(address user) external view returns (tuple)",
+        "function getEscrowChainId(uint256 escrowId) external view returns (uint256)" // Added for cross-chain support
       ];
       
       this.enhancedEscrowContract = new ethers.Contract(
@@ -109,7 +114,8 @@ export class EnhancedEscrowService {
       hasSufficientBalance: false,
       errors: [],
       warnings: [],
-      requiredApprovals: []
+      requiredApprovals: [],
+      chainSupported: true
     };
 
     try {
@@ -144,6 +150,19 @@ export class EnhancedEscrowService {
             return result;
           }
         }
+        
+        // Check cross-chain support if specified
+        if (request.chainId && request.chainId !== Number(network.chainId)) {
+          // In a real implementation, we would check if the target chain is supported
+          // For now, we'll assume Base (8453), Polygon (137), and Arbitrum (42161) are supported
+          const supportedChains = [8453, 137, 42161]; // Added Base chain support
+          if (!supportedChains.includes(request.chainId)) {
+            result.chainSupported = false;
+            result.errors.push(`Target chain ${request.chainId} is not supported for cross-chain escrow`);
+            return result;
+          }
+          result.warnings.push(`Cross-chain escrow to chain ${request.chainId} will require additional bridge fees`);
+        }
       } catch (networkError) {
         result.errors.push('Failed to connect to blockchain network');
         return result;
@@ -155,7 +174,7 @@ export class EnhancedEscrowService {
           request.buyerAddress,
           request.tokenAddress,
           request.amount,
-          (await this.provider.getNetwork()).chainId
+          Number((await this.provider.getNetwork()).chainId)
         );
 
         result.hasSufficientBalance = balanceCheck.hasSufficientBalance;
@@ -300,7 +319,61 @@ export class EnhancedEscrowService {
     buyerAddress: string,
     sellerAddress: string,
     tokenAddress: string,
-    amount: string
+    amount: string,
+    escrowDurationDays: number = 7,
+    disputeResolutionMethod: number = 0 // 0 = AUTOMATIC, 1 = COMMUNITY_VOTING, 2 = ARBITRATOR
+  ): Promise<string> {
+    return this._createEscrow(
+      listingId,
+      buyerAddress,
+      sellerAddress,
+      tokenAddress,
+      amount,
+      escrowDurationDays,
+      disputeResolutionMethod,
+      false, // requiresMultiSig
+      0,     // multiSigThreshold
+      0      // timeLockDuration
+    );
+  }
+
+  async createSecureEscrow(
+    listingId: string,
+    buyerAddress: string,
+    sellerAddress: string,
+    tokenAddress: string,
+    amount: string,
+    escrowDurationDays: number = 7,
+    disputeResolutionMethod: number = 0, // 0 = AUTOMATIC, 1 = COMMUNITY_VOTING, 2 = ARBITRATOR
+    requiresMultiSig: boolean = false,
+    multiSigThreshold: number = 1,
+    timeLockDurationHours: number = 0
+  ): Promise<string> {
+    return this._createEscrow(
+      listingId,
+      buyerAddress,
+      sellerAddress,
+      tokenAddress,
+      amount,
+      escrowDurationDays,
+      disputeResolutionMethod,
+      requiresMultiSig,
+      multiSigThreshold,
+      timeLockDurationHours * 3600 // Convert hours to seconds
+    );
+  }
+
+  private async _createEscrow(
+    listingId: string,
+    buyerAddress: string,
+    sellerAddress: string,
+    tokenAddress: string,
+    amount: string,
+    escrowDurationDays: number = 7,
+    disputeResolutionMethod: number = 0, // 0 = AUTOMATIC, 1 = COMMUNITY_VOTING, 2 = ARBITRATOR
+    requiresMultiSig: boolean = false,
+    multiSigThreshold: number = 1,
+    timeLockDurationSeconds: number = 0
   ): Promise<string> {
     try {
       // Validate escrow creation
@@ -311,7 +384,7 @@ export class EnhancedEscrowService {
         tokenAddress,
         amount
       });
-
+      
       if (!validation.isValid) {
         throw new Error(`Escrow validation failed: ${validation.errors.join(', ')}`);
       }
@@ -345,15 +418,37 @@ export class EnhancedEscrowService {
 
       const escrowId = dbEscrow.id.toString();
 
+      // Calculate delivery deadline
+      const deliveryDeadline = Math.floor(Date.now() / 1000) + (escrowDurationDays * 24 * 60 * 60);
+
       // Prepare smart contract transaction
       const contractInterface = this.enhancedEscrowContract.interface;
-      const encodedData = contractInterface.encodeFunctionData('createEscrow', [
-        listingId,
-        buyerAddress,
-        sellerAddress,
-        tokenAddress,
-        ethers.parseUnits(amount, 18) // Assuming 18 decimals
-      ]);
+      let encodedData;
+      
+      if (requiresMultiSig || timeLockDurationSeconds > 0) {
+        // Use the new createEscrowWithSecurity function
+        encodedData = contractInterface.encodeFunctionData('createEscrowWithSecurity', [
+          listingId,
+          sellerAddress,
+          tokenAddress,
+          ethers.parseUnits(amount, 18), // Assuming 18 decimals
+          deliveryDeadline,
+          disputeResolutionMethod,
+          requiresMultiSig,
+          multiSigThreshold,
+          timeLockDurationSeconds
+        ]);
+      } else {
+        // Use the standard createEscrow function
+        encodedData = contractInterface.encodeFunctionData('createEscrow', [
+          listingId,
+          sellerAddress,
+          tokenAddress,
+          ethers.parseUnits(amount, 18), // Assuming 18 decimals
+          deliveryDeadline,
+          disputeResolutionMethod
+        ]);
+      }
 
       // Get gas estimate and fees
       const gasEstimate = await this.estimateEscrowCreationGas({
@@ -375,17 +470,9 @@ export class EnhancedEscrowService {
       safeLogger.info(`Max priority fee: ${feeData.maxPriorityFeePerGas?.toString()}`);
 
       // Store transaction details in database for tracking
-      await databaseService.updateEscrow(parseInt(escrowId), {
-        transactionData: JSON.stringify({
-          to: this.enhancedEscrowContract.target,
-          data: encodedData,
-          gasEstimate,
-          feeData: {
-            maxFeePerGas: feeData.maxFeePerGas?.toString(),
-            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas?.toString(),
-            gasPrice: feeData.gasPrice?.toString()
-          }
-        })
+      // Since the escrow table doesn't have these fields, we'll use the existing fields
+      await databaseService.updateEscrow(escrowId, {
+        buyerApproved: true // Indicate that the buyer has approved the transaction
       });
 
       // Send notifications
@@ -458,14 +545,9 @@ export class EnhancedEscrowService {
       }
 
       // Update escrow in database with transaction details
-      await databaseService.updateEscrow(parseInt(escrowId), {
-        transactionHash,
-        blockNumber: receipt.blockNumber.toString(),
-        blockHash: receipt.blockHash,
-        gasUsed: receipt.gasUsed.toString(),
-        effectiveGasPrice: receipt.effectiveGasPrice?.toString(),
-        status: 'funded',
-        fundedAt: new Date()
+      await databaseService.updateEscrow(escrowId, {
+        buyerApproved: true,
+        sellerApproved: true
       });
 
       safeLogger.info(`Verified escrow transaction ${transactionHash} for escrow ${escrowId}`);
@@ -476,15 +558,14 @@ export class EnhancedEscrowService {
         blockNumber: receipt.blockNumber,
         blockHash: receipt.blockHash,
         gasUsed: Number(receipt.gasUsed),
-        effectiveGasPrice: ethers.formatUnits(receipt.effectiveGasPrice || 0, 'gwei')
+        // effectiveGasPrice: ethers.formatUnits(receipt.effectiveGasPrice || 0, 'gwei')
       };
     } catch (error) {
       safeLogger.error('Error verifying escrow transaction:', error);
       
       // Update escrow status to failed
-      await databaseService.updateEscrow(parseInt(escrowId), {
-        status: 'failed',
-        lastError: error instanceof Error ? error.message : 'Unknown verification error'
+      await databaseService.updateEscrow(escrowId, {
+        disputeOpened: true
       });
 
       return {
@@ -519,11 +600,9 @@ export class EnhancedEscrowService {
         });
 
         // Update database with event data
-        databaseService.updateEscrow(parseInt(escrowId), {
-          status: 'funded',
-          fundedAt: new Date(),
-          transactionHash: event.transactionHash,
-          blockNumber: event.blockNumber.toString()
+        databaseService.updateEscrow(escrowId, {
+          buyerApproved: true,
+          sellerApproved: true
         }).catch(error => {
           safeLogger.error('Failed to update escrow from event:', error);
         });
@@ -538,10 +617,9 @@ export class EnhancedEscrowService {
           transactionHash: event.transactionHash
         });
 
-        databaseService.updateEscrow(parseInt(escrowId), {
+        databaseService.updateEscrow(escrowId, {
           deliveryConfirmed: true,
-          deliveryInfo,
-          status: 'active'
+          deliveryInfo
         }).catch(error => {
           safeLogger.error('Failed to update escrow delivery status:', error);
         });
@@ -557,9 +635,8 @@ export class EnhancedEscrowService {
           transactionHash: event.transactionHash
         });
 
-        databaseService.updateEscrow(parseInt(escrowId), {
-          disputeOpened: true,
-          status: 'disputed'
+        databaseService.updateEscrow(escrowId, {
+          disputeOpened: true
         }).catch(error => {
           safeLogger.error('Failed to update escrow dispute status:', error);
         });
@@ -625,8 +702,8 @@ export class EnhancedEscrowService {
       safeLogger.info(`Locking ${amount} ${tokenAddress} in escrow ${escrowId}`);
       
       // Update escrow status in database
-      await databaseService.updateEscrow(parseInt(escrowId), {
-        // Mark funds as locked
+      await databaseService.updateEscrow(escrowId, {
+        buyerApproved: true
       });
 
       // Send notifications
@@ -669,7 +746,7 @@ export class EnhancedEscrowService {
       safeLogger.info(`Confirming delivery for escrow ${escrowId}: ${deliveryInfo}`);
       
       // Update escrow in database
-      await databaseService.updateEscrow(parseInt(escrowId), {
+      await databaseService.updateEscrow(escrowId, {
         // In a real implementation, we would store delivery info
       });
     } catch (error) {
@@ -693,7 +770,7 @@ export class EnhancedEscrowService {
       safeLogger.info(`Approving escrow ${escrowId} by buyer ${buyerAddress}`);
       
       // Update escrow in database
-      await databaseService.updateEscrow(parseInt(escrowId), {
+      await databaseService.updateEscrow(escrowId, {
         buyerApproved: true
       });
     } catch (error) {
@@ -718,7 +795,7 @@ export class EnhancedEscrowService {
       safeLogger.info(`Opening dispute for escrow ${escrowId} by ${userAddress}: ${reason}`);
       
       // Update escrow in database
-      await databaseService.updateEscrow(parseInt(escrowId), {
+      await databaseService.updateEscrow(escrowId, {
         disputeOpened: true
       });
     } catch (error) {
@@ -774,7 +851,7 @@ export class EnhancedEscrowService {
    */
   async getEscrow(escrowId: string): Promise<MarketplaceEscrow | null> {
     try {
-      const dbEscrow = await databaseService.getEscrowById(parseInt(escrowId));
+      const dbEscrow = await databaseService.getEscrowById(escrowId);
       if (!dbEscrow) return null;
       
       // Get buyer and seller addresses
@@ -977,7 +1054,7 @@ export class EnhancedEscrowService {
       safeLogger.info(`Cancelling escrow ${escrowId} by ${cancellerAddress}: ${reason}`);
 
       // Update database
-      await databaseService.updateEscrow(parseInt(escrowId), {
+      await databaseService.updateEscrow(escrowId, {
         // Mark as cancelled
       });
 

@@ -10,6 +10,19 @@ export interface ProductVariant {
   color?: string;
   colorHex?: string; // Hex color code for visual display
   size?: string;
+  sizeCategory?: string; // Category ID from size system (e.g., 'footwear-mens', 'clothing-tops')
+  sizeType?: 'clothing' | 'footwear' | 'general' | 'custom';
+  
+  // International size equivalents
+  sizeEquivalents?: {
+    US?: string;
+    UK?: string;
+    EU?: string;
+    JP?: string;
+  };
+  
+  // Custom size dimensions
+  customDimensions?: string; // e.g., "40x30x10cm"
   
   // Pricing
   priceAdjustment: number; // Additional cost (can be negative for discounts)
@@ -33,6 +46,17 @@ export interface ProductVariant {
     length: number;
     width: number;
     height: number;
+  };
+  
+  // Size measurements for clothing/footwear
+  measurements?: {
+    chest?: number; // cm
+    waist?: number; // cm
+    hips?: number; // cm
+    length?: number; // cm
+    inseam?: number; // cm
+    footLength?: number; // cm
+    footWidth?: number; // cm
   };
   
   // Timestamps

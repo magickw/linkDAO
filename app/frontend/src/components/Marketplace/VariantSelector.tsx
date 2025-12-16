@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { Check, AlertCircle } from 'lucide-react';
 import { ProductVariant, ColorSwatch, SizeOption } from '@/types/productVariant';
+import { InformationCircleIcon } from '@heroicons/react/24/outline';
+import SizeGuideModal from './SizeGuideModal';
 import { productVariantService } from '@/services/productVariantService';
 
 interface VariantSelectorProps {
@@ -23,6 +25,7 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
   const [selectedSize, setSelectedSize] = useState<string | undefined>();
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showSizeGuide, setShowSizeGuide] = useState(false);
 
   // Load variants
   useEffect(() => {
@@ -246,28 +249,38 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
           </div>
           
           <div className="flex flex-wrap gap-2">
-            {sizeOptions.map(option => (
-              <button
-                key={option.size}
-                onClick={() => handleSizeSelect(option.size)}
-                disabled={!option.available}
-                className={`
-                  px-4 py-2 rounded-lg border-2 font-medium text-sm
-                  transition-all duration-200
-                  ${selectedSize === option.size 
-                    ? 'border-indigo-400 bg-indigo-600/20 text-white' 
-                    : 'border-white/20 bg-white/5 text-white/70 hover:border-white/40 hover:bg-white/10'
-                  }
-                  ${!option.available ? 'opacity-40 cursor-not-allowed line-through' : 'cursor-pointer'}
-                `}
-                title={!option.available ? 'Out of Stock' : `${option.inventory} in stock`}
-              >
-                {option.size}
-                {!option.available && (
-                  <span className="ml-1 text-xs">(Out)</span>
-                )}
-              </button>
-            ))}
+{sizeOptions.map(option => {
+                    // Get international equivalents if available
+                    const getInternationalSizes = (size: string) => {
+                      // This would be enhanced to fetch from the size system
+                      return null; // Placeholder for international sizes
+                    };
+                    
+                    const intlSizes = getInternationalSizes(option.size);
+                    
+                    return (
+                      <button
+                        key={option.size}
+                        onClick={() => handleSizeSelect(option.size)}
+                        className={`px-4 py-2 rounded-lg border-2 transition-all ${
+                          selectedSize === option.size
+                            ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                            : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                        } ${!option.available ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={!option.available}
+                        title={intlSizes ? `US: ${intlSizes.US} | UK: ${intlSizes.UK} | EU: ${intlSizes.EU}` : undefined}
+                      >
+                        <div className="text-center">
+                          <div className="font-medium">{option.size}</div>
+                          {intlSizes && (
+                            <div className="text-xs text-gray-500">
+                              {intlSizes.EU}
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
           </div>
         </div>
       )}
@@ -305,6 +318,24 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
           </span>
         </div>
       )}
+
+      {/* Size Guide Button */}
+      {sizeOptions.length > 0 && (
+        <button
+          onClick={() => setShowSizeGuide(true)}
+          className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-800 transition-colors"
+        >
+          <InformationCircleIcon className="w-4 h-4" />
+          Size Guide
+        </button>
+      )}
+
+      {/* Size Guide Modal */}
+      <SizeGuideModal
+        isOpen={showSizeGuide}
+        onClose={() => setShowSizeGuide(false)}
+        initialCategory="clothing-tops"
+      />
     </div>
   );
 };

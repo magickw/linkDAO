@@ -69,18 +69,24 @@ export interface EnhancedEscrowInterface extends Interface {
       | "MIN_VOTING_POWER"
       | "REPUTATION_DECAY_PERIOD"
       | "VOTING_PERIOD"
+      | "addSignature"
       | "arbitratorFees"
       | "authorizeArbitrator"
       | "authorizedArbitrators"
+      | "autoResolveDispute"
       | "calculateWeightedScore"
       | "castHelpfulVote"
       | "castVote"
+      | "chainId"
       | "confirmDelivery"
       | "createEscrow"
+      | "createEscrowWithSecurity"
       | "detailedReputationScores"
+      | "escrowChainId"
       | "escrows"
       | "executeEmergencyRefund"
       | "getDetailedReputation"
+      | "getEscrowChainId"
       | "getReputationTier"
       | "getTopSellers"
       | "getUserReviews"
@@ -139,6 +145,10 @@ export interface EnhancedEscrowInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
+    functionFragment: "addSignature",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "arbitratorFees",
     values: [AddressLike]
   ): string;
@@ -149,6 +159,10 @@ export interface EnhancedEscrowInterface extends Interface {
   encodeFunctionData(
     functionFragment: "authorizedArbitrators",
     values: [AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "autoResolveDispute",
+    values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "calculateWeightedScore",
@@ -162,6 +176,7 @@ export interface EnhancedEscrowInterface extends Interface {
     functionFragment: "castVote",
     values: [BigNumberish, boolean]
   ): string;
+  encodeFunctionData(functionFragment: "chainId", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "confirmDelivery",
     values: [BigNumberish, string]
@@ -178,8 +193,26 @@ export interface EnhancedEscrowInterface extends Interface {
     ]
   ): string;
   encodeFunctionData(
+    functionFragment: "createEscrowWithSecurity",
+    values: [
+      BigNumberish,
+      AddressLike,
+      AddressLike,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      boolean,
+      BigNumberish,
+      BigNumberish
+    ]
+  ): string;
+  encodeFunctionData(
     functionFragment: "detailedReputationScores",
     values: [AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "escrowChainId",
+    values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "escrows",
@@ -192,6 +225,10 @@ export interface EnhancedEscrowInterface extends Interface {
   encodeFunctionData(
     functionFragment: "getDetailedReputation",
     values: [AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getEscrowChainId",
+    values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "getReputationTier",
@@ -297,6 +334,10 @@ export interface EnhancedEscrowInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "addSignature",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "arbitratorFees",
     data: BytesLike
   ): Result;
@@ -309,6 +350,10 @@ export interface EnhancedEscrowInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "autoResolveDispute",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "calculateWeightedScore",
     data: BytesLike
   ): Result;
@@ -317,6 +362,7 @@ export interface EnhancedEscrowInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "castVote", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "chainId", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "confirmDelivery",
     data: BytesLike
@@ -326,7 +372,15 @@ export interface EnhancedEscrowInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "createEscrowWithSecurity",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "detailedReputationScores",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "escrowChainId",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "escrows", data: BytesLike): Result;
@@ -336,6 +390,10 @@ export interface EnhancedEscrowInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "getDetailedReputation",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getEscrowChainId",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -684,6 +742,12 @@ export interface EnhancedEscrow extends BaseContract {
 
   VOTING_PERIOD: TypedContractMethod<[], [bigint], "view">;
 
+  addSignature: TypedContractMethod<
+    [escrowId: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
   arbitratorFees: TypedContractMethod<[arg0: AddressLike], [bigint], "view">;
 
   authorizeArbitrator: TypedContractMethod<
@@ -696,6 +760,12 @@ export interface EnhancedEscrow extends BaseContract {
     [arg0: AddressLike],
     [boolean],
     "view"
+  >;
+
+  autoResolveDispute: TypedContractMethod<
+    [escrowId: BigNumberish],
+    [void],
+    "nonpayable"
   >;
 
   calculateWeightedScore: TypedContractMethod<
@@ -716,6 +786,8 @@ export interface EnhancedEscrow extends BaseContract {
     "nonpayable"
   >;
 
+  chainId: TypedContractMethod<[], [bigint], "view">;
+
   confirmDelivery: TypedContractMethod<
     [escrowId: BigNumberish, deliveryInfo: string],
     [void],
@@ -730,6 +802,22 @@ export interface EnhancedEscrow extends BaseContract {
       amount: BigNumberish,
       deliveryDeadline: BigNumberish,
       resolutionMethod: BigNumberish
+    ],
+    [bigint],
+    "payable"
+  >;
+
+  createEscrowWithSecurity: TypedContractMethod<
+    [
+      listingId: BigNumberish,
+      seller: AddressLike,
+      tokenAddress: AddressLike,
+      amount: BigNumberish,
+      deliveryDeadline: BigNumberish,
+      resolutionMethod: BigNumberish,
+      requiresMultiSig: boolean,
+      multiSigThreshold: BigNumberish,
+      timeLockDuration: BigNumberish
     ],
     [bigint],
     "payable"
@@ -764,6 +852,8 @@ export interface EnhancedEscrow extends BaseContract {
     ],
     "view"
   >;
+
+  escrowChainId: TypedContractMethod<[arg0: BigNumberish], [bigint], "view">;
 
   escrows: TypedContractMethod<
     [arg0: BigNumberish],
@@ -830,6 +920,12 @@ export interface EnhancedEscrow extends BaseContract {
   getDetailedReputation: TypedContractMethod<
     [user: AddressLike],
     [EnhancedEscrow.DetailedReputationScoreStructOutput],
+    "view"
+  >;
+
+  getEscrowChainId: TypedContractMethod<
+    [escrowId: BigNumberish],
+    [bigint],
     "view"
   >;
 
@@ -975,6 +1071,9 @@ export interface EnhancedEscrow extends BaseContract {
     nameOrSignature: "VOTING_PERIOD"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
+    nameOrSignature: "addSignature"
+  ): TypedContractMethod<[escrowId: BigNumberish], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "arbitratorFees"
   ): TypedContractMethod<[arg0: AddressLike], [bigint], "view">;
   getFunction(
@@ -988,6 +1087,9 @@ export interface EnhancedEscrow extends BaseContract {
     nameOrSignature: "authorizedArbitrators"
   ): TypedContractMethod<[arg0: AddressLike], [boolean], "view">;
   getFunction(
+    nameOrSignature: "autoResolveDispute"
+  ): TypedContractMethod<[escrowId: BigNumberish], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "calculateWeightedScore"
   ): TypedContractMethod<[user: AddressLike], [bigint], "view">;
   getFunction(
@@ -1000,6 +1102,9 @@ export interface EnhancedEscrow extends BaseContract {
     [void],
     "nonpayable"
   >;
+  getFunction(
+    nameOrSignature: "chainId"
+  ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "confirmDelivery"
   ): TypedContractMethod<
@@ -1017,6 +1122,23 @@ export interface EnhancedEscrow extends BaseContract {
       amount: BigNumberish,
       deliveryDeadline: BigNumberish,
       resolutionMethod: BigNumberish
+    ],
+    [bigint],
+    "payable"
+  >;
+  getFunction(
+    nameOrSignature: "createEscrowWithSecurity"
+  ): TypedContractMethod<
+    [
+      listingId: BigNumberish,
+      seller: AddressLike,
+      tokenAddress: AddressLike,
+      amount: BigNumberish,
+      deliveryDeadline: BigNumberish,
+      resolutionMethod: BigNumberish,
+      requiresMultiSig: boolean,
+      multiSigThreshold: BigNumberish,
+      timeLockDuration: BigNumberish
     ],
     [bigint],
     "payable"
@@ -1052,6 +1174,9 @@ export interface EnhancedEscrow extends BaseContract {
     ],
     "view"
   >;
+  getFunction(
+    nameOrSignature: "escrowChainId"
+  ): TypedContractMethod<[arg0: BigNumberish], [bigint], "view">;
   getFunction(
     nameOrSignature: "escrows"
   ): TypedContractMethod<
@@ -1119,6 +1244,9 @@ export interface EnhancedEscrow extends BaseContract {
     [EnhancedEscrow.DetailedReputationScoreStructOutput],
     "view"
   >;
+  getFunction(
+    nameOrSignature: "getEscrowChainId"
+  ): TypedContractMethod<[escrowId: BigNumberish], [bigint], "view">;
   getFunction(
     nameOrSignature: "getReputationTier"
   ): TypedContractMethod<[user: AddressLike], [bigint], "view">;

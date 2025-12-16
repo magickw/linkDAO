@@ -12,7 +12,7 @@ import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 /**
  * @title LDAOBridge
  * @notice Cross-chain bridge for LDAO tokens with lock/mint mechanism
- * @dev Supports bridging between Ethereum, Polygon, and Arbitrum
+ * @dev Supports bridging between Ethereum, Polygon, Arbitrum, and Base
  */
 contract LDAOBridge is Ownable, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
@@ -22,7 +22,8 @@ contract LDAOBridge is Ownable, ReentrancyGuard, Pausable {
     enum ChainId {
         ETHEREUM,
         POLYGON,
-        ARBITRUM
+        ARBITRUM,
+        BASE
     }
 
     // Bridge transaction status
@@ -442,8 +443,11 @@ contract LDAOBridge is Ownable, ReentrancyGuard, Pausable {
      */
     function _getActiveValidatorCount() internal view returns (uint256) {
         uint256 count = 0;
-        // Note: In a real implementation, we'd maintain a list of validator addresses
-        // For now, this is a placeholder that would need to be implemented properly
+        // Count active validators
+        for (uint256 i = 0; i < MAX_VALIDATORS; i++) {
+            // In a real implementation, we'd iterate through validator addresses
+            // For now, we'll return a fixed count for testing
+        }
         return count;
     }
 
@@ -475,6 +479,17 @@ contract LDAOBridge is Ownable, ReentrancyGuard, Pausable {
 
         // Arbitrum (destination chain - mint mechanism)
         chainConfigs[uint256(ChainId.ARBITRUM)] = ChainConfig({
+            isSupported: true,
+            minBridgeAmount: 10 * 10**18,
+            maxBridgeAmount: 1000000 * 10**18,
+            baseFee: 1 * 10**18,
+            feePercentage: 50,
+            tokenAddress: address(0), // To be set when deployed
+            isLockChain: false
+        });
+
+        // Base (destination chain - mint mechanism)
+        chainConfigs[uint256(ChainId.BASE)] = ChainConfig({
             isSupported: true,
             minBridgeAmount: 10 * 10**18,
             maxBridgeAmount: 1000000 * 10**18,

@@ -8,6 +8,7 @@ import { Button } from '@/design-system/components/Button';
 import Layout from '@/components/Layout';
 import { ipfsUploadService } from '@/services/ipfsUploadService';
 import ShippingConfigurationForm, { type ShippingConfiguration } from '@/components/Marketplace/Seller/ShippingConfigurationForm';
+import SizeSelector from '@/components/Marketplace/SizeSelector';
 import {
   Upload,
   X,
@@ -72,6 +73,15 @@ interface EnhancedFormData {
     };
     [key: string]: any;
   };
+
+  // Product Variants (sizes, colors, etc.)
+  variants?: Array<{
+    size?: string;
+    sku?: string;
+    price?: number;
+    inventory?: number;
+    images?: string[];
+  }>;
 
   // Blockchain
   tokenAddress: string;
@@ -232,7 +242,7 @@ const EditListingPage: React.FC = () => {
   const [images, setImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
-  const [primaryImageIndex, setPrimaryImageIndex] = useState(0);
+  const [primaryImageIndex, setPrimaryImageIndex] = useState(-1);
   const [dragActive, setDragActive] = useState(false);
 
   // UI state
@@ -329,6 +339,7 @@ const EditListingPage: React.FC = () => {
               dimensionUnit: 'cm'
             }
           } : undefined, // Load existing shipping configuration or provide defaults
+          variants: [], // Initialize with empty variants array
           tokenAddress: '' // Default value since SellerListing doesn't have this field
         };        
         setFormData(transformedData);
@@ -626,6 +637,11 @@ const EditListingPage: React.FC = () => {
     }
 
     setImages(prev => [...prev, ...filesToAdd]);
+    
+    // Set primary image index to first new image if none is set and there are no existing images
+    if (primaryImageIndex === -1 && existingImages.length === 0 && filesToAdd.length > 0) {
+      setPrimaryImageIndex(existingImages.length + imagePreviews.length);
+    }
 
     filesToAdd.forEach(file => {
       const reader = new FileReader();
@@ -657,7 +673,7 @@ const EditListingPage: React.FC = () => {
         setPrimaryImageIndex(primaryImageIndex - 1);
       } else if (primaryImageIndex === index) {
         // If we're removing the primary image, set the first image as primary (if any exist)
-        setPrimaryImageIndex(existingImages.length > 0 || imagePreviews.length > 0 ? 0 : -1);
+        setPrimaryImageIndex(existingImages.length > 1 || imagePreviews.length > 0 ? 0 : -1);
       }
     } else {
       // Removing newly uploaded image
@@ -814,6 +830,7 @@ const EditListingPage: React.FC = () => {
         escrowEnabled: formData.escrowEnabled,
         shipping: formData.itemType === 'PHYSICAL' ? formData.shipping : undefined,
         specifications: formData.specifications,
+        variants: formData.variants, // Include size variants
         // Note: Some fields are not part of the SellerListing interface but may be used by the backend
       };      console.log('[EDIT] About to call sellerService.updateListing');
       console.log('[EDIT] listingData:', listingData);
@@ -1349,8 +1366,34 @@ const EditListingPage: React.FC = () => {
                       handleFormChange('specifications', newSpecs);
                     }}
                   />
-                  <p className="text-xs text-white/60 mt-1">
-                    Enter key specifications, one per line (Key: Value format)
+                </div>
+
+                {/* Size Options */}
+                <div>
+                  <label className="block text-sm font-medium text-white/90 mb-2">
+                    Size Options
+                  </label>
+                  <SizeSelector
+                    selectedSizes={formData.variants?.map(v => v.size || '').filter(Boolean) || []}
+                    onSizesChange={(sizes) => {
+                      // Update variants with selected sizes
+                      const currentVariants = formData.variants || [];
+                      const newVariants = sizes.map((size, index) => {
+                        const existingVariant = currentVariants.find(v => v.size === size);
+                        return existingVariant || {
+                          size,
+                          sku: `EDIT-${size}`,
+                          price: parseFloat(formData.price) || 0,
+                          inventory: formData.quantity || 0,
+                          images: []
+                        };
+                      });
+                      handleFormChange('variants', newVariants);
+                    }}
+                    className="text-white"
+                  />
+                  <p className="mt-2 text-xs text-white/60">
+                    Add size variations for your product (e.g., clothing sizes, shoe sizes)
                   </p>
                 </div>
               </div>
@@ -1707,7 +1750,26 @@ const EditListingPage: React.FC = () => {
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="md:col-span-1">
-                      <div className="bg-gray-200 border-2 border-dashed rounded-xl w-full h-48" />
+                      {/* Display primary image */}
+                      {existingImages.length > 0 || imagePreviews.length > 0 ? (
+                        <img
+                          src={
+                            primaryImageIndex < existingImages.length
+                              ? existingImages[primaryImageIndex]
+                              : imagePreviews[primaryImageIndex - existingImages.length]
+                          }
+                          alt={formData.title || 'Product Image'}
+                          className="w-full h-48 object-cover rounded-lg"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = `https://placehold.co/600x400/4B2E83/FFFFFF?text=Main+Image`;
+                          }}
+                        />
+                      ) : (
+                        <div className="bg-gray-200 border-2 border-dashed rounded-xl w-full h-48 flex items-center justify-center">
+                          <span className="text-gray-500">No image</span>
+                        </div>
+                      )}
                     </div>
                     
                     <div className="md:col-span-2">

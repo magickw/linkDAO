@@ -1029,34 +1029,34 @@ export class UnifiedMarketplaceService {
         throw new Error('Cannot connect to localhost in production due to CSP restrictions');
       }
 
-      // Simplified headers to avoid CORS issues
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        ...options.headers,
-      };
-
-      // Remove problematic headers
-      delete (headers as Record<string, string>)['Cache-Control'];
-      delete (headers as Record<string, string>)['Pragma'];
-      delete (headers as Record<string, string>)['Referrer-Policy'];
-
-      const fetchOptions: RequestInit = {
+      // Use global fetch wrapper which handles token refresh automatically
+      const { globalFetch } = await import('./globalFetchWrapper');
+      const response = await globalFetch(url, {
         ...options,
-        signal: controller.signal,
-        headers,
-        // Standard CORS settings
-        mode: 'cors',
-        credentials: 'omit', // Changed to omit to reduce CORS issues
-        redirect: 'follow'
-      };
+        maxRetries: 2
+      });
 
-      console.log('[MarketplaceService] Attempting fetch to:', url);
-      const response = await fetch(url, fetchOptions);
-      console.log('[MarketplaceService] Fetch response status:', response.status);
-
-      clearTimeout(timeoutId);
-      return response;
+      // Convert to a Response object for compatibility
+      if (response.success) {
+        const responseData = response.data;
+        const responseText = typeof responseData === 'string' 
+          ? responseData 
+          : JSON.stringify(responseData);
+        
+        return new Response(responseText, {
+          status: response.status,
+          headers: response.headers
+        });
+      } else {
+        // Create an error response
+        const error: any = new Error(response.error || 'Request failed');
+        error.response = {
+          status: response.status,
+          headers: response.headers
+        };
+        error.status = response.status;
+        throw error;
+      }
     } catch (error) {
       clearTimeout(timeoutId);
 
