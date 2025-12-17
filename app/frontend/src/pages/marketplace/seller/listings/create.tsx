@@ -1476,7 +1476,7 @@ const CreateListingPage: React.FC = () => {
                               className="w-full h-32 object-cover"
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement;
-                                target.src = `https://via.placeholder.com/300x300/4B2E83/FFFFFF?text=Image+${index + 1}`;
+                                target.src = `https://placehold.co/300x300/4B2E83/FFFFFF?text=Image+${index + 1}`;
                               }}
                             />
 

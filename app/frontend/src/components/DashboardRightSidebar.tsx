@@ -481,7 +481,7 @@ const DashboardRightSidebar = memo(() => {
               onChainCertified: true,
               safetyScore: 98
             },
-            images: ['https://via.placeholder.com/300x200']
+            images: ['https://placehold.co/300x200']
           }
         ];
 

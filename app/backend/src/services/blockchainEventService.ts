@@ -396,8 +396,8 @@ export class BlockchainEventService {
 
       // Send notifications
       await Promise.all([
-        notificationService.sendOrderNotification(buyer, 'ESCROW_CREATED', orderId),
-        notificationService.sendOrderNotification(seller, 'ESCROW_CREATED', orderId)
+        notificationService.sendOrderNotification(buyer, 'ESCROW_CREATED', String(orderId)),
+        notificationService.sendOrderNotification(seller, 'ESCROW_CREATED', String(orderId))
       ]);
     } catch (error) {
       safeLogger.error('Error handling EscrowCreated event:', error);
@@ -421,7 +421,7 @@ export class BlockchainEventService {
       await this.updateOrderStatus(orderId, 'PAID');
 
       // Get order details for notifications
-      const order = await databaseService.getOrderById(parseInt(orderId));
+      const order = await databaseService.getOrderById(orderId);
       if (order) {
         const [buyer, seller] = await Promise.all([
           databaseService.getUserById(order.buyerId || ''),
@@ -429,7 +429,7 @@ export class BlockchainEventService {
         ]);
 
         if (buyer && seller) {
-          await notificationService.sendOrderNotification(seller.walletAddress, 'PAYMENT_RECEIVED', orderId);
+          await notificationService.sendOrderNotification(seller.walletAddress, 'PAYMENT_RECEIVED', String(orderId));
         }
       }
     } catch (error) {
@@ -454,7 +454,7 @@ export class BlockchainEventService {
       await this.updateOrderStatus(orderId, 'DELIVERED');
 
       // Get order details for notifications
-      const order = await databaseService.getOrderById(parseInt(orderId));
+      const order = await databaseService.getOrderById(orderId);
       if (order) {
         const [buyer, seller] = await Promise.all([
           databaseService.getUserById(order.buyerId || ''),
@@ -463,8 +463,8 @@ export class BlockchainEventService {
 
         if (buyer && seller) {
           await Promise.all([
-            notificationService.sendOrderNotification(buyer.walletAddress, 'DELIVERY_CONFIRMED', orderId),
-            notificationService.sendOrderNotification(seller.walletAddress, 'DELIVERY_CONFIRMED', orderId)
+            notificationService.sendOrderNotification(buyer.walletAddress, 'DELIVERY_CONFIRMED', String(orderId)),
+            notificationService.sendOrderNotification(seller.walletAddress, 'DELIVERY_CONFIRMED', String(orderId))
           ]);
         }
       }
@@ -489,7 +489,7 @@ export class BlockchainEventService {
       await this.storeEvent(blockchainEvent);
 
       // Send notification
-      await notificationService.sendOrderNotification(approver, 'ESCROW_APPROVED', orderId);
+      await notificationService.sendOrderNotification(approver, 'ESCROW_APPROVED', String(orderId));
     } catch (error) {
       safeLogger.error('Error handling EscrowApproved event:', error);
     }
@@ -512,7 +512,7 @@ export class BlockchainEventService {
       await this.updateOrderStatus(orderId, 'DISPUTED');
 
       // Get order details for notifications
-      const order = await databaseService.getOrderById(parseInt(orderId));
+      const order = await databaseService.getOrderById(orderId);
       if (order) {
         const [buyer, seller] = await Promise.all([
           databaseService.getUserById(order.buyerId || ''),
@@ -521,7 +521,7 @@ export class BlockchainEventService {
 
         if (buyer && seller) {
           const otherParty = initiator === buyer.walletAddress ? seller.walletAddress : buyer.walletAddress;
-          await notificationService.sendOrderNotification(otherParty, 'DISPUTE_OPENED', orderId, { reason });
+          await notificationService.sendOrderNotification(otherParty, 'DISPUTE_OPENED', String(orderId), { reason });
         }
       }
     } catch (error) {
@@ -546,7 +546,7 @@ export class BlockchainEventService {
       await this.updateOrderStatus(orderId, favorBuyer ? 'REFUNDED' : 'COMPLETED');
 
       // Get order details for notifications
-      const order = await databaseService.getOrderById(parseInt(orderId));
+      const order = await databaseService.getOrderById(orderId);
       if (order) {
         const [buyer, seller] = await Promise.all([
           databaseService.getUserById(order.buyerId || ''),
@@ -555,8 +555,8 @@ export class BlockchainEventService {
 
         if (buyer && seller) {
           await Promise.all([
-            notificationService.sendOrderNotification(buyer.walletAddress, 'DISPUTE_RESOLVED', orderId, { favorBuyer, resolution }),
-            notificationService.sendOrderNotification(seller.walletAddress, 'DISPUTE_RESOLVED', orderId, { favorBuyer, resolution })
+            notificationService.sendOrderNotification(buyer.walletAddress, 'DISPUTE_RESOLVED', String(orderId), { favorBuyer, resolution }),
+            notificationService.sendOrderNotification(seller.walletAddress, 'DISPUTE_RESOLVED', String(orderId), { favorBuyer, resolution })
           ]);
         }
       }
@@ -582,7 +582,7 @@ export class BlockchainEventService {
       await this.updateOrderStatus(orderId, 'COMPLETED');
 
       // Send notification
-      await notificationService.sendOrderNotification(recipient, 'PAYMENT_RELEASED', orderId, { amount });
+      await notificationService.sendOrderNotification(recipient, 'PAYMENT_RELEASED', String(orderId), { amount });
     } catch (error) {
       safeLogger.error('Error handling PaymentReleased event:', error);
     }
@@ -662,7 +662,7 @@ export class BlockchainEventService {
 
   private async updateOrderStatus(orderId: string, status: string): Promise<void> {
     try {
-      await databaseService.updateOrder(parseInt(orderId), { status: status.toLowerCase() });
+      await databaseService.updateOrder(orderId, { status: status.toLowerCase() });
     } catch (error) {
       safeLogger.error('Error updating order status:', error);
     }

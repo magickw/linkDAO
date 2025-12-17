@@ -8,6 +8,7 @@ interface ModerationResult {
   reasoning: string;
   suggestedActions: string[];
   confidence: number; // 0-100
+  timestamp: number;
 }
 
 interface ModerationCategory {
@@ -201,7 +202,7 @@ export class AIModerationService {
 
       // Call AI service for content analysis
       const aiResponse = await openaiService.generateInsight({
-        type: 'content_moderation',
+        type: 'content_moderation' as any,
         context
       });
 

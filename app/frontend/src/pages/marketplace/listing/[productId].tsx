@@ -300,14 +300,14 @@ const ProductDetailPageRoute: React.FC = () => {
               soldCount: productData.sales_count || productData.salesCount || productData.soldCount || 0,
               media: imageUrls.length > 0 ? imageUrls.map((url: string, index: number) => ({
                 type: 'image' as const,
-                url: url || `https://via.placeholder.com/600x400/4B2E83/FFFFFF?text=${encodeURIComponent(productData.title || `Product ${index + 1}`)}`,
-                thumbnail: url || `https://via.placeholder.com/150x150/4B2E83/FFFFFF?text=${encodeURIComponent(productData.title || `Product ${index + 1}`)}`,
+                url: url || `https://placehold.co/600x400/4B2E83/FFFFFF?text=${encodeURIComponent(productData.title || `Product ${index + 1}`)}`,
+                thumbnail: url || `https://placehold.co/150x150/4B2E83/FFFFFF?text=${encodeURIComponent(productData.title || `Product ${index + 1}`)}`,
                 alt: productData.title ? `${productData.title} - Image ${index + 1}` : `Product Image ${index + 1}`
               })) : [
                 {
                   type: 'image' as const,
-                  url: `https://via.placeholder.com/600x400/4B2E83/FFFFFF?text=${encodeURIComponent(productData.title || 'Product')}`,
-                  thumbnail: `https://via.placeholder.com/150x150/4B2E83/FFFFFF?text=${encodeURIComponent(productData.title || 'Product')}`,
+                  url: `https://placehold.co/600x400/4B2E83/FFFFFF?text=${encodeURIComponent(productData.title || 'Product')}`,
+                  thumbnail: `https://placehold.co/150x150/4B2E83/FFFFFF?text=${encodeURIComponent(productData.title || 'Product')}`,
                   alt: productData.title || 'Product'
                 }
               ]

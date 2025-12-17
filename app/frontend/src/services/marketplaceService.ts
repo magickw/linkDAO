@@ -549,7 +549,6 @@ export class UnifiedMarketplaceService {
         console.warn('Request timed out fetching listing, using fallback data.');
         return this.createFallbackProduct(id);
       }
-      console.error('Marketplace service error:', error);
       console.error('Error fetching listing:', error);
       return this.createFallbackProduct(id);
     }

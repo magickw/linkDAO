@@ -755,7 +755,6 @@ export class AutomatedCaseManagementService {
     await db.update(disputes)
       .set({
         status: 'assigned',
-        updatedAt: new Date()
       })
       .where(eq(disputes.id, assignment.disputeId));
     

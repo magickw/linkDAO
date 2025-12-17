@@ -328,12 +328,12 @@ export class AIEvidenceAnalysisService {
   async findSimilarEvidence(
     evidenceId: string,
     analysisResult: EvidenceAnalysisResult
-  ): Promise<Array<{ evidenceId: string; similarity: number; disputeId: number }>> {
+  ): Promise<Array<{ evidenceId: string; similarity: number; disputeId: string }>> {
     try {
       // Get all evidence from database
       const allEvidence = await db.select().from(disputeEvidence);
       
-      const similarities: Array<{ evidenceId: string; similarity: number; disputeId: number }> = [];
+      const similarities: Array<{ evidenceId: string; similarity: number; disputeId: string }> = [];
       
       for (const evidence of allEvidence) {
         if (evidence.id.toString() === evidenceId) continue;
@@ -348,7 +348,7 @@ export class AIEvidenceAnalysisService {
           similarities.push({
             evidenceId: evidence.id.toString(),
             similarity,
-            disputeId: evidence.disputeId!
+            disputeId: evidence.orderId
           });
         }
       }

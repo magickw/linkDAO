@@ -160,7 +160,7 @@ export class GoogleVisionService implements VendorModerationService {
 
       // Test with a simple image URL (placeholder)
       // In production, you'd use a known safe test image
-      const testImageUrl = 'https://via.placeholder.com/150';
+      const testImageUrl = 'https://placehold.co/150';
       const testResult = await this.scanImage(testImageUrl);
       return testResult.success;
     } catch (error) {

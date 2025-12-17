@@ -353,7 +353,7 @@ class AutomatedTierUpgradeService {
           createdAt: sellers.createdAt,
         })
         .from(sellers)
-        .where(eq(sellers.id, parseInt(sellerId)))
+        .where(eq(sellers.id, sellerId))
         .limit(1);
 
       const accountAge = sellerInfo.length > 0 
@@ -469,14 +469,13 @@ class AutomatedTierUpgradeService {
       safeLogger.info(`Processing automated upgrade for ${walletAddress}: ${fromTier} -> ${toTier.tierId}`);
 
       // Update seller tier in database
-      const sellerIdNum = typeof sellerId === 'string' ? parseInt(sellerId, 10) : sellerId;
       await db
         .update(sellers)
         .set({
           tier: toTier.tierId,
           updatedAt: new Date(),
         })
-        .where(eq(sellers.id, sellerIdNum));
+        .where(eq(sellers.id, sellerId));
 
       // Activate tier benefits
       await this.activateTierBenefits(sellerId, toTier);

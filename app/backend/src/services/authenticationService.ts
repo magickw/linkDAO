@@ -266,9 +266,7 @@ export class AuthenticationService {
         userId: user?.id,
         handle: user?.handle,
         email: user?.email,
-        kycStatus: (user as any)?.kycStatus || 'none',
-        isActiveUser: (user as any)?.isActive ?? true,
-        isSuspended: (user as any)?.isSuspended ?? false,
+        kycStatus: user ? (user as any).kycStatus || 'none' : 'none',
       };
     } catch (error) {
       safeLogger.error('Error validating session:', error);

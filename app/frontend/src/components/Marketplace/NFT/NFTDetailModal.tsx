@@ -119,7 +119,7 @@ export default function NFTDetailModal({ isOpen, onClose, nftId }: NFTDetailModa
         id: nftId,
         name: 'Cosmic Wanderer #1234',
         description: 'A beautiful cosmic wanderer exploring the digital universe. This unique piece represents the journey of consciousness through the vast expanse of cyberspace, where digital souls find their purpose among the stars.',
-        imageUrl: 'https://via.placeholder.com/600x600/6366f1/ffffff?text=NFT+Detail',
+        imageUrl: 'https://placehold.co/600x600/6366f1/ffffff?text=NFT+Detail'
         animationUrl: undefined,
         price: '2.5',
         currency: 'ETH',
@@ -127,14 +127,14 @@ export default function NFTDetailModal({ isOpen, onClose, nftId }: NFTDetailModa
           id: 'creator1',
           handle: 'cosmicartist',
           walletAddress: '0x1234567890123456789012345678901234567890',
-          avatar: 'https://via.placeholder.com/40x40/8b5cf6/ffffff?text=CA',
+          avatar: 'https://placehold.co/40x40/8b5cf6/ffffff?text=CA'
           verified: true,
         },
         owner: {
           id: 'owner1',
           handle: 'collector_pro',
           walletAddress: '0x0987654321098765432109876543210987654321',
-          avatar: 'https://via.placeholder.com/40x40/10b981/ffffff?text=CP',
+          avatar: 'https://placehold.co/40x40/10b981/ffffff?text=CP'
         },
         collection: {
           id: 'collection1',

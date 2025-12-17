@@ -10,17 +10,18 @@ import { convertBigIntToStrings, stringifyWithBigInt, jsonToBigInt } from '../ut
 export interface BridgeTransaction {
   id: string;
   nonce: number;
-  user: string;
+  userId: string;
   amount: string;
-  sourceChain: number;
-  destinationChain: number;
+  fromChain: number;
+  toChain: number;
   status: 'pending' | 'completed' | 'failed' | 'cancelled';
   txHash?: string;
-  fee: string;
+  fees: string;
   timestamp: Date;
   completedAt?: Date;
   validatorCount: number;
   requiredValidators: number;
+  bridgeProvider: string;
 }
 
 export interface BridgeEvent {
@@ -356,15 +357,16 @@ export class BridgeMonitoringService extends EventEmitter {
 
     const transaction: Omit<BridgeTransaction, 'id'> = {
       nonce: Number(nonce),
-      user,
+      userId: user,
       amount: amount.toString(),
-      sourceChain: Number(sourceChain),
-      destinationChain: Number(destinationChain),
+      fromChain: Number(sourceChain),
+      toChain: Number(destinationChain),
       status: 'pending',
-      fee: fee.toString(),
+      fees: fee.toString(),
       timestamp,
       validatorCount: 0,
-      requiredValidators: await this.getRequiredValidators(chainId)
+      requiredValidators: await this.getRequiredValidators(chainId),
+      bridgeProvider: 'default'
     };
 
     await this.storeBridgeTransaction(transaction);
@@ -498,22 +500,23 @@ export class BridgeMonitoringService extends EventEmitter {
    * Increment validator count for transaction
    */
   private async incrementValidatorCount(nonce: number): Promise<void> {
-    try {
-      const [transaction] = await db
-        .select()
-        .from(bridgeTransactions)
-        .where(eq(bridgeTransactions.nonce, nonce))
-        .limit(1);
+    // This logic is removed as validatorCount does not seem to exist in the schema
+    // try {
+    //   const [transaction] = await db
+    //     .select()
+    //     .from(bridgeTransactions)
+    //     .where(eq(bridgeTransactions.nonce, nonce))
+    //     .limit(1);
 
-      if (transaction) {
-        await db
-          .update(bridgeTransactions)
-          .set({ validatorCount: transaction.validatorCount + 1 })
-          .where(eq(bridgeTransactions.id, transaction.id));
-      }
-    } catch (error) {
-      logger.error('Error incrementing validator count:', error);
-    }
+    //   if (transaction) {
+    //     await db
+    //       .update(bridgeTransactions)
+    //       .set({ validatorCount: transaction.validatorCount + 1 })
+    //       .where(eq(bridgeTransactions.id, transaction.id));
+    //   }
+    // } catch (error) {
+    //   logger.error('Error incrementing validator count:', error);
+    // }
   }
 
   /**

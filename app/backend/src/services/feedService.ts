@@ -539,11 +539,11 @@ export class FeedService {
 
       // 4. Attach metrics to posts using map lookups (O(1) per post)
       const postsWithMetrics = paginatedPosts.map(post => {
-        const reactionCount = reactionMap.get(post.id) || 0;
-        const tipCount = tipCountMap.get(post.id) || 0;
-        const totalTipAmount = tipTotalMap.get(post.id) || 0;
-        const commentCount = commentMap.get(post.id) || 0;
-        const viewCount = viewMap.get(post.id) || 0;
+        const reactionCount = Number(reactionMap.get(post.id) || 0);
+        const tipCount = Number(tipCountMap.get(post.id) || 0);
+        const totalTipAmount = Number(tipTotalMap.get(post.id) || 0);
+        const commentCount = Number(commentMap.get(post.id) || 0);
+        const viewCount = Number(viewMap.get(post.id) || 0);
 
         const score = this.calculateEngagementScore(
           reactionCount,
@@ -1315,9 +1315,9 @@ export class FeedService {
         totalReactionAmount: reactionData[0]?.totalAmount || 0,
         stakedValue: post[0].stakedValue,
         engagementScore: this.calculateEngagementScore(
-          reactionData[0]?.count || 0,
-          tipData[0]?.count || 0,
-          commentData[0]?.count || 0
+          Number(reactionData[0]?.count || 0),
+          Number(tipData[0]?.count || 0),
+          Number(commentData[0]?.count || 0)
         )
       };
     } catch (error) {

@@ -104,9 +104,9 @@ export class AuditLogAnalysisService {
     }
 
     // Get total count
-    const totalQuery = db.select({ count: count() }).from(admin_audit_logs);
+    let totalQuery = db.select({ count: count() }).from(admin_audit_logs);
     if (conditions.length > 0) {
-      totalQuery.where(and(...conditions));
+      totalQuery = totalQuery.where(and(...conditions));
     }
     const totalResult = await totalQuery;
     const total = totalResult[0]?.count || 0;

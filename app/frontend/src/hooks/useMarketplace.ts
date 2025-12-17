@@ -106,7 +106,7 @@ const parseOrderFromChain = (orderData: any): Order => {
           name: item.name || 'Unknown Product',
           price: item.price ? formatEther(item.price.toString()) : '0',
           quantity: Number(item.quantity || 1),
-          image: item.image || 'https://via.placeholder.com/50',
+          image: item.image || 'https://placehold.co/50'
         }))
       : [],
     paymentMethod: orderData.paymentMethod || 'crypto',
@@ -269,7 +269,7 @@ export const useMarketplace = (): UseMarketplaceReturn => {
       name: `Product ${startIndex + i + 1}`,
       description: `Description for product ${startIndex + i + 1}`,
       price: '0.1',
-      image: 'https://via.placeholder.com/150',
+      image: 'https://placehold.co/150',
       stock: 10,
       category: 'Electronics',
       status: 'active',
@@ -420,7 +420,7 @@ export const useMarketplace = (): UseMarketplaceReturn => {
             name: `Product ${orderId}`,
             price: (Math.random() * 0.5).toFixed(3),
             quantity: Math.floor(Math.random() * 3) + 1,
-            image: 'https://via.placeholder.com/50'
+            image: 'https://placehold.co/50',
           }
         ],
         createdAt: orderDate.toISOString(),

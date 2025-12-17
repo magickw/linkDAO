@@ -24,6 +24,7 @@ export interface AdvancedReputationImpact {
 
 export interface RealTimeReputationUpdate {
   userId: string;
+  walletAddress: string;
   previousScore: number;
   newScore: number;
   change: number;
@@ -39,10 +40,11 @@ export interface BulkReputationOperation {
   changes: Record<string, number>;
   justification: string;
   performedBy: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'failed' | 'rolled_back';
+  status: 'pending' | 'in_progress' | 'completed' | 'failed' | 'rolled_back' | 'completed_with_errors';
   createdAt: Date;
   completedAt?: Date;
   rollbackData?: Record<string, any>;
+  error?: string;
 }
 
 export interface ReputationAnalytics {
@@ -196,11 +198,11 @@ export class AdvancedReputationService extends EventEmitter {
 
       // Create reputation change event
       await db.insert(reputationChangeEvents).values({
-        userId,
+        userAddress: userId,
         eventType,
         scoreChange: adjustedScoreChange,
-        previousScore,
-        newScore,
+        previousScore: String(previousScore),
+        newScore: String(newScore),
         description: reason,
         metadata: {
           context,
@@ -211,7 +213,7 @@ export class AdvancedReputationService extends EventEmitter {
       // Update user reputation score
       await db.update(userReputationScores)
         .set({
-          overallScore: newScore,
+          overallScore: String(newScore),
           lastUpdated: new Date()
         })
         .where(eq(userReputationScores.userId, userId));
@@ -219,6 +221,7 @@ export class AdvancedReputationService extends EventEmitter {
       // Create real-time update
       const update: RealTimeReputationUpdate = {
         userId,
+        walletAddress: userId,
         previousScore: Number(previousScore),
         newScore: Number(newScore),
         change: adjustedScoreChange,
@@ -329,10 +332,9 @@ export class AdvancedReputationService extends EventEmitter {
     try {
       // Store penalty configuration
       await db.insert(reputationPenalties).values({
-        userId: config.userId || '00000000-0000-0000-0000-000000000000', // Default UUID
+        userAddress: '0x0000000000000000000000000000000000000000', // Default address
         penaltyType: config.violationType,
         severityLevel: 1,
-        violationCount: 1,
         description: `Progressive penalty for ${config.violationType}`,
         isActive: true
       });
@@ -357,7 +359,7 @@ export class AdvancedReputationService extends EventEmitter {
       // Get penalty configuration
       const penaltyConfig = await db.query.reputationPenalties.findFirst({
         where: and(
-          eq(reputationPenalties.violationType, violationType),
+          eq(reputationPenalties.penaltyType, violationType),
           eq(reputationPenalties.isActive, true)
         )
       });
@@ -371,13 +373,13 @@ export class AdvancedReputationService extends EventEmitter {
       const violationCount = violationHistory.length;
 
       // Determine severity level
-      const severityLevel = this.determineSeverityLevel(violationCount, penaltyConfig.severityConfig);
+      const severityLevel = this.determineSeverityLevel(violationCount, (penaltyConfig as any).severityConfig);
       
       // Calculate base penalty
       let basePenalty = severityLevel.basePenalty;
       
       // Apply escalation rules
-      const escalationMultiplier = this.calculateEscalationMultiplier(violationData, penaltyConfig.escalationRules);
+      const escalationMultiplier = this.calculateEscalationMultiplier(violationData, (penaltyConfig as any).escalationRules);
       basePenalty = Math.round(basePenalty * escalationMultiplier);
 
       // Apply penalty with advanced impact calculation
@@ -433,7 +435,7 @@ export class AdvancedReputationService extends EventEmitter {
     // Calculate time decay based on recent events
     const recentEvents = await db.query.reputationChangeEvents.findMany({
       where: and(
-        eq(reputationChangeEvents.userId, userId),
+        eq(reputationChangeEvents.userAddress, userId),
         eq(reputationChangeEvents.eventType, eventType),
         gt(reputationChangeEvents.createdAt, new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)) // Last 30 days
       ),
@@ -519,7 +521,7 @@ export class AdvancedReputationService extends EventEmitter {
     // Simplified network analysis - in production, this would use graph database
     // For now, return users who have interacted with the same content/disputes
     const interactions = await db.query.reputationChangeEvents.findMany({
-      where: eq(reputationChangeEvents.userId, userId),
+      where: eq(reputationChangeEvents.userAddress, userId),
       limit: 10
     });
 
@@ -530,7 +532,7 @@ export class AdvancedReputationService extends EventEmitter {
   private async getUserReputationHistory(userId: string, days: number) {
     return await db.query.reputationChangeEvents.findMany({
       where: and(
-        eq(reputationChangeEvents.userId, userId),
+        eq(reputationChangeEvents.userAddress, userId),
         gt(reputationChangeEvents.createdAt, new Date(Date.now() - days * 24 * 60 * 60 * 1000))
       ),
       orderBy: desc(reputationChangeEvents.createdAt)
@@ -540,7 +542,7 @@ export class AdvancedReputationService extends EventEmitter {
   private async getUserViolationHistory(userId: string, violationType: string) {
     return await db.query.reputationChangeEvents.findMany({
       where: and(
-        eq(reputationChangeEvents.userId, userId),
+        eq(reputationChangeEvents.userAddress, userId),
         eq(reputationChangeEvents.eventType, 'violation_penalty'),
         gt(reputationChangeEvents.createdAt, new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)) // Last year
       ),
@@ -641,17 +643,17 @@ export class AdvancedReputationService extends EventEmitter {
         logger.warn('Bulk operation completed with errors', { operationId, errorCount: errors.length });
       }
 
-      this.updateBulkOperationStatus(operationId, operation.status as any);
+      this.updateBulkOperationStatus(operationId, operation.status);
     } catch (error) {
       logger.error('Bulk operation failed', { error, operationId });
       this.updateBulkOperationStatus(operationId, 'failed', error.message);
     }
   }
 
-  private updateBulkOperationStatus(operationId: string, status: string, error?: string): void {
+  private updateBulkOperationStatus(operationId: string, status: BulkReputationOperation['status'], error?: string): void {
     const operation = this.bulkOperations.get(operationId);
     if (operation) {
-      operation.status = status as any;
+      operation.status = status;
       if (error) {
         operation.error = error;
       }
@@ -667,7 +669,7 @@ export class AdvancedReputationService extends EventEmitter {
     // Group by date and calculate average score for each day
     history.forEach(event => {
       const date = event.createdAt.toISOString().split('T')[0];
-      trendMap.set(date, event.newScore);
+      trendMap.set(date, Number(event.newScore));
     });
 
     return Array.from(trendMap.entries())
@@ -770,7 +772,7 @@ export class AdvancedReputationService extends EventEmitter {
   private async sendRealTimeNotification(update: RealTimeReputationUpdate): Promise<void> {
     try {
       // Send WebSocket notification
-      await adminWebSocketService.broadcastToUser(update.userId, {
+      await AdminWebSocketService.broadcastToUser(update.userId, {
         type: 'reputation_update',
         data: {
           walletAddress: update.walletAddress,

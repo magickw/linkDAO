@@ -96,17 +96,16 @@ export class AutomatedInsightService {
     }
     
     try {
-      const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+      let redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
       
       // Handle placeholder values
-      let actualRedisUrl = redisUrl;
-      if (actualRedisUrl === 'your_redis_url' || actualRedisUrl === 'redis://your_redis_url') {
-        actualRedisUrl = 'redis://localhost:6379';
+      if (redisUrl === 'your_redis_url' || redisUrl === 'redis://your_redis_url') {
+        redisUrl = 'redis://localhost:6379';
       }
       
-      safeLogger.info('🔗 Attempting Redis connection for automated insights to:', actualRedisUrl.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
+      safeLogger.info('🔗 Attempting Redis connection for automated insights to:', redisUrl.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
       
-      this.redis = new Redis(actualRedisUrl, {
+      this.redis = new Redis(redisUrl, {
         maxRetriesPerRequest: 3,
         connectTimeout: 10000,
         retryStrategy: (times) => {
@@ -124,17 +123,17 @@ export class AutomatedInsightService {
         safeLogger.error('Redis connection error for automated insights:', {
           message: error.message,
           name: error.name,
-          code: error.code,
-          errno: error.errno,
-          syscall: error.syscall
+          ...(error.code && { code: error.code }),
+          ...(error.errno && { errno: error.errno }),
+          ...(error.syscall && { syscall: error.syscall }),
         });
       });
 
-      this.redis.on('node error', (error) => {
+      this.redis.on('node error', (error: any) => {
         safeLogger.error('Redis node error for automated insights:', {
           message: error.message,
           name: error.name,
-          code: error.code
+          ...(error.code && { code: error.code }),
         });
       });
 
@@ -150,9 +149,9 @@ export class AutomatedInsightService {
         error: {
           name: error.name,
           message: error.message,
-          code: error.code,
-          errno: error.errno,
-          syscall: error.syscall
+          ...(error.code && { code: error.code }),
+          ...(error.errno && { errno: error.errno }),
+          ...(error.syscall && { syscall: error.syscall }),
         }
       });
     }

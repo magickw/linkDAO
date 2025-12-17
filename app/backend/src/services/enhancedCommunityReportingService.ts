@@ -147,7 +147,7 @@ export class EnhancedCommunityReportingService extends EventEmitter {
       });
 
       // Trigger validation process
-      this.startConsensusValidation(report.id);
+      this.startConsensusValidation(String(report.id));
 
       return report;
     } catch (error) {

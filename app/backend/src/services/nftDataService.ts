@@ -189,7 +189,7 @@ export class NFTDataService {
     return {
       name: `Mock NFT #${tokenId}`,
       description: 'This is a mock NFT for development purposes',
-      image: 'https://via.placeholder.com/400x400?text=Mock+NFT',
+      image: 'https://placehold.co/400x400?text=Mock+NFT',
       collection: 'Mock Collection',
       owner: '0x1234567890123456789012345678901234567890',
       traits: [

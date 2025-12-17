@@ -20,6 +20,7 @@ export interface ChartData {
     fill?: boolean;
     tension?: number;
     type?: 'line' | 'bar' | 'radar' | 'doughnut' | 'polarArea';
+    borderDash?: number[];
   }>;
 }
 
@@ -65,6 +66,14 @@ export interface ChartConfig {
         };
         beginAtZero?: boolean;
       };
+      r?: {
+        display: boolean;
+        beginAtZero?: boolean;
+        max?: number;
+        ticks?: {
+          stepSize?: number;
+        };
+      };
     };
   };
 }
@@ -84,7 +93,7 @@ export interface DashboardLayout {
   description: string;
   widgets: Array<{
     id: string;
-    type: 'chart' | 'metric' | 'table' | 'trend';
+    type: string;
     title: string;
     size: 'small' | 'medium' | 'large';
     position: { x: number; y: number; w: number; h: number };

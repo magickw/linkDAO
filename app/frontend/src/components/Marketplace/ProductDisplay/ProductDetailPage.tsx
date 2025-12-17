@@ -169,13 +169,13 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
           <div className="w-full lg:w-1/2">
             <GlassPanel variant="secondary" className="p-4 mb-4">
               <img
-                src={selectedImage || `https://via.placeholder.com/600x400/4B2E83/FFFFFF?text=${encodeURIComponent(product.title || 'Product')}`}
+                src={selectedImage || `https://placehold.co/600x400/4B2E83/FFFFFF?text=${encodeURIComponent(product.title || 'Product')}`}
                 alt={product.title || 'Product'}
                 className="w-full h-96 object-contain"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.onerror = null;
-                  target.src = `https://via.placeholder.com/600x400/4B2E83/FFFFFF?text=${encodeURIComponent(product.title || 'Product')}`;
+                  target.src = `https://placehold.co/600x400/4B2E83/FFFFFF?text=${encodeURIComponent(product.title || 'Product')}`;
                 }}
               />
             </GlassPanel>
@@ -196,7 +196,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.onerror = null;
-                        target.src = `https://via.placeholder.com/150x150/4B2E83/FFFFFF?text=${encodeURIComponent(`Img ${index + 1}`)}`;
+                        target.src = `https://placehold.co/150x150/4B2E83/FFFFFF?text=${encodeURIComponent(`Img ${index + 1}`)}`;
                       }}
                     />
                   </GlassPanel>

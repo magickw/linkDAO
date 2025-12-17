@@ -97,7 +97,7 @@ export default function NFTMarketplace({
             id: '1',
             name: 'Cosmic Wanderer #1234',
             description: 'A beautiful cosmic wanderer exploring the digital universe.',
-            imageUrl: 'https://via.placeholder.com/400x400/6366f1/ffffff?text=NFT+1',
+            imageUrl: 'https://placehold.co/400x400/6366f1/ffffff?text=NFT+1'
             price: '2.5',
             currency: 'ETH',
             creator: {
@@ -124,7 +124,7 @@ export default function NFTMarketplace({
             id: '2',
             name: 'Digital Dreams #0567',
             description: 'An abstract representation of digital consciousness.',
-            imageUrl: 'https://via.placeholder.com/400x400/8b5cf6/ffffff?text=NFT+2',
+            imageUrl: 'https://placehold.co/400x400/8b5cf6/ffffff?text=NFT+2'
             price: '1.8',
             currency: 'ETH',
             creator: {

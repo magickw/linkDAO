@@ -52,7 +52,7 @@ export const StakingSystemDemo: React.FC = () => {
     symbol: 'LNK',
     decimals: 18,
     name: 'LinkDAO Token',
-    logoUrl: 'https://via.placeholder.com/32x32/3B82F6/FFFFFF?text=LNK',
+    logoUrl: 'https://placehold.co/32x32/3B82F6/FFFFFF?text=LNK'
     priceUSD: 1.25,
     priceChange24h: 5.67
   };

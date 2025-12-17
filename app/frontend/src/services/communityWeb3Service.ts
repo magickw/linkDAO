@@ -512,7 +512,7 @@ export class CommunityWeb3Service {
       const mockMetadata = {
         name: `Token #${tokenId}`,
         description: `Mock description for token ${tokenId} from ${contractAddress}`,
-        image: `https://via.placeholder.com/512.png?text=${encodeURIComponent(`NFT+${tokenId}`)}`,
+        image: `https://placehold.co/512.png?text=${encodeURIComponent(`NFT+${tokenId}`)}`,
         attributes: [
           { trait_type: 'Rarity', value: 'Rare' },
           { trait_type: 'Background', value: 'Space' }
