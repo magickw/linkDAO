@@ -540,8 +540,7 @@ export class CommunityController {
   }): Promise<{ success: boolean; data?: any; message?: string }> {
     try {
       // Get community details for context
-      const community: Community | null = await communityService.getCommunityDetails(data.communityId, data.userAddress);
-
+      const community: any | null = await communityService.getCommunityDetails(data.communityId, data.userAddress);
       if (!community) {
         return { success: false, message: 'Community not found' };
       }
@@ -693,7 +692,7 @@ export class CommunityController {
       const stats = await communityService.getCommunityStats(id);
 
       if (!stats) {
-        res.status(404).json(createErrorResponse('NOT_FOUND', 'Community not found', 404));
+        res.status(404).json(createErrorResponse('NOT_FOUND', 'Community not found'));
         return;
       }
 
@@ -725,7 +724,7 @@ export class CommunityController {
       });
 
       if (!result.success) {
-        res.status(400).json(createErrorResponse('BAD_REQUEST', (result as any).message || 'Failed to moderate content', 400));
+        res.status(400).json(createErrorResponse('BAD_REQUEST', (result as any).message || 'Failed to moderate content'));
         return;
       }
 
@@ -1330,7 +1329,7 @@ export class CommunityController {
       const content = await communityService.getTokenGatedContentByPost(postId);
 
       if (!content) {
-        res.status(404).json(createErrorResponse('NOT_FOUND', 'Token-gated content not found', 404));
+        res.status(404).json(createErrorResponse('NOT_FOUND', 'Token-gated content not found'));
         return;
       }
 
@@ -1406,7 +1405,7 @@ export class CommunityController {
     } catch (error) {
       safeLogger.error('Error subscribing user:', error);
       if (error.message.includes('not found')) {
-        res.status(404).json(createErrorResponse('NOT_FOUND', error.message, 404));
+        res.status(404).json(createErrorResponse('NOT_FOUND', error.message));
       } else {
         res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to subscribe user'));
       }
@@ -1836,13 +1835,12 @@ export class CommunityController {
 
       const { bulkMemberManagementService } = await import('../services/bulkMemberManagementService');
       const result = await bulkMemberManagementService.importMembersFromCSV(id, req.file.buffer.toString('utf-8'), {
+        addresses: [], // Will be parsed from CSV
         defaultRole,
         defaultReputation,
         sendWelcomeMessage,
         skipExisting
-      });
-
-      res.json(createSuccessResponse(result, {}));
+      });      res.json(createSuccessResponse(result, {}));
     } catch (error) {
       safeLogger.error('Error importing members:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to import members'));
@@ -2211,10 +2209,10 @@ export class CommunityController {
       }
 
       const { communityAIModerationService } = await import('../services/communityAIModerationService');
-      const stats = await communityAIModerationService.getModerationStats(id, timeRange as string);
-
-      res.json(createSuccessResponse(stats, {}));
-    } catch (error) {
+      // Map route timeRange values to service timeRange values
+      const serviceTimeRange = timeRange === 'day' ? '7d' : timeRange === 'week' ? '30d' : timeRange === 'month' ? '90d' : '7d';
+      const stats = await communityAIModerationService.getModerationStats(id, serviceTimeRange);
+      res.json(createSuccessResponse(stats, {}));    } catch (error) {
       safeLogger.error('Error getting moderation stats:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get moderation stats'));
     }

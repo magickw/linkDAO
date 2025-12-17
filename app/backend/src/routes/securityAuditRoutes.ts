@@ -18,7 +18,7 @@ router.use(authMiddleware, validateAdminRole);
 // Service initialization
 router.post('/initialize',
   csrfProtection,
-  rateLimiter({ windowMs: 60 * 1000, max: 10 }), // 10 requests per minute
+  rateLimiter({ windowMs: 60 * 1000, maxRequests: 10 }), // 10 requests per minute
   securityAuditController.initializeService.bind(securityAuditController)
 );
 
@@ -50,49 +50,49 @@ router.post('/events/security-incident',
 
 // Audit event querying
 router.get('/events',
-  rateLimiter({ windowMs: 60 * 1000, max: 100 }), // 100 requests per minute
+  rateLimiter({ windowMs: 60 * 1000, maxRequests: 100 }), // 100 requests per minute
   securityAuditController.queryAuditEvents.bind(securityAuditController)
 );
 
 // Incident management
 router.post('/incidents',
   csrfProtection,
-  rateLimiter({ windowMs: 60 * 1000, max: 50 }), // 50 requests per minute
+  rateLimiter({ windowMs: 60 * 1000, maxRequests: 50 }), // 50 requests per minute
   securityAuditController.reportIncident.bind(securityAuditController)
 );
 
 router.get('/incidents/:incidentId',
-  rateLimiter({ windowMs: 60 * 1000, max: 100 }), // 100 requests per minute
+  rateLimiter({ windowMs: 60 * 1000, maxRequests: 100 }), // 100 requests per minute
   securityAuditController.getIncident.bind(securityAuditController)
 );
 
 router.get('/incidents',
-  rateLimiter({ windowMs: 60 * 1000, max: 100 }), // 100 requests per minute
+  rateLimiter({ windowMs: 60 * 1000, maxRequests: 100 }), // 100 requests per minute
   securityAuditController.getAllIncidents.bind(securityAuditController)
 );
 
 router.put('/incidents/:incidentId/status',
   csrfProtection,
-  rateLimiter({ windowMs: 60 * 1000, max: 50 }), // 50 requests per minute
+  rateLimiter({ windowMs: 60 * 1000, maxRequests: 50 }), // 50 requests per minute
   securityAuditController.updateIncidentStatus.bind(securityAuditController)
 );
 
 // Tamper detection
 router.post('/tamper-detection',
   csrfProtection,
-  rateLimiter({ windowMs: 60 * 1000, max: 50 }), // 50 requests per minute
+  rateLimiter({ windowMs: 60 * 1000, maxRequests: 50 }), // 50 requests per minute
   securityAuditController.recordTamperDetection.bind(securityAuditController)
 );
 
 router.put('/tamper-detection/resolve',
   csrfProtection,
-  rateLimiter({ windowMs: 60 * 1000, max: 50 }), // 50 requests per minute
+  rateLimiter({ windowMs: 60 * 1000, maxRequests: 50 }), // 50 requests per minute
   securityAuditController.resolveTamperDetection.bind(securityAuditController)
 );
 
 // Reporting
 router.get('/reports',
-  rateLimiter({ windowMs: 60 * 1000, max: 30 }), // 30 requests per minute
+  rateLimiter({ windowMs: 60 * 1000, maxRequests: 30 }), // 30 requests per minute
   securityAuditController.generateAuditReport.bind(securityAuditController)
 );
 

@@ -68,6 +68,8 @@ export class AdminConfigurationService {
   async createPolicyConfiguration(config: PolicyConfiguration, adminId: string): Promise<PolicyConfiguration> {
     const [created] = await db.insert(policy_configurations).values({
       ...config,
+      confidenceThreshold: config.confidenceThreshold.toString(),
+      reputationModifier: config.reputationModifier.toString(),
       createdBy: adminId,
     }).returning();
 
@@ -79,11 +81,16 @@ export class AdminConfigurationService {
   async updatePolicyConfiguration(id: number, config: Partial<PolicyConfiguration>, adminId: string): Promise<PolicyConfiguration> {
     const [existing] = await db.select().from(policy_configurations).where(eq(policy_configurations.id, id));
     
+    const updateData: any = { ...config, updatedAt: new Date() };
+    if (config.confidenceThreshold !== undefined) {
+      updateData.confidenceThreshold = config.confidenceThreshold.toString();
+    }
+    if (config.reputationModifier !== undefined) {
+      updateData.reputationModifier = config.reputationModifier.toString();
+    }
+    
     const [updated] = await db.update(policy_configurations)
-      .set({
-        ...config,
-        updatedAt: new Date(),
-      })
+      .set(updateData)
       .where(eq(policy_configurations.id, id))
       .returning();
 
@@ -93,10 +100,10 @@ export class AdminConfigurationService {
   }
 
   async getPolicyConfigurations(activeOnly: boolean = false): Promise<PolicyConfiguration[]> {
-    const query = db.select().from(policy_configurations);
+    let query = db.select().from(policy_configurations);
     
     if (activeOnly) {
-      query.where(eq(policy_configurations.isActive, true));
+      query = query.where(eq(policy_configurations.isActive, true));
     }
     
     const results = await query.orderBy(desc(policy_configurations.createdAt));
@@ -114,7 +121,13 @@ export class AdminConfigurationService {
   // Threshold Configuration Management
   async createThresholdConfiguration(config: ThresholdConfiguration, adminId: string): Promise<ThresholdConfiguration> {
     const [created] = await db.insert(threshold_configurations).values({
-      ...config,
+      contentType: config.contentType,
+      reputationTier: config.reputationTier,
+      autoBlockThreshold: config.autoBlockThreshold.toString(),
+      quarantineThreshold: config.quarantineThreshold.toString(),
+      publishThreshold: config.publishThreshold.toString(),
+      escalationThreshold: config.escalationThreshold.toString(),
+      isActive: config.isActive,
       createdBy: adminId,
     }).returning();
 
@@ -126,11 +139,22 @@ export class AdminConfigurationService {
   async updateThresholdConfiguration(id: number, config: Partial<ThresholdConfiguration>, adminId: string): Promise<ThresholdConfiguration> {
     const [existing] = await db.select().from(threshold_configurations).where(eq(threshold_configurations.id, id));
     
+    const updateData: any = { ...config, updatedAt: new Date() };
+    if (config.autoBlockThreshold !== undefined) {
+      updateData.autoBlockThreshold = config.autoBlockThreshold.toString();
+    }
+    if (config.quarantineThreshold !== undefined) {
+      updateData.quarantineThreshold = config.quarantineThreshold.toString();
+    }
+    if (config.publishThreshold !== undefined) {
+      updateData.publishThreshold = config.publishThreshold.toString();
+    }
+    if (config.escalationThreshold !== undefined) {
+      updateData.escalationThreshold = config.escalationThreshold.toString();
+    }
+    
     const [updated] = await db.update(threshold_configurations)
-      .set({
-        ...config,
-        updatedAt: new Date(),
-      })
+      .set(updateData)
       .where(eq(threshold_configurations.id, id))
       .returning();
 
@@ -159,7 +183,21 @@ export class AdminConfigurationService {
 
   // Vendor Configuration Management
   async createVendorConfiguration(config: VendorConfiguration, adminId: string): Promise<VendorConfiguration> {
-    const [created] = await db.insert(vendor_configurations).values(config).returning();
+    const [created] = await db.insert(vendor_configurations).values({
+      vendorName: config.vendorName,
+      serviceType: config.serviceType,
+      apiEndpoint: config.apiEndpoint,
+      apiKeyRef: config.apiKeyRef,
+      isEnabled: config.isEnabled,
+      priority: config.priority,
+      timeoutMs: config.timeoutMs,
+      retryAttempts: config.retryAttempts,
+      rateLimitPerMinute: config.rateLimitPerMinute,
+      costPerRequest: config.costPerRequest.toString(),
+      fallbackVendorId: config.fallbackVendorId,
+      healthCheckUrl: config.healthCheckUrl,
+      healthStatus: config.healthStatus,
+    }).returning();
 
     await this.logAuditAction(adminId, 'create', 'vendor_configuration', created.id.toString(), null, config);
     
@@ -169,11 +207,13 @@ export class AdminConfigurationService {
   async updateVendorConfiguration(id: number, config: Partial<VendorConfiguration>, adminId: string): Promise<VendorConfiguration> {
     const [existing] = await db.select().from(vendor_configurations).where(eq(vendor_configurations.id, id));
     
+    const updateData: any = { ...config, updatedAt: new Date() };
+    if (config.costPerRequest !== undefined) {
+      updateData.costPerRequest = config.costPerRequest.toString();
+    }
+    
     const [updated] = await db.update(vendor_configurations)
-      .set({
-        ...config,
-        updatedAt: new Date(),
-      })
+      .set(updateData)
       .where(eq(vendor_configurations.id, id))
       .returning();
 
@@ -214,8 +254,14 @@ export class AdminConfigurationService {
   // Alert Configuration Management
   async createAlertConfiguration(config: AlertConfiguration, adminId: string): Promise<AlertConfiguration> {
     const [created] = await db.insert(alert_configurations).values({
-      ...config,
+      alertName: config.alertName,
+      metricName: config.metricName,
+      conditionType: config.conditionType,
+      thresholdValue: config.thresholdValue.toString(),
+      severity: config.severity,
       notificationChannels: JSON.stringify(config.notificationChannels),
+      isActive: config.isActive,
+      cooldownMinutes: config.cooldownMinutes,
       createdBy: adminId,
     }).returning();
 
@@ -230,6 +276,9 @@ export class AdminConfigurationService {
     const updateData: any = { ...config, updatedAt: new Date() };
     if (config.notificationChannels) {
       updateData.notificationChannels = JSON.stringify(config.notificationChannels);
+    }
+    if (config.thresholdValue !== undefined) {
+      updateData.thresholdValue = config.thresholdValue.toString();
     }
     
     const [updated] = await db.update(alert_configurations)

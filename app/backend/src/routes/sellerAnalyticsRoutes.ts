@@ -12,7 +12,7 @@ router.use(authMiddleware);
 // Apply rate limiting for analytics endpoints
 const analyticsRateLimit = rateLimitingMiddleware({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  maxRequests: 100, // limit each IP to 100 requests per windowMs
   message: 'Too many analytics requests, please try again later'
 });
 

@@ -17,7 +17,7 @@ router.use(authMiddleware);
 // Apply rate limiting
 router.use(rateLimitingMiddleware({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  maxRequests: 100, // limit each IP to 100 requests per windowMs
   message: 'Too many requests from this IP, please try again later.',
 }));
 
@@ -40,7 +40,7 @@ router.post(
   '/evaluate',
   rateLimitingMiddleware({
     windowMs: 5 * 60 * 1000, // 5 minutes
-    max: 10, // limit to 10 evaluations per 5 minutes
+    maxRequests: 10, // limit to 10 evaluations per 5 minutes
   }),
   automatedTierUpgradeController.triggerTierEvaluation.bind(automatedTierUpgradeController)
 );
@@ -74,7 +74,7 @@ router.post(
   '/batch-evaluate',
   rateLimitingMiddleware({
     windowMs: 60 * 60 * 1000, // 1 hour
-    max: 5, // limit to 5 batch evaluations per hour
+    maxRequests: 5, // limit to 5 batch evaluations per hour
   }),
   // TODO: Add admin authentication middleware
   automatedTierUpgradeController.runBatchEvaluation.bind(automatedTierUpgradeController)

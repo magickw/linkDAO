@@ -679,6 +679,43 @@ export class WorkflowAutomationEngine extends EventEmitter {
     }
   }
 
+  async createRule(
+    rule: Omit<typeof workflowRules.$inferInsert, 'id' | 'createdAt' | 'updatedAt'>,
+    createdBy: string
+  ): Promise<{
+      success: boolean;
+      ruleId?: string;
+      error?: string;
+    }> {
+    try {
+      const [newRule] = await db.insert(workflowRules).values({
+        ...rule,
+        createdBy
+      }).returning();
+
+      const typedRule: WorkflowRule = {
+        ...newRule,
+        ruleType: newRule.ruleType as RuleType,
+        conditions: newRule.conditions as unknown as RuleCondition[],
+        actions: newRule.actions as unknown as RuleAction[]
+      };
+      this.ruleEngine.addRule(typedRule);
+
+      logger.info(`Workflow rule created: ${newRule.id} `, { ruleId: newRule.id, name: newRule.name });
+      return {
+        success: true,
+        ruleId: newRule.id
+      };
+
+    } catch (error) {
+      logger.error('Failed to create workflow rule', { error, rule });
+      return {
+        success: false,
+        error: `Failed to create workflow rule: ${error.message}`
+      };
+    }
+  }
+
   async createWorkflowRule(
     rule: Omit<typeof workflowRules.$inferInsert, 'id' | 'createdAt' | 'updatedAt'>,
     createdBy: string

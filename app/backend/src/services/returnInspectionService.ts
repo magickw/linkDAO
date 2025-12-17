@@ -99,7 +99,7 @@ export class ReturnInspectionService {
       }
 
       // Parse items to return
-      const itemsToReturn = returnRecord.itemsToReturn ? JSON.parse(returnRecord.itemsToReturn) : [];
+      const itemsToReturn = returnRecord.itemsToReturn ? JSON.parse(returnRecord.itemsToReturn as string) : [];
 
       // Generate checklist items for each returned item
       const checklist = itemsToReturn.map((item: any) => ({

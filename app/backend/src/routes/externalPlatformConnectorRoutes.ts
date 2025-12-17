@@ -19,7 +19,7 @@ router.use(adminAuthMiddleware);
 // Apply rate limiting for external platform operations
 const externalPlatformRateLimit = rateLimitingMiddleware({
   windowMs: 60 * 1000, // 1 minute
-  max: 50, // 50 requests per minute per user
+  maxRequests: 50, // 50 requests per minute per user
   message: 'Too many external platform requests'
 });
 

@@ -16,7 +16,7 @@ router.use(adminAuthMiddleware);
 // Apply rate limiting for optimization operations
 const optimizationRateLimit = rateLimitingMiddleware({
   windowMs: 60 * 1000, // 1 minute
-  max: 30, // 30 requests per minute per admin
+  maxRequests: 30, // 30 requests per minute per admin
   message: 'Too many workflow optimization requests'
 });
 

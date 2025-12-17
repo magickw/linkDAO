@@ -16,7 +16,7 @@ router.use(adminAuthMiddleware);
 // Apply rate limiting for QA operations
 const qaRateLimit = rateLimitingMiddleware({
   windowMs: 60 * 1000, // 1 minute
-  max: 50, // 50 requests per minute per admin
+  maxRequests: 50, // 50 requests per minute per admin
   message: 'Too many quality assurance requests'
 });
 

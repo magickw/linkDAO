@@ -23,9 +23,7 @@ export const validateAdminRole = (req: AuthenticatedRequest, res: Response, next
     // Check if user has admin role
     const adminRoles = ['super_admin', 'admin', 'moderator', 'analyst'];
     if (!adminRoles.includes(user.role)) {
-      return ApiResponse.forbidden(res, 'Admin access required', {
-        details: `Role '${user.role}' is not authorized for admin operations`
-      });
+      return ApiResponse.forbidden(res, 'Admin access required');
     }
 
     // Additional check for configured admin address
@@ -75,9 +73,7 @@ export const requirePermission = (permission: string) => {
 
       // Check if user has the required permission
       if (!user.permissions || !user.permissions.includes(permission)) {
-        return ApiResponse.forbidden(res, 'Insufficient permissions', {
-          details: `Permission '${permission}' is required for this operation`
-        });
+        return ApiResponse.forbidden(res, 'Insufficient permissions');
       }
 
       next();
@@ -102,9 +98,7 @@ export const requireRole = (roles: string | string[]) => {
 
       // Check if user has one of the required roles
       if (!allowedRoles.includes(user.role)) {
-        return ApiResponse.forbidden(res, 'Insufficient role privileges', {
-          details: `One of the following roles is required: ${allowedRoles.join(', ')}`
-        });
+        return ApiResponse.forbidden(res, 'Insufficient role privileges');
       }
 
       next();

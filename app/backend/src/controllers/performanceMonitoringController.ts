@@ -17,11 +17,13 @@ export class PerformanceMonitoringController {
   private renderMonitoringService: RenderPerformanceMonitoringService;
   private errorRecoveryProfiler: ErrorRecoveryCacheProfiler;
   private criticalPathOptimizer: CriticalPathPerformanceOptimizer;
+  private benchmarkService: any;
 
   constructor(pool: Pool, redis: Redis) {
     this.renderMonitoringService = new RenderPerformanceMonitoringService(pool, redis);
     this.errorRecoveryProfiler = new ErrorRecoveryCacheProfiler(redis);
     this.criticalPathOptimizer = new CriticalPathPerformanceOptimizer(pool, redis);
+    this.benchmarkService = performanceBenchmarkService;
   }
 
   /**

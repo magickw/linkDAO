@@ -788,7 +788,7 @@ class AdminDashboardService {
     // Apply limit
     alerts = alerts.slice(0, maxLimit);
 
-    return alerts;
+    return Promise.resolve(alerts);
   }
 }
 

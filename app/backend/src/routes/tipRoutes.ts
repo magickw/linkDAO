@@ -6,7 +6,7 @@ import rateLimit from 'express-rate-limit';
 // Rate limiting for tip endpoints
 const tipRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 100, // 100 requests per minute
+  maxRequests: 100, // 100 requests per minute
   message: {
     success: false,
     error: {
@@ -18,7 +18,7 @@ const tipRateLimit = rateLimit({
 
 const tipCreationRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 20, // 20 tip creations per minute
+  maxRequests: 20, // 20 tip creations per minute
   message: {
     success: false,
     error: {

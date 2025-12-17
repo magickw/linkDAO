@@ -202,6 +202,63 @@ export class InputValidator {
   /**
    * Handle validation errors with standardized response
    */
+  static async sanitizeContent(content: string, type: 'post' | 'comment' | 'message' | 'description' | 'bio' | 'title'): Promise<SanitizationResult> {
+    const warnings: string[] = [];
+    const blocked: string[] = [];
+    
+    // Define allowed tags based on content type
+    const allowedTags = {
+      post: ['p', 'br', 'strong', 'em', 'u', 'ol', 'ul', 'li', 'a'],
+      comment: ['br', 'strong', 'em', 'u', 'a'],
+      message: ['br', 'strong', 'em', 'u', 'a'],
+      description: ['br', 'strong', 'em', 'u'],
+      bio: ['br', 'strong', 'em', 'u'],
+      title: []
+    }[type] || [];
+    
+    // Sanitize HTML
+    let sanitized = sanitizeHtml(content, {
+      allowedTags,
+      allowedAttributes: {
+        'a': ['href', 'target']
+      },
+      exclusiveFilter: (frame) => {
+        // Block suspicious attributes
+        const suspiciousAttrs = ['onload', 'onclick', 'onerror', 'onmouseover'];
+        return suspiciousAttrs.some(attr => frame.attribs[attr] !== undefined);
+      }
+    });
+    
+    // Additional sanitization
+    sanitized = sanitized
+      .replace(/javascript:/gi, '')
+      .replace(/vbscript:/gi, '')
+      .replace(/data:/gi, '')
+      .trim();
+    
+    // Check for blocked content patterns
+    const blockedPatterns = [
+      /<script/i,
+      /on\w+\s*=/i,
+      /javascript:/i,
+      /vbscript:/i,
+      /data:text\/html/i
+    ];
+    
+    for (const pattern of blockedPatterns) {
+      if (pattern.test(content)) {
+        blocked.push(pattern.toString());
+      }
+    }
+    
+    // Warn about stripped content
+    if (content.length !== sanitized.length) {
+      warnings.push('Potentially unsafe content was removed');
+    }
+    
+    return { sanitized, warnings, blocked };
+  }
+
   private static handleValidationErrors = (req: Request, res: Response, next: NextFunction): void => {
     const errors = validationResult(req);
     

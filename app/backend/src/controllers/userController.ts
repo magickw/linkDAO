@@ -72,19 +72,19 @@ export class UserController {
       // Apply sorting
       if (sortOrder === 'asc') {
         if (sortBy === 'handle') {
-          query = query.orderBy(asc(users.handle));
+          query = query.orderBy(sql`${users.handle} ASC`);
         } else if (sortBy === 'lastLogin') {
-          query = query.orderBy(asc(users.lastLogin));
+          query = query.orderBy(sql`${users.lastLogin} ASC`);
         } else {
-          query = query.orderBy(asc(users.createdAt));
+          query = query.orderBy(sql`${users.createdAt} ASC`);
         }
       } else {
         if (sortBy === 'handle') {
-          query = query.orderBy(desc(users.handle));
+          query = query.orderBy(sql`${users.handle} DESC`);
         } else if (sortBy === 'lastLogin') {
-          query = query.orderBy(desc(users.lastLogin));
+          query = query.orderBy(sql`${users.lastLogin} DESC`);
         } else {
-          query = query.orderBy(desc(users.createdAt));
+          query = query.orderBy(sql`${users.createdAt} DESC`);
         }
       }
       

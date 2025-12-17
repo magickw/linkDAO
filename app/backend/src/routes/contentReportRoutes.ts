@@ -13,7 +13,7 @@ router.use(authMiddleware);
 // Apply rate limiting for report submissions to prevent abuse
 const reportRateLimit = rateLimitingMiddleware({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Max 10 reports per 15 minutes per user
+  maxRequests: 10, // Max 10 reports per 15 minutes per user
   message: 'Too many reports submitted. Please wait before submitting more reports.'
 });
 

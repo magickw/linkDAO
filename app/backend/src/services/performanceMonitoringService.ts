@@ -358,6 +358,21 @@ export class PerformanceMonitoringService extends EventEmitter {
     };
   }
 
+  generateReport(): any {
+    const recentAlerts = this.getRecentAlerts(20);
+    const healthStatus = this.getHealthStatus();
+    
+    return {
+      recentAlerts,
+      healthStatus,
+      metricsSummary: {
+        totalMetrics: this.metrics.length,
+        activeAlerts: this.alerts.filter(a => !a.resolved).length,
+        resolvedAlerts: this.alerts.filter(a => a.resolved).length
+      }
+    };
+  }
+
   getHealthStatus(): {
     status: 'healthy' | 'warning' | 'critical';
     checks: Array<{
@@ -453,6 +468,29 @@ export class PerformanceMonitoringService extends EventEmitter {
     return {
       status: overallStatus,
       checks
+    };
+  }
+
+  getRecentAlerts(limit: number = 50): PerformanceAlert[] {
+    // Return the most recent alerts, sorted by timestamp (newest first)
+    return this.alerts
+      .filter(alert => !alert.resolved)
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+      .slice(0, limit);
+  }
+
+  generateReport(): any {
+    const recentAlerts = this.getRecentAlerts(20);
+    const healthStatus = this.getHealthStatus();
+    
+    return {
+      recentAlerts,
+      healthStatus,
+      metricsSummary: {
+        totalMetrics: this.metrics.length,
+        activeAlerts: this.alerts.filter(a => !a.resolved).length,
+        resolvedAlerts: this.alerts.filter(a => a.resolved).length
+      }
     };
   }
 

@@ -41,7 +41,7 @@ const updateReportStatusSchema = {
 // Public routes
 router.post('/submit', csrfProtection,  
   authMiddleware,
-  rateLimiter({ windowMs: 15 * 60 * 1000, max: 10 }), // 10 reports per 15 minutes
+  rateLimiter({ windowMs: 15 * 60 * 1000, maxRequests: 10 }), // 10 reports per 15 minutes
   validateRequest(submitReportSchema),
   reportController.submitReport
 );

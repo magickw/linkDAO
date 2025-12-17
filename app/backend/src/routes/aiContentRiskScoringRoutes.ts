@@ -19,7 +19,7 @@ router.use(adminAuthMiddleware);
 // Apply rate limiting for AI operations (expensive)
 const aiRateLimit = rateLimitingMiddleware({
   windowMs: 60 * 1000, // 1 minute
-  max: 100, // 100 requests per minute per user
+  maxRequests: 100, // 100 requests per minute per user
   message: 'Too many AI risk assessment requests'
 });
 

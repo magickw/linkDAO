@@ -120,12 +120,19 @@ export class AdvancedAnalyticsService {
       const currentOrderData = currentOrders[0] || { totalRevenue: '0', totalTransactions: '0', averageOrderValue: '0' };
       const previousOrderData = previousOrders[0] || { totalRevenue: '0', totalTransactions: '0', averageOrderValue: '0' };
       
-      const revenueGrowth = previousOrderData.totalRevenue !== '0' 
-        ? ((parseFloat(currentOrderData.totalRevenue) - parseFloat(previousOrderData.totalRevenue)) / parseFloat(previousOrderData.totalRevenue)) * 100
+      // Convert database numeric values to strings for consistency
+      const currentRevenue = String(currentOrderData.totalRevenue || '0');
+      const previousRevenue = String(previousOrderData.totalRevenue || '0');
+      const currentTransactions = String(currentOrderData.totalTransactions || '0');
+      const previousTransactions = String(previousOrderData.totalTransactions || '0');
+      const currentAvgOrder = String(currentOrderData.averageOrderValue || '0');
+      
+      const revenueGrowth = previousRevenue !== '0' 
+        ? ((parseFloat(currentRevenue) - parseFloat(previousRevenue)) / parseFloat(previousRevenue)) * 100
         : 0;
         
-      const transactionGrowth = previousOrderData.totalTransactions !== '0'
-        ? ((parseInt(currentOrderData.totalTransactions) - parseInt(previousOrderData.totalTransactions)) / parseInt(previousOrderData.totalTransactions)) * 100
+      const transactionGrowth = previousTransactions !== '0'
+        ? ((parseInt(currentTransactions) - parseInt(previousTransactions)) / parseInt(previousTransactions)) * 100
         : 0;
         
       const userGrowth = previousUsers[0]?.count !== 0
@@ -134,25 +141,25 @@ export class AdvancedAnalyticsService {
       
       // Geographic and category data (mocked for now as we don't have this data in schema)
       const geographicData = {
-        'North America': { revenue: parseFloat(currentOrderData.totalRevenue) * 0.42, users: Math.floor(currentUsers[0].count * 0.42), transactions: Math.floor(parseInt(currentOrderData.totalTransactions) * 0.42) },
-        'Europe': { revenue: parseFloat(currentOrderData.totalRevenue) * 0.35, users: Math.floor(currentUsers[0].count * 0.35), transactions: Math.floor(parseInt(currentOrderData.totalTransactions) * 0.35) },
-        'Asia': { revenue: parseFloat(currentOrderData.totalRevenue) * 0.18, users: Math.floor(currentUsers[0].count * 0.18), transactions: Math.floor(parseInt(currentOrderData.totalTransactions) * 0.18) },
-        'Other': { revenue: parseFloat(currentOrderData.totalRevenue) * 0.05, users: Math.floor(currentUsers[0].count * 0.05), transactions: Math.floor(parseInt(currentOrderData.totalTransactions) * 0.05) }
+        'North America': { revenue: parseFloat(currentRevenue) * 0.42, users: Math.floor(currentUsers[0].count * 0.42), transactions: Math.floor(parseInt(currentTransactions) * 0.42) },
+        'Europe': { revenue: parseFloat(currentRevenue) * 0.35, users: Math.floor(currentUsers[0].count * 0.35), transactions: Math.floor(parseInt(currentTransactions) * 0.35) },
+        'Asia': { revenue: parseFloat(currentRevenue) * 0.18, users: Math.floor(currentUsers[0].count * 0.18), transactions: Math.floor(parseInt(currentTransactions) * 0.18) },
+        'Other': { revenue: parseFloat(currentRevenue) * 0.05, users: Math.floor(currentUsers[0].count * 0.05), transactions: Math.floor(parseInt(currentTransactions) * 0.05) }
       };
       
       const categories = {
-        'NFTs': { revenue: parseFloat(currentOrderData.totalRevenue) * 0.45, transactions: Math.floor(parseInt(currentOrderData.totalTransactions) * 0.45), growth: 12.5 },
-        'Digital Goods': { revenue: parseFloat(currentOrderData.totalRevenue) * 0.28, transactions: Math.floor(parseInt(currentOrderData.totalTransactions) * 0.28), growth: 8.3 },
-        'Physical Items': { revenue: parseFloat(currentOrderData.totalRevenue) * 0.18, transactions: Math.floor(parseInt(currentOrderData.totalTransactions) * 0.18), growth: 5.7 },
-        'Services': { revenue: parseFloat(currentOrderData.totalRevenue) * 0.09, transactions: Math.floor(parseInt(currentOrderData.totalTransactions) * 0.09), growth: 3.2 }
+        'NFTs': { revenue: parseFloat(currentRevenue) * 0.45, transactions: Math.floor(parseInt(currentTransactions) * 0.45), growth: 12.5 },
+        'Digital Goods': { revenue: parseFloat(currentRevenue) * 0.28, transactions: Math.floor(parseInt(currentTransactions) * 0.28), growth: 8.3 },
+        'Physical Items': { revenue: parseFloat(currentRevenue) * 0.18, transactions: Math.floor(parseInt(currentTransactions) * 0.18), growth: 5.7 },
+        'Services': { revenue: parseFloat(currentRevenue) * 0.09, transactions: Math.floor(parseInt(currentTransactions) * 0.09), growth: 3.2 }
       };
       
       const analytics: MarketplaceAnalytics = {
         overview: {
-          totalRevenue: parseFloat(currentOrderData.totalRevenue),
-          totalTransactions: parseInt(currentOrderData.totalTransactions),
+          totalRevenue: parseFloat(currentRevenue),
+          totalTransactions: parseInt(currentTransactions),
           activeUsers: currentUsers[0].count,
-          averageOrderValue: parseFloat(currentOrderData.averageOrderValue),
+          averageOrderValue: parseFloat(currentAvgOrder),
           customerSatisfaction: 4.7, // Mocked for now
           disputeRate: 1.2 // Mocked for now
         },
@@ -613,7 +620,7 @@ export class AdvancedAnalyticsService {
       // If a specific seller is requested, get their data
       if (sellerId) {
         // Get seller-specific data
-        const sellerData = await db.select().from(sellers).where(eq(sellers.id, sellerId));
+        const sellerData = await db.select().from(sellers).where(eq(sellers.id, parseInt(sellerId)));
         const sellerOrders = await db.select({
           totalRevenue: sum(orders.amount),
           totalOrders: count(),
@@ -626,19 +633,24 @@ export class AdvancedAnalyticsService {
         
         const orderData = sellerOrders[0] || { totalRevenue: '0', totalOrders: '0', averageOrderValue: '0' };
         
+        // Convert database values to strings for consistent parsing
+        const totalRevenue = String(orderData.totalRevenue || '0');
+        const totalOrders = String(orderData.totalOrders || '0');
+        const averageOrderValue = String(orderData.averageOrderValue || '0');
+        
         return {
           topSellers: [
             {
               id: sellerData[0].id,
-              name: sellerData[0].name || `Seller ${sellerData[0].id.slice(0, 8)}`,
-              revenue: parseFloat(orderData.totalRevenue),
-              orders: parseInt(orderData.totalOrders),
+              name: sellerData[0].storeName || `Seller ${sellerData[0].id}`,
+              revenue: parseFloat(totalRevenue),
+              orders: parseInt(totalOrders),
               rating: 4.5, // Mocked for now
               growth: 12.5 // Mocked for now
             }
           ],
           averageMetrics: {
-            orderValue: parseFloat(orderData.averageOrderValue),
+            orderValue: parseFloat(averageOrderValue),
             responseTime: 2.3, // hours - mocked for now
             fulfillmentTime: 18.5, // hours - mocked for now
             customerSatisfaction: 4.6 // mocked for now
@@ -659,11 +671,15 @@ export class AdvancedAnalyticsService {
       
       const topSellers = await Promise.all(topSellersQuery.map(async (sellerData) => {
         const sellerInfo = await db.select().from(sellers).where(eq(sellers.id, sellerData.sellerId));
+        // Convert database values to strings for consistent parsing
+        const totalRevenue = String(sellerData.totalRevenue || '0');
+        const totalOrders = String(sellerData.totalOrders || '0');
+        
         return {
           id: sellerData.sellerId,
-          name: sellerInfo[0]?.name || `Seller ${sellerData.sellerId.slice(0, 8)}`,
-          revenue: parseFloat(sellerData.totalRevenue),
-          orders: parseInt(sellerData.totalOrders),
+          name: sellerInfo[0]?.storeName || `Seller ${sellerData.sellerId}`,
+          revenue: parseFloat(totalRevenue),
+          orders: parseInt(totalOrders),
           rating: 4.5, // Mocked for now
           growth: 12.5 // Mocked for now
         };

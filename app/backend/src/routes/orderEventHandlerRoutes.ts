@@ -13,7 +13,7 @@ router.use(authMiddleware);
 // Apply rate limiting
 router.use(rateLimitingMiddleware({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  maxRequests: 100, // limit each IP to 100 requests per windowMs
   message: 'Too many order event requests from this IP'
 }));
 

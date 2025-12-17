@@ -50,7 +50,7 @@ export class EmergencyMiddleware {
 
     // Block non-essential requests
     if (this.isNonEssentialEndpoint(req.path)) {
-      return ApiResponse.serviceUnavailable(res, 'System is in emergency mode. Please try again later.', { retryAfter: 300 });
+      return ApiResponse.serviceUnavailable(res, 'System is in emergency mode. Please try again later.');
     }
 
     // Allow other requests with degraded functionality

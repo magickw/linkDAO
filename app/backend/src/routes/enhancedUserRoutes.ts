@@ -6,7 +6,7 @@ import rateLimit from 'express-rate-limit';
 // Rate limiting for user endpoints
 const userRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 500, // Increased to 500 requests per minute
+  maxRequests: 500, // Increased to 500 requests per minute
   message: {
     success: false,
     error: {

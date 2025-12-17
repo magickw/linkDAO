@@ -327,18 +327,18 @@ export class AdminNotificationService {
         return;
       }
 
-      // Send push notification
-      await pushNotificationService.sendToTokens(pushTokens, {
-        title: data.title,
-        body: data.message,
-        actionUrl: data.actionUrl,
-        data: {
-          type: data.type,
-          priority: data.priority,
-          category: data.category,
-          ...data.metadata
-        }
-      });
+      // TODO: Implement push notification sending when sendToTokens method is available
+      // await pushNotificationService.sendToTokens(pushTokens, {
+      //   title: data.title,
+      //   body: data.message,
+      //   actionUrl: data.actionUrl,
+      //   data: {
+      //     type: data.type,
+      //     priority: data.priority,
+      //     category: data.category,
+      //     ...data.metadata
+      //   }
+      // });
     } catch (error) {
       safeLogger.error('Error sending push notification:', error);
     }

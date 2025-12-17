@@ -10,7 +10,7 @@ interface ConnectionPoolConfig {
   connect_timeout?: number;
   prepare?: boolean;
   debug?: boolean;
-  max_lifetime?: number;
+  maxLifetime?: number;
   transform?: any;
 }
 
@@ -40,7 +40,7 @@ export class DatabaseConnectionPool {
       idle_timeout: parseInt(process.env.DB_IDLE_TIMEOUT || '30'), // Reduced idle timeout for faster cleanup
       connect_timeout: parseInt(process.env.DB_CONNECT_TIMEOUT || '10'), // Reduced connect timeout
       prepare: false, // Disable prepared statements for better compatibility
-      max_lifetime: 300, // 5 minutes max connection lifetime
+      maxLifetime: 300, // 5 minutes max connection lifetime
       transform: postgres.camel, // Transform to camelCase
     };
 

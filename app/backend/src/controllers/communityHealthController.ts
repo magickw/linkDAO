@@ -41,7 +41,7 @@ export const getCommunityHealthTrends = async (req: Request, res: Response): Pro
       return;
     }
     
-    const trends = await communityHealthService.getCommunityHealthTrends(communityId, daysNum);
+    const trends = await communityHealthService.getCommunityHealthTrends(communityId);
     
     res.json({
       success: true,
@@ -58,11 +58,16 @@ export const getCommunityHealthTrends = async (req: Request, res: Response): Pro
  */
 export const getCommunityComparisons = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { limit, sortBy } = req.query;
+    const { communityId, limit, sortBy } = req.query;
     const limitNum = limit ? parseInt(limit as string) : 10;
     const sortField = (sortBy as string) || 'health';
     
-    const comparisons = await communityHealthService.getCommunityComparisons(limitNum, sortField as any);
+    if (!communityId) {
+      res.status(400).json({ error: 'Community ID is required' });
+      return;
+    }
+    
+    const comparisons = await communityHealthService.getCommunityComparisons(communityId as string);
     
     res.json({
       success: true,
@@ -81,10 +86,12 @@ export const getHealthAlerts = async (req: Request, res: Response): Promise<void
   try {
     const { communityId, severity } = req.query;
     
-    const alerts = await communityHealthService.getHealthAlerts(
-      communityId as string,
-      severity as 'low' | 'medium' | 'high' | 'critical'
-    );
+    if (!communityId) {
+      res.status(400).json({ error: 'Community ID is required' });
+      return;
+    }
+    
+    const alerts = await communityHealthService.getHealthAlerts(communityId as string);
     
     res.json({
       success: true,
@@ -101,7 +108,14 @@ export const getHealthAlerts = async (req: Request, res: Response): Promise<void
  */
 export const getRealTimeHealthSnapshot = async (req: Request, res: Response): Promise<void> => {
   try {
-    const snapshot = await communityHealthService.getRealTimeHealthSnapshot();
+    const { communityId } = req.query;
+    
+    if (!communityId) {
+      res.status(400).json({ error: 'Community ID is required' });
+      return;
+    }
+    
+    const snapshot = await communityHealthService.getRealTimeHealthSnapshot(communityId as string);
     
     res.json({
       success: true,

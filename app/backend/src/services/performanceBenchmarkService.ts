@@ -2396,6 +2396,65 @@ export class PerformanceBenchmarkService {
       supportedSegments: Array.from(this.INDUSTRY_BENCHMARKS.values()).map(b => b.segment)
     };
   }
+
+  // Get benchmark summary
+  public getBenchmarkSummary(): any {
+    // Mock implementation - in a real implementation, this would return actual benchmark data
+    return {
+      overallScore: 85,
+      performanceGrade: 'B',
+      industryRank: 15,
+      percentile: 82,
+      lastUpdated: new Date(),
+      metrics: [
+        { name: 'Processing Time', value: 45, industryAverage: 48, status: 'good' },
+        { name: 'Approval Rate', value: 88, industryAverage: 85, status: 'excellent' },
+        { name: 'Customer Satisfaction', value: 4.3, industryAverage: 4.2, status: 'good' }
+      ]
+    };
+  }
+
+  // Run comprehensive benchmarks
+  public async runComprehensiveBenchmarks(): Promise<any> {
+    // Mock implementation - in a real implementation, this would run actual benchmarks
+    return {
+      overallScore: 87,
+      performanceGrade: 'B+',
+      industryRank: 12,
+      percentile: 85,
+      recommendations: [
+        { priority: 'high', description: 'Improve processing time', impact: 'high' },
+        { priority: 'medium', description: 'Enhance customer satisfaction', impact: 'medium' }
+      ],
+      metrics: [
+        { name: 'Processing Time', value: 42, industryAverage: 48, status: 'excellent' },
+        { name: 'Approval Rate', value: 90, industryAverage: 85, status: 'excellent' },
+        { name: 'Customer Satisfaction', value: 4.4, industryAverage: 4.2, status: 'excellent' }
+      ],
+      lastRun: new Date()
+    };
+  }
+
+  // Get benchmark history
+  public getBenchmarkHistory(): Map<string, any> {
+    // Mock implementation - in a real implementation, this would return actual history
+    const history = new Map<string, any>();
+    history.set('last_week', {
+      overallScore: 82,
+      performanceGrade: 'B',
+      industryRank: 18,
+      percentile: 78,
+      date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    });
+    history.set('last_month', {
+      overallScore: 79,
+      performanceGrade: 'C+',
+      industryRank: 25,
+      percentile: 72,
+      date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    });
+    return history;
+  }
 }
 
 export const performanceBenchmarkService = new PerformanceBenchmarkService();

@@ -14,7 +14,7 @@ const QUEUE_NAME = 'return-events';
 
 // Create the queue instance
 export const returnEventQueue = new Queue<ReturnEventJobData>(QUEUE_NAME, {
-    connection: redisService.getClient(),
+    connection: redisService.getClient() as any,
     defaultJobOptions: {
         attempts: 3,
         backoff: {
@@ -55,7 +55,7 @@ export const returnEventWorker = new Worker<ReturnEventJobData>(
         }
     },
     {
-        connection: redisService.getClient(),
+        connection: redisService.getClient() as any,
         concurrency: 5, // Process up to 5 events concurrently
         limiter: {
             max: 100,      // Max 100 jobs
@@ -82,7 +82,7 @@ returnEventWorker.on('error', (err) => {
  */
 export const queueReturnEvent = async (event: Omit<ReturnEvent, 'id' | 'timestamp'>) => {
     try {
-        await returnEventQueue.add('process_event', {
+        await returnEventQueue.add('process_event' as any, {
             event,
             timestamp: new Date().toISOString(),
         });

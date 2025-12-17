@@ -6,7 +6,7 @@ import { authMiddleware } from '../middleware/authMiddleware';
 import { ldaoSupportService } from '../services/ldaoSupportService';
 import { rateLimitingMiddleware } from '../middleware/rateLimitingMiddleware';
 import { db } from '../db';
-import { supportChatSessions } from '../db/schema/supportSchema';
+import { supportTickets, ticketResponses } from '../db/schema/supportSchema';
 import { eq, and, or } from 'drizzle-orm';
 
 const router = Router();
@@ -29,7 +29,7 @@ const validateRequest = (req: any, res: any, next: any) => {
 // Create a new support ticket
 router.post('/tickets', csrfProtection, 
   authMiddleware,
-  rateLimitingMiddleware({ windowMs: 15 * 60 * 1000, max: 5 }), // 5 tickets per 15 minutes
+  rateLimitingMiddleware({ windowMs: 15 * 60 * 1000, maxRequests: 5 }), // 5 tickets per 15 minutes
   [
     body('subject')
       .isLength({ min: 5, max: 200 })
@@ -149,7 +149,7 @@ router.get('/tickets/:ticketId',
 // Add response to support ticket
 router.post('/tickets/:ticketId/responses', csrfProtection, 
   authMiddleware,
-  rateLimitingMiddleware({ windowMs: 5 * 60 * 1000, max: 10 }), // 10 responses per 5 minutes
+  rateLimitingMiddleware({ windowMs: 5 * 60 * 1000, maxRequests: 10 }), // 10 responses per 5 minutes
   [
     param('ticketId')
       .matches(/^LDAO-\d+-[a-z0-9]+$/)
@@ -244,7 +244,7 @@ router.get('/faq',
 
 // Mark FAQ as helpful/not helpful
 router.post('/faq/:faqId/feedback', csrfProtection, 
-  rateLimitingMiddleware({ windowMs: 60 * 1000, max: 5 }), // 5 feedback per minute
+  rateLimitingMiddleware({ windowMs: 60 * 1000, maxRequests: 5 }), // 5 feedback per minute
   [
     param('faqId')
       .matches(/^faq-\d+$/)
@@ -307,7 +307,7 @@ router.post('/faq/:faqId/view', csrfProtection,
 // Initiate live chat session
 router.post('/chat/initiate', csrfProtection, 
   authMiddleware,
-  rateLimitingMiddleware({ windowMs: 60 * 1000, max: 3 }), // 3 chat initiations per minute
+  rateLimitingMiddleware({ windowMs: 60 * 1000, maxRequests: 3 }), // 3 chat initiations per minute
   [
     body('initialMessage')
       .optional()
@@ -344,7 +344,7 @@ router.post('/chat/initiate', csrfProtection,
 router.post('/chat/message',
   csrfProtection,
   authMiddleware,
-  rateLimitingMiddleware({ windowMs: 60 * 1000, max: 30 }), // 30 messages per minute
+  rateLimitingMiddleware({ windowMs: 60 * 1000, maxRequests: 30 }), // 30 messages per minute
   [
     body('chatSessionId')
       .isLength({ min: 36, max: 36 })
@@ -359,15 +359,12 @@ router.post('/chat/message',
       const userId = req.user.id;
       const { chatSessionId, message } = req.body;
 
-      // Verify user is part of the chat session or is staff
+      // Verify user is part of the ticket or is staff
       const session = await db.select()
-        .from(supportChatSessions)
+        .from(supportTickets)
         .where(and(
-          eq(supportChatSessions.id, chatSessionId),
-          or(
-            eq(supportChatSessions.userId, userId),
-            eq(supportChatSessions.agentId, userId)
-          )
+          eq(supportTickets.id, chatSessionId),
+          eq(supportTickets.userId, userId)
         ))
         .limit(1);
 
@@ -378,7 +375,7 @@ router.post('/chat/message',
         });
       }
 
-      const isAgent = session.agentId === userId;
+      const isAgent = session[0]?.assignedTo === userId;
       await ldaoSupportService.sendChatMessage(chatSessionId, userId, message, isAgent);
 
       res.json({
@@ -405,13 +402,10 @@ router.get('/chat/:chatSessionId/messages',
 
       // Verify user is part of the chat session or is staff
       const session = await db.select()
-        .from(supportChatSessions)
+        .from(supportTickets)
         .where(and(
-          eq(supportChatSessions.id, chatSessionId),
-          or(
-            eq(supportChatSessions.userId, userId),
-            eq(supportChatSessions.agentId, userId)
-          )
+          eq(supportTickets.id, chatSessionId),
+          eq(supportTickets.userId, userId)
         ))
         .limit(1);
 
@@ -442,7 +436,7 @@ router.get('/chat/:chatSessionId/messages',
 router.post('/chat/:chatSessionId/join',
   csrfProtection,
   authMiddleware,
-  rateLimitingMiddleware({ windowMs: 60 * 1000, max: 5 }), // 5 joins per minute
+  rateLimitingMiddleware({ windowMs: 60 * 1000, maxRequests: 5 }), // 5 joins per minute
   validateRequest,
   async (req: any, res: any) => {
     try {
@@ -459,10 +453,10 @@ router.post('/chat/:chatSessionId/join',
 
       // Verify chat session exists and is waiting
       const session = await db.select()
-        .from(supportChatSessions)
+        .from(supportTickets)
         .where(and(
-          eq(supportChatSessions.id, chatSessionId),
-          eq(supportChatSessions.status, 'waiting')
+          eq(supportTickets.id, chatSessionId),
+          eq(supportTickets.status, 'open')
         ))
         .limit(1);
 

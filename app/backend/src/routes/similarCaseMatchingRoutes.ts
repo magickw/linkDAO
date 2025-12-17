@@ -16,7 +16,7 @@ router.use(adminAuthMiddleware);
 // Apply rate limiting for case matching operations (computationally expensive)
 const caseMatchingRateLimit = rateLimitingMiddleware({
   windowMs: 60 * 1000, // 1 minute
-  max: 20, // 20 requests per minute per admin
+  maxRequests: 20, // 20 requests per minute per admin
   message: 'Too many case matching requests'
 });
 

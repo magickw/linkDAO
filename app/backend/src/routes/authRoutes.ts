@@ -10,7 +10,7 @@ import rateLimit from 'express-rate-limit';
 // to accommodate multiple auth attempts and service worker retries
 const authRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 200, // Increased from 60 to 200 requests per minute for development
+  maxRequests: 200, // Increased from 60 to 200 requests per minute for development
   message: {
     success: false,
     error: {

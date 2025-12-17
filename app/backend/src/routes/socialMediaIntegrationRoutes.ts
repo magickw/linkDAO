@@ -19,7 +19,7 @@ router.use(adminAuthMiddleware);
 // Apply rate limiting for social media operations
 const socialMediaRateLimit = rateLimitingMiddleware({
   windowMs: 60 * 1000, // 1 minute
-  max: 30, // 30 requests per minute per user
+  maxRequests: 30, // 30 requests per minute per user
   message: 'Too many social media requests'
 });
 

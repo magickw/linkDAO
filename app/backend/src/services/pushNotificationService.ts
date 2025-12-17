@@ -83,6 +83,51 @@ export class PushNotificationService {
     return this.vapidPublicKey;
   }
 
+  // Register a push notification token (wrapper for registerDeviceSubscription)
+  async registerToken(userId: string, token: string, platform: 'ios' | 'android' | 'web'): Promise<boolean> {
+    // Convert token to subscription format
+    const subscription = {
+      endpoint: `https://${platform}-push.linkdao.com/token/${token}`,
+      keys: {
+        p256dh: '',
+        auth: ''
+      }
+    };
+    
+    return await this.registerDeviceSubscription(userId, subscription, platform);
+  }
+
+  // Unregister a push notification token (wrapper for unregisterDeviceSubscription)
+  async unregisterToken(token: string): Promise<boolean> {
+    // Extract user ID from token - in a real implementation, this would be stored in a mapping
+    // For now, we'll use a placeholder
+    const userId = 'placeholder-user-id';
+    const endpoint = `https://mobile-push.linkdao.com/token/${token}`;
+    
+    return await this.unregisterDeviceSubscription(userId, endpoint);
+  }
+
+  // Send notification to a specific user
+  async sendToUser(userId: string, notification: { title: string; body: string; actionUrl?: string; data?: Record<string, any> }): Promise<boolean> {
+    try {
+      // Create a notification payload
+      const payload = {
+        userId,
+        type: 'generic' as const,
+        title: notification.title,
+        message: notification.body,
+        data: notification.data || {}
+      };
+      
+      // Send the notification
+      const result = await this.sendPushNotification(payload);
+      return result.success > 0;
+    } catch (error) {
+      safeLogger.error('Error sending notification to user:', error);
+      return false;
+    }
+  }
+
   // Register a new device subscription
   async registerDeviceSubscription(userId: string, subscription: any, userAgent?: string): Promise<boolean> {
     try {

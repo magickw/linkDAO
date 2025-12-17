@@ -44,7 +44,7 @@ router.use(adminAuthMiddleware);
 // Apply rate limiting for reputation operations
 const reputationRateLimit = rateLimitingMiddleware({
   windowMs: 60 * 1000, // 1 minute
-  max: 100, // 100 requests per minute per user
+  maxRequests: 100, // 100 requests per minute per user
   message: 'Too many reputation requests'
 });
 

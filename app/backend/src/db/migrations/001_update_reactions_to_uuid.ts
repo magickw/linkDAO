@@ -24,15 +24,15 @@ async function up(): Promise<void> {
   
   try {
     // Step 1: Add a new UUID column to store the new post references
-    console.log('Adding new post_id_uuid column...');
-    await db.execute(sql`ALTER TABLE reactions ADD COLUMN post_id_uuid UUID`);
+    console.log('Adding new post_id_temp column...');
+    await db.execute(sql`ALTER TABLE reactions ADD COLUMN post_id_temp UUID`);
 
     // Step 2: Add an index to the new column for performance
     console.log('Adding index for new column...');
     try {
-      await db.execute(sql`CREATE INDEX CONCURRENTLY idx_reactions_post_id_uuid ON reactions(post_id_uuid)`);
+      await db.execute(sql`CREATE INDEX CONCURRENTLY idx_reactions_post_id_temp ON reactions(post_id_temp)`);
     } catch (e) {
-      console.log('Index idx_reactions_post_id_uuid may already exist:', (e as Error).message);
+      console.log('Index idx_reactions_post_id_temp may already exist:', (e as Error).message);
     }
 
     // Step 3: Check if the old foreign key constraint exists before dropping
@@ -44,7 +44,7 @@ async function up(): Promise<void> {
       AND table_name = 'reactions'
     `);
     
-    if (constraintCheck.rowCount && constraintCheck.rowCount > 0) {
+    if (constraintCheck.rows.length > 0) {
       console.log('Dropping old foreign key constraint...');
       await db.execute(sql`ALTER TABLE reactions DROP CONSTRAINT reactions_post_id_fkey`);
     } else {
@@ -54,7 +54,7 @@ async function up(): Promise<void> {
     // Step 4: Rename the columns to make the UUID column primary
     console.log('Renaming columns...');
     await db.execute(sql`ALTER TABLE reactions RENAME COLUMN post_id TO post_id_old`);
-    await db.execute(sql`ALTER TABLE reactions RENAME COLUMN post_id_uuid TO post_id`);
+    await db.execute(sql`ALTER TABLE reactions RENAME COLUMN post_id_temp TO post_id`);
 
     // Step 5: Add the new foreign key constraint referencing quickPosts
     console.log('Adding new foreign key constraint...');
@@ -62,7 +62,7 @@ async function up(): Promise<void> {
 
     // Step 6: Rename the index to the final name
     try {
-      await db.execute(sql`ALTER INDEX idx_reactions_post_id_uuid RENAME TO idx_reactions_post_id`);
+      await db.execute(sql`ALTER INDEX idx_reactions_post_id_temp RENAME TO idx_reactions_post_id`);
     } catch (e) {
       console.log('Index rename failed, this may be expected if index was already renamed:', (e as Error).message);
     }
@@ -89,7 +89,7 @@ async function down(): Promise<void> {
       AND table_name = 'reactions'
     `);
     
-    if (constraintCheck.rowCount && constraintCheck.rowCount > 0) {
+    if (constraintCheck.rows.length > 0) {
       console.log('Dropping new foreign key constraint...');
       await db.execute(sql`ALTER TABLE reactions DROP CONSTRAINT reactions_post_id_fkey`);
     } else {
@@ -98,11 +98,11 @@ async function down(): Promise<void> {
 
     // Step 2: Rename columns back to original names
     console.log('Renaming columns back...');
-    await db.execute(sql`ALTER TABLE reactions RENAME COLUMN post_id TO post_id_uuid`);
+    await db.execute(sql`ALTER TABLE reactions RENAME COLUMN post_id TO post_id_temp`);
     await db.execute(sql`ALTER TABLE reactions RENAME COLUMN post_id_old TO post_id`);
 
     // Step 3: Drop the unused UUID column
-    await db.execute(sql`ALTER TABLE reactions DROP COLUMN IF EXISTS post_id_uuid`);
+    await db.execute(sql`ALTER TABLE reactions DROP COLUMN IF EXISTS post_id_temp`);
 
     // Step 4: Check if posts table exists and recreate the original foreign key constraint
     const postsTableCheck = await db.execute(sql`
@@ -111,7 +111,7 @@ async function down(): Promise<void> {
       WHERE table_name = 'posts'
     `);
     
-    if (postsTableCheck.rowCount && postsTableCheck.rowCount > 0) {
+    if (postsTableCheck.rows.length > 0) {
       console.log('Adding original foreign key constraint to posts table...');
       await db.execute(sql`ALTER TABLE reactions ADD CONSTRAINT reactions_post_id_fkey FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE`);
     } else {

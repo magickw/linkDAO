@@ -44,53 +44,53 @@ const safeHandler = (methodName: keyof typeof communicationManagerController) =>
 // Communication logging and audit trail
 router.post('/log',
   csrfProtection,
-  rateLimiter({ windowMs: 60 * 1000, max: 100 }), // 100 requests per minute
+  rateLimiter({ windowMs: 60 * 1000, maxRequests: 100 }), // 100 requests per minute
   safeHandler('logCommunication')
 );
 
 router.get('/logs',
-  rateLimiter({ windowMs: 60 * 1000, max: 100 }), // 100 requests per minute
+  rateLimiter({ windowMs: 60 * 1000, maxRequests: 100 }), // 100 requests per minute
   safeHandler('getCommunicationLogs')
 );
 
 // Dispute escalation management
 router.post('/escalation',
   csrfProtection,
-  rateLimiter({ windowMs: 60 * 1000, max: 50 }), // 50 requests per minute
+  rateLimiter({ windowMs: 60 * 1000, maxRequests: 50 }), // 50 requests per minute
   safeHandler('createEscalationTrigger')
 );
 
 router.put('/escalation/:escalationId/resolve',
   csrfProtection,
-  rateLimiter({ windowMs: 60 * 1000, max: 50 }), // 50 requests per minute
+  rateLimiter({ windowMs: 60 * 1000, maxRequests: 50 }), // 50 requests per minute
   safeHandler('resolveEscalation')
 );
 
 router.get('/escalations',
-  rateLimiter({ windowMs: 60 * 1000, max: 100 }), // 100 requests per minute
+  rateLimiter({ windowMs: 60 * 1000, maxRequests: 100 }), // 100 requests per minute
   safeHandler('getEscalationTriggers')
 );
 
 router.post('/escalation/:escalationId/route',
   csrfProtection,
-  rateLimiter({ windowMs: 60 * 1000, max: 50 }), // 50 requests per minute
+  rateLimiter({ windowMs: 60 * 1000, maxRequests: 50 }), // 50 requests per minute
   safeHandler('routeEscalation')
 );
 
 router.post('/escalation/:escalationId/preserve-context',
   csrfProtection,
-  rateLimiter({ windowMs: 60 * 1000, max: 50 }), // 50 requests per minute
+  rateLimiter({ windowMs: 60 * 1000, maxRequests: 50 }), // 50 requests per minute
   safeHandler('preserveEscalationContext')
 );
 
 // Communication pattern detection and analytics
 router.get('/patterns',
-  rateLimiter({ windowMs: 60 * 1000, max: 50 }), // 50 requests per minute
+  rateLimiter({ windowMs: 60 * 1000, maxRequests: 50 }), // 50 requests per minute
   safeHandler('getCommunicationPatterns')
 );
 
 router.get('/analytics',
-  rateLimiter({ windowMs: 60 * 1000, max: 30 }), // 30 requests per minute
+  rateLimiter({ windowMs: 60 * 1000, maxRequests: 30 }), // 30 requests per minute
   safeHandler('getCommunicationAnalytics')
 );
 

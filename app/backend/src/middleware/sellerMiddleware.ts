@@ -29,18 +29,18 @@ export const validateSellerAccess = (
     const { walletAddress } = req.params;
 
     if (!user) {
-      return ApiResponse.unauthorized(res, 'Authentication required', { code: 'AUTH_REQUIRED' });
+      return ApiResponse.unauthorized(res, 'Authentication required');
     }
 
     // If accessing specific seller resources, verify ownership or admin access
     if (walletAddress && walletAddress !== user.walletAddress && user.role !== 'admin') {
-      return ApiResponse.forbidden(res, 'Access denied. You can only access your own seller resources.', { code: 'ACCESS_DENIED' });
+      return ApiResponse.forbidden(res, 'Access denied. You can only access your own seller resources.');
     }
 
     next();
   } catch (error) {
     safeLogger.error('Seller access validation error:', error);
-    ApiResponse.serverError(res, 'Internal server error', { code: 'VALIDATION_ERROR' });
+    ApiResponse.serverError(res, 'Internal server error');
   }
 };
 
@@ -53,7 +53,7 @@ export const validateSellerTier = (requiredTier: string) => {
       const { user } = req;
 
       if (!user) {
-        return ApiResponse.unauthorized(res, 'Authentication required', { code: 'AUTH_REQUIRED' });
+        return ApiResponse.unauthorized(res, 'Authentication required');
       }
 
       // In a real implementation, you would check the user's seller tier
@@ -61,7 +61,7 @@ export const validateSellerTier = (requiredTier: string) => {
       next();
     } catch (error) {
       safeLogger.error('Seller tier validation error:', error);
-      ApiResponse.serverError(res, 'Internal server error', { code: 'TIER_VALIDATION_ERROR' });
+      ApiResponse.serverError(res, 'Internal server error');
     }
   };
 };

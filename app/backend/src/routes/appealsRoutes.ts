@@ -9,7 +9,7 @@ const router = Router();
 // Rate limiting for appeals endpoints
 const appealSubmissionRateLimit = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 5, // Limit each user to 5 appeal submissions per hour
+  maxRequests: 5, // Limit each user to 5 appeal submissions per hour
   message: 'Too many appeal submissions. Please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -21,7 +21,7 @@ const appealSubmissionRateLimit = rateLimit({
 
 const generalAppealsRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each user to 100 requests per 15 minutes
+  maxRequests: 100, // Limit each user to 100 requests per 15 minutes
   message: 'Too many requests. Please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -29,7 +29,7 @@ const generalAppealsRateLimit = rateLimit({
 
 const adminRateLimit = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 200, // Higher limit for admin operations
+  maxRequests: 200, // Higher limit for admin operations
   message: 'Admin rate limit exceeded',
   standardHeaders: true,
   legacyHeaders: false,

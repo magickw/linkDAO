@@ -13,7 +13,7 @@ router.use(authMiddleware);
 // Apply rate limiting
 router.use(rateLimitingMiddleware({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300, // limit each IP to 300 requests per windowMs for messaging
+  maxRequests: 300, // limit each IP to 300 requests per windowMs for messaging
   message: 'Too many messaging requests from this IP'
 }));
 
@@ -22,7 +22,7 @@ router.get('/conversations',
   validateRequest({
     query: {
       page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, max: 50 },
+      limit: { type: 'number', optional: true, min: 1, maxRequests: 50 },
       search: { type: 'string', optional: true }
     }
   }),
@@ -60,7 +60,7 @@ router.get('/conversations/:id/messages',
     },
     query: {
       page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, max: 100 },
+      limit: { type: 'number', optional: true, min: 1, maxRequests: 100 },
       before: { type: 'string', optional: true }, // message ID for pagination
       after: { type: 'string', optional: true }   // message ID for pagination
     }
@@ -183,7 +183,7 @@ router.get('/search',
       q: { type: 'string', required: true, minLength: 2 },
       conversationId: { type: 'string', optional: true },
       page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, max: 50 }
+      limit: { type: 'number', optional: true, min: 1, maxRequests: 50 }
     }
   }),
   messagingController.searchMessages

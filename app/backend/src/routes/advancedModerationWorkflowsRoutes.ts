@@ -19,7 +19,7 @@ router.use(adminAuthMiddleware);
 // Apply rate limiting for moderation operations
 const moderationRateLimit = rateLimitingMiddleware({
   windowMs: 60 * 1000, // 1 minute
-  max: 200, // 200 requests per minute per user
+  maxRequests: 200, // 200 requests per minute per user
   message: 'Too many moderation requests'
 });
 

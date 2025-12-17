@@ -13,7 +13,7 @@ const authRequired = authMiddleware;
 // Apply rate limiting
 router.use(rateLimitingMiddleware({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // limit each IP to 200 requests per windowMs
+  maxRequests: 200, // limit each IP to 200 requests per windowMs
   message: 'Too many community requests from this IP'
 }));
 
@@ -22,7 +22,7 @@ router.get('/',
   validateRequest({
     query: {
       page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, max: 50 },
+      limit: { type: 'number', optional: true, min: 1, maxRequests: 50 },
       category: { type: 'string', optional: true },
       search: { type: 'string', optional: true },
       sort: { type: 'string', optional: true, enum: ['newest', 'popular', 'active', 'members'] },
@@ -37,7 +37,7 @@ router.get('/trending',
   validateRequest({
     query: {
       page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, max: 20 },
+      limit: { type: 'number', optional: true, min: 1, maxRequests: 20 },
       timeRange: { type: 'string', optional: true, enum: ['day', 'week', 'month'] }
     }
   }),
@@ -49,7 +49,7 @@ router.get('*/trending',
   validateRequest({
     query: {
       page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, max: 20 },
+      limit: { type: 'number', optional: true, min: 1, maxRequests: 20 },
       timeRange: { type: 'string', optional: true, enum: ['day', 'week', 'month'] }
     }
   }),
@@ -63,7 +63,7 @@ router.get('/my-communities',
   validateRequest({
     query: {
       page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, max: 100 }
+      limit: { type: 'number', optional: true, min: 1, maxRequests: 100 }
     }
   }),
   communityController.getMyCommunities
@@ -83,7 +83,7 @@ router.get('/feed',
   validateRequest({
     query: {
       page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, max: 50 },
+      limit: { type: 'number', optional: true, min: 1, maxRequests: 50 },
       sort: { type: 'string', optional: true, enum: ['new', 'newest', 'hot', 'top', 'rising'] },
       timeRange: { type: 'string', optional: true, enum: ['hour', 'day', 'week', 'month', 'year', 'all'] }
     }
@@ -177,7 +177,7 @@ router.get('/:id/posts',
     },
     query: {
       page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, max: 50 },
+      limit: { type: 'number', optional: true, min: 1, maxRequests: 50 },
       sort: { type: 'string', optional: true, enum: ['newest', 'new', 'oldest', 'hot', 'top'] },
       timeRange: { type: 'string', optional: true, enum: ['day', 'week', 'month', 'all'] }
     }
@@ -231,7 +231,7 @@ router.get('/:id/members',
     },
     query: {
       page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, max: 50 },
+      limit: { type: 'number', optional: true, min: 1, maxRequests: 50 },
       role: { type: 'string', optional: true, enum: ['member', 'moderator', 'admin'] }
     }
   }),
@@ -272,7 +272,7 @@ router.get('/:id/governance',
     },
     query: {
       page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, max: 20 },
+      limit: { type: 'number', optional: true, min: 1, maxRequests: 20 },
       status: { type: 'string', optional: true, enum: ['active', 'passed', 'rejected', 'expired'] }
     }
   }),
@@ -290,7 +290,7 @@ router.post('/:id/governance', csrfProtection,
       title: { type: 'string', required: true, minLength: 5, maxLength: 200 },
       description: { type: 'string', required: true, minLength: 20, maxLength: 2000 },
       type: { type: 'string', required: true, enum: ['rule_change', 'moderator_election', 'budget_allocation', 'feature_request', 'spending', 'parameter_change', 'grant', 'membership'] },
-      votingDuration: { type: 'number', optional: true, min: 1, max: 30 }, // days
+      votingDuration: { type: 'number', optional: true, min: 1, maxRequests: 30 }, // days
       requiredStake: { type: 'number', optional: true, min: 0 }
     }
   }),
@@ -334,7 +334,7 @@ router.get('/:id/moderation/queue',
     },
     query: {
       page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, max: 50 },
+      limit: { type: 'number', optional: true, min: 1, maxRequests: 50 },
       type: { type: 'string', optional: true, enum: ['posts', 'reports', 'all'] }
     }
   }),
@@ -364,7 +364,7 @@ router.get('/search/query',
     query: {
       q: { type: 'string', required: true, minLength: 2 },
       page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, max: 20 },
+      limit: { type: 'number', optional: true, min: 1, maxRequests: 20 },
       category: { type: 'string', optional: true }
     }
   }),
@@ -412,7 +412,7 @@ router.get('/:id/delegations',
     query: {
       delegateAddress: { type: 'string', required: true },
       page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, max: 50 }
+      limit: { type: 'number', optional: true, min: 1, maxRequests: 50 }
     }
   }),
   communityController.getDelegationsAsDelegate
@@ -455,7 +455,7 @@ router.get('/:proposalId/multi-sig-approvals',
     },
     query: {
       page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, max: 50 }
+      limit: { type: 'number', optional: true, min: 1, maxRequests: 50 }
     }
   }),
   communityController.getMultiSigApprovals
@@ -485,7 +485,7 @@ router.get('/:proposalId/automated-executions',
     },
     query: {
       page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, max: 50 }
+      limit: { type: 'number', optional: true, min: 1, maxRequests: 50 }
     }
   }),
   communityController.getAutomatedExecutions
@@ -626,7 +626,7 @@ router.get('/user/created',
   validateRequest({
     query: {
       page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, max: 100 }
+      limit: { type: 'number', optional: true, min: 1, maxRequests: 100 }
     }
   }),
   communityController.getUserCreatedCommunities
@@ -684,7 +684,7 @@ router.post('/:id/members/bulk-add', csrfProtection,
     body: {
       memberAddresses: { type: 'array', required: true, items: { type: 'string' } },
       defaultRole: { type: 'string', optional: true, enum: ['member', 'moderator', 'admin'] },
-      defaultReputation: { type: 'number', optional: true, min: 0, max: 1000 },
+      defaultReputation: { type: 'number', optional: true, min: 0, maxRequests: 1000 },
       sendWelcomeMessage: { type: 'boolean', optional: true },
       skipExisting: { type: 'boolean', optional: true }
     }
@@ -796,7 +796,7 @@ router.post('/:id/members/import', csrfProtection,
     },
     body: {
       defaultRole: { type: 'string', optional: true, enum: ['member', 'moderator', 'admin'] },
-      defaultReputation: { type: 'number', optional: true, min: 0, max: 1000 },
+      defaultReputation: { type: 'number', optional: true, min: 0, maxRequests: 1000 },
       sendWelcomeMessage: { type: 'boolean', optional: true },
       skipExisting: { type: 'boolean', optional: true }
     }
@@ -886,7 +886,7 @@ router.get('/notifications/statistics',
   authRequired,
   validateRequest({
     query: {
-      days: { type: 'number', optional: true, min: 1, max: 365 }
+      days: { type: 'number', optional: true, min: 1, maxRequests: 365 }
     }
   }),
   communityController.getNotificationStatistics
@@ -924,7 +924,7 @@ router.get('/:id/health/historical',
       id: { type: 'string', required: true }
     },
     query: {
-      days: { type: 'number', optional: true, min: 7, max: 365 }
+      days: { type: 'number', optional: true, min: 7, maxRequests: 365 }
     }
   }),
   communityController.getHistoricalHealthMetrics
