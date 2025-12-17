@@ -4,7 +4,7 @@ import { csrfProtection } from '../middleware/csrfProtection';
 import { ApiResponse } from '../utils/apiResponse';
 import { validateRequest, marketplaceSchemas, commonSchemas } from '../middleware/joiValidation';
 import { paginationUtils } from '../utils/pagination';
-import { generalRateLimit } from '../middleware/rateLimitingMiddleware';
+import { rateLimitingMiddleware } from '../middleware/rateLimitingMiddleware';
 import { textSanitization } from '../utils/sanitizer';
 
 const router = express.Router();
@@ -14,7 +14,7 @@ const router = express.Router();
  * GET /api/example/products
  */
 router.get('/products',
-  generalRateLimit,
+  rateLimitingMiddleware(),
   validateRequest({
     query: commonSchemas.pagination.keys({
       category: commonSchemas.content.extract(['category']).optional(),
@@ -72,7 +72,7 @@ router.get('/products',
  * POST /api/example/products
  */
 router.post('/products', csrfProtection, 
-  generalRateLimit,
+  rateLimitingMiddleware(),
   textSanitization,
   validateRequest(marketplaceSchemas.createListing),
   async (req, res) => {
@@ -101,7 +101,7 @@ router.post('/products', csrfProtection,
  * GET /api/example/products/:id
  */
 router.get('/products/:id',
-  generalRateLimit,
+  rateLimitingMiddleware(),
   validateRequest({
     params: commonSchemas.idParam
   }),
@@ -143,7 +143,7 @@ router.get('/products/:id',
  * PUT /api/example/products/:id
  */
 router.put('/products/:id', csrfProtection, 
-  generalRateLimit,
+  rateLimitingMiddleware(),
   textSanitization,
   validateRequest({
     params: commonSchemas.idParam,
@@ -174,7 +174,7 @@ router.put('/products/:id', csrfProtection,
  * DELETE /api/example/products/:id
  */
 router.delete('/products/:id', csrfProtection, 
-  generalRateLimit,
+  rateLimitingMiddleware(),
   validateRequest({
     params: commonSchemas.idParam
   }),

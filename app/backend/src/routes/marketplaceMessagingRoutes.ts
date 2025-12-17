@@ -13,7 +13,7 @@ router.use(authMiddleware);
 // Apply rate limiting
 router.use(rateLimitingMiddleware({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300, // limit each IP to 300 requests per windowMs for messaging
+  maxRequests: 300, // limit each IP to 300 requests per windowMs for messaging
   message: 'Too many messaging requests from this IP'
 }));
 

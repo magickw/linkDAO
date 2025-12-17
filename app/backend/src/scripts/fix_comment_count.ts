@@ -24,7 +24,7 @@ async function analyzeCommentMismatch() {
       .select({
         id: posts.id,
         title: posts.title,
-        author: posts.author,
+        author: posts.authorId,
       })
       .from(posts)
       .limit(100);

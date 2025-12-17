@@ -31,6 +31,7 @@ export interface RefundRequest {
   amount?: number;
   reason?: string;
   refundMethod: 'original_payment' | 'store_credit' | 'exchange';
+  transactionHash?: string;
 }
 
 class ReturnService {

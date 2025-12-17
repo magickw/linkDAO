@@ -65,15 +65,13 @@ export class AdvancedCacheService {
     try {
       const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
       this.redis = new Redis(redisUrl, {
-        retryDelayOnFailover: 100,
         maxRetriesPerRequest: 3,
         lazyConnect: true,
         keepAlive: 30000,
         family: 4,
         keyPrefix: 'linkdao:',
         // Enable compression for large values
-        enableAutoPipelining: true,
-        maxRetriesPerRequest: 3
+        enableAutoPipelining: true
       });
 
       this.redis.on('connect', () => {
@@ -417,7 +415,8 @@ export class AdvancedCacheService {
       // Redis metrics
       if (this.redis) {
         const info = await this.redis.info('memory');
-        this.cacheMetrics.redisMemoryUsage = parseInt(info.used_memory);
+        const match = info.match(/used_memory:(\d+)/);
+        this.cacheMetrics.redisMemoryUsage = match ? parseInt(match[1]) : 0;
       }
 
       // Log metrics

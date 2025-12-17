@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { onboardingController } from '../controllers/onboardingController';
-import { authMiddleware } from '../middleware/authMiddleware';
+import { authMiddleware, AuthenticatedRequest } from '../middleware/authMiddleware';
 
 const router = Router();
 
@@ -10,7 +10,7 @@ const router = Router();
  * @access Private
  */
 router.get('/preferences', authMiddleware, (req, res) => {
-    onboardingController.getUserPreferences(req, res);
+    onboardingController.getUserPreferences(req as AuthenticatedRequest, res);
 });
 
 /**
@@ -19,7 +19,7 @@ router.get('/preferences', authMiddleware, (req, res) => {
  * @access Private
  */
 router.post('/preferences', authMiddleware, (req, res) => {
-    onboardingController.saveUserPreferences(req, res);
+    onboardingController.saveUserPreferences(req as AuthenticatedRequest, res);
 });
 
 /**
@@ -28,7 +28,7 @@ router.post('/preferences', authMiddleware, (req, res) => {
  * @access Private
  */
 router.post('/skip', authMiddleware, (req, res) => {
-    onboardingController.skipOnboarding(req, res);
+    onboardingController.skipOnboarding(req as AuthenticatedRequest, res);
 });
 
 /**
@@ -37,7 +37,7 @@ router.post('/skip', authMiddleware, (req, res) => {
  * @access Private
  */
 router.get('/status', authMiddleware, (req, res) => {
-    onboardingController.needsOnboarding(req, res);
+    onboardingController.needsOnboarding(req as AuthenticatedRequest, res);
 });
 
 /**
@@ -46,7 +46,7 @@ router.get('/status', authMiddleware, (req, res) => {
  * @access Public
  */
 router.get('/categories', (req, res) => {
-    onboardingController.getAvailableCategories(req, res);
+    onboardingController.getAvailableCategories(req as AuthenticatedRequest, res);
 });
 
 /**
@@ -55,7 +55,7 @@ router.get('/categories', (req, res) => {
  * @access Public
  */
 router.get('/tags', (req, res) => {
-    onboardingController.getAvailableTags(req, res);
+    onboardingController.getAvailableTags(req as AuthenticatedRequest, res);
 });
 
 export default router;

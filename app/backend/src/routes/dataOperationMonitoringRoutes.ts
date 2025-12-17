@@ -33,10 +33,14 @@ router.get('/overview', async (req: Request, res: Response) => {
           },
           api: {
             totalEndpoints: dataMetrics.api.endpoints.size,
-            totalRequests: performanceMetrics.overall.requestCount,
-            averageResponseTime: performanceMetrics.overall.averageResponseTime,
-            errorRate: performanceMetrics.overall.errorRate * 100,
-            throughput: performanceMetrics.overall.throughput
+            totalRequests: performanceMetrics.reduce((sum, m) => sum + m.requestCount, 0),
+            averageResponseTime: performanceMetrics.length > 0 
+              ? performanceMetrics.reduce((sum, m) => sum + m.responseTime, 0) / performanceMetrics.length 
+              : 0,
+            errorRate: performanceMetrics.length > 0 
+              ? (performanceMetrics.filter(m => m.statusCode >= 400).length / performanceMetrics.length) * 100 
+              : 0,
+            throughput: performanceMetrics.reduce((sum, m) => sum + m.throughput, 0)
           },
           alerts: {
             total: dataMetrics.alerts.length,
@@ -247,12 +251,11 @@ router.get('/health', async (req: Request, res: Response) => {
     const dataHealth = dataOperationMonitoringService.getHealthStatus();
     const performanceHealth = performanceMonitoringService.getHealthStatus();
     
-    const overallStatus = dataHealth.status === 'unhealthy' || performanceHealth.status === 'unhealthy' 
-      ? 'unhealthy' 
-      : dataHealth.status === 'degraded' || performanceHealth.status === 'degraded'
-      ? 'degraded'
-      : 'healthy';
-
+    const overallStatus = dataHealth.status === 'critical' || performanceHealth.status === 'critical' 
+          ? 'critical' 
+          : dataHealth.status === 'warning' || performanceHealth.status === 'warning' 
+            ? 'warning' 
+            : 'healthy';
     res.json({
       status: 'success',
       data: {
@@ -674,8 +677,9 @@ router.post('/reset', csrfProtection,  async (req: Request, res: Response) => {
     }
 
     dataOperationMonitoringService.resetMetrics();
-    performanceMonitoringService.resetMetrics();
-    userExperienceMetricsService.resetMetrics();
+    // TODO: Implement resetMetrics for performanceMonitoringService and userExperienceMetricsService
+    // performanceMonitoringService.resetMetrics();
+    // userExperienceMetricsService.resetMetrics();
     
     logger.info('Monitoring metrics reset', {
       requestedBy: req.ip,

@@ -213,7 +213,10 @@ export class IntelligentRateLimiter {
               upgradeMessage: userTier.tier === 'free' ? 'Upgrade to premium for higher limits' : undefined
             };
             
-            ApiResponse.tooManyRequests(res, message, details);
+            if (details?.retryAfter) {
+              res.set('Retry-After', details.retryAfter.toString());
+            }
+            ApiResponse.tooManyRequests(res, message);
           }
           return;
         }

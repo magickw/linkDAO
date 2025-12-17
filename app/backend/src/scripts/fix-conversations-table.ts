@@ -45,7 +45,7 @@ async function fixConversationsTable() {
 
         // Verify the fix
         const verifyColumns = await db.execute(checkColumnQuery);
-        const verifyRows = Array.isArray(verifyColumns) ? verifyColumns : (verifyColumns.rows || []);
+        const verifyRows = Array.isArray(verifyColumns) ? verifyColumns : [];
         safeLogger.info('Updated columns in conversations table:', verifyRows);
 
         safeLogger.info('✅ Conversations table fix completed successfully');

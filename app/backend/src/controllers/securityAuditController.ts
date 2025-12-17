@@ -96,7 +96,15 @@ export class SecurityAuditController {
    */
   async logSecurityEvent(req: Request, res: Response): Promise<void> {
     try {
-      const eventData = auditEventSchema.parse(req.body);
+      const rawData = req.body;
+      // Ensure riskScore is provided or calculate default
+      if (rawData.riskScore === undefined) {
+        // Calculate default risk score based on severity
+        const severityScores = { low: 2, medium: 5, high: 8, critical: 10 };
+        rawData.riskScore = severityScores[rawData.severity] || 5;
+      }
+      
+      const eventData = auditEventSchema.parse(rawData);
       
       const eventId = await securityAuditService.logSecurityEvent(eventData);
       

@@ -714,6 +714,82 @@ export class ReturnAnalyticsService {
     const index = Math.ceil((percentile / 100) * sorted.length) - 1;
     return sorted[Math.max(0, index)];
   }
+
+  // Missing methods added for route compatibility
+  async getAnalyticsByReason(sellerId: string, period: AnalyticsPeriod): Promise<any> {
+    try {
+      const results = await db
+        .select({
+          reason: returns.reason,
+          count: count(),
+          percentage: sql<number>`ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM returns WHERE seller_id = ${sellerId}), 2)`
+        })
+        .from(returns)
+        .where(
+          and(
+            eq(returns.sellerId, sellerId),
+            gte(returns.createdAt, period.start),
+            lte(returns.createdAt, period.end)
+          )
+        )
+        .groupBy(returns.reason);
+
+      return results;
+    } catch (error) {
+      safeLogger.error('Error getting analytics by reason:', error);
+      throw error;
+    }
+  }
+
+  async getAnalyticsByTime(sellerId: string, period: AnalyticsPeriod): Promise<any> {
+    try {
+      const results = await db
+        .select({
+          date: sql<string>`DATE(${returns.createdAt})`,
+          count: count(),
+          amount: sum(returns.originalAmount)
+        })
+        .from(returns)
+        .where(
+          and(
+            eq(returns.sellerId, sellerId),
+            gte(returns.createdAt, period.start),
+            lte(returns.createdAt, period.end)
+          )
+        )
+        .groupBy(sql`DATE(${returns.createdAt})`)
+        .orderBy(sql`DATE(${returns.createdAt})`);
+
+      return results;
+    } catch (error) {
+      safeLogger.error('Error getting analytics by time:', error);
+      throw error;
+    }
+  }
+
+  async generatePerformanceReport(sellerId: string, period: AnalyticsPeriod): Promise<any> {
+    try {
+      const [metrics, byReason, byTime] = await Promise.all([
+        this.getSellerMetrics(sellerId, period),
+        this.getAnalyticsByReason(sellerId, period),
+        this.getAnalyticsByTime(sellerId, period)
+      ]);
+
+      return {
+        period,
+        sellerId,
+        metrics,
+        breakdown: {
+          byReason,
+          byTime
+        },
+        generatedAt: new Date().toISOString()
+      };
+    } catch (error) {
+      safeLogger.error('Error generating performance report:', error);
+      throw error;
+    }
+  }
 }
 
 // Singleton instance

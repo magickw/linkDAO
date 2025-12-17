@@ -57,7 +57,7 @@ router.get('/products/:productId/variants',
 
       res.json({
         success: true,
-        variants: variants.rows
+        variants: variants
       });
     } catch (error: any) {
       console.error('Error fetching variants:', error);
@@ -118,7 +118,7 @@ router.post('/products/:productId/variants',
 
       res.status(201).json({
         success: true,
-        variant: result.rows[0]
+        variant: result[0]
       });
     } catch (error: any) {
       console.error('Error creating variant:', error);
@@ -171,7 +171,7 @@ router.post('/products/:productId/variants/bulk',
           RETURNING *
         `);
         
-        createdVariants.push(result.rows[0]);
+        createdVariants.push(result[0]);
       }
 
       res.status(201).json({
@@ -244,7 +244,7 @@ router.put('/variants/:variantId',
 
       res.json({
         success: true,
-        variant: result.rows[0]
+        variant: result[0]
       });
     } catch (error: any) {
       console.error('Error updating variant:', error);

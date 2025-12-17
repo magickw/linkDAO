@@ -135,7 +135,7 @@ class LDAOBenefitsDashboardService {
   /**
    * Get user's LDAO staking information
    */
-  private async getLDAOStakingInfo(userId: string): Promise<LDAOStakingInfo> {
+  public async getLDAOStakingInfo(userId: string): Promise<LDAOStakingInfo> {
     try {
       // Get real staking positions from DB
       const positions = await db
@@ -262,7 +262,7 @@ class LDAOBenefitsDashboardService {
   /**
    * Get user's recent LDAO-related activity
    */
-  private async getRecentActivity(userId: string): Promise<LDAORecentActivity[]> {
+  public async getRecentActivity(userId: string): Promise<LDAORecentActivity[]> {
     try {
       // Get recent marketplace rewards
       const recentRewards = await db
@@ -332,7 +332,7 @@ class LDAOBenefitsDashboardService {
   /**
    * Get LDAO token acquisition options
    */
-  private async getAcquisitionOptions(userId: string): Promise<LDAOAcquisitionOptions> {
+  public async getAcquisitionOptions(userId: string): Promise<LDAOAcquisitionOptions> {
     try {
       // Get user's current balance from users table
       const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);

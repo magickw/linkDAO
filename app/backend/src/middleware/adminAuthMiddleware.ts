@@ -185,7 +185,8 @@ export const adminRateLimit = (maxRequests: number = 100, windowMs: number = 15 
       // Check if limit exceeded
       if (requestInfo.count > maxRequests) {
         const retryAfter = Math.ceil((requestInfo.resetTime - now) / 1000);
-        return ApiResponse.tooManyRequests(res, 'Too many admin requests', { retryAfter });
+        res.set('Retry-After', retryAfter.toString());
+      return ApiResponse.tooManyRequests(res, 'Too many admin requests');
       }
       
       next();

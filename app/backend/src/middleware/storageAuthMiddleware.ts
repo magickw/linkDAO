@@ -173,7 +173,8 @@ export const storageRateLimiter = (maxRequests: number = 100, windowMs: number =
       // Check rate limit
       if (requestCounts[userId].count > maxRequests) {
         const retryAfter = Math.ceil((requestCounts[userId].resetTime - now) / 1000);
-        ApiResponse.tooManyRequests(res, 'Too many requests', { retryAfter });
+        res.set('Retry-After', retryAfter.toString());
+        ApiResponse.tooManyRequests(res, 'Too many requests');
         return;
       }
 

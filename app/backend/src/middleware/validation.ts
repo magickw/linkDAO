@@ -18,6 +18,8 @@ interface ValidationRule {
   min?: number;
   max?: number;
   enum?: string[];
+  pattern?: string;
+  items?: ValidationRule;
 }
 
 // Custom validation function that matches the route expectations
@@ -84,6 +86,9 @@ function validateField(key: string, value: any, rule: ValidationRule, location: 
       if (rule.maxLength && value.length > rule.maxLength) {
         return `${location}.${key} must be at most ${rule.maxLength} characters`;
       }
+      if (rule.pattern && !new RegExp(rule.pattern).test(value)) {
+        return `${location}.${key} format is invalid`;
+      }
       if (rule.enum && !rule.enum.includes(value)) {
         return `${location}.${key} must be one of: ${rule.enum.join(', ')}`;
       }
@@ -112,6 +117,13 @@ function validateField(key: string, value: any, rule: ValidationRule, location: 
       }
       if (!Array.isArray(value) && value !== undefined) {
         return `${location}.${key} must be an array`;
+      }
+      // Validate array items if items rule is specified
+      if (rule.items && Array.isArray(value)) {
+        for (let i = 0; i < value.length; i++) {
+          const itemError = validateField(`${key}[${i}]`, value[i], rule.items, location);
+          if (itemError) return itemError;
+        }
       }
       break;
 

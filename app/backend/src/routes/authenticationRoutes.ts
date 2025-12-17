@@ -47,7 +47,7 @@ export function createAuthenticationRoutes(
     '/refresh',
     authRateLimit,
     authValidationRules.refreshSession,
-    controller.refreshSession
+    controller.refreshToken
   );
 
   /**

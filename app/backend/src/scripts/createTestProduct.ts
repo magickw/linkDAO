@@ -59,7 +59,6 @@ async function createTestProduct() {
     safeLogger.info('Creating seller profile...');
     const sellerResult = await db.insert(schema.sellers).values({
       walletAddress: walletAddress,
-      displayName: 'Test Seller',
       storeName: 'Test Store',
       bio: 'This is a test seller',
       isOnline: true,

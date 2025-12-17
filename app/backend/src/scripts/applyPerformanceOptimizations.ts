@@ -3,7 +3,7 @@
  * Applies database optimizations and performance improvements
  */
 
-import { dbPool } from '../dbPool';
+import { dbPool } from '../db/connectionPool';
 import { logger } from '../utils/logger';
 
 async function applyPerformanceOptimizations() {
