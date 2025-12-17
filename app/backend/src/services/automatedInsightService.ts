@@ -99,13 +99,14 @@ export class AutomatedInsightService {
       const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
       
       // Handle placeholder values
-      if (redisUrl === 'your_redis_url' || redisUrl === 'redis://your_redis_url') {
-        redisUrl = 'redis://localhost:6379';
+      let actualRedisUrl = redisUrl;
+      if (actualRedisUrl === 'your_redis_url' || actualRedisUrl === 'redis://your_redis_url') {
+        actualRedisUrl = 'redis://localhost:6379';
       }
       
-      safeLogger.info('🔗 Attempting Redis connection for automated insights to:', redisUrl.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
+      safeLogger.info('🔗 Attempting Redis connection for automated insights to:', actualRedisUrl.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
       
-      this.redis = new Redis(redisUrl, {
+      this.redis = new Redis(actualRedisUrl, {
         maxRetriesPerRequest: 3,
         connectTimeout: 10000,
         retryStrategy: (times) => {
@@ -119,7 +120,7 @@ export class AutomatedInsightService {
         }
       });
 
-      this.redis.on('error', (error) => {
+      this.redis.on('error', (error: any) => {
         safeLogger.error('Redis connection error for automated insights:', {
           message: error.message,
           name: error.name,
@@ -164,9 +165,10 @@ export class AutomatedInsightService {
     timeframe: 'hourly' | 'daily' | 'weekly' | 'monthly' = 'daily'
   ): Promise<AIInsight[]> {
     try {
+      const cacheKey = `insights:generated:${timeframe}`;
+      
       // Check if Redis is available before using it
       if (this.redis) {
-        const cacheKey = `insights:generated:${timeframe}`;
         const cached = await this.redis.get(cacheKey);
         
         if (cached) {

@@ -27,19 +27,19 @@ import { ProfileService } from '@/services/profileService';
 
 // Helper function to validate IPFS CID and construct proper URL
 function getAvatarUrl(profileCid: string | undefined): string | undefined {
-  if (!profileCid) return undefined;
-
-  // Check if it's a valid IPFS CID
-  if (profileCid.startsWith('Qm') || profileCid.startsWith('bafy')) {
-    return `https://ipfs.io/ipfs/${profileCid}`;
-  }
+  if (!profileCid || profileCid.length === 0) return undefined;
 
   // Check if it's already a full URL
   try {
     new URL(profileCid);
     return profileCid;
   } catch {
-    // Not a valid URL, return undefined
+    // Not a valid URL, check if it's an IPFS CID
+    if (profileCid.startsWith('Qm') || profileCid.startsWith('bafy')) {
+      return `https://ipfs.io/ipfs/${profileCid}`;
+    }
+    
+    // If it's neither a valid URL nor an IPFS CID, return undefined
     return undefined;
   }
 }
@@ -126,7 +126,7 @@ export default function Profile() {
     ens: '',
     bio: '',
     avatar: '',
-    banner: '',
+    bannerCid: '',
     website: '',
     socialLinks: [] as { platform: string; url: string; username?: string }[],
   });
@@ -179,7 +179,7 @@ export default function Profile() {
         ens: backendProfile.ens,
         bio: backendProfile.bioCid, // In a real app, we'd fetch the actual bio content from IPFS
         avatar: getAvatarUrl(backendProfile.avatarCid || backendProfile.profileCid), // Fallback to profileCid for backend compatibility
-        banner: getAvatarUrl(backendProfile.bannerCid) || '',
+        bannerCid: backendProfile.bannerCid || '',
         website: backendProfile.website || '',
         socialLinks: backendProfile.socialLinks || [],
       });
@@ -220,7 +220,7 @@ export default function Profile() {
         ens: contractProfileData.ens,
         bio: contractProfileData.bioCid, // In a real app, we'd fetch the actual bio content from IPFS
         avatar: getAvatarUrl(contractProfileData.avatarCid || contractProfileData.profileCid), // Validate avatar URL
-        banner: '',
+        bannerCid: '',
         website: '',
         socialLinks: [],
       });
@@ -530,7 +530,7 @@ export default function Profile() {
         const uploadResult = await unifiedImageService.uploadImage(file, 'cover');
 
         // Update the profile state with the new banner URL
-        setProfile(prev => ({ ...prev, banner: uploadResult.cdnUrl }));
+        setProfile(prev => ({ ...prev, bannerCid: uploadResult.cdnUrl }));
 
         addToast('Banner uploaded successfully!', 'success');
 
@@ -620,6 +620,7 @@ export default function Profile() {
           displayName: profile.displayName,
           ens: profile.ens,
           avatarCid: profile.avatar,
+          bannerCid: profile.bannerCid,
           bioCid: profile.bio,
           socialLinks: profile.socialLinks,
           website: profile.website,
@@ -685,7 +686,7 @@ export default function Profile() {
         ens: profile.ens,
         bioCid: profile.bio,
         avatarCid: profile.avatar,
-        bannerCid: profile.banner,
+        bannerCid: profile.bannerCid,
         website: profile.website,
         socialLinks: profile.socialLinks,
         // Billing address
@@ -858,6 +859,7 @@ export default function Profile() {
           displayName: profile.displayName,
           ens: profile.ens,
           avatarCid: profile.avatar,
+          bannerCid: profile.bannerCid,
           bioCid: profile.bio,
           // Billing Address
           billingFirstName: addresses.billing.firstName,
@@ -1044,21 +1046,26 @@ export default function Profile() {
           {!isLoading && !hasError && (
             <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 dark:from-blue-900/30 dark:to-purple-900/30 backdrop-blur-lg rounded-2xl shadow-xl border border-white/30 dark:border-gray-700/50 overflow-hidden mb-6">
               {/* Banner Image */}
-              {profile.banner && (
+              {(profile.bannerCid && profile.bannerCid.length > 0) && (
                 <div className="w-full h-48 md:h-64 overflow-hidden relative">
                   <img
-                    src={profile.banner}
+                    src={getAvatarUrl(profile.bannerCid) || ''}
                     alt="Profile Banner"
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      console.error('Banner image failed to load:', profile.bannerCid);
+                      // Hide the banner if it fails to load
+                      e.currentTarget.parentElement!.style.display = 'none';
+                    }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/20"></div>
                 </div>
               )}
 
-              <div className={`flex flex-col lg:flex-row items-center lg:items-start p-6 ${profile.banner ? '-mt-16' : ''}`}>
+              <div className={`flex flex-col lg:flex-row items-center lg:items-start p-6 ${profile.bannerCid ? '-mt-16' : ''}`}>
                 <div className="flex-shrink-0 mb-6 lg:mb-0 lg:mr-8">
                   <div className="relative">
-                    <div className={`h-32 w-32 md:h-40 md:w-40 rounded-full border-4 ${profile.banner ? 'border-white dark:border-gray-800' : 'border-white dark:border-gray-700'} shadow-xl overflow-hidden ${profile.banner ? 'ring-4 ring-white/20' : ''}`}>
+                    <div className={`h-32 w-32 md:h-40 md:w-40 rounded-full border-4 ${profile.bannerCid ? 'border-white dark:border-gray-800' : 'border-white dark:border-gray-700'} shadow-xl overflow-hidden ${profile.bannerCid ? 'ring-4 ring-white/20' : ''}`}>
                       {(profile.avatar && !avatarError && typeof profile.avatar === 'string' && profile.avatar.startsWith('http')) ? (
                         <img
                           className="h-full w-full object-cover"
@@ -1539,12 +1546,17 @@ export default function Profile() {
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Banner Image
                       </label>
-                      {profile.banner && (
+                      {(profile.bannerCid && profile.bannerCid.length > 0) && (
                         <div className="mb-3">
                           <img
-                            src={profile.banner}
+                            src={getAvatarUrl(profile.bannerCid) || ''}
                             alt="Banner"
                             className="w-full h-32 object-cover rounded-lg"
+                            onError={(e) => {
+                              console.error('Banner preview failed to load:', profile.bannerCid);
+                              // Hide the preview if it fails to load
+                              e.currentTarget.parentElement!.style.display = 'none';
+                            }}
                           />
                         </div>
                       )}

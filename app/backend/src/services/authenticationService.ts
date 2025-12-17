@@ -262,13 +262,13 @@ export class AuthenticationService {
         isActive: session.isActive,
         lastUsedAt: new Date(),
         role: user?.role || 'user',
-        permissions: user?.permissions || [],
+        permissions: Array.isArray(user?.permissions) ? user.permissions : [],
         userId: user?.id,
         handle: user?.handle,
         email: user?.email,
         kycStatus: (user as any)?.kycStatus || 'none',
-        isActiveUser: user?.isActive ?? true,
-        isSuspended: user?.isSuspended ?? false,
+        isActiveUser: (user as any)?.isActive ?? true,
+        isSuspended: (user as any)?.isSuspended ?? false,
       };
     } catch (error) {
       safeLogger.error('Error validating session:', error);

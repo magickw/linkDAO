@@ -16,19 +16,19 @@ import { PublicProfileService, PublicProfileData } from '@/services/publicProfil
 
 // Helper function to validate IPFS CID and construct proper URL
 function getAvatarUrl(profileCid: string | undefined): string | undefined {
-  if (!profileCid) return undefined;
-
-  // Check if it's a valid IPFS CID
-  if (profileCid.startsWith('Qm') || profileCid.startsWith('bafy')) {
-    return `https://ipfs.io/ipfs/${profileCid}`;
-  }
+  if (!profileCid || profileCid.length === 0) return undefined;
 
   // Check if it's already a full URL
   try {
     new URL(profileCid);
     return profileCid;
   } catch {
-    // Not a valid URL, return undefined
+    // Not a valid URL, check if it's an IPFS CID
+    if (profileCid.startsWith('Qm') || profileCid.startsWith('bafy')) {
+      return `https://ipfs.io/ipfs/${profileCid}`;
+    }
+    
+    // If it's neither a valid URL nor an IPFS CID, return undefined
     return undefined;
   }
 }
@@ -358,12 +358,17 @@ export default function PublicProfile() {
         {/* Profile Header with Glassmorphism Effect */}
         <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 dark:from-blue-900/30 dark:to-purple-900/30 backdrop-blur-lg rounded-2xl shadow-xl border border-white/30 dark:border-gray-700/50 overflow-hidden mb-6">
           {/* Banner Image */}
-          {profile.bannerCid && (
+          {(profile.bannerCid && profile.bannerCid.length > 0) && (
             <div className="w-full h-48 md:h-64 overflow-hidden relative">
               <img
-                src={profile.bannerCid}
+                src={getAvatarUrl(profile.bannerCid) || ''}
                 alt="Profile Banner"
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  console.error('Banner image failed to load:', profile.bannerCid);
+                  // Hide the banner if it fails to load
+                  e.currentTarget.parentElement!.style.display = 'none';
+                }}
               />
               <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/20"></div>
             </div>
@@ -373,10 +378,10 @@ export default function PublicProfile() {
             <div className="flex-shrink-0 mb-6 lg:mb-0 lg:mr-8">
               <div className="relative">
                 <div className={`h-32 w-32 md:h-40 md:w-40 rounded-full border-4 ${profile.bannerCid ? 'border-white dark:border-gray-800' : 'border-white dark:border-gray-700'} shadow-xl overflow-hidden ${profile.bannerCid ? 'ring-4 ring-white/20' : ''}`}>
-                  {(profile.avatarCid && !avatarError && typeof profile.avatarCid === 'string' && profile.avatarCid.startsWith('http')) ? (
+                  {(profile.avatarCid && !avatarError && typeof profile.avatarCid === 'string' && profile.avatarCid.length > 0) ? (
                     <img
                       className="h-full w-full object-cover"
-                      src={profile.avatarCid}
+                      src={getAvatarUrl(profile.avatarCid) || profile.avatarCid}
                       alt={profile.handle}
                       onError={() => {
                         console.error('Avatar image failed to load:', profile.avatarCid);
