@@ -12,7 +12,7 @@ async function validatePerformanceMonitoring(): Promise<boolean> {
     safeLogger.info('🚀 Starting performance monitoring validation...');
 
     // Test imports
-    const PerformanceBenchmarkService = (await import('../services/performanceBenchmarkService')).default;
+    const { performanceBenchmarkService } = await import('../services/performanceBenchmarkService');
     const RenderPerformanceMonitoringService = (await import('../services/renderPerformanceMonitoringService')).default;
     const ErrorRecoveryCacheProfiler = (await import('../services/errorRecoveryCacheProfiler')).default;
     const CriticalPathPerformanceOptimizer = (await import('../services/criticalPathPerformanceOptimizer')).default;
@@ -41,7 +41,8 @@ async function validatePerformanceMonitoring(): Promise<boolean> {
     } as any as Redis;
 
     // Test service instantiation
-    const benchmarkService = new PerformanceBenchmarkService(mockPool, mockRedis);
+    const { PerformanceBenchmarkService } = await import('../services/performanceBenchmarkService');
+    const benchmarkService = new PerformanceBenchmarkService();
     const renderService = new RenderPerformanceMonitoringService(mockPool, mockRedis);
     const profilerService = new ErrorRecoveryCacheProfiler(mockRedis);
     const optimizerService = new CriticalPathPerformanceOptimizer(mockPool, mockRedis);

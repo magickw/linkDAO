@@ -641,7 +641,7 @@ export class AdvancedAnalyticsService {
         return {
           topSellers: [
             {
-              id: sellerData[0].id,
+              id: sellerData[0].id.toString(),
               name: sellerData[0].storeName || `Seller ${sellerData[0].id}`,
               revenue: parseFloat(totalRevenue),
               orders: parseInt(totalOrders),
@@ -670,7 +670,7 @@ export class AdvancedAnalyticsService {
       .limit(10);
       
       const topSellers = await Promise.all(topSellersQuery.map(async (sellerData) => {
-        const sellerInfo = await db.select().from(sellers).where(eq(sellers.id, sellerData.sellerId));
+        const sellerInfo = await db.select().from(sellers).where(eq(sellers.id, parseInt(sellerData.sellerId)));
         // Convert database values to strings for consistent parsing
         const totalRevenue = String(sellerData.totalRevenue || '0');
         const totalOrders = String(sellerData.totalOrders || '0');

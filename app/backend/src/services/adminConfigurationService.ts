@@ -100,13 +100,12 @@ export class AdminConfigurationService {
   }
 
   async getPolicyConfigurations(activeOnly: boolean = false): Promise<PolicyConfiguration[]> {
-    let query = db.select().from(policy_configurations);
+    const results = await db
+      .select()
+      .from(policy_configurations)
+      .where(activeOnly ? eq(policy_configurations.isActive, true) : undefined)
+      .orderBy(desc(policy_configurations.createdAt));
     
-    if (activeOnly) {
-      query = query.where(eq(policy_configurations.isActive, true));
-    }
-    
-    const results = await query.orderBy(desc(policy_configurations.createdAt));
     return results.map(this.mapPolicyConfiguration);
   }
 
@@ -164,20 +163,23 @@ export class AdminConfigurationService {
   }
 
   async getThresholdConfigurations(contentType?: string, reputationTier?: string): Promise<ThresholdConfiguration[]> {
-    let query = db.select().from(threshold_configurations);
-    
+    const conditions = [];
     if (contentType && reputationTier) {
-      query = query.where(and(
+      conditions.push(and(
         eq(threshold_configurations.contentType, contentType),
         eq(threshold_configurations.reputationTier, reputationTier)
       ));
     } else if (contentType) {
-      query = query.where(eq(threshold_configurations.contentType, contentType));
+      conditions.push(eq(threshold_configurations.contentType, contentType));
     } else if (reputationTier) {
-      query = query.where(eq(threshold_configurations.reputationTier, reputationTier));
+      conditions.push(eq(threshold_configurations.reputationTier, reputationTier));
     }
     
-    const results = await query.orderBy(desc(threshold_configurations.createdAt));
+    const results = await db
+      .select()
+      .from(threshold_configurations)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(threshold_configurations.createdAt));
     return results.map(this.mapThresholdConfiguration);
   }
 
@@ -223,8 +225,6 @@ export class AdminConfigurationService {
   }
 
   async getVendorConfigurations(serviceType?: string, enabledOnly: boolean = false): Promise<VendorConfiguration[]> {
-    let query = db.select().from(vendor_configurations);
-    
     const conditions = [];
     if (serviceType) {
       conditions.push(eq(vendor_configurations.serviceType, serviceType));
@@ -233,11 +233,11 @@ export class AdminConfigurationService {
       conditions.push(eq(vendor_configurations.isEnabled, true));
     }
     
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-    
-    const results = await query.orderBy(vendor_configurations.priority, desc(vendor_configurations.createdAt));
+    const results = await db
+      .select()
+      .from(vendor_configurations)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(vendor_configurations.priority, desc(vendor_configurations.createdAt));
     return results.map(this.mapVendorConfiguration);
   }
 
@@ -292,13 +292,16 @@ export class AdminConfigurationService {
   }
 
   async getAlertConfigurations(activeOnly: boolean = false): Promise<AlertConfiguration[]> {
-    let query = db.select().from(alert_configurations);
-    
+    const conditions = [];
     if (activeOnly) {
-      query = query.where(eq(alert_configurations.isActive, true));
+      conditions.push(eq(alert_configurations.isActive, true));
     }
     
-    const results = await query.orderBy(desc(alert_configurations.createdAt));
+    const results = await db
+      .select()
+      .from(alert_configurations)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(alert_configurations.createdAt));
     return results.map(this.mapAlertConfiguration);
   }
 
@@ -326,8 +329,6 @@ export class AdminConfigurationService {
   }
 
   async getAuditLogs(adminId?: string, resourceType?: string, limit: number = 100): Promise<any[]> {
-    let query = db.select().from(admin_audit_logs);
-    
     const conditions = [];
     if (adminId) {
       conditions.push(eq(admin_audit_logs.adminId, adminId));
@@ -336,11 +337,10 @@ export class AdminConfigurationService {
       conditions.push(eq(admin_audit_logs.resourceType, resourceType));
     }
     
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-    
-    return await query
+    return await db
+      .select()
+      .from(admin_audit_logs)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(admin_audit_logs.timestamp))
       .limit(limit);
   }

@@ -483,6 +483,10 @@ app.use('/api/hybrid-payment', hybridPaymentRoutes);
 // Add API reputation routes for frontend compatibility
 app.use('/api/reputation', reputationRoutes);
 
+// Add aligned reputation routes for better frontend compatibility
+import { alignedReputationRoutes } from './routes/alignedReputationRoutes';
+app.use('/api/reputation', alignedReputationRoutes);
+
 // Advanced reputation routes
 app.use('/api/reputation/advanced', advancedReputationRoutes);
 

@@ -27,7 +27,9 @@ class ReputationService {
         }
         throw new Error(`Failed to fetch user reputation: ${response.status} ${response.statusText}`);
       }
-      return await response.json();
+      const result = await response.json();
+      // Transform backend data structure to frontend data structure
+      return this.transformBackendReputation(result.data || result);
     } catch (error) {
       console.error('Error fetching user reputation:', error);
       // Return default data instead of mock data for production
@@ -65,7 +67,9 @@ class ReputationService {
         }
         throw new Error(`Failed to fetch reputation events: ${response.status} ${response.statusText}`);
       }
-      return await response.json();
+      const result = await response.json();
+      // Transform backend data structure to frontend data structure if needed
+      return result.data?.history || result.history || [];
     } catch (error) {
       console.error('Error fetching reputation events:', error);
       // Return empty array instead of mock data for production
@@ -117,6 +121,34 @@ class ReputationService {
 
   getAvailableBadges() {
     return BADGE_DEFINITIONS;
+  }
+
+  // Transform backend reputation data to frontend format
+  private transformBackendReputation(backendData: any): UserReputation {
+    // If data is already in frontend format, return as is
+    if (backendData && backendData.level && backendData.badges) {
+      return backendData;
+    }
+
+    // Transform backend data structure to frontend data structure
+    const totalScore = backendData?.score ?? 0;
+    const level = this.calculateLevel(totalScore);
+
+    return {
+      totalScore,
+      level,
+      badges: [],
+      progress: [],
+      breakdown: {
+        posting: backendData?.breakdown?.posting ?? 0,
+        governance: backendData?.breakdown?.governance ?? 0,
+        community: backendData?.breakdown?.community ?? 0,
+        trading: backendData?.breakdown?.trading ?? 0,
+        moderation: backendData?.breakdown?.moderation ?? 0,
+        total: backendData?.breakdown?.total ?? totalScore
+      },
+      achievements: []
+    };
   }
 
   // Default data methods for production

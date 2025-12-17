@@ -240,7 +240,7 @@ router.put('/variants/:variantId',
         SET ${setClauses.join(', ')}
         WHERE id = $${paramIndex}
         RETURNING *
-      `, values));
+      `));
 
       res.json({
         success: true,

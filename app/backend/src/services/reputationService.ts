@@ -2,6 +2,7 @@ import { db } from '../db';
 import { userReputation, reputationHistoryMarketplace, reputationCalculationRules } from '../db/schema';
 import { eq, desc, and, sql } from 'drizzle-orm';
 import { logger } from '../utils/logger';
+import { redisService } from './redisService';
 
 export interface ReputationData {
   walletAddress: string;
@@ -37,24 +38,40 @@ export interface ReputationHistoryEntry {
 }
 
 class ReputationService {
-  private cache = new Map<string, { data: ReputationData; timestamp: number }>();
-  private readonly CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+  private readonly CACHE_TTL = 10 * 60; // 10 minutes (in seconds for Redis)
+  private readonly REPUTATION_CACHE_PREFIX = 'reputation:user:';
 
   /**
    * Get reputation data for a wallet address with caching
+   * Optimized with better error handling and reduced database queries
    */
   async getReputation(walletAddress: string): Promise<ReputationData> {
     try {
-      // Check cache first
-      const cached = this.cache.get(walletAddress);
-      if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
-        logger.info(`Returning cached reputation for ${walletAddress}`);
-        return cached.data;
+      // Check Redis cache first
+      const cacheKey = `${this.REPUTATION_CACHE_PREFIX}${walletAddress}`;
+      const cached = await redisService.get(cacheKey);
+      if (cached) {
+        logger.debug(`Returning cached reputation for ${walletAddress} from Redis`);
+        return cached;
       }
 
-      // Query database
+      // Query database with optimized selection
       const [reputation] = await db
-        .select()
+        .select({
+          walletAddress: userReputation.walletAddress,
+          reputationScore: userReputation.reputationScore,
+          totalTransactions: userReputation.totalTransactions,
+          positiveReviews: userReputation.positiveReviews,
+          negativeReviews: userReputation.negativeReviews,
+          neutralReviews: userReputation.neutralReviews,
+          successfulSales: userReputation.successfulSales,
+          successfulPurchases: userReputation.successfulPurchases,
+          disputedTransactions: userReputation.disputedTransactions,
+          resolvedDisputes: userReputation.resolvedDisputes,
+          averageResponseTime: userReputation.averageResponseTime,
+          completionRate: userReputation.completionRate,
+          updatedAt: userReputation.updatedAt
+        })
         .from(userReputation)
         .where(eq(userReputation.walletAddress, walletAddress))
         .limit(1);
@@ -81,24 +98,35 @@ class ReputationService {
         // Return default values for new users
         reputationData = this.getDefaultReputationData(walletAddress);
         
-        // Create initial reputation record
-        await this.createInitialReputation(walletAddress);
+        // Create initial reputation record asynchronously to avoid blocking
+        setImmediate(() => {
+          this.createInitialReputation(walletAddress).catch(err => {
+            logger.warn(`Failed to create initial reputation record for ${walletAddress} in background: ${err.message}`);
+          });
+        });
       }
 
-      // Cache the result
-      this.cache.set(walletAddress, {
-        data: reputationData,
-        timestamp: Date.now()
-      });
+      // Cache the result in Redis
+      await redisService.set(cacheKey, reputationData, this.CACHE_TTL);
 
       logger.info(`Retrieved reputation for ${walletAddress}: score ${reputationData.score}`);
       return reputationData;
 
     } catch (error) {
-      logger.error(`Error getting reputation for ${walletAddress}:`, error);
+      logger.error(`Error getting reputation for ${walletAddress}:`, {
+        error: {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+          code: (error as any).code
+        },
+        walletAddress
+      });
       
       // Return default values as fallback
-      return this.getDefaultReputationData(walletAddress);
+      const defaultData = this.getDefaultReputationData(walletAddress);
+      logger.info(`Returning default reputation data for ${walletAddress}`);
+      return defaultData;
     }
   }
 
@@ -124,13 +152,26 @@ class ReputationService {
       `);
 
       // Invalidate cache
-      this.cache.delete(walletAddress);
+      const cacheKey = `${this.REPUTATION_CACHE_PREFIX}${walletAddress}`;
+      await redisService.del(cacheKey);
 
       logger.info(`Successfully updated reputation for ${walletAddress}`);
 
     } catch (error) {
-      logger.error(`Error updating reputation for ${walletAddress}:`, error);
-      throw new Error(`Failed to update reputation: ${error.message}`);
+      logger.error(`Error updating reputation for ${walletAddress}:`, {
+        error: {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+          code: (error as any).code
+        },
+        walletAddress,
+        transaction
+      });
+      
+      // Provide more detailed error message
+      const errorMessage = `Failed to update reputation for ${walletAddress}: ${error.message}`;
+      throw new Error(errorMessage);
     }
   }
 
@@ -146,6 +187,10 @@ class ReputationService {
         SELECT calculate_reputation_metrics(${walletAddress})
       `);
 
+      // Invalidate cache to force fresh data on next request
+      const cacheKey = `${this.REPUTATION_CACHE_PREFIX}${walletAddress}`;
+      await redisService.del(cacheKey);
+
       // Get updated reputation
       const updatedReputation = await this.getReputation(walletAddress);
       
@@ -153,19 +198,35 @@ class ReputationService {
       return updatedReputation.score;
 
     } catch (error) {
-      logger.error(`Error calculating reputation for ${walletAddress}:`, error);
-      throw new Error(`Failed to calculate reputation: ${error.message}`);
+      logger.error(`Error calculating reputation for ${walletAddress}:`, {
+        error: {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+          code: (error as any).code
+        },
+        walletAddress
+      });
+      
+      // Provide more detailed error message with fallback option
+      const errorMessage = `Failed to calculate reputation for ${walletAddress}: ${error.message}`;
+      logger.warn(`Reputation calculation failed, will return current cached value if available`);
+      throw new Error(errorMessage);
     }
   }
 
   /**
    * Get reputation history for a wallet address
+   * Optimized with better query structure and reduced processing
    */
   async getReputationHistory(
     walletAddress: string, 
     limit: number = 50
   ): Promise<ReputationHistoryEntry[]> {
     try {
+      // Limit the maximum number of history entries to prevent excessive data transfer
+      const effectiveLimit = Math.min(limit, 100);
+      
       const history = await db
         .select({
           id: reputationHistoryMarketplace.id,
@@ -179,8 +240,9 @@ class ReputationService {
         .from(reputationHistoryMarketplace)
         .where(eq(reputationHistoryMarketplace.walletAddress, walletAddress))
         .orderBy(desc(reputationHistoryMarketplace.createdAt))
-        .limit(limit);
+        .limit(effectiveLimit);
 
+      // Process entries with optimized conversion
       return history.map(entry => ({
         id: entry.id,
         eventType: entry.eventType,
@@ -192,22 +254,46 @@ class ReputationService {
       }));
 
     } catch (error) {
-      logger.error(`Error getting reputation history for ${walletAddress}:`, error);
+      logger.error(`Error getting reputation history for ${walletAddress}:`, {
+        error: {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+          code: (error as any).code
+        },
+        walletAddress,
+        limit
+      });
+      
+      // Log warning and return empty array as fallback
+      logger.warn(`Returning empty reputation history for ${walletAddress} due to error`);
       return [];
     }
   }
 
   /**
    * Get reputation statistics for multiple users
+   * Optimized with batch processing and reduced redundant operations
    */
   async getBulkReputation(walletAddresses: string[]): Promise<Map<string, ReputationData>> {
     const results = new Map<string, ReputationData>();
 
     try {
+      // Limit the number of addresses to prevent excessive database load
+      const limitedAddresses = walletAddresses.slice(0, 100); // Max 100 addresses per request
+      
+      if (limitedAddresses.length === 0) {
+        return results;
+      }
+
+      // Batch query for all reputations
       const reputations = await db
         .select()
         .from(userReputation)
-        .where(sql`${userReputation.walletAddress} = ANY(${walletAddresses})`);
+        .where(sql`${userReputation.walletAddress} = ANY(${limitedAddresses})`);
+
+      // Create a set of found addresses for efficient lookup
+      const foundAddresses = new Set(reputations.map(r => r.walletAddress));
 
       // Process found reputations
       for (const reputation of reputations) {
@@ -231,17 +317,27 @@ class ReputationService {
       }
 
       // Add default values for missing addresses
-      for (const address of walletAddresses) {
-        if (!results.has(address)) {
+      for (const address of limitedAddresses) {
+        if (!foundAddresses.has(address)) {
           results.set(address, this.getDefaultReputationData(address));
         }
       }
 
     } catch (error) {
-      logger.error('Error getting bulk reputation:', error);
+      logger.error('Error getting bulk reputation:', {
+        error: {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+          code: (error as any).code
+        },
+        walletAddresses: walletAddresses.slice(0, 100)
+      });
       
       // Return default values for all addresses
-      for (const address of walletAddresses) {
+      logger.warn(`Returning default reputation data for all ${Math.min(walletAddresses.length, 100)} addresses due to bulk query error`);
+      const limitedAddresses = walletAddresses.slice(0, 100);
+      for (const address of limitedAddresses) {
         results.set(address, this.getDefaultReputationData(address));
       }
     }
@@ -252,12 +348,17 @@ class ReputationService {
   /**
    * Clear cache for a specific wallet address
    */
-  clearCache(walletAddress?: string): void {
+  async clearCache(walletAddress?: string): Promise<void> {
     if (walletAddress) {
-      this.cache.delete(walletAddress);
+      const cacheKey = `${this.REPUTATION_CACHE_PREFIX}${walletAddress}`;
+      await redisService.del(cacheKey);
       logger.info(`Cleared reputation cache for ${walletAddress}`);
     } else {
-      this.cache.clear();
+      // Clear all reputation cache entries
+      const keys = await redisService.keys(`${this.REPUTATION_CACHE_PREFIX}*`);
+      for (const key of keys) {
+        await redisService.del(key);
+      }
       logger.info('Cleared all reputation cache');
     }
   }
@@ -265,9 +366,11 @@ class ReputationService {
   /**
    * Get cache statistics
    */
-  getCacheStats(): { size: number; hitRate: number } {
+  async getCacheStats(): Promise<{ size: number; hitRate: number }> {
+    // For Redis, we can't easily get the exact cache size without scanning all keys
+    // So we'll return a placeholder value
     return {
-      size: this.cache.size,
+      size: 0, // Redis doesn't provide easy way to get exact cache size
       hitRate: 0 // Could implement hit rate tracking if needed
     };
   }
@@ -297,7 +400,18 @@ class ReputationService {
 
       logger.info(`Created initial reputation record for ${walletAddress}`);
     } catch (error) {
-      logger.error(`Error creating initial reputation for ${walletAddress}:`, error);
+      logger.error(`Error creating initial reputation for ${walletAddress}:`, {
+        error: {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+          code: (error as any).code
+        },
+        walletAddress
+      });
+      
+      // Log warning but don't throw - this is a best-effort operation
+      logger.warn(`Failed to create initial reputation record for ${walletAddress}, will use default values`);
     }
   }
 

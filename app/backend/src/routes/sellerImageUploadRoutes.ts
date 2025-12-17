@@ -32,9 +32,9 @@ router.put(
       }
 
       // Check if seller exists
-      const seller = await db.query.sellers.findFirst({
-        where: eq(sellers.walletAddress, walletAddress.toLowerCase()),
-      });
+      const [seller] = await db.select().from(sellers).where(
+        eq(sellers.walletAddress, walletAddress.toLowerCase())
+      ).limit(1);
 
       if (!seller) {
         return notFoundResponse(res, 'Seller profile not found');
@@ -148,15 +148,14 @@ router.put(
         .where(eq(sellers.walletAddress, walletAddress.toLowerCase()));
 
       // Fetch updated profile
-      const updatedSeller = await db.query.sellers.findFirst({
-        where: eq(sellers.walletAddress, walletAddress.toLowerCase()),
-      });
+      const [updatedSeller] = await db.select().from(sellers).where(
+        eq(sellers.walletAddress, walletAddress.toLowerCase())
+      ).limit(1);
 
       return successResponse(res, {
         message: 'Profile updated successfully',
         profile: {
           walletAddress: updatedSeller?.walletAddress,
-          displayName: updatedSeller?.displayName,
           storeName: updatedSeller?.storeName,
           bio: updatedSeller?.bio,
           description: updatedSeller?.description,

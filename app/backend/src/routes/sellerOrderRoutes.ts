@@ -104,7 +104,7 @@ router.put('/:orderId/status', csrfProtection,
         ]);
       }
 
-      await sellerOrderService.updateOrderStatus(parsedOrderId, status, notes);
+      await sellerOrderService.updateOrderStatus(parsedOrderId.toString(), status, notes);
 
       return successResponse(res, {
         message: 'Order status updated successfully',
@@ -168,7 +168,7 @@ router.put('/:orderId/tracking', csrfProtection,
       }
 
       await sellerOrderService.updateOrderTracking(
-        parsedOrderId,
+        parsedOrderId.toString(),
         {
           trackingNumber: trackingNumber.trim(),
           trackingCarrier: trackingCarrier.trim(),
@@ -224,7 +224,7 @@ router.get('/detail/:orderId',
         ]);
       }
 
-      const order = await sellerOrderService.getOrderById(parsedOrderId);
+      const order = await sellerOrderService.getOrderById(parsedOrderId.toString());
 
       return successResponse(res, order, 200);
     } catch (error) {

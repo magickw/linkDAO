@@ -247,8 +247,7 @@ router.get('/returns/analytics/time', authMiddleware, async (req, res) => {
     const { sellerId, periodStart, periodEnd, granularity } = req.query;
     const analytics = await returnAnalyticsService.getAnalyticsByTime(
       sellerId as string,
-      { start: periodStart as string, end: periodEnd as string },
-      granularity as 'daily' | 'weekly' | 'monthly'
+      { start: periodStart as string, end: periodEnd as string }
     );
     res.json(analytics);
   } catch (error: any) {

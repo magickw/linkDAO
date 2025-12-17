@@ -24,7 +24,6 @@ export interface AdvancedReputationImpact {
 
 export interface RealTimeReputationUpdate {
   userId: string;
-  walletAddress: string;
   previousScore: number;
   newScore: number;
   change: number;
@@ -192,24 +191,22 @@ export class AdvancedReputationService extends EventEmitter {
 
       // Get current reputation
       const currentReputation = await this.getUserReputationData(userId);
-      const previousScore = currentReputation?.overallScore || 50;
+      const previousScore = Number(currentReputation?.overallScore || 50);
       const newScore = Math.max(0, Math.min(100, previousScore + adjustedScoreChange));
 
       // Create reputation change event
-      const [changeEvent] = await db.insert(reputationChangeEvents).values({
+      await db.insert(reputationChangeEvents).values({
         userId,
         eventType,
         scoreChange: adjustedScoreChange,
         previousScore,
         newScore,
-        reason,
-        impactAnalysis: impactAnalysis,
+        description: reason,
         metadata: {
-          ...eventData,
           context,
           performedBy
         }
-      }).returning();
+      });
 
       // Update user reputation score
       await db.update(userReputationScores)
@@ -222,9 +219,8 @@ export class AdvancedReputationService extends EventEmitter {
       // Create real-time update
       const update: RealTimeReputationUpdate = {
         userId,
-        walletAddress: currentReputation?.walletAddress || '',
-        previousScore,
-        newScore,
+        previousScore: Number(previousScore),
+        newScore: Number(newScore),
         change: adjustedScoreChange,
         reason,
         timestamp: new Date(),
@@ -266,8 +262,8 @@ export class AdvancedReputationService extends EventEmitter {
       const bulkOperation: BulkReputationOperation = {
         ...operation,
         operationId,
-        createdAt: new Date(),
-        status: 'pending'
+        status: 'pending',
+        createdAt: new Date()
       };
 
       this.bulkOperations.set(operationId, bulkOperation);
@@ -294,7 +290,7 @@ export class AdvancedReputationService extends EventEmitter {
     try {
       // Get current score
       const currentReputation = await this.getUserReputationData(userId);
-      const currentScore = currentReputation?.overallScore || 50;
+      const currentScore = Number(currentReputation?.overallScore || 50);
 
       // Get score trend over last 30 days
       const scoreTrend = await this.calculateScoreTrend(userId, 30);
@@ -333,10 +329,11 @@ export class AdvancedReputationService extends EventEmitter {
     try {
       // Store penalty configuration
       await db.insert(reputationPenalties).values({
-        violationType: config.violationType,
-        severityConfig: config.severityLevels,
-        escalationRules: config.escalationRules,
-        recoveryConfig: config.recoveryConfig,
+        userId: config.userId || '00000000-0000-0000-0000-000000000000', // Default UUID
+        penaltyType: config.violationType,
+        severityLevel: 1,
+        violationCount: 1,
+        description: `Progressive penalty for ${config.violationType}`,
         isActive: true
       });
 

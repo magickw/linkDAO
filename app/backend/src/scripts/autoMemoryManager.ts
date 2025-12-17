@@ -102,7 +102,7 @@ function emitMemoryOptimizationEvent(eventType: string): void {
   console.log(`📡 Emitting memory optimization event: ${eventType}`);
   
   // Emit events that other services can listen to
-  process.emit('memory:optimization', { type: eventType, timestamp: Date.now() } as any);
+  process.emit('memory:optimization' as any, { type: eventType, timestamp: Date.now() });
   
   // Specific events for different optimization types
   switch (eventType) {
