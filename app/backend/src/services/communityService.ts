@@ -3838,7 +3838,7 @@ export class CommunityService {
   }
 
   // Create subscription tier
-  async createSubscriptionTier(data: {
+  async createSubscriptionTierV2_Duplicate(data: {
     communityId: string;
     name: string;
     description?: string;
@@ -3891,7 +3891,7 @@ export class CommunityService {
   }
 
   // Get subscription tiers for a community
-  async getSubscriptionTiers(communityId: string): Promise<any[]> {
+  async getSubscriptionTiersV2_Duplicate(communityId: string): Promise<any[]> {
     try {
       const tiers = await db
         .select()
@@ -3926,7 +3926,7 @@ export class CommunityService {
   }
 
   // Subscribe user to a tier
-  async subscribeUser(data: {
+  async subscribeUserV2_Duplicate(data: {
     userId: string;
     communityId: string;
     tierId: string;
@@ -3999,7 +3999,7 @@ export class CommunityService {
   }
 
   // Get user subscriptions
-  async getUserSubscriptions(userId: string, communityId?: string): Promise<any[]> {
+  async getUserSubscriptionsV2_Duplicate(userId: string, communityId?: string): Promise<any[]> {
     try {
       const whereConditions = [eq(communityUserSubscriptions.userId, userId)];
 

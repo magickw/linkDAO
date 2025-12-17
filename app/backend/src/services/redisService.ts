@@ -334,6 +334,16 @@ export class RedisService {
     return result === 1;
   }
 
+  async publish(channel: string, message: string): Promise<void> {
+    if (!this.useRedis) {
+      safeLogger.warn('Redis is disabled, skipping publish to channel:', channel);
+      return;
+    }
+    
+    await this.ensureConnected();
+    await this.client.publish(channel, message);
+  }
+
   async ttl(key: string): Promise<number> {
     if (!this.useRedis) {
       safeLogger.warn('Redis is disabled, returning -1 for TTL check:', key);

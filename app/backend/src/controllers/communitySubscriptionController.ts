@@ -11,7 +11,7 @@ export class CommunitySubscriptionController {
     try {
       const { id: communityId } = req.params;
 
-      const tiers = await communityService.getSubscriptionTiersV1(communityId);
+      const tiers = await communityService.getSubscriptionTiers(communityId);
 
       res.json({
         success: true,
@@ -34,7 +34,7 @@ export class CommunitySubscriptionController {
       const { id: communityId, userAddress } = req.params;
 
       // Using getUserSubscriptions instead of getUserSubscription
-      const subscriptions = await communityService.getUserSubscriptionsV1(
+      const subscriptions = await communityService.getUserSubscriptions(
         userAddress,
         communityId
       );
@@ -95,7 +95,7 @@ export class CommunitySubscriptionController {
         });
       }
 
-      const result = await communityService.createSubscriptionTierV1({
+      const result = await communityService.createSubscriptionTier({
         communityId,
         name,
         description,
@@ -153,7 +153,7 @@ export class CommunitySubscriptionController {
         });
       }
 
-      const result = await communityService.subscribeUserV1({
+      const result = await communityService.subscribeUser({
         communityId,
         tierId,
         userAddress,

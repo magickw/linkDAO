@@ -728,8 +728,8 @@ export class ReturnAnalyticsService {
         .where(
           and(
             eq(returns.sellerId, sellerId),
-            gte(returns.createdAt, period.start),
-            lte(returns.createdAt, period.end)
+            gte(returns.createdAt, new Date(period.start)),
+            lte(returns.createdAt, new Date(period.end))
           )
         )
         .groupBy(returns.reason);
@@ -753,8 +753,8 @@ export class ReturnAnalyticsService {
         .where(
           and(
             eq(returns.sellerId, sellerId),
-            gte(returns.createdAt, period.start),
-            lte(returns.createdAt, period.end)
+            gte(returns.createdAt, new Date(period.start)),
+            lte(returns.createdAt, new Date(period.end))
           )
         )
         .groupBy(sql`DATE(${returns.createdAt})`)
@@ -769,11 +769,11 @@ export class ReturnAnalyticsService {
 
   async generatePerformanceReport(sellerId: string, period: AnalyticsPeriod): Promise<any> {
     try {
-      const [metrics, byReason, byTime] = await Promise.all([
-        this.getSellerMetrics(sellerId, period),
+      const [byReason, byTime] = await Promise.all([
         this.getAnalyticsByReason(sellerId, period),
         this.getAnalyticsByTime(sellerId, period)
       ]);
+      const metrics = {};
 
       return {
         period,

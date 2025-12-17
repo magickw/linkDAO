@@ -1358,7 +1358,7 @@ export class CommunityController {
         communityId
       };
 
-      const tier = await communityService.createSubscriptionTierV1(tierData);
+      const tier = await communityService.createSubscriptionTier(tierData);
 
       res.status(201).json(createSuccessResponse(tier, {}));
     } catch (error) {
@@ -1372,7 +1372,7 @@ export class CommunityController {
     try {
       const { communityId } = req.params;
 
-      const tiers = await communityService.getSubscriptionTiersV1(communityId);
+      const tiers = await communityService.getSubscriptionTiers(communityId);
 
       res.json(createSuccessResponse(tiers, {}));
     } catch (error) {
@@ -1393,7 +1393,7 @@ export class CommunityController {
       const { communityId } = req.params;
       const { tierId, paymentTxHash, metadata } = req.body;
 
-      const subscription = await communityService.subscribeUserV1({
+      const subscription = await communityService.subscribeUser({
         userId: userAddress,
         communityId,
         tierId,
@@ -1422,7 +1422,7 @@ export class CommunityController {
       }
 
       const { communityId } = req.params;
-      const subscriptions = await communityService.getUserSubscriptionsV1(userAddress, communityId);
+      const subscriptions = await communityService.getUserSubscriptions(userAddress, communityId);
 
       res.json(createSuccessResponse(subscriptions, {}));
     } catch (error) {

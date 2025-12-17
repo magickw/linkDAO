@@ -317,7 +317,7 @@ export class ReviewQueueService {
           contentId: row.content_id,
           contentType: row.content_type,
           userId: row.user_id,
-          status: 'under_review',
+          status: 'in_review',
           riskScore: parseFloat(row.risk_score),
           decision: row.decision,
           reasonCode: row.reason_code,

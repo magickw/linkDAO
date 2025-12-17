@@ -492,15 +492,15 @@ class TokenReactionService {
         };
       } else {
         // Check in quickPostReactions table (for UUID posts)
-        reaction = await db
+        const quickReaction = await db
           .select()
           .from(quickPostReactions)
           .where(and(eq(quickPostReactions.id, reactionId), eq(quickPostReactions.userId, userId)))
           .limit(1);
 
-        if (reaction.length > 0) {
+        if (quickReaction.length > 0) {
           // This is a reaction from the quickPostReactions table (UUID post IDs)
-          const refundAmount = parseFloat(reaction[0].amount);
+          const refundAmount = parseFloat(quickReaction[0].amount);
 
           // Delete the reaction
           await db.delete(quickPostReactions).where(eq(quickPostReactions.id, reactionId));
