@@ -29,14 +29,50 @@ ADD COLUMN IF NOT EXISTS status VARCHAR(24) DEFAULT 'active';
 COMMENT ON COLUMN posts.status IS 'Post status (alias for moderation_status)';
 
 -- ============================================================================
--- 4. Add 'updatedAt' and 'bannedAt' columns to community_members table
+-- 4. Add columns to community_members table
 -- ============================================================================
 ALTER TABLE community_members 
 ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW(),
-ADD COLUMN IF NOT EXISTS banned_at TIMESTAMP;
+ADD COLUMN IF NOT EXISTS banned_at TIMESTAMP,
+ADD COLUMN IF NOT EXISTS ban_expiry TIMESTAMP;
 
 COMMENT ON COLUMN community_members.updated_at IS 'Last update timestamp';
 COMMENT ON COLUMN community_members.banned_at IS 'Timestamp when member was banned';
+COMMENT ON COLUMN community_members.ban_expiry IS 'When the ban expires';
+
+-- ============================================================================
+-- 4a. Add columns to content_reports table
+-- ============================================================================
+ALTER TABLE content_reports 
+ADD COLUMN IF NOT EXISTS consensus_score NUMERIC(5,2),
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
+
+COMMENT ON COLUMN content_reports.consensus_score IS 'Agreement score among moderators';
+COMMENT ON COLUMN content_reports.updated_at IS 'Last update timestamp';
+
+-- ============================================================================
+-- 4b. Add columns to refund_transactions table
+-- ============================================================================
+ALTER TABLE refund_transactions 
+ADD COLUMN IF NOT EXISTS response_payload JSONB;
+
+COMMENT ON COLUMN refund_transactions.response_payload IS 'Raw API response from provider';
+
+-- ============================================================================
+-- 4c. Add metadata column to orders table
+-- ============================================================================
+ALTER TABLE orders 
+ADD COLUMN IF NOT EXISTS metadata JSONB;
+
+COMMENT ON COLUMN orders.metadata IS 'Additional metadata as JSONB';
+
+-- ============================================================================
+-- 4d. Add lastRewardClaim column to staking_positions table
+-- ============================================================================
+ALTER TABLE staking_positions 
+ADD COLUMN IF NOT EXISTS last_reward_claim TIMESTAMP;
+
+COMMENT ON COLUMN staking_positions.last_reward_claim IS 'Last time rewards were claimed';
 
 -- ============================================================================
 -- 5. Create referralConfig table
@@ -105,7 +141,13 @@ ON CONFLICT (config_key) DO NOTHING;
 -- ALTER TABLE returns DROP COLUMN IF EXISTS reason;
 -- ALTER TABLE content_reports DROP COLUMN IF EXISTS resolution;
 -- ALTER TABLE content_reports DROP COLUMN IF EXISTS moderator_notes;
+-- ALTER TABLE content_reports DROP COLUMN IF EXISTS consensus_score;
+-- ALTER TABLE content_reports DROP COLUMN IF EXISTS updated_at;
 -- ALTER TABLE posts DROP COLUMN IF EXISTS status;
 -- ALTER TABLE community_members DROP COLUMN IF EXISTS updated_at;
 -- ALTER TABLE community_members DROP COLUMN IF EXISTS banned_at;
+-- ALTER TABLE community_members DROP COLUMN IF EXISTS ban_expiry;
+-- ALTER TABLE refund_transactions DROP COLUMN IF EXISTS response_payload;
+-- ALTER TABLE orders DROP COLUMN IF EXISTS metadata;
+-- ALTER TABLE staking_positions DROP COLUMN IF EXISTS last_reward_claim;
 -- DROP TABLE IF EXISTS referral_config;

@@ -111,6 +111,10 @@ const StakingInterface: React.FC = () => {
   };
 
   const formatLockPeriod = (seconds: number): string => {
+    if (seconds === 0) {
+      return 'Flexible';
+    }
+    
     const days = seconds / (24 * 60 * 60);
     if (days >= 365) {
       return `${(days / 365).toFixed(1)} years`;

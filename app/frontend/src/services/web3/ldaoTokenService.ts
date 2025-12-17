@@ -221,41 +221,41 @@ export class LDAOTokenService {
     isActive: boolean;
   }> | null> {
     try {
-      // Return updated staking tiers with new APR rates
-      // These rates match the database migration: 2%, 3.5%, 5%, 6.5%, 8%
+      // Return updated staking tiers with the absurd 0-day tier removed
+      // Using more affordable APR rates: 3%, 5%, 7%, 9%, 11%
       const tiers = [
         {
           id: 1,
-          lockPeriod: 0, // Flexible staking
-          rewardRate: 200, // 2% APR (200 basis points)
+          lockPeriod: 2592000, // 30 days
+          rewardRate: 300, // 3% APR (300 basis points)
           minStakeAmount: '100',
           isActive: true
         },
         {
           id: 2,
-          lockPeriod: 2592000, // 30 days
-          rewardRate: 350, // 3.5% APR (350 basis points)
+          lockPeriod: 7776000, // 90 days
+          rewardRate: 500, // 5% APR (500 basis points)
           minStakeAmount: '500',
           isActive: true
         },
         {
           id: 3,
-          lockPeriod: 7776000, // 90 days
-          rewardRate: 500, // 5% APR (500 basis points)
+          lockPeriod: 15552000, // 180 days
+          rewardRate: 700, // 7% APR (700 basis points)
           minStakeAmount: '1000',
           isActive: true
         },
         {
           id: 4,
-          lockPeriod: 15552000, // 180 days
-          rewardRate: 650, // 6.5% APR (650 basis points)
+          lockPeriod: 31536000, // 365 days
+          rewardRate: 900, // 9% APR (900 basis points)
           minStakeAmount: '2000',
           isActive: true
         },
         {
           id: 5,
-          lockPeriod: 31536000, // 365 days
-          rewardRate: 800, // 8% APR (800 basis points)
+          lockPeriod: 63072000, // 730 days (2 years)
+          rewardRate: 1100, // 11% APR (1100 basis points)
           minStakeAmount: '5000',
           isActive: true
         }

@@ -954,6 +954,7 @@ export const orders = pgTable("orders", {
   totalAmount: numeric("total_amount", { precision: 20, scale: 8 }), // Total including fees, taxes, shipping
   currency: varchar("currency", { length: 10 }).default("USD"),
   orderMetadata: text("order_metadata"), // JSON object for additional order data
+  metadata: jsonb("metadata"), // Additional metadata as JSONB
   stripePaymentIntentId: varchar("stripe_payment_intent_id", { length: 255 }),
   stripeTransferGroup: varchar("stripe_transfer_group", { length: 255 }),
   createdAt: timestamp("created_at").defaultNow(),
@@ -1269,6 +1270,7 @@ export const communityMembers = pgTable("community_members", {
   lastActivityAt: timestamp("last_activity_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow(),
   bannedAt: timestamp("banned_at"),
+  banExpiry: timestamp("ban_expiry"), // When the ban expires
 }, (t) => ({
   pk: primaryKey(t.communityId, t.userAddress),
   communityIdIdx: index("idx_community_members_community_id").on(t.communityId),
@@ -2527,7 +2529,9 @@ export const contentReports = pgTable("content_reports", {
   status: varchar("status", { length: 24 }).default("open"),
   resolution: text("resolution"), // Resolution details for closed reports
   moderatorNotes: text("moderator_notes"), // Internal notes from moderators
+  consensusScore: numeric("consensus_score", { precision: 5, scale: 2 }), // Agreement score among moderators
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 }, (t) => ({
   contentIdx: index("content_reports_content_idx").on(t.contentId),
   reporterIdx: index("content_reports_reporter_idx").on(t.reporterId),
@@ -4023,6 +4027,7 @@ export const stakingPositions = pgTable("staking_positions", {
   endDate: timestamp("end_date").notNull(),
   isAutoCompound: boolean("is_auto_compound").default(false).notNull(),
   rewardsEarned: numeric("rewards_earned", { precision: 20, scale: 8 }).default("0").notNull(),
+  lastRewardClaim: timestamp("last_reward_claim"), // Last time rewards were claimed
   status: varchar("status", { length: 20 }).default("active").notNull(),
   contractAddress: varchar("contract_address", { length: 66 }),
   txHash: varchar("tx_hash", { length: 66 }),
@@ -4633,6 +4638,7 @@ export const refundTransactions = pgTable('refund_transactions', {
   completedAt: timestamp('completed_at'),
   errorMessage: text('error_message'),
   metadata: jsonb('metadata'),
+  responsePayload: jsonb('response_payload'), // Raw API response from provider
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
