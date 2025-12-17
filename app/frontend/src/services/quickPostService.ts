@@ -44,7 +44,7 @@ export class QuickPostService {
 
     try {
       // Get auth headers from enhancedAuthService to include JWT token
-      let authHeaders = enhancedAuthService.getAuthHeaders();
+      let authHeaders = await enhancedAuthService.getAuthHeaders();
       
       // Check if we have a valid token
       if (!authHeaders['Authorization']) {
@@ -93,7 +93,7 @@ export class QuickPostService {
 
   static async getQuickPost(id: string): Promise<QuickPost | null> {
     try {
-      const authHeaders = enhancedAuthService.getAuthHeaders();
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/quick-posts/${id}`, {
         method: 'GET',
         headers: {
@@ -119,7 +119,7 @@ export class QuickPostService {
 
   static async updateQuickPost(id: string, data: UpdateQuickPostInput): Promise<QuickPost> {
     try {
-      const authHeaders = enhancedAuthService.getAuthHeaders();
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/quick-posts/${id}`, {
         method: 'PUT',
         headers: {
@@ -144,7 +144,7 @@ export class QuickPostService {
 
   static async deleteQuickPost(id: string): Promise<boolean> {
     try {
-      const authHeaders = enhancedAuthService.getAuthHeaders();
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       
       // Check if we have a valid token
       if (!authHeaders['Authorization']) {
@@ -195,7 +195,7 @@ export class QuickPostService {
         limit: limit.toString()
       });
 
-      const authHeaders = enhancedAuthService.getAuthHeaders();
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/quick-posts/author/${authorId}?${params}`, {
         method: 'GET',
         headers: {
@@ -223,7 +223,7 @@ export class QuickPostService {
     tokenAmount: number = 0
   ): Promise<any> {
     try {
-      const authHeaders = enhancedAuthService.getAuthHeaders();
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/quick-posts/${quickPostId}/react`, {
         method: 'POST',
         headers: {
@@ -237,6 +237,36 @@ export class QuickPostService {
       });
 
       if (!response.ok) {
+        // Handle 401 errors specifically
+        if (response.status === 401) {
+          console.error('Authentication error: Session expired');
+          // Try to refresh the session and retry once
+          try {
+            await enhancedAuthService.refreshToken();
+            const retryAuthHeaders = await enhancedAuthService.getAuthHeaders();
+            const retryResponse = await fetch(`${BACKEND_API_BASE_URL}/api/quick-posts/${quickPostId}/react`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...retryAuthHeaders
+              },
+              body: JSON.stringify({
+                type,
+                tokenAmount
+              })
+            });
+
+            if (retryResponse.ok) {
+              const result = await retryResponse.json();
+              return result.data || result;
+            }
+          } catch (retryError) {
+            console.error('Retry after token refresh failed:', retryError);
+          }
+          
+          throw new Error('Your session has expired. Please refresh the page and sign in again.');
+        }
+        
         const error = await response.json();
         throw new Error(error.error || `Failed to add reaction: ${response.statusText}`);
       }
@@ -244,7 +274,7 @@ export class QuickPostService {
       const result = await response.json();
       return result.data || result;
     } catch (error) {
-      console.error('Error adding reaction to quick post:', error);
+      console.error('Error reacting:', error);
       throw error;
     }
   }
@@ -256,7 +286,7 @@ export class QuickPostService {
     message?: string
   ): Promise<any> {
     try {
-      const authHeaders = enhancedAuthService.getAuthHeaders();
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/quick-posts/${quickPostId}/tip`, {
         method: 'POST',
         headers: {

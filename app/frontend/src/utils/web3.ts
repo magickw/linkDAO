@@ -63,16 +63,37 @@ export async function getProvider() {
       console.log('Using chain RPC URL:', rpcUrl);
       
       if (rpcUrl) {
-        return new ethers.JsonRpcProvider(rpcUrl);
+        const provider = new ethers.JsonRpcProvider(rpcUrl, {
+          chainId,
+          name: chainId === 1 ? 'mainnet' : chainId === 11155111 ? 'sepolia' : 'unknown'
+        });
+        
+        // Add network detection with proper error handling
+        provider.ready.catch((error) => {
+          console.warn('Provider network detection failed, but continuing:', error);
+        });
+        
+        return provider;
       }
     } catch (e) {
       // ignore and use default provider below
       console.warn('Error getting chain RPC URL:', e);
     }
 
-    // Last-resort: use ethers default provider (may require API keys)
-    console.log('Using default provider');
-    return ethers.getDefaultProvider();
+    // Last-resort: use ethers default provider with fallback
+    console.log('Using default provider with fallback');
+    try {
+      return ethers.getDefaultProvider('mainnet', {
+        etherscan: process.env.ETHERSCAN_API_KEY,
+        infura: process.env.INFURA_PROJECT_ID,
+        alchemy: process.env.ALCHEMY_API_KEY,
+        pocket: process.env.POCKET_APPLICATION_ID,
+        quorum: 1
+      });
+    } catch (fallbackError) {
+      console.warn('Default provider failed, using basic fallback:', fallbackError);
+      return new ethers.JsonRpcProvider('https://eth.llamarpc.com', 1);
+    }
   } catch (error) {
     console.error('Error getting provider:', error);
     return null;

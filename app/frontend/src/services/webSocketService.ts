@@ -227,7 +227,7 @@ class WebSocketService {
           transports: ['websocket', 'polling'],
           reconnection: false, // We handle reconnection manually
           reconnectionAttempts: 0,
-          timeout: this.config.connectionTimeout,
+          timeout: Math.min(this.config.connectionTimeout || 20000, 10000), // Cap timeout to 10s
           forceNew: true,
           upgrade: true,
           rememberUpgrade: false,
@@ -235,7 +235,10 @@ class WebSocketService {
           withCredentials: true,
           extraHeaders: {
             'X-Client-Type': 'web'
-          }
+          },
+          // Add connection resilience options
+          autoConnect: true,
+          forceJSONP: false
         });
 
         console.log('Setting up socket event handlers');

@@ -1326,7 +1326,7 @@ export class CommunityController {
     try {
       const { postId } = req.params;
 
-      const content = await communityService.getTokenGatedContentByPost(postId);
+      const content = await communityService.getTokenGatedContentByPost(Number(postId));
 
       if (!content) {
         res.status(404).json(createErrorResponse('NOT_FOUND', 'Token-gated content not found'));
@@ -2237,7 +2237,7 @@ export class CommunityController {
         .where(eq(userReputation.walletAddress, userAddress))
         .limit(1);
       
-      return reputation[0]?.reputationScore || 0;
+      return Number(reputation[0]?.reputationScore) || 0;
     } catch (error) {
       safeLogger.error('Error getting user reputation:', error);
       return 0;

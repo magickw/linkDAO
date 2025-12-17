@@ -728,12 +728,29 @@ class EnhancedAuthService {
   }
 
   /**
-   * Get authentication headers for API requests
+   * Get authentication headers for API requests with automatic token refresh
    */
-  getAuthHeaders(): Record<string, string> {
+  async getAuthHeaders(): Promise<Record<string, string>> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json'
     };
+
+    // Check if we need to refresh the token before using it
+    if (this.token && this.shouldRefreshToken()) {
+      try {
+        console.log('🔄 Token needs refresh, attempting automatic refresh...');
+        const refreshResult = await this.refreshToken();
+        if (refreshResult.success) {
+          console.log('✅ Token refreshed successfully');
+        } else {
+          console.warn('⚠️ Token refresh failed, may need to re-authenticate');
+        }
+      } catch (error) {
+        console.error('❌ Automatic token refresh failed:', error);
+        // Don't throw here, let the request proceed with current token
+        // The 401 error will trigger proper re-authentication flow
+      }
+    }
 
     if (this.token) {
       headers['Authorization'] = `Bearer ${this.token}`;

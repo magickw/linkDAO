@@ -194,8 +194,13 @@ class CryptoPriceService {
       const { ldaoTokenService } = await import('./web3/ldaoTokenService');
       const { ldaoAcquisitionService } = await import('./ldaoAcquisitionService');
       
-      // Try to get price from LDAO Treasury contract
-      const quote = await ldaoAcquisitionService.getQuote('1');
+      // Try to get price from LDAO Treasury contract with timeout
+      const quote = await Promise.race([
+        ldaoAcquisitionService.getQuote('1'),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Price fetch timeout')), 5000)
+        )
+      ]);
       
       if (quote && quote.usdAmount) {
         return {
@@ -221,8 +226,26 @@ class CryptoPriceService {
         total_volume: 0,
         last_updated: new Date().toISOString()
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch LDAO price from contract:', error);
+      
+      // Check if it's a network/provider error and return fallback
+      if (error.message?.includes('network') || 
+          error.message?.includes('provider') ||
+          error.message?.includes('timeout')) {
+        console.warn('Network error detected, using fallback price for LDAO');
+        return {
+          id: 'ldao',
+          symbol: 'LDAO',
+          name: 'LinkDAO Token',
+          current_price: 0.01, // Conservative fallback price
+          price_change_percentage_24h: 0,
+          market_cap: 0,
+          total_volume: 0,
+          last_updated: new Date().toISOString()
+        };
+      }
+      
       return null;
     }
   }

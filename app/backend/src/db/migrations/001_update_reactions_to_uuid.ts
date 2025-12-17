@@ -44,7 +44,7 @@ async function up(): Promise<void> {
       AND table_name = 'reactions'
     `);
     
-    if (constraintCheck.rows.length > 0) {
+    if (constraintCheck.length > 0) {
       console.log('Dropping old foreign key constraint...');
       await db.execute(sql`ALTER TABLE reactions DROP CONSTRAINT reactions_post_id_fkey`);
     } else {
@@ -89,7 +89,7 @@ async function down(): Promise<void> {
       AND table_name = 'reactions'
     `);
     
-    if (constraintCheck.rows.length > 0) {
+    if (constraintCheck.length > 0) {
       console.log('Dropping new foreign key constraint...');
       await db.execute(sql`ALTER TABLE reactions DROP CONSTRAINT reactions_post_id_fkey`);
     } else {
@@ -111,7 +111,7 @@ async function down(): Promise<void> {
       WHERE table_name = 'posts'
     `);
     
-    if (postsTableCheck.rows.length > 0) {
+    if (postsTableCheck.length > 0) {
       console.log('Adding original foreign key constraint to posts table...');
       await db.execute(sql`ALTER TABLE reactions ADD CONSTRAINT reactions_post_id_fkey FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE`);
     } else {

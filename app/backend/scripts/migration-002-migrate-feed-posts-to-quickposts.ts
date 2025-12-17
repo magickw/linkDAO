@@ -37,9 +37,9 @@ async function migrateFeedPostsToQuickPosts() {
         AND (communityId IS NULL OR communityId = '')
     `);
 
-    console.log(`Found ${feedPostsToMove.rowCount} feed posts to migrate`);
+    console.log(`Found ${feedPostsToMove.length} feed posts to migrate`);
 
-    if (feedPostsToMove.rowCount === 0) {
+    if (feedPostsToMove.length === 0) {
       console.log('✅ No feed posts to migrate. All posts already have proper titles or community assignments.');
       return;
     }
@@ -78,7 +78,7 @@ async function migrateFeedPostsToQuickPosts() {
       RETURNING id
     `);
 
-    console.log(`✅ Migrated ${insertedQuickPosts.rowCount} posts to quickPosts table`);
+    console.log(`✅ Migrated ${insertedQuickPosts.length} posts to quickPosts table`);
 
     // Extract IDs for the next operations
     const postIds = rows.map(row => `'${row.id}'`).join(', ');
@@ -93,7 +93,7 @@ async function migrateFeedPostsToQuickPosts() {
       WHERE pt.post_id IN (${postIds})
     `);
 
-    if (postTagsToMove.rowCount > 0) {
+    if (postTagsToMove.length > 0) {
       const tagValues = postTagsToMove.rows.map(row => 
         `('${row.post_id}', '${row.tag}', '${row.created_at}')`
       ).join(',\n');
@@ -102,7 +102,7 @@ async function migrateFeedPostsToQuickPosts() {
         INSERT INTO quick_post_tags (quick_post_id, tag, created_at)
         VALUES ${tagValues}
       `);
-      console.log(`✅ Migrated ${postTagsToMove.rowCount} post tags to quick_post_tags table`);
+      console.log(`✅ Migrated ${postTagsToMove.length} post tags to quick_post_tags table`);
     }
 
     // Migrate reactions
@@ -119,7 +119,7 @@ async function migrateFeedPostsToQuickPosts() {
       WHERE r.post_id IN (${postIds})
     `);
 
-    if (reactionsToMove.rowCount > 0) {
+    if (reactionsToMove.length > 0) {
       const reactionValues = reactionsToMove.rows.map(row => 
         `('${row.post_id}', '${row.user_id}', '${row.type}', ${row.amount}, ${row.rewards_earned}, '${row.created_at}')`
       ).join(',\n');
@@ -128,7 +128,7 @@ async function migrateFeedPostsToQuickPosts() {
         INSERT INTO quick_post_reactions (quick_post_id, user_id, type, amount, rewards_earned, created_at)
         VALUES ${reactionValues}
       `);
-      console.log(`✅ Migrated ${reactionsToMove.rowCount} reactions to quick_post_reactions table`);
+      console.log(`✅ Migrated ${reactionsToMove.length} reactions to quick_post_reactions table`);
     }
 
     // Migrate tips
@@ -147,7 +147,7 @@ async function migrateFeedPostsToQuickPosts() {
       WHERE t.post_id IN (${postIds})
     `);
 
-    if (tipsToMove.rowCount > 0) {
+    if (tipsToMove.length > 0) {
       const tipValues = tipsToMove.rows.map(row => 
         `('${row.post_id}', '${row.from_user_id}', '${row.to_user_id}', '${row.token}', ${row.amount}, ${row.message ? `'${row.message}'` : 'NULL'}, '${row.tx_hash}', '${row.created_at}')`
       ).join(',\n');
@@ -156,7 +156,7 @@ async function migrateFeedPostsToQuickPosts() {
         INSERT INTO quick_post_tips (quick_post_id, from_user_id, to_user_id, token, amount, message, tx_hash, created_at)
         VALUES ${tipValues}
       `);
-      console.log(`✅ Migrated ${tipsToMove.rowCount} tips to quick_post_tips table`);
+      console.log(`✅ Migrated ${tipsToMove.length} tips to quick_post_tips table`);
     }
 
     // Migrate views
@@ -172,7 +172,7 @@ async function migrateFeedPostsToQuickPosts() {
       WHERE v.post_id IN (${postIds})
     `);
 
-    if (viewsToMove.rowCount > 0) {
+    if (viewsToMove.length > 0) {
       const viewValues = viewsToMove.rows.map(row => 
         `('${row.post_id}', ${row.user_id ? `'${row.user_id}'` : 'NULL'}, ${row.ip_address ? `'${row.ip_address}'` : 'NULL'}, ${row.user_agent ? `'${row.user_agent}'` : 'NULL'}, '${row.created_at}')`
       ).join(',\n');
@@ -181,7 +181,7 @@ async function migrateFeedPostsToQuickPosts() {
         INSERT INTO quick_post_views (quick_post_id, user_id, ip_address, user_agent, created_at)
         VALUES ${viewValues}
       `);
-      console.log(`✅ Migrated ${viewsToMove.rowCount} views to quick_post_views table`);
+      console.log(`✅ Migrated ${viewsToMove.length} views to quick_post_views table`);
     }
 
     // Migrate bookmarks
@@ -194,7 +194,7 @@ async function migrateFeedPostsToQuickPosts() {
       WHERE b.post_id IN (${postIds})
     `);
 
-    if (bookmarksToMove.rowCount > 0) {
+    if (bookmarksToMove.length > 0) {
       const bookmarkValues = bookmarksToMove.rows.map(row => 
         `('${row.user_id}', '${row.post_id}', '${row.created_at}')`
       ).join(',\n');
@@ -203,7 +203,7 @@ async function migrateFeedPostsToQuickPosts() {
         INSERT INTO quick_post_bookmarks (user_id, quick_post_id, created_at)
         VALUES ${bookmarkValues}
       `);
-      console.log(`✅ Migrated ${bookmarksToMove.rowCount} bookmarks to quick_post_bookmarks table`);
+      console.log(`✅ Migrated ${bookmarksToMove.length} bookmarks to quick_post_bookmarks table`);
     }
 
     // Migrate shares
@@ -220,7 +220,7 @@ async function migrateFeedPostsToQuickPosts() {
       WHERE s.post_id IN (${postIds})
     `);
 
-    if (sharesToMove.rowCount > 0) {
+    if (sharesToMove.length > 0) {
       const shareValues = sharesToMove.rows.map(row => 
         `('${row.post_id}', '${row.user_id}', '${row.target_type}', ${row.target_id ? `'${row.target_id}'` : 'NULL'}, ${row.message ? `'${row.message}'` : 'NULL'}, '${row.created_at}')`
       ).join(',\n');
@@ -229,7 +229,7 @@ async function migrateFeedPostsToQuickPosts() {
         INSERT INTO quick_post_shares (quick_post_id, user_id, target_type, target_id, message, created_at)
         VALUES ${shareValues}
       `);
-      console.log(`✅ Migrated ${sharesToMove.rowCount} shares to quick_post_shares table`);
+      console.log(`✅ Migrated ${sharesToMove.length} shares to quick_post_shares table`);
     }
 
     // Now delete the migrated posts from the posts table

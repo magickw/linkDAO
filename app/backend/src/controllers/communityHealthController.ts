@@ -148,12 +148,13 @@ export const exportHealthReport = async (req: Request, res: Response): Promise<v
     if (exportFormat === 'csv') {
       // Generate CSV content
       const csvContent = `Community Health Report
-Community: ${reportData.displayName}
-Health Score: ${reportData.healthScore}
-Members: ${reportData.memberCount}
-Engagement Rate: ${reportData.engagementRate}%
-Growth Rate (7d): ${reportData.growthRate7d}%
-Last Updated: ${reportData.lastUpdated.toISOString()}`;
+Community: ${communityId}
+Health Score: ${reportData.overall.score}
+Grade: ${reportData.overall.grade}
+Trend: ${reportData.overall.trend}
+Engagement Rate: ${reportData.engagement.avgEngagementRate}%
+Growth Rate (7d): ${reportData.growth.memberGrowthRate7d}%
+Last Updated: ${reportData.overall.lastUpdated.toISOString()}`;
       
       res.header('Content-Type', 'text/csv');
       res.header('Content-Disposition', `attachment; filename="community-health-${communityId}.csv"`);
