@@ -83,6 +83,7 @@ export const posts = pgTable("posts", {
   gatedContentPreview: text("gated_content_preview"), // Preview content for gated posts
   // Moderation fields
   moderationStatus: varchar("moderation_status", { length: 24 }).default('active'),
+  status: varchar("status", { length: 24 }).default('active'), // Alias for moderationStatus
   moderationWarning: text("moderation_warning"),
   riskScore: numeric("risk_score", { precision: 5, scale: 4 }).default('0'),
   // Pin fields
@@ -1266,6 +1267,8 @@ export const communityMembers = pgTable("community_members", {
   isActive: boolean("is_active").default(true).notNull(),
   joinedAt: timestamp("joined_at").defaultNow().notNull(),
   lastActivityAt: timestamp("last_activity_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  bannedAt: timestamp("banned_at"),
 }, (t) => ({
   pk: primaryKey(t.communityId, t.userAddress),
   communityIdIdx: index("idx_community_members_community_id").on(t.communityId),
@@ -2523,6 +2526,7 @@ export const contentReports = pgTable("content_reports", {
   weight: numeric("weight").default("1"),
   status: varchar("status", { length: 24 }).default("open"),
   resolution: text("resolution"), // Resolution details for closed reports
+  moderatorNotes: text("moderator_notes"), // Internal notes from moderators
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
   contentIdx: index("content_reports_content_idx").on(t.contentId),

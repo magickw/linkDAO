@@ -11,15 +11,35 @@ ADD COLUMN IF NOT EXISTS reason VARCHAR(255);
 COMMENT ON COLUMN returns.reason IS 'Alias for returnReason for analytics queries';
 
 -- ============================================================================
--- 2. Add 'resolution' column to content_reports table
+-- 2. Add 'resolution' and 'moderatorNotes' columns to content_reports table
 -- ============================================================================
 ALTER TABLE content_reports 
-ADD COLUMN IF NOT EXISTS resolution TEXT;
+ADD COLUMN IF NOT EXISTS resolution TEXT,
+ADD COLUMN IF NOT EXISTS moderator_notes TEXT;
 
 COMMENT ON COLUMN content_reports.resolution IS 'Resolution details for closed reports';
+COMMENT ON COLUMN content_reports.moderator_notes IS 'Internal notes from moderators';
 
 -- ============================================================================
--- 3. Create referralConfig table
+-- 3. Add 'status' column to posts table
+-- ============================================================================
+ALTER TABLE posts 
+ADD COLUMN IF NOT EXISTS status VARCHAR(24) DEFAULT 'active';
+
+COMMENT ON COLUMN posts.status IS 'Post status (alias for moderation_status)';
+
+-- ============================================================================
+-- 4. Add 'updatedAt' and 'bannedAt' columns to community_members table
+-- ============================================================================
+ALTER TABLE community_members 
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW(),
+ADD COLUMN IF NOT EXISTS banned_at TIMESTAMP;
+
+COMMENT ON COLUMN community_members.updated_at IS 'Last update timestamp';
+COMMENT ON COLUMN community_members.banned_at IS 'Timestamp when member was banned';
+
+-- ============================================================================
+-- 5. Create referralConfig table
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS referral_config (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -42,7 +62,7 @@ COMMENT ON COLUMN referral_config.config_value IS 'Configuration value stored as
 COMMENT ON COLUMN referral_config.config_type IS 'Type of value: string, number, boolean, or json';
 
 -- ============================================================================
--- 4. Insert default referral configuration values
+-- 6. Insert default referral configuration values
 -- ============================================================================
 INSERT INTO referral_config (config_key, config_value, config_type, description, is_active)
 VALUES 
@@ -56,7 +76,7 @@ VALUES
 ON CONFLICT (config_key) DO NOTHING;
 
 -- ============================================================================
--- 5. Verification queries (optional - comment out in production)
+-- 7. Verification queries (optional - comment out in production)
 -- ============================================================================
 
 -- Verify returns.reason column exists
@@ -84,4 +104,8 @@ ON CONFLICT (config_key) DO NOTHING;
 -- ============================================================================
 -- ALTER TABLE returns DROP COLUMN IF EXISTS reason;
 -- ALTER TABLE content_reports DROP COLUMN IF EXISTS resolution;
+-- ALTER TABLE content_reports DROP COLUMN IF EXISTS moderator_notes;
+-- ALTER TABLE posts DROP COLUMN IF EXISTS status;
+-- ALTER TABLE community_members DROP COLUMN IF EXISTS updated_at;
+-- ALTER TABLE community_members DROP COLUMN IF EXISTS banned_at;
 -- DROP TABLE IF EXISTS referral_config;

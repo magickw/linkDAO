@@ -10,6 +10,7 @@ export interface UserReputation {
   breakdown: ReputationBreakdown;
   progress: ProgressMilestone[];
   badges: string[];
+  achievements?: string[]; // List of achievement IDs or names
   rank?: number;
   percentile?: number;
 }
