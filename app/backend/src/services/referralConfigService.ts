@@ -1,4 +1,5 @@
 import { db } from '../db';
+import { referralConfig } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 
