@@ -652,6 +652,7 @@ export const scheduleAggregationJobs = async () => {
 
         // Schedule hourly aggregation (every hour at minute 5)
         await returnAggregationQueue.add(
+            'aggregate_hourly',
             { type: 'aggregate_hourly' },
             {
                 repeat: {
@@ -662,6 +663,7 @@ export const scheduleAggregationJobs = async () => {
 
         // Schedule daily aggregation (every day at 01:00 UTC)
         await returnAggregationQueue.add(
+            'aggregate_daily',
             { type: 'aggregate_daily' },
             {
                 repeat: {
@@ -672,6 +674,7 @@ export const scheduleAggregationJobs = async () => {
 
         // Schedule weekly aggregation (every Monday at 02:00 UTC)
         await returnAggregationQueue.add(
+            'aggregate_weekly',
             { type: 'aggregate_weekly' },
             {
                 repeat: {
@@ -682,6 +685,7 @@ export const scheduleAggregationJobs = async () => {
 
         // Schedule monthly aggregation (1st of every month at 03:00 UTC)
         await returnAggregationQueue.add(
+            'aggregate_monthly',
             { type: 'aggregate_monthly' },
             {
                 repeat: {

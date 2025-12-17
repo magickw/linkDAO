@@ -104,7 +104,31 @@ export class SecurityAuditController {
         rawData.riskScore = severityScores[rawData.severity] || 5;
       }
       
-      const eventData = auditEventSchema.parse(rawData);
+      const parsedData = auditEventSchema.parse(rawData);
+      // Create a properly typed event object to satisfy TypeScript
+      const eventData: Omit<SecurityAuditEvent, 'id' | 'timestamp'> = {
+        userId: parsedData.userId,
+        sessionId: parsedData.sessionId,
+        ipAddress: parsedData.ipAddress,
+        userAgent: parsedData.userAgent,
+        actionType: parsedData.actionType,
+        resourceType: parsedData.resourceType,
+        resourceId: parsedData.resourceId,
+        actionCategory: parsedData.actionCategory,
+        beforeState: parsedData.beforeState,
+        afterState: parsedData.afterState,
+        changes: parsedData.changes,
+        reason: parsedData.reason,
+        justification: parsedData.justification,
+        riskScore: parsedData.riskScore ?? 5, // Ensure riskScore is always a number
+        severity: parsedData.severity,
+        outcome: parsedData.outcome,
+        complianceFlags: parsedData.complianceFlags,
+        requiresApproval: parsedData.requiresApproval,
+        approvedBy: parsedData.approvedBy,
+        approvedAt: parsedData.approvedAt,
+        metadata: parsedData.metadata
+      };
       
       const eventId = await securityAuditService.logSecurityEvent(eventData);
       

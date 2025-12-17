@@ -253,10 +253,17 @@ router.get('/health', async (req: Request, res: Response) => {
     const dataHealth = dataOperationMonitoringService.getHealthStatus();
     const performanceHealth = performanceMonitoringService.getHealthStatus();
     
-    const overallStatus = dataHealth.status === 'unhealthy' || performanceHealth.status === 'unhealthy' 
-          ? 'unhealthy' 
-          : dataHealth.status === 'degraded' || performanceHealth.status === 'degraded' 
-            ? 'degraded' 
+    // Normalize status values for consistent comparison
+    const normalizedDataStatus = dataHealth.status === 'unhealthy' ? 'critical' : 
+                                dataHealth.status === 'degraded' ? 'warning' : 'healthy';
+    const normalizedPerformanceStatus = performanceHealth.status === 'critical' ? 'critical' : 
+                                       performanceHealth.status === 'warning' ? 'warning' : 'healthy';
+    
+    // Determine overall status (critical > warning > healthy)
+    const overallStatus = normalizedDataStatus === 'critical' || normalizedPerformanceStatus === 'critical' 
+          ? 'critical' 
+          : normalizedDataStatus === 'warning' || normalizedPerformanceStatus === 'warning' 
+            ? 'warning' 
             : 'healthy';
     res.json({
       status: 'success',

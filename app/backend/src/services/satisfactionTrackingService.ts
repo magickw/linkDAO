@@ -145,16 +145,16 @@ export class SatisfactionTrackingService {
       const surveyIds = [];
 
       // Create survey for buyer
-      if (escrow.buyerId) {
+      if (escrows.buyerId) {
         const buyerSurveyId = await this.generateSurveyId();
-        await this.sendSurveyToUser(buyerSurveyId, disputeId, escrow.buyerId, 'buyer');
+        await this.sendSurveyToUser(buyerSurveyId, disputeId, String(escrows.buyerId), 'buyer');
         surveyIds.push(buyerSurveyId);
       }
 
       // Create survey for seller
-      if (escrow.sellerId) {
+      if (escrows.sellerId) {
         const sellerSurveyId = await this.generateSurveyId();
-        await this.sendSurveyToUser(sellerSurveyId, disputeId, escrow.sellerId, 'seller');
+        await this.sendSurveyToUser(sellerSurveyId, disputeId, String(escrows.sellerId), 'seller');
         surveyIds.push(sellerSurveyId);
       }
 

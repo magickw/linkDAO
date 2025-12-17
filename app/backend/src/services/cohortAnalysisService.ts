@@ -469,7 +469,7 @@ export class CohortAnalysisService {
       }
 
       const user = userResult[0];
-      const signupDate = new Date(user.created_at);
+      const signupDate = new Date(String(user.created_at));
       const daysSinceSignup = Math.floor((Date.now() - signupDate.getTime()) / (1000 * 60 * 60 * 24));
 
       // Determine cohort period if not provided
@@ -485,7 +485,7 @@ export class CohortAnalysisService {
       `);
 
       const lastActivityDate = activityResult[0]?.last_activity 
-        ? new Date(activityResult[0].last_activity)
+        ? new Date(String(activityResult[0].last_activity))
         : signupDate;
 
       // Check if user is active (activity in last 30 days)

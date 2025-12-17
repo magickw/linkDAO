@@ -259,6 +259,11 @@ const ProductDetailPageRoute: React.FC = () => {
                 '/images/default-avatar.png';
             }
 
+            // Ensure imageUrls is always an array
+            if (!Array.isArray(imageUrls)) {
+              imageUrls = [];
+            }
+            
             // Transform the product data to match the ProductDetailPage component interface
             const transformedProduct = {
               id: productData.id,
@@ -293,11 +298,11 @@ const ProductDetailPageRoute: React.FC = () => {
                 count: productData.review_count || productData.reviewCount || 0
               },
               soldCount: productData.sales_count || productData.salesCount || productData.soldCount || 0,
-              media: imageUrls.length > 0 ? imageUrls.map((url: string) => ({
+              media: imageUrls.length > 0 ? imageUrls.map((url: string, index: number) => ({
                 type: 'image' as const,
-                url,
-                thumbnail: url,
-                alt: productData.title || 'Product image'
+                url: url || `https://via.placeholder.com/600x400/4B2E83/FFFFFF?text=${encodeURIComponent(productData.title || `Product ${index + 1}`)}`,
+                thumbnail: url || `https://via.placeholder.com/150x150/4B2E83/FFFFFF?text=${encodeURIComponent(productData.title || `Product ${index + 1}`)}`,
+                alt: productData.title ? `${productData.title} - Image ${index + 1}` : `Product Image ${index + 1}`
               })) : [
                 {
                   type: 'image' as const,

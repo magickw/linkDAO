@@ -1,6 +1,6 @@
 import emailService, { CommunityNotificationEmailData } from './emailService';
 import { safeLogger } from '../utils/safeLogger';
-import pushNotificationService, { CommunityPushNotification } from './pushNotificationService';
+import { pushNotificationService } from './pushNotificationService';
 import { db } from '../db';
 import { users, notificationPreferences } from '../db/schema';
 import { eq } from 'drizzle-orm';
@@ -78,7 +78,7 @@ export class CommunityNotificationService {
       }
 
       // Send push notification
-      if (preferences.push && pushNotificationService.isEnabled()) {
+      if (preferences.push) {
         await this.sendPushNotification(payload);
       }
 
@@ -172,7 +172,7 @@ export class CommunityNotificationService {
    */
   private async sendPushNotification(payload: CommunityNotificationPayload): Promise<void> {
     try {
-      const pushNotification: CommunityPushNotification = {
+      const pushNotification = {
         title: payload.title,
         body: payload.message,
         actionUrl: payload.actionUrl,
@@ -185,9 +185,16 @@ export class CommunityNotificationService {
         },
       };
 
-      await pushNotificationService.sendCommunityNotification(
+      // Note: sendCommunityNotification method needs to be implemented in pushNotificationService
+      // For now, using generic sendNotification
+      await pushNotificationService.sendNotification(
         payload.userAddress,
-        pushNotification
+        {
+          type: this.mapToPushNotificationType(payload.type),
+          title: pushNotification.title,
+          message: pushNotification.body,
+          data: pushNotification.data
+        }
       );
     } catch (error) {
       safeLogger.error('[CommunityNotification] Error sending push notification:', error);

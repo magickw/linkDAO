@@ -102,15 +102,16 @@ function emitMemoryOptimizationEvent(eventType: string): void {
   console.log(`📡 Emitting memory optimization event: ${eventType}`);
   
   // Emit events that other services can listen to
-  process.emit('memory:optimization' as any, { type: eventType, timestamp: Date.now() });
+  // Using 'as any' to bypass strict typing for custom events
+  (process as any).emit('memory:optimization', eventType, Date.now());
   
   // Specific events for different optimization types
   switch (eventType) {
     case 'warning':
-      process.emit('memory:cleanup' as any);
+      (process as any).emit('memory:cleanup');
       break;
     case 'critical':
-      process.emit('memory:emergency' as any);
+      (process as any).emit('memory:emergency');
       break;
   }
 }
@@ -171,7 +172,7 @@ function applyMemoryOptimization(level: 'normal' | 'warning' | 'critical'): void
         const currentUsage = getMemoryUsage();
         if (currentUsage.percentage > MEMORY_THRESHOLD_CRITICAL) {
           console.error('🚨 MEMORY STILL CRITICAL - PROCESS RESTART RECOMMENDED');
-          process.emit('memory:restart_needed' as any);
+          (process as any).emit('memory:restart_needed');
         }
       }, 5000);
       break;
@@ -216,7 +217,7 @@ function startMonitoring(): void {
   }, CHECK_INTERVAL);
   
   // Also check on low memory events
-  process.on('memory:low' as any, () => {
+  (process as any).on('memory:low', () => {
     console.log('📡 Received low memory event, checking memory usage...');
     checkMemoryUsage();
   });

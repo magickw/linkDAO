@@ -106,7 +106,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   onOrderComplete
 }) => {
   const [quantity, setQuantity] = useState(1);
-  const [selectedImage, setSelectedImage] = useState(product.media[0]?.url || '');
+  const [selectedImage, setSelectedImage] = useState(product.media && product.media.length > 0 ? product.media[0].url : '');
   const [isBuying, setIsBuying] = useState(false);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const router = useRouter();
@@ -169,38 +169,40 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
           <div className="w-full lg:w-1/2">
             <GlassPanel variant="secondary" className="p-4 mb-4">
               <img
-                src={selectedImage}
-                alt={product.title}
+                src={selectedImage || `https://via.placeholder.com/600x400/4B2E83/FFFFFF?text=${encodeURIComponent(product.title || 'Product')}`}
+                alt={product.title || 'Product'}
                 className="w-full h-96 object-contain"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.onerror = null;
-                  target.src = `https://via.placeholder.com/600x400/4B2E83/FFFFFF?text=${encodeURIComponent(product.title)}`;
+                  target.src = `https://via.placeholder.com/600x400/4B2E83/FFFFFF?text=${encodeURIComponent(product.title || 'Product')}`;
                 }}
               />
             </GlassPanel>
 
-            <div className="grid grid-cols-4 gap-2">
-              {product.media.map((media, index) => (
-                <GlassPanel
-                  key={index}
-                  variant="secondary"
-                  className={`p-2 cursor-pointer border-2 ${selectedImage === media.url ? 'border-blue-500' : 'border-transparent'}`}
-                  onClick={() => setSelectedImage(media.url)}
-                >
-                  <img
-                    src={media.thumbnail || media.url}
-                    alt={media.alt || `Product view ${index + 1}`}
-                    className="w-full h-20 object-contain"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.onerror = null;
-                      target.src = `https://via.placeholder.com/150x150/4B2E83/FFFFFF?text=${encodeURIComponent(`Img ${index + 1}`)}`;
-                    }}
-                  />
-                </GlassPanel>
-              ))}
-            </div>
+            {product.media && product.media.length > 0 && (
+              <div className="grid grid-cols-4 gap-2">
+                {product.media.map((media, index) => (
+                  <GlassPanel
+                    key={index}
+                    variant="secondary"
+                    className={`p-2 cursor-pointer border-2 ${selectedImage === media.url ? 'border-blue-500' : 'border-transparent'}`}
+                    onClick={() => setSelectedImage(media.url)}
+                  >
+                    <img
+                      src={media.thumbnail || media.url}
+                      alt={media.alt || `Product view ${index + 1}`}
+                      className="w-full h-20 object-contain"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.onerror = null;
+                        target.src = `https://via.placeholder.com/150x150/4B2E83/FFFFFF?text=${encodeURIComponent(`Img ${index + 1}`)}`;
+                      }}
+                    />
+                  </GlassPanel>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Product Info */}

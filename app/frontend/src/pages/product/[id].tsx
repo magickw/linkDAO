@@ -93,19 +93,20 @@ const ProductPage: React.FC = () => {
                 average: reviewStats.averageRating || productData.seller?.rating || 0,
                 count: reviewStats.totalReviews || 0
               },
-              media: productData.images?.map((url: string) => ({
-                type: 'image' as const,
-                url,
-                thumbnail: url,
-                alt: productData.title
-              })) || [
-                {
+              media: (Array.isArray(productData.images) ? productData.images : []).length > 0 ? 
+                productData.images.map((url: string, index: number) => ({
                   type: 'image' as const,
-                  url: 'https://placehold.co/600x400/667eea/ffffff?text=Product',
-                  thumbnail: 'https://placehold.co/150x150/667eea/ffffff?text=Product',
-                  alt: productData.title
-                }
-              ]
+                  url: url || `https://via.placeholder.com/600x400/667eea/ffffff?text=${encodeURIComponent(productData.title || `Product ${index + 1}`)}`,
+                  thumbnail: url || `https://via.placeholder.com/150x150/667eea/ffffff?text=${encodeURIComponent(productData.title || `Product ${index + 1}`)}`,
+                  alt: productData.title ? `${productData.title} - Image ${index + 1}` : `Product Image ${index + 1}`
+                })) : [
+                  {
+                    type: 'image' as const,
+                    url: `https://via.placeholder.com/600x400/667eea/ffffff?text=${encodeURIComponent(productData.title || 'Product')}`,
+                    thumbnail: `https://via.placeholder.com/150x150/667eea/ffffff?text=${encodeURIComponent(productData.title || 'Product')}`,
+                    alt: productData.title || 'Product'
+                  }
+                ]
             };
             
             setProduct(transformedProduct);
