@@ -6,7 +6,7 @@
 
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import * as schema from "../db/schema";
+import * as schema from "../schema";
 import { sql } from 'drizzle-orm';
 
 // Direct database connection for migration

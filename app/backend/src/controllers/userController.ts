@@ -3,7 +3,7 @@ import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/
 import { safeLogger } from '../utils/safeLogger';
 import { databaseService } from "../services/databaseService";
 import { userProfileService } from "../services/userProfileService";
-import { eq, desc, and, gte, sql } from "drizzle-orm";
+import { eq, desc, and, gte, sql, asc } from "drizzle-orm";
 import { users } from "../db/schema";
 import bcrypt from 'bcryptjs';
 

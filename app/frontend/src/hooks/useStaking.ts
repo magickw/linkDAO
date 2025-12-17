@@ -4,7 +4,8 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAccount, useSigner } from 'wagmi';
+import { useAccount } from 'wagmi';
+import { useEthersSigner } from '@/hooks/useEthersSigner';
 import { 
   stakingService, 
   StakingTier, 
@@ -14,7 +15,7 @@ import {
 
 export const useStaking = () => {
   const { address } = useAccount();
-  const { data: signer } = useSigner();
+  const signer = useEthersSigner();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -296,7 +297,7 @@ export const useRewardPool = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { address } = useAccount();
-  const { data: signer } = useSigner();
+  const signer = useEthersSigner();
 
   const fetchBalance = useCallback(async () => {
     setLoading(true);

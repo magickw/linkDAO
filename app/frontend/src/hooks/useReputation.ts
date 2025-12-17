@@ -4,12 +4,13 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAccount, useSigner } from 'wagmi';
+import { useAccount } from 'wagmi';
+import { useEthersSigner } from '@/hooks/useEthersSigner';
 import { reputationService, Reputation, ReputationAction } from '@/services/contracts/reputationService';
 
 export const useReputation = (userAddress?: string) => {
   const { address: connectedAddress } = useAccount();
-  const { data: signer } = useSigner();
+  const signer = useEthersSigner();
   const [reputation, setReputation] = useState<Reputation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

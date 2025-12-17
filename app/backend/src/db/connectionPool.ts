@@ -10,6 +10,8 @@ interface ConnectionPoolConfig {
   connect_timeout?: number;
   prepare?: boolean;
   debug?: boolean;
+  max_lifetime?: number;
+  transform?: any;
 }
 
 export class DatabaseConnectionPool {

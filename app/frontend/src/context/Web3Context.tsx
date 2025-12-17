@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useAccount, useConnect, useDisconnect, useSigner } from 'wagmi';
+import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import { useEthersSigner } from '@/hooks/useEthersSigner';
 import { hasInjectedProvider, requestWalletConnection, onAccountsChanged, onChainChanged } from '@/utils/walletConnector';
 
 interface Web3ContextType {
@@ -21,7 +22,7 @@ interface Web3ProviderProps {
 
 export function Web3Provider({ children }: Web3ProviderProps) {
   const { address, isConnected, connector } = useAccount();
-  const { data: signer } = useSigner();
+  const signer = useEthersSigner();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
 

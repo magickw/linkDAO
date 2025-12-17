@@ -6,6 +6,7 @@ import { refundPaymentService } from '../services/refundPaymentService';
 import { returnFraudDetectionService } from '../services/returnFraudDetectionService';
 import { returnLabelService } from '../services/returnLabelService';
 import { returnAnalyticsService } from '../services/returnAnalyticsService';
+import { returnInspectionService } from '../services/returnInspectionService';
 
 const router = Router();
 

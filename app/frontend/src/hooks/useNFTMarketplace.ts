@@ -4,12 +4,13 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAccount, useSigner } from 'wagmi';
+import { useAccount } from 'wagmi';
+import { useEthersSigner } from '@/hooks/useEthersSigner';
 import { nftMarketplaceService, NFTListing, CreateListingParams } from '@/services/contracts/nftMarketplaceService';
 
 export const useNFTMarketplace = () => {
   const { address } = useAccount();
-  const { data: signer } = useSigner();
+  const signer = useEthersSigner();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

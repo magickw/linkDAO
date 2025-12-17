@@ -31,7 +31,8 @@ import {
   BellOff,
   Loader2
 } from 'lucide-react';
-import { useAccount, useSigner } from 'wagmi';
+import { useAccount } from 'wagmi';
+import { useEthersSigner } from '@/hooks/useEthersSigner';
 import { GlassPanel, Button } from '../../design-system';
 import { useToast } from '@/context/ToastContext';
 import { MessageItem } from './MessageItem';
@@ -67,7 +68,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   initialConversationId
 }) => {
   const { address, isConnected } = useAccount();
-  const { data: signer } = useSigner();
+  const signer = useEthersSigner();
   // Local UI state (kept for selection and UI flags). Actual data comes from useChatHistory.
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(
