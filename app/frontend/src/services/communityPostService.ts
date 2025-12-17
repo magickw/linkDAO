@@ -9,7 +9,7 @@ const BACKEND_API_BASE_URL = ENV_CONFIG.BACKEND_URL;
 export class CommunityPostService {
   static async createPost(communityId: string, data: CreatePostInput): Promise<Post> {
     try {
-      const authHeaders = enhancedAuthService.getAuthHeaders();
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts`, {
         method: 'POST',
         headers: {
@@ -59,7 +59,7 @@ export class CommunityPostService {
   static async getPostStats(postId: string): Promise<{ commentCount: number }> {
     try {
       // Use the same approach as getPostCommentCount to get the comment count
-      const authHeaders = enhancedAuthService.getAuthHeaders();
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/comments?limit=1`, {
         method: 'GET',
         headers: {
@@ -100,7 +100,7 @@ export class CommunityPostService {
         const params = new URLSearchParams();
         if (options?.limit) params.append('limit', options.limit.toString());
 
-        let authHeaders = enhancedAuthService.getAuthHeaders();
+        let authHeaders = await enhancedAuthService.getAuthHeaders();
 
         // Add development token if needed
         if (!authHeaders['Authorization'] && ENV_CONFIG.IS_DEVELOPMENT) {
@@ -154,7 +154,7 @@ export class CommunityPostService {
 
   static async getPost(communityId: string, postId: string): Promise<Post | null> {
     try {
-      const authHeaders = enhancedAuthService.getAuthHeaders();
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts/${postId}`, {
         method: 'GET',
         headers: {
@@ -181,7 +181,7 @@ export class CommunityPostService {
 
   static async updatePost(communityId: string, postId: string, data: UpdatePostInput): Promise<Post> {
     try {
-      const authHeaders = enhancedAuthService.getAuthHeaders();
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts/${postId}`, {
         method: 'PUT',
         headers: {
@@ -206,7 +206,7 @@ export class CommunityPostService {
 
   static async deletePost(communityId: string, postId: string): Promise<boolean> {
     try {
-      const authHeaders = enhancedAuthService.getAuthHeaders();
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts/${postId}`, {
         method: 'DELETE',
         headers: {
@@ -240,7 +240,7 @@ export class CommunityPostService {
         sort
       });
 
-      const authHeaders = enhancedAuthService.getAuthHeaders();
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts?${params}`, {
         method: 'GET',
         headers: {
@@ -280,7 +280,7 @@ export class CommunityPostService {
         timeRange
       });
 
-      const authHeaders = enhancedAuthService.getAuthHeaders();
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/feed?${params}`, {
         method: 'GET',
         headers: {
@@ -309,7 +309,7 @@ export class CommunityPostService {
     tokenAmount: number = 0
   ): Promise<any> {
     try {
-      const authHeaders = enhancedAuthService.getAuthHeaders();
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts/${postId}/react`, {
         method: 'POST',
         headers: {
@@ -343,7 +343,7 @@ export class CommunityPostService {
     message?: string
   ): Promise<any> {
     try {
-      const authHeaders = enhancedAuthService.getAuthHeaders();
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts/${postId}/tip`, {
         method: 'POST',
         headers: {
@@ -372,7 +372,7 @@ export class CommunityPostService {
 
   static async createComment(data: CreateCommentInput): Promise<Comment> {
     try {
-      let authHeaders = enhancedAuthService.getAuthHeaders();
+      let authHeaders = await enhancedAuthService.getAuthHeaders();
       let hasAuthToken = authHeaders['Authorization'] && authHeaders['Authorization'] !== 'Bearer null';
 
       // Debug logging
@@ -437,7 +437,7 @@ export class CommunityPostService {
             if (refreshResult.success) {
               console.log('Token refresh successful, retrying request...');
               // Get new auth headers after refresh
-              const newAuthHeaders = enhancedAuthService.getAuthHeaders();
+              const newAuthHeaders = await enhancedAuthService.getAuthHeaders();
               
               // Retry the request with fresh token
               const retryResponse = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${data.postId}/comments`, {
@@ -516,7 +516,7 @@ export class CommunityPostService {
 
   static async deleteComment(commentId: string, author: string): Promise<boolean> {
     try {
-      const authHeaders = enhancedAuthService.getAuthHeaders();
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/comments/${commentId}`, {
         method: 'DELETE',
         headers: {
@@ -553,7 +553,7 @@ export class CommunityPostService {
       }
       if (options?.limit) params.append('limit', options.limit.toString());
 
-      const authHeaders = enhancedAuthService.getAuthHeaders();
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       const response = await fetch(
         `${BACKEND_API_BASE_URL}/api/feed/${postId}/comments?${params}`,
         {
@@ -603,7 +603,7 @@ export class CommunityPostService {
 
   static async getPinnedPosts(communityId: string): Promise<CommunityPost[]> {
     try {
-      const authHeaders = enhancedAuthService.getAuthHeaders();
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       const response = await fetch(
         `${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts?pinned=true`,
         {
@@ -630,7 +630,7 @@ export class CommunityPostService {
 
   static async pinPost(postId: string, sortOrder?: number): Promise<CommunityPost> {
     try {
-      const authHeaders = enhancedAuthService.getAuthHeaders();
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       const response = await fetch(
         `${BACKEND_API_BASE_URL}/api/posts/${postId}/pin`,
         {
@@ -658,7 +658,7 @@ export class CommunityPostService {
 
   static async unpinPost(postId: string): Promise<void> {
     try {
-      const authHeaders = enhancedAuthService.getAuthHeaders();
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       const response = await fetch(
         `${BACKEND_API_BASE_URL}/api/posts/${postId}/unpin`,
         {
@@ -682,7 +682,7 @@ export class CommunityPostService {
 
   static async reorderPinnedPosts(communityId: string, postIds: string[]): Promise<void> {
     try {
-      const authHeaders = enhancedAuthService.getAuthHeaders();
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       const response = await fetch(
         `${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts/reorder`,
         {
@@ -708,7 +708,7 @@ export class CommunityPostService {
   static async getPostCommentCount(postId: string): Promise<number> {
     try {
       // Use the same endpoint as getPostComments but with a small limit to just get the count
-      const authHeaders = enhancedAuthService.getAuthHeaders();
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/comments?limit=1`, {
         method: 'GET',
         headers: {

@@ -1,13 +1,13 @@
 import { db } from '../db';
 import { 
-  communityReports, 
+  contentReports as communityReports,  // Using contentReports as communityReports
   users, 
   userReputationScores, 
   reputationChangeEvents,
   workflowInstances,
   workflowStepExecutions
 } from '../db/schema';
-import { eq, and, or, desc, asc, sql, inArray, gt, count } from 'drizzle-orm';
+import { eq, and, or, desc, asc, sql, inArray, gt, count, between } from 'drizzle-orm';
 import { logger } from '../utils/logger';
 import { EventEmitter } from 'events';
 import { advancedReputationService } from './advancedReputationService';

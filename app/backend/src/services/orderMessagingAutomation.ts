@@ -1,6 +1,5 @@
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
-import { db } from '../db';
 import { 
   orders, 
   listings, 

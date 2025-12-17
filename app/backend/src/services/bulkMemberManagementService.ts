@@ -1,7 +1,7 @@
 import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
 import { communityMembers, communities } from '../db/schema';
-import { eq, and, or, inArray, sql } from 'drizzle-orm';
+import { eq, and, or, inArray, sql, count } from 'drizzle-orm';
 
 interface BulkMemberOperation {
   type: 'add' | 'remove' | 'update_role' | 'update_reputation' | 'ban' | 'unban';

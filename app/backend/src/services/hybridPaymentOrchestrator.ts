@@ -70,7 +70,7 @@ export class HybridPaymentOrchestrator {
     this.paymentValidationService = new PaymentValidationService();
     this.fiatPaymentService = new EnhancedFiatPaymentService();
     this.escrowService = new EnhancedEscrowService(
-      process.env.RPC_URL || 'https://eth-sepolia.g.alchemy.com/v2/5qxkwSO4d_0qE4wjQPIrp',
+      process.env.RPC_URL || 'https://sepolia.drpc.org',
       process.env.ENHANCED_ESCROW_CONTRACT_ADDRESS || '',
       process.env.MARKETPLACE_CONTRACT_ADDRESS || ''
     );

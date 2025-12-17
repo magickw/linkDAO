@@ -1,7 +1,7 @@
 import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
 import { users, communityMembers, communities, posts } from '../db/schema';
-import { eq, and, inArray, sql } from 'drizzle-orm';
+import { eq, and, inArray, sql, ne } from 'drizzle-orm';
 
 interface PushNotificationData {
   title: string;

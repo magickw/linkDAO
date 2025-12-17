@@ -13,7 +13,7 @@ if (!projectId) {
 const getRpcUrl = (chainId: number): string => {
   switch (chainId) {
     case mainnet.id:
-      return process.env.NEXT_PUBLIC_MAINNET_RPC_URL || 'https://eth-mainnet.g.alchemy.com/v2/5qxkwSO4d_0qE4wjQPIrp';
+      return process.env.NEXT_PUBLIC_MAINNET_RPC_URL || 'https://eth.llamarpc.com';
     case base.id:
       return process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org';
     case baseSepolia.id:
@@ -23,9 +23,9 @@ const getRpcUrl = (chainId: number): string => {
     case arbitrum.id:
       return process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL || 'https://arb1.arbitrum.io/rpc';
     case sepolia.id:
-      return process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || 'https://rpc.sepolia.org';
+      return process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || 'https://sepolia.drpc.org';
     default:
-      return 'https://eth-mainnet.g.alchemy.com/v2/demo';
+      return 'https://eth.llamarpc.com';
   }
 };
 

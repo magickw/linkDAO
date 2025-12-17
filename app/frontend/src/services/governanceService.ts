@@ -92,9 +92,13 @@ export class GovernanceService {
         this.contract = new ethers.Contract(this.governanceAddress, GOVERNANCE_ABI, provider);
       } else {
         // Fallback to JSON-RPC provider
-        const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://eth-sepolia.g.alchemy.com/v2/demo';
-        this.provider = new ethers.JsonRpcProvider(rpcUrl);
-        this.contract = new ethers.Contract(this.governanceAddress, GOVERNANCE_ABI, this.provider);
+        const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://sepolia.drpc.org';
+            try {
+              this.provider = new ethers.JsonRpcProvider(rpcUrl, 11155111);
+            } catch (error) {
+              console.warn('Failed to initialize governance provider:', error);
+              this.provider = null;
+            }        this.contract = new ethers.Contract(this.governanceAddress, GOVERNANCE_ABI, this.provider);
       }
     } catch (error) {
       console.error('Failed to initialize governance contract:', error);

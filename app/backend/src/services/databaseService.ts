@@ -794,7 +794,8 @@ export class DatabaseService {
           }
 
           // Create inventory hold record for legacy listings
-          await tx.insert(schema.inventoryHolds).values({
+          // TODO: Re-enable when inventoryHolds table is added to schema
+          /* await tx.insert(schema.inventoryHolds).values({
             productId: listingId,
             quantity: 1,
             heldBy: buyerId,
@@ -808,13 +809,13 @@ export class DatabaseService {
               paymentToken,
               source: 'legacy_listing'
             })
-          });
+          }); */
 
           // Decrement legacy listing
           await tx.update(schema.listings)
             .set({ 
-              quantity: sql`${schema.listings.quantity} - 1`,
-              inventoryHolds: sql`${schema.listings.inventoryHolds} + 1`
+              quantity: sql`${schema.listings.quantity} - 1`
+              // inventoryHolds: sql`${schema.listings.inventoryHolds} + 1`  // TODO: Add field to schema
             })
             .where(eq(schema.listings.id, listingId));
         } else {
