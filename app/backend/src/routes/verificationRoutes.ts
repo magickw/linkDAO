@@ -7,7 +7,7 @@ import rateLimit from 'express-rate-limit';
 // Rate limiting for verification endpoints
 const verificationRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  maxRequests: 20, // 20 requests per minute
+  max: 20, // 20 requests per minute
   message: {
     success: false,
     error: {

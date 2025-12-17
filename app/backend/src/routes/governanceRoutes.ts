@@ -6,7 +6,7 @@ import rateLimit from 'express-rate-limit';
 // Rate limiting for governance endpoints
 const governanceRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  maxRequests: 200, // 200 requests per minute
+  max: 200, // 200 requests per minute
   message: {
     success: false,
     error: {

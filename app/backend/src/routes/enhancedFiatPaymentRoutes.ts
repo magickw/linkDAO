@@ -11,7 +11,7 @@ const enhancedFiatPaymentController = new EnhancedFiatPaymentController();
 // Apply rate limiting to all fiat payment routes
 router.use(rateLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  maxRequests: 100, // limit each IP to 100 requests per windowMs
+  max: 100, // limit each IP to 100 requests per windowMs
   message: 'Too many fiat payment requests, please try again later'
 }));
 
@@ -58,7 +58,7 @@ router.post('/process', csrfProtection,
       .withMessage('Target chain must be a positive integer'),
     body('convertToCrypto.slippageTolerance')
       .optional()
-      .isFloat({ min: 0.1, maxRequests: 10 })
+      .isFloat({ min: 0.1, max: 10 })
       .withMessage('Slippage tolerance must be between 0.1 and 10'),
     body('convertToCrypto.recipientAddress')
       .optional()

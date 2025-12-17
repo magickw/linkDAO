@@ -97,7 +97,7 @@ router.get('/listings',
       status: { type: 'string', optional: true, enum: ['active', 'inactive', 'draft', 'sold_out', 'suspended'] },
       category: { type: 'string', optional: true },
       page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, maxRequests: 100 },
+      limit: { type: 'number', optional: true, min: 1, max: 100 },
       sortBy: { type: 'string', optional: true, enum: ['created_at', 'updated_at', 'price', 'title'] },
       sortOrder: { type: 'string', optional: true, enum: ['asc', 'desc'] }
     }
@@ -111,7 +111,7 @@ router.get('/orders',
     query: {
       status: { type: 'string', optional: true, enum: ['pending', 'shipped', 'delivered', 'disputed', 'completed', 'cancelled'] },
       page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, maxRequests: 100 },
+      limit: { type: 'number', optional: true, min: 1, max: 100 },
       sortBy: { type: 'string', optional: true, enum: ['created_at', 'updated_at', 'amount'] },
       sortOrder: { type: 'string', optional: true, enum: ['asc', 'desc'] }
     }

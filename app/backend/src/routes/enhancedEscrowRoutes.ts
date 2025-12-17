@@ -11,7 +11,7 @@ const enhancedEscrowController = new EnhancedEscrowController();
 // Apply rate limiting to all escrow routes
 router.use(rateLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  maxRequests: 50, // limit each IP to 50 requests per windowMs
+  max: 50, // limit each IP to 50 requests per windowMs
   message: 'Too many escrow requests, please try again later'
 }));
 

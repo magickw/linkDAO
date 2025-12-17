@@ -148,6 +148,15 @@ const DocsPage: NextPage = () => {
           readTime: '13 min',
           lastUpdated: '2025-10-28',
           tags: ['reputation', 'trust']
+        },
+        {
+          id: 'escrow-guide',
+          title: 'Enhanced Escrow Guide',
+          description: 'Complete guide to using LinkDAO\'s enhanced escrow system',
+          path: '/docs/escrow-guide',
+          readTime: '20 min',
+          lastUpdated: '2025-12-16',
+          tags: ['escrow', 'security', 'transactions']
         }
       ]
     },

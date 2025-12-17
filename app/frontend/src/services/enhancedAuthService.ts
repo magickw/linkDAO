@@ -591,15 +591,17 @@ class EnhancedAuthService {
     }
   }
 
-  /**
+/**
    * Refresh authentication token
    */
   async refreshToken(): Promise<AuthResponse> {
     if (!this.sessionData?.refreshToken) {
-      return { success: false, error: 'No refresh token available' };
+      console.error('No refresh token available in session data');
+      return { success: false, error: 'No refresh token available. Please log in again.' };
     }
 
     try {
+      console.log('Attempting to refresh authentication token...');
       // Use global fetch wrapper with skipAuth to avoid circular dependency
       const { globalFetch } = await import('./globalFetchWrapper');
       
@@ -612,37 +614,44 @@ class EnhancedAuthService {
       });
 
       if (!response.success) {
+        console.error('Token refresh API failed:', response.error);
+        // Clear invalid session data
+        this.clearStoredSession();
         throw new Error(response.error || 'Token refresh failed');
       }
 
       // Handle both direct token response and nested data response
-      const token = (response.data as any)?.token || (response.data as any)?.data?.token;
+      const token = (response.data as any)?.sessionToken || (response.data as any)?.data?.sessionToken || (response.data as any)?.token || (response.data as any)?.data?.token;
       const refreshToken = (response.data as any)?.refreshToken || (response.data as any)?.data?.refreshToken || undefined;
 
       if (!token) {
+        console.error('No token received in refresh response');
+        this.clearStoredSession();
         throw new Error('No token received in refresh response');
       }
 
       // Update session with new token
       this.storeSession(token, this.sessionData!.user, refreshToken);
+      console.log('Token refresh successful');
 
       return {
         success: true,
         token,
-        user: this.sessionData!.user
+        user: this.sessionData!.user,
+        refreshToken
       };
     } catch (error) {
       console.error('Token refresh failed:', error);
-      // If refresh fails, extend current session temporarily
-      if (this.sessionData) {
-        this.sessionData.expiresAt = Date.now() + (30 * 60 * 1000); // Extend by 30 minutes
-        return {
-          success: true,
-          token: this.token!,
-          user: this.sessionData.user
-        };
-      }
-      throw new Error('No session to extend');
+      // Clear the invalid session to force re-authentication
+      this.clearStoredSession();
+      
+      // Don't extend session temporarily - this was causing issues
+      // Instead, force the user to re-authenticate
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Token refresh failed. Please log in again.',
+        retryable: false
+      };
     }
   }
 

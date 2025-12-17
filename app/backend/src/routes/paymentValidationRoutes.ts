@@ -11,7 +11,7 @@ const paymentValidationController = new PaymentValidationController();
 // Apply rate limiting to all payment validation routes
 router.use(rateLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  maxRequests: 100, // limit each IP to 100 requests per windowMs
+  max: 100, // limit each IP to 100 requests per windowMs
   message: 'Too many payment validation requests, please try again later'
 }));
 

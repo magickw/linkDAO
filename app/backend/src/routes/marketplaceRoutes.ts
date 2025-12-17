@@ -9,7 +9,7 @@ import { safeLogger } from '../utils/safeLogger';
 // Rate limiting for marketplace endpoints
 const marketplaceRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  maxRequests: 200, // 200 requests per minute
+  max: 200, // 200 requests per minute
   message: {
     success: false,
     error: {
@@ -46,7 +46,7 @@ router.get('/sellers/:id/listings',
     },
     query: {
       page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, maxRequests: 100 }
+      limit: { type: 'number', optional: true, min: 1, max: 100 }
     }
   }),
   marketplaceController.getSellerListings
@@ -60,7 +60,7 @@ router.get('/search',
       q: { type: 'string', required: true, minLength: 1 },
       type: { type: 'string', optional: true, enum: ['products', 'sellers', 'all'] },
       page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, maxRequests: 100 },
+      limit: { type: 'number', optional: true, min: 1, max: 100 },
       category: { type: 'string', optional: true },
       minPrice: { type: 'number', optional: true, min: 0 },
       maxPrice: { type: 'number', optional: true, min: 0 }

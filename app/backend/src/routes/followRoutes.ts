@@ -6,7 +6,7 @@ import rateLimit from 'express-rate-limit';
 // Rate limiting for follow endpoints
 const followRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  maxRequests: 100, // 100 requests per minute
+  max: 100, // 100 requests per minute
   message: {
     success: false,
     error: {

@@ -14,7 +14,7 @@ router.use(requestLoggingMiddleware);
 // Rate limiting for reputation endpoints
 const reputationRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  maxRequests: 300, // 300 requests per minute for general reputation queries
+  max: 300, // 300 requests per minute for general reputation queries
   message: {
     success: false,
     error: {
@@ -26,7 +26,7 @@ const reputationRateLimit = rateLimit({
 
 const reputationUpdateRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  maxRequests: 20, // 20 updates per minute
+  max: 20, // 20 updates per minute
   message: {
     success: false,
     error: {

@@ -12,13 +12,13 @@ const orderController = new OrderController();
 // Rate limiting for order operations
 const orderRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  maxRequests: 100, // limit each IP to 100 requests per windowMs
+  max: 100, // limit each IP to 100 requests per windowMs
   message: 'Too many order requests from this IP, please try again later.'
 });
 
 const createOrderRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  maxRequests: 5, // limit each IP to 5 order creations per minute
+  max: 5, // limit each IP to 5 order creations per minute
   message: 'Too many order creation attempts, please try again later.'
 });
 

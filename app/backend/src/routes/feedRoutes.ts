@@ -26,7 +26,7 @@ router.get('/',
   validateRequest({
     query: {
       page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, maxRequests: 50 },
+      limit: { type: 'number', optional: true, min: 1, max: 50 },
       sort: { type: 'string', optional: true, enum: ['hot', 'new', 'top', 'following', 'rising'] },
       communities: { type: 'array', optional: true },
       timeRange: { type: 'string', optional: true, enum: ['hour', 'day', 'week', 'month', 'all'] },
@@ -41,7 +41,7 @@ router.get('/trending',
   validateRequest({
     query: {
       page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, maxRequests: 50 },
+      limit: { type: 'number', optional: true, min: 1, max: 50 },
       timeRange: { type: 'string', optional: true, enum: ['hour', 'day', 'week'] }
     }
   }),
@@ -182,7 +182,7 @@ router.get('/:id/comments',
     },
     query: {
       page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, maxRequests: 100 },
+      limit: { type: 'number', optional: true, min: 1, max: 100 },
       sortBy: { type: 'string', optional: true, enum: ['best', 'new', 'top', 'controversial'] }
     }
   }),
@@ -226,7 +226,7 @@ router.get('/community/:communityId/leaderboard',
     },
     query: {
       metric: { type: 'string', required: true, enum: ['posts', 'engagement', 'tips_received', 'tips_given'] },
-      limit: { type: 'number', optional: true, min: 1, maxRequests: 50 }
+      limit: { type: 'number', optional: true, min: 1, max: 50 }
     }
   }),
   feedController.getCommunityLeaderboard

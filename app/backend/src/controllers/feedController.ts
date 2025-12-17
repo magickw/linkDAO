@@ -398,12 +398,23 @@ export class FeedController {
     try {
       const userAddress = req.user?.walletAddress;
       if (!userAddress) {
-        res.status(401).json(apiResponse.error('Authentication required', 401));
+        res.status(401).json(apiResponse.error('Authentication required. Please log in again.', 401));
         return;
       }
 
       const { id } = req.params;
       const { content, parentCommentId } = req.body;
+
+      // Validate required fields
+      if (!content || content.trim() === '') {
+        res.status(400).json(apiResponse.error('Comment content is required', 400));
+        return;
+      }
+
+      if (!id) {
+        res.status(400).json(apiResponse.error('Post ID is required', 400));
+        return;
+      }
 
       const comment = await feedService.addComment({
         postId: id,
@@ -415,7 +426,20 @@ export class FeedController {
       res.status(201).json(apiResponse.success(comment, 'Comment added successfully'));
     } catch (error) {
       safeLogger.error('Error adding comment:', error);
-      res.status(500).json(apiResponse.error('Failed to add comment'));
+      
+      // Handle specific error cases
+      if (error instanceof Error) {
+        if (error.message === 'User not found') {
+          res.status(404).json(apiResponse.error('User not found. Please ensure your wallet is properly registered.', 404));
+          return;
+        }
+        if (error.message === 'Post not found') {
+          res.status(404).json(apiResponse.error('Post not found', 404));
+          return;
+        }
+      }
+      
+      res.status(500).json(apiResponse.error('Failed to add comment. Please try again later.'));
     }
   }
 

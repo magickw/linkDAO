@@ -432,33 +432,56 @@ export class CommunityPostService {
         if (response.status === 401) {
           try {
             console.log('Attempting to refresh authentication...');
-            await enhancedAuthService.refreshToken();
+            const refreshResult = await enhancedAuthService.refreshToken();
             
-            // Get new auth headers after refresh
-            const newAuthHeaders = enhancedAuthService.getAuthHeaders();
-            
-            // Retry the request with fresh token
-            const retryResponse = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${data.postId}/comments`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                ...newAuthHeaders
-              },
-              body: JSON.stringify({
-                author: data.author,
-                content: data.content,
-                parentCommentId: data.parentId,
-                media: data.media
-              })
-            });
+            if (refreshResult.success) {
+              console.log('Token refresh successful, retrying request...');
+              // Get new auth headers after refresh
+              const newAuthHeaders = enhancedAuthService.getAuthHeaders();
+              
+              // Retry the request with fresh token
+              const retryResponse = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${data.postId}/comments`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...newAuthHeaders
+                },
+                body: JSON.stringify({
+                  author: data.author,
+                  content: data.content,
+                  parentCommentId: data.parentId,
+                  media: data.media
+                })
+              });
 
-            if (retryResponse.ok) {
-              const result = await retryResponse.json();
-              return result.data || result;
+              if (retryResponse.ok) {
+                const result = await retryResponse.json();
+                return result.data || result;
+              } else {
+                // If retry also fails with 401, the refresh didn't work
+                if (retryResponse.status === 401) {
+                  throw new Error('Authentication failed. Please refresh the page and log in again.');
+                }
+              }
+            } else {
+              console.error('Token refresh failed:', refreshResult.error);
+              throw new Error('Authentication refresh failed. Please log in again.');
             }
           } catch (refreshError) {
             console.error('Token refresh failed:', refreshError);
+            // Clear the invalid session
+            enhancedAuthService.clearStoredSession();
+            throw new Error('Authentication failed. Please refresh the page and log in again.');
           }
+        }
+
+        // Handle specific error codes
+        if (response.status === 404) {
+          throw new Error('Post not found or has been deleted.');
+        }
+        
+        if (response.status === 403) {
+          throw new Error('You do not have permission to comment on this post.');
         }
 
         // Use global fetch wrapper as final fallback
@@ -478,7 +501,8 @@ export class CommunityPostService {
           return fallbackResponse.data;
         } catch (fallbackError) {
           console.error('Fallback request also failed:', fallbackError);
-          throw new Error(error.error || error.message || `Failed to create comment: ${response.statusText}`);
+          const errorMessage = error.error?.message || error.message || `Failed to create comment: ${response.statusText}`;
+          throw new Error(errorMessage);
         }
       }
 

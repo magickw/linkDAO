@@ -80,7 +80,7 @@ router.get('/metrics/performance', asyncHandler(async (req, res) => {
         p50: metrics.responseTime.p95 * 0.8, // Approximate
         p95: metrics.responseTime.p95,
         p99: metrics.responseTime.p99,
-        max: metrics.responseTime.p99 * 1.5 // Approximate
+        maxResponseTime: metrics.responseTime.p99 * 1.5 // Approximate
       },
       throughput: {
         requestsPerSecond: metrics.throughput,

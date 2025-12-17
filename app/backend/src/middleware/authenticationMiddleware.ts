@@ -37,12 +37,24 @@ export class AuthenticationMiddleware {
           success: false,
           error: {
             code: 'MISSING_TOKEN',
-            message: 'Authentication token is required',
+            message: 'Authentication token is required. Please log in again.',
           },
         });
       }
 
       const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+      
+      // Check if token format is valid
+      if (!token || token.length < 10) {
+        return res.status(401).json({
+          success: false,
+          error: {
+            code: 'INVALID_TOKEN_FORMAT',
+            message: 'Invalid authentication token format. Please log in again.',
+          },
+        });
+      }
+
       const sessionInfo = await this.authService.validateSession(token);
 
       if (!sessionInfo) {
@@ -50,7 +62,18 @@ export class AuthenticationMiddleware {
           success: false,
           error: {
             code: 'INVALID_TOKEN',
-            message: 'Invalid or expired authentication token',
+            message: 'Your session has expired. Please refresh the page and log in again.',
+          },
+        });
+      }
+
+      // Check if user is suspended
+      if (sessionInfo.isSuspended) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: 'ACCOUNT_SUSPENDED',
+            message: 'Your account has been suspended. Please contact support.',
           },
         });
       }
@@ -77,7 +100,7 @@ export class AuthenticationMiddleware {
         success: false,
         error: {
           code: 'AUTH_ERROR',
-          message: 'Authentication service error',
+          message: 'Authentication service is temporarily unavailable. Please try again later.',
         },
       });
     }

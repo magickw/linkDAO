@@ -9,19 +9,19 @@ const router = Router();
 // Rate limiting for different endpoints
 const createAssetLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  maxRequests: 10, // Limit each IP to 10 asset creations per windowMs
+  max: 10, // Limit each IP to 10 asset creations per windowMs
   message: 'Too many asset creation attempts, please try again later'
 });
 
 const accessAssetLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  maxRequests: 100, // Limit each IP to 100 asset access attempts per minute
+  max: 100, // Limit each IP to 100 asset access attempts per minute
   message: 'Too many asset access attempts, please try again later'
 });
 
 const dmcaLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  maxRequests: 5, // Limit each IP to 5 DMCA requests per hour
+  max: 5, // Limit each IP to 5 DMCA requests per hour
   message: 'Too many DMCA requests, please try again later'
 });
 

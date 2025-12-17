@@ -7,7 +7,7 @@ import rateLimit from 'express-rate-limit';
 // Rate limiting for report template library endpoints
 const reportTemplateRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  maxRequests: 100, // 100 requests per minute
+  max: 100, // 100 requests per minute
   message: {
     success: false,
     error: {
