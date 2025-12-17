@@ -1394,7 +1394,7 @@ export class CommunityController {
       const { tierId, paymentTxHash, metadata } = req.body;
 
       const subscription = await communityService.subscribeUser({
-        userId: userAddress,
+        userAddress,
         communityId,
         tierId,
         paymentTxHash,

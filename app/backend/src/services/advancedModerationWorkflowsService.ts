@@ -48,6 +48,8 @@ export interface ModerationCase {
   decision?: string; // Moderation decision details
   reasonCode?: string; // Reason code for moderation action
   confidence?: number; // Confidence score for automated decisions
+  vendorScores?: Record<string, number>; // Scores from different moderation vendors
+  evidenceCid?: string; // IPFS CID for evidence
   riskScore: number;
   currentStage: string;
   assignedModerators: string[];

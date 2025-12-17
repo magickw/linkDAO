@@ -271,7 +271,7 @@ class AutomatedTierUpgradeService {
       const currentTierLevel = this.getTierLevel(sellerData.tier || 'bronze');
       
       // Calculate seller metrics
-      const metrics = await this.calculateSellerMetrics(sellerData.id);
+      const metrics = await this.calculateSellerMetrics(String(sellerData.id));
       
       // Find the highest tier the seller qualifies for
       let qualifiedTier = this.tierCriteria[0]; // Default to bronze
@@ -301,7 +301,7 @@ class AutomatedTierUpgradeService {
 
       // Process upgrade if eligible
       if (upgradeEligible) {
-        await this.processAutomatedUpgrade(sellerData.id, walletAddress, sellerData.tier || 'bronze', qualifiedTier);
+        await this.processAutomatedUpgrade(String(sellerData.id), walletAddress, sellerData.tier || 'bronze', qualifiedTier);
         evaluationResult.upgradeDate = new Date();
       }
 

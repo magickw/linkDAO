@@ -909,6 +909,7 @@ export const disputes = pgTable("disputes", {
   reason: text("reason"),
   status: varchar("status", { length: 32 }).default("open"), // 'open', 'in_review', 'resolved', 'escalated'
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
   resolvedAt: timestamp("resolved_at"),
   resolution: text("resolution"), // Description of resolution
   // Evidence tracking
@@ -1271,6 +1272,7 @@ export const communityMembers = pgTable("community_members", {
   updatedAt: timestamp("updated_at").defaultNow(),
   bannedAt: timestamp("banned_at"),
   banExpiry: timestamp("ban_expiry"), // When the ban expires
+  banReason: text("ban_reason"), // Reason for the ban
 }, (t) => ({
   pk: primaryKey(t.communityId, t.userAddress),
   communityIdIdx: index("idx_community_members_community_id").on(t.communityId),
@@ -4027,6 +4029,7 @@ export const stakingPositions = pgTable("staking_positions", {
   endDate: timestamp("end_date").notNull(),
   isAutoCompound: boolean("is_auto_compound").default(false).notNull(),
   rewardsEarned: numeric("rewards_earned", { precision: 20, scale: 8 }).default("0").notNull(),
+  accumulatedRewards: numeric("accumulated_rewards", { precision: 20, scale: 8 }).default("0"), // Total accumulated rewards
   lastRewardClaim: timestamp("last_reward_claim"), // Last time rewards were claimed
   status: varchar("status", { length: 20 }).default("active").notNull(),
   contractAddress: varchar("contract_address", { length: 66 }),
@@ -4130,6 +4133,7 @@ export const bridgeTransactions = pgTable("bridge_transactions", {
   estimatedTime: integer("estimated_time"),
   actualTime: integer("actual_time"),
   errorMessage: text("error_message"),
+  validatorCount: integer("validator_count").default(0), // Number of validators for this bridge
   createdAt: timestamp("created_at").defaultNow().notNull(),
   completedAt: timestamp("completed_at"),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -5394,6 +5398,11 @@ export const refundProviderTransactions = pgTable("refund_provider_transactions"
 
   // Webhook tracking
   webhookReceived: boolean("webhook_received").default(false),
+  
+  // Additional tracking fields
+  providerRefundId: varchar("provider_refund_id", { length: 255 }),
+  responsePayload: jsonb("response_payload"),
+  processingTimeMs: integer("processing_time_ms"),
   webhookData: jsonb("webhook_data"),
 
   // Timestamps

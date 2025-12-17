@@ -23,6 +23,7 @@ export interface AuditEvent {
   resourceId?: string;
   oldState?: Record<string, any>;
   newState?: Record<string, any>;
+  details?: string; // Additional details about the event
   metadata: {
     ipAddress?: string;
     userAgent?: string;

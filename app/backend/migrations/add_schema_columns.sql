@@ -67,12 +67,42 @@ ADD COLUMN IF NOT EXISTS metadata JSONB;
 COMMENT ON COLUMN orders.metadata IS 'Additional metadata as JSONB';
 
 -- ============================================================================
--- 4d. Add lastRewardClaim column to staking_positions table
+-- 4d. Add columns to staking_positions table
 -- ============================================================================
 ALTER TABLE staking_positions 
-ADD COLUMN IF NOT EXISTS last_reward_claim TIMESTAMP;
+ADD COLUMN IF NOT EXISTS last_reward_claim TIMESTAMP,
+ADD COLUMN IF NOT EXISTS accumulated_rewards NUMERIC(20,8) DEFAULT 0;
 
 COMMENT ON COLUMN staking_positions.last_reward_claim IS 'Last time rewards were claimed';
+COMMENT ON COLUMN staking_positions.accumulated_rewards IS 'Total accumulated rewards';
+
+-- ============================================================================
+-- 4e. Add banReason column to community_members table
+-- ============================================================================
+ALTER TABLE community_members 
+ADD COLUMN IF NOT EXISTS ban_reason TEXT;
+
+COMMENT ON COLUMN community_members.ban_reason IS 'Reason for the ban';
+
+-- ============================================================================
+-- 4f. Add columns to refund_provider_transactions table
+-- ============================================================================
+ALTER TABLE refund_provider_transactions 
+ADD COLUMN IF NOT EXISTS provider_refund_id VARCHAR(255),
+ADD COLUMN IF NOT EXISTS response_payload JSONB,
+ADD COLUMN IF NOT EXISTS processing_time_ms INTEGER;
+
+COMMENT ON COLUMN refund_provider_transactions.provider_refund_id IS 'Provider-specific refund ID';
+COMMENT ON COLUMN refund_provider_transactions.response_payload IS 'Raw API response';
+COMMENT ON COLUMN refund_provider_transactions.processing_time_ms IS 'Processing time in milliseconds';
+
+-- ============================================================================
+-- 4g. Add updatedAt column to disputes table
+-- ============================================================================
+ALTER TABLE disputes 
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
+
+COMMENT ON COLUMN disputes.updated_at IS 'Last update timestamp';
 
 -- ============================================================================
 -- 5. Create referralConfig table
@@ -147,7 +177,13 @@ ON CONFLICT (config_key) DO NOTHING;
 -- ALTER TABLE community_members DROP COLUMN IF EXISTS updated_at;
 -- ALTER TABLE community_members DROP COLUMN IF EXISTS banned_at;
 -- ALTER TABLE community_members DROP COLUMN IF EXISTS ban_expiry;
+-- ALTER TABLE community_members DROP COLUMN IF EXISTS ban_reason;
 -- ALTER TABLE refund_transactions DROP COLUMN IF EXISTS response_payload;
+-- ALTER TABLE refund_provider_transactions DROP COLUMN IF EXISTS provider_refund_id;
+-- ALTER TABLE refund_provider_transactions DROP COLUMN IF EXISTS response_payload;
+-- ALTER TABLE refund_provider_transactions DROP COLUMN IF EXISTS processing_time_ms;
 -- ALTER TABLE orders DROP COLUMN IF EXISTS metadata;
 -- ALTER TABLE staking_positions DROP COLUMN IF EXISTS last_reward_claim;
+-- ALTER TABLE staking_positions DROP COLUMN IF EXISTS accumulated_rewards;
+-- ALTER TABLE disputes DROP COLUMN IF EXISTS updated_at;
 -- DROP TABLE IF EXISTS referral_config;

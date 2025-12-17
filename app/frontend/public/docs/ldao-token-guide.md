@@ -90,14 +90,15 @@ Earn LDAO by staking other tokens:
 
 ### Staking Tiers
 
-LinkDAO offers four staking tiers with increasing benefits:
+LinkDAO offers five staking tiers with increasing benefits:
 
 | Tier | Lock Period | Base APR | Voting Multiplier | Fee Discount |
 |------|-------------|----------|-------------------|--------------|
-| Bronze | 30 days | 5% | 1.2x | 10% |
-| Silver | 90 days | 8% | 1.5x | 20% |
-| Gold | 180 days | 12% | 1.8x | 35% |
-| Platinum | 365 days | 18% | 2.0x | 50% |
+| Bronze | 30 days | 3% | 1.2x | 10% |
+| Silver | 90 days | 5% | 1.5x | 20% |
+| Gold | 180 days | 7% | 1.8x | 35% |
+| Platinum | 365 days | 9% | 2.0x | 50% |
+| Diamond | 730 days (2 years) | 11% | 2.5x | 60% |
 
 ### Staking Process
 
@@ -130,7 +131,7 @@ To unstake your tokens:
 
 Staked LDAO tokens provide enhanced voting power:
 - **Base Voting**: 1 LDAO = 1 vote
-- **Staking Multiplier**: Up to 2.0x voting power
+- **Staking Multiplier**: Up to 2.5x voting power
 - **Time Bonus**: Additional power for longer staking periods
 - **Quadratic Voting**: Special voting mechanism for key decisions
 
@@ -159,6 +160,7 @@ LDAO holders receive fee discounts:
 - **Silver Tier**: 20% discount on platform fees
 - **Gold Tier**: 35% discount on platform fees
 - **Platinum Tier**: 50% discount on platform fees
+- **Diamond Tier**: 60% discount on platform fees
 
 ### Premium Features
 
