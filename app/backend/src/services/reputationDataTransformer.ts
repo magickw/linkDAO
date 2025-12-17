@@ -1,5 +1,5 @@
 import { ReputationData, ReputationHistoryEntry } from './reputationService';
-import { UserReputation, ReputationBreakdown, ProgressMilestone } from '../../frontend/src/types/reputation';
+import { UserReputation, ReputationBreakdown, ProgressMilestone } from '../types/reputation';
 
 /**
  * Transform backend reputation data to frontend format

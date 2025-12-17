@@ -45,6 +45,7 @@ export interface ModerationCase {
   contentType: string;
   userId: string;
   status: 'pending' | 'in_review' | 'approved' | 'rejected' | 'escalated';
+  decision?: string; // Moderation decision details
   riskScore: number;
   currentStage: string;
   assignedModerators: string[];

@@ -2522,6 +2522,7 @@ export const contentReports = pgTable("content_reports", {
   details: text("details"),
   weight: numeric("weight").default("1"),
   status: varchar("status", { length: 24 }).default("open"),
+  resolution: text("resolution"), // Resolution details for closed reports
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
   contentIdx: index("content_reports_content_idx").on(t.contentId),
@@ -4073,6 +4074,20 @@ export const userPurchaseLimits = pgTable("user_purchase_limits", {
 });
 
 // Referral program tracking
+// Referral configuration table
+export const referralConfig = pgTable("referral_config", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  configKey: varchar("config_key", { length: 100 }).notNull().unique(),
+  configValue: text("config_value").notNull(),
+  configType: varchar("config_type", { length: 20 }).default("string").notNull(), // string, number, boolean, json
+  description: text("description"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  configKeyIdx: index("idx_referral_config_config_key").on(t.configKey),
+}));
+
 export const referralActivities = pgTable("referral_activities", {
   id: uuid("id").defaultRandom().primaryKey(),
   referrerId: uuid("referrer_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
@@ -4534,6 +4549,7 @@ export const returns = pgTable('returns', {
   buyerId: uuid('buyer_id').notNull(),
   sellerId: uuid('seller_id').notNull(),
   returnReason: varchar('return_reason', { length: 50 }).notNull(),
+  reason: varchar('reason', { length: 255 }), // Alias for returnReason for analytics
   returnReasonDetails: text('return_reason_details'),
   itemsToReturn: jsonb('items_to_return').notNull(),
   originalAmount: decimal('original_amount', { precision: 10, scale: 2 }).notNull(),
