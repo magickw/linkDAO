@@ -504,6 +504,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 className="w-full h-full"
                 priority="medium"
                 placeholder="skeleton"
+                useProductDefault={true}
               />
             </div>
 
@@ -691,6 +692,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             priority={product.isFeatured ? "high" : "medium"}
             placeholder="skeleton"
             preload={product.isFeatured}
+            useProductDefault={true}
             onLoad={() => {
               // Preload additional images for this product
               if (product.images.length > 1) {

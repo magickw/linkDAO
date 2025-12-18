@@ -22,6 +22,7 @@ interface OptimizedImageProps {
   onError?: (error: Error) => void;
   lazy?: boolean;
   preload?: boolean;
+  useProductDefault?: boolean; // Use product placeholder instead of avatar for invalid images
 }
 
 interface ImageLoadState {
@@ -126,7 +127,7 @@ const isValidImageUrl = (src: string): boolean => {
 };
 
 const DEFAULT_AVATAR = '/images/default-avatar.png';
-const DEFAULT_PRODUCT_IMAGE = '/images/placeholder-product.png';
+const DEFAULT_PRODUCT_IMAGE = '/images/placeholders/product-placeholder.svg';
 
 const getOptimizedImageURL = (
   src: string,
@@ -211,7 +212,8 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   onLoad,
   onError,
   lazy = true,
-  preload = false
+  preload = false,
+  useProductDefault = false
 }) => {
   const [loadState, setLoadState] = useState<ImageLoadState>({
     isLoading: true,
@@ -228,8 +230,8 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
 
   // Generate optimized image URL
   const optimizedSrc = useMemo(() => {
-    return getOptimizedImageURL(src, width, height, quality);
-  }, [src, width, height, quality]);
+    return getOptimizedImageURL(src, width, height, quality, useProductDefault);
+  }, [src, width, height, quality, useProductDefault]);
 
   // Generate blur placeholder if needed
   const placeholderSrc = useMemo(() => {
