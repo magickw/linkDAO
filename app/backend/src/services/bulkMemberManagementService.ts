@@ -552,7 +552,7 @@ export class BulkMemberManagementService {
     options: MemberImportData = {}
   ): Promise<BulkMemberResult & { duplicates: string[] }> {
     try {
-      const { addresses, defaultRole = 'member', defaultReputation = 0 } = options;
+      const { addresses: importAddresses, defaultRole = 'member', defaultReputation = 0 } = options;
 
       // Parse CSV data
       const lines = csvData.split('\n').filter(line => line.trim());
@@ -625,7 +625,7 @@ export class BulkMemberManagementService {
         })
         .from(communityMembers)
         .where(and(...whereConditions))
-        .orderBy(communityMembers.joinedAt.desc);
+        .orderBy(desc(communityMembers.joinedAt));
 
       // Format data based on format type
       let data: string;
@@ -677,8 +677,8 @@ export class BulkMemberManagementService {
         case 'xlsx':
           // For XLSX, we would typically use a library like xlsx
           // For now, return CSV format
-          const headers = fields.join(',');
-          const rows = members.map(member => 
+          const xlsxHeaders = fields.join(',');
+          const xlsxRows = members.map(member => 
             fields.map(field => {
               switch (field) {
                 case 'address': return member.userAddress;
@@ -692,7 +692,7 @@ export class BulkMemberManagementService {
             }).join(',')
           );
 
-          data = [headers, ...rows].join('\n');
+          data = [xlsxHeaders, ...xlsxRows].join('\n');
           filename = `community_${communityId}_members_${new Date().toISOString().split('T')[0]}.csv`;
           mimeType = 'text/csv';
           break;
@@ -727,13 +727,13 @@ export class BulkMemberManagementService {
     try {
       // Get total members
       const totalResult = await db
-        .select({ count: sql`count(*)` as count })
+        .select({ count: sql<number>`count(*)` })
         .from(communityMembers)
         .where(eq(communityMembers.communityId, communityId));
 
       // Get active members
       const activeResult = await db
-        .select({ count: sql`count(*)` as count })
+        .select({ count: sql<number>`count(*)` })
         .from(communityMembers)
         .where(
           and(
@@ -744,7 +744,7 @@ export class BulkMemberManagementService {
 
       // Get banned members
       const bannedResult = await db
-        .select({ count: sql`count(*)` as count })
+        .select({ count: sql<number>`count(*)` })
         .from(communityMembers)
         .where(
           and(
@@ -758,7 +758,7 @@ export class BulkMemberManagementService {
       const roleResults = await db
         .select({
           role: communityMembers.role,
-          count: sql`count(*)` as count
+          count: sql<number>`count(*)`
         })
         .from(communityMembers)
         .where(
@@ -776,7 +776,7 @@ export class BulkMemberManagementService {
 
       // Get recent joins (last 7 days)
       const recentJoinsResult = await db
-        .select({ count: sql`count(*)` as count })
+        .select({ count: sql<number>`count(*)` })
         .from(communityMembers)
         .where(
           and(
@@ -791,7 +791,7 @@ export class BulkMemberManagementService {
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
       const highlyActiveResult = await db
-        .select({ count: sql`count(*)` as count })
+        .select({ count: sql<number>`count(*)` })
         .from(communityMembers)
         .where(
           and(
@@ -802,7 +802,7 @@ export class BulkMemberManagementService {
         );
 
       const moderatelyActiveResult = await db
-        .select({ count: sql`count(*)` as count })
+        .select({ count: sql<number>`count(*)` })
         .from(communityMembers)
         .where(
           and(
@@ -813,7 +813,7 @@ export class BulkMemberManagementService {
         );
 
       const inactiveResult = await db
-        .select({ count: sql`count(*)` as count })
+        .select({ count: sql<number>`count(*)` })
         .from(communityMembers)
         .where(
           and(
@@ -861,7 +861,7 @@ export class BulkMemberManagementService {
    */
   private async getMemberReputation(communityId: string, memberAddress: string): Promise<number> {
     try {
-      const member = await db
+      const memberResult = await db
         .select({ reputation: communityMembers.reputation })
         .from(communityMembers)
         .where(
@@ -873,7 +873,7 @@ export class BulkMemberManagementService {
         )
         .limit(1);
 
-      return member?.reputation || 0;
+      return memberResult[0]?.reputation || 0;
     } catch (error) {
       safeLogger.error('Error getting member reputation:', error);
       return 0;

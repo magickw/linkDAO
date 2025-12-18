@@ -868,7 +868,34 @@ export class ProductListingService {
             description: dbProduct.description,
             price: priceData,
             category,
-            images: JSON.parse(dbProduct.images || '[]'),
+            images: (() => {
+                try {
+                    // Parse images from the images field (could be Cloudinary URLs or IPFS hashes)
+                    let images = JSON.parse(dbProduct.images || '[]');
+                    
+                    // Process each image URL
+                    images = images.map((url: string) => {
+                        // If it's already a full URL (including Cloudinary), return as-is
+                        if (url.startsWith('http')) return url;
+                        
+                        // If it's an IPFS hash, convert to gateway URL
+                        if (url.startsWith('Qm') || url.startsWith('baf') || url.startsWith('ipfs://')) {
+                            if (url.startsWith('ipfs://')) {
+                                return url.replace('ipfs://', 'https://ipfs.io/ipfs/');
+                            }
+                            return `https://ipfs.io/ipfs/${url}`;
+                        }
+                        
+                        // For any other format, return as-is
+                        return url;
+                    });
+                    
+                    return images;
+                } catch (error) {
+                    safeLogger.warn('Failed to parse images:', error);
+                    return [];
+                }
+            })(),
             metadata: JSON.parse(dbProduct.metadata || '{}'),
             inventory: dbProduct.inventory,
             status: dbProduct.status,

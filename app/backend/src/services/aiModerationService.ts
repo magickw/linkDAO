@@ -245,7 +245,8 @@ export class AIModerationService {
         categories,
         reasoning,
         suggestedActions,
-        confidence: analysis.confidence || 85
+        confidence: analysis.confidence || 85,
+        timestamp: Date.now()
       };
     } catch (error) {
       safeLogger.error('Error parsing AI response:', error);
@@ -352,7 +353,8 @@ export class AIModerationService {
       categories: [],
       reasoning: 'Unable to perform automated moderation. Content approved by default.',
       suggestedActions: [],
-      confidence: 0
+      confidence: 0,
+      timestamp: Date.now()
     };
   }
 

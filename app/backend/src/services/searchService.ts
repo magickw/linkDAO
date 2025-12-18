@@ -1586,8 +1586,36 @@ export class SearchService {
       }
     }
     
+    // Process images properly
+    let images: string[] = [];
+    try {
+      // Parse images from the images field (could be Cloudinary URLs or IPFS hashes)
+      images = JSON.parse(product.images || '[]');
+      
+      // Process each image URL
+      images = images.map((url: string) => {
+        // If it's already a full URL (including Cloudinary), return as-is
+        if (url.startsWith('http')) return url;
+        
+        // If it's an IPFS hash, convert to gateway URL
+        if (url.startsWith('Qm') || url.startsWith('baf') || url.startsWith('ipfs://')) {
+          if (url.startsWith('ipfs://')) {
+            return url.replace('ipfs://', 'https://ipfs.io/ipfs/');
+          }
+          return `https://ipfs.io/ipfs/${url}`;
+        }
+        
+        // For any other format, return as-is
+        return url;
+      });
+    } catch (error) {
+      safeLogger.warn('Failed to parse images in search service:', error);
+      images = [];
+    }
+    
     return {
       ...product,
+      images,
       price: priceData,
       category: category?.name || 'Uncategorized',
       seller: product.seller ? {

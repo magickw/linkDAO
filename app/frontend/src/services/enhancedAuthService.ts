@@ -865,7 +865,7 @@ class EnhancedAuthService {
         `${this.baseUrl}/api/auth/preferences`,
         {
           method: 'PUT',
-          headers: this.getAuthHeaders(),
+          headers: await this.getAuthHeaders(),
           body: JSON.stringify({ preferences }),
         },
         { timeout: 10000, retries: 2 }
@@ -901,7 +901,7 @@ class EnhancedAuthService {
         `${this.baseUrl}/api/auth/privacy`,
         {
           method: 'PUT',
-          headers: this.getAuthHeaders(),
+          headers: await this.getAuthHeaders(),
           body: JSON.stringify({ privacySettings }),
         },
         { timeout: 10000, retries: 2 }
@@ -937,7 +937,7 @@ class EnhancedAuthService {
         `${this.baseUrl}/api/auth/kyc/initiate`,
         {
           method: 'POST',
-          headers: this.getAuthHeaders(),
+          headers: await this.getAuthHeaders(),
           body: JSON.stringify({ tier, documents }),
         },
         { timeout: 15000, retries: 2 }
@@ -967,7 +967,7 @@ class EnhancedAuthService {
         `${this.baseUrl}/api/auth/kyc/status`,
         {
           method: 'GET',
-          headers: this.getAuthHeaders(),
+          headers: await this.getAuthHeaders(),
         },
         { timeout: 10000, retries: 2 }
       );

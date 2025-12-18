@@ -741,38 +741,32 @@ export class ProductService {
       }
     }
 
-    // Parse images - prioritize CDN URLs over IPFS hashes
+    // Parse images - handle both Cloudinary URLs and IPFS hashes
     let images: string[] = [];
     
-    // First try to get CDN URLs
-    if (dbProduct.imageCdnUrls) {
-      try {
-        const cdnUrls = JSON.parse(dbProduct.imageCdnUrls);
-        // If CDN URLs is an object with URLs, extract them
-        if (typeof cdnUrls === 'object' && cdnUrls !== null) {
-          images = Object.values(cdnUrls).filter(url => typeof url === 'string' && url.length > 0);
-        } else if (Array.isArray(cdnUrls)) {
-          images = cdnUrls;
+    try {
+      // Parse images from the images field (could be Cloudinary URLs or IPFS hashes)
+      images = JSON.parse(dbProduct.images || '[]');
+      
+      // Process each image URL
+      images = images.map((url: string) => {
+        // If it's already a full URL (including Cloudinary), return as-is
+        if (url.startsWith('http')) return url;
+        
+        // If it's an IPFS hash, convert to gateway URL
+        if (url.startsWith('Qm') || url.startsWith('baf') || url.startsWith('ipfs://')) {
+          if (url.startsWith('ipfs://')) {
+            return url.replace('ipfs://', 'https://ipfs.io/ipfs/');
+          }
+          return `https://ipfs.io/ipfs/${url}`;
         }
-      } catch (error) {
-        safeLogger.warn('Failed to parse CDN URLs:', error);
-      }
-    }
-    
-    // Fallback to IPFS hashes if no CDN URLs
-    if (images.length === 0) {
-      try {
-        images = JSON.parse(dbProduct.images || '[]');
-        // Convert IPFS hashes to gateway URLs if needed
-        images = images.map((hash: string) => {
-          if (hash.startsWith('http')) return hash;
-          if (hash.startsWith('ipfs://')) return hash;
-          return `https://ipfs.io/ipfs/${hash}`;
-        });
-      } catch (error) {
-        safeLogger.warn('Failed to parse images:', error);
-        images = [];
-      }
+        
+        // For any other format, return as-is
+        return url;
+      });
+    } catch (error) {
+      safeLogger.warn('Failed to parse images:', error);
+      images = [];
     }
 
     return {

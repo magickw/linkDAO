@@ -169,7 +169,9 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
           <div className="w-full lg:w-1/2">
             <GlassPanel variant="secondary" className="p-4 mb-4">
               <img
-                src={selectedImage || `https://placehold.co/600x400/4B2E83/FFFFFF?text=${encodeURIComponent(product.title || 'Product')}`}
+                src={selectedImage && selectedImage.trim() !== '' ? 
+                     selectedImage.startsWith('http') ? selectedImage : `https://gateway.pinata.cloud/ipfs/${selectedImage.replace(/^\/+/, '')}` :
+                     `https://placehold.co/600x400/4B2E83/FFFFFF?text=${encodeURIComponent(product.title || 'Product')}`}
                 alt={product.title || 'Product'}
                 className="w-full h-96 object-contain"
                 onError={(e) => {
@@ -190,13 +192,17 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                     onClick={() => setSelectedImage(media.url)}
                   >
                     <img
-                      src={media.thumbnail || media.url}
+                      src={(media.thumbnail && media.thumbnail.trim() !== '') ? 
+                           media.thumbnail.startsWith('http') ? media.thumbnail : `https://gateway.pinata.cloud/ipfs/${media.thumbnail.replace(/^\/+/, '')}` :
+                           (media.url && media.url.trim() !== '') ? 
+                           media.url.startsWith('http') ? media.url : `https://gateway.pinata.cloud/ipfs/${media.url.replace(/^\/+/, '')}` :
+                           `https://placehold.co/150x150/4B2E83/FFFFFF?text=${encodeURIComponent(\`Img \${index + 1}\`)}`}
                       alt={media.alt || `Product view ${index + 1}`}
                       className="w-full h-20 object-contain"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.onerror = null;
-                        target.src = `https://placehold.co/150x150/4B2E83/FFFFFF?text=${encodeURIComponent(`Img ${index + 1}`)}`;
+                        target.src = `https://placehold.co/150x150/4B2E83/FFFFFF?text=${encodeURIComponent(\`Img \${index + 1}\`)}`;
                       }}
                     />
                   </GlassPanel>

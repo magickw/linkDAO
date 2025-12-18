@@ -12,16 +12,21 @@ export interface BridgeTransaction {
   nonce: number;
   userId: string;
   amount: string;
-  fromChain: number;
-  toChain: number;
+  fromChain: string;
+  toChain: string;
   status: 'pending' | 'completed' | 'failed' | 'cancelled';
-  txHash?: string;
+  sourceTxHash?: string;
+  destinationTxHash?: string;
+  bridgeId?: string;
   fees: string;
-  timestamp: Date;
+  createdAt: Date;
   completedAt?: Date;
+  updatedAt: Date;
   validatorCount: number;
-  requiredValidators: number;
   bridgeProvider: string;
+  estimatedTime?: number;
+  actualTime?: number;
+  errorMessage?: string;
 }
 
 export interface BridgeEvent {
@@ -462,7 +467,7 @@ export class BridgeMonitoringService extends EventEmitter {
   private async storeBridgeTransaction(transaction: Omit<BridgeTransaction, 'id'>): Promise<void> {
     try {
       await db.insert(bridgeTransactions).values({
-        id: `${transaction.sourceChain}-${transaction.nonce}`,
+        id: `${transaction.fromChain}-${transaction.nonce}`,
         ...transaction
       });
     } catch (error) {
@@ -602,7 +607,7 @@ export class BridgeMonitoringService extends EventEmitter {
 
       // Calculate total volume and fees
       const totalVolume = transactions.reduce((sum, tx) => sum + BigInt(tx.amount), 0n);
-      const totalFees = transactions.reduce((sum, tx) => sum + BigInt(tx.fee), 0n);
+      const totalFees = transactions.reduce((sum, tx) => sum + BigInt(tx.fees), 0n);
 
       // Calculate average completion time
       // Note: Database returns createdAt column, not timestamp property
@@ -629,13 +634,13 @@ export class BridgeMonitoringService extends EventEmitter {
       const chainMetrics: { [chainId: number]: any } = {};
       for (const config of this.chainConfigs) {
         const chainTxs = transactions.filter(tx => 
-          tx.sourceChain === config.chainId || tx.destinationChain === config.chainId
+          tx.fromChain === String(config.chainId) || tx.toChain === String(config.chainId)
         );
         
         chainMetrics[config.chainId] = {
           transactions: chainTxs.length,
           volume: chainTxs.reduce((sum, tx) => sum + BigInt(tx.amount), 0n).toString(),
-          fees: chainTxs.reduce((sum, tx) => sum + BigInt(tx.fee), 0n).toString()
+          fees: chainTxs.reduce((sum, tx) => sum + BigInt(tx.fees), 0n).toString()
         };
       }
 
@@ -725,11 +730,12 @@ export class BridgeMonitoringService extends EventEmitter {
    */
   public async getBridgeEvents(transactionId: string): Promise<BridgeEvent[]> {
     try {
-      return await db
+      const events = await db
         .select()
         .from(bridgeEvents)
         .where(eq(bridgeEvents.transactionId, transactionId))
         .orderBy(desc(bridgeEvents.timestamp));
+      return events as BridgeEvent[];
     } catch (error) {
       logger.error('Error getting bridge events:', error);
       return [];

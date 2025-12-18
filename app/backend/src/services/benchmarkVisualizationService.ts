@@ -747,7 +747,7 @@ export class BenchmarkVisualizationService {
             id: `trend-${keyMetrics[index]}`,
             type: 'chart',
             title: `Trend: ${keyMetrics[index].replace(/_/g, ' ').toUpperCase()}`,
-            size: 'medium',
+            size: 'medium' as 'small' | 'medium' | 'large',
             position: { x: (index % 2) * 6, y: 6 + Math.floor(index / 2) * 3, w: 6, h: 3 },
             data: chart
           }))

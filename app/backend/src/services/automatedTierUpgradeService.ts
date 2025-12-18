@@ -353,7 +353,7 @@ class AutomatedTierUpgradeService {
           createdAt: sellers.createdAt,
         })
         .from(sellers)
-        .where(eq(sellers.id, sellerId))
+        .where(eq(sellers.id, parseInt(sellerId)))
         .limit(1);
 
       const accountAge = sellerInfo.length > 0 
@@ -475,7 +475,7 @@ class AutomatedTierUpgradeService {
           tier: toTier.tierId,
           updatedAt: new Date(),
         })
-        .where(eq(sellers.id, sellerId));
+        .where(eq(sellers.id, parseInt(sellerId)));
 
       // Activate tier benefits
       await this.activateTierBenefits(sellerId, toTier);

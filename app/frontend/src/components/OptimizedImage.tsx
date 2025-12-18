@@ -23,7 +23,15 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   onError
 }) => {
   // Handle IPFS CIDs with multiple gateway fallbacks
-  const isIpfsCid = src.startsWith('Qm') || src.startsWith('baf');
+  const isIpfsCid = (() => {
+    // Handle various IPFS formats:
+    // 1. Raw CID: Qm..., baf...
+    // 2. Full IPFS URL: https://gateway.pinata.cloud/ipfs/Qm...
+    // 3. Path-based IPFS: /ipfs/Qm...
+    if (src.startsWith('Qm') || src.startsWith('baf')) return true;
+    if (src.includes('/ipfs/') && (src.includes('Qm') || src.includes('baf'))) return true;
+    return false;
+  })();
   
   // List of IPFS gateways to try in order (prioritize more reliable gateways)
   const ipfsGateways = [
@@ -36,7 +44,23 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   // Generate URLs for all gateways if it's an IPFS CID
   const generateUrls = () => {
     if (isIpfsCid) {
-      return ipfsGateways.map(gateway => `${gateway}${src}`);
+      // Extract the actual CID from various formats
+      let cid = src;
+      
+      // Handle full URLs: https://gateway.pinata.cloud/ipfs/Qm...
+      if (src.includes('/ipfs/')) {
+        const parts = src.split('/ipfs/');
+        if (parts.length > 1) {
+          cid = parts[1].replace(/^\/+/, ''); // Remove leading slashes
+        }
+      }
+      
+      // Handle path-based: /ipfs/Qm...
+      if (src.startsWith('/ipfs/')) {
+        cid = src.substring(6).replace(/^\/+/, ''); // Remove '/ipfs/' and leading slashes
+      }
+      
+      return ipfsGateways.map(gateway => `${gateway}${cid}`);
     }
     return [src];
   };

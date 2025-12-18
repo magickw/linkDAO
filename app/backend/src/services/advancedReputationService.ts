@@ -11,7 +11,7 @@ import {
 import { eq, and, desc, asc, sql, inArray, gt, lte, between } from 'drizzle-orm';
 import { logger } from '../utils/logger';
 import { EventEmitter } from 'events';
-import { AdminWebSocketService } from './adminWebSocketService';
+import { getAdminWebSocketService } from './adminWebSocketService';
 
 export interface AdvancedReputationImpact {
   baseImpact: number;
@@ -198,23 +198,23 @@ export class AdvancedReputationService extends EventEmitter {
 
       // Create reputation change event
       await db.insert(reputationChangeEvents).values({
-        userAddress: userId,
+        userId: userId,
         eventType,
         scoreChange: adjustedScoreChange,
-        previousScore: String(previousScore),
-        newScore: String(newScore),
+        previousScore: previousScore,
+        newScore: newScore,
         description: reason,
-        metadata: {
+        metadata: JSON.stringify({
           context,
           performedBy
-        }
+        })
       });
 
       // Update user reputation score
       await db.update(userReputationScores)
         .set({
-          overallScore: String(newScore),
-          lastUpdated: new Date()
+          overallScore: newScore,
+          updatedAt: new Date()
         })
         .where(eq(userReputationScores.userId, userId));
 
@@ -332,9 +332,10 @@ export class AdvancedReputationService extends EventEmitter {
     try {
       // Store penalty configuration
       await db.insert(reputationPenalties).values({
-        userAddress: '0x0000000000000000000000000000000000000000', // Default address
+        userId: '00000000-0000-0000-0000-000000000000', // Default UUID for system config
         penaltyType: config.violationType,
         severityLevel: 1,
+        violationCount: 0,
         description: `Progressive penalty for ${config.violationType}`,
         isActive: true
       });
@@ -357,12 +358,15 @@ export class AdvancedReputationService extends EventEmitter {
   ): Promise<RealTimeReputationUpdate> {
     try {
       // Get penalty configuration
-      const penaltyConfig = await db.query.reputationPenalties.findFirst({
-        where: and(
+      const penaltyConfigResults = await db.select()
+        .from(reputationPenalties)
+        .where(and(
           eq(reputationPenalties.penaltyType, violationType),
           eq(reputationPenalties.isActive, true)
-        )
-      });
+        ))
+        .limit(1);
+      
+      const penaltyConfig = penaltyConfigResults[0];
 
       if (!penaltyConfig) {
         throw new Error(`No progressive penalty configuration found for violation type: ${violationType}`);
@@ -433,15 +437,15 @@ export class AdvancedReputationService extends EventEmitter {
 
   private async calculateTimeDecayFactor(userId: string, eventType: string): Promise<number> {
     // Calculate time decay based on recent events
-    const recentEvents = await db.query.reputationChangeEvents.findMany({
-      where: and(
-        eq(reputationChangeEvents.userAddress, userId),
+    const recentEvents = await db.select()
+      .from(reputationChangeEvents)
+      .where(and(
+        eq(reputationChangeEvents.userId, userId),
         eq(reputationChangeEvents.eventType, eventType),
         gt(reputationChangeEvents.createdAt, new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)) // Last 30 days
-      ),
-      orderBy: desc(reputationChangeEvents.createdAt),
-      limit: 10
-    });
+      ))
+      .orderBy(desc(reputationChangeEvents.createdAt))
+      .limit(10);
 
     if (recentEvents.length === 0) return 1.0;
 
@@ -520,34 +524,34 @@ export class AdvancedReputationService extends EventEmitter {
   private async getConnectedUsers(userId: string, radius: number): Promise<Array<{userId: string; reputationScore: number}>> {
     // Simplified network analysis - in production, this would use graph database
     // For now, return users who have interacted with the same content/disputes
-    const interactions = await db.query.reputationChangeEvents.findMany({
-      where: eq(reputationChangeEvents.userAddress, userId),
-      limit: 10
-    });
+    const interactions = await db.select()
+      .from(reputationChangeEvents)
+      .where(eq(reputationChangeEvents.userId, userId))
+      .limit(10);
 
     // This is a placeholder - real implementation would analyze transaction graphs
     return [];
   }
 
   private async getUserReputationHistory(userId: string, days: number) {
-    return await db.query.reputationChangeEvents.findMany({
-      where: and(
-        eq(reputationChangeEvents.userAddress, userId),
+    return await db.select()
+      .from(reputationChangeEvents)
+      .where(and(
+        eq(reputationChangeEvents.userId, userId),
         gt(reputationChangeEvents.createdAt, new Date(Date.now() - days * 24 * 60 * 60 * 1000))
-      ),
-      orderBy: desc(reputationChangeEvents.createdAt)
-    });
+      ))
+      .orderBy(desc(reputationChangeEvents.createdAt));
   }
 
   private async getUserViolationHistory(userId: string, violationType: string) {
-    return await db.query.reputationChangeEvents.findMany({
-      where: and(
-        eq(reputationChangeEvents.userAddress, userId),
+    return await db.select()
+      .from(reputationChangeEvents)
+      .where(and(
+        eq(reputationChangeEvents.userId, userId),
         eq(reputationChangeEvents.eventType, 'violation_penalty'),
         gt(reputationChangeEvents.createdAt, new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)) // Last year
-      ),
-      orderBy: desc(reputationChangeEvents.createdAt)
-    });
+      ))
+      .orderBy(desc(reputationChangeEvents.createdAt));
   }
 
   private determineSeverityLevel(violationCount: number, severityConfig: any[]): any {
@@ -771,18 +775,19 @@ export class AdvancedReputationService extends EventEmitter {
 
   private async sendRealTimeNotification(update: RealTimeReputationUpdate): Promise<void> {
     try {
-      // Send WebSocket notification
-      await AdminWebSocketService.broadcastToUser(update.userId, {
-        type: 'reputation_update',
-        data: {
+      // Send WebSocket notification to admins
+      const wsService = getAdminWebSocketService();
+      if (wsService) {
+        wsService.broadcastToAllAdmins('reputation_update', {
+          userId: update.userId,
           walletAddress: update.walletAddress,
           previousScore: update.previousScore,
           newScore: update.newScore,
           change: update.change,
           reason: update.reason,
           timestamp: update.timestamp
-        }
-      });
+        });
+      }
 
       // Store notification for persistence
       // This would integrate with notification service in production
