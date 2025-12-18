@@ -58,23 +58,49 @@ const NewSupportTicket: NextPage = () => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    setIsSubmitting(false);
-    setIsSubmitted(true);
-    
-    // Reset form after 3 seconds
-    setTimeout(() => {
-      setIsSubmitted(false);
-      setFormData({
-        subject: '',
-        category: 'general',
-        priority: 'medium',
-        description: '',
-        attachments: []
+    try {
+      // Create ticket with actual API call
+      const response = await fetch('/api/support/tickets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.address}`,
+        },
+        body: JSON.stringify({
+          userEmail: formData.email,
+          title: formData.subject,
+          description: formData.description,
+          category: formData.category,
+          priority: formData.priority,
+          attachments: formData.attachments.map(f => f.name)
+        }),
       });
-    }, 3000);
+      
+      if (!response.ok) {
+        throw new Error('Failed to create ticket');
+      }
+      
+      const data = await response.json();
+      const ticket = data.ticket;
+      
+      setIsSubmitting(false);
+      setIsSubmitted(true);
+      
+      // Reset form after 3 seconds
+      setTimeout(() => {
+        setIsSubmitted(false);
+        setFormData({
+          subject: '',
+          category: 'general',
+          priority: 'medium',
+          description: '',
+          attachments: []
+        });
+      }, 3000);
+    } catch (err) {
+      setIsSubmitting(false);
+      setError(err.message || 'Failed to create ticket');
+    }
   };
 
   if (isSubmitted) {
@@ -143,6 +169,34 @@ const NewSupportTicket: NextPage = () => {
             </p>
           </div>
 
+          {/* Authentication Warning */}
+          {!user && (
+            <div className="mb-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+              <div className="flex">
+                <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-3 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">Authentication Required</h3>
+                  <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                    Please sign in to create a support ticket. This helps us track your request and respond faster.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Error Display */}
+          {error && (
+            <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+              <div className="flex">
+                <XCircle className="w-5 h-5 text-red-600 dark:text-red-400 mr-3 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h3 className="text-sm font-medium text-red-800 dark:text-red-200">Error</h3>
+                  <p className="text-sm text-red-700 dark:text-red-300 mt-1">{error}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Ticket Form */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border border-gray-200 dark:border-gray-700">
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -206,7 +260,7 @@ const NewSupportTicket: NextPage = () => {
 
               <div>
                 <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Description
+                  Description <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   id="description"

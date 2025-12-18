@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { supportTicketingIntegrationService, SupportTicket } from '../services/supportTicketingIntegrationService';
 import { logger } from '../utils/logger';
+import { emailService } from '../services/emailService';
 
 export class SupportTicketingController {
   /**
@@ -20,6 +21,19 @@ export class SupportTicketingController {
       }
 
       const ticket = supportTicketingIntegrationService.recordSupportTicket(ticketData);
+      
+      // Send confirmation email to user
+      try {
+        await emailService.sendTicketConfirmationEmail(
+          ticketData.userEmail,
+          ticket.id,
+          ticket.title,
+          ticket.priority
+        );
+      } catch (emailError) {
+        logger.error('Failed to send ticket confirmation email:', emailError);
+        // Continue even if email fails - ticket was created successfully
+      }
       
       res.status(201).json({
         success: true,

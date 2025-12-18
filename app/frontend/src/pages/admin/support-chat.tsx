@@ -239,43 +239,101 @@ const SupportChatPage: NextPage = () => {
             <div className="lg:col-span-1">
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
                 <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Waiting Sessions</h2>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                    {view === 'waiting' ? 'Waiting Sessions' : 'Session History'}
+                  </h2>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search sessions..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
                 </div>
                 <div className="divide-y divide-gray-200 dark:divide-gray-700 max-h-[600px] overflow-y-auto">
-                  {waitingSessions.length === 0 ? (
-                    <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-                      <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                      <p>No waiting sessions</p>
-                    </div>
-                  ) : (
-                    waitingSessions.map((session) => (
-                      <div
-                        key={session.id}
-                        className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center">
-                            <User className="w-5 h-5 text-gray-400 mr-2" />
-                            <span className="text-sm font-medium text-gray-900 dark:text-white">
-                              User {session.userId.substring(0, 8)}...
-                            </span>
-                          </div>
-                          <div className="flex items-center text-xs text-gray-500">
-                            <Clock className="w-3 h-3 mr-1" />
-                            {new Date(session.createdAt).toLocaleTimeString()}
-                          </div>
-                        </div>
-                        <div className="text-xs text-gray-600 dark:text-gray-400 mb-3">
-                          {session.messageCount} messages
-                        </div>
-                        <button
-                          onClick={() => acceptSession(session.id)}
-                          className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                        >
-                          Accept Chat
-                        </button>
+                  {view === 'waiting' ? (
+                    waitingSessions.length === 0 ? (
+                      <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                        <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                        <p className="font-medium mb-1">No waiting sessions</p>
+                        <p className="text-xs">New chats will appear here</p>
                       </div>
-                    ))
+                    ) : (
+                      waitingSessions
+                        .filter(s => !searchQuery || s.userId.toLowerCase().includes(searchQuery.toLowerCase()))
+                        .map((session) => (
+                          <div
+                            key={session.id}
+                            className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex items-center">
+                                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center mr-2">
+                                  <User className="w-4 h-4 text-white" />
+                                </div>
+                                <div>
+                                  <span className="text-sm font-medium text-gray-900 dark:text-white block">
+                                    User {session.userId.substring(0, 8)}
+                                  </span>
+                                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                                    {session.messageCount} messages
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex items-center text-xs text-gray-500">
+                                <Clock className="w-3 h-3 mr-1" />
+                                {new Date(session.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => acceptSession(session.id)}
+                              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all text-sm font-medium shadow-sm"
+                            >
+                              Accept Chat
+                            </button>
+                          </div>
+                        ))
+                    )
+                  ) : (
+                    sessionHistory.length === 0 ? (
+                      <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                        <History className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                        <p className="font-medium mb-1">No session history</p>
+                        <p className="text-xs">Completed chats will appear here</p>
+                      </div>
+                    ) : (
+                      sessionHistory
+                        .filter(s => !searchQuery || s.userId.toLowerCase().includes(searchQuery.toLowerCase()))
+                        .map((session) => (
+                          <div
+                            key={session.id}
+                            className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex items-center">
+                                <div className="w-8 h-8 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center mr-2">
+                                  <User className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                                </div>
+                                <div>
+                                  <span className="text-sm font-medium text-gray-900 dark:text-white block">
+                                    User {session.userId.substring(0, 8)}
+                                  </span>
+                                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                                    {session.messageCount} messages
+                                  </span>
+                                </div>
+                              </div>
+                              <CheckCircle className="w-5 h-5 text-green-500" />
+                            </div>
+                            <div className="text-xs text-gray-600 dark:text-gray-400">
+                              Completed at {new Date(session.createdAt).toLocaleTimeString()}
+                            </div>
+                          </div>
+                        ))
+                    )
                   )}
                 </div>
               </div>
@@ -344,6 +402,27 @@ const SupportChatPage: NextPage = () => {
                     </div>
 
                     <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+                      {/* Quick Reply Templates */}
+                      <div className="mb-3 flex flex-wrap gap-2">
+                        <button
+                          onClick={() => setNewMessage('Thank you for contacting support. How can I help you today?')}
+                          className="text-xs px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                        >
+                          Greeting
+                        </button>
+                        <button
+                          onClick={() => setNewMessage('I understand your concern. Let me look into this for you.')}
+                          className="text-xs px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                        >
+                          Acknowledge
+                        </button>
+                        <button
+                          onClick={() => setNewMessage('This issue has been resolved. Is there anything else I can help you with?')}
+                          className="text-xs px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                        >
+                          Resolved
+                        </button>
+                      </div>
                       <form onSubmit={handleSendMessage} className="flex">
                         <input
                           type="text"
@@ -353,16 +432,22 @@ const SupportChatPage: NextPage = () => {
                             handleTyping();
                           }}
                           placeholder="Type your message..."
-                          className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                          className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                          autoFocus
                         />
                         <button
                           type="submit"
                           disabled={!newMessage.trim()}
-                          className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-r-lg hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                          className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-r-lg hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
                         >
                           <Send className="w-5 h-5" />
                         </button>
                       </form>
+                      {isTyping && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                          Agent is typing...
+                        </p>
+                      )}
                     </div>
                   </>
                 )}

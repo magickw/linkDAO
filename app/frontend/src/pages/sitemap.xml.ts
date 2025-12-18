@@ -23,7 +23,7 @@ async function generateSiteMap() {
     { url: '/governance', priority: '0.8', changefreq: 'weekly' },
     { url: '/charity-dashboard', priority: '0.8', changefreq: 'weekly' },
     { url: '/communities', priority: '0.8', changefreq: 'daily' },
-    { url: '/social', priority: '0.7', changefreq: 'daily' },
+
     { url: '/trending', priority: '0.7', changefreq: 'daily' },
     { url: '/hashtags', priority: '0.6', changefreq: 'daily' },
     { url: '/blog', priority: '0.7', changefreq: 'weekly' },

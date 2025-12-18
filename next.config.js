@@ -311,13 +311,7 @@ const nextConfig = {
   
   // Redirects for legacy routes
   async redirects() {
-    return [
-      {
-        source: '/social',
-        destination: '/',
-        permanent: true,
-      },
-    ];
+    return [];
   },
   
   // API rewrites

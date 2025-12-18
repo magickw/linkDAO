@@ -50,36 +50,54 @@ class LDAOAcquisitionService {
   private treasuryContract: ethers.Contract | null = null;
   private ldaoContract: ethers.Contract | null = null;
   private provider: ethers.BrowserProvider | null = null;
+  private initializationPromise: Promise<void> | null = null;
   private initializationAttempted: boolean = false;
 
   constructor() {
-    this.initializeContracts();
+    // Don't initialize in constructor - let it happen on first use
   }
 
   /**
    * Ensure contracts are initialized before use (lazy initialization)
    */
-  private ensureContractsInitialized() {
-    if (!this.treasuryContract && typeof window !== 'undefined' && window.ethereum) {
+  private async ensureContractsInitialized(): Promise<void> {
+    // If already initialized, return immediately
+    if (this.treasuryContract && this.ldaoContract) {
+      return;
+    }
+
+    // If initialization is in progress, wait for it
+    if (this.initializationPromise) {
+      return this.initializationPromise;
+    }
+
+    // Start initialization
+    if (typeof window !== 'undefined' && window.ethereum) {
       const treasuryAddress = process.env.NEXT_PUBLIC_LDAO_TREASURY_ADDRESS;
       const ldaoAddress = process.env.NEXT_PUBLIC_LDAO_TOKEN_ADDRESS;
 
       if (treasuryAddress && ldaoAddress && !this.initializationAttempted) {
-        this.initializeContracts();
+        this.initializationPromise = this.initializeContracts();
+        await this.initializationPromise;
       }
     }
   }
 
-  private async initializeContracts() {
-    if (typeof window !== 'undefined' && window.ethereum) {
-      this.initializationAttempted = true;
-      this.provider = new ethers.BrowserProvider(window.ethereum);
+  private async initializeContracts(): Promise<void> {
+    try {
+      if (typeof window !== 'undefined' && window.ethereum) {
+        this.initializationAttempted = true;
+        this.provider = new ethers.BrowserProvider(window.ethereum);
 
-      // Initialize contracts with deployed addresses
-      const treasuryAddress = process.env.NEXT_PUBLIC_LDAO_TREASURY_ADDRESS;
-      const ldaoAddress = process.env.NEXT_PUBLIC_LDAO_TOKEN_ADDRESS;
+        // Initialize contracts with deployed addresses
+        const treasuryAddress = process.env.NEXT_PUBLIC_LDAO_TREASURY_ADDRESS;
+        const ldaoAddress = process.env.NEXT_PUBLIC_LDAO_TOKEN_ADDRESS;
 
-      if (treasuryAddress && ldaoAddress) {
+        if (!treasuryAddress || !ldaoAddress) {
+          console.warn('Treasury or LDAO token address not configured');
+          return;
+        }
+
         const signer = await this.provider.getSigner();
 
         // Treasury contract ABI (simplified)
@@ -101,6 +119,10 @@ class LDAOAcquisitionService {
         this.treasuryContract = new ethers.Contract(treasuryAddress, treasuryABI, signer);
         this.ldaoContract = new ethers.Contract(ldaoAddress, ldaoABI, signer);
       }
+    } catch (error) {
+      console.error('Failed to initialize contracts:', error);
+      this.initializationPromise = null;
+      throw error;
     }
   }
 
@@ -316,7 +338,7 @@ class LDAOAcquisitionService {
   async getQuote(ldaoAmount: string): Promise<PurchaseQuote> {
     try {
       // Ensure contracts are initialized
-      this.ensureContractsInitialized();
+      await this.ensureContractsInitialized();
 
       if (!this.treasuryContract) {
         throw new Error('Treasury contract not initialized');
@@ -476,7 +498,7 @@ class LDAOAcquisitionService {
   async isSalesActive(): Promise<boolean> {
     try {
       // Ensure contracts are initialized
-      this.ensureContractsInitialized();
+      await this.ensureContractsInitialized();
 
       if (!this.treasuryContract) {
         return false;
