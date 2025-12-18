@@ -16,7 +16,7 @@ import { LDAOReceiptService } from './ldaoReceiptService';
 import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
 import { purchaseTransactions, earningActivities } from '../db/schema';
-import { eq, desc, and, gte, lt } from 'drizzle-orm';
+import { eq, desc, and, gte, lt, SQL } from 'drizzle-orm';
 import { subDays } from 'date-fns';
 import { sanitizeString, sanitizeNumber, sanitizeWalletAddress } from '../utils/inputSanitization';
 
@@ -513,14 +513,16 @@ export class LDAOAcquisitionService {
       }
 
       // Get total count for pagination
+      const conditions = [
+        eq(purchaseTransactions.userId, sanitizedUserId),
+        sanitizedStatus ? eq(purchaseTransactions.status, sanitizedStatus) : undefined,
+        options?.startDate ? gte(purchaseTransactions.createdAt, options.startDate) : undefined,
+        options?.endDate ? lt(purchaseTransactions.createdAt, options.endDate) : undefined
+      ].filter((condition): condition is SQL<unknown> => condition !== undefined);
+
       const countResult = await this.db.select({ count: purchaseTransactions.id })
         .from(purchaseTransactions)
-        .where(and(
-          eq(purchaseTransactions.userId, sanitizedUserId),
-          sanitizedStatus ? eq(purchaseTransactions.status, sanitizedStatus) : undefined,
-          options?.startDate ? gte(purchaseTransactions.createdAt, options.startDate) : undefined,
-          options?.endDate ? lt(purchaseTransactions.createdAt, options.endDate) : undefined
-        ).filter((condition): condition is SQL<unknown> => condition !== undefined));
+        .where(and(...conditions));
 
       const totalCount = countResult.length > 0 ? countResult.length : 0;
 
@@ -595,12 +597,12 @@ export class LDAOAcquisitionService {
       // Get total count for pagination
       const countResult = await this.db.select({ count: earningActivities.id })
         .from(earningActivities)
-        .where(and(
+        .where(and(...[
           eq(earningActivities.userId, sanitizedUserId),
           sanitizedActivityType ? eq(earningActivities.activityType, sanitizedActivityType) : undefined,
           options?.startDate ? gte(earningActivities.createdAt, options.startDate) : undefined,
           options?.endDate ? lt(earningActivities.createdAt, options.endDate) : undefined
-        ).filter((condition): condition is SQL<unknown> => condition !== undefined));
+        ].filter((condition): condition is SQL<unknown> => condition !== undefined)));
 
       const totalCount = countResult.length > 0 ? countResult.length : 0;
 

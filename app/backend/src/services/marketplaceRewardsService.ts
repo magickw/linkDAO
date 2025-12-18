@@ -298,7 +298,7 @@ class MarketplaceRewardsService {
 
         // Calculate progress increment based on challenge type
         let progressIncrement = 0;
-        const challengeMetadata = challenge.metadata ? JSON.parse(challenge.metadata as string) : {};
+        const challengeMetadata = challenge.metadata ? JSON.parse(String(challenge.metadata)) : {};
 
         if (challengeMetadata.type === 'transaction_count') {
           progressIncrement = 1; // One transaction

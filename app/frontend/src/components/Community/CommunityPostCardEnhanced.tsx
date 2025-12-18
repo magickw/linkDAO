@@ -632,12 +632,45 @@ function CommunityPostCardEnhanced({
                     <span>{(post.views || post.viewCount || 0).toLocaleString()} views</span>
                   </div>
                 </div>
+
+                {/* Staking Reactions - Now visible on post card */}
+                <div className="mb-4 p-3 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800/50 dark:to-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Stake on Reactions</h4>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      {reactions.reduce((sum, r) => sum + r.totalStaked, 0)} $LDAO staked
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {reactions.map((reaction) => (
+                      <button
+                        key={reaction.type}
+                        onClick={() => handleReaction(reaction.type, 1)}
+                        className="flex flex-col items-center p-2 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-primary-500 dark:hover:border-primary-400 hover:shadow-md transition-all duration-200 group"
+                        title={`${reaction.label} - ${reaction.totalStaked} $LDAO staked`}
+                      >
+                        <span className="text-2xl mb-1 group-hover:scale-110 transition-transform duration-200">
+                          {reaction.emoji}
+                        </span>
+                        <span className="text-xs font-medium text-gray-700 dark:text-gray-300 text-center">
+                          {reaction.totalStaked}
+                        </span>
+                        {reaction.userStaked > 0 && (
+                          <span className="text-xs text-primary-600 dark:text-primary-400 font-bold">
+                            +{reaction.userStaked}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <PostInteractionBar
                   post={{
                     id: post.id,
                     contentCid: post.contentCid,
                     author: post.author,
-                    communityId: community.id, // Use the community ID passed to the component
+                    communityId: community.id,
                     commentCount: comments.length,
                     stakedValue: reactions.reduce((sum, r) => sum + r.totalStaked, 0)
                   }}
@@ -647,7 +680,6 @@ function CommunityPostCardEnhanced({
                   onReaction={onReaction}
                   onTip={onTip}
                   onShare={async (postId, shareType, message) => {
-                    // Handle sharing
                     console.log('Sharing community post:', postId, shareType, message);
                     addToast(`Post shared via ${shareType}!`, 'success');
                   }}

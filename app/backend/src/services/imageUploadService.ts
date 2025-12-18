@@ -107,7 +107,7 @@ class ImageUploadService {
 
     try {
       const formData = new FormData();
-      const blob = new Blob([file.buffer], { type: file.mimetype });
+      const blob = new Blob([file.buffer as BlobPart], { type: file.mimetype });
       const cloudinaryFile = new File([blob], file.originalname, { type: file.mimetype });
 
       formData.append('file', cloudinaryFile);

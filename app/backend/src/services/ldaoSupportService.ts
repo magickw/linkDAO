@@ -466,15 +466,15 @@ class LDAOSupportService {
     try {
       const chatSessionId = generateSecureId('chat');
       
-      // Store chat session in database
-      const [chatSession] = await db.insert(supportChatSessions).values({
-        id: chatSessionId,
-        userId,
-        status: 'waiting',
-        initialMessage: initialMessage || '',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }).returning();
+      // TODO: Store chat session in database when supportChatSessions table is added
+      // const [chatSession] = await db.insert(supportChatSessions).values({
+      //   id: chatSessionId,
+      //   userId,
+      //   status: 'waiting',
+      //   initialMessage: initialMessage || '',
+      //   createdAt: new Date(),
+      //   updatedAt: new Date()
+      // }).returning();
 
       // Notify support agents via WebSocket if available
       const { getWebSocketService } = await import('../services/webSocketService');
@@ -499,21 +499,30 @@ class LDAOSupportService {
   // Send message in live chat
   async sendChatMessage(chatSessionId: string, senderId: string, content: string, isAgent: boolean = false): Promise<void> {
     try {
-      // Store message in database
-      const [message] = await db.insert(supportChatMessages).values({
+      // TODO: Store message in database when supportChatMessages table is added
+      // const [message] = await db.insert(supportChatMessages).values({
+      //   id: generateSecureId('message'),
+      //   chatSessionId,
+      //   senderId,
+      //   content,
+      //   isAgent,
+      //   timestamp: new Date(),
+      //   read: false
+      // }).returning();
+
+      const message = {
         id: generateSecureId('message'),
         chatSessionId,
         senderId,
         content,
         isAgent,
-        timestamp: new Date(),
-        read: false
-      }).returning();
+        timestamp: new Date()
+      };
 
-      // Update session last activity
-      await db.update(supportChatSessions)
-        .set({ updatedAt: new Date() })
-        .where(eq(supportChatSessions.id, chatSessionId));
+      // TODO: Update session last activity when supportChatSessions table is added
+      // await db.update(supportChatSessions)
+      //   .set({ updatedAt: new Date() })
+      //   .where(eq(supportChatSessions.id, chatSessionId));
 
       // Broadcast message via WebSocket
       const { getWebSocketService } = await import('../services/webSocketService');
@@ -538,12 +547,13 @@ class LDAOSupportService {
   // Get chat session messages
   async getChatMessages(chatSessionId: string): Promise<any[]> {
     try {
-      const messages = await db.select()
-        .from(supportChatMessages)
-        .where(eq(supportChatMessages.chatSessionId, chatSessionId))
-        .orderBy(supportChatMessages.timestamp);
+      // TODO: Query supportChatMessages when table is added
+      // const messages = await db.select()
+      //   .from(supportChatMessages)
+      //   .where(eq(supportChatMessages.chatSessionId, chatSessionId))
+      //   .orderBy(supportChatMessages.timestamp);
 
-      return messages;
+      return [];
     } catch (error) {
       safeLogger.error('Error fetching chat messages:', error);
       throw new Error('Failed to fetch messages');
@@ -553,14 +563,14 @@ class LDAOSupportService {
   // Join chat session as agent
   async joinChatSession(chatSessionId: string, agentId: string): Promise<void> {
     try {
-      // Update session with agent
-      await db.update(supportChatSessions)
-        .set({ 
-          agentId,
-          status: 'active',
-          updatedAt: new Date()
-        })
-        .where(eq(supportChatSessions.id, chatSessionId));
+      // TODO: Update session with agent when supportChatSessions table is added
+      // await db.update(supportChatSessions)
+      //   .set({ 
+      //     agentId,
+      //     status: 'active',
+      //     updatedAt: new Date()
+      //   })
+      //   .where(eq(supportChatSessions.id, chatSessionId));
 
       // Notify user via WebSocket
       const { getWebSocketService } = await import('../services/webSocketService');

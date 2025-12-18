@@ -104,26 +104,24 @@ export class AuditLogAnalysisService {
     }
 
     // Get total count
-    let totalQuery = db.select({ count: count() }).from(admin_audit_logs);
-    if (conditions.length > 0) {
-      totalQuery = totalQuery.where(and(...conditions));
-    }
-    const totalResult = await totalQuery;
+    const totalQuery = conditions.length > 0
+      ? db.select({ count: count() }).from(admin_audit_logs).where(and(...conditions))
+      : db.select({ count: count() }).from(admin_audit_logs);
+    const totalResult = await totalQuery as any;
     const total = totalResult[0]?.count || 0;
 
     // Get paginated results
-    let query = db.select().from(admin_audit_logs);
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-    
     const limit = filters.limit || 50;
     const offset = filters.offset || 0;
+    
+    const query = conditions.length > 0
+      ? db.select().from(admin_audit_logs).where(and(...conditions))
+      : db.select().from(admin_audit_logs);
     
     const logs = await query
       .orderBy(desc(admin_audit_logs.timestamp))
       .limit(limit)
-      .offset(offset);
+      .offset(offset) as any;
 
     return {
       logs: logs.map(this.mapAuditLogEntry),

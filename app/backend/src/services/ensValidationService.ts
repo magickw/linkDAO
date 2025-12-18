@@ -2,7 +2,7 @@ import { ethers } from 'ethers';
 import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
 import { ensVerifications, users } from '../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 
 /**
  * ENS Validation Result

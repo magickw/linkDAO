@@ -276,12 +276,14 @@ export default function CommentThread({
 
               {/* Comment Actions */}
               <div className="flex items-center space-x-3 text-xs text-gray-500 dark:text-gray-400">
-                {userMembership && depth < maxDepth && !comment.isDeleted && (
+                {/* Reply Button - More prominent and always visible for members */}
+                {userMembership && !comment.isDeleted && (
                   <button
                     onClick={() => setShowReplyForm(!showReplyForm)}
-                    className="flex items-center space-x-1 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200"
+                    className="flex items-center space-x-1 font-medium text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 transition-colors duration-200"
+                    aria-label="Reply to comment"
                   >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
                     </svg>
                     <span>Reply</span>
@@ -358,45 +360,59 @@ export default function CommentThread({
 
               {/* Reply Form */}
               {showReplyForm && userMembership && (
-                <form onSubmit={handleReplySubmit} className="mt-3">
-                  <div className="flex space-x-2">
-                    <div className="bg-gradient-to-br from-primary-400 to-secondary-500 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">
-                      <span className="text-white font-bold text-xs">
-                        {getDefaultAvatar(getDisplayName({ author: address }))}
-                      </span>
+                <div className="mt-3">
+                  {depth >= maxDepth ? (
+                    <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-md text-sm text-yellow-800 dark:text-yellow-200">
+                      <p className="flex items-center space-x-2">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                        <span>Maximum reply depth reached. Please reply to a parent comment.</span>
+                      </p>
                     </div>
-                    <div className="flex-1">
-                      <textarea
-                        value={replyContent}
-                        onChange={(e) => setReplyContent(e.target.value)}
-                        placeholder="Write a reply..."
-                        className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white resize-none"
-                        rows={2}
-                        disabled={replySubmitting}
-                      />
-                      <div className="flex justify-end space-x-2 mt-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowReplyForm(false);
-                            setReplyContent('');
-                          }}
-                          className="px-2 py-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors duration-200"
-                          disabled={replySubmitting}
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="submit"
-                          disabled={!replyContent.trim() || replySubmitting}
-                          className="px-3 py-1 text-xs bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-                        >
-                          {replySubmitting ? 'Posting...' : 'Reply'}
-                        </button>
+                  ) : (
+                    <form onSubmit={handleReplySubmit}>
+                      <div className="flex space-x-2">
+                        <div className="bg-gradient-to-br from-primary-400 to-secondary-500 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">
+                          <span className="text-white font-bold text-xs">
+                            {getDefaultAvatar(getDisplayName({ author: address }))}
+                          </span>
+                        </div>
+                        <div className="flex-1">
+                          <textarea
+                            value={replyContent}
+                            onChange={(e) => setReplyContent(e.target.value)}
+                            placeholder="Write a reply..."
+                            className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white resize-none"
+                            rows={2}
+                            disabled={replySubmitting}
+                            autoFocus
+                          />
+                          <div className="flex justify-end space-x-2 mt-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowReplyForm(false);
+                                setReplyContent('');
+                              }}
+                              className="px-2 py-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors duration-200"
+                              disabled={replySubmitting}
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="submit"
+                              disabled={!replyContent.trim() || replySubmitting}
+                              className="px-3 py-1 text-xs bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                            >
+                              {replySubmitting ? 'Posting...' : 'Reply'}
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </form>
+                    </form>
+                  )}
+                </div>
               )}
 
               {/* Nested Replies */}

@@ -285,29 +285,28 @@ export class EnhancedStakingService {
       }
 
       // Create stake position record
-      const positionId = `stake_${userId}_${Date.now()}`;
       const now = new Date();
+      const endDate = new Date(now.getTime() + (options.duration || tierData.lockPeriod) * 24 * 60 * 60 * 1000);
 
-      await db.insert(stakingPositions).values({
-        id: positionId,
+      const [position] = await db.insert(stakingPositions).values({
         userId,
-        amount: options.amount,
+        amount: options.amount.toString(),
         startTime: now,
+        startDate: now,
+        endDate: endDate,
         lockPeriod: options.duration || tierData.lockPeriod,
-        aprRate: effectiveApr,
+        aprRate: effectiveApr.toString(),
         lastRewardClaim: now,
         accumulatedRewards: "0",
         isActive: true,
-        isAutoCompound: options.autoCompound,
+        isAutoCompound: options.autoCompound || false,
         isFixedTerm: tierData.lockPeriod > 0,
-        tierId: options.tierId,
-        contractAddress: "", // This would be set in a real implementation
-        transactionHash,
-        createdAt: now,
-        updatedAt: now
-      });
+        tierId: options.tierId ? options.tierId.toString() : null,
+        contractAddress: null,
+        transactionHash: transactionHash || null
+      }).returning();
 
-      return positionId;
+      return position.id;
     } catch (error) {
       safeLogger.error('Error creating stake position:', error);
       throw new Error('Failed to create stake position');
@@ -330,15 +329,15 @@ export class EnhancedStakingService {
         amount: pos.amount,
         startTime: pos.startTime,
         lockPeriod: pos.lockPeriod,
-        aprRate: pos.aprRate,
-        lastRewardClaim: pos.lastRewardClaim,
-        accumulatedRewards: pos.accumulatedRewards,
-        isActive: pos.status === 'active',
+        aprRate: parseFloat(pos.aprRate),
+        lastRewardClaim: pos.lastRewardClaim || new Date(),
+        accumulatedRewards: pos.accumulatedRewards || "0",
+        isActive: pos.isActive,
         isAutoCompound: pos.isAutoCompound,
-        isFixedTerm: pos.isFixedTerm,
-        tierId: pos.tierId,
-        contractAddress: pos.contractAddress,
-        transactionHash: pos.transactionHash
+        isFixedTerm: pos.isFixedTerm || false,
+        tierId: pos.tierId || null,
+        contractAddress: pos.contractAddress || "",
+        transactionHash: pos.transactionHash || null
       }));
     } catch (error) {
       safeLogger.error('Error fetching user stake positions:', error);
@@ -372,14 +371,14 @@ export class EnhancedStakingService {
       
       // Get all tiers and find the matching one
       const allTiers = await this.getStakingTiers();
-      const tierData = allTiers.find(t => t.id === pos.tierId);
+      const tierData = allTiers.find(t => t.id.toString() === pos.tierId);
 
       if (!tierData) {
         throw new Error('Staking tier not found');
       }
 
       const now = Date.now();
-      const lockEndTime = pos.startTime.getTime() + (pos.lockPeriod * 1000);
+      const lockEndTime = pos.startTime.getTime() + (pos.lockPeriod * 24 * 60 * 60 * 1000);
       const remainingLockTime = Math.max(0, lockEndTime - now);
       const canWithdraw = remainingLockTime === 0 || !pos.isFixedTerm;
 

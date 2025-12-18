@@ -142,7 +142,7 @@ export class CommunicationManagerService {
               eq(chatMessages.conversationId, filters.conversationId || ''),
               sql`participants::jsonb ? ${filters.userAddress}`
             )
-          );
+          ) as any;
         }
         
         if (filters.startDate || filters.endDate) {
@@ -153,15 +153,15 @@ export class CommunicationManagerService {
           if (filters.endDate) {
             dateConditions.push(lte(chatMessages.sentAt, filters.endDate));
           }
-          query = query.where(and(...dateConditions));
+          query = query.where(and(...dateConditions)) as any;
         }
         
         if (filters.messageType) {
-          query = query.where(eq(chatMessages.messageType, filters.messageType));
+          query = query.where(eq(chatMessages.messageType, filters.messageType)) as any;
         }
       }
 
-      const messages = await query.orderBy(desc(chatMessages.sentAt)).limit(1000);
+      const messages = await query.orderBy(desc(chatMessages.sentAt)).limit(1000) as any;
       
       // Transform to CommunicationLog format
       const logs: CommunicationLog[] = messages.map(msg => ({

@@ -6,6 +6,7 @@ import {
   EscalationRule,
   NotificationTemplate
 } from '../types/workflow';
+import { workflowEscalations, workflowTaskAssignments } from '../db/schema';
 import { logger } from '../utils/logger';
 import { EventEmitter } from 'events';
 
@@ -164,12 +165,7 @@ export class EscalationManagementService extends EventEmitter {
         escalationLevel: level,
         escalatedTo,
         escalatedBy,
-        escalationReason: reason,
-        escalationData: {
-          originalAssignee: task.assignedTo,
-          escalationRule: rule,
-          timestamp: new Date().toISOString()
-        }
+        escalationReason: reason
       }).returning();
 
       // Update task assignment
@@ -225,12 +221,8 @@ export class EscalationManagementService extends EventEmitter {
       await db.update(workflowEscalations)
         .set({
           resolvedAt: new Date(),
-          escalationData: {
-            ...escalation.escalationData,
-            resolution,
-            resolvedBy,
-            resolvedAt: new Date().toISOString()
-          }
+          resolutionNotes: resolution,
+          status: 'resolved'
         })
         .where(eq(workflowEscalations.id, escalationId));
 
@@ -361,12 +353,12 @@ export class EscalationManagementService extends EventEmitter {
 
   async getEscalationHistory(taskId: string): Promise<WorkflowEscalation[]> {
     try {
-      const escalations = await db.query.workflowEscalations.findMany({
-        where: eq(workflowEscalations.assignmentId, taskId),
-        orderBy: asc(workflowEscalations.escalatedAt)
-      });
+      const escalations = await db.select()
+        .from(workflowEscalations)
+        .where(eq(workflowEscalations.assignmentId, taskId))
+        .orderBy(asc(workflowEscalations.escalatedAt));
 
-      return escalations;
+      return escalations as any;
     } catch (error) {
       logger.error('Failed to get escalation history', { error, taskId });
       throw new Error(`Failed to get escalation history: ${error.message}`);
@@ -594,9 +586,11 @@ export class EscalationManagementService extends EventEmitter {
 
   private async getTaskAssignment(taskId: string): Promise<WorkflowTaskAssignment | null> {
     try {
-      return await db.query.workflowTaskAssignments.findFirst({
-        where: eq(workflowTaskAssignments.id, taskId)
-      });
+      const result = await db.select()
+        .from(workflowTaskAssignments)
+        .where(eq(workflowTaskAssignments.id, taskId))
+        .limit(1);
+      return result[0] as any || null;
     } catch (error) {
       logger.error('Failed to get task assignment', { error, taskId });
       return null;
@@ -643,9 +637,5 @@ export class EscalationManagementService extends EventEmitter {
     return `esc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 }
-
-// Import statements for database tables
-const workflowEscalations = {} as any;
-const workflowTaskAssignments = {} as any;
 
 export default EscalationManagementService;

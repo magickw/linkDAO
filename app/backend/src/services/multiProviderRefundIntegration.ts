@@ -94,9 +94,7 @@ export class MultiProviderRefundIntegration {
         transactionType: 'refund',
         amount: request.amount.toString(),
         currency: request.currency,
-        netAmount: request.amount.toString(),
-        createdAt: new Date(),
-        updatedAt: new Date()
+        netAmount: request.amount.toString()
       }).returning();
 
       const providerTransactionId = providerTransaction.id;

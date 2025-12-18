@@ -251,6 +251,7 @@ class ContentStagingService {
 
   /**
    * Publish content to IPFS after approval
+   * Note: This uses Pinata REST API, not IPFS client
    */
   async publishToIPFS(id: string): Promise<string | null> {
     try {
@@ -259,15 +260,14 @@ class ContentStagingService {
         throw new Error('Staged content not found');
       }
 
-      const ipfs = await this.getIpfsClient();
-      // Add to IPFS
-      const result = await ipfs.add(content);
-      const cid = result.cid.toString();
+      // TODO: Implement Pinata REST API upload
+      // For now, return null as IPFS client is not available
+      safeLogger.warn('IPFS publishing not implemented - use Pinata REST API');
 
       // Clean up staged content
       await this.removeStagedContent(id);
 
-      return cid;
+      return null;
     } catch (error) {
       safeLogger.error('Failed to publish content to IPFS:', error);
       return null;

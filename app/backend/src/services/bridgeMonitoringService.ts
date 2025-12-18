@@ -369,8 +369,9 @@ export class BridgeMonitoringService extends EventEmitter {
       status: 'pending',
       fees: fee.toString(),
       validatorCount: 0,
-      requiredValidators: await this.getRequiredValidators(chainId),
-      bridgeProvider: 'default'
+      bridgeProvider: 'default',
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
 
     await this.storeBridgeTransaction(transaction);

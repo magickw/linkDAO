@@ -936,7 +936,7 @@ export class BlockchainMarketplaceService {
     const evidenceString = evidence ? JSON.stringify(evidence) : undefined;
 
     const dbDispute = await databaseService.createDispute(
-      escrowId,
+      String(escrowId),
       reporterUser.id,
       reason,
       evidenceString

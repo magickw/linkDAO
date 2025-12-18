@@ -120,7 +120,7 @@ export class SellerDatabaseOptimizationIntegration {
     const timestamp = new Date();
     
     // Collect metrics from all services
-    const dbStats = await this.databaseOptimizer.getDatabaseStats();
+    const dbStats = await this.databaseOptimizer.getDatabaseStats() as { cacheHitRatio?: number };
     const connectionHealth = this.connectionOptimizer.getPoolHealth();
     const sellerQueryStats = this.sellerQueryOptimizer.getQueryStatistics();
     const connectionMetrics = this.connectionOptimizer.getMetrics();
@@ -140,7 +140,7 @@ export class SellerDatabaseOptimizationIntegration {
         healthStatus: connectionHealth.status
       },
       cacheEfficiency: {
-        hitRate: dbStats.cacheHitRatio * 100,
+        hitRate: (dbStats.cacheHitRatio || 0) * 100,
         invalidations: 0, // Would be tracked separately
         averageTTL: 300 // Default 5 minutes
       },

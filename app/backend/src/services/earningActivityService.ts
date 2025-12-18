@@ -113,10 +113,7 @@ class EarningActivityService {
         qualityScore: qualityScore.toString(),
         isPremiumBonus: data.isPremiumUser || false,
         premiumBonusAmount: premiumBonus.toString(),
-        dailyLimitApplied: false,
-        metadata: JSON.stringify(data.metadata || {}),
-        status: 'processed',
-        processedAt: new Date()
+        metadata: JSON.stringify(data.metadata || {})
       }).returning();
 
       // Update daily limits

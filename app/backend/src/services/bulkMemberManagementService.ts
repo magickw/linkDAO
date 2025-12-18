@@ -549,7 +549,7 @@ export class BulkMemberManagementService {
   async importMembersFromCSV(
     communityId: string,
     csvData: string,
-    options: MemberImportData = {}
+    options: MemberImportData = { addresses: [] }
   ): Promise<BulkMemberResult & { duplicates: string[] }> {
     try {
       const { addresses: importAddresses, defaultRole = 'member', defaultReputation = 0 } = options;
@@ -592,7 +592,7 @@ export class BulkMemberManagementService {
    */
   async exportMembers(
     communityId: string,
-    options: MemberExportOptions = {}
+    options: MemberExportOptions = { format: 'csv' }
   ): Promise<{
     data: string;
     filename: string;

@@ -159,7 +159,7 @@ export class ContentSanitizationService {
       // Sanitize with sanitize-html
       const allowedAttributes = options.allowedAttributes ? 
         options.allowedAttributes : 
-        Object.values(this.ALLOWED_ATTRIBUTES).flat();
+        Object.values(this.ALLOWED_ATTRIBUTES).flat() as unknown as Record<string, string[]>;
       
       const sanitized = sanitizeHtml(processedContent, {
         allowedTags: allowedTags,

@@ -52,7 +52,6 @@ export class MarketplaceRegistrationService {
           country: data.country,
           shippingAddress: data.shippingAddress,
           billingAddress: data.billingAddress,
-          kycVerified: false, // KYC verification will be done separately
           createdAt: new Date(),
           updatedAt: new Date()
         })

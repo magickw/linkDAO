@@ -40,7 +40,7 @@ export interface IPFSConnectionConfig {
 }
 
 export class IPFSService {
-  private client: null = null; // Not using IPFS client
+  private client: any = null; // Not using IPFS client
   private gatewayUrl: string;
   private defaultPinning: boolean;
   private isMemoryConstrained: boolean; // New field
@@ -239,9 +239,9 @@ export class IPFSService {
     // Since we don't use IPFS client, always use fallback CID generation
     safeLogger.warn('IPFS client not used, generating fallback CID');
     const crypto = require('crypto');
-    const hash = crypto.createHash('sha256').update(
-      Buffer.isBuffer(content) ? content : Buffer.from(content)
-    ).digest('hex');
+    const contentBuffer = Buffer.isBuffer(content) ? content : 
+                         (typeof content === 'string' ? Buffer.from(content) : Buffer.from(''));
+    const hash = crypto.createHash('sha256').update(contentBuffer).digest('hex');
     const fallbackCid = `bafy${hash.substring(0, 42)}`; // Use modern CIDv1 format
 
       const size = Buffer.isBuffer(content) ? content.length : 

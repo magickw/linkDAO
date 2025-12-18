@@ -273,19 +273,16 @@ class ImageMetadataService {
       let query = db
         .select()
         .from(imageStorage)
-        .where(eq(imageStorage.usageType, usageType))
+        .where(
+          ownerId 
+            ? and(eq(imageStorage.usageType, usageType), eq(imageStorage.ownerId, ownerId))
+            : eq(imageStorage.usageType, usageType)
+        )
+        .orderBy(desc(imageStorage.createdAt))
         .limit(limit)
-        .offset(offset)
-        .orderBy(desc(imageStorage.createdAt));
+        .offset(offset);
 
-      if (ownerId) {
-        query = query.where(and(
-          eq(imageStorage.usageType, usageType),
-          eq(imageStorage.ownerId, ownerId)
-        ));
-      }
-
-      const records = await query;
+      const records = await query as any;
 
       return records.map(record => ({
         id: record.id,
@@ -375,10 +372,10 @@ class ImageMetadataService {
       let baseQuery = db.select().from(imageStorage);
       
       if (ownerId) {
-        baseQuery = baseQuery.where(eq(imageStorage.ownerId, ownerId));
+        baseQuery = baseQuery.where(eq(imageStorage.ownerId, ownerId)) as any;
       }
 
-      const records = await baseQuery;
+      const records = await baseQuery as any;
 
       const totalImages = records.length;
       const totalSize = records.reduce((sum, record) => sum + (record.fileSize || 0), 0);
@@ -457,10 +454,10 @@ class ImageMetadataService {
       let query = db.select().from(imageStorage);
       
       if (ownerId) {
-        query = query.where(eq(imageStorage.ownerId, ownerId));
+        query = query.where(eq(imageStorage.ownerId, ownerId)) as any;
       }
 
-      const records = await query;
+      const records = await query as any;
       
       // Group by file size to find potential duplicates
       const sizeGroups: Record<number, typeof records> = {};
