@@ -180,7 +180,6 @@ export class SellerProfileService {
           // Profile Image fields
           profileImageCdn: updates.profileImageCdn,
           profileImageIpfs: updates.profileImageIpfs,
-          profilePicture: updates.profilePicture,
           // Business Information
           legalBusinessName: updates.legalBusinessName,
           businessType: updates.businessType,
