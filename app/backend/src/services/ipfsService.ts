@@ -697,6 +697,51 @@ export class IPFSService {
   }
 
   /**
+   * Upload metadata to IPFS
+   */
+  async uploadMetadata(metadata: any, options?: IPFSUploadOptions): Promise<IPFSFileMetadata> {
+    const content = JSON.stringify(metadata);
+    const buffer = Buffer.from(content);
+    return this.uploadFile(buffer, { ...options, metadata: { ...options?.metadata, mimeType: 'application/json' } });
+  }
+
+  /**
+   * Pin content to IPFS
+   */
+  async pinContent(ipfsHash: string): Promise<void> {
+    try {
+      await axios.post(
+        `https://api.pinata.cloud/pinning/pinByHash`,
+        { hashToPin: ipfsHash },
+        {
+          headers: {
+            'pinata_api_key': process.env.PINATA_API_KEY || '',
+            'pinata_secret_api_key': process.env.PINATA_SECRET_KEY || '',
+          },
+        }
+      );
+      safeLogger.info(`Content pinned: ${ipfsHash}`);
+    } catch (error) {
+      safeLogger.error('Error pinning content:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get content from IPFS
+   */
+  async getContent(ipfsHash: string): Promise<Buffer> {
+    try {
+      const url = this.getGatewayUrl(ipfsHash);
+      const response = await axios.get(url, { responseType: 'arraybuffer' });
+      return Buffer.from(response.data);
+    } catch (error) {
+      safeLogger.error('Error getting content:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get gateway URL for IPFS hash
    */
   getGatewayUrl(ipfsHash?: string): string {

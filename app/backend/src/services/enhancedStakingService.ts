@@ -29,9 +29,9 @@ export interface StakePosition {
   isActive: boolean;
   isAutoCompound: boolean;
   isFixedTerm: boolean;
-  tierId: number;
+  tierId: string | null;
   contractAddress: string;
-  transactionHash: string;
+  transactionHash: string | null;
 }
 
 export interface FlexibleStakingOptions {

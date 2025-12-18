@@ -317,19 +317,19 @@ export class EscalationManagementService extends EventEmitter {
         AND resolved_at IS NOT NULL
       `);
 
-      const totalEscalations = Number(totalResult.rows[0]?.total || 0);
+      const totalEscalations = Number((totalResult as any)[0]?.total || 0);
       
-      const escalationsByReason = reasonResults.rows.reduce((acc, row) => {
+      const escalationsByReason = (reasonResults as any[]).reduce((acc, row) => {
         acc[row.escalation_reason] = Number(row.count);
         return acc;
       }, {} as Record<string, number>);
 
-      const escalationsByLevel = levelResults.rows.reduce((acc, row) => {
+      const escalationsByLevel = (levelResults as any[]).reduce((acc, row) => {
         acc[Number(row.escalation_level)] = Number(row.count);
         return acc;
       }, {} as Record<number, number>);
 
-      const topEscalationReasons = reasonResults.rows.map(row => ({
+      const topEscalationReasons = (reasonResults as any[]).map(row => ({
         reason: row.escalation_reason,
         count: Number(row.count),
         percentage: totalEscalations > 0 ? (Number(row.count) / totalEscalations) * 100 : 0

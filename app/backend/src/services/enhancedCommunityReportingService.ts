@@ -13,7 +13,7 @@ import { EventEmitter } from 'events';
 import { advancedReputationService } from './advancedReputationService';
 
 export interface CommunityReport {
-  id: string;
+  id: number;
   reporterId: string;
   targetType: 'post' | 'user' | 'comment' | 'listing';
   targetId: string;
@@ -40,7 +40,7 @@ export interface ConsensusBasedWeight {
 }
 
 export interface ReportValidationResult {
-  reportId: string;
+  reportId: number;
   isValid: boolean;
   consensusScore: number;
   participatingUsers: number;
@@ -179,7 +179,7 @@ export class EnhancedCommunityReportingService extends EventEmitter {
       }
 
       // Base weight from overall reputation score
-      const baseWeight = Math.max(0.1, reporter.overallScore / 100);
+      const baseWeight = Math.max(0.1, parseFloat(reporter.overallScore) / 100);
 
       // Calculate accuracy score from reporting history
       const accuracyScore = await this.calculateReporterAccuracy(reporterId);
@@ -214,7 +214,7 @@ export class EnhancedCommunityReportingService extends EventEmitter {
   /**
    * Start consensus validation process for a report
    */
-  private async startConsensusValidation(reportId: string): Promise<void> {
+  private async startConsensusValidation(reportId: number): Promise<void> {
     try {
       const report = await db.query.communityReports.findFirst({
         where: eq(communityReports.id, reportId)
@@ -261,8 +261,8 @@ export class EnhancedCommunityReportingService extends EventEmitter {
       })
       .from(userReputationScores)
       .where(and(
-        gt(userReputationScores.overallScore, 60), // Minimum reputation threshold
-        gt(userReputationScores.moderationScore, 50) // Good moderation history
+        gt(userReputationScores.overallScore, '60'), // Minimum reputation threshold
+        gt(userReputationScores.moderationScore, '50') // Good moderation history
       ))
       .orderBy(desc(userReputationScores.overallScore))
       .limit(limit * 2); // Get more than needed for filtering
@@ -419,7 +419,7 @@ export class EnhancedCommunityReportingService extends EventEmitter {
   /**
    * Create validation workflow for consensus-based validation
    */
-  private async createValidationWorkflow(reportId: string, validators: Array<{userId: string; weight: number}>): Promise<void> {
+  private async createValidationWorkflow(reportId: number, validators: Array<{userId: string; weight: number}>): Promise<void> {
     try {
       // Create workflow instance
       const [workflowInstance] = await db.insert(workflowInstances).values({
@@ -463,7 +463,7 @@ export class EnhancedCommunityReportingService extends EventEmitter {
   /**
    * Process validation result and calculate consensus
    */
-  async processValidationResult(reportId: string, validatorVotes: Array<{userId: string; vote: 'validate' | 'reject'; weight: number}>): Promise<ReportValidationResult> {
+  async processValidationResult(reportId: number, validatorVotes: Array<{userId: string; vote: 'validate' | 'reject'; weight: number}>): Promise<ReportValidationResult> {
     try {
       const report = await db.query.communityReports.findFirst({
         where: eq(communityReports.id, reportId)
@@ -552,7 +552,7 @@ export class EnhancedCommunityReportingService extends EventEmitter {
         await advancedReputationService.applyAdvancedReputationChange(
           report.reporterId,
           'helpful_report',
-          Math.round(10 * report.reporterWeight),
+          Math.round(10 * parseFloat(report.reporterWeight || '1')),
           'Community report validated by consensus',
           { reportId, consensusScore, participatingUsers }
         );

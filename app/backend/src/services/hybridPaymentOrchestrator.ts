@@ -255,7 +255,7 @@ export class HybridPaymentOrchestrator {
 
       // Update order with escrow details
       await this.databaseService.updateOrder(request.orderId, {
-        escrowId: escrowId,
+        escrowId: escrowId.toString(),
         paymentMethod: 'crypto',
         status: 'pending'
       });
@@ -656,7 +656,9 @@ export class HybridPaymentOrchestrator {
           const transfer = await stripe.transfers.create({
             amount: capturedIntent.transfer_data.amount,
             currency: capturedIntent.currency,
-            destination: capturedIntent.transfer_data.destination,
+            destination: typeof capturedIntent.transfer_data.destination === 'string' 
+              ? capturedIntent.transfer_data.destination 
+              : capturedIntent.transfer_data.destination.id,
             transfer_group: capturedIntent.transfer_group,
             metadata: {
               orderId: orderId,
@@ -762,9 +764,11 @@ export class HybridPaymentOrchestrator {
     }>;
   }> {
     try {
-      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
+        expand: ['charges']
+      });
       
-      const refunds = paymentIntent.charges.data[0]?.refunds?.data || [];
+      const refunds = (paymentIntent as any).charges?.data?.[0]?.refunds?.data || [];
       
       return {
         status: paymentIntent.status,

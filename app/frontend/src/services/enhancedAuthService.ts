@@ -811,9 +811,12 @@ class EnhancedAuthService {
       return;
     }
 
+    // If no address provided, check if this is a disconnect or just initial state
     if (!newAddress) {
-      // Wallet disconnected - only logout if we have an active session
-      if (this.sessionData) {
+      // Only logout if we have a session AND the wallet was actually connected before
+      // Don't logout on initial page load when address is undefined
+      if (this.sessionData && this.sessionData.user.address) {
+        console.log('👛 Wallet disconnected, clearing session');
         await this.logout();
       }
       return;
@@ -823,9 +826,11 @@ class EnhancedAuthService {
     if (this.sessionData && this.sessionData.user.address) {
       // Only check for real address changes, not initial connections
       // Use case-insensitive comparison to prevent unnecessary logouts
-      if (newAddress && this.sessionData.user.address.toLowerCase() !== newAddress.toLowerCase()) {
+      if (newAddress.toLowerCase() !== this.sessionData.user.address.toLowerCase()) {
         console.log('👛 Wallet address changed from', this.sessionData.user.address, 'to', newAddress, 'clearing session');
         await this.logout();
+      } else {
+        console.log('✅ Wallet address matches session, keeping authentication');
       }
     }
     // If sessionData.user.address is undefined or empty, it's likely an initial connection, don't logout

@@ -710,7 +710,7 @@ export class EnhancedCDNOptimizationService {
   }
 
   // Utility methods
-  private getOptimalFormat(metadata: sharp.Metadata): 'webp' | 'jpeg' | 'png' | 'avif' {
+  private getOptimalFormat(metadata: any): 'webp' | 'jpeg' | 'png' | 'avif' {
     // Logic to determine optimal format based on image characteristics
     if (metadata.hasAlpha) {
       return 'webp'; // WebP handles transparency well

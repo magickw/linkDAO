@@ -1,7 +1,7 @@
 import { db } from '../db/index';
 import { safeLogger } from '../utils/safeLogger';
 import { imageStorage } from '../db/schema';
-import { eq, and, gte, lte, desc, asc, count, sum, avg } from 'drizzle-orm';
+import { eq, and, gte, lte, desc, asc, count, sum, avg, sql } from 'drizzle-orm';
 import { createHash } from 'crypto';
 
 export interface ImageMetadata {
@@ -193,7 +193,7 @@ class ImageMetadataService {
       await db
         .update(imageStorage)
         .set({
-          accessCount: db.select({ count: count() }).from(imageStorage).where(eq(imageStorage.id, imageId)),
+          accessCount: sql`${imageStorage.accessCount} + 1`,
           lastAccessed: new Date(),
           updatedAt: new Date()
         })

@@ -115,6 +115,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []); // Empty dependency array - only run once on mount
 
   useEffect(() => {
+    // Only handle wallet changes if we're not in the middle of authentication
+    // and if there's actually a change (not just initial mount)
+    const sessionStatus = enhancedAuthService.getSessionStatus();
+    
+    // Skip if no session exists yet (initial state)
+    if (!sessionStatus.hasSession && !address) {
+      return;
+    }
+    
+    // Skip if address matches current session (no actual change)
+    if (address && sessionStatus.address && 
+        address.toLowerCase() === sessionStatus.address.toLowerCase()) {
+      return;
+    }
+    
     enhancedAuthService.handleWalletChange(address);
   }, [address]);
 

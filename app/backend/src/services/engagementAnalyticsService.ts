@@ -561,7 +561,7 @@ export class EngagementAnalyticsService {
       let totalViews = 0;
 
       for (const post of userPosts) {
-        const [reactions, comments, views] = await Promise.all([
+        const [reactionsCount, commentsCount, viewsCount] = await Promise.all([
           db.select({ count: count() })
             .from(reactions)
             .where(eq(reactions.postId, post.id))
@@ -576,9 +576,9 @@ export class EngagementAnalyticsService {
             .then(r => Number(r[0]?.count || 0))
         ]);
 
-        totalReactions += reactions;
-        totalComments += comments;
-        totalViews += views;
+        totalReactions += reactionsCount;
+        totalComments += commentsCount;
+        totalViews += viewsCount;
       }
 
       const totalEngagement = totalReactions + totalComments;

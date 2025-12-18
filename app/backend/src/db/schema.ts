@@ -73,6 +73,7 @@ export const posts = pgTable("posts", {
   contentCid: text("content_cid").notNull(),
   parentId: integer("parent_id"),
   mediaCids: text("media_cids"), // JSON array of media IPFS CIDs
+  mediaUrls: text("media_urls"), // JSON array of media URLs (HTTP/HTTPS)
   tags: text("tags"), // JSON array of tags
   stakedValue: numeric("staked_value").default('0'), // Total tokens staked on this post
   reputationScore: integer("reputation_score").default(0), // Author's reputation score at time of posting
@@ -904,7 +905,7 @@ export const reputations = pgTable("reputations", {
 // Disputes
 export const disputes = pgTable("disputes", {
   id: serial("id").primaryKey(),
-  escrowId: integer("escrow_id").references(() => escrows.id),
+  escrowId: uuid("escrow_id").references(() => escrows.id),
   reporterId: uuid("reporter_id").references(() => users.id),
   reason: text("reason"),
   status: varchar("status", { length: 32 }).default("open"), // 'open', 'in_review', 'resolved', 'escalated'
@@ -2524,7 +2525,11 @@ export const moderationActions = pgTable("moderation_actions", {
 export const contentReports = pgTable("content_reports", {
   id: serial("id").primaryKey(),
   contentId: varchar("content_id", { length: 64 }).notNull(),
+  targetType: varchar("target_type", { length: 32 }),
+  targetId: varchar("target_id", { length: 64 }),
+  reportType: varchar("report_type", { length: 32 }),
   reporterId: uuid("reporter_id").references(() => users.id).notNull(),
+  reporterWeight: numeric("reporter_weight").default("1"),
   reason: varchar("reason", { length: 48 }).notNull(),
   details: text("details"),
   weight: numeric("weight").default("1"),
@@ -2532,11 +2537,30 @@ export const contentReports = pgTable("content_reports", {
   resolution: text("resolution"), // Resolution details for closed reports
   moderatorNotes: text("moderator_notes"), // Internal notes from moderators
   consensusScore: numeric("consensus_score", { precision: 5, scale: 2 }), // Agreement score among moderators
+  validatedAt: timestamp("validated_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (t) => ({
   contentIdx: index("content_reports_content_idx").on(t.contentId),
   reporterIdx: index("content_reports_reporter_idx").on(t.reporterId),
+}));
+
+// Alias for backward compatibility
+export const communityReports = contentReports;
+
+// Reputation change events tracking
+export const reputationChangeEvents = pgTable("reputation_change_events", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  changeType: varchar("change_type", { length: 32 }).notNull(),
+  changeAmount: numeric("change_amount").notNull(),
+  reason: text("reason"),
+  relatedEntityType: varchar("related_entity_type", { length: 32 }),
+  relatedEntityId: varchar("related_entity_id", { length: 64 }),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  userIdx: index("reputation_change_events_user_idx").on(t.userId),
+  typeIdx: index("reputation_change_events_type_idx").on(t.changeType),
 }));
 
 // Appeals system
@@ -4008,8 +4032,11 @@ export const earningActivities = pgTable("earning_activities", {
   activityType: varchar("activity_type", { length: 50 }).notNull(),
   activityId: varchar("activity_id", { length: 255 }).notNull(),
   tokensEarned: numeric("tokens_earned", { precision: 20, scale: 8 }).notNull(),
+  baseReward: numeric("base_reward", { precision: 20, scale: 8 }).notNull(),
   multiplier: numeric("multiplier", { precision: 5, scale: 4 }).default("1.0").notNull(),
+  qualityScore: numeric("quality_score", { precision: 5, scale: 4 }),
   isPremiumBonus: boolean("is_premium_bonus").default(false).notNull(),
+  premiumBonusAmount: numeric("premium_bonus_amount", { precision: 20, scale: 8 }).default("0"),
   metadata: text("metadata"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (t) => ({
@@ -4026,14 +4053,19 @@ export const stakingPositions = pgTable("staking_positions", {
   lockPeriod: integer("lock_period").notNull(),
   aprRate: numeric("apr_rate", { precision: 5, scale: 4 }).notNull(),
   startDate: timestamp("start_date").notNull(),
+  startTime: timestamp("start_time").notNull().$defaultFn(() => new Date()),
   endDate: timestamp("end_date").notNull(),
   isAutoCompound: boolean("is_auto_compound").default(false).notNull(),
+  isFixedTerm: boolean("is_fixed_term").default(true),
+  isActive: boolean("is_active").default(true).notNull(),
+  tierId: varchar("tier_id", { length: 64 }),
   rewardsEarned: numeric("rewards_earned", { precision: 20, scale: 8 }).default("0").notNull(),
   accumulatedRewards: numeric("accumulated_rewards", { precision: 20, scale: 8 }).default("0"), // Total accumulated rewards
   lastRewardClaim: timestamp("last_reward_claim"), // Last time rewards were claimed
   status: varchar("status", { length: 20 }).default("active").notNull(),
   contractAddress: varchar("contract_address", { length: 66 }),
   txHash: varchar("tx_hash", { length: 66 }),
+  transactionHash: varchar("transaction_hash", { length: 66 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (t) => ({
@@ -4463,6 +4495,26 @@ export const workflowTaskAssignments = pgTable("workflow_task_assignments", {
   stepExecutionIdx: index("workflow_task_assignments_step_execution_idx").on(table.stepExecutionId),
   assignedToIdx: index("workflow_task_assignments_assigned_to_idx").on(table.assignedTo),
   statusIdx: index("workflow_task_assignments_status_idx").on(table.status),
+}));
+
+// Workflow Escalations
+export const workflowEscalations = pgTable("workflow_escalations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  assignmentId: uuid("assignment_id").references(() => workflowTaskAssignments.id, { onDelete: "cascade" }).notNull(),
+  escalationReason: varchar("escalation_reason", { length: 255 }).notNull(),
+  escalationLevel: integer("escalation_level").default(1).notNull(),
+  escalatedTo: uuid("escalated_to").references(() => users.id, { onDelete: "set null" }),
+  escalatedBy: uuid("escalated_by").references(() => users.id, { onDelete: "set null" }),
+  escalatedAt: timestamp("escalated_at").defaultNow().notNull(),
+  resolvedAt: timestamp("resolved_at"),
+  resolutionNotes: text("resolution_notes"),
+  status: varchar("status", { length: 20 }).default("pending").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  assignmentIdx: index("workflow_escalations_assignment_idx").on(table.assignmentId),
+  statusIdx: index("workflow_escalations_status_idx").on(table.status),
+  escalatedToIdx: index("workflow_escalations_escalated_to_idx").on(table.escalatedTo),
 }));
 
 // Workflow Rules

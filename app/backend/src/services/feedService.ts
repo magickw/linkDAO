@@ -294,7 +294,7 @@ export class FeedService {
         .select({
           id: quickPosts.id,
           authorId: quickPosts.authorId,
-          dao: sql<string>`NULL` as unknown as string, // Quick posts don't have DAO
+          dao: sql<string>`NULL`, // Quick posts don't have DAO
           content: quickPosts.content, // Include content directly
           contentCid: quickPosts.contentCid,
           mediaCids: quickPosts.mediaCids,
@@ -348,7 +348,7 @@ export class FeedService {
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         } else if (sort === 'top') {
           // Sort by engagement/staked value
-          return (b.stakedValue || 0) - (a.stakedValue || 0);
+          return parseFloat(b.stakedValue || '0') - parseFloat(a.stakedValue || '0');
         } else {
           // Default to newest
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -1510,11 +1510,11 @@ export class FeedService {
           };
 
           // Add postId or quickPostId if they exist
-          if (commentValues.postId !== null) {
-            minimalCommentValues.postId = commentValues.postId;
+          if ('postId' in commentValues && commentValues.postId !== null) {
+            (minimalCommentValues as any).postId = commentValues.postId;
           }
-          if (commentValues.quickPostId !== null) {
-            minimalCommentValues.quickPostId = commentValues.quickPostId;
+          if ('quickPostId' in commentValues && commentValues.quickPostId !== null) {
+            (minimalCommentValues as any).quickPostId = commentValues.quickPostId;
           }
 
           comment = await db
@@ -1867,7 +1867,7 @@ export class FeedService {
 
       const engagementRate = this.calculateEngagementRate(totalReactions, totalTips, totalShares);
       const viralityScore = this.calculateViralityScore(totalShares, totalReactions, ageInHours);
-      const qualityScore = this.calculateContentQualityScore(
+      const qualityScore = this.calculateQualityScore(
         tipData[0]?.totalAmount || 0,
         totalReactions,
         0 // views placeholder

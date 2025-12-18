@@ -60,51 +60,55 @@ async function generateSiteMap() {
   ];
 
   // Dynamic pages - these would be fetched from your API/database
-  let dynamicPages = [];
+  const dynamicPages: Array<{ url: string; priority: string; changefreq: string }> = [];
   
+  // Skip dynamic content for now to ensure sitemap always works
+  // Dynamic content can be added later when API is stable
+  /*
   try {
     // Fetch marketplace listings for sitemap with timeout (limited to 50 items)
     const listingsPromise = marketplaceService.getMarketplaceListings({ limit: 50 });
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Timeout')), 5000)
+      setTimeout(() => reject(new Error('Timeout')), 3000)
     );
     
     const listings = await Promise.race([listingsPromise, timeoutPromise]);
     if (Array.isArray(listings)) {
-      dynamicPages = [...dynamicPages, ...listings.map(listing => ({
+      dynamicPages.push(...listings.map(listing => ({
         url: `/marketplace/listing/${listing.id}`,
         priority: '0.7',
         changefreq: 'weekly'
-      }))];
+      })));
     }
   } catch (error) {
     console.error('Error fetching marketplace listings for sitemap:', error);
-    // Continue with empty array if there's an error
   }
 
   try {
     // Fetch communities for sitemap with timeout (limited to 50 items)
     const communitiesPromise = CommunityService.getAllCommunities({ limit: 50 });
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Timeout')), 5000)
+      setTimeout(() => reject(new Error('Timeout')), 3000)
     );
     
     const communities = await Promise.race([communitiesPromise, timeoutPromise]);
     if (Array.isArray(communities)) {
-      dynamicPages = [...dynamicPages, ...communities.map(community => ({
+      dynamicPages.push(...communities.map(community => ({
         url: `/communities/${community.slug || community.id}`,
         priority: '0.6',
         changefreq: 'weekly'
-      }))];
+      })));
     }
   } catch (error) {
     console.error('Error fetching communities for sitemap:', error);
-    // Continue with empty array if there's an error
   }
+  */
 
   // Combine static and dynamic pages
   const allPages = [...staticPages, ...dynamicPages];
 
+  const timestamp = new Date().toISOString();
+  
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   ${allPages
@@ -112,7 +116,7 @@ async function generateSiteMap() {
       return `
     <url>
       <loc>${SITE_URL}${url}</loc>
-      <lastmod>${new Date().toISOString()}</lastmod>
+      <lastmod>${timestamp}</lastmod>
       <changefreq>${changefreq}</changefreq>
       <priority>${priority}</priority>
     </url>
@@ -131,34 +135,52 @@ export const getServerSideProps: GetServerSideProps = async ({ res }) => {
   } catch (error) {
     console.error('Error generating sitemap:', error);
     
-    // Fallback to minimal sitemap if generation fails
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://linkdao.io';
+    const timestamp = new Date().toISOString();
+    
     sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>${SITE_URL}</loc>
-    <lastmod>${new Date().toISOString()}</lastmod>
+    <loc>${siteUrl}</loc>
+    <lastmod>${timestamp}</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>${SITE_URL}/marketplace</loc>
-    <lastmod>${new Date().toISOString()}</lastmod>
+    <loc>${siteUrl}/marketplace</loc>
+    <lastmod>${timestamp}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>${SITE_URL}/communities</loc>
-    <lastmod>${new Date().toISOString()}</lastmod>
+    <loc>${siteUrl}/communities</loc>
+    <lastmod>${timestamp}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>${siteUrl}/governance</loc>
+    <lastmod>${timestamp}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>${siteUrl}/blog</loc>
+    <lastmod>${timestamp}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
   </url>
 </urlset>`;
   }
 
-  res.setHeader('Content-Type', 'text/xml');
-  res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate');
-  res.write(sitemap);
-  res.end();
+  try {
+    res.setHeader('Content-Type', 'text/xml');
+    res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate');
+    res.write(sitemap);
+    res.end();
+  } catch (responseError) {
+    console.error('Error writing sitemap response:', responseError);
+  }
 
   return {
     props: {},
