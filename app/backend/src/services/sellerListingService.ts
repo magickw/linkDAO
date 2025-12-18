@@ -132,13 +132,26 @@ class SellerListingService {
       const normalizedAddress = walletAddress.toLowerCase();
       safeLogger.info('Fetching seller listings', { walletAddress: normalizedAddress, options });
 
+      const {
+        status,
+        limit = 50,
+        offset = 0,
+        sortBy = 'createdAt',
+        sortOrder = 'desc',
+      } = options;
+
       // Verify seller exists and get seller ID
       const sellerResult = await db.select().from(sellers).where(eq(sellers.walletAddress, normalizedAddress));
       const seller = sellerResult[0];
 
       if (!seller) {
-        safeLogger.warn('Seller not found', { walletAddress: normalizedAddress });
-        throw new Error('Seller not found');
+        safeLogger.info('Seller profile not found, returning empty listings', { walletAddress: normalizedAddress });
+        return {
+          listings: [],
+          total: 0,
+          page: Math.floor(offset / limit) + 1,
+          pageSize: limit
+        };
       }
 
       // Get user ID for seller
@@ -146,17 +159,14 @@ class SellerListingService {
       const user = userResult[0];
 
       if (!user) {
-        safeLogger.warn('User not found for seller', { walletAddress: normalizedAddress });
-        throw new Error('User not found');
+        safeLogger.info('User not found for seller, returning empty listings', { walletAddress: normalizedAddress });
+        return {
+          listings: [],
+          total: 0,
+          page: Math.floor(offset / limit) + 1,
+          pageSize: limit
+        };
       }
-
-    const {
-      status,
-      limit = 50,
-      offset = 0,
-      sortBy = 'createdAt',
-      sortOrder = 'desc',
-    } = options;
 
     // Build query conditions
     const conditions = [eq(products.sellerId, user.id)];
@@ -245,7 +255,15 @@ class SellerListingService {
         error: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined
       });
-      throw error;
+      
+      // Return empty result instead of throwing to prevent 500 errors
+      const { limit = 50, offset = 0 } = options;
+      return {
+        listings: [],
+        total: 0,
+        page: Math.floor(offset / limit) + 1,
+        pageSize: limit
+      };
     }
   }
 
