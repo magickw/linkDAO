@@ -1,6 +1,5 @@
 import express from 'express';
 import { safeLogger } from '../utils/safeLogger';
-import { csrfProtection } from '../middleware/csrfProtection';
 import { Request, Response } from 'express';
 
 const router = express.Router();
@@ -34,7 +33,7 @@ router.get('/api/proxy', async (req: Request, res: Response) => {
     
     try {
       const urlObj = new URL(url);
-      const isAllowed = allowedDomains.some(domain => urlObj.hostname.includes(domain));
+      const isAllowed = allowedDomains.some(domain => urlObj.hostname === domain || urlObj.hostname.endsWith('.' + domain));
       
       if (!isAllowed) {
         return res.status(403).json({ error: 'URL not allowed' });
@@ -45,13 +44,28 @@ router.get('/api/proxy', async (req: Request, res: Response) => {
     
     // Make the request to the external service
     const response = await fetch(url, {
-      method: req.method,
+      method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
     });
     
-    // Get the response data
+    // Handle HEAD requests differently (no response body)
+    if (req.method === 'HEAD') {
+      // Copy relevant headers from the response
+      const headersToCopy = ['content-type', 'content-length', 'etag', 'last-modified'];
+      headersToCopy.forEach(header => {
+        const value = response.headers.get(header);
+        if (value) {
+          res.set(header, value);
+        }
+      });
+      
+      // Send the response back to the client
+      return res.status(response.status).end();
+    }
+    
+    // Get the response data for non-HEAD requests
     const data = await response.json();
     
     // Set appropriate headers
@@ -65,7 +79,7 @@ router.get('/api/proxy', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/api/proxy', csrfProtection,  async (req: Request, res: Response) => {
+router.post('/api/proxy', async (req: Request, res: Response) => {
   try {
     const { url } = req.query;
     
@@ -90,7 +104,7 @@ router.post('/api/proxy', csrfProtection,  async (req: Request, res: Response) =
     
     try {
       const urlObj = new URL(url);
-      const isAllowed = allowedDomains.some(domain => urlObj.hostname.includes(domain));
+      const isAllowed = allowedDomains.some(domain => urlObj.hostname === domain || urlObj.hostname.endsWith('.' + domain));
       
       if (!isAllowed) {
         return res.status(403).json({ error: 'URL not allowed' });
@@ -109,7 +123,14 @@ router.post('/api/proxy', csrfProtection,  async (req: Request, res: Response) =
     });
     
     // Get the response data
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch (parseError) {
+      // If JSON parsing fails, return the raw text
+      const text = await response.text();
+      return res.status(response.status).send(text);
+    }
     
     // Set appropriate headers
     res.set('Content-Type', 'application/json');

@@ -102,6 +102,11 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
     return next();
   }
   
+  // Skip CSRF protection for proxy routes (they handle their own security)
+  if (req.path.startsWith('/api/proxy')) {
+    return next();
+  }
+  
   // Check if user is authenticated via JWT or wallet signature
   const authHeader = req.headers.authorization;
   const hasWalletAuth = req.headers['x-wallet-address'] || (req as any).user?.walletAddress || (req as any).user?.address;  
