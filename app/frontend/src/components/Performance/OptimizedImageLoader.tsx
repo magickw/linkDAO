@@ -115,31 +115,49 @@ const imageCache = new ImageCacheManager();
 // Image optimization utilities
 const isValidImageUrl = (src: string): boolean => {
   if (!src || typeof src !== 'string') return false;
-  // Allow data URLs, blob URLs, absolute URLs, and relative paths starting with /
+  // Allow data URLs, blob URLs, absolute URLs, relative paths starting with /, and IPFS CIDs
   return src.startsWith('data:') ||
          src.startsWith('blob:') ||
          src.startsWith('http://') ||
          src.startsWith('https://') ||
-         src.startsWith('/');
+         src.startsWith('/') ||
+         src.startsWith('Qm') || // IPFS CIDv0
+         src.startsWith('baf'); // IPFS CIDv1
 };
 
 const DEFAULT_AVATAR = '/images/default-avatar.png';
+const DEFAULT_PRODUCT_IMAGE = '/images/placeholder-product.png';
 
 const getOptimizedImageURL = (
   src: string,
   width?: number,
   height?: number,
-  quality: number = 75
+  quality: number = 75,
+  useProductDefault: boolean = false
 ): string => {
   // Validate src - if it looks like a wallet address or invalid, use default
   if (!isValidImageUrl(src)) {
     console.warn('Invalid image URL detected, using default:', src?.substring(0, 20));
-    return DEFAULT_AVATAR;
+    return useProductDefault ? DEFAULT_PRODUCT_IMAGE : DEFAULT_AVATAR;
   }
 
   // If it's already a data URL or blob URL, return as is
   if (src.startsWith('data:') || src.startsWith('blob:')) {
     return src;
+  }
+
+  // Handle IPFS CIDs by converting to gateway URL
+  if (src.startsWith('Qm') || src.startsWith('baf')) {
+    const ipfsGateway = 'https://gateway.pinata.cloud/ipfs/';
+    const url = new URL(`${ipfsGateway}${src}`);
+    
+    // Add optimization parameters
+    if (width) url.searchParams.set('w', width.toString());
+    if (height) url.searchParams.set('h', height.toString());
+    url.searchParams.set('q', quality.toString());
+    url.searchParams.set('f', 'webp');
+    
+    return url.toString();
   }
 
   // For external URLs, try to use optimization services

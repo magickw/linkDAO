@@ -171,9 +171,10 @@ class TokenReactionService {
   async getReactionSummaries(postId: string): Promise<ReactionSummary[]> {
     try {
       return await this.makeRequest<ReactionSummary[]>(`/api/reactions/${postId}/summaries`);
-    } catch (error) {
-      console.error('Failed to get reaction summaries:', error);
-      // Return empty array instead of throwing to prevent UI crashes
+    } catch (error: any) {
+      if (error?.message?.includes('422') || error?.message?.includes('HTTP 422')) {
+        return [];
+      }
       return [];
     }
   }

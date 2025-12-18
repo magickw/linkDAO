@@ -38,19 +38,32 @@ export function useReputationData({
       setIsLoading(true);
       setError(null);
 
-      // Fetch user reputation
-      const userReputation = await reputationService.getUserReputation(userId);
+      const userReputation = await reputationService.getUserReputation(userId).catch(err => {
+        if (err?.message?.includes('400') || err?.response?.status === 400) {
+          return null;
+        }
+        throw err;
+      });
       
-      // Fetch recent reputation events
-      const reputationEvents = await reputationService.getReputationEvents(userId, 10);
+      const reputationEvents = await reputationService.getReputationEvents(userId, 10).catch(err => {
+        if (err?.message?.includes('400') || err?.response?.status === 400) {
+          return [];
+        }
+        throw err;
+      });
 
       setReputation(userReputation);
-      setEvents(reputationEvents);
+      setEvents(reputationEvents || []);
       setLastUpdated(new Date());
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch reputation data';
-      setError(errorMessage);
-      console.error('Reputation data fetch error:', err);
+    } catch (err: any) {
+      if (err?.message?.includes('400') || err?.response?.status === 400) {
+        setReputation(null);
+        setEvents([]);
+        setError(null);
+      } else {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch reputation data';
+        setError(errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }

@@ -321,31 +321,23 @@ class CryptoPriceService {
    * Fetch prices from CoinGecko API with rate limiting
    */
   private async fetchPricesFromAPI(symbols: string[]): Promise<Map<string, CryptoPriceData>> {
-    // Circuit breaker pattern - if too many failures, stop trying for a while
     if (this.circuitBreakerOpen) {
       const now = Date.now();
       if (now - this.circuitBreakerOpenTime < this.CIRCUIT_BREAKER_TIMEOUT) {
-        console.log('Circuit breaker open, using cached data only');
         return new Map();
       } else {
-        // Try to close circuit breaker
-        console.log('Attempting to close circuit breaker');
         this.circuitBreakerOpen = false;
         this.retryCount = 0;
       }
     }
 
-    // Check if we're being rate limited
     if (this.retryCount >= this.MAX_RETRIES) {
-      console.warn('Max retries reached, opening circuit breaker');
       this.circuitBreakerOpen = true;
       this.circuitBreakerOpenTime = Date.now();
       return new Map();
     }
 
-    // Check network connectivity
     if (!networkService.getOnlineStatus()) {
-      console.log('Network is offline, using cached prices');
       return new Map();
     }
 
@@ -360,15 +352,17 @@ class CryptoPriceService {
     const url = `${this.baseUrl}/simple/price?ids=${coinIds.join(',')}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true&include_last_updated_at=true`;
 
     try {
-      // Use global request manager with aggressive caching
-      const data = await cachedFetch<Record<string, any>>(url, {}, `coingecko_prices_${coinIds.join(',')}`);
+      const data = await cachedFetch<Record<string, any>>(url, {
+        headers: {
+          'Accept': 'application/json'
+        }
+      }, `coingecko_prices_${coinIds.join(',')}`);
       
       if (!data) {
-        throw new Error('No data received from CoinGecko API');
+        return new Map();
       }
       const priceMap = new Map<string, CryptoPriceData>();
 
-      // Map response back to symbols
       symbols.forEach(symbol => {
         const coinId = this.tokenIdMap.get(symbol.toUpperCase());
         if (coinId && data[coinId]) {
@@ -376,7 +370,7 @@ class CryptoPriceService {
           priceMap.set(symbol.toUpperCase(), {
             id: coinId,
             symbol: symbol.toUpperCase(),
-            name: symbol, // We could fetch full names separately if needed
+            name: symbol,
             current_price: coinData.usd || 0,
             price_change_percentage_24h: coinData.usd_24h_change || 0,
             market_cap: coinData.usd_market_cap || 0,
@@ -386,10 +380,20 @@ class CryptoPriceService {
         }
       });
 
+      this.retryCount = 0;
       return priceMap;
-    } catch (error) {
-      console.error('CoinGecko API fetch failed:', error);
-      throw error;
+    } catch (error: any) {
+      this.retryCount++;
+      
+      if (error?.message?.includes('503') || error?.message?.includes('429')) {
+        const backoffTime = Math.min(1000 * Math.pow(2, this.retryCount), 60000);
+        if (this.retryCount >= this.MAX_RETRIES) {
+          this.circuitBreakerOpen = true;
+          this.circuitBreakerOpenTime = Date.now();
+        }
+      }
+      
+      return new Map();
     }
   }
 

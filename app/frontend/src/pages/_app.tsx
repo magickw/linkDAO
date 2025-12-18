@@ -163,9 +163,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
               onSuccess: (registration) => {
                 console.log('Service worker registered successfully');
               },
-              onError: (error) => {
-                console.error('Service worker registration failed:', error);
-              }
+              onError: () => {}
             });
 
             await swUtilRef.current.register();

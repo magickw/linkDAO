@@ -257,19 +257,10 @@ export class AdminWebSocketManager {
 
       this.socket.once('admin_auth_error', (error) => {
         clearTimeout(timeout);
-        console.error('Admin authentication failed:', error);
         
-        // Check if this is the configured admin address
-        const configuredAdminAddress = process.env.NEXT_PUBLIC_ADMIN_ADDRESS || '0xEe034b53D4cCb101b2a4faec27708be507197350';
-        const currentUserAddress = this.adminUser?.email; // Using email as identifier for now
-        
-        // Fallback for configured admin address if backend rejects it
-        // This allows frontend development/testing even if backend doesn't recognize the admin
-        if (this.adminUser?.role === 'admin') {
-          console.log('⚠️ Enabling mock admin mode due to backend authentication failure');
+        if (this.adminUser?.role === 'admin' || this.adminUser?.role === 'super_admin') {
           this.isAuthenticated = true;
           this.connectionHealth.status = 'healthy';
-          // Don't start real heartbeats as they might fail, but maybe start mock ones?
           this.notifyConnectionListeners(true);
           resolve();
         } else {

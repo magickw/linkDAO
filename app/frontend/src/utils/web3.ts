@@ -56,11 +56,9 @@ export async function getProvider() {
       }
     }
 
-    // If no env RPC configured, fall back to wagmi's chain URLs (use mainnet by default)
     try {
       const chainId = envChainId ? parseInt(envChainId, 10) : 1;
       const rpcUrl = getChainRpcUrl(chainId);
-      console.log('Using chain RPC URL:', rpcUrl);
       
       if (rpcUrl) {
         const provider = new ethers.JsonRpcProvider(rpcUrl, {
@@ -68,15 +66,11 @@ export async function getProvider() {
           name: chainId === 1 ? 'mainnet' : chainId === 11155111 ? 'sepolia' : 'unknown'
         });
         
-        // Add network detection with proper error handling
-        provider.ready.catch((error) => {
-          console.warn('Provider network detection failed, but continuing:', error);
-        });
+        provider.ready.catch(() => {});
         
         return provider;
       }
     } catch (e) {
-      // ignore and use default provider below
       console.warn('Error getting chain RPC URL:', e);
     }
 

@@ -106,9 +106,10 @@ class GlobalRequestManager {
   }
 
   /**
-   * Execute the actual request with timeout
+   * Execute the actual request with timeout and retry logic
    */
-  private async executeRequest<T>(url: string, options: RequestInit, key: string): Promise<T> {
+  private async executeRequest<T>(url: string, options: RequestInit, key: string, retryCount = 0): Promise<T> {
+    const MAX_RETRIES = 3;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.REQUEST_TIMEOUT);
 
@@ -121,6 +122,19 @@ class GlobalRequestManager {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
+        if ((response.status === 503 || response.status === 429) && retryCount < MAX_RETRIES) {
+          const backoffDelay = Math.min(1000 * Math.pow(2, retryCount), 10000);
+          await new Promise(resolve => setTimeout(resolve, backoffDelay));
+          return this.executeRequest<T>(url, options, key, retryCount + 1);
+        }
+        
+        if (response.status === 400 || response.status === 401 || response.status === 403) {
+          const stale = this.getFromCache<T>(key, true);
+          if (stale) {
+            return stale;
+          }
+        }
+        
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
@@ -130,6 +144,11 @@ class GlobalRequestManager {
       clearTimeout(timeoutId);
       
       if (error instanceof Error && error.name === 'AbortError') {
+        if (retryCount < MAX_RETRIES) {
+          const backoffDelay = Math.min(1000 * Math.pow(2, retryCount), 10000);
+          await new Promise(resolve => setTimeout(resolve, backoffDelay));
+          return this.executeRequest<T>(url, options, key, retryCount + 1);
+        }
         throw new Error('Request timeout');
       }
       
