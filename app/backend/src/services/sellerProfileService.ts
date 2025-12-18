@@ -173,7 +173,14 @@ export class SellerProfileService {
           websiteUrl: updates.websiteUrl,
           socialLinks: updates.socialLinks ? JSON.stringify(updates.socialLinks) : undefined,
           storeDescription: updates.storeDescription,
+          // Cover Image fields
           coverImageUrl: updates.coverImageUrl,
+          coverImageCdn: updates.coverImageCdn,
+          coverImageIpfs: updates.coverImageIpfs,
+          // Profile Image fields
+          profileImageCdn: updates.profileImageCdn,
+          profileImageIpfs: updates.profileImageIpfs,
+          profilePicture: updates.profilePicture,
           // Business Information
           legalBusinessName: updates.legalBusinessName,
           businessType: updates.businessType,
@@ -184,6 +191,7 @@ export class SellerProfileService {
           registeredAddressCountry: updates.registeredAddressCountry,
           ...(taxIdEncrypted ? { taxIdEncrypted } : {}),
           ...(updates.taxIdType ? { taxIdType: updates.taxIdType } : {}),
+          ...(updates.payoutSettings ? { payoutSettings: JSON.stringify(updates.payoutSettings) } : {}),
 
           onboardingSteps: updatedOnboardingSteps,
           onboardingCompleted: this.calculateOnboardingCompletion(updatedOnboardingSteps),

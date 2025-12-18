@@ -168,6 +168,14 @@ class SellerListingService {
         };
       }
 
+    safeLogger.info('Querying products for seller', { 
+      userId: user.id, 
+      walletAddress: normalizedAddress,
+      statusFilter: status || 'none',
+      limit,
+      offset
+    });
+
     // Build query conditions
     const conditions = [eq(products.sellerId, user.id)];
 
@@ -180,6 +188,18 @@ class SellerListingService {
 
     // Get total count
     const productsList = await db.select().from(products).where(whereClause);
+
+    safeLogger.info('Products query result', {
+      userId: user.id,
+      totalFound: productsList.length,
+      statusFilter: status || 'none',
+      sampleProduct: productsList[0] ? {
+        id: productsList[0].id,
+        title: productsList[0].title,
+        status: productsList[0].status,
+        sellerId: productsList[0].sellerId
+      } : null
+    });
 
     const total = productsList.length;
 
