@@ -1461,6 +1461,15 @@ export class FeedService {
       const isIntegerId = /^\d+$/.test(postId);
       safeLogger.info('Post ID type check:', { postId, isIntegerId });
 
+      // Validate parentCommentId if provided
+      if (parentCommentId) {
+        const parentComment = await db.select().from(comments).where(eq(comments.id, parentCommentId)).limit(1);
+        if (parentComment.length === 0) {
+          safeLogger.error('Parent comment not found for ID:', parentCommentId);
+          throw new Error('Parent comment not found');
+        }
+      }
+
       const commentValues: any = {
         authorId: user[0].id,
         content,
