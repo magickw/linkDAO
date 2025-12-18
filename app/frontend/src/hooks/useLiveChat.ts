@@ -10,6 +10,7 @@ export const useLiveChat = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [agentName, setAgentName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [waitingPosition, setWaitingPosition] = useState<number | null>(null);
 
   const connect = useCallback(async () => {
     if (!user?.address) {
@@ -27,19 +28,28 @@ export const useLiveChat = () => {
     }
   }, [user]);
 
-  const sendMessage = useCallback((content: string) => {
+  const sendMessage = useCallback(async (content: string) => {
+    if (!sessionId) {
+      setError('Not connected to chat');
+      return;
+    }
+
+    const tempMessage: ChatMessage = {
+      id: `temp-${Date.now()}`,
+      sessionId: sessionId,
+      sender: 'user',
+      content,
+      timestamp: new Date(),
+    };
+
+    setMessages(prev => [...prev, tempMessage]);
+
     try {
-      liveChatService.sendMessage(content);
-      
-      setMessages(prev => [...prev, {
-        id: `temp-${Date.now()}`,
-        sessionId: sessionId!,
-        sender: 'user',
-        content,
-        timestamp: new Date(),
-      }]);
+      await liveChatService.sendMessage(content);
+      setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send message');
+      setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
     }
   }, [sessionId]);
 
@@ -62,6 +72,11 @@ export const useLiveChat = () => {
 
     liveChatService.onAgentJoined((name) => {
       setAgentName(name);
+      setWaitingPosition(null);
+    });
+
+    liveChatService.onWaitingForAgent((data) => {
+      setWaitingPosition(data.position);
     });
 
     return () => {
@@ -76,6 +91,7 @@ export const useLiveChat = () => {
     isTyping,
     agentName,
     error,
+    waitingPosition,
     connect,
     sendMessage,
     disconnect,

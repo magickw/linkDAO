@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { csrfProtection } from '../middleware/csrfProtection';
 import { supportTicketingController } from '../controllers/supportTicketingController';
 import { authMiddleware } from '../middleware/authMiddleware';
-import { validateAdminRole } from '../middleware/adminAuthMiddleware';
+import { validateAdminRole, requirePermission } from '../middleware/adminAuthMiddleware';
 
 const router = Router();
 
@@ -14,12 +14,16 @@ router.post('/interactions', csrfProtection, supportTicketingController.recordDo
 router.get('/tickets/user/:userEmail', authMiddleware, supportTicketingController.getUserTickets.bind(supportTicketingController));
 router.get('/tickets/:ticketId', authMiddleware, supportTicketingController.getTicket.bind(supportTicketingController));
 
-// Admin routes (admin authentication required)
-router.put('/tickets/:ticketId', csrfProtection, validateAdminRole, supportTicketingController.updateTicket.bind(supportTicketingController));
-router.get('/tickets', validateAdminRole, supportTicketingController.searchTickets.bind(supportTicketingController));
-router.get('/analytics', validateAdminRole, supportTicketingController.getSupportAnalytics.bind(supportTicketingController));
-router.get('/analytics/statistics', validateAdminRole, supportTicketingController.getTicketStatistics.bind(supportTicketingController));
-router.get('/analytics/documentation-effectiveness', validateAdminRole, supportTicketingController.getDocumentationEffectiveness.bind(supportTicketingController));
+// Support staff routes (requires support.tickets permission)
+router.put('/tickets/:ticketId', csrfProtection, authMiddleware, requirePermission('support.tickets'), supportTicketingController.updateTicket.bind(supportTicketingController));
+router.get('/tickets', authMiddleware, requirePermission('support.tickets'), supportTicketingController.searchTickets.bind(supportTicketingController));
+
+// Analytics routes (requires system.analytics permission)
+router.get('/analytics', authMiddleware, requirePermission('system.analytics'), supportTicketingController.getSupportAnalytics.bind(supportTicketingController));
+router.get('/analytics/statistics', authMiddleware, requirePermission('system.analytics'), supportTicketingController.getTicketStatistics.bind(supportTicketingController));
+router.get('/analytics/documentation-effectiveness', authMiddleware, requirePermission('system.analytics'), supportTicketingController.getDocumentationEffectiveness.bind(supportTicketingController));
+
+// Admin-only routes
 router.post('/integrations/configure', csrfProtection, validateAdminRole, supportTicketingController.configureIntegrations.bind(supportTicketingController));
 
 export { router as supportTicketingRoutes };

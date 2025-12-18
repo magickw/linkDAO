@@ -3,7 +3,8 @@ import { requestManager } from './requestManager';
 import { convertBackendPostToPost } from '../models/Post';
 import { convertBackendQuickPostToQuickPost } from '../models/QuickPost';
 import { analyticsService } from './analyticsService';
-import { enhancedAuthService } from './enhancedAuthService'; // Add enhancedAuthService import
+import { enhancedAuthService } from './enhancedAuthService';
+import { csrfService } from './csrfService'; // Add csrfService import
 import { ENV_CONFIG } from '@/config/environment';
 
 // Use centralized environment config to ensure consistent backend URL
@@ -758,12 +759,23 @@ export class FeedService {
   // Add comment to post
   static async addComment(postId: string, content: string, parentCommentId?: string): Promise<any> {
     try {
+      // Get base auth headers from enhancedAuthService
       const authHeaders = await enhancedAuthService.getAuthHeaders();
+      
+      // Add CSRF headers for authenticated requests
+      let headers = { ...authHeaders };
+      try {
+        const csrfHeaders = await csrfService.getCSRFHeaders();
+        Object.assign(headers, csrfHeaders);
+      } catch (error) {
+        console.warn('Failed to get CSRF headers:', error);
+      }
+      
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...authHeaders
+          ...headers
         },
         body: JSON.stringify({
           content,
@@ -962,6 +974,7 @@ export class FeedService {
         throw error;
       }
 
+      // Get base auth headers from enhancedAuthService
       const authHeaders = await enhancedAuthService.getAuthHeaders();
       
       // Verify auth headers were properly set
@@ -976,19 +989,28 @@ export class FeedService {
         throw error;
       }
 
+      // Add CSRF headers for authenticated requests
+      let headers = { ...authHeaders };
+      try {
+        const csrfHeaders = await csrfService.getCSRFHeaders();
+        Object.assign(headers, csrfHeaders);
+      } catch (error) {
+        console.warn('Failed to get CSRF headers:', error);
+      }
+
       console.log('🎯 Making reaction request with auth:', {
         postId,
         type,
         hasToken: !!token,
         tokenLength: token.length,
-        authHeaderPresent: !!authHeaders.Authorization
+        authHeaderPresent: !!headers.Authorization
       });
 
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/react`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...authHeaders
+          ...headers
         },
         body: JSON.stringify({
           type,

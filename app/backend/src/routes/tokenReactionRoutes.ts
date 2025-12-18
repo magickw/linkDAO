@@ -28,8 +28,11 @@ const createReactionValidation = [
 const getReactionsValidation = [
   query('postId')
     .optional()
-    .isUUID()
-    .withMessage('postId must be a valid UUID'),
+    .custom((value) => {
+      // Allow both UUIDs (for quick posts) and numeric IDs (for community posts)
+      return /^([0-9]+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.test(value);
+    })
+    .withMessage('postId must be a valid numeric ID or UUID'),
   query('reactionType')
     .optional()
     .isIn(['🔥', '🚀', '💎'])
@@ -46,8 +49,11 @@ const getReactionsValidation = [
 
 const postIdValidation = [
   param('postId')
-    .isUUID()
-    .withMessage('postId must be a valid UUID'),
+    .custom((value) => {
+      // Allow both UUIDs (for quick posts) and numeric IDs (for community posts)
+      return /^([0-9]+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.test(value);
+    })
+    .withMessage('postId must be a valid numeric ID or UUID'),
 ];
 
 const reactionIdValidation = [

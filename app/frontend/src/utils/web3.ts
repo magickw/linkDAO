@@ -61,13 +61,12 @@ export async function getProvider() {
       const rpcUrl = getChainRpcUrl(chainId);
       
       if (rpcUrl) {
-        const provider = new ethers.JsonRpcProvider(rpcUrl, {
-          chainId,
-          name: chainId === 1 ? 'mainnet' : chainId === 11155111 ? 'sepolia' : 'unknown'
+        // Use staticNetwork: true to prevent network detection issues
+        const provider = new ethers.JsonRpcProvider(rpcUrl, chainId, {
+          staticNetwork: true
         });
         
-        provider.ready.catch(() => {});
-        
+        // Don't wait for network detection - just return the provider
         return provider;
       }
     } catch (e) {

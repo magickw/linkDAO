@@ -49,7 +49,11 @@ class ENSService {
     try {
       // Use public provider for ENS resolution
       this.provider = new ethers.JsonRpcProvider(
-        process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL || 'https://cloudflare-eth.com'
+        process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL || 'https://cloudflare-eth.com',
+        undefined, // Let ethers determine the network
+        {
+          staticNetwork: true
+        }
       );
     } catch (error) {
       console.warn('Failed to initialize ENS provider:', error);

@@ -21,9 +21,17 @@ export const validateAdminRole = (req: AuthenticatedRequest, res: Response, next
     }
 
     // Check if user has admin role
-    const adminRoles = ['super_admin', 'admin', 'moderator', 'analyst'];
+    const adminRoles = ['super_admin', 'admin', 'moderator', 'analyst', 'support'];
     if (!adminRoles.includes(user.role)) {
       return ApiResponse.forbidden(res, 'Admin access required');
+    }
+
+    // Enforce MFA for high-privilege roles (optional but recommended)
+    if ((user.role === 'admin' || user.role === 'super_admin') && process.env.ENFORCE_ADMIN_MFA === 'true') {
+      const mfaVerified = (req as any).session?.mfaVerified;
+      if (!mfaVerified) {
+        return ApiResponse.forbidden(res, 'Multi-factor authentication required for admin accounts');
+      }
     }
 
     // Additional check for configured admin address

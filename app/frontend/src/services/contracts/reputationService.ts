@@ -58,7 +58,9 @@ export class ReputationService {
       const address = await contractRegistryService.getContractAddress('ReputationSystem');
       // Create a read-only provider for view functions
       const { publicClient } = await import('wagmi');
-      const provider = new ethers.JsonRpcProvider('https://sepolia.drpc.org');
+      const provider = new ethers.JsonRpcProvider('https://sepolia.drpc.org', undefined, {
+        staticNetwork: true
+      });
       this.contract = new Contract(address, REPUTATION_ABI, provider);
     }
 

@@ -8,6 +8,7 @@ import userRoutes from './userRoutes';
 import adminNewsletterRoutes from './adminNewsletterRoutes';
 import adminReturnAnalyticsRoutes from './adminReturnAnalyticsRoutes';
 import charityRoutes from './charityRoutes';
+import employeeManagementRoutes from './employeeManagementRoutes';
 import {
   validateAdminRole,
   requirePermission,
@@ -95,6 +96,9 @@ router.use('/users', requirePermission('users.view'), userRoutes);
 
 // Newsletter Routes (with system.settings permission)
 router.use('/newsletter', requirePermission('system.settings'), adminNewsletterRoutes);
+
+// Employee Management Routes (requires admin or super_admin role)
+router.use('/', employeeManagementRoutes);
 
 // Charity Routes (with governance.verify permission)
 router.use('/', charityRoutes);

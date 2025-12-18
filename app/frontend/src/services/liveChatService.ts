@@ -22,41 +22,61 @@ class LiveChatService {
 
   connect(token: string): Promise<string> {
     return new Promise((resolve, reject) => {
-      // Use the same environment variable as the rest of the application
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
-      // Assuming the socket.io server is on the same base URL
-      const url = baseUrl.replace(/^http/, 'ws');
       
-      this.socket = io(url, {
+      this.socket = io(`${baseUrl}/chat/user`, {
         auth: { token },
-        transports: ['websocket'],
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        reconnectionAttempts: 5,
       });
 
       this.socket.on('connect', () => {
         this.socket?.emit('initiate-chat', {}, (response: any) => {
-          if (response.success) {
+          if (response?.success) {
             this.sessionId = response.sessionId;
             resolve(response.sessionId);
           } else {
-            reject(new Error('Failed to initiate chat'));
+            reject(new Error(response?.error || 'Failed to initiate chat'));
           }
         });
       });
 
       this.socket.on('connect_error', (error) => {
-        reject(error);
+        console.error('Live chat connection error:', error);
+        reject(new Error(`Connection failed: ${error.message}`));
+      });
+
+      this.socket.on('disconnect', (reason) => {
+        console.warn('Live chat disconnected:', reason);
       });
     });
   }
 
-  sendMessage(content: string): void {
-    if (!this.socket || !this.sessionId) {
-      throw new Error('Not connected to chat');
-    }
+  sendMessage(content: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!this.socket || !this.sessionId) {
+        reject(new Error('Not connected to chat'));
+        return;
+      }
 
-    this.socket.emit('chat-message', {
-      sessionId: this.sessionId,
-      content,
+      if (!this.socket.connected) {
+        reject(new Error('Socket disconnected'));
+        return;
+      }
+
+      this.socket.emit('chat-message', {
+        sessionId: this.sessionId,
+        content,
+      }, (response: any) => {
+        if (response?.success) {
+          resolve();
+        } else {
+          reject(new Error(response?.error || 'Failed to send message'));
+        }
+      });
     });
   }
 
@@ -70,6 +90,10 @@ class LiveChatService {
 
   onAgentJoined(callback: (agentName: string) => void): void {
     this.socket?.on('agent-joined', callback);
+  }
+
+  onWaitingForAgent(callback: (data: { position: number }) => void): void {
+    this.socket?.on('waiting-for-agent', callback);
   }
 
   disconnect(): void {

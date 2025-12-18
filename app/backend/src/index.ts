@@ -112,6 +112,7 @@ import { initializeWebSocketFix, shutdownWebSocketFix } from './services/websock
 import { initializeWebSocket, shutdownWebSocket } from './services/webSocketService';
 import { initializeAdminWebSocket, shutdownAdminWebSocket } from './services/adminWebSocketService';
 import { initializeSellerWebSocket, shutdownSellerWebSocket } from './services/sellerWebSocketService';
+import { liveChatSocketService } from './services/liveChatSocketService';
 import { memoryMonitoringService } from './services/memoryMonitoringService';
 import { comprehensiveMonitoringService } from './services/comprehensiveMonitoringService';
 import { blockchainEventService } from './services/blockchainEventService';
@@ -1305,6 +1306,28 @@ httpServer.listen(PORT, () => {
         }
       } else {
         console.log('⚠️ Seller WebSocket service disabled for resource optimization');
+      }
+
+      // Live Chat Socket service - enabled on Render Pro and non-constrained environments
+      if (enableWebSockets && (isRenderPro || !isSevereResourceConstrained)) {
+        try {
+          const { Server } = await import('socket.io');
+          const io = new Server(httpServer, {
+            cors: {
+              origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+              credentials: true
+            },
+            path: '/socket.io/',
+            transports: ['websocket', 'polling']
+          });
+          liveChatSocketService.initialize(io);
+          console.log('✅ Live Chat Socket service initialized');
+          console.log(`💬 Live chat support ready`);
+        } catch (error) {
+          console.warn('⚠️ Live Chat Socket service initialization failed:', error);
+        }
+      } else {
+        console.log('⚠️ Live Chat Socket service disabled for resource optimization');
       }
 
       // Initialize cache service

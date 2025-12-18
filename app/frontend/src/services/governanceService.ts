@@ -94,7 +94,9 @@ export class GovernanceService {
         // Fallback to JSON-RPC provider
         const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://sepolia.drpc.org';
             try {
-              this.provider = new ethers.JsonRpcProvider(rpcUrl, 11155111);
+              this.provider = new ethers.JsonRpcProvider(rpcUrl, 11155111, {
+                staticNetwork: true
+              });
             } catch (error) {
               console.warn('Failed to initialize governance provider:', error);
               this.provider = null;

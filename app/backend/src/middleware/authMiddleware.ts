@@ -95,22 +95,28 @@ export const authMiddleware: RequestHandler = async (req: Request, res: Response
         if (userResult.length > 0) {
           userRole = userResult[0].role || 'user';
           userEmail = userResult[0].email;
-          userPermissions = (userResult[0].permissions as string[]) || [];
-          isAdmin = ['admin', 'super_admin', 'moderator'].includes(userRole);
-        }
-      } catch (dbError) {
-        console.error('Database error when fetching user details:', dbError);
-      }
-    }
-
-    // Override role for configured admin address
-    if (isConfiguredAdmin) {
-      userRole = 'super_admin';
-      isAdmin = true;
-      // Grant all permissions to configured admin
-      userPermissions = [
-        '*', // Wildcard permission
-        'admin_access',
+                      userPermissions = (userResult[0].permissions as string[]) || [];
+                      isAdmin = ['admin', 'super_admin', 'moderator', 'support', 'analyst'].includes(userRole);
+                
+                      // Block wallet-only authentication for employees
+                      const isEmployee = userResult[0].isEmployee;
+                      const hasPasswordHash = userResult[0].passwordHash;
+                      if (isEmployee && !hasPasswordHash) {
+                        return ApiResponse.unauthorized(res, 'Employees must use email and password authentication');
+                      }
+                        }
+                      } catch (dbError) {
+                        console.error('Database error when fetching user details:', dbError);
+                      }
+                    }
+                
+                    // Override role for configured admin address
+                    if (isConfiguredAdmin) {
+                      userRole = 'super_admin';
+                      isAdmin = true;
+                      // Grant all permissions to configured admin
+                      userPermissions = [
+                        '*', // Wildcard permission        'admin_access',
         'manage_users',
         'manage_content',
         'content.moderate',

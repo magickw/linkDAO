@@ -2,6 +2,7 @@ import { Post, CreatePostInput, UpdatePostInput } from '../models/Post';
 import { Comment, CreateCommentInput, CommunityPost } from '../models/CommunityPost';
 import { ENV_CONFIG } from '@/config/environment';
 import { enhancedAuthService } from './enhancedAuthService';
+import { csrfService } from './csrfService';
 
 // Use centralized environment config to ensure consistent backend URL
 const BACKEND_API_BASE_URL = ENV_CONFIG.BACKEND_URL;
@@ -9,12 +10,23 @@ const BACKEND_API_BASE_URL = ENV_CONFIG.BACKEND_URL;
 export class CommunityPostService {
   static async createPost(communityId: string, data: CreatePostInput): Promise<Post> {
     try {
+      // Get base auth headers from enhancedAuthService
       const authHeaders = await enhancedAuthService.getAuthHeaders();
+      
+      // Add CSRF headers for authenticated requests
+      let headers = { ...authHeaders };
+      try {
+        const csrfHeaders = await csrfService.getCSRFHeaders();
+        Object.assign(headers, csrfHeaders);
+      } catch (error) {
+        console.warn('Failed to get CSRF headers:', error);
+      }
+      
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...authHeaders
+          ...headers
         },
         body: JSON.stringify({
           content: data.content,
@@ -181,12 +193,23 @@ export class CommunityPostService {
 
   static async updatePost(communityId: string, postId: string, data: UpdatePostInput): Promise<Post> {
     try {
+      // Get base auth headers from enhancedAuthService
       const authHeaders = await enhancedAuthService.getAuthHeaders();
+      
+      // Add CSRF headers for authenticated requests
+      let headers = { ...authHeaders };
+      try {
+        const csrfHeaders = await csrfService.getCSRFHeaders();
+        Object.assign(headers, csrfHeaders);
+      } catch (error) {
+        console.warn('Failed to get CSRF headers:', error);
+      }
+      
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts/${postId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          ...authHeaders
+          ...headers
         },
         body: JSON.stringify(data)
       });
@@ -206,12 +229,23 @@ export class CommunityPostService {
 
   static async deletePost(communityId: string, postId: string): Promise<boolean> {
     try {
+      // Get base auth headers from enhancedAuthService
       const authHeaders = await enhancedAuthService.getAuthHeaders();
+      
+      // Add CSRF headers for authenticated requests
+      let headers = { ...authHeaders };
+      try {
+        const csrfHeaders = await csrfService.getCSRFHeaders();
+        Object.assign(headers, csrfHeaders);
+      } catch (error) {
+        console.warn('Failed to get CSRF headers:', error);
+      }
+      
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts/${postId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          ...authHeaders
+          ...headers
         }
       });
 
@@ -309,12 +343,23 @@ export class CommunityPostService {
     tokenAmount: number = 0
   ): Promise<any> {
     try {
+      // Get base auth headers from enhancedAuthService
       const authHeaders = await enhancedAuthService.getAuthHeaders();
+      
+      // Add CSRF headers for authenticated requests
+      let headers = { ...authHeaders };
+      try {
+        const csrfHeaders = await csrfService.getCSRFHeaders();
+        Object.assign(headers, csrfHeaders);
+      } catch (error) {
+        console.warn('Failed to get CSRF headers:', error);
+      }
+      
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts/${postId}/react`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...authHeaders
+          ...headers
         },
         body: JSON.stringify({
           type,
@@ -343,12 +388,23 @@ export class CommunityPostService {
     message?: string
   ): Promise<any> {
     try {
+      // Get base auth headers from enhancedAuthService
       const authHeaders = await enhancedAuthService.getAuthHeaders();
+      
+      // Add CSRF headers for authenticated requests
+      let headers = { ...authHeaders };
+      try {
+        const csrfHeaders = await csrfService.getCSRFHeaders();
+        Object.assign(headers, csrfHeaders);
+      } catch (error) {
+        console.warn('Failed to get CSRF headers:', error);
+      }
+      
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts/${postId}/tip`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...authHeaders
+          ...headers
         },
         body: JSON.stringify({
           amount,
@@ -372,6 +428,7 @@ export class CommunityPostService {
 
   static async createComment(data: CreateCommentInput): Promise<Comment> {
     try {
+      // Get base auth headers from enhancedAuthService
       let authHeaders = await enhancedAuthService.getAuthHeaders();
       let hasAuthToken = authHeaders['Authorization'] && authHeaders['Authorization'] !== 'Bearer null';
 
@@ -398,11 +455,20 @@ export class CommunityPostService {
         throw new Error('No valid authentication token available');
       }
 
+      // Add CSRF headers for authenticated requests
+      let headers = { ...authHeaders };
+      try {
+        const csrfHeaders = await csrfService.getCSRFHeaders();
+        Object.assign(headers, csrfHeaders);
+      } catch (error) {
+        console.warn('Failed to get CSRF headers:', error);
+      }
+
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${data.postId}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...authHeaders
+          ...headers
         },
         body: JSON.stringify({
           author: data.author,
@@ -439,12 +505,21 @@ export class CommunityPostService {
               // Get new auth headers after refresh
               const newAuthHeaders = await enhancedAuthService.getAuthHeaders();
               
+              // Add CSRF headers for authenticated requests
+              let retryHeaders = { ...newAuthHeaders };
+              try {
+                const csrfHeaders = await csrfService.getCSRFHeaders();
+                Object.assign(retryHeaders, csrfHeaders);
+              } catch (error) {
+                console.warn('Failed to get CSRF headers for retry:', error);
+              }
+              
               // Retry the request with fresh token
               const retryResponse = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${data.postId}/comments`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
-                  ...newAuthHeaders
+                  ...retryHeaders
                 },
                 body: JSON.stringify({
                   author: data.author,
@@ -486,14 +561,25 @@ export class CommunityPostService {
 
         // Use global fetch wrapper as final fallback
         try {
+          // Get base auth headers from enhancedAuthService
           const authHeaders = await enhancedAuthService.getAuthHeaders();
+          
+          // Add CSRF headers for authenticated requests
+          let fallbackHeaders = { ...authHeaders };
+          try {
+            const csrfHeaders = await csrfService.getCSRFHeaders();
+            Object.assign(fallbackHeaders, csrfHeaders);
+          } catch (error) {
+            console.warn('Failed to get CSRF headers for fallback:', error);
+          }
+          
           const { post } = await import('./globalFetchWrapper');
           const fallbackResponse = await post(`${BACKEND_API_BASE_URL}/api/feed/${data.postId}/comments`, {
             author: data.author,
             content: data.content,
             parentCommentId: data.parentId,
             media: data.media
-          }, { headers: authHeaders });
+          }, { headers: fallbackHeaders });
 
           if (!fallbackResponse.success) {
             throw new Error(fallbackResponse.error || 'Failed to create comment');
@@ -517,12 +603,23 @@ export class CommunityPostService {
 
   static async deleteComment(commentId: string, author: string): Promise<boolean> {
     try {
+      // Get base auth headers from enhancedAuthService
       const authHeaders = await enhancedAuthService.getAuthHeaders();
+      
+      // Add CSRF headers for authenticated requests
+      let headers = { ...authHeaders };
+      try {
+        const csrfHeaders = await csrfService.getCSRFHeaders();
+        Object.assign(headers, csrfHeaders);
+      } catch (error) {
+        console.warn('Failed to get CSRF headers:', error);
+      }
+      
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/comments/${commentId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          ...authHeaders
+          ...headers
         },
         body: JSON.stringify({ author })
       });

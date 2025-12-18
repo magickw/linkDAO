@@ -27,6 +27,12 @@ export const users = pgTable("users", {
   loginAttempts: integer("login_attempts").default(0),
   lockedUntil: timestamp("locked_until"),
 
+  // Employee management fields
+  isEmployee: boolean("is_employee").default(false),
+  employeeStatus: varchar("employee_status", { length: 20 }).default('active'),
+  invitedBy: uuid("invited_by"),
+  invitedAt: timestamp("invited_at"),
+
   // Billing address fields
   billingFirstName: varchar("billing_first_name", { length: 100 }),
   billingLastName: varchar("billing_last_name", { length: 100 }),

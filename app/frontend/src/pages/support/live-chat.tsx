@@ -19,7 +19,7 @@ import {
 
 const LiveChatPage: NextPage = () => {
   const { isAuthenticated } = useAuth();
-  const { connected, messages, isTyping, agentName, error, connect, sendMessage, disconnect } = useLiveChat();
+  const { connected, messages, isTyping, agentName, error, waitingPosition, connect, sendMessage, disconnect } = useLiveChat();
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
 
@@ -40,12 +40,18 @@ const LiveChatPage: NextPage = () => {
     scrollToBottom();
   }, [messages]);
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !connected) return;
 
-    sendMessage(newMessage);
+    const messageToSend = newMessage;
     setNewMessage('');
+
+    try {
+      await sendMessage(messageToSend);
+    } catch (err) {
+      setNewMessage(messageToSend);
+    }
   };
 
   const formatTime = (date: Date) => {
@@ -103,14 +109,21 @@ const LiveChatPage: NextPage = () => {
                   <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
                     <Bot className="w-6 h-6 text-blue-600" />
                   </div>
-                  <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+                  <div className={`absolute bottom-0 right-0 w-3 h-3 ${agentName ? 'bg-green-500' : 'bg-yellow-500'} rounded-full border-2 border-white`}></div>
                 </div>
                 <div className="ml-3">
-                  <h2 className="font-semibold">Support Agent</h2>
-                  <div className="text-sm text-blue-100 flex items-center">
-                    <Clock className="w-3 h-3 mr-1" />
-                    Responds in 2 minutes
-                  </div>
+                  <h2 className="font-semibold">{agentName || 'Support Agent'}</h2>
+                  {waitingPosition !== null ? (
+                    <div className="text-sm text-blue-100 flex items-center">
+                      <Clock className="w-3 h-3 mr-1" />
+                      Position in queue: {waitingPosition}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-blue-100 flex items-center">
+                      <Clock className="w-3 h-3 mr-1" />
+                      {agentName ? 'Connected' : 'Connecting to agent...'}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -185,18 +198,27 @@ const LiveChatPage: NextPage = () => {
 
             {/* Chat Input */}
             <div className="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
+              {error && (
+                <div className="mb-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <div className="flex items-center">
+                    <X className="w-4 h-4 text-red-600 dark:text-red-400 mr-2" />
+                    <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                  </div>
+                </div>
+              )}
               <form onSubmit={handleSendMessage} className="flex">
                 <input
                   type="text"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   placeholder="Type your message..."
-                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  disabled={!connected}
+                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <button
                   type="submit"
-                  disabled={!newMessage.trim()}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-r-lg hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 transition-all"
+                  disabled={!newMessage.trim() || !connected}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-r-lg hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
                   <Send className="w-5 h-5" />
                 </button>
