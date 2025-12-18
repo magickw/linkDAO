@@ -135,55 +135,15 @@ COMMENT ON COLUMN content_reports.consensus_score IS 'Agreement score among mode
 COMMENT ON COLUMN content_reports.updated_at IS 'Track when report was last updated';
 
 -- ============================================================================
--- 11. PAYMENT TRANSACTIONS TABLE - Change orderId type to UUID
+-- 11. PAYMENT TRANSACTIONS, PAYMENT RECEIPTS, ORDER PAYMENT EVENTS TABLES
 -- ============================================================================
--- Drop existing foreign key constraint
-ALTER TABLE payment_transactions 
-DROP CONSTRAINT IF EXISTS payment_transactions_order_id_orders_id_fk;
-
--- Change column type
-ALTER TABLE payment_transactions 
-ALTER COLUMN order_id TYPE UUID USING order_id::text::uuid;
-
--- Recreate foreign key
-ALTER TABLE payment_transactions 
-ADD CONSTRAINT payment_transactions_order_id_orders_id_fk 
-FOREIGN KEY (order_id) REFERENCES orders(id);
+-- NOTE: These tables (payment_transactions, payment_receipts, order_payment_events) 
+-- do not exist in the current database schema. They are defined in schema.ts but
+-- have not been created yet. If you need these tables, create them first using
+-- drizzle-kit push or a separate migration script.
 
 -- ============================================================================
--- 12. PAYMENT RECEIPTS TABLE - Change orderId type to UUID
--- ============================================================================
--- Drop existing foreign key constraint
-ALTER TABLE payment_receipts 
-DROP CONSTRAINT IF EXISTS payment_receipts_order_id_orders_id_fk;
-
--- Change column type
-ALTER TABLE payment_receipts 
-ALTER COLUMN order_id TYPE UUID USING order_id::text::uuid;
-
--- Recreate foreign key
-ALTER TABLE payment_receipts 
-ADD CONSTRAINT payment_receipts_order_id_orders_id_fk 
-FOREIGN KEY (order_id) REFERENCES orders(id);
-
--- ============================================================================
--- 13. ORDER PAYMENT EVENTS TABLE - Change orderId type to UUID
--- ============================================================================
--- Drop existing foreign key constraint
-ALTER TABLE order_payment_events 
-DROP CONSTRAINT IF EXISTS order_payment_events_order_id_orders_id_fk;
-
--- Change column type
-ALTER TABLE order_payment_events 
-ALTER COLUMN order_id TYPE UUID USING order_id::text::uuid;
-
--- Recreate foreign key
-ALTER TABLE order_payment_events 
-ADD CONSTRAINT order_payment_events_order_id_orders_id_fk 
-FOREIGN KEY (order_id) REFERENCES orders(id);
-
--- ============================================================================
--- 14. STAKING POSITIONS TABLE - Add reward tracking columns
+-- 12. STAKING POSITIONS TABLE - Add reward tracking columns
 -- ============================================================================
 ALTER TABLE staking_positions 
 ADD COLUMN IF NOT EXISTS accumulated_rewards NUMERIC(20, 8) DEFAULT 0,
@@ -193,7 +153,7 @@ COMMENT ON COLUMN staking_positions.accumulated_rewards IS 'Total accumulated re
 COMMENT ON COLUMN staking_positions.last_reward_claim IS 'Last time rewards were claimed';
 
 -- ============================================================================
--- 15. REFERRAL CONFIG TABLE - Create new table
+-- 13. REFERRAL CONFIG TABLE - Create new table
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS referral_config (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -212,7 +172,7 @@ COMMENT ON TABLE referral_config IS 'Configuration settings for referral program
 COMMENT ON COLUMN referral_config.config_type IS 'Type of config: string, number, boolean, json';
 
 -- ============================================================================
--- 16. BRIDGE TRANSACTIONS TABLE - Add validator count
+-- 14. BRIDGE TRANSACTIONS TABLE - Add validator count
 -- ============================================================================
 ALTER TABLE bridge_transactions 
 ADD COLUMN IF NOT EXISTS validator_count INTEGER DEFAULT 0;
@@ -220,7 +180,7 @@ ADD COLUMN IF NOT EXISTS validator_count INTEGER DEFAULT 0;
 COMMENT ON COLUMN bridge_transactions.validator_count IS 'Number of validators for this bridge transaction';
 
 -- ============================================================================
--- 17. RETURNS TABLE - Add enhanced tracking columns
+-- 15. RETURNS TABLE - Add enhanced tracking columns
 -- ============================================================================
 ALTER TABLE returns 
 ADD COLUMN IF NOT EXISTS reason VARCHAR(255),
@@ -240,7 +200,7 @@ COMMENT ON COLUMN returns.inspection_photos IS 'JSON array of photo URLs';
 COMMENT ON COLUMN returns.inspection_passed IS 'Whether item passed inspection';
 
 -- ============================================================================
--- 18. REFUND TRANSACTIONS TABLE - Add tracking columns
+-- 16. REFUND TRANSACTIONS TABLE - Add tracking columns
 -- ============================================================================
 ALTER TABLE refund_transactions 
 ADD COLUMN IF NOT EXISTS initiated_at TIMESTAMP,
@@ -250,20 +210,22 @@ COMMENT ON COLUMN refund_transactions.initiated_at IS 'When refund was initiated
 COMMENT ON COLUMN refund_transactions.response_payload IS 'Raw API response from payment provider';
 
 -- ============================================================================
--- 19. REFUND PROVIDER TRANSACTIONS TABLE - Add tracking fields
+-- 17. REFUND PROVIDER TRANSACTIONS TABLE - Add tracking fields
 -- ============================================================================
-ALTER TABLE refund_provider_transactions 
-ADD COLUMN IF NOT EXISTS provider_refund_id VARCHAR(255),
-ADD COLUMN IF NOT EXISTS response_payload JSONB,
-ADD COLUMN IF NOT EXISTS processing_time_ms INTEGER;
-
-COMMENT ON COLUMN refund_provider_transactions.provider_refund_id IS 'Provider-specific refund ID';
-COMMENT ON COLUMN refund_provider_transactions.response_payload IS 'Raw API response payload';
-COMMENT ON COLUMN refund_provider_transactions.processing_time_ms IS 'Processing time in milliseconds';
+-- NOTE: This table (refund_provider_transactions) does not exist in the current 
+-- database schema. It is defined in schema.ts but has not been created yet.
+-- If you need this table, create it first using drizzle-kit push or a separate 
+-- migration script.
 
 -- ============================================================================
--- 20. SUPPORT TABLES - Create new support system tables
+-- 18. SUPPORT TABLES - Create new support system tables
 -- ============================================================================
+-- NOTE: These support tables (support_chat_sessions, support_chat_messages, 
+-- support_faq, support_tickets) do not exist yet in the database.
+-- Uncomment the sections below to create them.
+
+/*
+-- Uncomment these sections if you want to create the support tables
 
 -- Support Chat Sessions
 CREATE TABLE IF NOT EXISTS support_chat_sessions (
@@ -338,6 +300,7 @@ CREATE INDEX IF NOT EXISTS idx_support_tickets_category ON support_tickets(categ
 COMMENT ON TABLE support_tickets IS 'Support tickets for issue tracking';
 COMMENT ON COLUMN support_tickets.status IS 'Status: open, in_progress, resolved, closed';
 COMMENT ON COLUMN support_tickets.priority IS 'Priority: low, medium, high, urgent';
+*/
 
 -- ============================================================================
 -- DATA MIGRATION - Populate new columns with sensible defaults

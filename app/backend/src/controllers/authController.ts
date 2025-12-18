@@ -8,7 +8,7 @@ import { ethers } from 'ethers';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { eq } from 'drizzle-orm';
-import { users } from '../db/schema';
+import { users, authSessions } from '../db/schema';
 import { successResponse, errorResponse, validationErrorResponse } from '../utils/apiResponse';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
 import { referralService } from '../services/referralService';
@@ -196,6 +196,22 @@ class AuthController {
           jwtSecret,
           { expiresIn: '24h' }
         );
+
+        // Create session record in auth_sessions table
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
+        try {
+          await db.insert(authSessions).values({
+            walletAddress: userData.walletAddress.toLowerCase(),
+            sessionToken: token,
+            expiresAt: expiresAt,
+            isActive: true,
+            lastUsedAt: new Date(),
+            createdAt: new Date()
+          });
+          safeLogger.info('Session created in auth_sessions table', { walletAddress: userData.walletAddress });
+        } catch (sessionError) {
+          safeLogger.error('Failed to create session record:', sessionError);
+        }
 
         // Return success response
         successResponse(res, {

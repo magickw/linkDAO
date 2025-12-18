@@ -82,10 +82,11 @@ class LDAOSupportService {
 
   async getTicketsByUser(userId: string): Promise<SupportTicket[]> {
     try {
-      return await db.select()
+      const results = await db.select()
         .from(supportTickets)
         .where(eq(supportTickets.userId, userId))
         .orderBy(desc(supportTickets.createdAt));
+      return results as SupportTicket[];
     } catch (error) {
       safeLogger.error('Error fetching user tickets:', error);
       throw new Error('Failed to fetch support tickets');
@@ -98,7 +99,7 @@ class LDAOSupportService {
         .from(supportTickets)
         .where(eq(supportTickets.id, ticketId));
       
-      return ticket || null;
+      return (ticket as SupportTicket) || null;
     } catch (error) {
       safeLogger.error('Error fetching ticket:', error);
       throw new Error('Failed to fetch support ticket');
@@ -130,9 +131,9 @@ class LDAOSupportService {
         .returning();
 
       // Notify user of status change
-      await this.notifyTicketStatusChange(updatedTicket);
+      await this.notifyTicketStatusChange(updatedTicket as SupportTicket);
 
-      return updatedTicket;
+      return updatedTicket as SupportTicket;
     } catch (error) {
       safeLogger.error('Error updating ticket status:', error);
       throw new Error('Failed to update ticket status');
@@ -179,13 +180,17 @@ class LDAOSupportService {
   // FAQ Management
   async getFAQByCategory(category: string = 'ldao'): Promise<SupportFAQ[]> {
     try {
-      return await db.select()
+      const results = await db.select()
         .from(supportFAQ)
         .where(and(
           eq(supportFAQ.category, category),
           eq(supportFAQ.isPublished, true)
         ))
         .orderBy(desc(supportFAQ.views));
+      return results.map(faq => ({
+        ...faq,
+        tags: Array.isArray(faq.tags) ? faq.tags : JSON.parse(faq.tags as any || '[]')
+      })) as SupportFAQ[];
     } catch (error) {
       safeLogger.error('Error fetching FAQ items:', error);
       throw new Error('Failed to fetch FAQ items');
@@ -205,12 +210,15 @@ class LDAOSupportService {
         .from(supportFAQ)
         .where(whereCondition);
 
-      // Simple text search with escaped pattern
-      return faqs.filter(faq => 
+      // Parse tags and filter
+      return faqs.map(faq => ({
+        ...faq,
+        tags: Array.isArray(faq.tags) ? faq.tags : JSON.parse(faq.tags as any || '[]')
+      })).filter((faq: any) => 
         faq.question.toLowerCase().includes(escapedQuery.toLowerCase()) ||
         faq.answer.toLowerCase().includes(escapedQuery.toLowerCase()) ||
-        faq.tags.some(tag => tag.toLowerCase().includes(escapedQuery.toLowerCase()))
-      );
+        faq.tags.some((tag: string) => tag.toLowerCase().includes(escapedQuery.toLowerCase()))
+      ) as SupportFAQ[];
     } catch (error) {
       safeLogger.error('Error searching FAQ:', error);
       throw new Error('Failed to search FAQ');
@@ -258,7 +266,7 @@ class LDAOSupportService {
       
       const tickets = await db.select()
         .from(supportTickets)
-        .where(gte(supportTickets.createdAt, startDate));
+        .where(gte(supportTickets.createdAt, startDate)) as SupportTicket[];
 
       const totalTickets = tickets.length;
       const openTickets = tickets.filter(t => t.status === 'open').length;
@@ -472,8 +480,8 @@ class LDAOSupportService {
       const { getWebSocketService } = await import('../services/webSocketService');
       const wsService = getWebSocketService();
       
-      if (wsService) {
-        wsService.broadcastToAll('new_chat_request', {
+      if (wsService && typeof (wsService as any).broadcast === 'function') {
+        (wsService as any).broadcast('new_chat_request', {
           chatSessionId,
           userId,
           initialMessage,
@@ -511,8 +519,8 @@ class LDAOSupportService {
       const { getWebSocketService } = await import('../services/webSocketService');
       const wsService = getWebSocketService();
       
-      if (wsService) {
-        wsService.broadcastToAll('chat_message', {
+      if (wsService && typeof (wsService as any).broadcast === 'function') {
+        (wsService as any).broadcast('chat_message', {
           chatSessionId,
           messageId: message.id,
           senderId,
@@ -581,7 +589,10 @@ class LDAOSupportService {
         updatedAt: new Date()
       }).returning();
 
-      return faq;
+      return {
+        ...faq,
+        tags: Array.isArray(faq.tags) ? faq.tags : JSON.parse(faq.tags as any || '[]')
+      } as SupportFAQ;
     } catch (error) {
       safeLogger.error('Error creating FAQ item:', error);
       throw new Error('Failed to create FAQ item');
@@ -598,7 +609,10 @@ class LDAOSupportService {
         .where(eq(supportFAQ.id, faqId))
         .returning();
 
-      return updatedFAQ;
+      return {
+        ...updatedFAQ,
+        tags: Array.isArray(updatedFAQ.tags) ? updatedFAQ.tags : JSON.parse(updatedFAQ.tags as any || '[]')
+      } as SupportFAQ;
     } catch (error) {
       safeLogger.error('Error updating FAQ item:', error);
       throw new Error('Failed to update FAQ item');

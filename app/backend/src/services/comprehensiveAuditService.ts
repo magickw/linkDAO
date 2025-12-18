@@ -989,6 +989,13 @@ class ComprehensiveAuditService extends EventEmitter {
       });
     }
   }
+
+  /**
+   * Alias for recordAuditEvent for backward compatibility
+   */
+  async logEvent(event: Omit<AuditEvent, 'id' | 'timestamp'>): Promise<AuditEvent> {
+    return this.recordAuditEvent(event);
+  }
 }
 
 export const comprehensiveAuditService = new ComprehensiveAuditService();

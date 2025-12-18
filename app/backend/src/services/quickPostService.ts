@@ -332,8 +332,8 @@ export class QuickPostService {
 
       // Broadcast via WebSocket
       const wsService = getWebSocketService();
-      if (wsService) {
-        wsService.sendQuickPostUpdate({
+      if (wsService && typeof (wsService as any).broadcast === 'function') {
+        (wsService as any).broadcast('quick_post_update', {
           type: 'reaction',
           quickPostId,
           userId,
@@ -368,8 +368,8 @@ export class QuickPostService {
 
       // Broadcast via WebSocket
       const wsService = getWebSocketService();
-      if (wsService) {
-        wsService.sendQuickPostUpdate({
+      if (wsService && typeof (wsService as any).broadcast === 'function') {
+        (wsService as any).broadcast('quick_post_update', {
           type: 'tip',
           quickPostId,
           fromUserId,

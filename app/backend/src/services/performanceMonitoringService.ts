@@ -479,21 +479,6 @@ export class PerformanceMonitoringService extends EventEmitter {
       .slice(0, limit);
   }
 
-  generateReport(): any {
-    const recentAlerts = this.getRecentAlerts(20);
-    const healthStatus = this.getHealthStatus();
-    
-    return {
-      recentAlerts,
-      healthStatus,
-      metricsSummary: {
-        totalMetrics: this.metrics.length,
-        activeAlerts: this.alerts.filter(a => !a.resolved).length,
-        resolvedAlerts: this.alerts.filter(a => a.resolved).length
-      }
-    };
-  }
-
   stopMonitoring(): void {
     if (this.monitoringInterval) {
       clearInterval(this.monitoringInterval);

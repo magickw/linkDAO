@@ -49,14 +49,10 @@ export class MarketplaceMessagingService {
   async createOrderConversation(orderId: number): Promise<any> {
     try {
       // Get order details with buyer, seller, and product information
-      const order = await db.query.orders.findFirst({
-        where: eq(orders.id, orderId),
-        with: {
-          buyer: true,
-          seller: true,
-          product: true
-        }
-      });
+      const [order] = await db.select()
+        .from(orders)
+        .where(eq(orders.id, orderId))
+        .limit(1);
 
       if (!order) {
         throw new Error('Order not found');

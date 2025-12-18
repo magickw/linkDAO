@@ -144,6 +144,7 @@ class ReferralService {
         activityType: 'referral',
         activityId: referralId,
         tokensEarned: signupBonusAmount.toString(),
+        baseReward: signupBonusAmount.toString(),
         multiplier: '1.0',
         isPremiumBonus: false,
         metadata: JSON.stringify({ 
@@ -220,6 +221,7 @@ class ReferralService {
             activityType: 'referral',
             activityId: referral.id,
             tokensEarned: bonusAmount.toString(),
+            baseReward: bonusAmount.toString(),
             multiplier: '1.0',
             isPremiumBonus: false,
             metadata: JSON.stringify({ 

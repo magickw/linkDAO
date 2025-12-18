@@ -115,21 +115,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []); // Empty dependency array - only run once on mount
 
   useEffect(() => {
-    // Only handle wallet changes if we're not in the middle of authentication
-    // and if there's actually a change (not just initial mount)
+    // Only handle wallet changes if there's an actual change
     const sessionStatus = enhancedAuthService.getSessionStatus();
     
-    // Skip if no session exists yet (initial state)
-    if (!sessionStatus.hasSession && !address) {
+    // Skip during initial mount when there's no address yet
+    // This prevents premature logout when page loads with a saved session
+    if (!address) {
+      // Only proceed if we have a session and wallet is actually disconnecting
+      // Otherwise, skip to avoid clearing session during initial page load
+      if (!sessionStatus.hasSession) {
+        return; // No session, no address - initial state, do nothing
+      }
+      // If we have a session but no address, this might be a disconnect
+      // But we should wait to see if wallet reconnects before logging out
       return;
     }
     
     // Skip if address matches current session (no actual change)
-    if (address && sessionStatus.address && 
+    if (sessionStatus.address && 
         address.toLowerCase() === sessionStatus.address.toLowerCase()) {
       return;
     }
     
+    // At this point, either:
+    // 1. We have a new address (wallet connected/changed)
+    // 2. Address changed from previous session
     enhancedAuthService.handleWalletChange(address);
   }, [address]);
 

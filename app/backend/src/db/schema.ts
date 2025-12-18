@@ -935,7 +935,7 @@ export const orders = pgTable("orders", {
   listingId: uuid("listing_id").references(() => listings.id),
   buyerId: uuid("buyer_id").references(() => users.id),
   sellerId: uuid("seller_id").references(() => users.id),
-  escrowId: integer("escrow_id").references(() => escrows.id),
+  escrowId: uuid("escrow_id").references(() => escrows.id),
   amount: numeric("amount").notNull(), // Using numeric for better precision
   paymentToken: varchar("payment_token", { length: 66 }),
   status: varchar("status", { length: 32 }).default("pending"), // 'pending', 'completed', 'disputed', 'refunded'
@@ -3299,6 +3299,9 @@ export const paymentTransactions = pgTable("payment_transactions", {
   receiptData: text("receipt_data"), // JSON
   failureReason: text("failure_reason"),
   retryCount: integer("retry_count").default(0),
+  transactionType: varchar("transaction_type", { length: 50 }),
+  requestPayload: text("request_payload"),
+  webhookReceived: boolean("webhook_received").default(false),
   metadata: text("metadata"), // JSON
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

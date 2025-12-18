@@ -109,6 +109,7 @@ export const marketplaceVerifications = pgTable("marketplace_verifications", {
   brandVerification: jsonb("brand_verification"),
   verificationStatus: varchar("verification_status", { length: 20 }).default("pending").notNull(), // 'pending' | 'approved' | 'rejected'
   verifiedBy: varchar("verified_by", { length: 64 }),
+  kycVerified: boolean("kyc_verified").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

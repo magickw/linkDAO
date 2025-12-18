@@ -59,7 +59,13 @@ export class MarketplaceVerificationService {
       .orderBy(sellerVerifications.submittedAt, 'desc')
       .limit(1);
 
-    return verifications[0] || null;
+    const verification = verifications[0];
+    if (!verification) return null;
+    
+    return {
+      ...verification,
+      sellerId: verification.userId
+    } as SellerVerification;
   }
 
   /**
@@ -69,7 +75,13 @@ export class MarketplaceVerificationService {
     const verifications = await db.select().from(sellerVerifications)
       .where(eq(sellerVerifications.id, verificationId));
 
-    return verifications[0] || null;
+    const verification = verifications[0];
+    if (!verification) return null;
+    
+    return {
+      ...verification,
+      sellerId: verification.userId
+    } as SellerVerification;
   }
 
   /**
@@ -200,7 +212,7 @@ export class MarketplaceVerificationService {
         status: 'verified',
         verifiedAt: new Date(),
         expiresAt,
-        verificationMethod: metadata?.verificationMethod,
+        verificationMethod: metadata?.verificationMethod as 'irs_tin_match' | 'trulioo' | 'manual_review' | 'open_corporates' | undefined,
         verificationReference: metadata?.verificationReference,
         riskScore: metadata?.riskScore,
       })
@@ -218,7 +230,10 @@ export class MarketplaceVerificationService {
         .where(eq(marketplaceVerifications.sellerVerificationId, verificationId));
     }
 
-    return updated;
+    return {
+      ...updated,
+      sellerId: updated.userId
+    } as SellerVerification;
   }
 
   /**
@@ -243,7 +258,10 @@ export class MarketplaceVerificationService {
         .where(eq(marketplaceVerifications.sellerVerificationId, verificationId));
     }
 
-    return updated;
+    return {
+      ...updated,
+      sellerId: updated.userId
+    } as SellerVerification;
   }
 
   /**
@@ -262,7 +280,10 @@ export class MarketplaceVerificationService {
     // - Add to manual review queue
     // - Send email to admins
 
-    return updated;
+    return {
+      ...updated,
+      sellerId: updated.userId
+    } as SellerVerification;
   }
 
   /**
