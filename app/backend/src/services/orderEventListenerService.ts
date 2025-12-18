@@ -5,7 +5,7 @@ import {
   orders, 
   orderEvents
 } from '../db/schema';
-import { eq, desc, gt } from 'drizzle-orm';
+import { eq, desc, gt, sql } from 'drizzle-orm';
 
 export class OrderEventListenerService {
   private pollingInterval: NodeJS.Timeout | null = null;

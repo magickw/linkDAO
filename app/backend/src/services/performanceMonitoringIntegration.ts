@@ -37,8 +37,8 @@ export class PerformanceMonitoringIntegration {
       safeLogger.info('🚀 Initializing performance monitoring services...');
 
       // Initialize services
-      this.benchmarkService = new PerformanceBenchmarkService(this.pool, this.redis);
-      this.renderMonitoringService = new RenderPerformanceMonitoringService();
+      this.benchmarkService = new PerformanceBenchmarkService();
+      this.renderMonitoringService = new RenderPerformanceMonitoringService(this.pool, this.redis);
       this.errorRecoveryProfiler = new ErrorRecoveryCacheProfiler(this.redis);
       this.criticalPathOptimizer = new CriticalPathPerformanceOptimizer(this.pool, this.redis);
 

@@ -1,4 +1,4 @@
-import IPFSService from './ipfsService';
+import ipfsService from './ipfsService';
 import { safeLogger } from '../utils/safeLogger';
 import { EvidenceBundle, ModerationCase, AIModelResult } from '../models/ModerationModels';
 import crypto from 'crypto';
@@ -66,11 +66,11 @@ class EvidenceStorageService {
       const ipfsResult = await IPFSService.uploadMetadata(bundle as any);
       
       // Pin for long-term storage
-      await IPFSService.pinContent(ipfsResult.hash);
+      await IPFSService.pinContent(ipfsResult.ipfsHash);
 
       return {
         ...bundle,
-        ipfsHash: ipfsResult.hash,
+        ipfsHash: ipfsResult.ipfsHash,
         bundleSize,
         verificationHash,
       };
@@ -135,11 +135,11 @@ class EvidenceStorageService {
 
     for (let i = 0; i < screenshots.length; i++) {
       const screenshot = screenshots[i];
-      const result = await IPFSService.uploadFile(screenshot, `screenshot_${i}.png`);
-      screenshotHashes.push(result.hash);
+      const result = await IPFSService.uploadFile(screenshot, { metadata: { name: `screenshot_${i}.png` } });
+      screenshotHashes.push(result.ipfsHash);
       
       // Pin screenshot for retention
-      await IPFSService.pinContent(result.hash);
+      await IPFSService.pinContent(result.ipfsHash);
     }
 
     return screenshotHashes;
@@ -252,12 +252,12 @@ class EvidenceStorageService {
 
       // Store audit record to IPFS
       const auditJson = JSON.stringify(auditRecord, null, 2);
-      const result = await IPFSService.uploadFile(Buffer.from(auditJson), `audit_${auditRecord.id}.json`);
+      const result = await IPFSService.uploadFile(Buffer.from(auditJson), { metadata: { name: `audit_${auditRecord.id}.json` } });
       
       // Pin for long-term retention
-      await IPFSService.pinContent(result.hash);
+      await IPFSService.pinContent(result.ipfsHash);
 
-      return result.hash;
+      return result.ipfsHash;
     } catch (error) {
       safeLogger.error('Error creating audit record:', error);
       throw new Error(`Failed to create audit record: ${error instanceof Error ? error.message : 'Unknown error'}`);

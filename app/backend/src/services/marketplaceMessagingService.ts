@@ -10,7 +10,8 @@ import {
   orders,
   products,
   trackingRecords,
-  disputes
+  disputes,
+  users
 } from '../db/schema';
 import { eq, and, desc, sql, inArray, lt } from 'drizzle-orm';
 import { WebSocketService } from './webSocketService';
@@ -48,7 +49,7 @@ export class MarketplaceMessagingService {
    */
   async createOrderConversation(orderId: string): Promise<any> {
     try {
-      // Get order details with buyer, seller, and product information
+      // Get order details
       const [order] = await db.select()
         .from(orders)
         .where(eq(orders.id, orderId))
@@ -58,15 +59,36 @@ export class MarketplaceMessagingService {
         throw new Error('Order not found');
       }
 
+      // Get buyer and seller details
+      const [buyer] = await db.select()
+        .from(users)
+        .where(eq(users.id, order.buyerId))
+        .limit(1);
+
+      const [seller] = await db.select()
+        .from(users)
+        .where(eq(users.id, order.sellerId))
+        .limit(1);
+
+      // Get product details if listingId exists
+      let product = null;
+      if (order.listingId) {
+        const [productResult] = await db.select()
+          .from(products)
+          .where(eq(products.id, order.listingId))
+          .limit(1);
+        product = productResult;
+      }
+
       // Create conversation
       const newConversation = await db.insert(conversations).values({
-        title: `Order #${orderId} - ${order.product?.title || 'Product'}`,
-        participants: JSON.stringify([order.buyer.walletAddress, order.seller.walletAddress]),
+        title: `Order #${orderId} - ${product?.title || 'Product'}`,
+        participants: JSON.stringify([buyer?.walletAddress, seller?.walletAddress]),
         conversationType: 'order_support',
-        productId: order.productId,
+        productId: order.listingId || '',
         contextMetadata: JSON.stringify({
           order_id: orderId,
-          product_name: order.product?.title || 'Product',
+          product_name: product?.title || 'Product',
           order_status: order.status,
           order_amount: order.amount
         }),
@@ -79,13 +101,15 @@ export class MarketplaceMessagingService {
       await db.insert(conversationParticipants).values([
         {
           conversationId: newConversation[0].id,
-          userId: order.buyer.id,
+          userId: order.buyerId,
+          walletAddress: buyer?.walletAddress || '',
           role: 'buyer',
           joinedAt: new Date()
         },
         {
           conversationId: newConversation[0].id,
-          userId: order.seller.id,
+          userId: order.sellerId,
+          walletAddress: seller?.walletAddress || '',
           role: 'seller',
           joinedAt: new Date()
         }
@@ -108,9 +132,10 @@ export class MarketplaceMessagingService {
   ): Promise<any> {
     try {
       // Get conversation details
-      const conversation = await db.query.conversations.findFirst({
-        where: eq(conversations.id, conversationId)
-      });
+      const [conversation] = await db.select()
+        .from(conversations)
+        .where(eq(conversations.id, conversationId))
+        .limit(1);
 
       if (!conversation) {
         throw new Error('Conversation not found');
@@ -159,26 +184,20 @@ export class MarketplaceMessagingService {
   async getOrderTimeline(conversationId: string) {
     try {
       // Get conversation with order
-      const conversation = await db.query.conversations.findFirst({
-        where: eq(conversations.id, conversationId),
-        with: {
-          order: {
-            with: {
-              events: true
-            }
-          }
-        }
-      });
+      const [conversation] = await db.select()
+        .from(conversations)
+        .where(eq(conversations.id, conversationId))
+        .limit(1);
 
       if (!conversation || !conversation.orderId) {
         throw new Error('Conversation or order not found');
       }
 
       // Get messages
-      const messages = await db.query.chatMessages.findMany({
-        where: eq(chatMessages.conversationId, conversationId),
-        orderBy: [desc(chatMessages.sentAt)]
-      });
+      const messages = await db.select()
+        .from(chatMessages)
+        .where(eq(chatMessages.conversationId, conversationId))
+        .orderBy(desc(chatMessages.sentAt));
 
       // Combine messages and order events
       const timeline = [
@@ -214,12 +233,12 @@ export class MarketplaceMessagingService {
   async suggestQuickReplies(userId: string, messageContent: string): Promise<any[]> {
     try {
       // Get user's quick replies
-      const userQuickReplies = await db.query.quickReplies.findMany({
-        where: and(
+      const userQuickReplies = await db.select()
+        .from(quickReplies)
+        .where(and(
           eq(quickReplies.userId, userId),
           eq(quickReplies.isActive, true)
-        )
-      });
+        ));
 
       // Filter based on trigger keywords
       return userQuickReplies.filter(reply => 
@@ -267,9 +286,9 @@ export class MarketplaceMessagingService {
       });
 
       // Get participants
-      const participants = await db.query.conversationParticipants.findMany({
-        where: eq(conversationParticipants.conversationId, conversationId)
-      });
+      const participants = await db.select()
+        .from(conversationParticipants)
+        .where(eq(conversationParticipants.conversationId, conversationId));
 
       // Find seller and buyer
       const seller = participants.find(p => p.role === 'seller');

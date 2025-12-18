@@ -555,15 +555,14 @@ export class UnifiedSellerAPIClient {
 
   async getAnalytics(walletAddress: string, period: string = '30d'): Promise<SellerAnalytics> {
     const url = `${this.endpoints.getAnalytics(walletAddress)}?period=${period}`;
-    return await this.request<SellerAnalytics>(url);
+    return await this.request<SellerAnalytics>(url, undefined, true);
   }
-
   // Listings API methods
   async getListings(walletAddress: string, status?: string): Promise<SellerListing[]> {
     const url = status
       ? `${this.endpoints.getListings(walletAddress)}?status=${status}`
       : this.endpoints.getListings(walletAddress);
-    const response = await this.request<{ listings: SellerListing[]; total: number } | SellerListing[]>(url);
+    const response = await this.request<{ listings: SellerListing[]; total: number } | SellerListing[]>(url, undefined, true);
 
     // Handle both array response and paginated response format
     if (Array.isArray(response)) {
@@ -572,9 +571,7 @@ export class UnifiedSellerAPIClient {
       return response.listings;
     }
     return [];
-  }
-
-  async createListing(listingData: Partial<SellerListing>): Promise<SellerListing> {
+  }  async createListing(listingData: Partial<SellerListing>): Promise<SellerListing> {
     return await this.request<SellerListing>(this.endpoints.createListing(), {
       method: 'POST',
       body: JSON.stringify(listingData),
@@ -602,8 +599,7 @@ export class UnifiedSellerAPIClient {
     const url = status
       ? `${this.endpoints.getOrders(walletAddress)}?status=${status}`
       : this.endpoints.getOrders(walletAddress);
-    return await this.request<SellerOrder[]>(url);
-  }
+    return await this.request<SellerOrder[]>(url, undefined, true);  }
 
   async updateOrderStatus(orderId: string, status: string, data?: any): Promise<void> {
     await this.request<void>(this.endpoints.updateOrderStatus(orderId), {

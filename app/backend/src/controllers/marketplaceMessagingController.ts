@@ -25,7 +25,7 @@ export class MarketplaceMessagingController {
         return;
       }
 
-      const conversation = await marketplaceMessagingService.createOrderConversation(Number(orderId));
+      const conversation = await marketplaceMessagingService.createOrderConversation(orderId);
 
       res.status(201).json(apiResponse.success(conversation, 'Order conversation created successfully'));
     } catch (error) {

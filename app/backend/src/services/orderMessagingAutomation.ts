@@ -8,7 +8,7 @@ import {
   disputes,
   conversations
 } from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { marketplaceMessagingService } from './marketplaceMessagingService';
 
 export class OrderMessagingAutomation {

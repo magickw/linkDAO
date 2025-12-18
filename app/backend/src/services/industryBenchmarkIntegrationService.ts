@@ -200,7 +200,13 @@ export class IndustryBenchmarkIntegrationService {
       // Update benchmark service with new data
       await performanceBenchmarkService.updateIndustryBenchmarks(sourceId, {
         ...update,
-        lastUpdated: new Date()
+        lastUpdated: new Date(),
+        metadata: {
+          methodology: update.metadata?.methodology || 'External data source',
+          dataQuality: update.metadata?.dataQuality || 'medium',
+          coverage: update.metadata?.coverage || 'General',
+          limitations: update.metadata?.limitations || []
+        }
       });
 
       logger.info(`Successfully synced data from ${source.name}`);
@@ -220,9 +226,9 @@ export class IndustryBenchmarkIntegrationService {
         actorId: 'system',
         resourceType: 'EXTERNAL_DATA_SOURCE',
         resourceId: sourceId,
-        details: {
+        details: JSON.stringify({
           error: error instanceof Error ? error.message : 'Unknown error'
-        }
+        })
       });
 
       return null;
@@ -350,11 +356,11 @@ export class IndustryBenchmarkIntegrationService {
         actorId: 'system',
         resourceType: 'EXTERNAL_DATA_SOURCE',
         resourceId: source.id,
-        details: {
+        details: JSON.stringify({
           source: source.name,
           metricsCount: Object.keys(mockResponse.metrics).length,
           dataQuality: validation.summary.overallQuality
-        }
+        })
       });
 
       return mockResponse;
@@ -553,11 +559,11 @@ export class IndustryBenchmarkIntegrationService {
         actorId: 'system',
         resourceType: 'EXTERNAL_DATA_SOURCE',
         resourceId: sourceId,
-        details: {
+        details: JSON.stringify({
           name: newSource.name,
           type: newSource.type,
           syncFrequency: newSource.syncFrequency
-        }
+        })
       });
 
       logger.info(`Added data source: ${newSource.name} (${sourceId})`);
@@ -594,7 +600,7 @@ export class IndustryBenchmarkIntegrationService {
         actorId: 'system',
         resourceType: 'EXTERNAL_DATA_SOURCE',
         resourceId: sourceId,
-        details: updates
+        details: JSON.stringify(updates)
       });
 
       logger.info(`Updated data source: ${updatedSource.name} (${sourceId})`);
@@ -628,10 +634,10 @@ export class IndustryBenchmarkIntegrationService {
         actorId: 'manual',
         resourceType: 'EXTERNAL_DATA_SOURCE',
         resourceId: sourceId,
-        details: {
+        details: JSON.stringify({
           name: source.name,
           type: source.type
-        }
+        })
       });
 
       logger.info(`Removed data source: ${source.name} (${sourceId})`);
@@ -659,7 +665,7 @@ export class IndustryBenchmarkIntegrationService {
    * Get sync statistics
    */
   public getSyncStats(): any {
-    const sources = Array.from(this.dataSources);
+    const sources = Array.from(this.dataSources.values());
     
     return {
       totalSources: sources.length,

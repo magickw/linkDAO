@@ -305,6 +305,10 @@ export class IPFSService {
         path: file.path
       }));
 
+      if (!this.client) {
+        throw new Error('IPFS client not available');
+      }
+
       const results = [];
       for (const file of filesToAdd) {
         const result = await this.client.add(file, {
@@ -417,6 +421,10 @@ export class IPFSService {
       const startTime = Date.now();
       safeLogger.info('Starting IPFS download', { hash: ipfsHash });
 
+      if (!this.client) {
+        throw new Error('IPFS client not available');
+      }
+
       // Get file content
       const chunks = [];
       for await (const chunk of this.client.cat(ipfsHash)) {
@@ -459,6 +467,9 @@ export class IPFSService {
     }
 
     try {
+      if (!this.client) {
+        return false;
+      }
       // Try to get file stats to check if it exists
       await this.client.files.stat(`/${ipfsHash}`);
       return true;
@@ -480,6 +491,9 @@ export class IPFSService {
     }
 
     try {
+      if (!this.client) {
+        return false;
+      }
       await this.client.pin.add(ipfsHash);
       safeLogger.info('File pinned successfully', { hash: ipfsHash });
       return true;
@@ -498,6 +512,9 @@ export class IPFSService {
     }
 
     try {
+      if (!this.client) {
+        return false;
+      }
       await this.client.pin.rm(ipfsHash);
       safeLogger.info('File unpinned successfully', { hash: ipfsHash });
       return true;

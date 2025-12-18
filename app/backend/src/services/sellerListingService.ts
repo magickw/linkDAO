@@ -126,24 +126,28 @@ class SellerListingService {
     walletAddress: string,
     options: ListingQueryOptions = {}
   ): Promise<{ listings: ProductListing[]; total: number; page: number; pageSize: number }> {
-    // Normalize wallet address to lowercase for case-insensitive comparison
-    const normalizedAddress = walletAddress.toLowerCase();
+    try {
+      // Normalize wallet address to lowercase for case-insensitive comparison
+      const normalizedAddress = walletAddress.toLowerCase();
+      safeLogger.info('Fetching seller listings', { walletAddress: normalizedAddress, options });
 
-    // Verify seller exists and get seller ID
-    const sellerResult = await db.select().from(sellers).where(eq(sellers.walletAddress, normalizedAddress));
-    const seller = sellerResult[0];
+      // Verify seller exists and get seller ID
+      const sellerResult = await db.select().from(sellers).where(eq(sellers.walletAddress, normalizedAddress));
+      const seller = sellerResult[0];
 
-    if (!seller) {
-      throw new Error('Seller not found');
-    }
+      if (!seller) {
+        safeLogger.warn('Seller not found', { walletAddress: normalizedAddress });
+        throw new Error('Seller not found');
+      }
 
-    // Get user ID for seller
-    const userResult = await db.select().from(users).where(eq(users.walletAddress, normalizedAddress));
-    const user = userResult[0];
+      // Get user ID for seller
+      const userResult = await db.select().from(users).where(eq(users.walletAddress, normalizedAddress));
+      const user = userResult[0];
 
-    if (!user) {
-      throw new Error('User not found');
-    }
+      if (!user) {
+        safeLogger.warn('User not found for seller', { walletAddress: normalizedAddress });
+        throw new Error('User not found');
+      }
 
     const {
       status,
@@ -173,33 +177,72 @@ class SellerListingService {
     const listings = await db.select().from(products).where(and(...conditions)).orderBy(orderByDirection).limit(limit).offset(offset);
 
     return {
-      listings: listings.map(listing => ({
-        id: listing.id,
-        sellerId: listing.sellerId.toString(),
-        sellerAddress: walletAddress,
-        title: listing.title,
-        description: listing.description,
-        price: listing.priceAmount?.toString() || '0',
-        currency: listing.priceCurrency,
-        categoryId: listing.categoryId,
-        images: listing.images ? JSON.parse(listing.images) : [],
-        metadata: listing.metadata ? JSON.parse(listing.metadata) : {},
-        inventory: listing.inventory,
-        status: listing.status || 'draft',
-        tags: listing.tags ? JSON.parse(listing.tags) : [],
-        shipping: listing.shipping ? JSON.parse(listing.shipping) : null,
-        nft: listing.nft ? JSON.parse(listing.nft) : null,
-        views: listing.views || 0,
-        favorites: listing.favorites || 0,
-        listingStatus: listing.listingStatus || 'draft',
-        publishedAt: listing.publishedAt || undefined,
-        createdAt: listing.createdAt || new Date(),
-        updatedAt: listing.updatedAt || new Date(),
-      })),
+      listings: listings.map(listing => {
+        try {
+          return {
+            id: listing.id,
+            sellerId: listing.sellerId,
+            sellerAddress: walletAddress,
+            title: listing.title,
+            description: listing.description,
+            price: listing.priceAmount?.toString() || '0',
+            currency: listing.priceCurrency,
+            categoryId: listing.categoryId,
+            images: typeof listing.images === 'string' ? JSON.parse(listing.images) : (listing.images || []),
+            metadata: typeof listing.metadata === 'string' ? JSON.parse(listing.metadata) : (listing.metadata || {}),
+            inventory: listing.inventory,
+            status: listing.status || 'draft',
+            tags: listing.tags ? (typeof listing.tags === 'string' ? JSON.parse(listing.tags) : listing.tags) : [],
+            shipping: listing.shipping ? (typeof listing.shipping === 'string' ? JSON.parse(listing.shipping) : listing.shipping) : null,
+            nft: listing.nft ? (typeof listing.nft === 'string' ? JSON.parse(listing.nft) : listing.nft) : null,
+            views: listing.views || 0,
+            favorites: listing.favorites || 0,
+            listingStatus: listing.listingStatus || 'draft',
+            publishedAt: listing.publishedAt || undefined,
+            createdAt: listing.createdAt || new Date(),
+            updatedAt: listing.updatedAt || new Date(),
+          };
+        } catch (parseError) {
+          safeLogger.error('Error parsing listing data:', { listingId: listing.id, error: parseError });
+          // Return listing with safe defaults if JSON parsing fails
+          return {
+            id: listing.id,
+            sellerId: listing.sellerId,
+            sellerAddress: walletAddress,
+            title: listing.title,
+            description: listing.description,
+            price: listing.priceAmount?.toString() || '0',
+            currency: listing.priceCurrency,
+            categoryId: listing.categoryId,
+            images: [],
+            metadata: {},
+            inventory: listing.inventory,
+            status: listing.status || 'draft',
+            tags: [],
+            shipping: null,
+            nft: null,
+            views: listing.views || 0,
+            favorites: listing.favorites || 0,
+            listingStatus: listing.listingStatus || 'draft',
+            publishedAt: listing.publishedAt || undefined,
+            createdAt: listing.createdAt || new Date(),
+            updatedAt: listing.updatedAt || new Date(),
+          };
+        }
+      }),
       total,
       page: Math.floor(offset / limit) + 1,
       pageSize: limit,
     };
+    } catch (error) {
+      safeLogger.error('Error in getSellerListings:', {
+        walletAddress,
+        options,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      throw error;
+    }
   }
 
   /**

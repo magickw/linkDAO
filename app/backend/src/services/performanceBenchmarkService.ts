@@ -567,7 +567,16 @@ export class PerformanceBenchmarkService {
           industryRank,
           percentile,
           industrySegment
-        })
+        }),
+        metadata: {
+          source: 'performance_benchmark_service',
+          severity: 'low',
+          category: 'performance',
+          tags: ['benchmark', 'seller']
+        },
+        outcome: 'success',
+        complianceFlags: [],
+        retentionPolicy: 'standard'
       });
 
       return benchmarkData;
@@ -1786,7 +1795,16 @@ export class PerformanceBenchmarkService {
           actorType: 'system',
           resourceType: 'INDUSTRY_BENCHMARK',
           resourceId: benchmarkId,
-          details: JSON.stringify(updates)
+          details: JSON.stringify(updates),
+          metadata: {
+            source: 'performance_benchmark_service',
+            severity: 'low',
+            category: 'performance',
+            tags: ['benchmark', 'industry']
+          },
+          outcome: 'success',
+          complianceFlags: [],
+          retentionPolicy: 'standard'
         });
         
         logger.info(`Industry benchmark updated: ${benchmarkId}`);
@@ -1870,7 +1888,16 @@ export class PerformanceBenchmarkService {
           deadline,
           currentValue,
           progress
-        })
+        }),
+        metadata: {
+          source: 'performance_benchmark_service',
+          severity: 'low',
+          category: 'performance',
+          tags: ['target', 'seller']
+        },
+        outcome: 'success',
+        complianceFlags: [],
+        retentionPolicy: 'standard'
       });
 
       return target;
@@ -1986,7 +2013,16 @@ export class PerformanceBenchmarkService {
           updates,
           previousTarget: existingTarget,
           newTarget: updatedTarget
-        })
+        }),
+        metadata: {
+          source: 'performance_benchmark_service',
+          severity: 'low',
+          category: 'performance',
+          tags: ['target', 'update']
+        },
+        outcome: 'success',
+        complianceFlags: [],
+        retentionPolicy: 'standard'
       });
 
       return updatedTarget;
