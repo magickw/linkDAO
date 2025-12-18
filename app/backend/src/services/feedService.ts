@@ -85,10 +85,13 @@ export class FeedService {
     const timeFilter = this.buildTimeFilter(timeRange, posts);
     const quickPostTimeFilter = this.buildTimeFilter(timeRange, quickPosts);
 
-    // Build community filter
+    // Build community filter - check both dao and communityId fields
     let communityFilter = sql`1=1`;
     if (filterCommunities.length > 0) {
-      communityFilter = inArray(posts.dao, filterCommunities);
+      communityFilter = or(
+        inArray(posts.dao, filterCommunities),
+        inArray(posts.communityId, filterCommunities)
+      );
     }
 
     // Declare user variable in outer scope so it's accessible to later queries

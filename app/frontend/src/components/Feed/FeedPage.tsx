@@ -51,11 +51,26 @@ export const FeedPage: React.FC<FeedPageProps> = ({
         };
       } else {
         // For home/feed page, get the enhanced feed that includes both regular posts and quickPosts
+        // AND posts from communities the user has joined
+        let userCommunities: string[] = [];
+        
+        // Fetch user's community memberships if they're connected
+        if (address) {
+          try {
+            const { CommunityService } = await import('../../services/communityService');
+            userCommunities = await CommunityService.getUserCommunityMemberships();
+            console.log('📋 [FEED] User is member of communities:', userCommunities);
+          } catch (err) {
+            console.warn('Failed to fetch user communities, continuing without community filter:', err);
+          }
+        }
+
         response = await FeedService.getEnhancedFeed({
           sortBy: currentSort,
           timeRange: currentTimeRange,
           feedSource: 'following', // Show posts from followed users (including self) for home/feed
-          userAddress: address // CRITICAL: Pass user address for personalized feed
+          userAddress: address, // CRITICAL: Pass user address for personalized feed
+          communities: userCommunities // Include posts from user's communities
         }, 1, 20);
       }
 
