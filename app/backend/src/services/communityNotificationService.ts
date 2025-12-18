@@ -186,16 +186,14 @@ export class CommunityNotificationService {
       };
 
       // Note: sendCommunityNotification method needs to be implemented in pushNotificationService
-      // For now, using generic sendNotification
-      await pushNotificationService.sendNotification(
-        payload.userAddress,
-        {
-          type: this.mapToPushNotificationType(payload.type),
-          title: pushNotification.title,
-          message: pushNotification.body,
-          data: pushNotification.data
-        }
-      );
+      // For now, using generic sendPushNotification
+      await pushNotificationService.sendPushNotification({
+        userId: payload.userAddress,
+        type: this.mapToPushNotificationType(payload.type),
+        title: pushNotification.title,
+        message: pushNotification.body,
+        data: pushNotification.data
+      });
     } catch (error) {
       safeLogger.error('[CommunityNotification] Error sending push notification:', error);
     }

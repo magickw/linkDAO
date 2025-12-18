@@ -1907,11 +1907,13 @@ export const nfts = pgTable("nfts", {
   animationUrl: text("animation_url"),
   animationHash: varchar("animation_hash", { length: 255 }),
   metadataUri: text("metadata_uri").notNull(),
+  metadataHash: varchar("metadata_hash", { length: 255 }),
   attributes: text("attributes"), // JSON
   rarity: varchar("rarity", { length: 20 }),
   status: varchar("status", { length: 20 }).default("active"),
   isVerified: boolean("is_verified").default(false),
   verifiedAt: timestamp("verified_at"),
+  verifierId: uuid("verifier_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1924,6 +1926,7 @@ export const nftCollections = pgTable("nft_collections", {
   symbol: varchar("symbol", { length: 10 }).notNull(),
   description: text("description"),
   imageUrl: text("image_url"),
+  imageHash: varchar("image_hash", { length: 255 }),
   bannerUrl: text("banner_url"),
   maxSupply: integer("max_supply"),
   currentSupply: integer("current_supply").default(0),
@@ -1942,6 +1945,7 @@ export const nftListings = pgTable("nft_listings", {
   listingType: varchar("listing_type", { length: 20 }).notNull(), // 'fixed' | 'auction'
   startTime: timestamp("start_time").defaultNow(),
   endTime: timestamp("end_time"),
+  expiresAt: timestamp("expires_at"),
   status: varchar("status", { length: 20 }).default("active"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -2547,21 +2551,6 @@ export const contentReports = pgTable("content_reports", {
 
 // Alias for backward compatibility
 export const communityReports = contentReports;
-
-// Reputation change events tracking
-export const reputationChangeEvents = pgTable("reputation_change_events", {
-  id: serial("id").primaryKey(),
-  userId: uuid("user_id").references(() => users.id).notNull(),
-  changeType: varchar("change_type", { length: 32 }).notNull(),
-  changeAmount: numeric("change_amount").notNull(),
-  reason: text("reason"),
-  relatedEntityType: varchar("related_entity_type", { length: 32 }),
-  relatedEntityId: varchar("related_entity_id", { length: 64 }),
-  createdAt: timestamp("created_at").defaultNow(),
-}, (t) => ({
-  userIdx: index("reputation_change_events_user_idx").on(t.userId),
-  typeIdx: index("reputation_change_events_type_idx").on(t.changeType),
-}));
 
 // Appeals system
 export const moderationAppeals = pgTable("moderation_appeals", {
@@ -5870,5 +5859,36 @@ export const supportTickets = pgTable("support_tickets", {
   statusIdx: index("idx_support_tickets_status").on(t.status),
   priorityIdx: index("idx_support_tickets_priority").on(t.priority),
   categoryIdx: index("idx_support_tickets_category").on(t.category),
+}));
+
+// Offline/Mobile support tables
+export const cachedContent = pgTable("cached_content", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userAddress: varchar("user_address", { length: 66 }).notNull(),
+  contentType: varchar("content_type", { length: 20 }).notNull(),
+  contentId: varchar("content_id", { length: 255 }).notNull(),
+  contentData: text("content_data").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  priority: integer("priority").default(5),
+  accessedAt: timestamp("accessed_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  userIdx: index("idx_cached_content_user").on(t.userAddress),
+  typeIdx: index("idx_cached_content_type").on(t.contentType),
+}));
+
+export const offlineActions = pgTable("offline_actions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userAddress: varchar("user_address", { length: 66 }).notNull(),
+  actionType: varchar("action_type", { length: 20 }).notNull(),
+  actionData: text("action_data").notNull(),
+  status: varchar("status", { length: 20 }).default("pending"),
+  retryCount: integer("retry_count").default(0),
+  lastAttemptAt: timestamp("last_attempt_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  userIdx: index("idx_offline_actions_user").on(t.userAddress),
+  statusIdx: index("idx_offline_actions_status").on(t.status),
 }));
 

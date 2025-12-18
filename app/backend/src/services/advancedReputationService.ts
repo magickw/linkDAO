@@ -200,9 +200,9 @@ export class AdvancedReputationService extends EventEmitter {
       await db.insert(reputationChangeEvents).values({
         userId: userId,
         eventType,
-        scoreChange: adjustedScoreChange,
-        previousScore: previousScore,
-        newScore: newScore,
+        scoreChange: adjustedScoreChange.toString(),
+        previousScore: previousScore.toString(),
+        newScore: newScore.toString(),
         description: reason,
         metadata: JSON.stringify({
           context,
@@ -213,7 +213,7 @@ export class AdvancedReputationService extends EventEmitter {
       // Update user reputation score
       await db.update(userReputationScores)
         .set({
-          overallScore: newScore,
+          overallScore: newScore.toString(),
           updatedAt: new Date()
         })
         .where(eq(userReputationScores.userId, userId));
@@ -511,7 +511,7 @@ export class AdvancedReputationService extends EventEmitter {
 
     // Calculate trend
     const recentEvents = historicalEvents.slice(-10);
-    const scoreChanges = recentEvents.map(e => e.scoreChange);
+    const scoreChanges = recentEvents.map(e => Number(e.scoreChange));
     const averageChange = scoreChanges.reduce((sum, change) => sum + change, 0) / scoreChanges.length;
     
     // Predict based on trend and current event

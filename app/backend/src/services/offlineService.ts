@@ -121,7 +121,7 @@ export class OfflineService {
         ))
         .orderBy(desc(offlineContentCache.accessedAt));
 
-      return results;
+      return results as any[];
     } catch (error) {
       safeLogger.error('Error getting all cached content:', error);
       return [];
@@ -206,7 +206,7 @@ export class OfflineService {
         ))
         .orderBy(offlineActionQueue.createdAt);
 
-      return results;
+      return results as any[];
     } catch (error) {
       safeLogger.error('Error getting pending actions:', error);
       return [];

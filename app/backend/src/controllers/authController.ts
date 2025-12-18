@@ -197,13 +197,28 @@ class AuthController {
           { expiresIn: '24h' }
         );
 
+        // Generate refresh token
+        const refreshToken = jwt.sign(
+          {
+            userId: userData.id,
+            walletAddress: userData.walletAddress,
+            type: 'refresh',
+            timestamp: Date.now()
+          },
+          jwtSecret,
+          { expiresIn: '7d' }
+        );
+
         // Create session record in auth_sessions table
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
+        const refreshExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
         try {
           await db.insert(authSessions).values({
             walletAddress: userData.walletAddress.toLowerCase(),
             sessionToken: token,
+            refreshToken: refreshToken,
             expiresAt: expiresAt,
+            refreshExpiresAt: refreshExpiresAt,
             isActive: true,
             lastUsedAt: new Date(),
             createdAt: new Date()
