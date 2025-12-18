@@ -46,16 +46,8 @@ export const handleReactionWithAuth = async (
   reactionType: string,
   amount: number = 0
 ) => {
-  // Check authentication (wallet connection should be checked by the caller)
-  if (!checkAuthentication()) {
-    // Check if user has a wallet connected but not authenticated
-    const hasWallet = checkWalletConnection();
-    if (hasWallet) {
-      throw new Error('Please sign in with your wallet to react to posts. Look for the "Sign In" button in the header.');
-    } else {
-      throw new Error('Please connect your wallet and sign in to react to posts.');
-    }
-  }
+  // Note: Authentication should be checked by the caller before calling this function
+  // This function focuses on making the API request with proper auth headers
   
   // Ensure valid post ID
   const validPostId = ensureValidPostId(postId);

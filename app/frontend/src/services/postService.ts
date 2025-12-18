@@ -395,4 +395,23 @@ export class PostService {
       throw error;
     }
   }
+
+  static async getPostsByCommunity(communityId: string, page: number = 1, limit: number = 20): Promise<Post[]> {
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString()
+      });
+
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/community/${communityId}?${params}`, {
+        method: 'GET',
+        headers: await enhancedAuthService.getAuthHeaders()
+      });
+
+      return this.handleResponse(response, 'Failed to fetch posts by community');
+    } catch (error) {
+      console.error('Error fetching posts by community:', error);
+      throw error;
+    }
+  }
 }

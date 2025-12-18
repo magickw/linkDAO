@@ -24,6 +24,7 @@ import { useFollow, useFollowStatus } from '@/hooks/useFollow';
 import { unifiedImageService } from '@/services/unifiedImageService';
 import Link from 'next/link';
 import { ProfileService } from '@/services/profileService';
+import { getTokenLogoWithFallback } from '@/utils/tokenLogoUtils';
 
 // Helper function to validate IPFS CID and construct proper URL
 function getAvatarUrl(profileCid: string | undefined): string | undefined {
@@ -1981,23 +1982,42 @@ export default function Profile() {
                       <div className="mt-6">
                         <h4 className="font-medium text-gray-900 dark:text-white mb-3">Token Balances</h4>
                         <div className="space-y-3">
-                          {tokens.map((token, index) => (
-                            <div key={index} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                              <div className="flex items-center">
-                                <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center mr-3">
-                                  <span className="text-xs font-medium">{token.symbol.substring(0, 3)}</span>
+                          {tokens.map((token, index) => {
+                            const logoUrl = getTokenLogoWithFallback(token.symbol, token.logoUrl);
+                            return (
+                              <div key={index} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <div className="flex items-center">
+                                  {logoUrl ? (
+                                    <img 
+                                      src={logoUrl} 
+                                      alt={token.symbol} 
+                                      className="h-8 w-8 rounded-full object-contain mr-3"
+                                      onError={(e) => {
+                                        const target = e.target as HTMLImageElement;
+                                        target.style.display = 'none';
+                                        const fallback = document.createElement('div');
+                                        fallback.className = 'h-8 w-8 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center text-white text-xs font-bold mr-3';
+                                        fallback.textContent = token.symbol ? token.symbol.substring(0, 2) : 'TK';
+                                        target.parentElement!.appendChild(fallback);
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="h-8 w-8 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center text-white text-xs font-bold mr-3">
+                                      {token.symbol ? token.symbol.substring(0, 2) : 'TK'}
+                                    </div>
+                                  )}
+                                  <div>
+                                    <p className="font-medium text-gray-900 dark:text-white">{token.symbol}</p>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">{token.symbol}</p>
+                                  </div>
                                 </div>
-                                <div>
-                                  <p className="font-medium text-gray-900 dark:text-white">{token.symbol}</p>
-                                  <p className="text-sm text-gray-500 dark:text-gray-400">{token.symbol}</p>
+                                <div className="text-right">
+                                  <p className="font-medium text-gray-900 dark:text-white">{token.balanceFormatted.split(' ')[0]}</p>
+                                  <p className="text-sm text-gray-500 dark:text-gray-400">${token.valueUSD.toFixed(2)}</p>
                                 </div>
                               </div>
-                              <div className="text-right">
-                                <p className="font-medium text-gray-900 dark:text-white">{token.balanceFormatted.split(' ')[0]}</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">${token.valueUSD.toFixed(2)}</p>
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     </>
