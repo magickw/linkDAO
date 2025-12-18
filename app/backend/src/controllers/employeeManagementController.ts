@@ -359,7 +359,7 @@ class EmployeeManagementController {
           permissions: updatedEmployee.permissions,
           updatedAt: updatedEmployee.updatedAt
         }
-      }, 'Employee updated successfully');
+      });
 
     } catch (error) {
       safeLogger.error('Error updating employee:', error);
@@ -409,7 +409,7 @@ class EmployeeManagementController {
           role: updated.role,
           permissions: updated.permissions
         }
-      }, 'Employee role updated successfully');
+      });
 
     } catch (error) {
       safeLogger.error('Error updating employee role:', error);
@@ -450,7 +450,7 @@ class EmployeeManagementController {
           id: updated.id,
           permissions: updated.permissions
         }
-      }, 'Employee permissions updated successfully');
+      });
 
     } catch (error) {
       safeLogger.error('Error updating employee permissions:', error);
@@ -502,7 +502,7 @@ class EmployeeManagementController {
           lockedUntil: updated.lockedUntil,
           emailVerified: updated.emailVerified
         }
-      }, `Employee ${action} successful`);
+      });
 
     } catch (error) {
       safeLogger.error('Error updating employee status:', error);
@@ -679,7 +679,7 @@ class EmployeeManagementController {
         checked: inactiveEmployees.length,
         suspended: lockedCount,
         threshold: inactivityDays
-      }, `Checked ${inactiveEmployees.length} employees, suspended ${lockedCount} for inactivity`);
+      });
 
     } catch (error) {
       safeLogger.error('Error checking inactive employees:', error);
@@ -727,7 +727,7 @@ class EmployeeManagementController {
         inviteUrl,
         expiresAt,
         message: 'Invitation created. Share this URL with the employee.'
-      }, 'Invitation created successfully', 201);
+      }, 201);
 
     } catch (error) {
       safeLogger.error('Error inviting employee:', error);
@@ -823,7 +823,7 @@ class EmployeeManagementController {
           successful: results.length,
           failed: errors.length
         }
-      }, 'Bulk employee creation completed', 201);
+      }, 201);
 
     } catch (error) {
       safeLogger.error('Error bulk inviting employees:', error);

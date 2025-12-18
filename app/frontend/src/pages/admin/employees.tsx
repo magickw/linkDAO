@@ -140,7 +140,7 @@ const EmployeeManagementPage: NextPage = () => {
   };
 
   const handleResetPassword = async (employeeId: string) => {
-    if (!confirm('Are you sure you want to reset this employee's password?')) return;
+    if (!confirm('Are you sure you want to reset this employee\'s password?')) return;
 
     try {
       const token = localStorage.getItem('token');
