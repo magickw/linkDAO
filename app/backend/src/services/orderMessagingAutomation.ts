@@ -27,14 +27,10 @@ export class OrderMessagingAutomation {
       const conversation = await this.marketplaceMessaging.createOrderConversation(orderId);
 
       // 2. Get order details
-      const order = await db.query.orders.findFirst({
-        where: eq(orders.id, orderId),
-        with: {
-          buyer: true,
-          seller: true,
-          listing: true
-        }
-      });
+      const [order] = await db.select()
+        .from(orders)
+        .where(eq(orders.id, orderId))
+        .limit(1);
 
       if (!order) {
         throw new Error('Order not found');
@@ -52,8 +48,7 @@ export class OrderMessagingAutomation {
       );
 
       // 4. Notify seller via WebSocket
-      // Note: This would typically be implemented with a WebSocket service
-      safeLogger.info(`New order message for seller ${order.seller.walletAddress}`, {
+      safeLogger.info(`New order message for seller ${order.sellerId}`, {
         conversation_id: conversation.id,
         order_id: orderId
       });
@@ -68,7 +63,7 @@ export class OrderMessagingAutomation {
   /**
    * Handle order shipped event
    */
-  async onOrderShipped(orderId: number, trackingInfo: any) {
+  async onOrderShipped(orderId: string, trackingInfo: any) {
     try {
       // Get conversation for order
       const conversation = await this.getOrderConversation(orderId);
@@ -134,9 +129,10 @@ export class OrderMessagingAutomation {
   async onDisputeOpened(disputeId: number) {
     try {
       // Get dispute details
-      const dispute = await db.query.disputes.findFirst({
-        where: eq(disputes.id, disputeId),
-      });
+      const [dispute] = await db.select()
+        .from(disputes)
+        .where(eq(disputes.id, disputeId))
+        .limit(1);
 
       if (!dispute || !dispute.orderId) {
         throw new Error('Dispute or order not found');
@@ -194,7 +190,7 @@ export class OrderMessagingAutomation {
   /**
    * Get conversation for an order
    */
-  private async getOrderConversation(orderId: number) {
+  private async getOrderConversation(orderId: string) {
     const conversationsList = await db
       .select()
       .from(conversations)

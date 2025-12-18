@@ -1,6 +1,7 @@
 import { Post, CreatePostInput, UpdatePostInput } from '../models/Post';
 import { ENV_CONFIG } from '@/config/environment';
 import { enhancedAuthService } from './enhancedAuthService';
+import { post as postRequest } from './globalFetchWrapper';
 
 // Use centralized environment config to ensure consistent backend URL
 const BACKEND_API_BASE_URL = ENV_CONFIG.BACKEND_URL;
@@ -38,8 +39,6 @@ export class PostService {
 
   static async createPost(data: CreatePostInput): Promise<Post> {
     try {
-      const authHeaders = enhancedAuthService.getAuthHeaders();
-
       // If communityId is provided, create post in community
       // Otherwise, create a quick post on user's timeline
       const endpoint = data.communityId
@@ -47,8 +46,7 @@ export class PostService {
         : `${BACKEND_API_BASE_URL}/api/posts`;
 
       // Use global fetch wrapper which handles token refresh automatically
-      const { post } = await import('./globalFetchWrapper');
-      const response = await post(endpoint, {
+      const response = await postRequest(endpoint, {
         content: data.content,
         author: data.author,
         type: 'text', // Default post type
@@ -75,13 +73,9 @@ export class PostService {
 
   static async getPost(id: string): Promise<Post | null> {
     try {
-      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/${id}`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders
-        }
+        headers: await enhancedAuthService.getAuthHeaders()
       });
 
       if (response.status === 404) {
@@ -102,13 +96,9 @@ export class PostService {
 
   static async updatePost(id: string, data: UpdatePostInput): Promise<Post> {
     try {
-      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders
-        },
+        headers: await enhancedAuthService.getAuthHeaders(),
         body: JSON.stringify(data)
       });
 
@@ -121,13 +111,9 @@ export class PostService {
 
   static async deletePost(id: string): Promise<boolean> {
     try {
-      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/${id}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders
-        }
+        headers: await enhancedAuthService.getAuthHeaders()
       });
 
       // Handle specific status codes
@@ -162,13 +148,9 @@ export class PostService {
     tokenAmount: number = 0
   ): Promise<any> {
     try {
-      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/react`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders
-        },
+        headers: await enhancedAuthService.getAuthHeaders(),
         body: JSON.stringify({
           type,
           tokenAmount
@@ -189,13 +171,9 @@ export class PostService {
     message?: string
   ): Promise<any> {
     try {
-      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/tip`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders
-        },
+        headers: await enhancedAuthService.getAuthHeaders(),
         body: JSON.stringify({
           amount,
           tokenType,
@@ -223,13 +201,9 @@ export class PostService {
         sort
       });
 
-      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/comments?${params}`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders
-        }
+        headers: await enhancedAuthService.getAuthHeaders()
       });
 
       return this.handleResponse(response, 'Failed to fetch comments');
@@ -242,19 +216,15 @@ export class PostService {
   static async addComment(
     postId: string,
     content: string,
-    parentCommentId?: string
+    parentId?: string
   ): Promise<any> {
     try {
-      const authHeaders = enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/comments`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders
-        },
+        headers: await enhancedAuthService.getAuthHeaders(),
         body: JSON.stringify({
           content,
-          parentCommentId
+          parentId
         })
       });
 
@@ -265,12 +235,30 @@ export class PostService {
     }
   }
 
-  static async getCommunityPosts(
-    communityId: string,
+  static async deleteComment(commentId: string): Promise<boolean> {
+    try {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/comments/${commentId}`, {
+        method: 'DELETE',
+        headers: await enhancedAuthService.getAuthHeaders()
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to delete comment: ${response.statusText}`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      throw error;
+    }
+  }
+
+  static async getFeed(
     page: number = 1,
     limit: number = 20,
-    sort: string = 'new'
-  ): Promise<{ posts: Post[]; pagination: any }> {
+    sort: string = 'newest'
+  ): Promise<any> {
     try {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -278,63 +266,10 @@ export class PostService {
         sort
       });
 
-      const authHeaders = enhancedAuthService.getAuthHeaders();
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts?${params}`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed?${params}`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders
-        }
+        headers: await enhancedAuthService.getAuthHeaders()
       });
-
-      return this.handleResponse(response, 'Failed to fetch community posts');
-    } catch (error) {
-      console.error('Error fetching community posts:', error);
-      // Return empty results if there's an error to prevent breaking the UI
-      return {
-        posts: [],
-        pagination: {
-          page,
-          limit,
-          total: 0,
-          totalPages: 0
-        }
-      };
-    }
-  }
-
-  static async getPostsByCommunity(
-    communityId: string,
-    page: number = 1,
-    limit: number = 20,
-    sort: string = 'new'
-  ): Promise<Post[]> {
-    try {
-      const result = await this.getCommunityPosts(communityId, page, limit, sort);
-      return result.posts || [];
-    } catch (error) {
-      console.error('Error fetching posts by community:', error);
-      // Return empty array if there's an error to prevent breaking the UI
-      return [];
-    }
-  }
-
-  static async getFeed(forUser?: string): Promise<Post[]> {
-    try {
-      const authHeaders = enhancedAuthService.getAuthHeaders();
-      const params = new URLSearchParams();
-      if (forUser) params.append('forUser', forUser);
-
-      const response = await fetch(
-        `${BACKEND_API_BASE_URL}/api/feed${params.toString() ? `?${params}` : ''}`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            ...authHeaders
-          }
-        }
-      );
 
       return this.handleResponse(response, 'Failed to fetch feed');
     } catch (error) {
@@ -343,23 +278,120 @@ export class PostService {
     }
   }
 
-  static async getPostsByAuthor(author: string): Promise<Post[]> {
+  static async getCommunityFeed(
+    communityId: string,
+    page: number = 1,
+    limit: number = 20,
+    sort: string = 'newest'
+  ): Promise<any> {
     try {
-      const authHeaders = enhancedAuthService.getAuthHeaders();
-      const response = await fetch(
-        `${BACKEND_API_BASE_URL}/api/posts/author/${author}`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            ...authHeaders
-          }
-        }
-      );
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        sort
+      });
+
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/feed?${params}`, {
+        method: 'GET',
+        headers: await enhancedAuthService.getAuthHeaders()
+      });
+
+      return this.handleResponse(response, 'Failed to fetch community feed');
+    } catch (error) {
+      console.error('Error fetching community feed:', error);
+      throw error;
+    }
+  }
+
+  static async getTrendingPosts(limit: number = 10): Promise<Post[]> {
+    try {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/trending?limit=${limit}`, {
+        method: 'GET',
+        headers: await enhancedAuthService.getAuthHeaders()
+      });
+
+      return this.handleResponse(response, 'Failed to fetch trending posts');
+    } catch (error) {
+      console.error('Error fetching trending posts:', error);
+      throw error;
+    }
+  }
+
+  static async searchPosts(query: string, page: number = 1, limit: number = 20): Promise<any> {
+    try {
+      const params = new URLSearchParams({
+        q: query,
+        page: page.toString(),
+        limit: limit.toString()
+      });
+
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/search?${params}`, {
+        method: 'GET',
+        headers: await enhancedAuthService.getAuthHeaders()
+      });
+
+      return this.handleResponse(response, 'Failed to search posts');
+    } catch (error) {
+      console.error('Error searching posts:', error);
+      throw error;
+    }
+  }
+
+  // Additional methods that were missing but referenced in tests and hooks
+
+  static async getPostsByAuthor(author: string, page: number = 1, limit: number = 20): Promise<any> {
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString()
+      });
+
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/author/${author}?${params}`, {
+        method: 'GET',
+        headers: await enhancedAuthService.getAuthHeaders()
+      });
 
       return this.handleResponse(response, 'Failed to fetch posts by author');
     } catch (error) {
       console.error('Error fetching posts by author:', error);
+      throw error;
+    }
+  }
+
+  static async getPostsByTag(tag: string, page: number = 1, limit: number = 20): Promise<any> {
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString()
+      });
+
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/tag/${tag}?${params}`, {
+        method: 'GET',
+        headers: await enhancedAuthService.getAuthHeaders()
+      });
+
+      return this.handleResponse(response, 'Failed to fetch posts by tag');
+    } catch (error) {
+      console.error('Error fetching posts by tag:', error);
+      throw error;
+    }
+  }
+
+  static async getAllPosts(page: number = 1, limit: number = 20): Promise<any> {
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString()
+      });
+
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts?${params}`, {
+        method: 'GET',
+        headers: await enhancedAuthService.getAuthHeaders()
+      });
+
+      return this.handleResponse(response, 'Failed to fetch all posts');
+    } catch (error) {
+      console.error('Error fetching all posts:', error);
       throw error;
     }
   }

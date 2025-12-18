@@ -139,12 +139,12 @@ export class ComplianceActionsService {
         actorId: options.createdBy,
         resourceType: 'SELLER',
         resourceId: sellerId,
-        details: {
+        details: JSON.stringify({
           warningId: warning.id,
           severity,
           reason,
           requiresResponse: warning.requiresResponse
-        }
+        })
       });
 
       // Send notification
@@ -224,12 +224,12 @@ export class ComplianceActionsService {
         actorId: options.createdBy,
         resourceType: 'SELLER',
         resourceId: sellerId,
-        details: {
+        details: JSON.stringify({
           suspensionId: suspension.id,
           suspensionType,
           reason,
           duration: options.duration
-        }
+        })
       });
 
       // Send notifications
@@ -307,12 +307,12 @@ export class ComplianceActionsService {
         actorId: options.createdBy,
         resourceType: 'SELLER',
         resourceId: sellerId,
-        details: {
+        details: JSON.stringify({
           investigationId: investigation.id,
           priority,
           reason,
           assignedTo: options.assignedTo
-        }
+        })
       });
 
       // Send notifications
@@ -374,7 +374,7 @@ export class ComplianceActionsService {
         createdBy: options.createdBy,
         createdAt: new Date(),
         status: 'active',
-        reviewRequired: options.probessionPeriod ? true : false,
+        reviewRequired: options.probationPeriod ? true : false,
         nextReviewDate: options.probationPeriod ? 
           new Date(Date.now() + options.probationPeriod * 24 * 60 * 60 * 1000) : 
           new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
@@ -395,12 +395,12 @@ export class ComplianceActionsService {
         actorId: options.createdBy,
         resourceType: 'SELLER',
         resourceId: sellerId,
-        details: {
+        details: JSON.stringify({
           reinstatementId: reinstatement.id,
           previousSuspensionId,
           reason,
           probationPeriod: options.probationPeriod
-        }
+        })
       });
 
       // Send notifications

@@ -15,7 +15,7 @@ import { earningActivityService } from './earningActivityService';
 import { earningNotificationService } from './earningNotificationService';
 
 export interface MarketplaceTransactionData {
-  orderId: number;
+  orderId: string;
   buyerId?: string;
   sellerId?: string;
   transactionAmount: number;
@@ -414,7 +414,7 @@ class MarketplaceRewardsService {
       const [challenge] = await db.insert(earningChallenges).values({
         name: data.name,
         description: data.description,
-        challengeType: data.challengeType,
+        challengeType: data.challengeType as 'daily' | 'weekly' | 'monthly' | 'milestone',
         activityType: 'marketplace',
         targetValue: data.targetValue.toString(),
         rewardAmount: data.rewardAmount.toString(),

@@ -46,7 +46,7 @@ interface DeviceSubscription {
 
 interface NotificationPayload {
   userId: string;
-  type: 'community_update' | 'new_post' | 'mention' | 'reply' | 'community_invite' | 'governance_proposal' | 'proposal_result' | 'moderator_action' | 'system_update';
+  type: 'community_update' | 'new_post' | 'mention' | 'reply' | 'community_invite' | 'governance_proposal' | 'proposal_result' | 'moderator_action' | 'system_update' | 'generic';
   communityId?: string;
   postId?: string;
   title: string;
@@ -191,11 +191,13 @@ await db.execute(sql`
   // Get user's notification preferences
   async getUserNotificationPreferences(userId: string): Promise<NotificationPreferences> {
     try {
-      const preferences = await db.execute(sql`
+      const result = await db.execute(sql`
         SELECT * FROM notification_preferences 
         WHERE user_id = ${userId}
-      `)
-        .limit(1);
+        LIMIT 1
+      `);
+      
+      const preferences = Array.isArray(result) ? result : [];
 
       if (preferences.length === 0) {
         // Create default preferences
@@ -305,12 +307,11 @@ await db.execute(sql`
           if (result.success) {
             successCount++;
             // Update last used timestamp
-            await db
-              .update(sql`push_notification_subscriptions`)
-              .set({
-                last_used_at: new Date()
-              })
-              .where(eq(sql`id`, subscription.id));
+            await db.execute(sql`
+              UPDATE push_notification_subscriptions 
+              SET last_used_at = NOW() 
+              WHERE id = ${subscription.id}
+            `);
           } else {
             failedCount++;
             // If subscription is invalid, deactivate it
@@ -608,8 +609,9 @@ await db.execute(sql`
         WHERE is_active = true AND last_used_at < ${cutoffDate}
       `);
 
-      safeLogger.info(`Cleaned up ${result} inactive subscriptions`);
-      return result;
+      const count = (result as any).count || (Array.isArray(result) ? result.length : 0);
+      safeLogger.info(`Cleaned up ${count} inactive subscriptions`);
+      return count;
     } catch (error) {
       safeLogger.error('Error cleaning up inactive subscriptions:', error);
       return 0;

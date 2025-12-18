@@ -6,7 +6,7 @@ import { NotificationService } from './notificationService';
 import { reputationService } from './reputationService';
 
 export interface CreateDisputeRequest {
-  escrowId: number;
+  escrowId: string;
   reporterId: string;
   reason: string;
   disputeType: DisputeType;
@@ -139,7 +139,7 @@ export class DisputeService {
       await this.notificationService.sendOrderNotification(
         respondentId!,
         'dispute_created',
-        request.escrowId.toString(),
+        request.escrowId,
         { disputeId: dispute.id, escrowId: request.escrowId }
       );
 

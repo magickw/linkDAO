@@ -94,18 +94,19 @@ class NFTService {
 
       // Store NFT in database
       const [nft] = await db.insert(nfts).values({
+        tokenId: `${Date.now()}`, // Generate a temporary token ID
+        contractAddress: params.contractAddress || '0x0000000000000000000000000000000000000000',
+        ownerId: params.creatorId,
         creatorId: params.creatorId,
         collectionId: params.collectionId,
         name: params.name,
         description: params.description,
+        imageUrl: imageResult.gatewayUrl,
         imageHash: imageResult.ipfsHash,
         animationHash,
         metadataHash: metadataResult.ipfsHash,
         metadataUri: metadataResult.gatewayUrl,
         attributes: JSON.stringify(params.attributes),
-        royalty: params.royalty,
-        contentHash,
-        externalUrl: params.externalUrl,
       }).returning();
 
       return {
@@ -130,16 +131,15 @@ class NFTService {
 
       // Store collection in database
       const [collection] = await db.insert(nftCollections).values({
+        contractAddress: params.contractAddress || '0x0000000000000000000000000000000000000000',
         creatorId: params.creatorId,
         name: params.name,
         symbol: params.symbol,
         description: params.description,
+        imageUrl: imageResult.gatewayUrl,
         imageHash: imageResult.ipfsHash,
-        externalUrl: params.externalUrl,
         maxSupply: params.maxSupply,
-        mintPrice: params.mintPrice,
-        isPublicMint: params.isPublicMint,
-        royalty: params.royalty,
+        royaltyPercentage: params.royalty?.toString() || '0',
       }).returning();
 
       return {
@@ -183,8 +183,9 @@ class NFTService {
         sellerId: params.sellerId,
         price: params.price,
         currency: params.currency,
-        expiresAt: expiresAt.toISOString(),
-        isActive: true,
+        listingType: 'fixed',
+        expiresAt: expiresAt,
+        status: 'active',
       }).returning();
 
       return listing;
@@ -208,8 +209,9 @@ class NFTService {
         reservePrice: params.reservePrice,
         currentBid: '0',
         currency: params.currency,
-        endTime: endTime.toISOString(),
-        isActive: true,
+        startTime: new Date(),
+        endTime: endTime,
+        status: 'active',
       }).returning();
 
       return auction;
@@ -229,10 +231,10 @@ class NFTService {
       const [offer] = await db.insert(nftOffers).values({
         nftId: params.nftId,
         buyerId: params.buyerId,
-        amount: params.amount,
+        price: params.amount,
         currency: params.currency,
-        expiresAt: expiresAt.toISOString(),
-        isActive: true,
+        expiresAt: expiresAt,
+        status: 'pending',
       }).returning();
 
       return offer;

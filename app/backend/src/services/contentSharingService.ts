@@ -207,7 +207,7 @@ class ContentSharingService {
         type: 'community',
         title: communityData.displayName,
         description: communityData.description,
-        imageUrl: communityData.iconUrl,
+        imageUrl: communityData.avatar,
         url: `/communities/${communityData.id}`,
         metadata: {
           memberCount: communityData.memberCount,
@@ -301,18 +301,12 @@ ${post.content}`
             : `--- Cross-posted from ${options.attribution.originalAuthor} ---\n\n${post.content}`;
 
           const crossPost = await db.insert(posts).values({
-            authorAddress: userAddress,
+            authorId: userAddress,
             communityId,
             content: crossPostContent,
+            contentCid: post.contentCid || '',
             mediaUrls: post.mediaUrls,
-            tags: post.tags,
-            metadata: {
-              ...post.metadata,
-              crossPost: true,
-              originalPostId: originalPostId,
-              originalAuthor: options.attribution.originalAuthor,
-              originalCommunityId: options.attribution.originalCommunityId,
-            }
+            tags: post.tags
           }).returning();
 
           results.success.push(communityId);
@@ -615,9 +609,8 @@ ${post.content}`
       description: postData.content,
       imageUrl: postData.mediaUrls?.[0],
       url: `/posts/${postData.id}`,
-      authorAddress: postData.authorAddress,
-      communityId: postData.communityId,
-      metadata: postData.metadata
+      authorAddress: postData.authorId, // Use authorId which is the UUID field
+      communityId: postData.communityId
     };
   }
 
@@ -639,7 +632,7 @@ ${post.content}`
       type: 'community',
       title: communityData.displayName,
       description: communityData.description,
-      imageUrl: communityData.iconUrl,
+      imageUrl: communityData.avatar,
       url: `/communities/${communityData.id}`,
       metadata: {
         memberCount: communityData.memberCount,
@@ -663,35 +656,36 @@ ${post.content}`
     const userData = user[0];
     
     return {
-      id: userData.address,
+      id: userData.id,
       type: 'user_profile',
-      title: userData.displayName || `${userData.address.slice(0, 6)}...${userData.address.slice(-4)}`,
-      description: userData.bio || '',
-      imageUrl: userData.avatarUrl,
-      url: `/profile/${userData.address}`,
-      authorAddress: userData.address,
+      title: userData.displayName || `${userData.walletAddress.slice(0, 6)}...${userData.walletAddress.slice(-4)}`,
+      description: userData.bioCid || '',
+      imageUrl: userData.avatarCid,
+      url: `/profile/${userData.walletAddress}`,
+      authorAddress: userData.walletAddress,
       metadata: {
         joinedAt: userData.createdAt,
-        reputation: userData.reputation
+        reputation: 0
       }
     };
   }
 
   private async enhancePostPreview(preview: ContentPreview, postId: string): Promise<ContentPreview> {
     // Get engagement data
-    const engagementData = await db
-      .select({
-        likes: sql`count(case when reaction_type = 'like' then 1 end)`.as('likes'),
-        comments: sql`count(case when reaction_type = 'comment' then 1 end)`.as('comments')
-      })
-      .from(sql`post_reactions`)
-      .where(sql`post_id = ${postId}`)
-      .groupBy(sql`post_id`);
+    const engagementData = await db.execute(sql`
+      SELECT 
+        count(case when reaction_type = 'like' then 1 end) as likes,
+        count(case when reaction_type = 'comment' then 1 end) as comments
+      FROM post_reactions
+      WHERE post_id = ${postId}
+      GROUP BY post_id
+    `);
 
-    if (engagementData.length > 0) {
+    const engagementArray = Array.isArray(engagementData) ? engagementData : [];
+    if (engagementArray.length > 0) {
       preview.metadata.engagement = {
-        likes: Number(engagementData[0].likes),
-        comments: Number(engagementData[0].comments),
+        likes: Number(engagementArray[0].likes),
+        comments: Number(engagementArray[0].comments),
         shares: 0 // Will be filled by sharing analytics
       };
     }

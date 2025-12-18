@@ -42,7 +42,7 @@ interface OrderWithBuyer {
   orderNotes?: string;
   createdAt: Date;
   listingId?: string;
-  escrowId?: number;
+  escrowId?: string;
   checkoutSessionId?: string;
   paymentMethod?: string;
 }

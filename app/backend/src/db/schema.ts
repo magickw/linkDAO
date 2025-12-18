@@ -644,6 +644,7 @@ export const products = pgTable("products", {
   images: text("images").notNull(), // JSON array of IPFS hashes
   metadata: text("metadata").notNull(), // JSON ProductMetadata
   inventory: integer("inventory").notNull().default(0),
+  inventoryHolds: integer("inventory_holds").notNull().default(0), // Number of items currently held in temporary reservations
   status: varchar("status", { length: 32 }).default("active"), // 'active' | 'inactive' | 'sold_out' | 'suspended' | 'draft'
   tags: text("tags"), // JSON array of tags
   shipping: text("shipping"), // JSON ShippingInfo
@@ -694,6 +695,52 @@ export const productTags = pgTable("product_tags", {
     columns: [t.productId],
     foreignColumns: [products.id]
   })
+}));
+
+// Inventory Holds - for temporary inventory reservations during checkout
+export const inventoryHolds = pgTable("inventory_holds", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  productId: uuid("product_id").references(() => products.id, { onDelete: "cascade" }).notNull(),
+  heldBy: uuid("held_by").references(() => users.id, { onDelete: "cascade" }), // User who holds the inventory
+  quantity: integer("quantity").notNull(),
+  orderId: varchar("order_id", { length: 255 }), // Associated order ID
+  holdType: varchar("hold_type", { length: 50 }).default("order_pending"), // 'order_pending' | 'checkout' | 'reservation'
+  expiresAt: timestamp("expires_at").notNull(),
+  status: varchar("status", { length: 20 }).default("active"), // 'active' | 'released' | 'converted' | 'consumed' | 'order_created'
+  metadata: text("metadata"), // JSON metadata for additional context
+  releaseReason: varchar("release_reason", { length: 50 }), // 'order_completed' | 'order_cancelled' | 'expired'
+  releasedAt: timestamp("released_at"), // When the hold was released
+  checkoutSessionId: varchar("checkout_session_id", { length: 255 }),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  productIdIdx: index("idx_inventory_holds_product_id").on(t.productId),
+  heldByIdx: index("idx_inventory_holds_held_by").on(t.heldBy),
+  orderIdIdx: index("idx_inventory_holds_order_id").on(t.orderId),
+  expiresAtIdx: index("idx_inventory_holds_expires_at").on(t.expiresAt),
+  statusIdx: index("idx_inventory_holds_status").on(t.status),
+  holdTypeIdx: index("idx_inventory_holds_hold_type").on(t.holdType),
+}));
+
+// ENS Verifications - for verified ENS names
+export const ensVerifications = pgTable("ens_verifications", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  walletAddress: varchar("wallet_address", { length: 66 }).notNull(),
+  ensName: varchar("ens_name", { length: 255 }).notNull(),
+  resolvedAddress: varchar("resolved_address", { length: 66 }).notNull(),
+  isVerified: boolean("is_verified").default(false).notNull(),
+  verifiedAt: timestamp("verified_at"),
+  lastCheckedAt: timestamp("last_checked_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  userIdIdx: index("idx_ens_verifications_user_id").on(t.userId),
+  walletAddressIdx: index("idx_ens_verifications_wallet_address").on(t.walletAddress),
+  ensNameIdx: index("idx_ens_verifications_ens_name").on(t.ensName),
+  isVerifiedIdx: index("idx_ens_verifications_is_verified").on(t.isVerified),
+  expiresAtIdx: index("idx_ens_verifications_expires_at").on(t.expiresAt),
 }));
 
 // Sellers table for enhanced store functionality
@@ -837,6 +884,7 @@ export const listings = pgTable("listings", {
   tokenAddress: varchar("token_address", { length: 66 }).notNull(),
   price: numeric("price").notNull(), // Using numeric for better precision
   quantity: integer("quantity").notNull(),
+  inventoryHolds: integer("inventory_holds").notNull().default(0), // Number of items currently held in temporary reservations
   itemType: varchar("item_type", { length: 32 }).notNull(), // 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE'
   listingType: varchar("listing_type", { length: 32 }).notNull(), // 'FIXED_PRICE' | 'AUCTION'
   status: varchar("status", { length: 32 }).default("active"),
@@ -3230,27 +3278,7 @@ export const imageStorage = pgTable("image_storage", {
   usageReferenceIdx: index("idx_image_storage_usage_reference").on(t.usageReferenceId),
   createdAtIdx: index("idx_image_storage_created_at").on(t.createdAt),
 }));
-
-// ENS Verifications
-export const ensVerifications = pgTable("ens_verifications", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  walletAddress: varchar("wallet_address", { length: 66 }).notNull(),
-  ensHandle: varchar("ens_handle", { length: 255 }).notNull(),
-  verificationMethod: varchar("verification_method", { length: 50 }).notNull(), // 'signature', 'transaction', 'reverse_resolution'
-  verificationData: text("verification_data"), // JSON object with verification details
-  verifiedAt: timestamp("verified_at").defaultNow(),
-  verificationTxHash: varchar("verification_tx_hash", { length: 66 }),
-  expiresAt: timestamp("expires_at"),
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (t) => ({
-  walletAddressIdx: index("idx_ens_verifications_wallet_address").on(t.walletAddress),
-  ensHandleIdx: index("idx_ens_verifications_ens_handle").on(t.ensHandle),
-  isActiveIdx: index("idx_ens_verifications_is_active").on(t.isActive),
-  expiresAtIdx: index("idx_ens_verifications_expires_at").on(t.expiresAt),
-  uniqueActiveIdx: index("idx_ens_verifications_unique_active").on(t.walletAddress, t.ensHandle),
-}));
+// ENS Verifications table is defined earlier in the file (line 725)
 
 // Export all marketplace tables
 export const {

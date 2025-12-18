@@ -89,7 +89,7 @@ export class OrderEventListenerService {
   /**
    * Manually trigger event processing for a specific order
    */
-  async processOrderEvents(orderId: number) {
+  async processOrderEvents(orderId: string) {
     try {
       // Get all events for this order
       const events = await db

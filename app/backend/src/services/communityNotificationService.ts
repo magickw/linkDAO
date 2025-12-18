@@ -307,30 +307,31 @@ export class CommunityNotificationService {
    */
   private mapToPushNotificationType(
     type: CommunityNotificationType
-  ): 'post' | 'comment' | 'governance' | 'moderation' | 'role_change' | 'mention' {
+  ): 'new_post' | 'community_update' | 'mention' | 'reply' | 'community_invite' | 'governance_proposal' | 'proposal_result' | 'moderator_action' | 'system_update' {
     switch (type) {
       case 'new_post':
-        return 'post';
+        return 'new_post';
       case 'new_comment':
       case 'post_reply':
       case 'comment_reply':
-        return 'comment';
+        return 'reply';
       case 'governance_proposal':
       case 'governance_vote':
+        return 'governance_proposal';
       case 'governance_passed':
       case 'governance_executed':
-        return 'governance';
+        return 'proposal_result';
       case 'moderation_action':
       case 'moderation_warning':
       case 'moderation_ban':
-        return 'moderation';
+        return 'moderator_action';
       case 'role_change':
       case 'role_promotion':
-        return 'role_change';
+        return 'community_update';
       case 'mention':
         return 'mention';
       default:
-        return 'post';
+        return 'community_update';
     }
   }
 

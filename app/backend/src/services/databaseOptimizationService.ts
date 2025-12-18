@@ -98,14 +98,14 @@ export class DatabaseOptimizationService {
 
       const slowQueries: QueryPerformanceMetrics[] = [];
 
-      for (const row of slowQueriesResult.rows) {
+      for (const row of slowQueriesResult) {
         const queryPlan = await this.getQueryPlan(row.query);
         const recommendations = this.generateQueryRecommendations(row, queryPlan);
 
         slowQueries.push({
           query: row.query,
           executionTime: row.mean_time,
-          rowsAffected: row.rows,
+          rowsAffected: (row as any).rows || 0,
           indexUsage: this.extractIndexUsage(queryPlan),
           recommendations,
           timestamp: new Date()
@@ -130,7 +130,8 @@ export class DatabaseOptimizationService {
   private async getQueryPlan(query: string): Promise<any> {
     try {
       const result = await db.execute(sql`EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${query}`);
-      return result.rows[0]['QUERY PLAN'];
+      const resultArray = Array.isArray(result) ? result : [];
+      return resultArray[0]?.['QUERY PLAN'];
     } catch (error) {
       logger.warn('Failed to get query plan:', error);
       return null;
@@ -268,7 +269,8 @@ export class DatabaseOptimizationService {
       WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
     `);
 
-    return result.rows.map(row => row['?column?']);
+    const resultArray = Array.isArray(result) ? result : [];
+    return resultArray.map(row => row['?column?']);
   }
 
   /**
@@ -312,14 +314,18 @@ export class DatabaseOptimizationService {
       WHERE schemaname || '.' || tablename = ${tableName}
     `);
 
-    const currentIndexes = indexesResult.rows.map(index => {
-      const usage = usageResult.rows.find(u => u.indexname === index.indexname);
+    const indexesArray = Array.isArray(indexesResult) ? indexesResult : [];
+    const usageArray = Array.isArray(usageResult) ? usageResult : [];
+    const tableStatsArray = Array.isArray(tableStats) ? tableStats : [];
+    
+    const currentIndexes = indexesArray.map(index => {
+      const usage = usageArray.find(u => u.indexname === index.indexname);
       return {
         name: index.indexname,
         columns: this.extractIndexColumns(index.indexdef),
         usageCount: usage?.idx_scan || 0,
         size: usage?.index_size || '0 bytes',
-        efficiency: this.calculateIndexEfficiency(usage, tableStats.rows[0])
+        efficiency: this.calculateIndexEfficiency(usage, tableStatsArray[0])
       };
     });
 
@@ -526,7 +532,12 @@ export class DatabaseOptimizationService {
         FROM pg_stat_activity
       `);
 
-      const row = result.rows[0];
+      const resultArray = Array.isArray(result) ? result : [];
+      const row = resultArray[0];
+      
+      if (!row) {
+        throw new Error('No connection stats available');
+      }
       
       return {
         totalConnections: parseInt(row.total_connections),
@@ -588,7 +599,8 @@ export class DatabaseOptimizationService {
         ORDER BY n_live_tup DESC
       `);
 
-      for (const row of result.rows) {
+      const resultArray = Array.isArray(result) ? result : [];
+      for (const row of resultArray) {
         const deadTupleRatio = row.n_dead_tup / Math.max(1, row.n_live_tup);
         
         // Recommend VACUUM if too many dead tuples

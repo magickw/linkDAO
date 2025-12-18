@@ -1,4 +1,4 @@
-import { eq, and, lt } from 'drizzle-orm';
+import { eq, and, lt, desc } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
 import { sellerVerifications, marketplaceVerifications } from '../db/marketplaceSchema';
@@ -47,7 +47,10 @@ export class MarketplaceVerificationService {
     // Trigger automated verification process
     this.processVerification(verification.id);
 
-    return verification;
+    return {
+      ...verification,
+      sellerId: verification.userId
+    } as SellerVerification;
   }
 
   /**
@@ -56,7 +59,7 @@ export class MarketplaceVerificationService {
   async getActiveSellerVerification(userId: string): Promise<SellerVerification | null> {
     const verifications = await db.select().from(sellerVerifications)
       .where(eq(sellerVerifications.userId, userId))
-      .orderBy(sellerVerifications.submittedAt, 'desc')
+      .orderBy(desc(sellerVerifications.submittedAt))
       .limit(1);
 
     const verification = verifications[0];

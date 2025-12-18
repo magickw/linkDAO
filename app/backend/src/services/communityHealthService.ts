@@ -602,9 +602,10 @@ export class CommunityHealthService {
     const result = await db
       .select({ count: count() })
       .from(reactions)
+      .innerJoin(posts, eq(reactions.postId, posts.id))
       .where(
         and(
-          eq(reactions.communityId, communityId),
+          eq(posts.communityId, communityId),
           gte(reactions.createdAt, since)
         )
       );

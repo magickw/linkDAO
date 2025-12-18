@@ -54,7 +54,7 @@ export class MobileOfflineService {
         await offlineService.cacheContent(
           userAddress,
           'post',
-          post.id,
+          post.id.toString(),
           {
             id: post.id,
             communityId: post.communityId,

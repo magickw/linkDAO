@@ -486,13 +486,14 @@ export class CommunityPostService {
 
         // Use global fetch wrapper as final fallback
         try {
+          const authHeaders = await enhancedAuthService.getAuthHeaders();
           const { post } = await import('./globalFetchWrapper');
           const fallbackResponse = await post(`${BACKEND_API_BASE_URL}/api/feed/${data.postId}/comments`, {
             author: data.author,
             content: data.content,
             parentCommentId: data.parentId,
             media: data.media
-          });
+          }, { headers: authHeaders });
 
           if (!fallbackResponse.success) {
             throw new Error(fallbackResponse.error || 'Failed to create comment');

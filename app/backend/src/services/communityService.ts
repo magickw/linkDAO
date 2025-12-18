@@ -562,10 +562,7 @@ export class CommunityService {
 
       return communityData;
     } catch (error) {
-      safeLogger.error('Error getting community details for ID:', communityId, 'Error:', error);
-      safeLogger.error('Error stack:', error.stack);
-      safeLogger.error('Error message:', error.message);
-      safeLogger.error('Error code:', error.code);
+      safeLogger.error('Error getting community details', { communityId, error });
 
       // Handle database connection errors specifically
       if (error.message?.includes('database') || error.message?.includes('connection') || error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
@@ -695,11 +692,11 @@ export class CommunityService {
 
       return communityData;
     } catch (error) {
-      safeLogger.error('Error getting community by slug:', slug, error);
+      safeLogger.error('Error getting community by slug', { slug, error });
 
       // Handle database connection errors specifically
       if (error.message?.includes('database') || error.message?.includes('connection') || error.code === 'ECONNREFUSED') {
-        safeLogger.error('Database connection error when fetching community by slug:', slug);
+        safeLogger.error('Database connection error when fetching community by slug', { slug });
         // Return a service unavailable response
         throw new Error('Service temporarily unavailable');
       }

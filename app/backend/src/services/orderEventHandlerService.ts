@@ -13,7 +13,7 @@ export class OrderEventHandlerService {
   /**
    * Handle order events and trigger appropriate messaging automation
    */
-  async handleOrderEvent(orderId: number, eventType: string, eventData?: any) {
+  async handleOrderEvent(orderId: string, eventType: string, eventData?: any) {
     try {
       safeLogger.info(`Handling order event: ${eventType} for order ${orderId}`);
       
@@ -45,7 +45,7 @@ export class OrderEventHandlerService {
   /**
    * Handle order created event
    */
-  private async handleOrderCreated(orderId: number) {
+  private async handleOrderCreated(orderId: string) {
     try {
       await orderMessagingAutomation.onOrderCreated(orderId);
       safeLogger.info(`Successfully handled order created event for order ${orderId}`);
@@ -58,7 +58,7 @@ export class OrderEventHandlerService {
   /**
    * Handle payment received event
    */
-  private async handlePaymentReceived(orderId: number, paymentData?: any) {
+  private async handlePaymentReceived(orderId: string, paymentData?: any) {
     try {
       // If payment data is not provided, fetch it from the database
       let payment = paymentData;
@@ -88,7 +88,7 @@ export class OrderEventHandlerService {
   /**
    * Handle order shipped event
    */
-  private async handleOrderShipped(orderId: number, trackingData?: any) {
+  private async handleOrderShipped(orderId: string, trackingData?: any) {
     try {
       // If tracking data is not provided, fetch it from the database
       let trackingInfo = trackingData;

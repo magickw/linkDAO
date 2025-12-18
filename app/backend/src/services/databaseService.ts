@@ -1121,7 +1121,7 @@ export class DatabaseService {
     }
   }
 
-  async createDispute(escrowId: number, reporterId: string, reason: string, evidence?: string) {
+  async createDispute(escrowId: string, reporterId: string, reason: string, evidence?: string) {
     try {
       const result = await this.db.insert(schema.disputes).values({
         escrowId,
@@ -1488,7 +1488,7 @@ export class DatabaseService {
     }
   }
   // Order Management Methods
-  async createOrderEvent(orderId: number, eventType: string, description: string, metadata?: string) {
+  async createOrderEvent(orderId: string, eventType: string, description: string, metadata?: string) {
     return this.executeQuery(async () => {
       const [event] = await this.db.insert(schema.orderEvents).values({
         orderId,
@@ -1501,7 +1501,7 @@ export class DatabaseService {
     });
   }
 
-  async getOrderEvents(orderId: number) {
+  async getOrderEvents(orderId: string) {
     return this.executeQuery(async () => {
       return await this.db.select()
         .from(schema.orderEvents)

@@ -56,6 +56,16 @@ export class QuickPostService {
           throw new Error('Authentication required. Please log in again.');
         }
       }
+      
+      // Add session ID and CSRF token to headers
+      const headers = {
+        ...authHeaders,
+        'x-session-id': sessionId
+      };
+      
+      if (csrfToken) {
+        headers['x-csrf-token'] = csrfToken;
+      }
 
       // Use global fetch wrapper which handles token refresh automatically
       const { post } = await import('./globalFetchWrapper');
@@ -67,7 +77,7 @@ export class QuickPostService {
         onchainRef: data.onchainRef,
         poll: data.poll,
         proposal: data.proposal
-      });
+      }, { headers });
 
       if (!response.success) {
         throw new Error(response.error || 'Failed to create quick post');
