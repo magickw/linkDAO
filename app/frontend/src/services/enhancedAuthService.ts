@@ -724,7 +724,35 @@ class EnhancedAuthService {
    * Get current token
    */
   getToken(): string | null {
-    return this.token;
+    // If we have the token in memory, return it
+    if (this.token) {
+      return this.token;
+    }
+
+    // Fallback: check localStorage if in-memory token is missing
+    // This handles cases where the service instance might be recreated
+    if (typeof window !== 'undefined') {
+      try {
+        const storedToken = localStorage.getItem(this.STORAGE_KEYS.ACCESS_TOKEN);
+        if (storedToken) {
+          // Verify the session is still valid
+          const sessionDataStr = localStorage.getItem(this.STORAGE_KEYS.SESSION_DATA);
+          if (sessionDataStr) {
+            const sessionData = JSON.parse(sessionDataStr);
+            if (Date.now() < sessionData.expiresAt) {
+              console.log('🔄 Restored token from localStorage');
+              this.token = storedToken;
+              this.sessionData = sessionData;
+              return storedToken;
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error retrieving token from storage:', error);
+      }
+    }
+
+    return null;
   }
 
   /**

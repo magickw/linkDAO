@@ -949,7 +949,41 @@ export class FeedService {
   // Add reaction to post
   static async addReaction(postId: string, type: string, tokenAmount: number = 0): Promise<any> {
     try {
+      // Check if user has a valid token before making the request
+      const token = enhancedAuthService.getToken();
+      if (!token) {
+        console.error('❌ No authentication token found for reaction');
+        const error: FeedError = {
+          code: 'AUTH_REQUIRED',
+          message: 'Please sign in to react to posts. Your session may have expired.',
+          timestamp: new Date(),
+          retryable: false
+        };
+        throw error;
+      }
+
       const authHeaders = await enhancedAuthService.getAuthHeaders();
+      
+      // Verify auth headers were properly set
+      if (!authHeaders.Authorization || authHeaders.Authorization === 'Bearer null') {
+        console.error('❌ Auth headers missing or invalid for reaction');
+        const error: FeedError = {
+          code: 'AUTH_REQUIRED',
+          message: 'Authentication failed. Please refresh the page and sign in again.',
+          timestamp: new Date(),
+          retryable: false
+        };
+        throw error;
+      }
+
+      console.log('🎯 Making reaction request with auth:', {
+        postId,
+        type,
+        hasToken: !!token,
+        tokenLength: token.length,
+        authHeaderPresent: !!authHeaders.Authorization
+      });
+
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/react`, {
         method: 'POST',
         headers: {
@@ -964,9 +998,30 @@ export class FeedService {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        
+        // Provide specific error messages for authentication issues
+        if (response.status === 401) {
+          const errorCode = errorData.error?.code || errorData.code;
+          let message = 'Authentication required. Please sign in to react to posts.';
+          
+          if (errorCode === 'INVALID_TOKEN') {
+            message = 'Your session has expired. Please refresh the page and sign in again.';
+          } else if (errorCode === 'MISSING_TOKEN') {
+            message = 'Please sign in to react to posts. Click the wallet icon to connect.';
+          }
+          
+          const error: FeedError = {
+            code: errorCode || 'AUTH_REQUIRED',
+            message,
+            timestamp: new Date(),
+            retryable: false
+          };
+          throw error;
+        }
+        
         const error: FeedError = {
           code: `HTTP_${response.status}`,
-          message: errorData.error || `Failed to add reaction: ${response.statusText}`,
+          message: errorData.error?.message || errorData.message || `Failed to add reaction: ${response.statusText}`,
           timestamp: new Date(),
           retryable: response.status >= 500 || response.status === 429
         };
