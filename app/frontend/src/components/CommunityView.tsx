@@ -328,7 +328,40 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
                 {/* Only show join button if user is not the creator */}
                 {!isCommunityCreator && (
                   <button
-                    onClick={() => setIsJoined(!isJoined)}
+                    onClick={async () => {
+                      if (!isConnected || !address) {
+                        alert('Please connect your wallet to join this community');
+                        return;
+                      }
+
+                      if (!communityData?.id) {
+                        alert('Community data not loaded');
+                        return;
+                      }
+
+                      try {
+                        if (isJoined) {
+                          const success = await CommunityService.leaveCommunity(communityData.id);
+                          if (success) {
+                            setIsJoined(false);
+                            console.log('✅ Successfully left community');
+                          } else {
+                            alert('Failed to leave community. Please try again.');
+                          }
+                        } else {
+                          const success = await CommunityService.joinCommunity(communityData.id);
+                          if (success) {
+                            setIsJoined(true);
+                            console.log('✅ Successfully joined community');
+                          } else {
+                            alert('Failed to join community. Please try again.');
+                          }
+                        }
+                      } catch (error) {
+                        console.error('Error toggling membership:', error);
+                        alert('An error occurred. Please try again.');
+                      }
+                    }}
                     className={`px-4 py-1.5 rounded-full font-medium text-sm transition-colors ${isJoined
                       ? 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
                       : 'bg-blue-600 text-white hover:bg-blue-700'

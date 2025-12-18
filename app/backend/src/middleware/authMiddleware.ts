@@ -4,6 +4,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { eq } from 'drizzle-orm';
 import { users } from '../db/schema';
+import { ApiResponse } from '../utils/apiResponse';
 
 export interface AuthenticatedUser {
   address: string;

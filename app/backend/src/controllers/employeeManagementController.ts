@@ -177,7 +177,7 @@ class EmployeeManagementController {
           temporaryPassword: password,
           note: 'Store this password securely. It will not be shown again.'
         } : undefined
-      }, 'Employee created successfully', 201);
+      }, 201);
 
     } catch (error) {
       safeLogger.error('Error creating employee:', error);
@@ -214,8 +214,8 @@ class EmployeeManagementController {
 
       const employees = await query
         .where(and(...conditions))
-        .limit(Number(limit))
-        .offset(offset)
+        .limit(Number(limit) as number)
+        .offset(offset as number)
         .orderBy(users.createdAt);
 
       const employeeList = employees.map(emp => ({
@@ -519,7 +519,7 @@ class EmployeeManagementController {
         .select()
         .from(users)
         .where(eq(users.id, employeeId))
-        .limit(1);
+        .limit(1 as number);
 
       if (!employee) {
         return ApiResponse.notFound(res, 'Employee not found');
@@ -586,7 +586,7 @@ class EmployeeManagementController {
         deletedBy: req.user?.id
       });
 
-      return ApiResponse.success(res, null, 'Employee deleted successfully');
+      return ApiResponse.success(res, null);
 
     } catch (error) {
       safeLogger.error('Error deleting employee:', error);
@@ -640,6 +640,8 @@ class EmployeeManagementController {
       const inactivityThreshold = new Date();
       inactivityThreshold.setDate(inactivityThreshold.getDate() - inactivityDays);
 
+      const { isNull, lt } = await import('drizzle-orm');
+
       const inactiveEmployees = await db
         .select()
         .from(users)
@@ -648,8 +650,8 @@ class EmployeeManagementController {
             eq(users.isEmployee, true),
             eq(users.employeeStatus, 'active'),
             or(
-              users.lastLogin === null,
-              users.lastLogin < inactivityThreshold
+              isNull(users.lastLogin),
+              lt(users.lastLogin, inactivityThreshold)
             )
           )
         );
@@ -762,7 +764,7 @@ class EmployeeManagementController {
             .select()
             .from(users)
             .where(eq(users.email, email.toLowerCase()))
-            .limit(1);
+            .limit(1 as number);
 
           if (existingUser.length > 0) {
             errors.push({ email, error: 'Email already exists' });

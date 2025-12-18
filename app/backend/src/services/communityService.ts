@@ -478,6 +478,9 @@ export class CommunityService {
       // Get user membership if userAddress provided
       let membership = null;
       if (userAddress) {
+        // Normalize address to lowercase for case-insensitive matching
+        const normalizedUserAddress = userAddress.toLowerCase();
+        
         const membershipResult = await db
           .select({
             role: communityMembers.role,
@@ -490,7 +493,7 @@ export class CommunityService {
           .where(
             and(
               eq(communityMembers.communityId, communityId),
-              eq(communityMembers.userAddress, userAddress)
+              eq(communityMembers.userAddress, normalizedUserAddress)
             )
           )
           .limit(1);
@@ -615,6 +618,9 @@ export class CommunityService {
       // Get user membership if userAddress provided
       let membership = null;
       if (userAddress) {
+        // Normalize address to lowercase for case-insensitive matching
+        const normalizedUserAddress = userAddress.toLowerCase();
+        
         const membershipResult = await db
           .select({
             role: communityMembers.role,
@@ -627,7 +633,7 @@ export class CommunityService {
           .where(
             and(
               eq(communityMembers.communityId, community.id),
-              eq(communityMembers.userAddress, userAddress)
+              eq(communityMembers.userAddress, normalizedUserAddress)
             )
           )
           .limit(1);

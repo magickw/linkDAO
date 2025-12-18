@@ -246,11 +246,6 @@ function CommunityPostCardEnhanced({
       return;
     }
 
-    if (!userMembership) {
-      addToast('You must join the community to comment', 'error');
-      return;
-    }
-
     try {
       setCommentSubmitting(true);
 
@@ -422,7 +417,7 @@ function CommunityPostCardEnhanced({
             voteType="upvote"
             currentVote={userVote}
             onVote={handleVote}
-            disabled={!userMembership}
+            disabled={!isConnected}
             className="mb-2"
           />
 
@@ -446,7 +441,7 @@ function CommunityPostCardEnhanced({
             voteType="downvote"
             currentVote={userVote}
             onVote={handleVote}
-            disabled={!userMembership}
+            disabled={!isConnected}
             className="mt-2"
           />
         </div>

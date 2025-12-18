@@ -7,6 +7,9 @@ export interface User {
   id: string;
   walletAddress: string;
   handle?: string;
+  role?: string;
+  name?: string;
+  displayName?: string;
   // Add other user properties as needed
 }
 

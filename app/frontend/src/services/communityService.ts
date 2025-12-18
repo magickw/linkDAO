@@ -1447,4 +1447,78 @@ export class CommunityService {
       return { posts: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
     }
   }
+
+  /**
+   * Join a community
+   * @param communityId - Community ID to join
+   * @returns Success status
+   */
+  static async joinCommunity(communityId: string): Promise<boolean> {
+    try {
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
+      
+      if (!authHeaders.Authorization || authHeaders.Authorization === 'Bearer null') {
+        console.error('No authentication token available for joining community');
+        return false;
+      }
+
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${communityId}/join`,
+        {
+          method: 'POST',
+          headers: authHeaders,
+        },
+        COMMUNITY_RETRY_OPTIONS
+      );
+
+      if (!response.ok) {
+        const error = await safeJson(response);
+        console.error('Failed to join community:', error);
+        return false;
+      }
+
+      const result = await response.json();
+      return result.success === true;
+    } catch (error) {
+      console.error('Error joining community:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Leave a community
+   * @param communityId - Community ID to leave
+   * @returns Success status
+   */
+  static async leaveCommunity(communityId: string): Promise<boolean> {
+    try {
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
+      
+      if (!authHeaders.Authorization || authHeaders.Authorization === 'Bearer null') {
+        console.error('No authentication token available for leaving community');
+        return false;
+      }
+
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${communityId}/leave`,
+        {
+          method: 'DELETE',
+          headers: authHeaders,
+        },
+        COMMUNITY_RETRY_OPTIONS
+      );
+
+      if (!response.ok) {
+        const error = await safeJson(response);
+        console.error('Failed to leave community:', error);
+        return false;
+      }
+
+      const result = await response.json();
+      return result.success === true;
+    } catch (error) {
+      console.error('Error leaving community:', error);
+      return false;
+    }
+  }
 }
