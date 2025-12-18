@@ -1267,10 +1267,59 @@ httpServer.listen(PORT, () => {
 
       if (enableWebSockets) {
         try {
+          // CRITICAL FIX: Initialize main WebSocket service FIRST
+          // This creates the single shared Socket.IO instance that all other services will use
           const webSocketService = initializeWebSocket(httpServer, productionConfig.webSocket);
-          console.log('✅ WebSocket service initialized');
+          console.log('✅ WebSocket service initialized (shared Socket.IO instance created)');
           console.log(`🔌 WebSocket ready for real-time updates`);
           console.log(`📊 WebSocket config: maxConnections=${productionConfig.webSocket.maxConnections}, memoryThreshold=${productionConfig.webSocket.memoryThreshold}MB`);
+
+          // Admin WebSocket service - uses the shared Socket.IO instance via namespaces
+          if (isRenderPro || !isSevereResourceConstrained) {
+            try {
+              // DO NOT pass httpServer - this would create a duplicate Socket.IO instance
+              // AdminWebSocketService should get the shared instance via getWebSocketService()
+              const adminWebSocketService = initializeAdminWebSocket(httpServer);
+              console.log('✅ Admin WebSocket service initialized (using shared Socket.IO instance)');
+              console.log(`🔧 Admin real-time dashboard ready`);
+            } catch (error) {
+              console.warn('⚠️ Admin WebSocket service initialization failed:', error);
+            }
+          } else {
+            console.log('⚠️ Admin WebSocket service disabled for resource optimization');
+          }
+
+          // Seller WebSocket service - uses the shared Socket.IO instance
+          if (isRenderPro || !isSevereResourceConstrained) {
+            try {
+              const sellerWebSocketService = initializeSellerWebSocket();
+              console.log('✅ Seller WebSocket service initialized (using shared Socket.IO instance)');
+              console.log(`🛒 Seller real-time updates ready`);
+            } catch (error) {
+              console.warn('⚠️ Seller WebSocket service initialization failed:', error);
+            }
+          } else {
+            console.log('⚠️ Seller WebSocket service disabled for resource optimization');
+          }
+
+          // Live Chat Socket service - uses the shared Socket.IO instance
+          if (isRenderPro || !isSevereResourceConstrained) {
+            try {
+              // Get the shared Socket.IO instance using the proper method
+              const sharedIo = webSocketService.getSocketIOServer();
+              if (sharedIo) {
+                liveChatSocketService.initialize(sharedIo);
+                console.log('✅ Live Chat Socket service initialized (using shared Socket.IO instance)');
+                console.log(`💬 Live chat support ready`);
+              } else {
+                console.warn('⚠️ Live Chat Socket service: shared Socket.IO instance not available');
+              }
+            } catch (error) {
+              console.warn('⚠️ Live Chat Socket service initialization failed:', error);
+            }
+          } else {
+            console.log('⚠️ Live Chat Socket service disabled for resource optimization');
+          }
         } catch (error) {
           console.warn('⚠️ WebSocket service initialization failed:', error);
         }
@@ -1280,54 +1329,6 @@ httpServer.listen(PORT, () => {
             isResourceConstrained ? 'resource constraints' :
               'manual disable';
         console.log(`⚠️ WebSocket service disabled (${reason}) to conserve memory`);
-      }
-
-      // Admin WebSocket service - enabled on Render Pro and non-constrained environments
-      if (enableWebSockets && (isRenderPro || !isSevereResourceConstrained)) {
-        try {
-          const adminWebSocketService = initializeAdminWebSocket(httpServer);
-          console.log('✅ Admin WebSocket service initialized');
-          console.log(`🔧 Admin real-time dashboard ready`);
-        } catch (error) {
-          console.warn('⚠️ Admin WebSocket service initialization failed:', error);
-        }
-      } else {
-        console.log('⚠️ Admin WebSocket service disabled for resource optimization');
-      }
-
-      // Seller WebSocket service - enabled on Render Pro and non-constrained environments
-      if (enableWebSockets && (isRenderPro || !isSevereResourceConstrained)) {
-        try {
-          const sellerWebSocketService = initializeSellerWebSocket();
-          console.log('✅ Seller WebSocket service initialized');
-          console.log(`🛒 Seller real-time updates ready`);
-        } catch (error) {
-          console.warn('⚠️ Seller WebSocket service initialization failed:', error);
-        }
-      } else {
-        console.log('⚠️ Seller WebSocket service disabled for resource optimization');
-      }
-
-      // Live Chat Socket service - enabled on Render Pro and non-constrained environments
-      if (enableWebSockets && (isRenderPro || !isSevereResourceConstrained)) {
-        try {
-          const { Server } = await import('socket.io');
-          const io = new Server(httpServer, {
-            cors: {
-              origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-              credentials: true
-            },
-            path: '/socket.io/',
-            transports: ['websocket', 'polling']
-          });
-          liveChatSocketService.initialize(io);
-          console.log('✅ Live Chat Socket service initialized');
-          console.log(`💬 Live chat support ready`);
-        } catch (error) {
-          console.warn('⚠️ Live Chat Socket service initialization failed:', error);
-        }
-      } else {
-        console.log('⚠️ Live Chat Socket service disabled for resource optimization');
       }
 
       // Initialize cache service

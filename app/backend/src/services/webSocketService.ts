@@ -972,6 +972,11 @@ export class WebSocketService {
     });
   }
 
+  // Get the Socket.IO server instance (for sharing with other services)
+  getSocketIOServer(): Server {
+    return this.io;
+  }
+
   // Graceful shutdown with cleanup
   close() {
     safeLogger.info('Shutting down WebSocket service...');

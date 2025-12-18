@@ -82,24 +82,18 @@ export class AdminWebSocketService {
   private connectionMonitor: NodeJS.Timeout | null = null;
 
   constructor(httpServer: HttpServer) {
-    // Get the existing Socket.IO instance or create a new one
+    // CRITICAL FIX: Always use the existing shared Socket.IO instance
+    // Never create a new Server instance as it causes duplicate upgrade handlers
     const existingService = getWebSocketService();
-    if (existingService && (existingService as any).io) {
-      this.io = (existingService as any).io;
+    if (existingService) {
+      this.io = existingService.getSocketIOServer();
+      safeLogger.info('AdminWebSocketService: Using shared Socket.IO instance');
     } else {
-      const allowedOrigins = process.env.FRONTEND_URL
-        ? process.env.FRONTEND_URL.split(',').map(url => url.trim())
-        : ["http://localhost:3000"];
-
-      this.io = new Server(httpServer, {
-        cors: {
-          origin: allowedOrigins,
-          methods: ["GET", "POST"]
-        },
-        pingTimeout: 60000,
-        pingInterval: 25000,
-        transports: ['websocket', 'polling']
-      });
+      // This should never happen if services are initialized in correct order
+      // Log error and throw to prevent creating duplicate Socket.IO instance
+      const errorMsg = 'AdminWebSocketService: Main WebSocket service not initialized! Cannot create duplicate Socket.IO instance.';
+      safeLogger.error(errorMsg);
+      throw new Error(errorMsg + ' Initialize WebSocketService first.');
     }
 
     this.setupAdminEventHandlers();
