@@ -7,6 +7,7 @@ import { useFeedSortingPreferences } from '../../hooks/useFeedPreferences';
 import { serviceWorkerCacheService } from '../../services/serviceWorkerCacheService';
 import { FeedService } from '../../services/feedService';
 import LoadingSkeletons from '../LoadingSkeletons/PostCardSkeleton';
+import { useWeb3 } from '../../context/Web3Context';
 
 interface FeedPageProps {
   communityId?: string;
@@ -25,12 +26,13 @@ export const FeedPage: React.FC<FeedPageProps> = ({
   const [hasMore, setHasMore] = useState(true);
 
   const { currentSort, currentTimeRange, updateSort, updateTimeRange } = useFeedSortingPreferences();
+  const { address } = useWeb3();
   // Use the service worker cache service directly instead of the hook
   const cacheService = serviceWorkerCacheService;
 
   useEffect(() => {
     loadPosts();
-  }, [currentSort, currentTimeRange, communityId]);
+  }, [currentSort, currentTimeRange, communityId, address]);
 
   const loadPosts = async () => {
     try {
@@ -52,7 +54,8 @@ export const FeedPage: React.FC<FeedPageProps> = ({
         response = await FeedService.getEnhancedFeed({
           sortBy: currentSort,
           timeRange: currentTimeRange,
-          feedSource: 'following' // Show posts from followed users (including self) for home/feed
+          feedSource: 'following', // Show posts from followed users (including self) for home/feed
+          userAddress: address // CRITICAL: Pass user address for personalized feed
         }, 1, 20);
       }
 
