@@ -364,8 +364,8 @@ export class BridgeMonitoringService extends EventEmitter {
       nonce: Number(nonce),
       userId: user,
       amount: amount.toString(),
-      fromChain: Number(sourceChain),
-      toChain: Number(destinationChain),
+      fromChain: sourceChain.toString(),
+      toChain: destinationChain.toString(),
       status: 'pending',
       fees: fee.toString(),
       timestamp,
@@ -399,7 +399,7 @@ export class BridgeMonitoringService extends EventEmitter {
 
     await this.updateBridgeTransaction(Number(nonce), {
       status: 'completed',
-      txHash,
+      destinationTxHash: txHash,
       completedAt: timestamp
     });
 
@@ -571,12 +571,11 @@ export class BridgeMonitoringService extends EventEmitter {
       const metrics = await this.calculateMetrics();
       
       await db.insert(bridgeMetrics).values({
-        id: `metrics-${Date.now()}`,
         timestamp: new Date(),
         totalTransactions: metrics.totalTransactions,
         totalVolume: metrics.totalVolume,
         totalFees: metrics.totalFees,
-        successRate: metrics.successRate,
+        successRate: metrics.successRate.toString(),
         averageCompletionTime: metrics.averageCompletionTime,
         activeValidators: metrics.activeValidators,
         chainMetrics: stringifyWithBigInt(metrics.chainMetrics)
@@ -678,7 +677,7 @@ export class BridgeMonitoringService extends EventEmitter {
         .where(eq(bridgeTransactions.nonce, nonce))
         .limit(1);
 
-      return transaction || null;
+      return transaction as BridgeTransaction || null;
     } catch (error) {
       logger.error('Error getting bridge transaction:', error);
       return null;
@@ -699,7 +698,7 @@ export class BridgeMonitoringService extends EventEmitter {
       let query = db.select().from(bridgeTransactions);
       
       if (status) {
-        query = query.where(eq(bridgeTransactions.status, status as any));
+        query = query.where(eq(bridgeTransactions.status, status as any)) as any;
       }
       
       const transactions = await query
@@ -708,16 +707,16 @@ export class BridgeMonitoringService extends EventEmitter {
         .offset(offset);
 
       // Get total count
-      const totalQuery = db.select({ count: bridgeTransactions.id }).from(bridgeTransactions);
+      let totalQuery = db.select({ count: sql<number>`count(*)`.as('count') }).from(bridgeTransactions);
       if (status) {
-        totalQuery.where(eq(bridgeTransactions.status, status as any));
+        totalQuery = totalQuery.where(eq(bridgeTransactions.status, status as any)) as any;
       }
       
       const [{ count }] = await totalQuery;
       
       return {
-        transactions,
-        total: count
+        transactions: transactions as BridgeTransaction[],
+        total: Number(count)
       };
     } catch (error) {
       logger.error('Error getting bridge transactions:', error);
@@ -759,7 +758,7 @@ export class BridgeMonitoringService extends EventEmitter {
         totalTransactions: metrics.totalTransactions,
         totalVolume: metrics.totalVolume,
         totalFees: metrics.totalFees,
-        successRate: metrics.successRate,
+        successRate: Number(metrics.successRate),
         averageCompletionTime: metrics.averageCompletionTime,
         activeValidators: metrics.activeValidators,
         chainMetrics: JSON.parse(metrics.chainMetrics, jsonToBigInt)
@@ -828,7 +827,7 @@ export class BridgeMonitoringService extends EventEmitter {
     try {
       const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
       
-      return await db
+      const results = await db
         .select()
         .from(bridgeTransactions)
         .where(
@@ -837,6 +836,8 @@ export class BridgeMonitoringService extends EventEmitter {
             lte(bridgeTransactions.createdAt, oneDayAgo)
           )
         );
+      
+      return results as BridgeTransaction[];
     } catch (error) {
       logger.error('Error getting stuck transactions:', error);
       return [];
@@ -919,11 +920,11 @@ export class BridgeMonitoringService extends EventEmitter {
       
       // Apply filters
       if (userId) {
-        query = query.where(eq(bridgeTransactions.userId, userId));
+        query = query.where(eq(bridgeTransactions.userId, userId)) as any;
       }
       
       if (status) {
-        query = query.where(eq(bridgeTransactions.status, status as any));
+        query = query.where(eq(bridgeTransactions.status, status as any)) as any;
       }
       
       // Apply pagination
@@ -931,17 +932,17 @@ export class BridgeMonitoringService extends EventEmitter {
       query = query
         .orderBy(desc(bridgeTransactions.createdAt))
         .limit(limit)
-        .offset(offset);
+        .offset(offset) as any;
 
       const transactions = await query;
 
       // Get total count for pagination
-      let totalQuery = db.select({ count: sql<number>`count(*)` }).from(bridgeTransactions);
+      let totalQuery = db.select({ count: sql<number>`count(*)`.as('count') }).from(bridgeTransactions);
       if (userId) {
-        totalQuery = totalQuery.where(eq(bridgeTransactions.userId, userId));
+        totalQuery = totalQuery.where(eq(bridgeTransactions.userId, userId)) as any;
       }
       if (status) {
-        totalQuery = totalQuery.where(eq(bridgeTransactions.status, status as any));
+        totalQuery = totalQuery.where(eq(bridgeTransactions.status, status as any)) as any;
       }
       
       const totalResult = await totalQuery;

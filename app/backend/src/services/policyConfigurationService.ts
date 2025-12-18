@@ -105,7 +105,7 @@ export class PolicyConfigurationService {
       const result = await db
         .insert(policy_configurations)
         .values({
-          name: policy.name || `${policy.category}_${policy.action}_${Date.now()}`,
+          name: `${policy.category}_${policy.action}_${Date.now()}`,
           category: policy.category,
           severity: policy.severity,
           confidenceThreshold: policy.confidenceThreshold.toString(),

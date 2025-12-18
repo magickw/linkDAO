@@ -240,7 +240,7 @@ export class OrderTrackingService {
         throw new NotFoundError('Order not found or access denied');
       }
 
-      const events = await this.databaseService.getOrderEvents(parseInt(orderId));
+      const events = await this.databaseService.getOrderEvents(orderId);
       return events.map(event => ({
         id: event.id.toString(),
         orderId: event.orderId?.toString() || orderId,
@@ -332,7 +332,7 @@ export class OrderTrackingService {
 
       // Create order event
       await this.databaseService.createOrderEvent(
-        parseInt(orderId),
+        orderId,
         `STATUS_CHANGED_${status}`,
         `Order status changed to ${status}`,
         metadata ? JSON.stringify(metadata) : undefined
@@ -399,7 +399,7 @@ export class OrderTrackingService {
 
       // Create order event
       await this.databaseService.createOrderEvent(
-        parseInt(orderId),
+        orderId,
         'SHIPPING_ADDED',
         `Tracking information added: ${carrier} - ${trackingNumber}`,
         JSON.stringify({ trackingNumber, carrier, estimatedDelivery })
@@ -452,7 +452,7 @@ export class OrderTrackingService {
 
       // Create order event
       await this.databaseService.createOrderEvent(
-        parseInt(orderId),
+        orderId,
         'DELIVERY_CONFIRMED',
         'Delivery confirmed by buyer',
         deliveryInfo ? JSON.stringify(deliveryInfo) : undefined
@@ -523,7 +523,7 @@ export class OrderTrackingService {
       }
 
       // Get tracking record from database
-      const trackingRecord = await this.databaseService.getTrackingRecord(parseInt(orderId));
+      const trackingRecord = await this.databaseService.getTrackingRecord(orderId);
       
       if (!trackingRecord) {
         return {

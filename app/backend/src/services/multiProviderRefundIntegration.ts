@@ -93,7 +93,10 @@ export class MultiProviderRefundIntegration {
         providerName: request.provider,
         providerTransactionId: request.providerTransactionId,
         providerStatus: 'pending',
-        requestPayload: JSON.stringify(request),
+        transactionType: 'refund',
+        amount: request.amount,
+        currency: request.currency,
+        netAmount: request.amount,
         createdAt: new Date(),
         updatedAt: new Date()
       });

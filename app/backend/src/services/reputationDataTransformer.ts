@@ -51,8 +51,10 @@ export class ReputationDataTransformer {
     ];
     
     return {
+      userId: backendData.walletAddress || '',
       totalScore,
       level,
+      levelName: this.getLevelName(level),
       badges: [], // Badges would need to be fetched separately or calculated
       progress,
       breakdown,
@@ -76,6 +78,21 @@ export class ReputationDataTransformer {
     }));
   }
   
+  /**
+   * Get level name based on level number
+   */
+  private static getLevelName(level: number): string {
+    const levelNames: Record<number, string> = {
+      1: 'Newcomer',
+      2: 'Contributor',
+      3: 'Active Member',
+      4: 'Trusted User',
+      5: 'Community Leader',
+      6: 'Legend'
+    };
+    return levelNames[level] || 'Newcomer';
+  }
+
   /**
    * Calculate reputation level based on score
    */

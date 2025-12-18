@@ -99,12 +99,12 @@ export class DatabaseOptimizationService {
       const slowQueries: QueryPerformanceMetrics[] = [];
 
       for (const row of slowQueriesResult) {
-        const queryPlan = await this.getQueryPlan(row.query);
+        const queryPlan = await this.getQueryPlan((row as any).query);
         const recommendations = this.generateQueryRecommendations(row, queryPlan);
 
         slowQueries.push({
-          query: row.query,
-          executionTime: row.mean_time,
+          query: (row as any).query,
+          executionTime: (row as any).mean_time,
           rowsAffected: (row as any).rows || 0,
           indexUsage: this.extractIndexUsage(queryPlan),
           recommendations,

@@ -48,16 +48,12 @@ export class OrderEventListenerService {
       safeLogger.info('Checking for new order events...');
       
       // Build query for new events
-      let query = db
+      const query = db
         .select()
         .from(orderEvents)
+        .where(this.lastProcessedEventId ? gt(orderEvents.id, this.lastProcessedEventId) : sql`true`)
         .orderBy(desc(orderEvents.timestamp))
         .limit(50); // Process up to 50 events at a time
-      
-      // If we've processed events before, only get newer ones
-      if (this.lastProcessedEventId) {
-        query = query.where(gt(orderEvents.id, this.lastProcessedEventId));
-      }
       
       const events = await query;
       

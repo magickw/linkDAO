@@ -451,7 +451,7 @@ export class OrderPaymentIntegrationService {
       }
 
       // Get order details for receipt generation
-      const order = await this.databaseService.getOrderById(parseInt(transaction.orderId));
+      const order = await this.databaseService.getOrderById(transaction.orderId);
       if (!order) {
         throw new Error('Order not found');
       }
@@ -756,7 +756,7 @@ export class OrderPaymentIntegrationService {
     const dbTransactions = await this.databaseService.getPaymentTransactionsByOrderId(orderId);
     return dbTransactions.map(dbTransaction => ({
       id: dbTransaction.id,
-      orderId: dbTransaction.orderId.toString(),
+      orderId: dbTransaction.orderId,
       paymentMethod: dbTransaction.paymentMethod as 'crypto' | 'fiat' | 'escrow',
       transactionHash: dbTransaction.transactionHash,
       paymentIntentId: dbTransaction.paymentIntentId,
@@ -801,7 +801,7 @@ export class OrderPaymentIntegrationService {
     paymentStatus: PaymentTransactionStatus
   ): Promise<boolean> {
     try {
-      const order = await this.databaseService.getOrderById(parseInt(orderId));
+      const order = await this.databaseService.getOrderById(orderId);
       if (!order) return false;
 
       const notificationType = this.getNotificationTypeForStatus(orderStatus, paymentStatus, 'buyer');
@@ -886,7 +886,7 @@ export class OrderPaymentIntegrationService {
     return dbReceipts.map(dbReceipt => ({
       id: dbReceipt.id,
       transactionId: dbReceipt.transactionId,
-      orderId: dbReceipt.orderId.toString(),
+      orderId: dbReceipt.orderId,
       receiptNumber: dbReceipt.receiptNumber,
       paymentMethod: dbReceipt.paymentMethod,
       amount: dbReceipt.amount,

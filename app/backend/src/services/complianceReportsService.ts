@@ -167,7 +167,8 @@ export class ComplianceReportsService {
           averageComplianceScore: 0,
           criticalViolations: 0,
           resolvedViolations: 0
-        }
+        },
+        downloadCount: 0
       };
 
       // Generate summary data
@@ -188,15 +189,15 @@ export class ComplianceReportsService {
 
       // Log generation
       await comprehensiveAuditService.logEvent({
-        action: 'compliance_report_generated',
+        actionType: 'compliance_report_generated',
         actorId: options.generatedBy,
         resourceType: 'COMPLIANCE_REPORT',
         resourceId: reportId,
-        details: {
+        details: JSON.stringify({
           reportType: 'summary',
           period: { startDate, endDate },
           generatedBy: options.generatedBy
-        }
+        })
       });
 
       logger.info(`Compliance summary report generated: ${reportId}`);
@@ -240,7 +241,8 @@ export class ComplianceReportsService {
           averageComplianceScore: 0,
           criticalViolations: 0,
           resolvedViolations: 0
-        }
+        },
+        downloadCount: 0
       };
 
       // Generate violation data
@@ -261,15 +263,15 @@ export class ComplianceReportsService {
 
       // Log generation
       await comprehensiveAuditService.logEvent({
-        action: 'compliance_report_generated',
+        actionType: 'compliance_report_generated',
         actorId: options.generatedBy,
         resourceType: 'COMPLIANCE_REPORT',
         resourceId: reportId,
-        details: {
+        details: JSON.stringify({
           reportType: 'violation',
           period: { startDate, endDate },
           generatedBy: options.generatedBy
-        }
+        })
       });
 
       logger.info(`Violation report generated: ${reportId}`);
@@ -313,7 +315,8 @@ export class ComplianceReportsService {
           averageComplianceScore: 0,
           criticalViolations: 0,
           resolvedViolations: 0
-        }
+        },
+        downloadCount: 0
       };
 
       // Generate trend data
@@ -334,15 +337,15 @@ export class ComplianceReportsService {
 
       // Log generation
       await comprehensiveAuditService.logEvent({
-        action: 'compliance_report_generated',
+        actionType: 'compliance_report_generated',
         actorId: options.generatedBy,
         resourceType: 'COMPLIANCE_REPORT',
         resourceId: reportId,
-        details: {
+        details: JSON.stringify({
           reportType: 'trend',
           period: { startDate, endDate },
           generatedBy: options.generatedBy
-        }
+        })
       });
 
       logger.info(`Trend analysis report generated: ${reportId}`);
@@ -387,7 +390,8 @@ export class ComplianceReportsService {
           averageComplianceScore: 0,
           criticalViolations: 0,
           resolvedViolations: 0
-        }
+        },
+        downloadCount: 0
       };
 
       // Generate seller-specific data
@@ -408,16 +412,16 @@ export class ComplianceReportsService {
 
       // Log generation
       await comprehensiveAuditService.logEvent({
-        action: 'compliance_report_generated',
+        actionType: 'compliance_report_generated',
         actorId: options.generatedBy,
         resourceType: 'COMPLIANCE_REPORT',
         resourceId: reportId,
-        details: {
+        details: JSON.stringify({
           reportType: 'seller',
           sellerId,
           period: { startDate, endDate },
           generatedBy: options.generatedBy
-        }
+        })
       });
 
       logger.info(`Seller compliance report generated: ${reportId}`);

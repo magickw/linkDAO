@@ -324,6 +324,8 @@ export class ReviewQueueService {
           confidence: parseFloat(row.confidence),
           vendorScores: row.vendor_scores || {},
           evidenceCid: row.evidence_cid,
+          currentStage: 'review',
+          assignedModerators: [],
           createdAt: row.created_at,
           updatedAt: new Date()
         },

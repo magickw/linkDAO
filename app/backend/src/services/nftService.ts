@@ -95,7 +95,7 @@ class NFTService {
       // Store NFT in database
       const [nft] = await db.insert(nfts).values({
         tokenId: `${Date.now()}`, // Generate a temporary token ID
-        contractAddress: params.contractAddress || '0x0000000000000000000000000000000000000000',
+        contractAddress: '0x0000000000000000000000000000000000000000',
         ownerId: params.creatorId,
         creatorId: params.creatorId,
         collectionId: params.collectionId,
@@ -131,7 +131,7 @@ class NFTService {
 
       // Store collection in database
       const [collection] = await db.insert(nftCollections).values({
-        contractAddress: params.contractAddress || '0x0000000000000000000000000000000000000000',
+        contractAddress: '0x0000000000000000000000000000000000000000',
         creatorId: params.creatorId,
         name: params.name,
         symbol: params.symbol,
@@ -208,7 +208,6 @@ class NFTService {
         startingPrice: params.startingPrice,
         reservePrice: params.reservePrice,
         currentBid: '0',
-        currency: params.currency,
         startTime: new Date(),
         endTime: endTime,
         status: 'active',

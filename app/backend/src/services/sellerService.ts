@@ -465,20 +465,31 @@ class SellerService {
       // Deactivate any existing verification records for this wallet
       await db
         .update(ensVerifications)
-        .set({ isActive: false, updatedAt: new Date() })
+        .set({ isVerified: false, updatedAt: new Date() })
         .where(eq(ensVerifications.walletAddress, walletAddress));
+
+      // Get user ID from wallet address
+      const user = await db.query.users.findFirst({
+        where: (users, { eq }) => eq(users.walletAddress, walletAddress),
+      });
+
+      if (!user) {
+        safeLogger.error('User not found for wallet address:', walletAddress);
+        return;
+      }
 
       // Create new verification record
       await db.insert(ensVerifications).values({
+        userId: user.id,
         walletAddress,
-        ensHandle,
-        verificationMethod: 'reverse_resolution',
-        verificationData: JSON.stringify({
+        ensName: ensHandle,
+        resolvedAddress: walletAddress,
+        metadata: JSON.stringify({
           verifiedAt: new Date().toISOString(),
           method: 'reverse_resolution',
         }),
         verifiedAt: new Date(),
-        isActive: true,
+        isVerified: true,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -492,7 +503,7 @@ class SellerService {
     try {
       await db
         .update(ensVerifications)
-        .set({ isActive: false, updatedAt: new Date() })
+        .set({ isVerified: false, updatedAt: new Date() })
         .where(eq(ensVerifications.walletAddress, walletAddress));
     } catch (error) {
       safeLogger.error('Error deactivating ENS verification record:', error);

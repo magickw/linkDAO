@@ -150,7 +150,7 @@ class OrderManagementService {
         .leftJoin(users, eq(orders.buyerId, users.id))
         .leftJoin(sellers, eq(sql`buyer_user.wallet_address`, sellers.walletAddress))
         .leftJoin(sellers, eq(marketplaceListings.sellerAddress, sellers.walletAddress))
-        .where(eq(orders.id, parseInt(orderId)))
+        .where(eq(orders.id, orderId))
         .limit(1);
 
       if (orderResult.length === 0) {
@@ -163,14 +163,14 @@ class OrderManagementService {
       const events = await db
         .select()
         .from(orderEvents)
-        .where(eq(orderEvents.orderId, parseInt(orderId)))
+        .where(eq(orderEvents.orderId, orderId))
         .orderBy(desc(orderEvents.timestamp));
 
       // Get payment transactions
       const payments = await db
         .select()
         .from(paymentTransactions)
-        .where(eq(paymentTransactions.orderId, parseInt(orderId)))
+        .where(eq(paymentTransactions.orderId, orderId))
         .orderBy(desc(paymentTransactions.createdAt));
 
       return {
@@ -346,11 +346,11 @@ class OrderManagementService {
       await db
         .update(orders)
         .set({ status: newStatus })
-        .where(eq(orders.id, parseInt(orderId)));
+        .where(eq(orders.id, orderId));
 
       // Create order event
       await db.insert(orderEvents).values({
-        orderId: parseInt(orderId),
+        orderId: orderId,
         eventType: `STATUS_CHANGED_${newStatus.toUpperCase()}`,
         description: `Order status changed to ${newStatus}${notes ? `: ${notes}` : ''}`,
         metadata: JSON.stringify({ 
@@ -396,11 +396,8 @@ class OrderManagementService {
 
       // Create tracking record - Note: There's a schema mismatch where trackingRecords.orderId is integer
       // but orders.id is UUID. For now, we'll use a hash of the UUID to create an integer
-      const orderIdHash = orderId.split('-').join('').substring(0, 8);
-      const trackingOrderId = parseInt(orderIdHash, 16) % 2147483647; // Keep within integer range
-      
       await db.insert(trackingRecords).values({
-        orderId: trackingOrderId,
+        orderId: orderId,
         trackingNumber,
         carrier,
         status: 'shipped',

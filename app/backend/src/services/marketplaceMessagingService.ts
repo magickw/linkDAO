@@ -46,7 +46,7 @@ export class MarketplaceMessagingService {
   /**
    * Auto-create conversation on order placement
    */
-  async createOrderConversation(orderId: number): Promise<any> {
+  async createOrderConversation(orderId: string): Promise<any> {
     try {
       // Get order details with buyer, seller, and product information
       const [order] = await db.select()
@@ -63,7 +63,6 @@ export class MarketplaceMessagingService {
         title: `Order #${orderId} - ${order.product?.title || 'Product'}`,
         participants: JSON.stringify([order.buyer.walletAddress, order.seller.walletAddress]),
         conversationType: 'order_support',
-        orderId: orderId,
         productId: order.productId,
         contextMetadata: JSON.stringify({
           order_id: orderId,

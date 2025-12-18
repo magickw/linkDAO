@@ -561,13 +561,13 @@ export class PerformanceBenchmarkService {
         actorType: 'system',
         resourceType: 'SELLER',
         resourceId: sellerId,
-        details: {
+        details: JSON.stringify({
           overallScore,
           performanceGrade,
           industryRank,
           percentile,
           industrySegment
-        }
+        })
       });
 
       return benchmarkData;
@@ -1786,7 +1786,7 @@ export class PerformanceBenchmarkService {
           actorType: 'system',
           resourceType: 'INDUSTRY_BENCHMARK',
           resourceId: benchmarkId,
-          details: updates
+          details: JSON.stringify(updates)
         });
         
         logger.info(`Industry benchmark updated: ${benchmarkId}`);
@@ -1864,13 +1864,13 @@ export class PerformanceBenchmarkService {
         actorType: 'user',
         resourceType: 'SELLER',
         resourceId: sellerId,
-        details: {
+        details: JSON.stringify({
           metricId,
           targetValue,
           deadline,
           currentValue,
           progress
-        }
+        })
       });
 
       return target;
@@ -1982,11 +1982,11 @@ export class PerformanceBenchmarkService {
         actorType: 'user',
         resourceType: 'PERFORMANCE_TARGET',
         resourceId: targetId,
-        details: {
+        details: JSON.stringify({
           updates,
           previousTarget: existingTarget,
           newTarget: updatedTarget
-        }
+        })
       });
 
       return updatedTarget;

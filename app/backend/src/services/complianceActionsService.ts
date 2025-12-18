@@ -135,7 +135,7 @@ export class ComplianceActionsService {
 
       // Log action
       await comprehensiveAuditService.logEvent({
-        action: 'compliance_warning_generated',
+        actionType: 'compliance_warning_generated',
         actorId: options.createdBy,
         resourceType: 'SELLER',
         resourceId: sellerId,
@@ -220,7 +220,7 @@ export class ComplianceActionsService {
 
       // Log action
       await comprehensiveAuditService.logEvent({
-        action: 'seller_suspended',
+        actionType: 'seller_suspended',
         actorId: options.createdBy,
         resourceType: 'SELLER',
         resourceId: sellerId,
@@ -391,7 +391,7 @@ export class ComplianceActionsService {
 
       // Log action
       await comprehensiveAuditService.logEvent({
-        action: 'seller_reinstated',
+        actionType: 'seller_reinstated',
         actorId: options.createdBy,
         resourceType: 'SELLER',
         resourceId: sellerId,

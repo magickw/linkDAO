@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
-import { ensVerifications } from '../db/schema';
+import { ensVerifications, users } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
 
 /**
@@ -344,8 +344,8 @@ class ENSValidationService {
       const existingVerification = await db.query.ensVerifications.findFirst({
         where: and(
           eq(ensVerifications.walletAddress, walletAddress),
-          eq(ensVerifications.ensHandle, ensName),
-          eq(ensVerifications.isActive, true)
+          eq(ensVerifications.ensName, ensName),
+          eq(ensVerifications.isVerified, true)
         ),
       });
 
@@ -354,20 +354,29 @@ class ENSValidationService {
         await db
           .update(ensVerifications)
           .set({
-            verificationMethod: verificationResult.verificationMethod,
-            verificationData: JSON.stringify(verificationResult.verificationData),
+            metadata: JSON.stringify(verificationResult.verificationData),
             verifiedAt: new Date(),
             updatedAt: new Date(),
           })
           .where(eq(ensVerifications.id, existingVerification.id));
       } else {
+        // Get user ID from wallet address
+        const user = await db.query.users.findFirst({
+          where: (users, { eq }) => eq(users.walletAddress, walletAddress),
+        });
+
+        if (!user) {
+          throw new Error('User not found for wallet address');
+        }
+
         // Create new verification
         await db.insert(ensVerifications).values({
+          userId: user.id,
           walletAddress,
-          ensHandle: ensName,
-          verificationMethod: verificationResult.verificationMethod,
-          verificationData: JSON.stringify(verificationResult.verificationData),
-          isActive: true,
+          ensName: ensName,
+          resolvedAddress: verificationResult.resolvedAddress || walletAddress,
+          metadata: JSON.stringify(verificationResult.verificationData),
+          isVerified: true,
           expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year expiry
         });
       }
@@ -387,8 +396,8 @@ class ENSValidationService {
       const verification = await db.query.ensVerifications.findFirst({
         where: and(
           eq(ensVerifications.walletAddress, walletAddress),
-          eq(ensVerifications.ensHandle, ensName),
-          eq(ensVerifications.isActive, true)
+          eq(ensVerifications.ensName, ensName),
+          eq(ensVerifications.isVerified, true)
         ),
       });
 
@@ -407,7 +416,7 @@ class ENSValidationService {
       const verifications = await db.query.ensVerifications.findMany({
         where: and(
           eq(ensVerifications.walletAddress, walletAddress),
-          eq(ensVerifications.isActive, true)
+          eq(ensVerifications.isVerified, true)
         ),
         orderBy: (ensVerifications, { desc }) => [desc(ensVerifications.verifiedAt)],
       });
@@ -427,13 +436,13 @@ class ENSValidationService {
       await db
         .update(ensVerifications)
         .set({
-          isActive: false,
+          isVerified: false,
           updatedAt: new Date(),
         })
         .where(
           and(
             eq(ensVerifications.walletAddress, walletAddress),
-            eq(ensVerifications.ensHandle, ensName)
+            eq(ensVerifications.ensName, ensName)
           )
         );
 

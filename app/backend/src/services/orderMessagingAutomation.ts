@@ -134,12 +134,22 @@ export class OrderMessagingAutomation {
         .where(eq(disputes.id, disputeId))
         .limit(1);
 
-      if (!dispute || !dispute.orderId) {
-        throw new Error('Dispute or order not found');
+      if (!dispute) {
+        throw new Error('Dispute not found');
+      }
+
+      // Get order through escrow
+      const [order] = await db.select()
+        .from(orders)
+        .where(eq(orders.escrowId, dispute.escrowId))
+        .limit(1);
+
+      if (!order) {
+        throw new Error('Order not found for dispute');
       }
 
       // Get conversation for order
-      const conversation = await this.getOrderConversation(dispute.orderId);
+      const conversation = await this.getOrderConversation(order.id);
 
       if (!conversation) {
         throw new Error('Conversation not found for order');
@@ -194,7 +204,7 @@ export class OrderMessagingAutomation {
     const conversationsList = await db
       .select()
       .from(conversations)
-      .where(eq(conversations.orderId, orderId));
+      .where(sql`${conversations.contextMetadata}->>'order_id' = ${orderId}`);
 
     return conversationsList[0] || null;
   }

@@ -366,7 +366,7 @@ export class OrderService {
 
       // Create dispute record
       await databaseService.createDispute(
-        parseInt(order.escrowId || '0'),
+        order.escrowId || '',
         (await userProfileService.getProfileByAddress(initiatorAddress))?.id || '',
         reason,
         evidence ? JSON.stringify(evidence) : undefined

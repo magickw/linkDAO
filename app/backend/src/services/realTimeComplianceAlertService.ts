@@ -335,11 +335,11 @@ export class RealTimeComplianceAlertService extends EventEmitter {
         actorId: 'compliance_alert_service',
         resourceType: 'COMPLIANCE_ALERT',
         resourceId: complianceAlert.id,
-        details: {
+        details: JSON.stringify({
           sellerId: alert.sellerId,
           violationType: rule.violationType,
           severity: alert.severity
-        }
+        })
       });
 
       return complianceAlert;
@@ -522,10 +522,10 @@ export class RealTimeComplianceAlertService extends EventEmitter {
       actorId: 'compliance_alert_service',
       resourceType: 'COMPLIANCE_ALERT',
       resourceId: alert.id,
-      details: {
+      details: JSON.stringify({
         escalationLevel: alert.escalationLevel,
         sellerId: alert.sellerId
-      }
+      })
     });
 
     this.emit('alert_escalated', alert);
@@ -556,9 +556,9 @@ export class RealTimeComplianceAlertService extends EventEmitter {
       actorId: userId,
       resourceType: 'COMPLIANCE_ALERT',
       resourceId: alertId,
-      details: {
+      details: JSON.stringify({
         sellerId: alert.sellerId
-      }
+      })
     });
 
     this.emit('alert_acknowledged', alert);
@@ -591,10 +591,10 @@ export class RealTimeComplianceAlertService extends EventEmitter {
       actorId: userId,
       resourceType: 'COMPLIANCE_ALERT',
       resourceId: alertId,
-      details: {
+      details: JSON.stringify({
         sellerId: alert.sellerId,
         resolution
-      }
+      })
     });
 
     this.emit('alert_resolved', alert);
