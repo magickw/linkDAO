@@ -1029,7 +1029,7 @@ export class GovernanceService {
    */
   private async getAuthHeaders(): Promise<Record<string, string>> {
     // Get base auth headers from enhancedAuthService
-    const headers = enhancedAuthService.getAuthHeaders();
+    const headers = await enhancedAuthService.getAuthHeaders();
     
     // Add CSRF headers for authenticated requests
     try {

@@ -34,7 +34,7 @@ export class CommunityMembershipService {
     
     try {
       // Get authentication headers
-      const authHeaders = enhancedAuthService.getAuthHeaders();
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${data.communityId}/members`, {
         method: 'POST',
@@ -74,7 +74,7 @@ export class CommunityMembershipService {
     
     try {
       // Get authentication headers
-      const authHeaders = enhancedAuthService.getAuthHeaders();
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/members/${userId}`, {
         method: 'DELETE',
@@ -304,7 +304,7 @@ export class CommunityMembershipService {
     
     try {
       // Get authentication headers
-      const authHeaders = enhancedAuthService.getAuthHeaders();
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/members/${userId}`, {
         method: 'PUT',

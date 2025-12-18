@@ -70,7 +70,7 @@ export class X402PaymentService {
       }
 
       // Get auth headers with Bearer token
-      const authHeaders = enhancedAuthService.getAuthHeaders();
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
 
       // Call the backend x402 payment API with proper authentication
       const headers: Record<string, string> = {

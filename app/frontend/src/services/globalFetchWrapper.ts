@@ -50,7 +50,7 @@ export async function globalFetch<T = any>(
       
       // Add auth headers if not skipped
       if (!skipAuth && enhancedAuthService.isAuthenticated()) {
-        const authHeaders = enhancedAuthService.getAuthHeaders();
+        const authHeaders = await enhancedAuthService.getAuthHeaders();
         Object.entries(authHeaders).forEach(([key, value]) => {
           headers.set(key, value);
         });

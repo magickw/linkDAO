@@ -11,7 +11,7 @@ export class BlockService {
    * @returns True if successful
    */
   static async block(blocker: string, blocked: string): Promise<boolean> {
-    const authHeaders = enhancedAuthService.getAuthHeaders();
+    const authHeaders = await enhancedAuthService.getAuthHeaders();
     const csrfHeaders = await csrfService.getCSRFHeaders();
 
     const response = await fetch(`${API_BASE_URL}/api/block/block`, {
@@ -38,7 +38,7 @@ export class BlockService {
    * @returns True if successful
    */
   static async unblock(blocker: string, blocked: string): Promise<boolean> {
-    const authHeaders = enhancedAuthService.getAuthHeaders();
+    const authHeaders = await enhancedAuthService.getAuthHeaders();
     const csrfHeaders = await csrfService.getCSRFHeaders();
 
     const response = await fetch(`${API_BASE_URL}/api/block/unblock`, {
@@ -65,11 +65,12 @@ export class BlockService {
    * @returns True if blocked
    */
   static async isBlocked(blocker: string, blocked: string): Promise<boolean> {
+    const authHeaders = await enhancedAuthService.getAuthHeaders();
     const response = await fetch(
       `${API_BASE_URL}/api/block/is-blocked/${blocker}/${blocked}`,
       {
         headers: {
-          ...enhancedAuthService.getAuthHeaders(),
+          ...authHeaders,
         },
       }
     );
@@ -88,11 +89,12 @@ export class BlockService {
    * @returns Array of blocked addresses
    */
   static async getBlockedUsers(address: string): Promise<string[]> {
+    const authHeaders = await enhancedAuthService.getAuthHeaders();
     const response = await fetch(
       `${API_BASE_URL}/api/block/blocked-users/${address}`,
       {
         headers: {
-          ...enhancedAuthService.getAuthHeaders(),
+          ...authHeaders,
         },
       }
     );
@@ -110,11 +112,12 @@ export class BlockService {
    * @returns Array of blocker addresses
    */
   static async getBlockedBy(address: string): Promise<string[]> {
+    const authHeaders = await enhancedAuthService.getAuthHeaders();
     const response = await fetch(
       `${API_BASE_URL}/api/block/blocked-by/${address}`,
       {
         headers: {
-          ...enhancedAuthService.getAuthHeaders(),
+          ...authHeaders,
         },
       }
     );

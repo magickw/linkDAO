@@ -341,13 +341,14 @@ class ENSValidationService {
       }
 
       // Check if verification already exists
-      const existingVerification = await db.query.ensVerifications.findFirst({
-        where: and(
+      const [existingVerification] = await db.select()
+        .from(ensVerifications)
+        .where(and(
           eq(ensVerifications.walletAddress, walletAddress),
           eq(ensVerifications.ensName, ensName),
           eq(ensVerifications.isVerified, true)
-        ),
-      });
+        ))
+        .limit(1);
 
       if (existingVerification) {
         // Update existing verification
@@ -361,9 +362,10 @@ class ENSValidationService {
           .where(eq(ensVerifications.id, existingVerification.id));
       } else {
         // Get user ID from wallet address
-        const user = await db.query.users.findFirst({
-          where: (users, { eq }) => eq(users.walletAddress, walletAddress),
-        });
+        const [user] = await db.select()
+          .from(users)
+          .where(eq(users.walletAddress, walletAddress))
+          .limit(1);
 
         if (!user) {
           throw new Error('User not found for wallet address');
@@ -393,13 +395,14 @@ class ENSValidationService {
    */
   async getStoredENSVerification(walletAddress: string, ensName: string) {
     try {
-      const verification = await db.query.ensVerifications.findFirst({
-        where: and(
+      const [verification] = await db.select()
+        .from(ensVerifications)
+        .where(and(
           eq(ensVerifications.walletAddress, walletAddress),
           eq(ensVerifications.ensName, ensName),
           eq(ensVerifications.isVerified, true)
-        ),
-      });
+        ))
+        .limit(1);
 
       return verification;
     } catch (error) {
@@ -413,13 +416,13 @@ class ENSValidationService {
    */
   async getWalletENSVerifications(walletAddress: string) {
     try {
-      const verifications = await db.query.ensVerifications.findMany({
-        where: and(
+      const verifications = await db.select()
+        .from(ensVerifications)
+        .where(and(
           eq(ensVerifications.walletAddress, walletAddress),
           eq(ensVerifications.isVerified, true)
-        ),
-        orderBy: (ensVerifications, { desc }) => [desc(ensVerifications.verifiedAt)],
-      });
+        ))
+        .orderBy(desc(ensVerifications.verifiedAt));
 
       return verifications;
     } catch (error) {

@@ -309,6 +309,10 @@ export class IPFSService {
         throw new Error('IPFS client not available');
       }
 
+      if (!this.client) {
+        throw new Error('IPFS client not initialized');
+      }
+
       const results = [];
       for (const file of filesToAdd) {
         const result = await this.client.add(file, {

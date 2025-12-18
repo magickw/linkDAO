@@ -466,7 +466,7 @@ export class CommunityInteractionService {
     
     try {
       // Get authentication headers
-      const authHeaders = enhancedAuthService.getAuthHeaders();
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${request.communityId}/posts`, {
         method: 'POST',
@@ -533,7 +533,7 @@ export class CommunityInteractionService {
     
     try {
       // Get authentication headers
-      const authHeaders = enhancedAuthService.getAuthHeaders();
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${request.communityId}/posts/ai-assisted`, {
         method: 'POST',
@@ -598,7 +598,7 @@ export class CommunityInteractionService {
     
     try {
       // Get authentication headers
-      const authHeaders = enhancedAuthService.getAuthHeaders();
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${action.communityId}/moderate`, {
         method: 'POST',
@@ -660,7 +660,7 @@ export class CommunityInteractionService {
     
     try {
       // Get authentication headers
-      const authHeaders = enhancedAuthService.getAuthHeaders();
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${settingsUpdate.communityId}/settings`, {
         method: 'PUT',

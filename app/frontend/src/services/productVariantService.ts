@@ -18,7 +18,7 @@ class ProductVariantService {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            ...enhancedAuthService.getAuthHeaders()
+            ...(await enhancedAuthService.getAuthHeaders())
           }
         }
       );
@@ -45,7 +45,7 @@ class ProductVariantService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...enhancedAuthService.getAuthHeaders()
+          ...(await enhancedAuthService.getAuthHeaders())
         },
         body: JSON.stringify(variantData)
       }
@@ -70,7 +70,7 @@ class ProductVariantService {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          ...enhancedAuthService.getAuthHeaders()
+          ...(await enhancedAuthService.getAuthHeaders())
         },
         body: JSON.stringify(updates)
       }
@@ -95,7 +95,7 @@ class ProductVariantService {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          ...enhancedAuthService.getAuthHeaders()
+          ...(await enhancedAuthService.getAuthHeaders())
         }
       }
     );
@@ -116,7 +116,7 @@ class ProductVariantService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...enhancedAuthService.getAuthHeaders()
+          ...(await enhancedAuthService.getAuthHeaders())
         },
         body: JSON.stringify({ variants })
       }

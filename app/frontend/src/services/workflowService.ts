@@ -15,8 +15,8 @@ class WorkflowService {
     this.baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10001';
   }
 
-  private getHeaders() {
-    return enhancedAuthService.getAuthHeaders();
+  private async getHeaders() {
+    return await enhancedAuthService.getAuthHeaders();
   }
 
   // Template Management
@@ -24,7 +24,7 @@ class WorkflowService {
     const response = await fetch(`${this.baseUrl}/admin/workflows/templates`, {
       method: 'POST',
       headers: {
-        ...this.getHeaders(),
+        ...(await this.getHeaders()),
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(templateData)
@@ -40,7 +40,7 @@ class WorkflowService {
 
   async getTemplate(templateId: string): Promise<WorkflowTemplate> {
     const response = await fetch(`${this.baseUrl}/admin/workflows/templates/${templateId}`, {
-      headers: this.getHeaders()
+      headers: await this.getHeaders()
     });
 
     if (!response.ok) {
@@ -57,7 +57,7 @@ class WorkflowService {
     if (isActive !== undefined) params.append('isActive', isActive.toString());
 
     const response = await fetch(`${this.baseUrl}/admin/workflows/templates?${params}`, {
-      headers: this.getHeaders()
+      headers: await this.getHeaders()
     });
 
     if (!response.ok) {
@@ -72,7 +72,7 @@ class WorkflowService {
     const response = await fetch(`${this.baseUrl}/admin/workflows/templates/${templateId}`, {
       method: 'PUT',
       headers: {
-        ...this.getHeaders(),
+        ...(await this.getHeaders()),
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(updates)
@@ -89,7 +89,7 @@ class WorkflowService {
   async deleteTemplate(templateId: string): Promise<void> {
     const response = await fetch(`${this.baseUrl}/admin/workflows/templates/${templateId}`, {
       method: 'DELETE',
-      headers: this.getHeaders()
+      headers: await this.getHeaders()
     });
 
     if (!response.ok) {
@@ -102,7 +102,7 @@ class WorkflowService {
     const response = await fetch(`${this.baseUrl}/admin/workflows/execute`, {
       method: 'POST',
       headers: {
-        ...this.getHeaders(),
+        ...(await this.getHeaders()),
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ templateId, contextData })
@@ -118,7 +118,7 @@ class WorkflowService {
 
   async getWorkflowInstance(instanceId: string): Promise<WorkflowInstance> {
     const response = await fetch(`${this.baseUrl}/admin/workflows/instances/${instanceId}`, {
-      headers: this.getHeaders()
+      headers: await this.getHeaders()
     });
 
     if (!response.ok) {
@@ -135,7 +135,7 @@ class WorkflowService {
     if (status) params.append('status', status);
 
     const response = await fetch(`${this.baseUrl}/admin/workflows/instances?${params}`, {
-      headers: this.getHeaders()
+      headers: await this.getHeaders()
     });
 
     if (!response.ok) {
@@ -150,7 +150,7 @@ class WorkflowService {
     const response = await fetch(`${this.baseUrl}/admin/workflows/instances/${instanceId}/cancel`, {
       method: 'POST',
       headers: {
-        ...this.getHeaders(),
+        ...(await this.getHeaders()),
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ reason })
@@ -169,7 +169,7 @@ class WorkflowService {
     }
 
     const response = await fetch(`${this.baseUrl}/admin/workflows/tasks/my-tasks?${params}`, {
-      headers: this.getHeaders()
+      headers: await this.getHeaders()
     });
 
     if (!response.ok) {
@@ -184,7 +184,7 @@ class WorkflowService {
     const response = await fetch(`${this.baseUrl}/admin/workflows/tasks/${taskId}/complete`, {
       method: 'POST',
       headers: {
-        ...this.getHeaders(),
+        ...(await this.getHeaders()),
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ completionData, status })
@@ -199,7 +199,7 @@ class WorkflowService {
     const response = await fetch(`${this.baseUrl}/admin/workflows/tasks/${taskId}/assign`, {
       method: 'POST',
       headers: {
-        ...this.getHeaders(),
+        ...(await this.getHeaders()),
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ assignedTo, reason })
@@ -214,7 +214,7 @@ class WorkflowService {
     const response = await fetch(`${this.baseUrl}/admin/workflows/tasks/${taskId}/escalate`, {
       method: 'POST',
       headers: {
-        ...this.getHeaders(),
+        ...(await this.getHeaders()),
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ escalatedTo, reason })
@@ -230,7 +230,7 @@ class WorkflowService {
     const response = await fetch(`${this.baseUrl}/admin/workflows/rules`, {
       method: 'POST',
       headers: {
-        ...this.getHeaders(),
+        ...(await this.getHeaders()),
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(ruleData)
@@ -250,7 +250,7 @@ class WorkflowService {
     if (isActive !== undefined) params.append('isActive', isActive.toString());
 
     const response = await fetch(`${this.baseUrl}/admin/workflows/rules?${params}`, {
-      headers: this.getHeaders()
+      headers: await this.getHeaders()
     });
 
     if (!response.ok) {
@@ -265,7 +265,7 @@ class WorkflowService {
     const response = await fetch(`${this.baseUrl}/admin/workflows/rules/${ruleId}`, {
       method: 'PUT',
       headers: {
-        ...this.getHeaders(),
+        ...(await this.getHeaders()),
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(updates)
@@ -282,7 +282,7 @@ class WorkflowService {
   async deleteRule(ruleId: string): Promise<void> {
     const response = await fetch(`${this.baseUrl}/admin/workflows/rules/${ruleId}`, {
       method: 'DELETE',
-      headers: this.getHeaders()
+      headers: await this.getHeaders()
     });
 
     if (!response.ok) {
@@ -298,7 +298,7 @@ class WorkflowService {
     if (endDate) params.append('endDate', endDate.toISOString());
 
     const response = await fetch(`${this.baseUrl}/admin/workflows/analytics?${params}`, {
-      headers: this.getHeaders()
+      headers: await this.getHeaders()
     });
 
     if (!response.ok) {
@@ -314,7 +314,7 @@ class WorkflowService {
     const response = await fetch(`${this.baseUrl}/admin/workflows/validate-design`, {
       method: 'POST',
       headers: {
-        ...this.getHeaders(),
+        ...(await this.getHeaders()),
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(designData)
@@ -332,7 +332,7 @@ class WorkflowService {
     const response = await fetch(`${this.baseUrl}/admin/workflows/test`, {
       method: 'POST',
       headers: {
-        ...this.getHeaders(),
+        ...(await this.getHeaders()),
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ templateId, testData })

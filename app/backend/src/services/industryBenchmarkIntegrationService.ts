@@ -224,11 +224,21 @@ export class IndustryBenchmarkIntegrationService {
       await comprehensiveAuditService.logEvent({
         actionType: 'benchmark_sync_failed',
         actorId: 'system',
+        actorType: 'system',
         resourceType: 'EXTERNAL_DATA_SOURCE',
         resourceId: sourceId,
         details: JSON.stringify({
           error: error instanceof Error ? error.message : 'Unknown error'
-        })
+        }),
+        metadata: {
+          source: 'industry_benchmark',
+          severity: 'high',
+          category: 'benchmark',
+          tags: ['sync', 'error']
+        },
+        outcome: 'success',
+        complianceFlags: [],
+        retentionPolicy: 'standard'
       });
 
       return null;
@@ -354,13 +364,23 @@ export class IndustryBenchmarkIntegrationService {
       await comprehensiveAuditService.logEvent({
         actionType: 'benchmark_data_synced',
         actorId: 'system',
+        actorType: 'system',
         resourceType: 'EXTERNAL_DATA_SOURCE',
         resourceId: source.id,
         details: JSON.stringify({
           source: source.name,
           metricsCount: Object.keys(mockResponse.metrics).length,
           dataQuality: validation.summary.overallQuality
-        })
+        }),
+        metadata: {
+          source: 'industry_benchmark',
+          severity: 'low',
+          category: 'benchmark',
+          tags: ['sync', 'success']
+        },
+        outcome: 'success',
+        complianceFlags: [],
+        retentionPolicy: 'standard'
       });
 
       return mockResponse;
@@ -557,13 +577,23 @@ export class IndustryBenchmarkIntegrationService {
       await comprehensiveAuditService.logEvent({
         actionType: 'data_source_added',
         actorId: 'system',
+        actorType: 'system',
         resourceType: 'EXTERNAL_DATA_SOURCE',
         resourceId: sourceId,
         details: JSON.stringify({
           name: newSource.name,
           type: newSource.type,
           syncFrequency: newSource.syncFrequency
-        })
+        }),
+        metadata: {
+          source: 'industry_benchmark',
+          severity: 'low',
+          category: 'benchmark',
+          tags: ['data_source', 'added']
+        },
+        outcome: 'success',
+        complianceFlags: [],
+        retentionPolicy: 'standard'
       });
 
       logger.info(`Added data source: ${newSource.name} (${sourceId})`);
@@ -598,8 +628,18 @@ export class IndustryBenchmarkIntegrationService {
       await comprehensiveAuditService.logEvent({
         actionType: 'data_source_updated',
         actorId: 'system',
+        actorType: 'system',
         resourceType: 'EXTERNAL_DATA_SOURCE',
         resourceId: sourceId,
+        outcome: 'success',
+        metadata: {
+          source: 'industry_benchmark',
+          severity: 'low',
+          category: 'benchmark',
+          tags: ['data_source', 'updated']
+        },
+        complianceFlags: [],
+        retentionPolicy: 'standard',
         details: JSON.stringify(updates)
       });
 
@@ -632,12 +672,22 @@ export class IndustryBenchmarkIntegrationService {
       await comprehensiveAuditService.logEvent({
         actionType: 'data_source_removed',
         actorId: 'manual',
+        actorType: 'system',
         resourceType: 'EXTERNAL_DATA_SOURCE',
         resourceId: sourceId,
         details: JSON.stringify({
           name: source.name,
           type: source.type
-        })
+        }),
+        metadata: {
+          source: 'industry_benchmark',
+          severity: 'medium',
+          category: 'benchmark',
+          tags: ['data_source', 'removed']
+        },
+        outcome: 'success',
+        complianceFlags: [],
+        retentionPolicy: 'standard'
       });
 
       logger.info(`Removed data source: ${source.name} (${sourceId})`);

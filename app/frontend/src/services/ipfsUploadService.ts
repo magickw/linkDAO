@@ -44,7 +44,7 @@ class IPFSUploadService {
     formData.append('file', file);
 
     // Get auth headers
-    const authHeaders = enhancedAuthService.getAuthHeaders();
+    const authHeaders = await enhancedAuthService.getAuthHeaders();
 
     // Create headers object for fetch
     // IMPORTANT: Do NOT set Content-Type for FormData - browser will set it automatically with boundary

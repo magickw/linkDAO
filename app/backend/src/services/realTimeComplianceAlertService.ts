@@ -333,13 +333,23 @@ export class RealTimeComplianceAlertService extends EventEmitter {
       await comprehensiveAuditService.logEvent({
         actionType: 'compliance_alert_created',
         actorId: 'compliance_alert_service',
+        actorType: 'system',
         resourceType: 'COMPLIANCE_ALERT',
         resourceId: complianceAlert.id,
         details: JSON.stringify({
           sellerId: alert.sellerId,
           violationType: rule.violationType,
           severity: alert.severity
-        })
+        }),
+        metadata: {
+          source: 'compliance_system',
+          severity: alert.severity,
+          category: 'compliance',
+          tags: ['alert', 'created']
+        },
+        outcome: 'success',
+        complianceFlags: [],
+        retentionPolicy: 'standard'
       });
 
       return complianceAlert;
@@ -520,12 +530,22 @@ export class RealTimeComplianceAlertService extends EventEmitter {
     await comprehensiveAuditService.logEvent({
       actionType: 'compliance_alert_escalated',
       actorId: 'compliance_alert_service',
+      actorType: 'system',
       resourceType: 'COMPLIANCE_ALERT',
       resourceId: alert.id,
       details: JSON.stringify({
         escalationLevel: alert.escalationLevel,
         sellerId: alert.sellerId
-      })
+      }),
+      metadata: {
+        source: 'compliance_system',
+        severity: alert.severity,
+        category: 'compliance',
+        tags: ['alert', 'escalated']
+      },
+      outcome: 'success',
+      complianceFlags: [],
+      retentionPolicy: 'standard'
     });
 
     this.emit('alert_escalated', alert);
@@ -554,11 +574,21 @@ export class RealTimeComplianceAlertService extends EventEmitter {
     await comprehensiveAuditService.logEvent({
       actionType: 'compliance_alert_acknowledged',
       actorId: userId,
+      actorType: 'system',
       resourceType: 'COMPLIANCE_ALERT',
       resourceId: alertId,
       details: JSON.stringify({
         sellerId: alert.sellerId
-      })
+      }),
+      metadata: {
+        source: 'compliance_system',
+        severity: alert.severity,
+        category: 'compliance',
+        tags: ['alert', 'acknowledged']
+      },
+      outcome: 'success',
+      complianceFlags: [],
+      retentionPolicy: 'standard'
     });
 
     this.emit('alert_acknowledged', alert);
@@ -589,8 +619,18 @@ export class RealTimeComplianceAlertService extends EventEmitter {
     await comprehensiveAuditService.logEvent({
       actionType: 'compliance_alert_resolved',
       actorId: userId,
+      actorType: 'system',
       resourceType: 'COMPLIANCE_ALERT',
       resourceId: alertId,
+      outcome: 'success',
+      metadata: {
+        source: 'compliance_system',
+        severity: alert.severity,
+        category: 'compliance',
+        tags: ['alert', 'resolved']
+      },
+      complianceFlags: [],
+      retentionPolicy: 'standard',
       details: JSON.stringify({
         sellerId: alert.sellerId,
         resolution

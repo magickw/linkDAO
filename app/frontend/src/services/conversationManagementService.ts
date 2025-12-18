@@ -24,8 +24,8 @@ export class ConversationManagementService {
   /**
    * Get authentication headers for API requests
    */
-  private getAuthHeaders(): Record<string, string> {
-    return enhancedAuthService.getAuthHeaders();
+  private async getAuthHeaders(): Promise<Record<string, string>> {
+    return await enhancedAuthService.getAuthHeaders();
   }
 
   /**
@@ -46,7 +46,7 @@ export class ConversationManagementService {
       if (filter?.participantAddress) params.append('participant', filter.participantAddress);
 
       const response = await fetch(`/api/conversations/search?${params}`, {
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
       });
 
       if (response.ok) {
@@ -71,7 +71,7 @@ export class ConversationManagementService {
     try {
       const response = await fetch('/api/messages/search', {
         method: 'POST',
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
         body: JSON.stringify(searchQuery),
       });
 
@@ -98,7 +98,7 @@ export class ConversationManagementService {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/archive`, {
         method: 'POST',
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
         body: JSON.stringify({ reason }),
       });
 
@@ -119,7 +119,7 @@ export class ConversationManagementService {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/unarchive`, {
         method: 'POST',
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
       });
 
       return response.ok;
@@ -140,7 +140,7 @@ export class ConversationManagementService {
     try {
       const response = await fetch(`/api/conversations/${conversationId}`, {
         method: 'DELETE',
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
         body: JSON.stringify({ deleteForEveryone }),
       });
 
@@ -162,7 +162,7 @@ export class ConversationManagementService {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/pin`, {
         method: isPinned ? 'POST' : 'DELETE',
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
       });
 
       return response.ok;
@@ -184,7 +184,7 @@ export class ConversationManagementService {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/mute`, {
         method: isMuted ? 'POST' : 'DELETE',
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
         body: JSON.stringify({ muteUntil }),
       });
 
@@ -206,7 +206,7 @@ export class ConversationManagementService {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/settings`, {
         method: 'PUT',
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
         body: JSON.stringify(settings),
       });
 
@@ -226,7 +226,7 @@ export class ConversationManagementService {
   ): Promise<ConversationSettings | null> {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/settings`, {
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
       });
 
       if (response.ok) {
@@ -251,7 +251,7 @@ export class ConversationManagementService {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/title`, {
         method: 'PUT',
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
         body: JSON.stringify({ title }),
       });
 
@@ -275,7 +275,7 @@ export class ConversationManagementService {
     try {
       const response = await fetch('/api/conversations/group', {
         method: 'POST',
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
         body: JSON.stringify({
           name,
           description,
@@ -313,7 +313,7 @@ export class ConversationManagementService {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/members`, {
         method: 'POST',
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
         body: JSON.stringify({
           memberAddress,
           role,
@@ -338,7 +338,7 @@ export class ConversationManagementService {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/members/${memberAddress}`, {
         method: 'DELETE',
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
       });
 
       return response.ok;
@@ -360,7 +360,7 @@ export class ConversationManagementService {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/members/${memberAddress}/role`, {
         method: 'PUT',
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
         body: JSON.stringify({ role }),
       });
 
@@ -381,7 +381,7 @@ export class ConversationManagementService {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/leave`, {
         method: 'POST',
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
       });
 
       return response.ok;
@@ -400,7 +400,7 @@ export class ConversationManagementService {
   ): Promise<ConversationMember[]> {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/members`, {
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
       });
 
       if (response.ok) {
@@ -426,7 +426,7 @@ export class ConversationManagementService {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/group-settings`, {
         method: 'PUT',
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
         body: JSON.stringify(settings),
       });
 
@@ -449,7 +449,7 @@ export class ConversationManagementService {
     try {
       const response = await fetch('/api/conversations/community-announcement', {
         method: 'POST',
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
         body: JSON.stringify({
           communityId,
           title,
@@ -488,7 +488,7 @@ export class ConversationManagementService {
       params.append('offset', offset.toString());
 
       const response = await fetch(`/api/conversations/filter?${params}`, {
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
       });
 
       if (response.ok) {
@@ -517,7 +517,7 @@ export class ConversationManagementService {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/export`, {
         method: 'POST',
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
         body: JSON.stringify({
           format,
           ...options,
@@ -551,7 +551,7 @@ export class ConversationManagementService {
       }
 
       const response = await fetch(`/api/conversations/${conversationId}/analytics?${params}`, {
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
       });
 
       if (response.ok) {
@@ -576,7 +576,7 @@ export class ConversationManagementService {
     try {
       const response = await fetch(`/api/users/${targetAddress}/block`, {
         method: isBlocked ? 'POST' : 'DELETE',
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
       });
 
       return response.ok;
@@ -598,7 +598,7 @@ export class ConversationManagementService {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/report`, {
         method: 'POST',
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
         body: JSON.stringify({
           reason,
           description,
@@ -621,7 +621,7 @@ export class ConversationManagementService {
   ): Promise<Array<{ address: string; isOnline: boolean; lastSeen?: Date }>> {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/participants`, {
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
       });
 
       if (response.ok) {
@@ -647,7 +647,7 @@ export class ConversationManagementService {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/clear`, {
         method: 'POST',
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
         body: JSON.stringify({ clearForEveryone }),
       });
 
@@ -669,7 +669,7 @@ export class ConversationManagementService {
     try {
       const response = await fetch(`/api/conversations/${conversationId}/backup`, {
         method: 'POST',
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
         body: JSON.stringify({ includeMedia }),
       });
 
@@ -695,7 +695,7 @@ export class ConversationManagementService {
     try {
       const response = await fetch(`/api/conversations/restore/${backupId}`, {
         method: 'POST',
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
       });
 
       return response.ok;

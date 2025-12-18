@@ -137,6 +137,7 @@ export class ComplianceActionsService {
       await comprehensiveAuditService.logEvent({
         actionType: 'compliance_warning_generated',
         actorId: options.createdBy,
+        actorType: 'system',
         resourceType: 'SELLER',
         resourceId: sellerId,
         details: JSON.stringify({
@@ -144,7 +145,16 @@ export class ComplianceActionsService {
           severity,
           reason,
           requiresResponse: warning.requiresResponse
-        })
+        }),
+        metadata: {
+          source: 'compliance_system',
+          severity: 'medium',
+          category: 'compliance',
+          tags: ['warning', 'seller']
+        },
+        outcome: 'success',
+        complianceFlags: [],
+        retentionPolicy: 'standard'
       });
 
       // Send notification
@@ -222,6 +232,7 @@ export class ComplianceActionsService {
       await comprehensiveAuditService.logEvent({
         actionType: 'seller_suspended',
         actorId: options.createdBy,
+        actorType: 'system',
         resourceType: 'SELLER',
         resourceId: sellerId,
         details: JSON.stringify({
@@ -229,7 +240,16 @@ export class ComplianceActionsService {
           suspensionType,
           reason,
           duration: options.duration
-        })
+        }),
+        metadata: {
+          source: 'compliance_system',
+          severity: 'high',
+          category: 'compliance',
+          tags: ['suspension', 'seller']
+        },
+        outcome: 'success',
+        complianceFlags: [],
+        retentionPolicy: 'standard'
       });
 
       // Send notifications
@@ -303,8 +323,9 @@ export class ComplianceActionsService {
 
       // Log action
       await comprehensiveAuditService.logEvent({
-        action: 'compliance_investigation_started',
+        actionType: 'compliance_investigation_started',
         actorId: options.createdBy,
+        actorType: 'system',
         resourceType: 'SELLER',
         resourceId: sellerId,
         details: JSON.stringify({
@@ -312,7 +333,16 @@ export class ComplianceActionsService {
           priority,
           reason,
           assignedTo: options.assignedTo
-        })
+        }),
+        metadata: {
+          source: 'compliance_system',
+          severity: priority === 'urgent' || priority === 'high' ? 'high' : 'medium',
+          category: 'compliance',
+          tags: ['investigation', 'seller']
+        },
+        outcome: 'success',
+        complianceFlags: [],
+        retentionPolicy: 'standard'
       });
 
       // Send notifications
@@ -393,8 +423,18 @@ export class ComplianceActionsService {
       await comprehensiveAuditService.logEvent({
         actionType: 'seller_reinstated',
         actorId: options.createdBy,
+        actorType: 'system',
         resourceType: 'SELLER',
         resourceId: sellerId,
+        outcome: 'success',
+        metadata: {
+          source: 'compliance_system',
+          severity: 'medium',
+          category: 'compliance',
+          tags: ['reinstatement', 'seller']
+        },
+        complianceFlags: [],
+        retentionPolicy: 'standard',
         details: JSON.stringify({
           reinstatementId: reinstatement.id,
           previousSuspensionId,

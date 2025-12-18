@@ -13,7 +13,7 @@ import { EventEmitter } from 'events';
 import { advancedReputationService } from './advancedReputationService';
 
 export interface CommunityReport {
-  id: number;
+  id: string | number;
   reporterId: string;
   targetType: 'post' | 'user' | 'comment' | 'listing';
   targetId: string;
@@ -21,10 +21,10 @@ export interface CommunityReport {
   reason: string;
   evidence?: string[];
   status: 'pending' | 'validated' | 'rejected' | 'escalated';
-  consensusScore: number;
-  reporterWeight: number;
-  validationVotes: number;
-  rejectionVotes: number;
+  consensusScore: number | string;
+  reporterWeight: number | string;
+  validationVotes?: number;
+  rejectionVotes?: number;
   createdAt: Date;
   validatedAt?: Date;
 }
@@ -40,7 +40,7 @@ export interface ConsensusBasedWeight {
 }
 
 export interface ReportValidationResult {
-  reportId: number;
+  reportId: number | string;
   isValid: boolean;
   consensusScore: number;
   participatingUsers: number;
@@ -147,7 +147,7 @@ export class EnhancedCommunityReportingService extends EventEmitter {
       // Trigger validation process
       this.startConsensusValidation(String(report.id));
 
-      return report;
+      return report as CommunityReport;
     } catch (error) {
       logger.error('Failed to submit enhanced community report', { error, reportData });
       throw error;
@@ -216,7 +216,7 @@ export class EnhancedCommunityReportingService extends EventEmitter {
     try {
       const [report] = await db.select()
         .from(communityReports)
-        .where(eq(communityReports.id, reportId))
+        .where(eq(communityReports.id, parseInt(reportId)))
         .limit(1);
 
       if (!report) {
@@ -236,7 +236,7 @@ export class EnhancedCommunityReportingService extends EventEmitter {
       }
 
       // Create validation workflow
-      await this.createValidationWorkflow(reportId, validators);
+      await this.createValidationWorkflow(parseInt(reportId), validators);
 
       logger.info('Consensus validation started', { 
         reportId, 
@@ -404,7 +404,8 @@ export class EnhancedCommunityReportingService extends EventEmitter {
 
       // Calculate average consensus alignment
       const averageConsensus = recentParticipation.reduce((sum, event) => {
-        return sum + (event.metadata?.consensusScore || 0.5);
+        const metadata = event.metadata as any;
+        return sum + (metadata?.consensusScore || 0.5);
       }, 0) / recentParticipation.length;
 
       // Multiplier based on consensus alignment
@@ -462,7 +463,7 @@ export class EnhancedCommunityReportingService extends EventEmitter {
   /**
    * Process validation result and calculate consensus
    */
-  async processValidationResult(reportId: string, validatorVotes: Array<{userId: string; vote: 'validate' | 'reject'; weight: number}>): Promise<ReportValidationResult> {
+  async processValidationResult(reportId: number, validatorVotes: Array<{userId: string; vote: 'validate' | 'reject'; weight: number}>): Promise<ReportValidationResult> {
     try {
       const [report] = await db.select()
         .from(communityReports)
@@ -731,7 +732,7 @@ export class EnhancedCommunityReportingService extends EventEmitter {
       ))
       .limit(1);
     
-    return existing || null;
+    return (existing as CommunityReport) || null;
   }
 
   private async checkConflictOfInterest(userId: string, targetType: string, targetId: string): Promise<boolean> {

@@ -134,13 +134,13 @@ class AdminService {
   }
 
   // Public method to get auth headers
-  getAuthHeaders() {
-    return enhancedAuthService.getAuthHeaders();
+  async getAuthHeaders() {
+    return await enhancedAuthService.getAuthHeaders();
   }
 
   // Private method for internal use
-  private getHeaders() {
-    return this.getAuthHeaders();
+  private async getHeaders() {
+    return await this.getAuthHeaders();
   }
 
   // Moderation Queue Management
@@ -161,7 +161,7 @@ class AdminService {
       }
 
       const response = await fetch(`${this.baseUrl}/api/admin/moderation?${params}`, {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -204,7 +204,7 @@ class AdminService {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/moderation/${itemId}/assign`, {
         method: 'POST',
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
         body: JSON.stringify({ assigneeId }),
       });
 
@@ -228,7 +228,7 @@ class AdminService {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/moderation/${itemId}/resolve`, {
         method: 'POST',
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
         body: JSON.stringify(resolution),
       });
 
@@ -261,7 +261,7 @@ class AdminService {
       }
 
       const response = await fetch(`${this.baseUrl}/api/admin/sellers/applications?${params}`, {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -308,7 +308,7 @@ class AdminService {
   async getSellerApplication(applicationId: string): Promise<SellerApplication> {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/sellers/applications/${applicationId}`, {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -332,7 +332,7 @@ class AdminService {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/sellers/applications/${applicationId}/review`, {
         method: 'POST',
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
         body: JSON.stringify(review),
       });
 
@@ -351,7 +351,7 @@ class AdminService {
   async getSellerRiskAssessment(applicationId: string): Promise<{ assessment: any }> {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/sellers/applications/${applicationId}/risk-assessment`, {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -385,7 +385,7 @@ class AdminService {
       }
 
       const response = await fetch(`${this.baseUrl}/api/admin/sellers/performance?${params}`, {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -418,7 +418,7 @@ class AdminService {
       }
 
       const response = await fetch(`${this.baseUrl}/api/admin/sellers/performance/export?${params}`, {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -451,7 +451,7 @@ class AdminService {
       }
 
       const response = await fetch(`${this.baseUrl}/api/admin/disputes?${params}`, {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -500,7 +500,7 @@ class AdminService {
   async getDispute(disputeId: string): Promise<DisputeCase> {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}`, {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -519,7 +519,7 @@ class AdminService {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/assign`, {
         method: 'POST',
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
         body: JSON.stringify({ assigneeId }),
       });
 
@@ -544,7 +544,7 @@ class AdminService {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/resolve`, {
         method: 'POST',
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
         body: JSON.stringify(resolution),
       });
 
@@ -564,7 +564,7 @@ class AdminService {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/notes`, {
         method: 'POST',
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
         body: JSON.stringify({ note }),
       });
 
@@ -586,7 +586,7 @@ class AdminService {
       const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/evidence`, {
         method: 'POST',
         headers: {
-          ...this.getHeaders(),
+          ...(await this.getHeaders()),
           // Remove Content-Type to let browser set it with boundary for FormData
           'Content-Type': undefined as any
         },
@@ -609,7 +609,7 @@ class AdminService {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/evidence/${evidenceId}`, {
         method: 'DELETE',
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -628,7 +628,7 @@ class AdminService {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/evidence/${evidenceId}/status`, {
         method: 'PATCH',
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
         body: JSON.stringify({ status }),
       });
 
@@ -648,7 +648,7 @@ class AdminService {
   async getDisputeMessages(disputeId: string): Promise<{ messages: any[] }> {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/messages`, {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -672,7 +672,7 @@ class AdminService {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/messages`, {
         method: 'POST',
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
         body: JSON.stringify(messageData),
       });
 
@@ -713,7 +713,7 @@ class AdminService {
       }
 
       const response = await fetch(`${this.baseUrl}/api/admin/users?${params}`, {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -762,7 +762,7 @@ class AdminService {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/users/${userId}/suspend`, {
         method: 'POST',
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
         body: JSON.stringify(suspension),
       });
 
@@ -782,7 +782,7 @@ class AdminService {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/users/${userId}/unsuspend`, {
         method: 'POST',
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -801,7 +801,7 @@ class AdminService {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/users/${userId}/role`, {
         method: 'PUT',
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
         body: JSON.stringify({ role }),
       });
 
@@ -820,7 +820,7 @@ class AdminService {
   async getUserActivity(userId: string): Promise<{ activities: any[] }> {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/users/${userId}/activity`, {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -851,7 +851,7 @@ class AdminService {
       }
 
       const response = await fetch(`${this.baseUrl}/api/admin/users/export?${params}`, {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -885,7 +885,7 @@ class AdminService {
       }
 
       const response = await fetch(`${this.baseUrl}/api/admin/moderation/history?${params}`, {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -905,7 +905,7 @@ class AdminService {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/moderation/history/${actionId}/undo`, {
         method: 'POST',
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -935,7 +935,7 @@ class AdminService {
       }
 
       const response = await fetch(`${this.baseUrl}/api/admin/moderation/history/export?${params}`, {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -954,7 +954,7 @@ class AdminService {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/moderation/${itemId}`, {
         method: 'DELETE',
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -978,7 +978,7 @@ class AdminService {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/content/${contentId}/moderate`, {
         method: 'POST',
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
         body: JSON.stringify(action),
       });
 
@@ -1008,7 +1008,7 @@ class AdminService {
   }> {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/stats`, {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -1027,7 +1027,7 @@ class AdminService {
       let charityStats = { pendingCharityProposals: 0 };
       try {
         const charityResponse = await fetch(`${this.baseUrl}/api/admin/charities/stats`, {
-          headers: this.getHeaders(),
+          headers: await this.getHeaders(),
         });
         if (charityResponse.ok) {
           charityStats = await charityResponse.json();
@@ -1081,7 +1081,7 @@ class AdminService {
       }
 
       const response = await fetch(`${this.baseUrl}/api/admin/charities?${params}`, {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -1100,7 +1100,7 @@ class AdminService {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/charities/${charityId}/approve`, {
         method: 'POST',
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
         body: JSON.stringify({ notes }),
       });
 
@@ -1120,7 +1120,7 @@ class AdminService {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/charities/${charityId}/reject`, {
         method: 'POST',
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
         body: JSON.stringify({ notes }),
       });
 
@@ -1154,7 +1154,7 @@ class AdminService {
       }
 
       const response = await fetch(`${this.baseUrl}/api/admin/audit/logs?${params}`, {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -1174,7 +1174,7 @@ class AdminService {
   async getAIInsightsReport(timeframe: string = 'daily'): Promise<ComprehensiveInsightReport> {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/report?timeframe=${timeframe}`, {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -1192,7 +1192,7 @@ class AdminService {
   async getAIEngineStatus(): Promise<EngineStatus> {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/status`, {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -1210,7 +1210,7 @@ class AdminService {
   async getPredictiveAnalytics(type: string, horizon: number = 7): Promise<any> {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/predictions?type=${type}&horizon=${horizon}`, {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -1228,7 +1228,7 @@ class AdminService {
   async getContentDemandPredictions(timeframe: 'week' | 'month' | 'quarter' = 'month'): Promise<ContentDemandPrediction[]> {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/predictions?type=content_demand&timeframe=${timeframe}`, {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -1246,7 +1246,7 @@ class AdminService {
   async getUserBehaviorPredictions(horizon: number = 7): Promise<UserBehaviorPrediction[]> {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/predictions?type=user_behavior&horizon=${horizon}`, {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -1264,7 +1264,7 @@ class AdminService {
   async getContentPerformancePredictions(): Promise<ContentPerformancePrediction[]> {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/predictions?type=content_performance`, {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -1282,7 +1282,7 @@ class AdminService {
   async getAnomalies(): Promise<any[]> {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/anomalies`, {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -1300,7 +1300,7 @@ class AdminService {
   async getTrendAnalysis(): Promise<any[]> {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/trends`, {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -1329,7 +1329,7 @@ class AdminService {
       }
 
       const response = await fetch(`${this.baseUrl}/api/admin/notifications?${params}`, {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -1349,7 +1349,7 @@ class AdminService {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/notifications/${notificationId}/read`, {
         method: 'PATCH',
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -1368,7 +1368,7 @@ class AdminService {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/notifications/read-all`, {
         method: 'PATCH',
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -1386,7 +1386,7 @@ class AdminService {
   async getUnreadNotificationCount(): Promise<{ count: number }> {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/notifications/unread-count`, {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -1405,7 +1405,7 @@ class AdminService {
   async getNotificationStats(): Promise<NotificationStats> {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/notifications/stats`, {
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
@@ -1430,7 +1430,7 @@ class AdminService {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/mobile/push/register`, {
         method: 'POST',
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
         body: JSON.stringify({ token, platform }),
       });
 
@@ -1450,7 +1450,7 @@ class AdminService {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/mobile/push/unregister`, {
         method: 'DELETE',
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
         body: JSON.stringify({ token }),
       });
 
@@ -1477,7 +1477,7 @@ class AdminService {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/users`, {
         method: 'POST',
-        headers: this.getHeaders(),
+        headers: await this.getHeaders(),
         body: JSON.stringify(userData),
       });
 

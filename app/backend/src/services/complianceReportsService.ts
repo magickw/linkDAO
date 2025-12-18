@@ -191,13 +191,23 @@ export class ComplianceReportsService {
       await comprehensiveAuditService.logEvent({
         actionType: 'compliance_report_generated',
         actorId: options.generatedBy,
+        actorType: 'system',
         resourceType: 'COMPLIANCE_REPORT',
         resourceId: reportId,
         details: JSON.stringify({
           reportType: 'summary',
           period: { startDate, endDate },
           generatedBy: options.generatedBy
-        })
+        }),
+        metadata: {
+          source: 'compliance_system',
+          severity: 'low',
+          category: 'compliance',
+          tags: ['report', 'summary']
+        },
+        outcome: 'success',
+        complianceFlags: [],
+        retentionPolicy: 'standard'
       });
 
       logger.info(`Compliance summary report generated: ${reportId}`);
@@ -265,13 +275,23 @@ export class ComplianceReportsService {
       await comprehensiveAuditService.logEvent({
         actionType: 'compliance_report_generated',
         actorId: options.generatedBy,
+        actorType: 'system',
         resourceType: 'COMPLIANCE_REPORT',
         resourceId: reportId,
         details: JSON.stringify({
           reportType: 'violation',
           period: { startDate, endDate },
           generatedBy: options.generatedBy
-        })
+        }),
+        metadata: {
+          source: 'compliance_system',
+          severity: 'medium',
+          category: 'compliance',
+          tags: ['report', 'violation']
+        },
+        outcome: 'success',
+        complianceFlags: [],
+        retentionPolicy: 'standard'
       });
 
       logger.info(`Violation report generated: ${reportId}`);
@@ -339,13 +359,23 @@ export class ComplianceReportsService {
       await comprehensiveAuditService.logEvent({
         actionType: 'compliance_report_generated',
         actorId: options.generatedBy,
+        actorType: 'system',
         resourceType: 'COMPLIANCE_REPORT',
         resourceId: reportId,
         details: JSON.stringify({
           reportType: 'trend',
           period: { startDate, endDate },
           generatedBy: options.generatedBy
-        })
+        }),
+        metadata: {
+          source: 'compliance_system',
+          severity: 'low',
+          category: 'compliance',
+          tags: ['report', 'trend']
+        },
+        outcome: 'success',
+        complianceFlags: [],
+        retentionPolicy: 'standard'
       });
 
       logger.info(`Trend analysis report generated: ${reportId}`);
@@ -414,8 +444,18 @@ export class ComplianceReportsService {
       await comprehensiveAuditService.logEvent({
         actionType: 'compliance_report_generated',
         actorId: options.generatedBy,
+        actorType: 'system',
         resourceType: 'COMPLIANCE_REPORT',
         resourceId: reportId,
+        outcome: 'success',
+        metadata: {
+          source: 'compliance_system',
+          severity: 'low',
+          category: 'compliance',
+          tags: ['report', 'seller']
+        },
+        complianceFlags: [],
+        retentionPolicy: 'standard',
         details: JSON.stringify({
           reportType: 'seller',
           sellerId,

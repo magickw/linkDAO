@@ -241,7 +241,7 @@ export class UnifiedSellerAPIClient {
       // Add authentication headers only if required
       if (requireAuth) {
         // Use enhancedAuthService for consistent authentication
-        const authHeaders = enhancedAuthService.getAuthHeaders();
+        const authHeaders = await enhancedAuthService.getAuthHeaders();
         Object.assign(headers, authHeaders);
 
         // Get wallet address for authentication

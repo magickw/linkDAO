@@ -469,9 +469,10 @@ class SellerService {
         .where(eq(ensVerifications.walletAddress, walletAddress));
 
       // Get user ID from wallet address
-      const user = await db.query.users.findFirst({
-        where: (users, { eq }) => eq(users.walletAddress, walletAddress),
-      });
+      const [user] = await db.select()
+        .from(users)
+        .where(eq(users.walletAddress, walletAddress))
+        .limit(1);
 
       if (!user) {
         safeLogger.error('User not found for wallet address:', walletAddress);

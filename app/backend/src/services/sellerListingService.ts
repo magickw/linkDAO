@@ -165,8 +165,11 @@ class SellerListingService {
       conditions.push(eq(products.status, status));
     }
 
+    // Build where clause
+    const whereClause = conditions.length === 1 ? conditions[0] : and(...conditions);
+
     // Get total count
-    const productsList = await db.select().from(products).where(and(...conditions));
+    const productsList = await db.select().from(products).where(whereClause);
 
     const total = productsList.length;
 
@@ -175,7 +178,7 @@ class SellerListingService {
     const orderByDirection = sortOrder === 'asc' ? asc(orderByColumn) : desc(orderByColumn);
 
     // Get listings
-    const listings = await db.select().from(products).where(and(...conditions)).orderBy(orderByDirection).limit(limit).offset(offset);
+    const listings = await db.select().from(products).where(whereClause).orderBy(orderByDirection).limit(limit).offset(offset);
 
     return {
       listings: listings.map(listing => {
