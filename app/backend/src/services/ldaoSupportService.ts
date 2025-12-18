@@ -1,7 +1,7 @@
 import { eq, desc, and, gte, like } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
-import { supportTickets, supportFAQ, supportCategories, ticketResponses, supportChatSessions, supportChatMessages } from '../db/schema/supportSchema';
+import { supportTickets, supportFAQ, supportCategories, ticketResponses } from '../db/schema/supportSchema';
 import emailService from './emailService';
 import { createNotification } from './notificationHelper';
 import { escapeLikePattern, generateSecureId } from '../utils/securityUtils';
@@ -63,17 +63,17 @@ class LDAOSupportService {
       supportMonitoring.trackTicketCreated();
 
       // Send confirmation email to user
-      await this.sendTicketConfirmation(ticket);
+      await this.sendTicketConfirmation(ticket as SupportTicket);
 
       // Notify support team based on priority
       if (ticketData.priority === 'urgent' || ticketData.priority === 'high') {
-        await this.notifySupportTeam(ticket);
+        await this.notifySupportTeam(ticket as SupportTicket);
       }
 
       // Auto-assign based on category
-      await this.autoAssignTicket(ticket);
+      await this.autoAssignTicket(ticket as SupportTicket);
 
-      return ticket;
+      return ticket as SupportTicket;
     } catch (error) {
       safeLogger.error('Error creating support ticket:', error);
       throw new Error('Failed to create support ticket');

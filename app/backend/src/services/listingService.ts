@@ -904,6 +904,7 @@ export class ProductListingService {
             nft: dbProduct.nft ? JSON.parse(dbProduct.nft) : undefined,
             views: dbProduct.views || 0,
             favorites: dbProduct.favorites || 0,
+            salesCount: dbProduct.salesCount || 0,
             createdAt: dbProduct.createdAt,
             updatedAt: dbProduct.updatedAt,
         };

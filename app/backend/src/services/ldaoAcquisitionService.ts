@@ -364,7 +364,7 @@ export class LDAOAcquisitionService {
       // Create sanitized request
       const sanitizedRequest: EarnRequest = {
         userId: sanitizedUserId,
-        activityType: sanitizedActivityType,
+        activityType: sanitizedActivityType as 'post' | 'comment' | 'referral' | 'marketplace',
         activityId: sanitizedActivityId,
         metadata: sanitizedMetadata
       };
@@ -520,7 +520,7 @@ export class LDAOAcquisitionService {
           sanitizedStatus ? eq(purchaseTransactions.status, sanitizedStatus) : undefined,
           options?.startDate ? gte(purchaseTransactions.createdAt, options.startDate) : undefined,
           options?.endDate ? lt(purchaseTransactions.createdAt, options.endDate) : undefined
-        ).filter(Boolean));
+        ).filter((condition): condition is SQL<unknown> => condition !== undefined));
 
       const totalCount = countResult.length > 0 ? countResult.length : 0;
 
@@ -600,7 +600,7 @@ export class LDAOAcquisitionService {
           sanitizedActivityType ? eq(earningActivities.activityType, sanitizedActivityType) : undefined,
           options?.startDate ? gte(earningActivities.createdAt, options.startDate) : undefined,
           options?.endDate ? lt(earningActivities.createdAt, options.endDate) : undefined
-        ).filter(Boolean));
+        ).filter((condition): condition is SQL<unknown> => condition !== undefined));
 
       const totalCount = countResult.length > 0 ? countResult.length : 0;
 

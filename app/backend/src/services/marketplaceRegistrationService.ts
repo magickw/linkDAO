@@ -74,14 +74,15 @@ export class MarketplaceRegistrationService {
       await db
         .insert(sellerVerifications)
         .values({
-          userId: data.walletAddress,
+          userId: userId,
           currentTier: 'unverified',
-          kycVerified: false,
+          status: 'pending',
           reputationScore: 0,
           totalVolume: '0',
           successfulTransactions: 0,
           disputeRate: '0',
           lastTierUpdate: new Date(),
+          submittedAt: new Date(),
           createdAt: new Date(),
           updatedAt: new Date()
         })
@@ -120,7 +121,6 @@ export class MarketplaceRegistrationService {
           email: data.email,
           shippingAddress: data.shippingAddress,
           billingAddress: data.billingAddress,
-          kycVerified: false,
           createdAt: new Date(),
           updatedAt: new Date()
         })

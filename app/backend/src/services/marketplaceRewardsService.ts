@@ -186,7 +186,7 @@ class MarketplaceRewardsService {
 
       // Create marketplace reward record
       await db.insert(marketplaceRewards).values({
-        orderId: data.orderId,
+        orderId: parseInt(data.orderId),
         buyerId: data.buyerId || null,
         sellerId: data.sellerId || null,
         transactionAmount: data.transactionAmount.toString(),
@@ -298,7 +298,7 @@ class MarketplaceRewardsService {
 
         // Calculate progress increment based on challenge type
         let progressIncrement = 0;
-        const challengeMetadata = challenge.metadata ? JSON.parse(challenge.metadata) : {};
+        const challengeMetadata = challenge.metadata ? JSON.parse(challenge.metadata as string) : {};
 
         if (challengeMetadata.type === 'transaction_count') {
           progressIncrement = 1; // One transaction
@@ -414,7 +414,7 @@ class MarketplaceRewardsService {
       const [challenge] = await db.insert(earningChallenges).values({
         name: data.name,
         description: data.description,
-        challengeType: data.challengeType as 'daily' | 'weekly' | 'monthly' | 'milestone',
+        challengeType: data.challengeType,
         activityType: 'marketplace',
         targetValue: data.targetValue.toString(),
         rewardAmount: data.rewardAmount.toString(),
@@ -553,7 +553,17 @@ class MarketplaceRewardsService {
               );
 
             return {
-              ...challenge,
+              id: challenge.id,
+              name: challenge.name,
+              description: challenge.description,
+              challengeType: challenge.challengeType as 'daily' | 'weekly' | 'monthly' | 'milestone',
+              activityType: challenge.activityType,
+              targetValue: parseFloat(challenge.targetValue),
+              rewardAmount: parseFloat(challenge.rewardAmount),
+              bonusMultiplier: parseFloat(challenge.bonusMultiplier || '1.0'),
+              startDate: challenge.startDate,
+              endDate: challenge.endDate || undefined,
+              maxParticipants: challenge.maxParticipants || undefined,
               userProgress: progress ? {
                 currentProgress: parseFloat(progress.currentProgress),
                 isCompleted: progress.isCompleted,
@@ -566,7 +576,19 @@ class MarketplaceRewardsService {
         return challengesWithProgress;
       }
 
-      return challenges;
+      return challenges.map(challenge => ({
+        id: challenge.id,
+        name: challenge.name,
+        description: challenge.description,
+        challengeType: challenge.challengeType as 'daily' | 'weekly' | 'monthly' | 'milestone',
+        activityType: challenge.activityType,
+        targetValue: parseFloat(challenge.targetValue),
+        rewardAmount: parseFloat(challenge.rewardAmount),
+        bonusMultiplier: parseFloat(challenge.bonusMultiplier || '1.0'),
+        startDate: challenge.startDate,
+        endDate: challenge.endDate || undefined,
+        maxParticipants: challenge.maxParticipants || undefined
+      }));
 
     } catch (error) {
       safeLogger.error('Error getting active marketplace challenges:', error);

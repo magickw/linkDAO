@@ -753,10 +753,10 @@ export class OrderPaymentIntegrationService {
   }
 
   private async getPaymentTransactionsByOrderId(orderId: string): Promise<PaymentTransaction[]> {
-    const dbTransactions = await this.databaseService.getPaymentTransactionsByOrderId(orderId);
+    const dbTransactions = await this.databaseService.getPaymentTransactionsByOrderId(parseInt(orderId));
     return dbTransactions.map(dbTransaction => ({
       id: dbTransaction.id,
-      orderId: dbTransaction.orderId,
+      orderId: dbTransaction.orderId.toString(),
       paymentMethod: dbTransaction.paymentMethod as 'crypto' | 'fiat' | 'escrow',
       transactionHash: dbTransaction.transactionHash,
       paymentIntentId: dbTransaction.paymentIntentId,
@@ -882,11 +882,11 @@ export class OrderPaymentIntegrationService {
   }
 
   private async getPaymentReceiptsByOrderId(orderId: string): Promise<PaymentReceipt[]> {
-    const dbReceipts = await this.databaseService.getPaymentReceiptsByOrderId(orderId);
+    const dbReceipts = await this.databaseService.getPaymentReceiptsByOrderId(parseInt(orderId));
     return dbReceipts.map(dbReceipt => ({
       id: dbReceipt.id,
       transactionId: dbReceipt.transactionId,
-      orderId: dbReceipt.orderId,
+      orderId: dbReceipt.orderId.toString(),
       receiptNumber: dbReceipt.receiptNumber,
       paymentMethod: dbReceipt.paymentMethod,
       amount: dbReceipt.amount,
