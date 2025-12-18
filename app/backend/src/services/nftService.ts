@@ -2,7 +2,7 @@ import { eq, desc, and, or, sql } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
 import { nfts, nftCollections, nftListings, nftOffers, nftAuctions, users } from '../db/schema';
-import ipfsService, { NFTMetadata } from './ipfsService';
+import ipfsService from './ipfsService';
 import { ethers } from 'ethers';
 
 export interface CreateNFTParams {
@@ -66,31 +66,31 @@ class NFTService {
   async createNFT(params: CreateNFTParams): Promise<any> {
     try {
       // Upload image to IPFS
-      const imageResult = await ipfsService.uploadFile(params.image, 'nft-image');
+      const imageResult = await ipfsService.uploadFile(params.image, { metadata: { name: 'nft-image' } });
       
       // Upload animation file if provided
       let animationHash: string | undefined;
       if (params.animationFile) {
-        const animationResult = await ipfsService.uploadFile(params.animationFile, 'nft-animation');
-        animationHash = animationResult.hash;
+        const animationResult = await ipfsService.uploadFile(params.animationFile, { metadata: { name: 'nft-animation' } });
+        animationHash = animationResult.ipfsHash;
       }
 
-      // Create metadata
-      const metadata = ipfsService.createNFTMetadata({
+      // Create metadata object
+      const metadata = {
         name: params.name,
         description: params.description,
-        imageHash: imageResult.hash,
-        animationHash,
-        externalUrl: params.externalUrl,
+        image: `ipfs://${imageResult.ipfsHash}`,
+        animation_url: animationHash ? `ipfs://${animationHash}` : undefined,
+        external_url: params.externalUrl,
         attributes: params.attributes,
         creator: params.creatorId,
-      });
+      };
 
       // Upload metadata to IPFS
-      const metadataResult = await ipfsService.uploadMetadata(metadata);
+      const metadataResult = await ipfsService.uploadFile(Buffer.from(JSON.stringify(metadata)), { metadata: { name: 'nft-metadata', mimeType: 'application/json' } });
 
       // Generate content hash for duplicate detection
-      const contentHash = ipfsService.generateContentHash(params.image);
+      const contentHash = require('crypto').createHash('sha256').update(params.image).digest('hex');
 
       // Store NFT in database
       const [nft] = await db.insert(nfts).values({
@@ -98,10 +98,10 @@ class NFTService {
         collectionId: params.collectionId,
         name: params.name,
         description: params.description,
-        imageHash: imageResult.hash,
+        imageHash: imageResult.ipfsHash,
         animationHash,
-        metadataHash: metadataResult.hash,
-        metadataUri: metadataResult.url,
+        metadataHash: metadataResult.ipfsHash,
+        metadataUri: metadataResult.gatewayUrl,
         attributes: JSON.stringify(params.attributes),
         royalty: params.royalty,
         contentHash,
@@ -110,8 +110,8 @@ class NFTService {
 
       return {
         ...nft,
-        imageUrl: imageResult.url,
-        metadataUrl: metadataResult.url,
+        imageUrl: imageResult.gatewayUrl,
+        metadataUrl: metadataResult.gatewayUrl,
         animationUrl: animationHash ? `${ipfsService.getGatewayUrl()}${animationHash}` : null,
       };
     } catch (error) {
@@ -126,7 +126,7 @@ class NFTService {
   async createCollection(params: CreateCollectionParams): Promise<any> {
     try {
       // Upload collection image to IPFS
-      const imageResult = await ipfsService.uploadFile(params.image, 'collection-image');
+      const imageResult = await ipfsService.uploadFile(params.image, { metadata: { name: 'collection-image' } });
 
       // Store collection in database
       const [collection] = await db.insert(nftCollections).values({
@@ -134,7 +134,7 @@ class NFTService {
         name: params.name,
         symbol: params.symbol,
         description: params.description,
-        imageHash: imageResult.hash,
+        imageHash: imageResult.ipfsHash,
         externalUrl: params.externalUrl,
         maxSupply: params.maxSupply,
         mintPrice: params.mintPrice,
@@ -144,7 +144,7 @@ class NFTService {
 
       return {
         ...collection,
-        imageUrl: imageResult.url,
+        imageUrl: imageResult.gatewayUrl,
       };
     } catch (error) {
       safeLogger.error('Error creating collection:', error);
@@ -477,7 +477,7 @@ class NFTService {
       await db.update(nfts)
         .set({
           isVerified: true,
-          verifiedAt: new Date().toISOString(),
+          verifiedAt: new Date(),
           verifierId,
         })
         .where(eq(nfts.id, nftId));

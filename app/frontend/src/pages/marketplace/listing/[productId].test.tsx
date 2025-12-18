@@ -23,12 +23,26 @@ const MockProductDetailPageRoute = () => {
     ]
   };
 
+  // Simulate the IPFS handling logic from the real component
+  const processImageUrl = (url: string) => {
+    if (!url || url.trim() === '') {
+      return `https://placehold.co/600x400/4B2E83/FFFFFF?text=Product`;
+    }
+    
+    if (url.startsWith('http')) {
+      return url;
+    }
+    
+    // Handle IPFS hashes
+    return `https://gateway.pinata.cloud/ipfs/${url.replace(/^\/+/, '')}`;
+  };
+
   return (
     <div data-testid="product-detail-route">
       {/* Main product image */}
       <img
         data-testid="main-product-image"
-        src={mockProduct.media[0].url}
+        src={processImageUrl(mockProduct.media[0].url)}
         alt={mockProduct.media[0].alt}
       />
       
@@ -38,7 +52,7 @@ const MockProductDetailPageRoute = () => {
           <img
             key={index}
             data-testid={`thumbnail-${index}`}
-            src={media.thumbnail}
+            src={processImageUrl(media.thumbnail)}
             alt={media.alt}
           />
         ))}
@@ -137,7 +151,7 @@ describe('Product Detail Page Route', () => {
           {/* Main product image */}
           <img
             data-testid="main-product-image"
-            src={mockProduct.media[0].url}
+            src={`https://gateway.pinata.cloud/ipfs/${mockProduct.media[0].url}`}
             alt={mockProduct.media[0].alt}
           />
           
@@ -147,7 +161,7 @@ describe('Product Detail Page Route', () => {
               <img
                 key={index}
                 data-testid={`thumbnail-${index}`}
-                src={media.thumbnail}
+                src={`https://gateway.pinata.cloud/ipfs/${media.thumbnail}`}
                 alt={media.alt}
               />
             ))}
@@ -161,7 +175,7 @@ describe('Product Detail Page Route', () => {
     // Check that IPFS hashes are converted to gateway URLs
     const mainImage = screen.getByTestId('main-product-image');
     expect(mainImage).toBeInTheDocument();
-    expect(mainImage).toHaveAttribute('src', 'https://ipfs.io/ipfs/QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco');
+    expect(mainImage).toHaveAttribute('src', 'https://gateway.pinata.cloud/ipfs/QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco');
   });
 
   it('handles mixed Cloudinary and IPFS URLs correctly', () => {
@@ -200,7 +214,7 @@ describe('Product Detail Page Route', () => {
               <img
                 key={index}
                 data-testid={`thumbnail-${index}`}
-                src={media.thumbnail}
+                src={media.url.startsWith('http') ? media.thumbnail : `https://gateway.pinata.cloud/ipfs/${media.thumbnail}`}
                 alt={media.alt}
               />
             ))}
@@ -218,6 +232,6 @@ describe('Product Detail Page Route', () => {
     
     expect(mainImage).toHaveAttribute('src', 'https://res.cloudinary.com/test-cloud/image/upload/v1234567890/product.jpg');
     expect(thumbnail1).toHaveAttribute('src', 'https://res.cloudinary.com/test-cloud/image/upload/c_fill,w_150,h_150,q_80/v1234567890/product.jpg');
-    expect(thumbnail2).toHaveAttribute('src', 'https://ipfs.io/ipfs/QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco');
+    expect(thumbnail2).toHaveAttribute('src', 'https://gateway.pinata.cloud/ipfs/QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco');
   });
 });

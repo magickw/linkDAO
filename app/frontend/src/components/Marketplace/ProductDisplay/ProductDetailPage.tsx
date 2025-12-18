@@ -196,13 +196,13 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                            media.thumbnail.startsWith('http') ? media.thumbnail : `https://gateway.pinata.cloud/ipfs/${media.thumbnail.replace(/^\/+/, '')}` :
                            (media.url && media.url.trim() !== '') ? 
                            media.url.startsWith('http') ? media.url : `https://gateway.pinata.cloud/ipfs/${media.url.replace(/^\/+/, '')}` :
-                           `https://placehold.co/150x150/4B2E83/FFFFFF?text=${encodeURIComponent(\`Img \${index + 1}\`)}`}
+                           `https://placehold.co/150x150/4B2E83/FFFFFF?text=${encodeURIComponent('Img ' + (index + 1))}`}
                       alt={media.alt || `Product view ${index + 1}`}
                       className="w-full h-20 object-contain"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.onerror = null;
-                        target.src = `https://placehold.co/150x150/4B2E83/FFFFFF?text=${encodeURIComponent(\`Img \${index + 1}\`)}`;
+                        target.src = `https://placehold.co/150x150/4B2E83/FFFFFF?text=${encodeURIComponent('Img ' + (index + 1))}`;
                       }}
                     />
                   </GlassPanel>

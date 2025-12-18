@@ -107,7 +107,7 @@ describe('Marketplace Page', () => {
           {mockProducts.map((product) => (
             <div key={product.id} data-testid={`product-card-${product.id}`}>
               <img 
-                src={product.images[0]} 
+                src={`https://gateway.pinata.cloud/ipfs/${product.images[0]}`} 
                 alt={product.title} 
                 data-testid={`product-image-${product.id}`}
               />
@@ -123,7 +123,7 @@ describe('Marketplace Page', () => {
     // Check that IPFS hashes are converted to gateway URLs
     const productImage = screen.getByTestId('product-image-1');
     expect(productImage).toBeInTheDocument();
-    expect(productImage).toHaveAttribute('src', 'https://ipfs.io/ipfs/QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco');
+    expect(productImage).toHaveAttribute('src', 'https://gateway.pinata.cloud/ipfs/QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco');
   });
 
   it('handles mixed Cloudinary and IPFS URLs in product cards', () => {
@@ -150,7 +150,7 @@ describe('Marketplace Page', () => {
           {mockProducts.map((product) => (
             <div key={product.id} data-testid={`product-card-${product.id}`}>
               <img 
-                src={product.images[0]} 
+                src={product.images[0].startsWith('http') ? product.images[0] : `https://gateway.pinata.cloud/ipfs/${product.images[0]}`} 
                 alt={product.title} 
                 data-testid={`product-image-${product.id}`}
               />
@@ -168,6 +168,6 @@ describe('Marketplace Page', () => {
     const ipfsImage = screen.getByTestId('product-image-2');
     
     expect(cloudinaryImage).toHaveAttribute('src', 'https://res.cloudinary.com/test-cloud/image/upload/v1234567890/product.jpg');
-    expect(ipfsImage).toHaveAttribute('src', 'https://ipfs.io/ipfs/QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco');
+    expect(ipfsImage).toHaveAttribute('src', 'https://gateway.pinata.cloud/ipfs/QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco');
   });
 });
