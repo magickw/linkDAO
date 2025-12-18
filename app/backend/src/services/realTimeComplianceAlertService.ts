@@ -331,7 +331,7 @@ export class RealTimeComplianceAlertService extends EventEmitter {
 
       // Log to audit service
       await comprehensiveAuditService.logEvent({
-        action: 'compliance_alert_created',
+        actionType: 'compliance_alert_created',
         actorId: 'compliance_alert_service',
         resourceType: 'COMPLIANCE_ALERT',
         resourceId: complianceAlert.id,
@@ -518,7 +518,7 @@ export class RealTimeComplianceAlertService extends EventEmitter {
 
     // Log escalation
     await comprehensiveAuditService.logEvent({
-      action: 'compliance_alert_escalated',
+      actionType: 'compliance_alert_escalated',
       actorId: 'compliance_alert_service',
       resourceType: 'COMPLIANCE_ALERT',
       resourceId: alert.id,
@@ -552,7 +552,7 @@ export class RealTimeComplianceAlertService extends EventEmitter {
 
     // Log acknowledgment
     await comprehensiveAuditService.logEvent({
-      action: 'compliance_alert_acknowledged',
+      actionType: 'compliance_alert_acknowledged',
       actorId: userId,
       resourceType: 'COMPLIANCE_ALERT',
       resourceId: alertId,
@@ -587,7 +587,7 @@ export class RealTimeComplianceAlertService extends EventEmitter {
 
     // Log resolution
     await comprehensiveAuditService.logEvent({
-      action: 'compliance_alert_resolved',
+      actionType: 'compliance_alert_resolved',
       actorId: userId,
       resourceType: 'COMPLIANCE_ALERT',
       resourceId: alertId,

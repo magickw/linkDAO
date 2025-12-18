@@ -123,18 +123,16 @@ export class EnhancedCommunityReportingService extends EventEmitter {
 
       // Create report
       const [report] = await db.insert(communityReports).values({
-        id: `report-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        contentId: reportData.targetId,
         reporterId: reportData.reporterId,
         targetType: reportData.targetType,
         targetId: reportData.targetId,
         reportType: reportData.reportType,
         reason: reportData.reason,
-        evidence: reportData.evidence || [],
+        details: JSON.stringify(reportData.evidence || []),
         status: 'pending',
-        consensusScore: 0,
-        reporterWeight: reporterWeight.finalWeight,
-        validationVotes: 0,
-        rejectionVotes: 0,
+        consensusScore: '0',
+        reporterWeight: reporterWeight.finalWeight.toString(),
         createdAt: new Date()
       }).returning();
 
@@ -214,11 +212,12 @@ export class EnhancedCommunityReportingService extends EventEmitter {
   /**
    * Start consensus validation process for a report
    */
-  private async startConsensusValidation(reportId: number): Promise<void> {
+  private async startConsensusValidation(reportId: string): Promise<void> {
     try {
-      const report = await db.query.communityReports.findFirst({
-        where: eq(communityReports.id, reportId)
-      });
+      const [report] = await db.select()
+        .from(communityReports)
+        .where(eq(communityReports.id, reportId))
+        .limit(1);
 
       if (!report) {
         throw new Error(`Report not found: ${reportId}`);
@@ -295,11 +294,11 @@ export class EnhancedCommunityReportingService extends EventEmitter {
   private async calculateReporterAccuracy(reporterId: string): Promise<number> {
     try {
       // Get reporter's historical reports
-      const reports = await db.query.communityReports.findMany({
-        where: eq(communityReports.reporterId, reporterId),
-        orderBy: desc(communityReports.createdAt),
-        limit: 20 // Last 20 reports
-      });
+      const reports = await db.select()
+        .from(communityReports)
+        .where(eq(communityReports.reporterId, reporterId))
+        .orderBy(desc(communityReports.createdAt))
+        .limit(20); // Last 20 reports
 
       if (reports.length === 0) return 0.5; // Default accuracy for new reporters
 
@@ -362,14 +361,14 @@ export class EnhancedCommunityReportingService extends EventEmitter {
   private async calculateExpertiseBonus(reporterId: string, reportType: string): Promise<number> {
     try {
       // Get historical reports of the same type
-      const sameTypeReports = await db.query.communityReports.findMany({
-        where: and(
+      const sameTypeReports = await db.select()
+        .from(communityReports)
+        .where(and(
           eq(communityReports.reporterId, reporterId),
           eq(communityReports.reportType, reportType)
-        ),
-        orderBy: desc(communityReports.createdAt),
-        limit: 10
-      });
+        ))
+        .orderBy(desc(communityReports.createdAt))
+        .limit(10);
 
       if (sameTypeReports.length === 0) return 1.0; // No expertise bonus for new report types
 
@@ -392,14 +391,14 @@ export class EnhancedCommunityReportingService extends EventEmitter {
   private async calculateConsensusMultiplier(reporterId: string): Promise<number> {
     try {
       // Get recent consensus participation
-      const recentParticipation = await db.query.reputationChangeEvents.findMany({
-        where: and(
+      const recentParticipation = await db.select()
+        .from(reputationChangeEvents)
+        .where(and(
           eq(reputationChangeEvents.userId, reporterId),
           gt(reputationChangeEvents.createdAt, new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)) // Last 30 days
-        ),
-        orderBy: desc(reputationChangeEvents.createdAt),
-        limit: 5
-      });
+        ))
+        .orderBy(desc(reputationChangeEvents.createdAt))
+        .limit(5);
 
       if (recentParticipation.length === 0) return 1.0;
 
@@ -463,11 +462,12 @@ export class EnhancedCommunityReportingService extends EventEmitter {
   /**
    * Process validation result and calculate consensus
    */
-  async processValidationResult(reportId: number, validatorVotes: Array<{userId: string; vote: 'validate' | 'reject'; weight: number}>): Promise<ReportValidationResult> {
+  async processValidationResult(reportId: string, validatorVotes: Array<{userId: string; vote: 'validate' | 'reject'; weight: number}>): Promise<ReportValidationResult> {
     try {
-      const report = await db.query.communityReports.findFirst({
-        where: eq(communityReports.id, reportId)
-      });
+      const [report] = await db.select()
+        .from(communityReports)
+        .where(eq(communityReports.id, reportId))
+        .limit(1);
 
       if (!report) {
         throw new Error(`Report not found: ${reportId}`);
@@ -540,9 +540,7 @@ export class EnhancedCommunityReportingService extends EventEmitter {
       await db.update(communityReports)
         .set({
           status: isValid ? 'validated' : 'rejected',
-          consensusScore,
-          validationVotes: totalValidationWeight > 0 ? Math.round(totalValidationWeight) : 0,
-          rejectionVotes: totalRejectionWeight > 0 ? Math.round(totalRejectionWeight) : 0,
+          consensusScore: consensusScore.toString(),
           validatedAt: new Date()
         })
         .where(eq(communityReports.id, reportId));
@@ -560,7 +558,7 @@ export class EnhancedCommunityReportingService extends EventEmitter {
         await advancedReputationService.applyAdvancedReputationChange(
           report.reporterId,
           'false_report',
-          Math.round(-5 * report.reporterWeight),
+          Math.round(-5 * parseFloat(report.reporterWeight || '1')),
           'Community report rejected by consensus',
           { reportId, consensusScore, participatingUsers }
         );

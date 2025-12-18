@@ -86,7 +86,7 @@ export class MultiProviderRefundIntegration {
       });
 
       // Create provider transaction record
-      await db.insert(refundProviderTransactions).values({
+      const [providerTransaction] = await db.insert(refundProviderTransactions).values({
         refundRecordId: refundRecord.id,
         providerName: request.provider,
         providerTransactionId: request.providerTransactionId,
@@ -97,7 +97,9 @@ export class MultiProviderRefundIntegration {
         netAmount: request.amount,
         createdAt: new Date(),
         updatedAt: new Date()
-      });
+      }).returning();
+
+      const providerTransactionId = providerTransaction.id;
 
       // Process refund through appropriate provider
       let providerResult: any;

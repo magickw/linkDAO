@@ -63,10 +63,10 @@ class EvidenceStorageService {
       const verificationHash = this.generateVerificationHash(bundle);
 
       // Store to IPFS
-      const ipfsResult = await IPFSService.uploadMetadata(bundle as any);
+      const ipfsResult = await ipfsService.uploadMetadata(bundle as any);
       
       // Pin for long-term storage
-      await IPFSService.pinContent(ipfsResult.ipfsHash);
+      await ipfsService.pinFile(ipfsResult.ipfsHash);
 
       return {
         ...bundle,
@@ -86,7 +86,7 @@ class EvidenceStorageService {
   async retrieveEvidenceBundle(ipfsHash: string): Promise<EvidenceRetrievalResult> {
     try {
       // Retrieve from IPFS
-      const content = await IPFSService.getContent(ipfsHash);
+      const content = await ipfsService.getContent(ipfsHash);
       const bundle = JSON.parse(content.toString()) as EvidenceBundle;
 
       // Verify bundle integrity
@@ -135,11 +135,11 @@ class EvidenceStorageService {
 
     for (let i = 0; i < screenshots.length; i++) {
       const screenshot = screenshots[i];
-      const result = await IPFSService.uploadFile(screenshot, { metadata: { name: `screenshot_${i}.png` } });
+      const result = await ipfsService.uploadFile(screenshot, { metadata: { name: `screenshot_${i}.png` } });
       screenshotHashes.push(result.ipfsHash);
       
       // Pin screenshot for retention
-      await IPFSService.pinContent(result.ipfsHash);
+      await ipfsService.pinFile(result.ipfsHash);
     }
 
     return screenshotHashes;
@@ -252,10 +252,10 @@ class EvidenceStorageService {
 
       // Store audit record to IPFS
       const auditJson = JSON.stringify(auditRecord, null, 2);
-      const result = await IPFSService.uploadFile(Buffer.from(auditJson), { metadata: { name: `audit_${auditRecord.id}.json` } });
+      const result = await ipfsService.uploadFile(Buffer.from(auditJson), { metadata: { name: `audit_${auditRecord.id}.json` } });
       
       // Pin for long-term retention
-      await IPFSService.pinContent(result.ipfsHash);
+      await ipfsService.pinFile(result.ipfsHash);
 
       return result.ipfsHash;
     } catch (error) {
@@ -269,7 +269,7 @@ class EvidenceStorageService {
    */
   async retrieveAuditRecord(ipfsHash: string): Promise<any> {
     try {
-      const content = await IPFSService.getContent(ipfsHash);
+      const content = await ipfsService.getContent(ipfsHash);
       return JSON.parse(content.toString());
     } catch (error) {
       safeLogger.error('Error retrieving audit record:', error);
@@ -301,7 +301,7 @@ class EvidenceStorageService {
    */
   async verifyEvidenceExists(ipfsHash: string): Promise<boolean> {
     try {
-      await IPFSService.getContent(ipfsHash);
+      await ipfsService.getContent(ipfsHash);
       return true;
     } catch (error) {
       return false;
@@ -318,7 +318,7 @@ class EvidenceStorageService {
     timestamp?: Date;
   }> {
     try {
-      const content = await IPFSService.getContent(ipfsHash);
+      const content = await ipfsService.getContent(ipfsHash);
       const bundle = JSON.parse(content.toString()) as EvidenceBundle;
 
       return {

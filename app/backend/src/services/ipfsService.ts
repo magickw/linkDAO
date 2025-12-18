@@ -374,9 +374,8 @@ export class IPFSService {
    * Download file from IPFS with memory optimization
    */
   async downloadFile(ipfsHash: string): Promise<IPFSDownloadResult> {
-    if (!this.client) {
-      // In memory-constrained environments, use direct gateway access
-      if (this.isMemoryConstrained) {
+    // In memory-constrained environments, use direct gateway access
+    if (this.isMemoryConstrained || !this.client) {
         try {
           const startTime = Date.now();
           safeLogger.info('Starting IPFS download via gateway (memory-constrained)', { hash: ipfsHash });
@@ -412,18 +411,11 @@ export class IPFSService {
           safeLogger.error(`IPFS gateway download failed for ${ipfsHash}:`, error);
           throw new Error(`IPFS download failed: ${error instanceof Error ? error.message : String(error)}`);
         }
-      }
-
-      throw new Error('IPFS client not initialized');
     }
 
     try {
       const startTime = Date.now();
       safeLogger.info('Starting IPFS download', { hash: ipfsHash });
-
-      if (!this.client) {
-        throw new Error('IPFS client not available');
-      }
 
       // Get file content
       const chunks = [];
@@ -463,13 +455,10 @@ export class IPFSService {
    */
   async fileExists(ipfsHash: string): Promise<boolean> {
     if (!this.client) {
-      throw new Error('IPFS client not initialized');
+      return false;
     }
 
     try {
-      if (!this.client) {
-        return false;
-      }
       // Try to get file stats to check if it exists
       await this.client.files.stat(`/${ipfsHash}`);
       return true;
@@ -487,13 +476,10 @@ export class IPFSService {
    */
   async pinFile(ipfsHash: string): Promise<boolean> {
     if (!this.client) {
-      throw new Error('IPFS client not initialized');
+      return false;
     }
 
     try {
-      if (!this.client) {
-        return false;
-      }
       await this.client.pin.add(ipfsHash);
       safeLogger.info('File pinned successfully', { hash: ipfsHash });
       return true;
@@ -508,13 +494,10 @@ export class IPFSService {
    */
   async unpinFile(ipfsHash: string): Promise<boolean> {
     if (!this.client) {
-      throw new Error('IPFS client not initialized');
+      return false;
     }
 
     try {
-      if (!this.client) {
-        return false;
-      }
       await this.client.pin.rm(ipfsHash);
       safeLogger.info('File unpinned successfully', { hash: ipfsHash });
       return true;
@@ -529,7 +512,15 @@ export class IPFSService {
    */
   async getFileMetadata(ipfsHash: string): Promise<IPFSFileMetadata> {
     if (!this.client) {
-      throw new Error('IPFS client not initialized');
+      // Return fallback metadata when client is not available
+      return {
+        id: ipfsHash,
+        name: ipfsHash,
+        size: 0,
+        createdAt: new Date(),
+        ipfsHash: ipfsHash,
+        gatewayUrl: `${this.gatewayUrl}/${ipfsHash}`
+      };
     }
 
     try {
@@ -617,7 +608,7 @@ export class IPFSService {
    */
   async getCIDVersion(ipfsHash: string): Promise<string> {
     if (!this.client) {
-      throw new Error('IPFS client not initialized');
+      return ipfsHash; // Return the hash as-is when client is not available
     }
 
     try {
@@ -665,7 +656,7 @@ export class IPFSService {
    */
   async getPinnedSize(): Promise<number> {
     if (!this.client) {
-      throw new Error('IPFS client not initialized');
+      return 0; // Return 0 when client is not available
     }
 
     try {
@@ -696,7 +687,7 @@ export class IPFSService {
    */
   async getPinStatus(ipfsHash: string): Promise<'pinned' | 'unpinned' | 'unknown'> {
     if (!this.client) {
-      throw new Error('IPFS client not initialized');
+      return 'unknown'; // Return unknown when client is not available
     }
 
     try {

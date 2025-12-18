@@ -222,7 +222,7 @@ export class IndustryBenchmarkIntegrationService {
       }
 
       await comprehensiveAuditService.logEvent({
-        action: 'benchmark_sync_failed',
+        actionType: 'benchmark_sync_failed',
         actorId: 'system',
         resourceType: 'EXTERNAL_DATA_SOURCE',
         resourceId: sourceId,
@@ -352,7 +352,7 @@ export class IndustryBenchmarkIntegrationService {
       source.errorMessage = undefined;
 
       await comprehensiveAuditService.logEvent({
-        action: 'benchmark_data_synced',
+        actionType: 'benchmark_data_synced',
         actorId: 'system',
         resourceType: 'EXTERNAL_DATA_SOURCE',
         resourceId: source.id,
@@ -555,7 +555,7 @@ export class IndustryBenchmarkIntegrationService {
       }
 
       await comprehensiveAuditService.logEvent({
-        action: 'data_source_added',
+        actionType: 'data_source_added',
         actorId: 'system',
         resourceType: 'EXTERNAL_DATA_SOURCE',
         resourceId: sourceId,
@@ -596,7 +596,7 @@ export class IndustryBenchmarkIntegrationService {
       }
 
       await comprehensiveAuditService.logEvent({
-        action: 'data_source_updated',
+        actionType: 'data_source_updated',
         actorId: 'system',
         resourceType: 'EXTERNAL_DATA_SOURCE',
         resourceId: sourceId,
@@ -630,7 +630,7 @@ export class IndustryBenchmarkIntegrationService {
       this.dataSources.delete(sourceId);
 
       await comprehensiveAuditService.logEvent({
-        action: 'data_source_removed',
+        actionType: 'data_source_removed',
         actorId: 'manual',
         resourceType: 'EXTERNAL_DATA_SOURCE',
         resourceId: sourceId,

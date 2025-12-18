@@ -1,6 +1,7 @@
 import { db } from '../db';
 import { sellers, products, users, categories } from '../db/schema';
 import { eq, and, desc, asc, or } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 
 /**
  * Listing Query Options

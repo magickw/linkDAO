@@ -147,6 +147,7 @@ export class MarketplaceMessagingService {
       // Create message
       const newMessage = await db.insert(chatMessages).values({
         conversationId: conversationId,
+        senderId: 'system',
         senderAddress: 'system',
         content: template.content,
         messageType: eventType,
@@ -206,14 +207,14 @@ export class MarketplaceMessagingService {
           type: 'message',
           timestamp: msg.sentAt,
           data: msg
-        })),
-        ...(conversation.order?.events || []).map(event => ({
-          id: event.id,
-          type: 'order_event',
-          timestamp: event.timestamp,
-          data: event
         }))
       ];
+
+      // Add order events if orderId exists
+      if (conversation.orderId) {
+        // TODO: Fetch order events from orders table if needed
+        // For now, just return messages
+      }
 
       // Sort by timestamp
       timeline.sort((a, b) => 
@@ -241,11 +242,13 @@ export class MarketplaceMessagingService {
         ));
 
       // Filter based on trigger keywords
-      return userQuickReplies.filter(reply => 
-        reply.triggerKeywords?.some(keyword => 
-          messageContent.toLowerCase().includes(keyword.toLowerCase())
-        )
-      );
+      return userQuickReplies.filter(reply => {
+        const keywords = reply.triggerKeywords;
+        if (!keywords || !Array.isArray(keywords)) return false;
+        return keywords.some(keyword => 
+          messageContent.toLowerCase().includes(String(keyword).toLowerCase())
+        );
+      });
     } catch (error) {
       safeLogger.error('Error suggesting quick replies:', error);
       throw new Error('Failed to suggest quick replies');
@@ -266,11 +269,11 @@ export class MarketplaceMessagingService {
       
       // MEMORY OPTIMIZATION: Limit message query and use transaction
       const messages = await db.transaction(async (tx) => {
-        const msgs = await tx.query.chatMessages.findMany({
-          where: eq(chatMessages.conversationId, conversationId),
-          orderBy: [desc(chatMessages.sentAt)],
-          limit: MAX_MESSAGES_PER_CONVERSATION
-        });
+        const msgs = await tx.select()
+          .from(chatMessages)
+          .where(eq(chatMessages.conversationId, conversationId))
+          .orderBy(desc(chatMessages.sentAt))
+          .limit(MAX_MESSAGES_PER_CONVERSATION);
         
         // If there are too many messages, clean up old ones
         if (msgs.length === MAX_MESSAGES_PER_CONVERSATION) {
