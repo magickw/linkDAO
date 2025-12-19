@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { useWeb3 } from '@/context/Web3Context';
+import { useAuth } from '@/context/AuthContext';
 
 /**
  * LegacyFunctionalityPreserver
@@ -11,15 +11,19 @@ import { useWeb3 } from '@/context/Web3Context';
  */
 export default function LegacyFunctionalityPreserver() {
   const router = useRouter();
-  const { isConnected } = useWeb3();
+  const { isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
+    // Wait for auth loading to complete before making redirect decisions
+    if (isLoading) return;
+
     const handleLegacyRoutes = () => {
       const currentPath = router.pathname;
       const query = router.query;
 
       // Redirect old social pages to dashboard
-      if (currentPath === '/social' && isConnected) {
+      // Only redirect if fully authenticated to avoid race conditions
+      if (currentPath === '/social' && isAuthenticated) {
         // Preserve any query parameters and redirect to dashboard with feed view
         const preservedQuery = { ...query, view: 'feed' };
         router.replace({
@@ -32,7 +36,7 @@ export default function LegacyFunctionalityPreserver() {
       // Handle old dashboard URLs with specific views
       if (currentPath === '/dashboard' && query.view) {
         const view = query.view as string;
-        
+
         // Preserve view state in the new dashboard
         if (view === 'feed' || view === 'community') {
           // The new dashboard will handle these views automatically
@@ -53,28 +57,25 @@ export default function LegacyFunctionalityPreserver() {
     };
 
     handleLegacyRoutes();
-  }, [router, isConnected]);
+  }, [router, isAuthenticated, isLoading]);
 
   // Preserve localStorage data from old implementations
   useEffect(() => {
     const preserveLegacyData = () => {
       // Migrate old user preferences from multiple sources
       const oldSocialPreferences = localStorage.getItem('social-preferences');
-      // const oldWeb3SocialPreferences = localStorage.getItem('web3-social-preferences'); // Removed as web3-social is deleted
-      
+
       if (oldSocialPreferences && !localStorage.getItem('dashboard-preferences')) {
         try {
           const socialPrefs = oldSocialPreferences ? JSON.parse(oldSocialPreferences) : {};
-          // const web3SocialPrefs = oldWeb3SocialPreferences ? JSON.parse(oldWeb3SocialPreferences) : {}; // Removed as web3-social is deleted
-          
-          // Merge preferences - web3-social preferences removed
+
+          // Merge preferences
           const mergedPreferences = {
             ...socialPrefs,
-            // ...web3SocialPrefs, // Removed as web3-social is deleted
-            migratedFrom: 'social-page', // Simplified since web3-social is deleted
+            migratedFrom: 'social-page',
             migrationDate: new Date().toISOString()
           };
-          
+
           localStorage.setItem('dashboard-preferences', JSON.stringify(mergedPreferences));
         } catch (error) {
           console.warn('Failed to migrate legacy preferences:', error);
@@ -85,13 +86,13 @@ export default function LegacyFunctionalityPreserver() {
       const oldFeedSettings = typeof window !== 'undefined' && window.localStorage ? localStorage.getItem('feed-settings') : null;
       const oldSocialFeedSettings = typeof window !== 'undefined' && window.localStorage ? localStorage.getItem('social-feed-settings') : null;
       const legacyFeedState = typeof window !== 'undefined' && window.sessionStorage ? sessionStorage.getItem('legacy-feed-state') : null;
-      
+
       if ((oldFeedSettings || oldSocialFeedSettings || legacyFeedState) && typeof window !== 'undefined' && window.localStorage && !localStorage.getItem('dashboard-feed-settings')) {
         try {
           const feedSettings = oldFeedSettings ? JSON.parse(oldFeedSettings) : {};
           const socialFeedSettings = oldSocialFeedSettings ? JSON.parse(oldSocialFeedSettings) : {};
           const feedState = legacyFeedState ? JSON.parse(legacyFeedState) : {};
-          
+
           // Merge all feed settings
           const mergedSettings = {
             ...feedSettings,
@@ -100,11 +101,11 @@ export default function LegacyFunctionalityPreserver() {
             migratedFrom: oldSocialFeedSettings ? 'social-feed' : 'legacy-feed',
             migrationDate: new Date().toISOString()
           };
-          
+
           if (typeof window !== 'undefined' && window.localStorage) {
             localStorage.setItem('dashboard-feed-settings', JSON.stringify(mergedSettings));
           }
-          
+
           // Clean up session storage
           if (legacyFeedState && typeof window !== 'undefined' && window.sessionStorage) {
             sessionStorage.removeItem('legacy-feed-state');
@@ -146,7 +147,7 @@ export default function LegacyFunctionalityPreserver() {
 
       oldEvents.forEach(eventName => {
         // Remove any existing listeners
-        window.removeEventListener(eventName, () => {});
+        window.removeEventListener(eventName, () => { });
       });
 
       // Add compatibility layer for old custom events
@@ -189,7 +190,7 @@ export default function LegacyFunctionalityPreserver() {
   useEffect(() => {
     const preserveScrollPosition = () => {
       if (typeof window === 'undefined' || !window.sessionStorage) return;
-      
+
       const savedPosition = sessionStorage.getItem('legacy-scroll-position');
       if (savedPosition && (router.pathname === '/dashboard' || router.pathname === '/')) {
         try {
@@ -205,7 +206,7 @@ export default function LegacyFunctionalityPreserver() {
     // Save scroll position before navigation
     const handleBeforeUnload = () => {
       if (typeof window === 'undefined' || !window.sessionStorage) return;
-      
+
       sessionStorage.setItem('legacy-scroll-position', JSON.stringify({
         x: window.scrollX,
         y: window.scrollY
@@ -229,40 +230,35 @@ export default function LegacyFunctionalityPreserver() {
     const handleApiCompatibility = () => {
       // Intercept and redirect legacy API calls
       const originalFetch = window.fetch;
-      
-      window.fetch = function(input: RequestInfo | URL, init?: RequestInit) {
+
+      window.fetch = function (input: RequestInfo | URL, init?: RequestInit) {
         // Convert input to string URL for easier manipulation
         let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
-        
+
         // Redirect legacy social API endpoints
         if (url.includes('/api/social/')) {
           url = url.replace('/api/social/', '/api/dashboard/');
         }
-        
+
         // Redirect legacy feed API endpoints
         if (url.includes('/api/feed/')) {
           url = url.replace('/api/feed/', '/api/dashboard/feed/');
         }
-        
-        // Removed web3-social API redirect as the page is deleted
-        // if (url.includes('/api/web3-social/')) {
-        //   url = url.replace('/api/web3-social/', '/api/dashboard/');
-        // }
-        
+
         // Convert back to the appropriate type
-        const newInput = typeof input === 'string' ? url : 
-                        input instanceof URL ? new URL(url) : 
-                        { ...input, url };
-        
+        const newInput = typeof input === 'string' ? url :
+          input instanceof URL ? new URL(url) :
+            { ...input, url };
+
         return originalFetch(newInput, init);
       } as typeof window.fetch;
-      
+
       // Cleanup function to restore original fetch
       return () => {
         window.fetch = originalFetch;
       };
     };
-    
+
     const cleanup = handleApiCompatibility();
     return cleanup;
   }, []);

@@ -47,38 +47,63 @@ export default function CommunityPostSharePage() {
             try {
                 setIsLoading(true);
                 setError(null);
+                console.log(`[CommunityPostSharePage] Fetching post for shareId: ${shareId}`);
 
-                // Fetch community post by share ID - 使用相对路径以自动使用当前域名
-                const response = await fetch(`/cp/${shareId}`);
+                // Fetch community post by share ID - 使用绝对路径确保请求正确
+                const response = await fetch(`${window.location.origin}/cp/${shareId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                });
                 
                 if (!response.ok) {
                     if (response.status === 404) {
                         setError('Community post not found');
                     } else {
-                        setError('Failed to load post');
+                        setError(`Failed to load post (${response.status})`);
                     }
                     return;
                 }
 
+                // 检查响应内容类型
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    setError('Invalid response format');
+                    return;
+                }
+
                 const result = await response.json();
+                console.log('[CommunityPostSharePage] API response:', result);
                 
                 if (result.success && result.data) {
                     // 后端返回的数据格式不同，需要从 result.data.post 获取实际帖子数据
                     const postData = result.data.post as CommunityPost;
                     const canonicalUrl = result.data.canonicalUrl;
                     
+                    console.log('[CommunityPostSharePage] Post data found:', postData);
+                    console.log('[CommunityPostSharePage] Canonical URL:', canonicalUrl);
+                    
                     setPost(postData);
                     setCanonicalUrl(canonicalUrl);
                     
                     // 重定向到规范URL
                     if (canonicalUrl && canonicalUrl !== window.location.pathname) {
+                        console.log('[CommunityPostSharePage] Redirecting to canonical URL:', canonicalUrl);
                         router.replace(canonicalUrl);
                     }
                 } else {
+                    console.log('[CommunityPostSharePage] Post not found in response');
                     setError('Community post not found');
                 }
             } catch (err) {
-                console.error('Error fetching community post:', err);
+                console.error('[CommunityPostSharePage] Error fetching community post:', err);
+                console.error('[CommunityPostSharePage] Error details:', {
+                    message: err instanceof Error ? err.message : 'Unknown error',
+                    stack: err instanceof Error ? err.stack : 'No stack trace',
+                    shareId
+                });
                 setError(err instanceof Error ? err.message : 'Failed to load post');
                 addToast('Failed to load community post', 'error');
             } finally {

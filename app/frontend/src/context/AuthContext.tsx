@@ -94,7 +94,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Only sync auth state once on mount to prevent continuous reloads
   useEffect(() => {
     let mounted = true;
-    
+
     const syncOnce = async () => {
       if (mounted) {
         try {
@@ -104,10 +104,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
     };
-    
+
     // Defer sync to prevent blocking initial render
     const timeoutId = setTimeout(syncOnce, 500);
-    
+
     return () => {
       mounted = false;
       clearTimeout(timeoutId);
@@ -117,7 +117,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     // Only handle wallet changes if there's an actual change
     const sessionStatus = enhancedAuthService.getSessionStatus();
-    
+
     // Skip during initial mount when there's no address yet
     // This prevents premature logout when page loads with a saved session
     if (!address) {
@@ -130,13 +130,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // But we should wait to see if wallet reconnects before logging out
       return;
     }
-    
+
     // Skip if address matches current session (no actual change)
-    if (sessionStatus.address && 
-        address.toLowerCase() === sessionStatus.address.toLowerCase()) {
+    if (sessionStatus.address &&
+      address.toLowerCase() === sessionStatus.address.toLowerCase()) {
       return;
     }
-    
+
     // At this point, either:
     // 1. We have a new address (wallet connected/changed)
     // 2. Address changed from previous session
@@ -165,17 +165,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [address, connector, syncAuthState, addToast]);
 
   const login = useCallback(async (walletAddress: string, connector: any, status: string): Promise<{ success: boolean; error?: string }> => {
-    // Don't set global isLoading - it blocks navigation
-    // Authentication happens in background without blocking UI
+    // Set loading state to prevent premature redirects during auth
+    setIsLoading(true);
     try {
       const result = await enhancedAuthService.authenticateWallet(walletAddress, connector, status);
       if (result.success && result.user) {
-        // Fire-and-forget: Don't await syncAuthState to prevent blocking navigation
-        // This allows navigation to proceed immediately while auth state syncs in background
-        // Use setTimeout to further ensure it doesn't block the event loop
-        setTimeout(() => {
-          syncAuthState().catch(err => console.error('Background auth sync failed:', err));
-        }, 0);
+        // Await state sync to ensure UI reflects authenticated state immediately
+        await syncAuthState();
         addToast('Successfully authenticated!', 'success');
         return { success: true };
       }
@@ -183,6 +179,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
       addToast(error.message, 'error');
       return { success: false, error: error.message };
+    } finally {
+      setIsLoading(false);
     }
   }, [syncAuthState, addToast]);
 

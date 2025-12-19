@@ -65,7 +65,7 @@ export class IPFSService {
       apiUrl = 'http://localhost:5001';
     }
 
-    this.gatewayUrl = process.env.IPFS_GATEWAY_URL || 'https://gateway.pinata.cloud/ipfs';
+    this.gatewayUrl = (process.env.IPFS_GATEWAY_URL || 'https://gateway.pinata.cloud/ipfs').replace(/\/+$/, '');
     this.defaultPinning = process.env.IPFS_DEFAULT_PINNING !== 'false' && !this.isMemoryConstrained; // Disable pinning in constrained environments
 
     // IPFS client not used - we use Pinata REST API directly
@@ -188,10 +188,10 @@ export class IPFSService {
       // Generate a fallback hash for development/testing
       const fallbackHash = `fallback-${Date.now()}-${Math.random().toString(36).substring(7)}`;
       safeLogger.warn('IPFS not available, using fallback hash:', fallbackHash);
-      
-      const size = Buffer.isBuffer(content) ? content.length : 
-                  (typeof content === 'string' ? content.length : 0);
-      
+
+      const size = Buffer.isBuffer(content) ? content.length :
+        (typeof content === 'string' ? content.length : 0);
+
       return {
         id: fallbackHash,
         name: options?.metadata?.name || 'fallback-file',
@@ -239,27 +239,27 @@ export class IPFSService {
     // Since we don't use IPFS client, always use fallback CID generation
     safeLogger.warn('IPFS client not used, generating fallback CID');
     const crypto = require('crypto');
-    const contentBuffer = Buffer.isBuffer(content) ? content : 
-                         (typeof content === 'string' ? Buffer.from(content) : Buffer.from(''));
+    const contentBuffer = Buffer.isBuffer(content) ? content :
+      (typeof content === 'string' ? Buffer.from(content) : Buffer.from(''));
     const hash = crypto.createHash('sha256').update(contentBuffer).digest('hex');
     const fallbackCid = `bafy${hash.substring(0, 42)}`; // Use modern CIDv1 format
 
-      const size = Buffer.isBuffer(content) ? content.length : 
-                  (typeof content === 'string' ? content.length : 0);
+    const size = Buffer.isBuffer(content) ? content.length :
+      (typeof content === 'string' ? content.length : 0);
 
-      const metadata: IPFSFileMetadata = {
-        id: fallbackCid,
-        name: options?.metadata?.name || 'fallback-file',
-        size: size,
-        mimeType: options?.metadata?.mimeType,
-        createdAt: new Date(),
-        ipfsHash: fallbackCid,
-        gatewayUrl: `${this.gatewayUrl}/${fallbackCid}`,
-        tags: options?.metadata?.tags,
-        description: options?.metadata?.description
-      };
+    const metadata: IPFSFileMetadata = {
+      id: fallbackCid,
+      name: options?.metadata?.name || 'fallback-file',
+      size: size,
+      mimeType: options?.metadata?.mimeType,
+      createdAt: new Date(),
+      ipfsHash: fallbackCid,
+      gatewayUrl: `${this.gatewayUrl}/${fallbackCid}`,
+      tags: options?.metadata?.tags,
+      description: options?.metadata?.description
+    };
 
-      return metadata;
+    return metadata;
   }
 
   /**
@@ -279,7 +279,7 @@ export class IPFSService {
         Buffer.isBuffer(file.content) ? file.content : Buffer.from(file.content)
       ).digest('hex');
       const fileCid = `bafy${hash.substring(0, 42)}`;
-      
+
       fileList.push({
         id: fileCid,
         name: file.path,
@@ -380,41 +380,41 @@ export class IPFSService {
   async downloadFile(ipfsHash: string): Promise<IPFSDownloadResult> {
     // In memory-constrained environments, use direct gateway access
     if (this.isMemoryConstrained || !this.client) {
-        try {
-          const startTime = Date.now();
-          safeLogger.info('Starting IPFS download via gateway (memory-constrained)', { hash: ipfsHash });
+      try {
+        const startTime = Date.now();
+        safeLogger.info('Starting IPFS download via gateway (memory-constrained)', { hash: ipfsHash });
 
-          // Use axios directly to avoid loading IPFS client
-          const response = await axios.get(`${this.gatewayUrl}/${ipfsHash}`, {
-            timeout: 10000,
-            responseType: 'arraybuffer' // More memory efficient
-          });
+        // Use axios directly to avoid loading IPFS client
+        const response = await axios.get(`${this.gatewayUrl}/${ipfsHash}`, {
+          timeout: 10000,
+          responseType: 'arraybuffer' // More memory efficient
+        });
 
-          const content = Buffer.from(response.data);
-          const size = content.length;
+        const content = Buffer.from(response.data);
+        const size = content.length;
 
-          // Create metadata
-          const metadata: IPFSFileMetadata = {
-            id: ipfsHash,
-            name: `file-${ipfsHash.slice(0, 8)}`,
-            size: size,
-            createdAt: new Date(),
-            ipfsHash: ipfsHash,
-            gatewayUrl: `${this.gatewayUrl}/${ipfsHash}`
-          };
+        // Create metadata
+        const metadata: IPFSFileMetadata = {
+          id: ipfsHash,
+          name: `file-${ipfsHash.slice(0, 8)}`,
+          size: size,
+          createdAt: new Date(),
+          ipfsHash: ipfsHash,
+          gatewayUrl: `${this.gatewayUrl}/${ipfsHash}`
+        };
 
-          const endTime = Date.now();
-          safeLogger.info(`IPFS download completed via gateway`, {
-            hash: ipfsHash,
-            size: size,
-            duration: endTime - startTime
-          });
+        const endTime = Date.now();
+        safeLogger.info(`IPFS download completed via gateway`, {
+          hash: ipfsHash,
+          size: size,
+          duration: endTime - startTime
+        });
 
-          return { content, metadata };
-        } catch (error) {
-          safeLogger.error(`IPFS gateway download failed for ${ipfsHash}:`, error);
-          throw new Error(`IPFS download failed: ${error instanceof Error ? error.message : String(error)}`);
-        }
+        return { content, metadata };
+      } catch (error) {
+        safeLogger.error(`IPFS gateway download failed for ${ipfsHash}:`, error);
+        throw new Error(`IPFS download failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
 
     try {
@@ -758,8 +758,16 @@ export class IPFSService {
    */
   getGatewayUrl(ipfsHash?: string): string {
     // Using Pinata gateway
-    const gateway = 'https://gateway.pinata.cloud/ipfs/';
-    return ipfsHash ? `${gateway}${ipfsHash}` : gateway;
+    const gateway = 'https://gateway.pinata.cloud/ipfs';
+
+    // Ensure both parts don't have conflicting slashes
+    if (ipfsHash) {
+      // If hash starts with /, remove it since we'll add one separator
+      const cleanHash = ipfsHash.startsWith('/') ? ipfsHash.substring(1) : ipfsHash;
+      return `${gateway}/${cleanHash}`;
+    }
+
+    return `${gateway}/`;
   }
 }
 

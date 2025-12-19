@@ -129,8 +129,17 @@ class SellerListingService {
   ): Promise<{ listings: ProductListing[]; total: number; page: number; pageSize: number }> {
     try {
       // Normalize wallet address to lowercase for case-insensitive comparison
-      const normalizedAddress = walletAddress.toLowerCase();
-      safeLogger.info('Fetching seller listings', { walletAddress: normalizedAddress, options });
+      // Handle both formats: with and without '0x' prefix
+      let normalizedAddress = walletAddress.toLowerCase();
+      if (!normalizedAddress.startsWith('0x') && /^[a-f0-9]{40}$/.test(normalizedAddress)) {
+        normalizedAddress = '0x' + normalizedAddress;
+      } else if (normalizedAddress.startsWith('0x') && normalizedAddress.length === 42) {
+        // Already in correct format
+      } else if (!normalizedAddress.startsWith('0x') && normalizedAddress.length === 40) {
+        normalizedAddress = '0x' + normalizedAddress;
+      }
+      
+      safeLogger.info('Fetching seller listings', { originalWalletAddress: walletAddress, normalizedAddress, options });
 
       const {
         status,
@@ -140,33 +149,31 @@ class SellerListingService {
         sortOrder = 'desc',
       } = options;
 
-      // Verify seller exists and get seller ID
-      const sellerResult = await db.select().from(sellers).where(eq(sellers.walletAddress, normalizedAddress));
-      const seller = sellerResult[0];
-
-      if (!seller) {
-        safeLogger.info('Seller profile not found, returning empty listings', { walletAddress: normalizedAddress });
-        return {
-          listings: [],
-          total: 0,
-          page: Math.floor(offset / limit) + 1,
-          pageSize: limit
-        };
-      }
-
-      // Get user ID for seller
+      // Verify seller exists and get user ID
+      // Query users table instead of sellers table to match the foreign key relationship
       const userResult = await db.select().from(users).where(eq(users.walletAddress, normalizedAddress));
-      const user = userResult[0];
+      let user = userResult[0];
 
       if (!user) {
-        safeLogger.info('User not found for seller, returning empty listings', { walletAddress: normalizedAddress });
-        return {
-          listings: [],
-          total: 0,
-          page: Math.floor(offset / limit) + 1,
-          pageSize: limit
-        };
+        // Try without 0x prefix as fallback
+        const fallbackAddress = normalizedAddress.startsWith('0x') ? normalizedAddress.substring(2) : normalizedAddress;
+        const fallbackUserResult = await db.select().from(users).where(eq(users.walletAddress, fallbackAddress));
+        user = fallbackUserResult[0];
+        
+        if (!user) {
+          safeLogger.info('User not found for seller, returning empty listings', { walletAddress: normalizedAddress, fallbackAddress });
+          return {
+            listings: [],
+            total: 0,
+            page: Math.floor(offset / limit) + 1,
+            pageSize: limit
+          };
+        }
       }
+
+      // Get seller profile for additional info if needed
+      const sellerResult = await db.select().from(sellers).where(eq(sellers.walletAddress, normalizedAddress));
+      const seller = sellerResult[0];
 
     safeLogger.info('Querying products for seller', { 
       userId: user.id, 
@@ -216,7 +223,7 @@ class SellerListingService {
           return {
             id: listing.id,
             sellerId: listing.sellerId,
-            sellerAddress: walletAddress,
+            sellerAddress: user?.walletAddress || normalizedAddress,
             title: listing.title,
             description: listing.description,
             price: listing.priceAmount?.toString() || '0',
@@ -242,7 +249,7 @@ class SellerListingService {
           return {
             id: listing.id,
             sellerId: listing.sellerId,
-            sellerAddress: walletAddress,
+            sellerAddress: user?.walletAddress || normalizedAddress,
             title: listing.title,
             description: listing.description,
             price: listing.priceAmount?.toString() || '0',

@@ -27,12 +27,18 @@ router.get('/seller/:walletAddress',
   async (req: Request, res: Response) => {
     try {
       const { walletAddress } = req.params;
-
-      // Validate wallet address format
-      if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+  
+      // Validate wallet address format - more flexible validation
+      if (!walletAddress) {
         return validationErrorResponse(res, [
-          { field: 'walletAddress', message: 'Invalid wallet address format' }
-        ], 'Invalid wallet address');
+          { field: 'walletAddress', message: 'Wallet address is required' }
+        ], 'Wallet address required');
+      }
+          
+      // Basic validation - check if it looks like a wallet address
+      if (!/^0x[a-fA-F0-9]{40,42}$/.test(walletAddress) && !/^[a-zA-Z0-9]{40,44}$/.test(walletAddress)) {
+        console.warn('Invalid wallet address format received in seller profile request:', walletAddress);
+        // Still process the request but log the warning
       }
 
       const profile = await sellerProfileService.getProfile(walletAddress);

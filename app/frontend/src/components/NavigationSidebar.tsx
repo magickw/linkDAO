@@ -198,16 +198,21 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
       switch (action.id) {
         case 'send':
           // In the navigation sidebar, we might want to redirect to the full wallet page
-          window.location.href = '/wallet';
+          // Use client-side navigation instead of full reload
+          await navigateToFeed(); // Clear current view state
+          router.push('/wallet?tab=send');
           break;
         case 'receive':
-          window.location.href = '/wallet';
+          await navigateToFeed();
+          router.push('/wallet?tab=receive');
           break;
         case 'swap':
-          window.location.href = '/wallet';
+          await navigateToFeed();
+          router.push('/wallet?tab=swap');
           break;
         case 'stake':
-          window.location.href = '/wallet';
+          await navigateToFeed();
+          router.push('/wallet?tab=stake');
           break;
         default:
           await action.action();

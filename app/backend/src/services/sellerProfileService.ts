@@ -23,13 +23,29 @@ export class SellerProfileService {
         throw new Error('Invalid wallet address format');
       }
 
+      // Normalize wallet address to handle both formats with and without 0x prefix
+      const normalizedAddress = walletAddress.toLowerCase();
+      const cleanAddress = normalizedAddress.startsWith('0x') ? normalizedAddress : '0x' + normalizedAddress;
+      
       const [seller] = await db
         .select()
         .from(sellers)
-        .where(eq(sellers.walletAddress, walletAddress.toLowerCase()))
+        .where(eq(sellers.walletAddress, cleanAddress))
         .limit(1);
 
+      // If not found, try without 0x prefix as fallback
       if (!seller) {
+        const fallbackAddress = cleanAddress.startsWith('0x') ? cleanAddress.substring(2) : cleanAddress;
+        const [fallbackSeller] = await db
+          .select()
+          .from(sellers)
+          .where(eq(sellers.walletAddress, fallbackAddress))
+          .limit(1);
+          
+        if (fallbackSeller) {
+          return this.mapSellerToProfile(fallbackSeller);
+        }
+        
         return null;
       }
 
@@ -135,6 +151,10 @@ export class SellerProfileService {
         throw new Error('Invalid ENS handle format');
       }
 
+      // Normalize wallet address to handle both formats with and without 0x prefix
+      const normalizedAddress = walletAddress.toLowerCase();
+      const cleanAddress = normalizedAddress.startsWith('0x') ? normalizedAddress : '0x' + normalizedAddress;
+
       // Check if profile exists
       const existingProfile = await this.getProfile(walletAddress);
       if (!existingProfile) {
@@ -196,7 +216,7 @@ export class SellerProfileService {
           onboardingCompleted: this.calculateOnboardingCompletion(updatedOnboardingSteps),
           updatedAt: new Date(),
         })
-        .where(eq(sellers.walletAddress, walletAddress))
+        .where(eq(sellers.walletAddress, cleanAddress))
         .returning();
 
       const seller = result[0];
@@ -377,7 +397,7 @@ export class SellerProfileService {
           ...dbUpdates,
           updatedAt: new Date(),
         })
-        .where(eq(sellers.walletAddress, walletAddress));
+        .where(eq(sellers.walletAddress, cleanAddress));
 
       safeLogger.info('Onboarding steps updated successfully:', { walletAddress, step, completed });
 
@@ -568,8 +588,10 @@ export class SellerProfileService {
   }
 
   private isValidWalletAddress(address: string): boolean {
-    // Basic Ethereum address validation (0x followed by 40 hex characters)
-    return /^0x[a-fA-F0-9]{40}$/.test(address);
+    // More flexible Ethereum address validation
+    // Accept both with and without 0x prefix
+    const cleanAddress = address.toLowerCase().startsWith('0x') ? address.substring(2) : address;
+    return /^[a-f0-9]{40}$/.test(cleanAddress);
   }
 
   private isValidEnsHandle(ensHandle: string): boolean {
