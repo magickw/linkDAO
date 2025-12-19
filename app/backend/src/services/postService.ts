@@ -196,6 +196,7 @@ export class PostService {
         author: input.author,
         parentId: input.parentId || null,
         contentCid,
+        shareId: dbPost.shareId || '', // Include shareId from database
         mediaCids,
         tags: input.tags || [],
         createdAt,
@@ -251,6 +252,7 @@ export class PostService {
           parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
           content: dbPost.content,
           contentCid: dbPost.contentCid,
+          shareId: dbPost.shareId || '', // Include shareId for share URLs
           mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
           tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
           createdAt: dbPost.createdAt || new Date(),
@@ -264,6 +266,7 @@ export class PostService {
         parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
         content: dbPost.content,
         contentCid: dbPost.contentCid,
+        shareId: dbPost.shareId || '', // Include shareId for share URLs
         mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
         tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
         createdAt: dbPost.createdAt || new Date(),
@@ -296,6 +299,7 @@ export class PostService {
           parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
           content: dbPost.content,
           contentCid: dbPost.contentCid,
+          shareId: dbPost.shareId || '', // Include shareId for share URLs
           mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
           tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
           createdAt: dbPost.createdAt || new Date(),
@@ -309,6 +313,7 @@ export class PostService {
         parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
         content: dbPost.content,
         contentCid: dbPost.contentCid,
+        shareId: dbPost.shareId || '', // Include shareId for share URLs
         mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
         tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
         createdAt: dbPost.createdAt || new Date(),
@@ -476,6 +481,7 @@ export class PostService {
         author: existingPost.author,
         parentId: existingPost.parentId,
         contentCid,
+        shareId: updated.shareId || existingPost.shareId || '', // Include shareId
         mediaCids,
         tags: input.tags || existingPost.tags,
         createdAt: existingPost.createdAt,
@@ -546,6 +552,7 @@ export class PostService {
             parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
             content: dbPost.content,
             contentCid: dbPost.contentCid,
+            shareId: dbPost.shareId || '', // Include shareId
             mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
             tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
             createdAt,
@@ -617,6 +624,7 @@ export class PostService {
           parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
           content: dbPost.content,
           contentCid: dbPost.contentCid,
+          shareId: dbPost.shareId || '', // Include shareId
           mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
           tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
           createdAt,

@@ -449,9 +449,11 @@ class SellerService {
   // Listings Management - Using Unified API Client
   async getListings(walletAddress: string, status?: string): Promise<SellerListing[]> {
     try {
-      console.log(`Fetching listings for: ${walletAddress}`, status ? `with status: ${status}` : '');
+      console.log(`[SellerService] Fetching listings for: ${walletAddress}`, status ? `with status: ${status}` : '');
       const backendListings = await unifiedSellerAPIClient.getListings(walletAddress, status);
 
+      console.log(`[SellerService] Backend returned ${backendListings.length} listings`);
+      
       // Transform backend data to match SellerListing interface
       return backendListings.map((listing: any): SellerListing => {
         // Extract enhanced data if available
@@ -493,7 +495,7 @@ class SellerService {
         };
       });
     } catch (error) {
-      console.error('Error fetching listings:', error);
+      console.error('[SellerService] Error fetching listings:', error);
       return [];
     }
   }

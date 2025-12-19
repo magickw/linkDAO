@@ -1294,6 +1294,7 @@ export class CommunityService {
           title: posts.title,
           content: posts.content,
           contentCid: posts.contentCid,
+          shareId: posts.shareId, // Include shareId for share URLs
           parentId: posts.parentId,
           mediaCids: posts.mediaCids,
           tags: posts.tags,

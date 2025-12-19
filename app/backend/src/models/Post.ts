@@ -4,6 +4,7 @@ export interface Post {
   parentId: string | null;
   content?: string; // Direct content from DB to avoid IPFS fetch
   contentCid: string;
+  shareId: string; // Share ID for generating share URLs
   mediaCids: string[];
   tags: string[];
   createdAt: Date;

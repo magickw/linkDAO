@@ -92,12 +92,16 @@ export default function SharePostModal({
 
   // Generate share text
   const getShareText = () => {
-    const content = post.title || post.contentCid;
+    // Use actual content if available, otherwise fallback to title
+    const content = (post as any).content || post.title || 'Check out this interesting post';
     const truncatedContent = content.length > 100
       ? content.substring(0, 100) + '...'
       : content;
 
-    return `Check out this post by ${post.author}: "${truncatedContent}"`;
+    // Use author's handle if available, otherwise fallback to wallet address
+    const authorName = post.authorProfile?.handle || getDisplayName(post);
+    
+    return `Check out this post by ${authorName}: "${truncatedContent}"`;
   };
 
   // Share options
@@ -302,9 +306,11 @@ export default function SharePostModal({
                   <div className="font-medium mb-1">{post.title}</div>
                 )}
                 <div className="line-clamp-3">
-                  {(post as any).content && (post as any).content.length > 150
-                    ? (post as any).content.substring(0, 150) + '...'
-                    : (post as any).content || post.contentCid.substring(0, 150) + '...'}
+                  {(post as any).content 
+                    ? ((post as any).content.length > 150
+                        ? (post as any).content.substring(0, 150) + '...'
+                        : (post as any).content)
+                    : 'No content preview available'}
                 </div>
               </div>
             </div>

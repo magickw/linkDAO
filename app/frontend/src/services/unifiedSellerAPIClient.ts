@@ -562,15 +562,30 @@ export class UnifiedSellerAPIClient {
     const url = status
       ? `${this.endpoints.getListings(walletAddress)}?status=${status}`
       : this.endpoints.getListings(walletAddress);
-    const response = await this.request<{ listings: SellerListing[]; total: number } | SellerListing[]>(url, undefined, true);
+    
+    try {
+      console.log('[SellerAPI] Fetching listings for wallet:', walletAddress, 'URL:', url);
+      
+      const response = await this.request<{ listings: SellerListing[]; total: number } | SellerListing[]>(url, undefined, true);
 
-    // Handle both array response and paginated response format
-    if (Array.isArray(response)) {
-      return response;
-    } else if (response && 'listings' in response && Array.isArray(response.listings)) {
-      return response.listings;
+      console.log('[SellerAPI] Listings response:', response);
+      
+      // Handle both array response and paginated response format
+      if (Array.isArray(response)) {
+        console.log('[SellerAPI] Returning array response with', response.length, 'listings');
+        return response;
+      } else if (response && typeof response === 'object' && 'listings' in response && Array.isArray(response.listings)) {
+        console.log('[SellerAPI] Returning paginated response with', response.listings.length, 'listings');
+        return response.listings;
+      }
+      
+      console.log('[SellerAPI] Returning empty array - unexpected response format');
+      return [];
+    } catch (error) {
+      console.error('[SellerAPI] Error fetching listings:', error);
+      // Return empty array instead of throwing to prevent UI crashes
+      return [];
     }
-    return [];
   }  async createListing(listingData: Partial<SellerListing>): Promise<SellerListing> {
     return await this.request<SellerListing>(this.endpoints.createListing(), {
       method: 'POST',

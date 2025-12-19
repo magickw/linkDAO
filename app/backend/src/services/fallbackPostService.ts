@@ -13,6 +13,7 @@ export class FallbackPostService {
         author: input.author,
         parentId: input.parentId || null,
         contentCid: `content_${Date.now()}`, // Mock CID
+        shareId: `fallback_${Date.now()}`, // Mock shareId
         mediaCids: input.media ? input.media.map((_, i) => `media_${Date.now()}_${i}`) : [],
         tags: input.tags || [],
         createdAt: new Date(),

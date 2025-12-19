@@ -133,6 +133,9 @@ export default function Home() {
   // Initialize WebSocket instance without auto-connecting
   const webSocket = useWebSocket(webSocketConfig);
 
+  // Track WebSocket connection status to avoid multiple connections
+  const wsConnectedRef = useRef(false);
+
   useEffect(() => {
     if (isConnected) {
       // Use setTimeout to defer both content loading and WebSocket connection
@@ -147,10 +150,14 @@ export default function Home() {
 
         // Then defer WebSocket connection establishment separately
         setTimeout(() => {
-          if (isMounted.current && !webSocket.isConnected) {
+          if (isMounted.current && !wsConnectedRef.current) {
             setIsConnectionStabilized(true);
             // Connect WebSocket only after wallet is connected and page has stabilized
-            webSocket.connect().catch(console.error);
+            webSocket.connect().then(() => {
+              if (isMounted.current) {
+                wsConnectedRef.current = true;
+              }
+            }).catch(console.error);
           }
         }, 200); // Longer delay to ensure navigation is complete
       };
@@ -163,6 +170,7 @@ export default function Home() {
         // Disconnect WebSocket when leaving the page
         if (webSocket && typeof webSocket.disconnect === 'function') {
           webSocket.disconnect();
+          wsConnectedRef.current = false; // Reset connection status
         }
       };
     } else {
@@ -171,17 +179,12 @@ export default function Home() {
       // Disconnect WebSocket when wallet is disconnected
       if (webSocket && typeof webSocket.disconnect === 'function') {
         webSocket.disconnect();
+        wsConnectedRef.current = false; // Reset connection status
       }
     }
   }, [isConnected, webSocket]);
 
-  // Initialize WebSocket for real-time updates with proper cleanup
-  // Only connect when wallet is connected AND navigation is complete
-  const { isConnected: wsConnected, subscribe, on, off } = useWebSocket({
-    walletAddress: address || '',
-    autoConnect: shouldConnectWebSocket && !!address && isMounted.current,
-    autoReconnect: true
-  });
+
 
   // Handle feed refresh with useCallback for stable reference
   const handleRefreshFeed = useCallback(() => {
@@ -283,13 +286,16 @@ export default function Home() {
       console.log('[HomePage] Route change complete:', url);
       
       // Re-enable WebSocket if we're back on home page
+      // Use requestAnimationFrame to ensure this doesn't block the navigation
       if (router.pathname === '/') {
-        // Only reconnect if wallet is connected and WebSocket is not already connected
-        setTimeout(() => {
-          if (isConnected && webSocket && typeof webSocket.connect === 'function' && !webSocket.isConnected) {
-            webSocket.connect().catch(console.error);
-          }
-        }, 100);
+        requestAnimationFrame(() => {
+          // Only reconnect if wallet is connected and WebSocket is not already connected
+          setTimeout(() => {
+            if (isConnected && webSocket && typeof webSocket.connect === 'function' && !webSocket.isConnected) {
+              webSocket.connect().catch(console.error);
+            }
+          }, 500); // Additional delay to ensure navigation has fully completed
+        });
       }
     };
 

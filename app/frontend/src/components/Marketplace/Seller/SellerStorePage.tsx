@@ -275,7 +275,8 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
             profilePicture: sellerProfile.profilePicture,
             profileImageCdn: sellerProfile.profileImageCdn,
             bio: sellerProfile.bio,
-            description: sellerProfile.description
+            description: sellerProfile.description,
+            walletAddress: sellerProfile.walletAddress
           });
           
           // Transform and update seller data (same logic as in useEffect)
@@ -351,6 +352,27 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
           };
           
           setSeller(transformedSeller);
+          
+          // Fetch listings using the actual wallet address from the profile
+          try {
+            const { sellerService } = await import('@/services/sellerService');
+            const actualWalletAddress = transformedSeller.walletAddress;
+            const sellerListings = await sellerService.getListings(actualWalletAddress);
+            
+            if (sellerListings && sellerListings.length > 0) {
+              // Transform seller listings to unified format
+              const transformedListings: UnifiedSellerListing[] = sellerListings.map(listing => {
+                const transformResult = unifiedSellerService.transformExternalListing(listing, 'seller');
+                return transformResult.data;
+              });
+              setListings(transformedListings);
+            } else {
+              setListings([]);
+            }
+          } catch (listingsError) {
+            console.warn('Failed to fetch seller listings during refresh:', listingsError);
+            setListings([]);
+          }
         } else {
           // If seller not found, set error state instead of using mock data
           setError('Seller profile not found or unavailable');
@@ -517,7 +539,10 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
       // Fetch seller listings with error handling
       try {
         const { sellerService } = await import('@/services/sellerService');
-        const sellerListings = await sellerService.getListings(sellerId);
+        // Use the actual wallet address from the seller profile instead of the sellerId parameter
+        // This ensures we're using the correct identifier for fetching listings
+        const actualWalletAddress = sellerProfile?.walletAddress || sellerId;
+        const sellerListings = await sellerService.getListings(actualWalletAddress);
         
         if (sellerListings && sellerListings.length > 0) {
           // Transform seller listings to unified format
