@@ -23,6 +23,7 @@ router.get('/feed', postController.getFeed.bind(postController));
 router.get('/author/:author', postController.getPostsByAuthor.bind(postController));
 router.get('/tag/:tag', postController.getPostsByTag.bind(postController));
 router.get('/community/:communityId', postController.getPostsByCommunity.bind(postController));
+router.get('/share/:shareId', postController.getPostByShareId.bind(postController));
 router.get('/:id', postController.getPostById.bind(postController));
 router.put('/:id', authMiddleware, csrfProtection, postController.updatePost.bind(postController));
 router.delete('/:id', authMiddleware, csrfProtection, postController.deletePost.bind(postController));

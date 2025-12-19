@@ -101,6 +101,30 @@ export class PostController {
     }
   }
 
+  async getPostByShareId(req: Request, res: Response): Promise<Response> {
+    try {
+      const { shareId } = req.params;
+      const post = await this.postService.getPostByShareId(shareId);
+
+      if (!post) {
+        return res.status(404).json({
+          success: false,
+          error: 'Post not found'
+        });
+      }
+
+      return res.json({
+        success: true,
+        data: post
+      });
+    } catch (error: any) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve post'
+      });
+    }
+  }
+
   async getFeed(req: Request, res: Response): Promise<Response> {
     try {
       const { forUser } = req.query;

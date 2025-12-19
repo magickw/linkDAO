@@ -111,6 +111,7 @@ router.get('/feed', safeBind(quickPostController.getQuickPostFeed, quickPostCont
 router.get('/csrf-token', safeBind(quickPostController.getCsrfToken, quickPostController));
 router.get('/author/:authorId', safeBind(quickPostController.getQuickPostsByAuthor, quickPostController));
 router.get('/tag/:tag', safeBind(quickPostController.getQuickPostsByTag, quickPostController));
+router.get('/share/:shareId', safeBind(quickPostController.getQuickPostByShareId, quickPostController));
 router.get('/:id', safeBind(quickPostController.getQuickPost, quickPostController));
 router.put('/:id', authMiddleware, csrfProtection, safeBind(quickPostController.updateQuickPost, quickPostController));
 router.delete('/:id', authMiddleware, csrfProtection, safeBind(quickPostController.deleteQuickPost, quickPostController));

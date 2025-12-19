@@ -173,6 +173,7 @@ export class DatabaseService {
       const result = await this.db
         .select({
           id: schema.posts.id,
+          shareId: schema.posts.shareId,
           authorId: schema.posts.authorId,
           title: schema.posts.title,
           content: schema.posts.content,
@@ -198,6 +199,41 @@ export class DatabaseService {
       return result[0] || null;
     } catch (error) {
       safeLogger.error("Error getting post by ID:", error);
+      throw error;
+    }
+  }
+
+  async getPostByShareId(shareId: string) {
+    try {
+      const result = await this.db
+        .select({
+          id: schema.posts.id,
+          shareId: schema.posts.shareId,
+          authorId: schema.posts.authorId,
+          title: schema.posts.title,
+          content: schema.posts.content,
+          contentCid: schema.posts.contentCid,
+          parentId: schema.posts.parentId,
+          mediaCids: schema.posts.mediaCids,
+          tags: schema.posts.tags,
+          stakedValue: schema.posts.stakedValue,
+          reputationScore: schema.posts.reputationScore,
+          dao: schema.posts.dao,
+          communityId: schema.posts.communityId,
+          pollId: schema.posts.pollId,
+          isTokenGated: schema.posts.isTokenGated,
+          gatedContentPreview: schema.posts.gatedContentPreview,
+          moderationStatus: schema.posts.moderationStatus,
+          moderationWarning: schema.posts.moderationWarning,
+          riskScore: schema.posts.riskScore,
+          createdAt: schema.posts.createdAt,
+          updatedAt: schema.posts.updatedAt,
+        })
+        .from(schema.posts)
+        .where(eq(schema.posts.shareId, shareId));
+      return result[0] || null;
+    } catch (error) {
+      safeLogger.error("Error getting post by share ID:", error);
       throw error;
     }
   }

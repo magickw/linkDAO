@@ -15,6 +15,8 @@ import { Send, Vote, TrendingUp, Users, MessageCircle, RefreshCw, Award, Video, 
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import SupportWidget from '@/components/SupportWidget';
 import { newsletterService } from '@/services/newsletterService';
+import { usePostModalManager } from '@/hooks/usePostModalManager';
+import PostModal from '@/components/PostModal';
 
 // Lazy load heavy components
 const SmartRightSidebar = lazy(() => import('@/components/SmartRightSidebar/SmartRightSidebar').catch(() => ({ default: () => <div>Failed to load sidebar</div> })));
@@ -68,6 +70,7 @@ export default function Home() {
   const { createPost, isLoading: isCreatingPost } = useCreatePost();
   const { profile } = useProfile(address);
   const { navigationState, openModal, closeModal } = useNavigation();
+  const postModalManager = usePostModalManager();
 
   // Removed deferredConnected state - it was causing navigation blocking
   // by triggering heavy re-renders with startTransition when wallet connects
@@ -1193,6 +1196,13 @@ export default function Home() {
             </div>
           </BottomSheet>
         </Suspense>
+
+        {/* Post Modal */}
+        <PostModal
+          post={postModalManager.post}
+          isOpen={postModalManager.isOpen}
+          onClose={postModalManager.closeModal}
+        />
       </Layout>
     </>
   );

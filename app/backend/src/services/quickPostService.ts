@@ -4,6 +4,7 @@ import { eq, and, sql, desc, asc, isNull } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 import { trendingCacheService } from './trendingCacheService';
 import { getWebSocketService } from './webSocketService';
+import { generateShareId } from '../utils/shareIdGenerator';
 
 // Define interfaces for input data
 interface QuickPostInput {
@@ -47,6 +48,7 @@ export class QuickPostService {
       const insertData: any = {
         authorId: postData.authorId,
         contentCid: postData.contentCid, // This is now the CID, not the actual content
+        shareId: generateShareId(8), // Generate short, shareable ID
       };
 
       // Add optional fields only if they exist in the schema
@@ -126,6 +128,7 @@ export class QuickPostService {
       const posts = await db
         .select({
           id: quickPosts.id,
+          shareId: quickPosts.shareId,
           authorId: quickPosts.authorId,
           contentCid: quickPosts.contentCid,
           parentId: quickPosts.parentId,
@@ -152,6 +155,41 @@ export class QuickPostService {
     } catch (error) {
       safeLogger.error('Error getting quick post:', error);
       throw new Error('Failed to retrieve quick post');
+    }
+  }
+
+  async getQuickPostByShareId(shareId: string) {
+    try {
+      const posts = await db
+        .select({
+          id: quickPosts.id,
+          shareId: quickPosts.shareId,
+          authorId: quickPosts.authorId,
+          contentCid: quickPosts.contentCid,
+          parentId: quickPosts.parentId,
+          mediaCids: quickPosts.mediaCids,
+          tags: quickPosts.tags,
+          stakedValue: quickPosts.stakedValue,
+          reputationScore: quickPosts.reputationScore,
+          isTokenGated: quickPosts.isTokenGated,
+          gatedContentPreview: quickPosts.gatedContentPreview,
+          moderationStatus: quickPosts.moderationStatus,
+          moderationWarning: quickPosts.moderationWarning,
+          riskScore: quickPosts.riskScore,
+          createdAt: quickPosts.createdAt,
+          updatedAt: quickPosts.updatedAt,
+          walletAddress: users.walletAddress,
+          handle: users.handle
+        })
+        .from(quickPosts)
+        .leftJoin(users, eq(quickPosts.authorId, users.id))
+        .where(eq(quickPosts.shareId, shareId))
+        .limit(1);
+
+      return posts[0] || null;
+    } catch (error) {
+      safeLogger.error('Error getting quick post by share ID:', error);
+      throw new Error('Failed to retrieve quick post by share ID');
     }
   }
 

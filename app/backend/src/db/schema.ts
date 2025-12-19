@@ -73,6 +73,7 @@ export const users = pgTable("users", {
 // Posts
 export const posts = pgTable("posts", {
   id: serial("id").primaryKey(),
+  shareId: varchar("share_id", { length: 16 }), // Short, shareable ID for community posts
   authorId: uuid("author_id").references(() => users.id),
   title: text("title"), // Making title nullable to handle existing data
   content: text("content"), // Actual post content (fallback when IPFS unavailable)
@@ -110,6 +111,7 @@ export const posts = pgTable("posts", {
     columns: [t.communityId],
     foreignColumns: [communities.id]
   }),
+  shareIdIdx: index("idx_posts_share_id").on(t.shareId),
   communityIdIdx: index("idx_posts_community_id").on(t.communityId),
   tokenGatedIdx: index("idx_posts_token_gated").on(t.isTokenGated),
 }));
@@ -117,6 +119,7 @@ export const posts = pgTable("posts", {
 // Quick Posts - for home/feed posts (no title or community required)
 export const quickPosts = pgTable("quick_posts", {
   id: uuid("id").defaultRandom().primaryKey(),
+  shareId: varchar("share_id", { length: 16 }).notNull().unique(), // Short, shareable ID for URLs
   authorId: uuid("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   content: text("content"), // Actual post content (fallback when IPFS unavailable)
   contentCid: text("content_cid").notNull(),
@@ -143,6 +146,7 @@ export const quickPosts = pgTable("quick_posts", {
     columns: [t.parentId],
     foreignColumns: [quickPosts.id]
   }),
+  shareIdIdx: index("idx_quick_posts_share_id").on(t.shareId),
   moderationStatusIdx: index("idx_quick_posts_moderation_status").on(t.moderationStatus),
   authorIdIdx: index("idx_quick_posts_author_id").on(t.authorId),
   createdAtIdx: index("idx_quick_posts_created_at").on(t.createdAt),

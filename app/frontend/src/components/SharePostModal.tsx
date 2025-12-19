@@ -70,11 +70,21 @@ export default function SharePostModal({
   const [isSharing, setIsSharing] = useState(false);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
 
-  // Generate post URL
+  // Generate share URL
   const getPostUrl = () => {
     const baseUrl = window.location.origin;
+    
+    // Check if post has shareId (new format)
+    if ((post as any).shareId) {
+      // Use short share URL
+      if (postType === 'community' && post.communityId) {
+        return `${baseUrl}/cp/${(post as any).shareId}`;
+      }
+      return `${baseUrl}/p/${(post as any).shareId}`;
+    }
+    
+    // Fallback to old format for posts without shareId
     if (postType === 'community' && post.communityId) {
-      // Use /communities/ instead of /dao/ since dao concept was removed
       return `${baseUrl}/communities/${post.communityId}/posts/${post.id}`;
     }
     return `${baseUrl}/post/${post.id}`;

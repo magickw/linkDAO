@@ -275,6 +275,51 @@ export class PostService {
     }
   }
 
+  async getPostByShareId(shareId: string): Promise<Post | undefined> {
+    try {
+      // Fetch the post from database by share_id
+      const dbPost = await databaseService.getPostByShareId(shareId);
+
+      if (!dbPost) {
+        safeLogger.info(`Post not found with share ID: ${shareId}`);
+        return undefined;
+      }
+
+      // Get user profile for author info
+      const author = dbPost.authorId ? await userProfileService.getProfileById(dbPost.authorId) : null;
+      if (!author) {
+        safeLogger.info(`Author not found for post share ID: ${shareId}, authorId: ${dbPost.authorId}`);
+        // Instead of returning undefined, create a minimal response with unknown author
+        return {
+          id: dbPost.id.toString(),
+          author: 'unknown',
+          parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
+          content: dbPost.content,
+          contentCid: dbPost.contentCid,
+          mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
+          tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
+          createdAt: dbPost.createdAt || new Date(),
+          onchainRef: '',
+        };
+      }
+
+      return {
+        id: dbPost.id.toString(),
+        author: author.walletAddress,
+        parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
+        content: dbPost.content,
+        contentCid: dbPost.contentCid,
+        mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
+        tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
+        createdAt: dbPost.createdAt || new Date(),
+        onchainRef: '',
+      };
+    } catch (error) {
+      safeLogger.error('Error getting post by share ID:', error);
+      return undefined;
+    }
+  }
+
   async getPostsByAuthor(author: string): Promise<Post[]> {
     // Get user ID from address
     const user = await userProfileService.getProfileByAddress(author);

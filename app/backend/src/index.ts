@@ -445,6 +445,8 @@ app.use(fileUploadSecurity);
 // Import routes
 import postRoutes from './routes/postRoutes';
 import quickPostRoutes from './routes/quickPostRoutes';
+import postShareRoutes from './routes/postShareRoutes';
+import communityPostShareRoutes from './routes/communityPostShareRoutes';
 import feedRoutes from './routes/feedRoutes';
 import userRoutes from './routes/userRoutes';
 import communityRoutes from './routes/communityRoutes';
@@ -496,6 +498,8 @@ import enhancedCommunityReportingRoutes from './routes/enhancedCommunityReportin
 app.use('/api/community-reporting', enhancedCommunityReportingRoutes);
 
 // Register routes with enhanced error handling
+app.use('/p', postShareRoutes); // Short share URLs for timeline posts
+app.use('/cp', communityPostShareRoutes); // Short share URLs for community posts
 app.use('/api/posts', postRoutes);
 app.use('/api/quick-posts', quickPostRoutes);
 app.use('/api/feed', feedRoutes);

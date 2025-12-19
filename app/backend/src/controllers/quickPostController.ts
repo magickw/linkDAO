@@ -89,6 +89,23 @@ export class QuickPostController {
     }
   }
 
+  async getQuickPostByShareId(req: AuthenticatedRequest, res: Response): Promise<Response> {
+    try {
+      const { shareId } = req.params;
+
+      const quickPost = await this.quickPostService.getQuickPostByShareId(shareId);
+
+      if (!quickPost) {
+        return res.status(404).json(apiResponse.error('Quick post not found', 404));
+      }
+
+      return res.json(apiResponse.success(quickPost, 'Quick post retrieved successfully'));
+    } catch (error: any) {
+      console.error('Error getting quick post by share ID:', error);
+      return res.status(500).json(apiResponse.error(error.message || 'Failed to retrieve quick post', 500));
+    }
+  }
+
   async updateQuickPost(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { id } = req.params;

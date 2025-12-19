@@ -16,6 +16,7 @@ interface PostInteractionBarProps {
     communityName?: string;
     commentCount?: number;
     stakedValue?: number;
+    shareId?: string; // New field for share URLs
   };
   postType: 'feed' | 'community' | 'enhanced';
   userMembership?: any;
