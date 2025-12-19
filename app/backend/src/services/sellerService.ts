@@ -11,7 +11,9 @@ import {
   marketplaceListings,
   orders,
   userReputation,
-  reviews
+  reviews,
+  listings,
+  products
 } from '../db/schema';
 import { ensService } from './ensService';
 import { profileSyncService } from './profileSyncService';
@@ -628,27 +630,57 @@ class SellerService {
         throw new Error('Seller profile not found');
       }
 
-      // Get listing counts from marketplace_listings table
+      // Normalize wallet address for case-insensitive comparison
+      const normalizedAddress = walletAddress.toLowerCase();
+
+      // Get user ID for the seller
+      const userResult = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(sql`LOWER(${users.walletAddress}) = ${normalizedAddress}`)
+        .limit(1);
+
+      const user = userResult[0];
+      if (!user) {
+        safeLogger.warn('User not found for seller stats', { walletAddress: normalizedAddress });
+        // Return zero stats if user not found
+        return {
+          totalListings: 0,
+          activeListings: 0,
+          totalSales: 0,
+          averageRating: 0,
+          profileCompleteness: this.calculateProfileCompleteness(seller).score,
+          totalRevenue: '0',
+          completedOrders: 0,
+          pendingOrders: 0,
+          disputedOrders: 0,
+          reputationScore: 0,
+        };
+      }
+
+      // Get listing counts from products table (same as listings tab)
       const listingStats = await db
         .select({
           totalListings: sql<number>`count(*)`,
           activeListings: sql<number>`count(*) filter (where status = 'active')`,
         })
-        .from(marketplaceListings)
-        .where(eq(marketplaceListings.sellerAddress, walletAddress));
+        .from(products)
+        .where(eq(products.sellerId, user.id));
 
-      // Get order statistics
+      // Get order statistics through listings->products join
+      // orders.listingId -> listings.id, listings.productId -> products.id
       const orderStats = await db
         .select({
-          totalSales: sql<number>`count(*) filter (where status = 'completed')`,
-          totalRevenue: sql<string>`coalesce(sum(total_amount) filter (where status = 'completed'), 0)`,
-          completedOrders: sql<number>`count(*) filter (where status = 'completed')`,
-          pendingOrders: sql<number>`count(*) filter (where status in ('pending', 'processing', 'shipped'))`,
-          disputedOrders: sql<number>`count(*) filter (where status = 'disputed')`,
+          totalSales: sql<number>`count(*) filter (where ${orders.status} = 'completed')`,
+          totalRevenue: sql<string>`coalesce(sum(${orders.totalAmount}) filter (where ${orders.status} = 'completed'), 0)`,
+          completedOrders: sql<number>`count(*) filter (where ${orders.status} = 'completed')`,
+          pendingOrders: sql<number>`count(*) filter (where ${orders.status} in ('pending', 'processing', 'shipped'))`,
+          disputedOrders: sql<number>`count(*) filter (where ${orders.status} = 'disputed')`,
         })
         .from(orders)
-        .innerJoin(marketplaceListings, eq(orders.listingId, marketplaceListings.id))
-        .where(eq(marketplaceListings.sellerAddress, walletAddress));
+        .innerJoin(listings, eq(orders.listingId, listings.id))
+        .innerJoin(products, eq(listings.productId, products.id))
+        .where(eq(products.sellerId, user.id));
 
       // Get reputation data
       const reputationData = await db
