@@ -81,6 +81,7 @@ export const authMiddleware: RequestHandler = async (req: Request, res: Response
 
     const isConfiguredAdmin = walletAddress === configuredAdminAddress;
 
+    let userRecord: any = null;
     if (decoded.userId) {
       try {
         const connectionString = process.env.DATABASE_URL!;
@@ -94,31 +95,33 @@ export const authMiddleware: RequestHandler = async (req: Request, res: Response
           .limit(1);
 
         if (userResult.length > 0) {
-          userRole = userResult[0].role || 'user';
-          userEmail = userResult[0].email;
-          userPermissions = (userResult[0].permissions as string[]) || [];
+          userRecord = userResult[0];
+          userRole = userRecord.role || 'user';
+          userEmail = userRecord.email;
+          userPermissions = (userRecord.permissions as string[]) || [];
           isAdmin = ['admin', 'super_admin', 'moderator', 'support', 'analyst'].includes(userRole);
                 
           // Block wallet-only authentication for employees for sensitive operations
           // but allow basic access with a flag to indicate they need to upgrade auth
-          const isEmployee = userResult[0].isEmployee;
-          const hasPasswordHash = userResult[0].passwordHash;
+          const isEmployee = userRecord.isEmployee;
+          const hasPasswordHash = !!userRecord.passwordHash;
           const needsAuthUpgrade = isEmployee && !hasPasswordHash;
           
-          if (needsAuthUpgrade) {
-            // Check if this is a sensitive operation that requires upgraded auth
-            const sensitivePaths = [
-              '/api/admin', '/api/users', '/api/employees', 
-              '/api/auth/change-password', '/api/auth/update'
-            ];
-            
-            const isSensitiveOperation = sensitivePaths.some(path => 
-              req.path.startsWith(path)
-            );
-            
-            if (isSensitiveOperation) {
-              return ApiResponse.unauthorized(res, 'Employees must use email and password authentication for sensitive operations');
-            }
+          // Check if this is a sensitive operation that requires upgraded auth
+          const isMutation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
+          const sensitivePrefixes = [
+            '/api/admin',
+            '/api/employees', 
+            '/api/auth/change-password',
+            '/api/auth/update'
+          ];
+          
+          const isSensitiveOperation = isMutation && sensitivePrefixes.some(prefix => 
+            req.path.startsWith(prefix)
+          );
+          
+          if (needsAuthUpgrade && isSensitiveOperation) {
+            return ApiResponse.unauthorized(res, 'Employees must use email and password authentication for sensitive operations');
           }
         }
       } catch (dbError) {
@@ -126,13 +129,22 @@ export const authMiddleware: RequestHandler = async (req: Request, res: Response
       }
     }
                 
-                    // Override role for configured admin address
-                    if (isConfiguredAdmin) {
-                      userRole = 'super_admin';
-                      isAdmin = true;
-                      // Grant all permissions to configured admin
-                      userPermissions = [
-                        '*', // Wildcard permission        'admin_access',
+    // Override role for configured admin address
+    if (isConfiguredAdmin) {
+      // Ensure configured admin has a database record
+      if (!userRecord) {
+        return ApiResponse.unauthorized(
+          res,
+          'Admin account must be initialized before use'
+        );
+      }
+      
+      userRole = 'super_admin';
+      isAdmin = true;
+      // Grant all permissions to configured admin
+      userPermissions = [
+        '*', // Wildcard permission
+        'admin_access',
         'manage_users',
         'manage_content',
         'content.moderate',
@@ -150,28 +162,9 @@ export const authMiddleware: RequestHandler = async (req: Request, res: Response
         'governance.verify'
       ];
     }
-
-    // Query user data again to include in the user object (or use the previously fetched data)
-    let userNeedsAuthUpgrade = false;
-    if (decoded.userId) {
-      try {
-        const connectionString = process.env.DATABASE_URL!;
-        const sql = postgres(connectionString, { ssl: 'require' });
-        const db = drizzle(sql);
-
-        const userResult = await db
-          .select({ isEmployee: users.isEmployee, passwordHash: users.passwordHash })
-          .from(users)
-          .where(eq(users.id, decoded.userId))
-          .limit(1);
-
-        if (userResult.length > 0) {
-          userNeedsAuthUpgrade = userResult[0].isEmployee && !userResult[0].passwordHash;
-        }
-      } catch (dbError) {
-        console.error('Database error when fetching user details for needsAuthUpgrade flag:', dbError);
-      }
-    }
+    
+    // Determine needsAuthUpgrade based on user record
+    const userNeedsAuthUpgrade = userRecord?.isEmployee && !userRecord?.passwordHash;
 
     // Normalize user object to match expected interface
     // IMPORTANT: Normalize wallet addresses to lowercase for consistent comparisons

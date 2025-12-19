@@ -175,9 +175,8 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                 width={600}
                 height={384}
                 className="w-full h-96 object-contain"
-                priority="high"
-                placeholder="skeleton"
-                useProductDefault={true}
+                lazy={false}
+                quality={75}
               />
             </GlassPanel>
 
@@ -196,9 +195,8 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                       width={150}
                       height={80}
                       className="w-full h-20 object-contain"
-                      priority="medium"
-                      placeholder="skeleton"
-                      useProductDefault={true}
+                      lazy={true}
+                      quality={75}
                     />
                   </GlassPanel>
                 ))}

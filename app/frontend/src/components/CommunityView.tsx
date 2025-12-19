@@ -78,63 +78,71 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
 
         // Use setTimeout to defer community data loading and avoid blocking navigation
         setTimeout(async () => {
-          // Better approach: Try to fetch by slug first, and only try by ID if slug returns null
-          let data = null;
+          try {
+            // Better approach: Try to fetch by slug first, and only try by ID if slug returns null
+            let data = null;
 
-          // Try fetching by slug first (most common case for user navigation)
-          data = await CommunityService.getCommunityBySlug(communitySlug);
+            // Try fetching by slug first (most common case for user navigation)
+            data = await CommunityService.getCommunityBySlug(communitySlug);
 
-          // If slug fetch didn't work (returned null), try by ID if it looks like a UUID
-          if (!data) {
-            // Check if it looks like a UUID before trying
-            const isUuidFormat = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(communitySlug);
-            if (isUuidFormat) {
-              data = await CommunityService.getCommunityById(communitySlug);
+            // If slug fetch didn't work (returned null), try by ID if it looks like a UUID
+            if (!data) {
+              // Check if it looks like a UUID before trying
+              const isUuidFormat = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(communitySlug);
+              if (isUuidFormat) {
+                data = await CommunityService.getCommunityById(communitySlug);
+              }
             }
-          }
 
-          if (!data) {
-            setError('Community not found');
+            if (!data) {
+              setError('Community not found');
+              setCommunityData(null);
+              setPosts([]);
+              return;
+            }
+
+            // Ensure community data has all required properties with defaults
+            const processedCommunityData = {
+              ...data,
+              displayName: data.displayName || data.name || 'Unnamed Community',
+              description: data.description || 'No description available',
+              memberCount: typeof data.memberCount === 'number' ? data.memberCount : 0,
+              avatar: data.avatar || '🏛️',
+              rules: Array.isArray(data.rules) ? data.rules : [],
+              moderators: Array.isArray(data.moderators) ? data.moderators : [],
+              createdAt: data.createdAt || new Date(),
+              onlineMemberCount: typeof data.onlineMemberCount === 'number' ? data.onlineMemberCount : 0
+            };
+
+            setCommunityData(processedCommunityData);
+
+            // Set joined status - creators are always members
+            const isCreator = processedCommunityData.creatorAddress?.toLowerCase() === address?.toLowerCase();
+            const isMod = (processedCommunityData.moderators || []).some(
+              mod => mod.toLowerCase() === address?.toLowerCase()
+            );
+
+            // If user is creator or moderator, they are automatically joined
+            if (isCreator || isMod) {
+              setIsJoined(true);
+            } else if (processedCommunityData.isMember !== undefined) {
+              // Otherwise use backend data if available
+              setIsJoined(processedCommunityData.isMember);
+            } else {
+              // Default to not joined
+              setIsJoined(false);
+            }
+
+            // Fetch real posts for the community
+            const communityPosts = await PostService.getPostsByCommunity(data.id);
+            setPosts(communityPosts || []); // Ensure posts is always an array
+          } catch (setTimeoutError) {
+            console.error('Error in setTimeout:', setTimeoutError);
+            setError('Failed to load community data');
             setCommunityData(null);
             setPosts([]);
-            return;
           }
-
-        // Ensure community data has all required properties with defaults
-        const processedCommunityData = {
-          ...data,
-          displayName: data.displayName || data.name || 'Unnamed Community',
-          description: data.description || 'No description available',
-          memberCount: typeof data.memberCount === 'number' ? data.memberCount : 0,
-          avatar: data.avatar || '🏛️',
-          rules: Array.isArray(data.rules) ? data.rules : [],
-          moderators: Array.isArray(data.moderators) ? data.moderators : [],
-          createdAt: data.createdAt || new Date(),
-          onlineMemberCount: typeof data.onlineMemberCount === 'number' ? data.onlineMemberCount : 0
-        };
-
-        setCommunityData(processedCommunityData);
-
-        // Set joined status - creators are always members
-        const isCreator = processedCommunityData.creatorAddress?.toLowerCase() === address?.toLowerCase();
-        const isMod = (processedCommunityData.moderators || []).some(
-          mod => mod.toLowerCase() === address?.toLowerCase()
-        );
-
-        // If user is creator or moderator, they are automatically joined
-        if (isCreator || isMod) {
-          setIsJoined(true);
-        } else if (processedCommunityData.isMember !== undefined) {
-          // Otherwise use backend data if available
-          setIsJoined(processedCommunityData.isMember);
-        } else {
-          // Default to not joined
-          setIsJoined(false);
-        }
-
-        // Fetch real posts for the community
-        const communityPosts = await PostService.getPostsByCommunity(data.id);
-        setPosts(communityPosts || []); // Ensure posts is always an array
+        });
       } catch (err) {
         console.error('Error fetching community data:', err);
         // Provide a more user-friendly error message that accounts for network issues

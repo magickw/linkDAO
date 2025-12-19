@@ -172,7 +172,7 @@ const SellerBadge: React.FC<{ seller: Product['seller']; onClick?: () => void }>
           width={24}
           height={24}
           className="w-full h-full"
-          priority="low"
+          lazy={true}
           placeholder="skeleton"
         />
       </div>
@@ -502,9 +502,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 width={96}
                 height={96}
                 className="w-full h-full"
-                priority="medium"
-                placeholder="skeleton"
-                useProductDefault={true}
+                lazy={false}
+                quality={75}
               />
             </div>
 

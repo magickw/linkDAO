@@ -22,15 +22,36 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   quality = 75,
   onError
 }) => {
+  // Handle empty or invalid src
+  if (!src || src.trim() === '') {
+    return (
+      <div className={className} style={{ position: 'relative', width, height }}>
+        <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
+          <div className="text-center">
+            <svg className="w-8 h-8 mx-auto mb-2 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+            </svg>
+            <span className="text-xs text-gray-500 dark:text-gray-400">No image</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
   // Handle IPFS CIDs with multiple gateway fallbacks
   const isIpfsCid = (() => {
     // Handle various IPFS formats:
     // 1. Raw CID: Qm..., baf...
     // 2. Full IPFS URL: https://gateway.pinata.cloud/ipfs/Qm...
     // 3. Path-based IPFS: /ipfs/Qm...
-    if (src.startsWith('Qm') || src.startsWith('baf')) return true;
-    if (src.includes('/ipfs/') && (src.includes('Qm') || src.includes('baf'))) return true;
-    return false;
+    try {
+      if (src.startsWith('Qm') || src.startsWith('baf')) return true;
+      if (src.includes('/ipfs/') && (src.includes('Qm') || src.includes('baf'))) return true;
+      return false;
+    } catch (error) {
+      console.warn('Error checking IPFS CID:', error);
+      return false;
+    }
   })();
   
   // List of IPFS gateways to try in order (prioritize more reliable gateways)
@@ -43,26 +64,31 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   
   // Generate URLs for all gateways if it's an IPFS CID
   const generateUrls = () => {
-    if (isIpfsCid) {
-      // Extract the actual CID from various formats
-      let cid = src;
-      
-      // Handle full URLs: https://gateway.pinata.cloud/ipfs/Qm...
-      if (src.includes('/ipfs/')) {
-        const parts = src.split('/ipfs/');
-        if (parts.length > 1) {
-          cid = parts[1].replace(/^\/+/, ''); // Remove leading slashes
+    try {
+      if (isIpfsCid) {
+        // Extract the actual CID from various formats
+        let cid = src;
+          
+        // Handle full URLs: https://gateway.pinata.cloud/ipfs/Qm...
+        if (src.includes('/ipfs/')) {
+          const parts = src.split('/ipfs/');
+          if (parts.length > 1) {
+            cid = parts[1].replace(/^\/\/+/, ''); // Remove leading slashes
+          }
         }
+          
+        // Handle path-based: /ipfs/Qm...
+        if (src.startsWith('/ipfs/')) {
+          cid = src.substring(6).replace(/^\/\/+/, ''); // Remove '/ipfs/' and leading slashes
+        }
+          
+        return ipfsGateways.map(gateway => `${gateway}${cid}`);
       }
-      
-      // Handle path-based: /ipfs/Qm...
-      if (src.startsWith('/ipfs/')) {
-        cid = src.substring(6).replace(/^\/+/, ''); // Remove '/ipfs/' and leading slashes
-      }
-      
-      return ipfsGateways.map(gateway => `${gateway}${cid}`);
+      return [src];
+    } catch (error) {
+      console.warn('Error generating URLs:', error);
+      return [src];
     }
-    return [src];
   };
   
   const [urls, setUrls] = useState<string[]>(generateUrls());
@@ -81,13 +107,21 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   
   // Handle image error and try next gateway
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    // If we have more gateways to try, try the next one
-    if (isIpfsCid && currentIndex < urls.length - 1) {
-      const nextIndex = currentIndex + 1;
-      setCurrentIndex(nextIndex);
-      setCurrentSrc(urls[nextIndex]);
-    } else {
-      // No more gateways to try or not an IPFS CID
+    try {
+      // If we have more gateways to try, try the next one
+      if (isIpfsCid && currentIndex < urls.length - 1) {
+        const nextIndex = currentIndex + 1;
+        setCurrentIndex(nextIndex);
+        setCurrentSrc(urls[nextIndex]);
+      } else {
+        // No more gateways to try or not an IPFS CID
+        setHasError(true);
+        if (onError) {
+          onError(e);
+        }
+      }
+    } catch (error) {
+      console.warn('Error handling image error:', error);
       setHasError(true);
       if (onError) {
         onError(e);
@@ -112,38 +146,59 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   }
   
   // Handle external URLs by using img tag with loading optimization
-  if (currentSrc.startsWith('http')) {
-    return (
-      <div className={className} style={{ position: 'relative', width, height }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={currentSrc}
-          alt={alt}
-          width={width}
-          height={height}
-          loading={lazy ? 'lazy' : 'eager'}
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          onError={handleImageError}
-        />
-      </div>
-    );
-  }
-  
-  // For local images, use Next.js Image component
-  return (
-    <div className={className} style={{ position: 'relative', width, height }}>
-      <Image
-        src={src}
-        alt={alt}
-        width={width}
-        height={height}
-        loading={lazy ? 'lazy' : 'eager'}
-        quality={quality}
-        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-        onError={handleImageError as any}
-      />
-    </div>
-  );
+  try {
+    if (currentSrc.startsWith('http')) {
+      return (
+        <div className={className} style={{ position: 'relative', width, height }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={currentSrc}
+            alt={alt}
+            width={width}
+            height={height}
+            loading={lazy ? 'lazy' : 'eager'}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            onError={handleImageError}
+          />
+        </div>
+      );
+    }
+      } catch (error) {
+        console.warn('Error handling external URL:', error);
+        // Fall back to local image handling
+      }
+        
+      // For local images, use Next.js Image component
+      try {
+        return (
+          <div className={className} style={{ position: 'relative', width, height }}>
+            <Image
+              src={src}
+              alt={alt}
+              width={width}
+              height={height}
+              loading={lazy ? 'lazy' : 'eager'}
+              quality={quality}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              onError={handleImageError as any}
+            />
+          </div>
+        );
+      } catch (error) {      console.warn('Error handling local image:', error);
+      // Show error state
+      return (
+        <div className={className} style={{ position: 'relative', width, height }}>
+          <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
+            <div className="text-center">
+              <svg className="w-8 h-8 mx-auto mb-2 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+              </svg>
+              <span className="text-xs text-gray-500 dark:text-gray-400">Image error</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
 };
 
 export default OptimizedImage;

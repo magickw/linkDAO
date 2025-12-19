@@ -262,17 +262,17 @@ const CommunitiesPage: React.FC = () => {
 
               if (!isMounted.current) return;
 
-            // Set community IDs
-            const allUserCommunityIds = new Set<string>();
-            myCommunitiesResponse.communities.forEach(c => {
-              if (c && c.id) {
-                allUserCommunityIds.add(c.id);
-              }
-            });
+              // Set community IDs
+              const allUserCommunityIds = new Set<string>();
+              myCommunitiesResponse.communities.forEach(c => {
+                if (c && c.id) {
+                  allUserCommunityIds.add(c.id);
+                }
+              });
 
-            setJoinedCommunities(Array.from(allUserCommunityIds));
+              setJoinedCommunities(Array.from(allUserCommunityIds));
 
-            // Merge user communities into the main list so they appear in the sidebar
+              // Merge user communities into the main list so they appear in the sidebar
             // The sidebar filters 'communities' based on 'joinedCommunities', so we need to ensure
             // all joined/created communities are actually present in the 'communities' array.
             const allUserCommunities = myCommunitiesResponse.communities;
@@ -317,6 +317,7 @@ const CommunitiesPage: React.FC = () => {
             });
             if (!isMounted.current) return;
             setUserAdminRoles(adminRoles);
+            }, 0);
           } catch (error) {
             console.error('Error loading user communities:', error);
             // Continue with empty arrays on error
@@ -327,7 +328,7 @@ const CommunitiesPage: React.FC = () => {
 
         // Load enhanced Web3 data
         await loadWeb3EnhancedData(communitiesData);
-
+        }, 0);
       } catch (err) {
         console.error('Error loading communities:', err);
         if (!isMounted.current) return;
@@ -493,7 +494,7 @@ const CommunitiesPage: React.FC = () => {
         // Initialize with empty arrays instead of mock data
         setGovernanceProposals([]);
         setWalletActivities([]);
-
+      }, 0);
     } catch (err) {
       console.error('Error loading Web3 enhanced data:', err);
       // Provide empty data as fallback
