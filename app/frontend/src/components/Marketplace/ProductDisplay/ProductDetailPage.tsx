@@ -24,6 +24,7 @@ import { GlassPanel } from '../../../design-system/components/GlassPanel';
 import { Button } from '../../../design-system/components/Button';
 import { DualPricing } from '../../../design-system/components/DualPricing';
 import { AnimatedProductBadge, AnimatedTrustIndicator } from '../../../components/VisualPolish/MarketplaceAnimations';
+import { OptimizedImage } from '../../Performance/OptimizedImageLoader';
 
 interface ProductDetailPageProps {
   product: {
@@ -168,17 +169,15 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
           {/* Product Images */}
           <div className="w-full lg:w-1/2">
             <GlassPanel variant="secondary" className="p-4 mb-4">
-              <img
-                src={selectedImage && selectedImage.trim() !== '' ? 
-                     selectedImage.startsWith('http') ? selectedImage : `https://gateway.pinata.cloud/ipfs/${selectedImage.replace(/^\/+/, '')}` :
-                     `https://placehold.co/600x400/4B2E83/FFFFFF?text=${encodeURIComponent(product.title || 'Product')}`}
+              <OptimizedImage
+                src={selectedImage || product.media?.[0]?.url || ''}
                 alt={product.title || 'Product'}
+                width={600}
+                height={384}
                 className="w-full h-96 object-contain"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.onerror = null;
-                  target.src = `https://placehold.co/600x400/4B2E83/FFFFFF?text=${encodeURIComponent(product.title || 'Product')}`;
-                }}
+                priority="high"
+                placeholder="skeleton"
+                useProductDefault={true}
               />
             </GlassPanel>
 
@@ -191,19 +190,15 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                     className={`p-2 cursor-pointer border-2 ${selectedImage === media.url ? 'border-blue-500' : 'border-transparent'}`}
                     onClick={() => setSelectedImage(media.url)}
                   >
-                    <img
-                      src={(media.thumbnail && media.thumbnail.trim() !== '') ? 
-                           media.thumbnail.startsWith('http') ? media.thumbnail : `https://gateway.pinata.cloud/ipfs/${media.thumbnail.replace(/^\/+/, '')}` :
-                           (media.url && media.url.trim() !== '') ? 
-                           media.url.startsWith('http') ? media.url : `https://gateway.pinata.cloud/ipfs/${media.url.replace(/^\/+/, '')}` :
-                           `https://placehold.co/150x150/4B2E83/FFFFFF?text=${encodeURIComponent('Img ' + (index + 1))}`}
+                    <OptimizedImage
+                      src={media.thumbnail || media.url || ''}
                       alt={media.alt || `Product view ${index + 1}`}
+                      width={150}
+                      height={80}
                       className="w-full h-20 object-contain"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.onerror = null;
-                        target.src = `https://placehold.co/150x150/4B2E83/FFFFFF?text=${encodeURIComponent('Img ' + (index + 1))}`;
-                      }}
+                      priority="medium"
+                      placeholder="skeleton"
+                      useProductDefault={true}
                     />
                   </GlassPanel>
                 ))}
@@ -558,16 +553,14 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                 <h3 className="font-medium text-white mb-3">Seller Information</h3>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <img
-                      src={product.seller.avatar}
+                    <OptimizedImage
+                      src={product.seller.avatar || ''}
                       alt={product.seller.name}
+                      width={48}
+                      height={48}
                       className="w-12 h-12 rounded-full mr-3 object-cover"
-                      onError={(e) => {
-                        // Fallback to generated avatar if image fails to load
-                        const target = e.target as HTMLImageElement;
-                        target.onerror = null; // Prevent infinite loop
-                        target.src = `https://api.dicebear.com/7.x/identicon/svg?seed=${product.seller.id}&backgroundColor=b6e3f4`;
-                      }}
+                      priority="medium"
+                      placeholder="skeleton"
                     />
                     <div>
                       <div className="font-medium text-white">{product.seller.name}</div>

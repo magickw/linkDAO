@@ -13,6 +13,7 @@ import { useToast } from '../../../context/ToastContext';
 import { countries } from '../../../utils/countries';
 import { PayoutSetupStep } from '../Seller/onboarding/PayoutSetupStep';
 import { paymentMethodService, CreatePaymentMethodInput } from '../../../services/paymentMethodService';
+import { OptimizedImage } from '../../Performance/OptimizedImageLoader';
 
 interface SellerDashboardProps {
   mockWalletAddress?: string;
@@ -850,22 +851,36 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                     {(listings as UnifiedSellerListing[]).map((listing: UnifiedSellerListing) => (
                       <div key={listing.id} className="bg-gray-800 rounded-lg p-4 hover:bg-gray-750 transition-colors duration-200 border border-gray-700 hover:border-gray-600">
                         <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <h4 className="text-white font-medium mb-1">{listing.title}</h4>
-                            <p className="text-gray-300 text-sm mb-2 line-clamp-2">{listing.description}</p>
-                            <div className="flex items-center gap-4 text-sm">
-                              <span className="text-green-400 font-medium">
-                                {typeof listing.price === 'string' ? listing.price : listing.price.toString()} {listing.currency || 'ETH'}
-                              </span>
-                              <span className="text-gray-400">
-                                Qty: {listing.quantity}
-                              </span>
-                              <span className={`px-2 py-1 rounded text-xs ${listing.status === 'active' ? 'bg-green-600 text-white' :
-                                listing.status === 'sold' ? 'bg-blue-600 text-white' :
-                                  'bg-gray-600 text-white'
-                                }`}>
-                                {listing.status?.toUpperCase()}
-                              </span>
+                          <div className="flex items-center gap-4 flex-1">
+                            <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
+                              <OptimizedImage
+                                src={listing.images?.[0] || ''}
+                                alt={listing.title}
+                                width={80}
+                                height={80}
+                                className="w-full h-full object-cover"
+                                priority="medium"
+                                placeholder="skeleton"
+                                useProductDefault={true}
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="text-white font-medium mb-1">{listing.title}</h4>
+                              <p className="text-gray-300 text-sm mb-2 line-clamp-2">{listing.description}</p>
+                              <div className="flex items-center gap-4 text-sm">
+                                <span className="text-green-400 font-medium">
+                                  {typeof listing.price === 'string' ? listing.price : listing.price.toString()} {listing.currency || 'ETH'}
+                                </span>
+                                <span className="text-gray-400">
+                                  Qty: {listing.quantity}
+                                </span>
+                                <span className={`px-2 py-1 rounded text-xs ${listing.status === 'active' ? 'bg-green-600 text-white' :
+                                  listing.status === 'sold' ? 'bg-blue-600 text-white' :
+                                    'bg-gray-600 text-white'
+                                  }`}>
+                                  {listing.status?.toUpperCase()}
+                                </span>
+                              </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
