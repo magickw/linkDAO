@@ -999,9 +999,6 @@ app.use('/api/marketplace/seller/images', sellerImageRoutes);
 // Seller verification routes
 app.use('/api/marketplace/seller/verification', sellerVerificationRoutes);
 
-// Seller profile routes
-app.use('/api/marketplace/seller', marketplaceSellerRoutes);
-
 // ENS validation routes
 app.use('/api/marketplace/ens', ensValidationRoutes);
 
@@ -1018,9 +1015,8 @@ app.use('/api/marketplace', marketplaceRoutes);
 // Frontend expects: GET /api/marketplace/seller/:walletAddress
 app.use('/api/marketplace', sellerProfileRoutes);
 
-// Marketplace seller routes - Additional seller utility endpoints
-// These are more specific routes like /seller/:walletAddress/enhanced, /seller/:walletAddress/completeness
-app.use('/api/marketplace', marketplaceSellerRoutes);
+// NOTE: marketplaceSellerRoutes has been removed to prevent route conflicts
+// All seller routes are now properly handled by the dedicated route files above
 
 // Profile routes are handled by userProfileRoutes.ts
 // This duplicate definition has been removed to prevent conflicts

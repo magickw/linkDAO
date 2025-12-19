@@ -12,7 +12,11 @@ import {
   CheckCircle,
   XCircle,
   Users,
-  Ticket
+  Ticket,
+  Search,
+  History,
+  Activity,
+  TrendingUp
 } from 'lucide-react';
 
 interface ChatMessage {
@@ -40,6 +44,15 @@ const SupportChatPage: NextPage = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [sessionHistory, setSessionHistory] = useState<ChatSession[]>([]);
+  const [view, setView] = useState<'waiting' | 'history'>('waiting');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [stats, setStats] = useState({
+    totalToday: 0,
+    activeNow: 0,
+    avgResponseTime: '0s',
+    resolvedToday: 0
+  });
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -78,25 +91,34 @@ const SupportChatPage: NextPage = () => {
     });
 
     newSocket.on('session-accepted', (data: { sessionId: string; userId: string; messages: ChatMessage[] }) => {
-      setActiveSession({
+      const session = {
         id: data.sessionId,
         userId: data.userId,
         createdAt: new Date(),
         messageCount: data.messages.length,
         messages: data.messages
-      });
+      };
+      setActiveSession(session);
       setMessages(data.messages);
       setWaitingSessions(prev => prev.filter(s => s.id !== data.sessionId));
+      setStats(prev => ({ ...prev, activeNow: prev.activeNow + 1 }));
     });
 
     newSocket.on('chat-message', (message: ChatMessage) => {
       setMessages(prev => [...prev, message]);
+      setActiveSession(prev => prev ? { ...prev, messageCount: prev.messageCount + 1 } : null);
     });
 
     newSocket.on('session-closed', (data: { sessionId: string }) => {
       if (activeSession?.id === data.sessionId) {
+        setSessionHistory(prev => [activeSession, ...prev]);
         setActiveSession(null);
         setMessages([]);
+        setStats(prev => ({ 
+          ...prev, 
+          activeNow: Math.max(0, prev.activeNow - 1),
+          resolvedToday: prev.resolvedToday + 1
+        }));
       }
     });
 
