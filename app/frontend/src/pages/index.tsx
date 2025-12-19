@@ -123,6 +123,16 @@ export default function Home() {
   const [isConnectionStabilized, setIsConnectionStabilized] = useState(false);
   const [shouldConnectWebSocket, setShouldConnectWebSocket] = useState(false);
 
+  // Memoize WebSocket configuration to prevent unnecessary re-renders on wallet connection
+  const webSocketConfig = useMemo(() => ({
+    walletAddress: address || '',
+    autoConnect: false, // Disable autoConnect to prevent immediate connection on wallet connect
+    autoReconnect: true
+  }), [address]);
+
+  // Initialize WebSocket instance without auto-connecting
+  const webSocket = useWebSocket(webSocketConfig);
+
   useEffect(() => {
     if (isConnected) {
       // Use setTimeout to defer both content loading and WebSocket connection
@@ -137,9 +147,10 @@ export default function Home() {
 
         // Then defer WebSocket connection establishment separately
         setTimeout(() => {
-          if (isMounted.current) {
+          if (isMounted.current && !webSocket.isConnected) {
             setIsConnectionStabilized(true);
-            setShouldConnectWebSocket(true);
+            // Connect WebSocket only after wallet is connected and page has stabilized
+            webSocket.connect().catch(console.error);
           }
         }, 200); // Longer delay to ensure navigation is complete
       };
@@ -149,14 +160,20 @@ export default function Home() {
 
       return () => {
         clearTimeout(timer);
-        setShouldConnectWebSocket(false);
+        // Disconnect WebSocket when leaving the page
+        if (webSocket && typeof webSocket.disconnect === 'function') {
+          webSocket.disconnect();
+        }
       };
     } else {
       setIsContentReady(true);
       setIsConnectionStabilized(false);
-      setShouldConnectWebSocket(false);
+      // Disconnect WebSocket when wallet is disconnected
+      if (webSocket && typeof webSocket.disconnect === 'function') {
+        webSocket.disconnect();
+      }
     }
-  }, [isConnected]);
+  }, [isConnected, webSocket]);
 
   // Initialize WebSocket for real-time updates with proper cleanup
   // Only connect when wallet is connected AND navigation is complete
@@ -217,16 +234,15 @@ export default function Home() {
   // Subscribe to feed updates when connected with proper cleanup
   useEffect(() => {
     // Only subscribe if connected and WebSocket should be active
-    if (wsConnected && address && !wsSubscribed && shouldConnectWebSocket) {
+    if (webSocket.isConnected && address && !wsSubscribed) {
       // Subscribe to global feed updates
-      subscribe('feed', 'all', {
+      const subscriptionId = webSocket.subscribe('feed', 'all', {
         eventTypes: ['feed_update', 'new_post']
       });
       setWsSubscribed(true);
 
       // Listen for new posts with stable callback
       const handleFeedUpdate = (data: any) => {
-        console.log('New post received:', data);
         // Only refresh if it's not the user's own post (to prevent double refresh)
         if (data.author?.toLowerCase() !== address.toLowerCase()) {
           // Defer the refresh to prevent blocking navigation
@@ -237,21 +253,30 @@ export default function Home() {
         }
       };
 
-      on('feed_update', handleFeedUpdate);
+      webSocket.on('feed_update', handleFeedUpdate);
 
       return () => {
-        off('feed_update', handleFeedUpdate);
+        webSocket.off('feed_update', handleFeedUpdate);
+        // Unsubscribe when cleaning up
+        if (subscriptionId) {
+          // Use setTimeout to ensure unsubscribe happens after event handlers are removed
+          setTimeout(() => {
+            if (isMounted.current) {
+              webSocket.unsubscribe(subscriptionId);
+            }
+          }, 0);
+        }
         setWsSubscribed(false);
       };
     }
-  }, [wsConnected, address, wsSubscribed, subscribe, on, off, addToast, debouncedRefresh, shouldConnectWebSocket]);
+  }, [webSocket, address, wsSubscribed, addToast, debouncedRefresh, isMounted]);
 
   // Add navigation event listeners to properly cleanup on route changes
   useEffect(() => {
     const handleRouteChangeStart = (url: string) => {
       console.log('[HomePage] Route change start:', url);
-      // Only disable WebSocket operations - don't touch isMounted
-      setShouldConnectWebSocket(false);
+      // Don't modify WebSocket state here to avoid blocking navigation
+      // The WebSocket cleanup will happen in the component unmount
     };
 
     const handleRouteChangeComplete = (url: string) => {
@@ -259,10 +284,10 @@ export default function Home() {
       
       // Re-enable WebSocket if we're back on home page
       if (router.pathname === '/') {
+        // Only reconnect if wallet is connected and WebSocket is not already connected
         setTimeout(() => {
-          if (isConnected) {
-            setIsConnectionStabilized(true);
-            setShouldConnectWebSocket(true);
+          if (isConnected && webSocket && typeof webSocket.connect === 'function' && !webSocket.isConnected) {
+            webSocket.connect().catch(console.error);
           }
         }, 100);
       }
@@ -270,7 +295,7 @@ export default function Home() {
 
     const handleRouteChangeError = (err: any, url: string) => {
       console.error('[HomePage] Route change error for', url, ':', err);
-      // Don't change isMounted on error either
+      // Don't change isMounted on error
     };
 
     // Listen for route changes to properly cleanup
@@ -283,7 +308,7 @@ export default function Home() {
       router.events.off('routeChangeComplete', handleRouteChangeComplete);
       router.events.off('routeChangeError', handleRouteChangeError);
     };
-  }, [router.pathname, router.events, isConnected]);
+  }, [router.pathname, router.events, isConnected, webSocket]);
 
   // Handle post creation with useCallback
 
