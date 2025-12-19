@@ -20,17 +20,15 @@ interface TransferOptions {
     recipient: string;
     amount: string;
     decimals?: number;
+    chainId?: number; // Optional chain ID, defaults to current connected chain
 }
 
 export function useTokenTransfer() {
-    const chainId = useChainId();
+    const currentChainId = useChainId();
     const { address } = useAccount();
     const config = useConfig();
     const [isPending, setIsPending] = useState(false);
     const [txHash, setTxHash] = useState<`0x${string}` | null>(null);
-
-    // Get the current chain object from config
-    const chain = config.chains.find(c => c.id === chainId);
 
     // Native ETH Transfer
     const {
@@ -44,7 +42,7 @@ export function useTokenTransfer() {
         isPending: isErc20Pending
     } = useWriteContract();
 
-    const transfer = useCallback(async ({ tokenAddress, recipient, amount, decimals = 18 }: TransferOptions) => {
+    const transfer = useCallback(async ({ tokenAddress, recipient, amount, decimals = 18, chainId }: TransferOptions & { chainId?: number }) => {
         setIsPending(true);
         setTxHash(null);
 
@@ -68,16 +66,19 @@ export function useTokenTransfer() {
                 hash = await sendTransactionAsync({
                     to: recipient as `0x${string}`,
                     value: amountBigInt,
-                    chainId
+                    chainId: chainId  // Use the specified chainId if provided
                 });
             } else {
-                // ERC20 Token
+                // For ERC20 transfers on a different chain, we need to get the correct chain config
+                const targetChainId = chainId || currentChainId;
+                const targetChain = config.chains.find(c => c.id === targetChainId);
+                
                 hash = await writeContractAsync({
                     address: tokenAddress as `0x${string}`,
                     abi: ERC20_TRANSFER_ABI,
                     functionName: 'transfer',
                     args: [recipient as `0x${string}`, amountBigInt],
-                    chain,
+                    chain: chainId ? config.chains.find(c => c.id === chainId) : undefined,  // Use specified chain if provided
                     account: address
                 });
             }
@@ -90,7 +91,7 @@ export function useTokenTransfer() {
         } finally {
             setIsPending(false);
         }
-    }, [chain, chainId, address, sendTransactionAsync, writeContractAsync]);
+    }, [currentChainId, config.chains, address, sendTransactionAsync, writeContractAsync]);
 
     return {
         transfer,

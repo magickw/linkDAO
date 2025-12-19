@@ -63,7 +63,19 @@ export function transformDisplayListingToUnified(
       availability: displayListing.isActive === false ? 'out_of_stock' : 'available',
 
       // Media and presentation
-      images: displayListing.images || [displayListing.image].filter(Boolean),
+      images: displayListing.images && Array.isArray(displayListing.images) 
+        ? displayListing.images.filter(img => 
+            typeof img === 'string' && 
+            !img.startsWith('0x') && 
+            img.length > 0 && 
+            (img.startsWith('http') || img.startsWith('ipfs') || img.startsWith('Qm') || img.startsWith('baf'))
+          )
+        : [displayListing.image].filter(Boolean).filter(img => 
+            typeof img === 'string' && 
+            !img.startsWith('0x') && 
+            img.length > 0 && 
+            (img.startsWith('http') || img.startsWith('ipfs') || img.startsWith('Qm') || img.startsWith('baf'))
+          ),
       thumbnailUrl: displayListing.image || displayListing.images?.[0] || '',
       featuredImage: displayListing.featuredImage || displayListing.images?.[0],
 
@@ -208,7 +220,7 @@ export function transformSellerListingToUnified(
       ? parseFloat(backendListing.price)
       : (backendListing.price ?? 0);
 
-    // Get images - handle both array and JSON string
+    // Get images - handle both array and JSON string, and filter out any wallet addresses
     let images = backendListing.images || [];
     if (typeof images === 'string') {
       try {
@@ -216,6 +228,18 @@ export function transformSellerListingToUnified(
       } catch {
         images = [];
       }
+    }
+    
+    // Ensure images is an array and filter out any items that look like wallet addresses
+    if (Array.isArray(images)) {
+      images = images.filter(img => 
+        typeof img === 'string' && 
+        !img.startsWith('0x') && 
+        img.length > 0 && 
+        (img.startsWith('http') || img.startsWith('ipfs') || img.startsWith('Qm') || img.startsWith('baf'))
+      );
+    } else {
+      images = [];
     }
 
     const unified: UnifiedSellerListing = {
@@ -313,6 +337,34 @@ export function transformMarketplaceListingToUnified(
   const transformedFields: string[] = [];
 
   try {
+    // Ensure images is always an array and doesn't contain wallet addresses
+    let images: string[] = [];
+    if (Array.isArray(marketplaceListing.images)) {
+      // Filter out any items that look like wallet addresses (0x... format)
+      images = marketplaceListing.images.filter(img => 
+        typeof img === 'string' && 
+        !img.startsWith('0x') && 
+        img.length > 0 && 
+        (img.startsWith('http') || img.startsWith('ipfs') || img.startsWith('Qm') || img.startsWith('baf'))
+      );
+    } else if (typeof marketplaceListing.images === 'string') {
+      // If images is a string, try to parse as JSON
+      try {
+        const parsedImages = JSON.parse(marketplaceListing.images);
+        if (Array.isArray(parsedImages)) {
+          images = parsedImages.filter(img => 
+            typeof img === 'string' && 
+            !img.startsWith('0x') && 
+            img.length > 0 && 
+            (img.startsWith('http') || img.startsWith('ipfs') || img.startsWith('Qm') || img.startsWith('baf'))
+          );
+        }
+      } catch {
+        // If parsing fails, treat as empty array
+        images = [];
+      }
+    }
+
     const unified: UnifiedSellerListing = {
       // Core identification
       id: marketplaceListing.id,
@@ -337,8 +389,8 @@ export function transformMarketplaceListingToUnified(
       availability: marketplaceListing.isActive ? 'available' : 'out_of_stock',
 
       // Media and presentation
-      images: marketplaceListing.images || [],
-      thumbnailUrl: marketplaceListing.images?.[0] || '',
+      images: images,
+      thumbnailUrl: images[0] || '',
 
       // Status and lifecycle
       status: mapMarketplaceStatus(marketplaceListing.status, marketplaceListing.isActive),
@@ -382,6 +434,15 @@ export function transformMarketplaceListingToUnified(
     if (!marketplaceListing.title && marketplaceListing.metadataURI) {
       transformedFields.push('title');
       warnings.push('Used metadataURI as title fallback');
+    }
+
+    // Add warning if images were filtered due to wallet addresses
+    if (marketplaceListing.images && Array.isArray(marketplaceListing.images)) {
+      const originalCount = marketplaceListing.images.length;
+      const filteredCount = images.length;
+      if (originalCount > filteredCount) {
+        warnings.push(`Filtered ${originalCount - filteredCount} invalid image URLs (likely wallet addresses)`);
+      }
     }
 
     return {

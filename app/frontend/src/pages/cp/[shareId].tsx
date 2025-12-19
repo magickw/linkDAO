@@ -60,18 +60,20 @@ export default function CommunityPostSharePage() {
                     return;
                 }
 
-                const data = await response.json();
+                const result = await response.json();
                 
-                if (data.success && data.data) {
-                    const postData = data.data as CommunityPost;
+                if (result.success && result.data) {
+                    // 后端返回的数据格式不同，需要从 result.data.post 获取实际帖子数据
+                    const postData = result.data.post as CommunityPost;
+                    const canonicalUrl = result.data.canonicalUrl;
+                    
                     setPost(postData);
+                    setCanonicalUrl(canonicalUrl);
                     
-                    // Construct canonical URL
-                    const canonical = `/communities/${postData.communitySlug}/posts/${shareId}`;
-                    setCanonicalUrl(canonical);
-                    
-                    // Update URL without navigation
-                    window.history.replaceState({}, '', canonical);
+                    // 重定向到规范URL
+                    if (canonicalUrl && canonicalUrl !== window.location.pathname) {
+                        router.replace(canonicalUrl);
+                    }
                 } else {
                     setError('Community post not found');
                 }

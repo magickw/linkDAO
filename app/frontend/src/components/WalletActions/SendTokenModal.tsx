@@ -14,13 +14,26 @@ interface SendTokenModalProps {
 
 export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, onSuccess }: SendTokenModalProps) {
   const { addToast } = useToast();
-  const chainId = useChainId();
+  const currentChainId = useChainId();
   const { transfer, isPending, txHash } = useTokenTransfer();
 
   const [selectedTokenSymbol, setSelectedTokenSymbol] = useState(tokens[0]?.symbol || 'ETH');
   const [amount, setAmount] = useState('');
   const [recipient, setRecipient] = useState('');
   const [error, setError] = useState('');
+  const [selectedChainId, setSelectedChainId] = useState<number>(currentChainId);
+
+  // Define available networks
+  const networks = [
+    { id: 1, name: 'Ethereum', symbol: 'ETH', explorer: 'https://etherscan.io' },
+    { id: 8453, name: 'Base', symbol: 'ETH', explorer: 'https://basescan.org' },
+    { id: 137, name: 'Polygon', symbol: 'MATIC', explorer: 'https://polygonscan.com' },
+    { id: 42161, name: 'Arbitrum', symbol: 'ETH', explorer: 'https://arbiscan.io' },
+    { id: 11155111, name: 'Sepolia', symbol: 'ETH', explorer: 'https://sepolia.etherscan.io' },
+    { id: 84532, name: 'Base Sepolia', symbol: 'ETH', explorer: 'https://sepolia.basescan.org' },
+  ];
+
+  const selectedNetwork = networks.find(network => network.id === selectedChainId) || networks[0];
 
   // Sync selected token when modal opens or when tokens/initialToken change
   useEffect(() => {
@@ -73,6 +86,77 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
       return;
     }
 
+    // Check if selected chain is different from current connected chain
+    if (selectedChainId !== currentChainId) {
+      // For cross-chain transfers, we need to use bridge service
+      const confirmed = window.confirm(
+        `You're attempting to send tokens to a different network (${selectedNetwork.name}) than your current connection (${networks.find(n => n.id === currentChainId)?.name}).\n\n` +
+        `This requires a cross-chain bridge service which is not yet fully implemented in this UI.\n\n` +
+        `Would you like to proceed with the standard transfer on your current connected network (${networks.find(n => n.id === currentChainId)?.name}) instead?`
+      );
+      
+      if (confirmed) {
+        // If confirmed, send on current chain instead of selected chain
+        try {
+          const hash = await transfer({
+            tokenAddress: selectedToken?.contractAddress,
+            recipient,
+            amount,
+            decimals: selectedTokenSymbol === 'USDC' ? 6 : 18, // Simple heuristic, ideally comes from token data
+            chainId: currentChainId // Use current chain instead of selected
+          });
+
+          if (hash) {
+            addToast('Transaction submitted successfully!', 'success');
+            if (onSuccess) onSuccess(hash);
+            
+            // Construct the explorer URL based on the current chain (since that's where tx actually went)
+            const currentNetworkInfo = networks.find(network => network.id === currentChainId);
+            let explorerUrl = currentNetworkInfo?.explorer ? `${currentNetworkInfo.explorer}/tx/${hash}` : `https://etherscan.io/tx/${hash}`;
+
+            // Ask user if they want to view the transaction on the explorer
+            if (window.confirm(`Transaction submitted! Would you like to view it on the blockchain explorer?`)) {
+              window.open(explorerUrl, '_blank', 'noopener,noreferrer');
+            }
+
+            onClose();
+          }
+        } catch (err) {
+          console.error(err);
+          setError(err instanceof Error ? err.message : 'Transaction failed');
+          addToast('Transaction failed: ' + (err instanceof Error ? err.message : 'Unknown error'), 'error');
+        }
+        return; // Return early to avoid the cross-chain logic below
+      } else {
+        // User chose not to proceed with current chain, so show cross-chain option
+        const crossChainConfirmed = window.confirm(
+          `To send tokens to the ${selectedNetwork.name} network, you need to use the cross-chain bridge.\n\n` +
+          `This will open the bridge interface where you can complete the cross-chain transfer.\n\n` +
+          `Note: Cross-chain transfers typically take 5-15 minutes and may involve additional fees.`
+        );
+        
+        if (crossChainConfirmed) {
+          // In a real implementation, this would open the cross-chain bridge interface
+          // For now, we'll just show an alert
+          alert(
+            `Cross-chain bridge functionality would open now.\n\n` +
+            `In the full implementation:\n` +
+            `- You would connect to the source network (${networks.find(n => n.id === currentChainId)?.name})\n` +
+            `- Approve the bridge contract\n` +
+            `- Initiate the cross-chain transfer to ${selectedNetwork.name}\n` +
+            `- Wait for the bridge to complete (5-15 minutes)\n` +
+            `- Receive tokens on ${selectedNetwork.name}`
+          );
+          onClose();
+          return;
+        } else {
+          // User cancelled cross-chain transfer
+          return;
+        }
+      }
+    }
+
+    // If we're here, sending on the same chain (selectedChainId === currentChainId)
     setError('');
 
     try {
@@ -80,38 +164,17 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
         tokenAddress: selectedToken?.contractAddress,
         recipient,
         amount,
-        decimals: selectedTokenSymbol === 'USDC' ? 6 : 18 // Simple heuristic, ideally comes from token data
+        decimals: selectedTokenSymbol === 'USDC' ? 6 : 18, // Simple heuristic, ideally comes from token data
+        chainId: selectedChainId
       });
 
       if (hash) {
         addToast('Transaction submitted successfully!', 'success');
         if (onSuccess) onSuccess(hash);
         
-        // Construct the explorer URL based on the current chain
-        let explorerUrl = '';
-        switch (chainId) {
-          case 1: // Ethereum Mainnet
-            explorerUrl = `https://etherscan.io/tx/${hash}`;
-            break;
-          case 8453: // Base Mainnet
-            explorerUrl = `https://basescan.org/tx/${hash}`;
-            break;
-          case 84532: // Base Sepolia
-            explorerUrl = `https://sepolia.basescan.org/tx/${hash}`;
-            break;
-          case 137: // Polygon
-            explorerUrl = `https://polygonscan.com/tx/${hash}`;
-            break;
-          case 42161: // Arbitrum
-            explorerUrl = `https://arbiscan.io/tx/${hash}`;
-            break;
-          case 11155111: // Sepolia Testnet
-            explorerUrl = `https://sepolia.etherscan.io/tx/${hash}`;
-            break;
-          default:
-            // Fallback to Ethereum mainnet if chain is not recognized
-            explorerUrl = `https://etherscan.io/tx/${hash}`;
-        }
+        // Construct the explorer URL based on the selected chain
+        const selectedNetworkInfo = networks.find(network => network.id === selectedChainId);
+        let explorerUrl = selectedNetworkInfo?.explorer ? `${selectedNetworkInfo.explorer}/tx/${hash}` : `https://etherscan.io/tx/${hash}`;
 
         // Ask user if they want to view the transaction on the explorer
         if (window.confirm(`Transaction submitted! Would you like to view it on the blockchain explorer?`)) {
@@ -141,7 +204,7 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Send Tokens</h2>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Chain ID: {chainId} • Direct Transfer
+              Chain ID: {selectedChainId} • Direct Transfer
             </p>
           </div>
           <button
@@ -183,13 +246,45 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </div>
-            </div>
-            <div className="mt-2 flex justify-between text-xs text-gray-500 dark:text-gray-400 px-1">
-              <span>Balance: {selectedToken?.balance.toFixed(4)} {selectedTokenSymbol}</span>
-              <span>≈ ${selectedToken?.valueUSD?.toFixed(2) || '0.00'}</span>
-            </div>
-          </div>
-
+                      </div>
+                      <div className="mt-2 flex justify-between text-xs text-gray-500 dark:text-gray-400 px-1">
+                        <span>Balance: {selectedToken?.balance.toFixed(4)} {selectedTokenSymbol}</span>
+                        <span>≈ ${selectedToken?.valueUSD?.toFixed(2) || '0.00'}</span>
+                      </div>
+                    </div>
+            
+                    {/* Network Selection */}
+                    <div className="px-6 pb-5">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Network
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={selectedChainId}
+                          onChange={(e) => setSelectedChainId(Number(e.target.value))}
+                          className="w-full p-3 pl-10 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent appearance-none"
+                        >
+                          {networks.map((network) => (
+                            <option key={network.id} value={network.id}>
+                              {network.name} ({network.symbol})
+                            </option>
+                          ))}
+                        </select>
+                        <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                          <div className="w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-xs font-bold text-primary-600 dark:text-primary-400">
+                            {selectedNetwork.symbol.slice(0, 1)}
+                          </div>
+                        </div>
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                          <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      </div>
+                      <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 px-1">
+                        Selected: {selectedNetwork.name} (Chain ID: {selectedChainId})
+                      </div>
+                    </div>
           {/* Amount */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
