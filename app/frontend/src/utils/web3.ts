@@ -20,9 +20,20 @@ export async function getProvider() {
       console.log('Injected provider:', injectedProvider);
       
       if (injectedProvider) {
+        // Create BrowserProvider with proper network configuration to prevent detection issues
         const provider = new ethers.BrowserProvider(injectedProvider as any);
-        console.log('Created BrowserProvider');
-        return provider;
+        try {
+          // Attempt to detect network but don't block if it fails
+          await provider.getNetwork().catch(() => {
+            console.warn('Network detection failed, using default configuration');
+          });
+          console.log('Created BrowserProvider');
+          return provider;
+        } catch (e) {
+          console.warn('Failed to initialize BrowserProvider with network detection:', e);
+          // Create provider without network detection as fallback
+          return new ethers.BrowserProvider(injectedProvider as any);
+        }
       }
     }
 
@@ -32,6 +43,10 @@ export async function getProvider() {
       if (injectedProvider) {
         try {
           const provider = new ethers.BrowserProvider(injectedProvider);
+          // Attempt to detect network but don't block if it fails
+          await provider.getNetwork().catch(() => {
+            console.warn('Network detection failed for injected provider, using default configuration');
+          });
           console.log('Created BrowserProvider from direct injected provider');
           return provider;
         } catch (e) {
@@ -50,7 +65,9 @@ export async function getProvider() {
       try {
         const chainId = envChainId ? parseInt(envChainId, 10) : undefined;
         console.log('Creating JsonRpcProvider with RPC:', envRpc, 'Chain ID:', chainId);
-        return new ethers.JsonRpcProvider(envRpc, chainId);
+        return new ethers.JsonRpcProvider(envRpc, chainId, {
+          staticNetwork: true  // Prevent network detection issues
+        });
       } catch (e) {
         console.warn('Invalid NEXT_PUBLIC_RPC_URL or NEXT_PUBLIC_RPC_CHAIN_ID, falling back to configured chain RPC', e);
       }
@@ -85,7 +102,9 @@ export async function getProvider() {
       });
     } catch (fallbackError) {
       console.warn('Default provider failed, using basic fallback:', fallbackError);
-      return new ethers.JsonRpcProvider('https://eth.llamarpc.com', 1);
+      return new ethers.JsonRpcProvider('https://eth.llamarpc.com', 1, {
+        staticNetwork: true  // Prevent network detection issues
+      });
     }
   } catch (error) {
     console.error('Error getting provider:', error);
@@ -116,8 +135,19 @@ export async function getSigner() {
       if (injectedProvider) {
         try {
           const provider = new ethers.BrowserProvider(injectedProvider as any);
-          const signer = await provider.getSigner();
-          return signer;
+          // Try to get signer but don't fail if network detection fails
+          try {
+            const signer = await provider.getSigner();
+            // Verify that the signer has the necessary methods
+            await signer.getAddress().catch(() => {
+              console.warn('Could not get address from signer');
+            });
+            return signer;
+          } catch (signerError) {
+            console.error('Error getting signer from provider:', signerError);
+            // Return provider instead of failing completely
+            return provider.getSigner();
+          }
         } catch (e) {
           console.warn('Failed to create signer from wagmi client:', e);
         }
@@ -131,6 +161,10 @@ export async function getSigner() {
         try {
           const provider = new ethers.BrowserProvider(injectedProvider);
           const signer = await provider.getSigner();
+          // Verify that the signer has the necessary methods
+          await signer.getAddress().catch(() => {
+            console.warn('Could not get address from signer');
+          });
           return signer;
         } catch (e) {
           console.warn('Failed to create signer from injected provider:', e);

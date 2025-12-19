@@ -717,7 +717,33 @@ class EnhancedAuthService {
    * Check if user is authenticated
    */
   isAuthenticated(): boolean {
-    return !!this.token && !!this.sessionData && Date.now() < this.sessionData.expiresAt;
+    // First check in-memory state
+    if (this.token && this.sessionData && Date.now() < this.sessionData.expiresAt) {
+      return true;
+    }
+
+    // If not in memory, check localStorage to recover state
+    // This handles cases where the service instance was recreated
+    if (typeof window !== 'undefined') {
+      try {
+        const sessionDataStr = localStorage.getItem(this.STORAGE_KEYS.SESSION_DATA);
+        if (sessionDataStr) {
+          const sessionData = JSON.parse(sessionDataStr);
+          
+          // Check if session is still valid
+          if (Date.now() < sessionData.expiresAt) {
+            // Restore in-memory state
+            this.sessionData = sessionData;
+            this.token = sessionData.token;
+            return true;
+          }
+        }
+      } catch (error) {
+        console.error('Error checking authentication from storage:', error);
+      }
+    }
+
+    return false;
   }
 
   /**
