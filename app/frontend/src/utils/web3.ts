@@ -98,18 +98,23 @@ export async function getProvider() {
  */
 export async function getSigner() {
   try {
+    // Try wagmi wallet client first
     const client = await getWalletClient(config);
-    // Check if client is available before accessing transport
-    if (!client) return null;
-
-    const injectedProvider = (client as any).transport?.provider;
-    if (injectedProvider) {
-      const provider = new ethers.BrowserProvider(injectedProvider as any);
-      const signer = await provider.getSigner();
-      return signer;
+    
+    if (client) {
+      const injectedProvider = (client as any).transport?.provider;
+      if (injectedProvider) {
+        try {
+          const provider = new ethers.BrowserProvider(injectedProvider as any);
+          const signer = await provider.getSigner();
+          return signer;
+        } catch (e) {
+          console.warn('Failed to create signer from wagmi client:', e);
+        }
+      }
     }
 
-    // Fallback to direct injected provider
+    // Fallback to direct injected provider (window.ethereum)
     if (hasInjectedProvider()) {
       const injectedProvider = getInjectedProvider();
       if (injectedProvider) {

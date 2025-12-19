@@ -1005,15 +1005,16 @@ app.use('/api/marketplace/ens', ensValidationRoutes);
 // Marketplace search routes
 app.use('/api/marketplace/search', marketplaceSearchRoutes);
 
-// Register main marketplace routes - ONLY for endpoints NOT covered by specific routes above
-// This should NOT include /listings as that's handled by marketplaceListingsRoutes
-app.use('/api/marketplace', marketplaceRoutes);
-
 // Seller profile API routes - Primary seller endpoints
 // sellerProfileRoutes defines routes like /seller/:walletAddress, so mounting at /api/marketplace
 // creates the correct path: /api/marketplace/seller/:walletAddress
 // Frontend expects: GET /api/marketplace/seller/:walletAddress
 app.use('/api/marketplace', sellerProfileRoutes);
+
+// Register main marketplace routes - ONLY for endpoints NOT covered by specific routes above
+// This should NOT include /listings as that's handled by marketplaceListingsRoutes
+// This should also NOT include /sellers/:id as that's handled by sellerProfileRoutes
+app.use('/api/marketplace', marketplaceRoutes);
 
 // NOTE: marketplaceSellerRoutes has been removed to prevent route conflicts
 // All seller routes are now properly handled by the dedicated route files above
