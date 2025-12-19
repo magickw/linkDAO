@@ -400,6 +400,7 @@ export class PostService {
 
         return {
           id: dbPost.id.toString(),
+          shareId: dbPost.shareId,
           author: authorAddress,
           parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
           content: dbPost.content,

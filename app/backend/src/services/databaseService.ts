@@ -282,6 +282,7 @@ export class DatabaseService {
       const result = await this.db
         .select({
           id: schema.posts.id,
+          shareId: schema.posts.shareId,
           authorId: schema.posts.authorId,
           title: schema.posts.title,
           content: schema.posts.content,

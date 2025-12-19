@@ -14,9 +14,22 @@ export function useEthersSigner() {
     
     try {
       const { account, chain, transport } = walletClient;
+      
+      // Verify that necessary properties exist before using them
+      if (!account || !chain || !transport) {
+        console.error('Missing required wallet client properties:', { account, chain, transport });
+        return null;
+      }
+
+      // Verify that chain has the required id property
+      if (typeof chain.id === 'undefined') {
+        console.error('Chain ID is undefined');
+        return null;
+      }
+
       const network = {
         chainId: chain.id,
-        name: chain.name,
+        name: chain.name || 'unknown',
         ensAddress: chain.contracts?.ensRegistry?.address,
       };
       

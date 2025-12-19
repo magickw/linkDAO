@@ -469,8 +469,10 @@ export class QuickPostService {
       const posts = await db
         .select({
           id: quickPosts.id,
+          shareId: quickPosts.shareId,
           authorId: quickPosts.authorId,
           contentCid: quickPosts.contentCid,
+          content: quickPosts.content,
           parentId: quickPosts.parentId,
           mediaCids: quickPosts.mediaCids,
           tags: quickPosts.tags,

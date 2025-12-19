@@ -178,6 +178,12 @@ export class LDAOTokenService {
         throw new Error('No wallet connected. Please connect your wallet to stake tokens.');
       }
 
+      // Extract address from signer to verify it's properly connected
+      const walletAddress = await signer.getAddress();
+      if (!walletAddress) {
+        throw new Error('Wallet address could not be retrieved. Please reconnect your wallet.');
+      }
+
       // Get contract with signer
       const contract = await this.getContract(true);
       if (!contract) {

@@ -102,6 +102,16 @@ export async function getSigner() {
     const client = await getWalletClient(config);
     
     if (client) {
+      // Check if the client has the necessary methods before accessing them
+      if (typeof client.getChainId === 'function') {
+        try {
+          const chainId = await client.getChainId();
+          console.log('Wallet client chain ID:', chainId);
+        } catch (e) {
+          console.warn('Failed to get chain ID from wallet client:', e);
+        }
+      }
+      
       const injectedProvider = (client as any).transport?.provider;
       if (injectedProvider) {
         try {

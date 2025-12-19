@@ -43,6 +43,7 @@ export interface AuthorProfile {
 // This can be either a regular Post (with title/community) or QuickPost (without title/community)
 export interface EnhancedPost {
   id: string;
+  shareId?: string; // Share ID for generating share URLs
   author: string;
   authorId?: string; // Optional for compatibility with backend
   handle?: string; // User handle from backend

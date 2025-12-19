@@ -302,9 +302,9 @@ export default function SharePostModal({
                   <div className="font-medium mb-1">{post.title}</div>
                 )}
                 <div className="line-clamp-3">
-                  {post.contentCid.length > 150
-                    ? post.contentCid.substring(0, 150) + '...'
-                    : post.contentCid}
+                  {(post as any).content && (post as any).content.length > 150
+                    ? (post as any).content.substring(0, 150) + '...'
+                    : (post as any).content || post.contentCid.substring(0, 150) + '...'}
                 </div>
               </div>
             </div>
