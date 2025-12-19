@@ -167,19 +167,20 @@ export default function Home() {
 
       return () => {
         clearTimeout(timer);
-        // Disconnect WebSocket when leaving the page
-        if (webSocket && typeof webSocket.disconnect === 'function') {
-          webSocket.disconnect();
-          wsConnectedRef.current = false; // Reset connection status
-        }
+        // DON'T disconnect WebSocket when leaving the page - let it persist for better UX
+        // Only reset the local reference
+        wsConnectedRef.current = false;
       };
     } else {
       setIsContentReady(true);
       setIsConnectionStabilized(false);
-      // Disconnect WebSocket when wallet is disconnected
+      // Only disconnect WebSocket when wallet is disconnected (not on page navigation)
+      // Use setTimeout to ensure disconnection doesn't block navigation
       if (webSocket && typeof webSocket.disconnect === 'function') {
-        webSocket.disconnect();
-        wsConnectedRef.current = false; // Reset connection status
+        setTimeout(() => {
+          webSocket.disconnect();
+          wsConnectedRef.current = false; // Reset connection status
+        }, 0);
       }
     }
   }, [isConnected, webSocket]);
@@ -274,28 +275,26 @@ export default function Home() {
     }
   }, [webSocket, address, wsSubscribed, addToast, debouncedRefresh, isMounted]);
 
-  // Add navigation event listeners to properly cleanup on route changes
+  // Add navigation event listeners to properly handle WebSocket on route changes
   useEffect(() => {
     const handleRouteChangeStart = (url: string) => {
       console.log('[HomePage] Route change start:', url);
       // Don't modify WebSocket state here to avoid blocking navigation
-      // The WebSocket cleanup will happen in the component unmount
+      // The WebSocket cleanup will happen elsewhere
     };
 
     const handleRouteChangeComplete = (url: string) => {
       console.log('[HomePage] Route change complete:', url);
       
       // Re-enable WebSocket if we're back on home page
-      // Use requestAnimationFrame to ensure this doesn't block the navigation
+      // Use setTimeout with 0 delay to ensure this doesn't block the navigation
       if (router.pathname === '/') {
-        requestAnimationFrame(() => {
-          // Only reconnect if wallet is connected and WebSocket is not already connected
-          setTimeout(() => {
-            if (isConnected && webSocket && typeof webSocket.connect === 'function' && !webSocket.isConnected) {
-              webSocket.connect().catch(console.error);
-            }
-          }, 500); // Additional delay to ensure navigation has fully completed
-        });
+        // Use setTimeout to defer WebSocket reconnection until after navigation completes
+        setTimeout(() => {
+          if (isConnected && webSocket && typeof webSocket.connect === 'function' && !webSocket.isConnected) {
+            webSocket.connect().catch(console.error);
+          }
+        }, 0); // Run immediately after current execution stack clears
       }
     };
 
@@ -304,7 +303,7 @@ export default function Home() {
       // Don't change isMounted on error
     };
 
-    // Listen for route changes to properly cleanup
+    // Listen for route changes to properly handle WebSocket
     router.events.on('routeChangeStart', handleRouteChangeStart);
     router.events.on('routeChangeComplete', handleRouteChangeComplete);
     router.events.on('routeChangeError', handleRouteChangeError);

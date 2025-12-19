@@ -67,7 +67,8 @@ class EnhancedAuthService {
     WALLET_ADDRESS: 'linkdao_wallet_address',
     SESSION_DATA: 'linkdao_session_data',
     SIGNATURE_TIMESTAMP: 'linkdao_signature_timestamp',
-    USER_DATA: 'linkdao_user_data'
+    USER_DATA: 'linkdao_user_data',
+    BACKEND_URL: 'linkdao_backend_url'
   };
 
   constructor() {
@@ -89,6 +90,19 @@ class EnhancedAuthService {
 
         // Check if session is still valid
         if (Date.now() < sessionData.expiresAt) {
+          // Check if the stored session is for the same backend (prevent cross-backend auth issues)
+          const storedBackendUrl = localStorage.getItem(this.STORAGE_KEYS.BACKEND_URL);
+          const currentBackendUrl = this.baseUrl;
+
+          if (storedBackendUrl && storedBackendUrl !== currentBackendUrl) {
+            console.log('🔄 Backend URL changed, clearing stored session', {
+              oldUrl: storedBackendUrl,
+              newUrl: currentBackendUrl
+            });
+            this.clearStoredSession();
+            return;
+          }
+
           this.sessionData = sessionData;
           this.token = sessionData.token;
           console.log('✅ Restored valid session from storage');
@@ -565,6 +579,7 @@ class EnhancedAuthService {
         localStorage.setItem(this.STORAGE_KEYS.WALLET_ADDRESS, user.address);
         localStorage.setItem(this.STORAGE_KEYS.SIGNATURE_TIMESTAMP, now.toString());
         localStorage.setItem(this.STORAGE_KEYS.USER_DATA, JSON.stringify(user));
+        localStorage.setItem(this.STORAGE_KEYS.BACKEND_URL, this.baseUrl); // Store current backend URL
 
         if (refreshToken) {
           localStorage.setItem(this.STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
@@ -719,6 +734,20 @@ class EnhancedAuthService {
   isAuthenticated(): boolean {
     // First check in-memory state
     if (this.token && this.sessionData && Date.now() < this.sessionData.expiresAt) {
+      // Check if the stored session is for the same backend
+      const storedBackendUrl = typeof window !== 'undefined' 
+        ? localStorage.getItem(this.STORAGE_KEYS.BACKEND_URL) 
+        : null;
+      
+      if (storedBackendUrl && storedBackendUrl !== this.baseUrl) {
+        console.log('🔄 Backend URL changed, clearing authentication', {
+          storedUrl: storedBackendUrl,
+          currentUrl: this.baseUrl
+        });
+        this.clearStoredSession();
+        return false;
+      }
+      
       return true;
     }
 
@@ -732,6 +761,17 @@ class EnhancedAuthService {
           
           // Check if session is still valid
           if (Date.now() < sessionData.expiresAt) {
+            // Check if the stored session is for the same backend
+            const storedBackendUrl = localStorage.getItem(this.STORAGE_KEYS.BACKEND_URL);
+            if (storedBackendUrl && storedBackendUrl !== this.baseUrl) {
+              console.log('🔄 Backend URL changed, clearing authentication', {
+                storedUrl: storedBackendUrl,
+                currentUrl: this.baseUrl
+              });
+              this.clearStoredSession();
+              return false;
+            }
+            
             // Restore in-memory state
             this.sessionData = sessionData;
             this.token = sessionData.token;
@@ -751,7 +791,21 @@ class EnhancedAuthService {
    */
   getToken(): string | null {
     // If we have the token in memory, return it
-    if (this.token) {
+    if (this.token && this.sessionData) {
+      // Check if the stored session is for the same backend
+      const storedBackendUrl = typeof window !== 'undefined' 
+        ? localStorage.getItem(this.STORAGE_KEYS.BACKEND_URL) 
+        : null;
+      
+      if (storedBackendUrl && storedBackendUrl !== this.baseUrl) {
+        console.log('🔄 Backend URL changed, clearing token', {
+          storedUrl: storedBackendUrl,
+          currentUrl: this.baseUrl
+        });
+        this.clearStoredSession();
+        return null;
+      }
+      
       return this.token;
     }
 
@@ -766,6 +820,17 @@ class EnhancedAuthService {
           if (sessionDataStr) {
             const sessionData = JSON.parse(sessionDataStr);
             if (Date.now() < sessionData.expiresAt) {
+              // Check if the stored session is for the same backend
+              const storedBackendUrl = localStorage.getItem(this.STORAGE_KEYS.BACKEND_URL);
+              if (storedBackendUrl && storedBackendUrl !== this.baseUrl) {
+                console.log('🔄 Backend URL changed, clearing token', {
+                  storedUrl: storedBackendUrl,
+                  currentUrl: this.baseUrl
+                });
+                this.clearStoredSession();
+                return null;
+              }
+              
               console.log('🔄 Restored token from localStorage');
               this.token = storedToken;
               this.sessionData = sessionData;

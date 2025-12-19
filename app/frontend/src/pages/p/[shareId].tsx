@@ -33,7 +33,7 @@ export default function SharePostPage() {
                 setError(null);
 
                 // Fetch post by share ID
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/quick-posts/share/${shareId}`);
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/p/${shareId}`);
                 
                 if (!response.ok) {
                     if (response.status === 404) {
@@ -44,18 +44,20 @@ export default function SharePostPage() {
                     return;
                 }
 
-                const data = await response.json();
+                const result = await response.json();
                 
-                if (data.success && data.data) {
-                    setPost(data.data as QuickPost);
+                if (result.success && result.data) {
+                    // 后端返回的数据格式不同，需要从 result.data.post 获取实际帖子数据
+                    const postData = result.data.post as QuickPost;
+                    const canonicalUrl = result.data.canonicalUrl;
                     
-                    // Construct canonical URL
-                    const handle = data.data.authorProfile?.handle || data.data.author?.slice(0, 8);
-                    const canonical = `/${handle}/posts/${shareId}`;
-                    setCanonicalUrl(canonical);
+                    setPost(postData);
+                    setCanonicalUrl(canonicalUrl);
                     
-                    // Update URL without navigation
-                    window.history.replaceState({}, '', canonical);
+                    // 重定向到规范URL
+                    if (canonicalUrl && canonicalUrl !== window.location.pathname) {
+                        router.replace(canonicalUrl);
+                    }
                 } else {
                     setError('Post not found');
                 }
