@@ -620,12 +620,14 @@ const EnhancedPostCard = React.memo(({
                   id: post.id,
                   title: post.title,
                   contentCid: post.contentCid, // Use contentCid field instead of content
+                  content: post.content, 
                   author: post.author,
                   communityId: post.communityId,
                   communityName: post.communityName || 'general',
                   commentCount: post.comments,
                   stakedValue: post.reactions.reduce((sum, r) => sum + r.totalAmount, 0),
-                  shareId: (post as any).shareId // Pass shareId if available
+                  shareId: (post as any).shareId, // Pass shareId if available
+                  authorProfile: post.authorProfile 
                 }}
                 postType={post.communityId ? 'community' : 'feed'} // Use appropriate post type
                 onComment={() => {

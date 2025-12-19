@@ -86,6 +86,38 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
       if (hash) {
         addToast('Transaction submitted successfully!', 'success');
         if (onSuccess) onSuccess(hash);
+        
+        // Construct the explorer URL based on the current chain
+        let explorerUrl = '';
+        switch (chainId) {
+          case 1: // Ethereum Mainnet
+            explorerUrl = `https://etherscan.io/tx/${hash}`;
+            break;
+          case 8453: // Base Mainnet
+            explorerUrl = `https://basescan.org/tx/${hash}`;
+            break;
+          case 84532: // Base Sepolia
+            explorerUrl = `https://sepolia.basescan.org/tx/${hash}`;
+            break;
+          case 137: // Polygon
+            explorerUrl = `https://polygonscan.com/tx/${hash}`;
+            break;
+          case 42161: // Arbitrum
+            explorerUrl = `https://arbiscan.io/tx/${hash}`;
+            break;
+          case 11155111: // Sepolia Testnet
+            explorerUrl = `https://sepolia.etherscan.io/tx/${hash}`;
+            break;
+          default:
+            // Fallback to Ethereum mainnet if chain is not recognized
+            explorerUrl = `https://etherscan.io/tx/${hash}`;
+        }
+
+        // Ask user if they want to view the transaction on the explorer
+        if (window.confirm(`Transaction submitted! Would you like to view it on the blockchain explorer?`)) {
+          window.open(explorerUrl, '_blank', 'noopener,noreferrer');
+        }
+
         onClose();
       }
     } catch (err) {

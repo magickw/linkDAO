@@ -367,11 +367,52 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
               });
               setListings(transformedListings);
             } else {
-              setListings([]);
+              // If seller service failed to return listings, try marketplace service as fallback
+              console.log('Seller service returned no listings during refresh, trying marketplace service...');
+              try {
+                const { marketplaceService } = await import('@/services/marketplaceService');
+                const marketplaceListings = await marketplaceService.getListingsBySeller(actualWalletAddress);
+                
+                if (marketplaceListings && marketplaceListings.length > 0) {
+                  // Transform marketplace listings to unified format
+                  const transformedListings: UnifiedSellerListing[] = marketplaceListings.map(listing => {
+                    const transformResult = unifiedSellerService.transformExternalListing(listing, 'marketplace');
+                    return transformResult.data;
+                  });
+                  setListings(transformedListings);
+                  console.log('Successfully loaded listings using marketplace service fallback during refresh');
+                } else {
+                  setListings([]);
+                }
+              } catch (fallbackError) {
+                console.warn('Marketplace service fallback also failed during refresh:', fallbackError);
+                setListings([]);
+              }
             }
           } catch (listingsError) {
             console.warn('Failed to fetch seller listings during refresh:', listingsError);
-            setListings([]);
+            
+            // Try marketplace service as fallback when seller service fails
+            try {
+              const { marketplaceService } = await import('@/services/marketplaceService');
+              const actualWalletAddress = transformedSeller.walletAddress;
+              const marketplaceListings = await marketplaceService.getListingsBySeller(actualWalletAddress);
+              
+              if (marketplaceListings && marketplaceListings.length > 0) {
+                // Transform marketplace listings to unified format
+                const transformedListings: UnifiedSellerListing[] = marketplaceListings.map(listing => {
+                  const transformResult = unifiedSellerService.transformExternalListing(listing, 'marketplace');
+                  return transformResult.data;
+                });
+                setListings(transformedListings);
+                console.log('Successfully loaded listings using marketplace service fallback after seller service error during refresh');
+              } else {
+                setListings([]);
+              }
+            } catch (fallbackError) {
+              console.warn('Marketplace service fallback also failed during refresh:', fallbackError);
+              setListings([]);
+            }
           }
         } else {
           // If seller not found, set error state instead of using mock data
@@ -536,7 +577,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
         setLoading(false);
       }
       
-      // Fetch seller listings with error handling
+      // Fetch seller listings with error handling and fallback
       try {
         const { sellerService } = await import('@/services/sellerService');
         // Use the actual wallet address from the seller profile instead of the sellerId parameter
@@ -552,11 +593,52 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
           });
           setListings(transformedListings);
         } else {
-          setListings([]);
+          // If seller service failed to return listings, try marketplace service as fallback
+          console.log('Seller service returned no listings, trying marketplace service...');
+          try {
+            const { marketplaceService } = await import('@/services/marketplaceService');
+            const marketplaceListings = await marketplaceService.getListingsBySeller(actualWalletAddress);
+            
+            if (marketplaceListings && marketplaceListings.length > 0) {
+              // Transform marketplace listings to unified format
+              const transformedListings: UnifiedSellerListing[] = marketplaceListings.map(listing => {
+                const transformResult = unifiedSellerService.transformExternalListing(listing, 'marketplace');
+                return transformResult.data;
+              });
+              setListings(transformedListings);
+              console.log('Successfully loaded listings using marketplace service fallback');
+            } else {
+              setListings([]);
+            }
+          } catch (fallbackError) {
+            console.warn('Marketplace service fallback also failed:', fallbackError);
+            setListings([]);
+          }
         }
       } catch (listingsError) {
         console.warn('Failed to fetch seller listings:', listingsError);
-        setListings([]);
+        
+        // Try marketplace service as fallback when seller service fails
+        try {
+          const { marketplaceService } = await import('@/services/marketplaceService');
+          const actualWalletAddress = sellerProfile?.walletAddress || sellerId;
+          const marketplaceListings = await marketplaceService.getListingsBySeller(actualWalletAddress);
+          
+          if (marketplaceListings && marketplaceListings.length > 0) {
+            // Transform marketplace listings to unified format
+            const transformedListings: UnifiedSellerListing[] = marketplaceListings.map(listing => {
+              const transformResult = unifiedSellerService.transformExternalListing(listing, 'marketplace');
+              return transformResult.data;
+            });
+            setListings(transformedListings);
+            console.log('Successfully loaded listings using marketplace service fallback after seller service error');
+          } else {
+            setListings([]);
+          }
+        } catch (fallbackError) {
+          console.warn('Marketplace service fallback also failed:', fallbackError);
+          setListings([]);
+        }
       }
       
       // Initialize reviews as empty array instead of mock data

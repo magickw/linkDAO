@@ -664,10 +664,13 @@ function CommunityPostCardEnhanced({
                   post={{
                     id: post.id,
                     contentCid: post.contentCid,
+                    content: post.content, // add actual content
+                    shareId: post.shareId, // add shareId
                     author: post.author,
                     communityId: community.id,
                     commentCount: comments.length,
-                    stakedValue: reactions.reduce((sum, r) => sum + r.totalStaked, 0)
+                    stakedValue: reactions.reduce((sum, r) => sum + r.totalStaked, 0),
+                    authorProfile: post.authorProfile // add author profile
                   }}
                   postType="community"
                   userMembership={userMembership}

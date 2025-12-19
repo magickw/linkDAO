@@ -883,9 +883,12 @@ export default function Web3SocialPostCard({
           post={{
             id: post.id,
             contentCid: post.contentCid,
+            content: post.content, // add actual content
+            shareId: post.shareId, // add shareId
             author: post.author,
             commentCount: commentCount,
-            stakedValue: reactions.reduce((sum, r) => sum + r.totalStaked, 0)
+            stakedValue: reactions.reduce((sum, r) => sum + r.totalStaked, 0),
+            authorProfile: post.authorProfile // add author info
           }}
           postType="feed"
           onReaction={async (postId: string, reactionType: string, amount?: number) => {
