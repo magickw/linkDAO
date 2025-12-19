@@ -163,16 +163,34 @@ const getOptimizedImageURL = (
 
   // For external URLs, try to use optimization services
   if (src.startsWith('http')) {
-    // Example: Use a CDN or image optimization service
-    const url = new URL(src);
+    // Fix malformed IPFS gateway URLs with double slashes
+    if (src.includes('//ipfs//') || src.includes('/ipfs//')) {
+      const fixed = src.replace(/\/\/ipfs\/\//, '/ipfs/').replace(/\/ipfs\/\//, '/ipfs/');
+      console.warn('Fixed malformed IPFS URL:', src, '→', fixed);
+      
+      // If the fixed URL is still invalid (no CID after /ipfs/), use default
+      if (fixed.endsWith('/ipfs/') || fixed.includes('/ipfs//')) {
+        console.warn('Cannot fix malformed IPFS URL, using default');
+        return useProductDefault ? DEFAULT_PRODUCT_IMAGE : DEFAULT_AVATAR;
+      }
+      
+      src = fixed;
+    }
 
-    // Add optimization parameters if the service supports them
-    if (width) url.searchParams.set('w', width.toString());
-    if (height) url.searchParams.set('h', height.toString());
-    url.searchParams.set('q', quality.toString());
-    url.searchParams.set('f', 'webp'); // Prefer WebP format
+    try {
+      const url = new URL(src);
 
-    return url.toString();
+      // Add optimization parameters if the service supports them
+      if (width) url.searchParams.set('w', width.toString());
+      if (height) url.searchParams.set('h', height.toString());
+      url.searchParams.set('q', quality.toString());
+      url.searchParams.set('f', 'webp'); // Prefer WebP format
+
+      return url.toString();
+    } catch (urlError) {
+      console.warn('Invalid URL format, using default:', src);
+      return useProductDefault ? DEFAULT_PRODUCT_IMAGE : DEFAULT_AVATAR;
+    }
   }
 
   return src;
