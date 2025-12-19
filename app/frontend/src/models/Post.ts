@@ -68,6 +68,7 @@ export function convertBackendPostToPost(backendPost: any): Post {
     title: backendPost.title || '',
     content: content, // Use parsed content
     contentCid: backendPost.contentCid || '',
+    shareId: backendPost.shareId || '', // Include shareId for share URLs
     mediaCids: backendPost.mediaCids ? JSON.parse(backendPost.mediaCids) : [],
     tags: backendPost.tags ? JSON.parse(backendPost.tags) : [],
     createdAt: toDate(backendPost.createdAt),

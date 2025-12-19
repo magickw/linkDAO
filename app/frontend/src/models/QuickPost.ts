@@ -76,6 +76,7 @@ export function convertBackendQuickPostToQuickPost(backendPost: any): QuickPost 
     title: backendPost.title || '', // Optional for quickPosts
     content: content, // Use parsed content
     contentCid: backendPost.contentCid || '',
+    shareId: backendPost.shareId || '', // Include shareId for share URLs
     mediaCids: backendPost.mediaCids ? JSON.parse(backendPost.mediaCids) : [],
     tags: backendPost.tags ? JSON.parse(backendPost.tags) : [],
     createdAt: new Date(backendPost.createdAt || Date.now()),

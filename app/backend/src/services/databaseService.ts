@@ -191,6 +191,8 @@ export class DatabaseService {
           moderationStatus: schema.posts.moderationStatus,
           moderationWarning: schema.posts.moderationWarning,
           riskScore: schema.posts.riskScore,
+          upvotes: schema.posts.upvotes,
+          downvotes: schema.posts.downvotes,
           createdAt: schema.posts.createdAt,
           updatedAt: schema.posts.updatedAt,
         })

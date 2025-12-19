@@ -35,15 +35,15 @@ export default function SmartRightSidebar({
   const [prefillToken, setPrefillToken] = useState<string | null>(null);
   // const [sendModalEstimate, setSendModalEstimate] = useState<any | null>(null); // Removed as estimation is handled by wallet or internal hook
 
-  // Use real wallet data with live prices and transaction history
+  // Use real wallet data with live prices but defer transaction history loading
   const {
     walletData,
     isLoading
   } = useWalletData({
-    autoRefresh: true,
+    autoRefresh: false, // Disable auto-refresh to prevent blocking
     refreshInterval: 300000, // Refresh every 5 minutes
-    enableTransactionHistory: true,
-    maxTransactions: 10
+    enableTransactionHistory: true, // Enable but it will be loaded separately
+    maxTransactions: 5 // Reduce initial transaction count
   });
 
   const { refresh } = useWalletData({ // Get refresh function

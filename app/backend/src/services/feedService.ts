@@ -238,6 +238,7 @@ export class FeedService {
           title: posts.title,
           content: posts.content, // Include content directly
           contentCid: posts.contentCid,
+          shareId: posts.shareId, // Include shareId for share URLs
           mediaCids: posts.mediaCids,
           tags: posts.tags,
           createdAt: posts.createdAt,
@@ -300,6 +301,7 @@ export class FeedService {
           dao: sql<string>`NULL`, // Quick posts don't have DAO
           content: quickPosts.content, // Include content directly
           contentCid: quickPosts.contentCid,
+          shareId: quickPosts.shareId, // Include shareId for share URLs
           mediaCids: quickPosts.mediaCids,
           tags: quickPosts.tags,
           createdAt: quickPosts.createdAt,

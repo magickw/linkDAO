@@ -407,6 +407,8 @@ export class PostService {
           contentCid: dbPost.contentCid,
           mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
           tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
+          upvotes: dbPost.upvotes || 0,
+          downvotes: dbPost.downvotes || 0,
           createdAt,
           updatedAt,
           onchainRef: dbPost.onchainRef || '',

@@ -28,7 +28,7 @@ export default function TrendingContentWidget({
   const [trendingItems, setTrendingItems] = useState<TrendingItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch real trending data from API
+  // Fetch real trending data from API with debouncing to prevent excessive calls
   useEffect(() => {
     const fetchTrendingData = async () => {
       setIsLoading(true);
@@ -48,7 +48,9 @@ export default function TrendingContentWidget({
       }
     };
 
-    fetchTrendingData();
+    // Use setTimeout to defer the initial fetch to avoid blocking initial render
+    const timer = setTimeout(fetchTrendingData, 100);
+    return () => clearTimeout(timer);
   }, [context, communityId, activeFilter]);
 
   const formatNumber = (num: number) => {

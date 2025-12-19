@@ -193,6 +193,22 @@ export default function EnhancedHomeFeed({
           >
             <EnhancedPostCard
               post={post}
+              onUpvote={async (postId) => {
+                try {
+                  await FeedService.upvotePost(postId);
+                  addToast('Post upvoted successfully!', 'success');
+                } catch (error) {
+                  addToast('Failed to upvote post', 'error');
+                }
+              }}
+              onDownvote={async (postId) => {
+                try {
+                  await FeedService.downvotePost(postId);
+                  addToast('Post downvoted successfully!', 'success');
+                } catch (error) {
+                  addToast('Failed to downvote post', 'error');
+                }
+              }}
               onReaction={async (postId, type, amount) => {
                 // Store the previous count for rollback in case of failure
                 const previousReactionCount = posts.find(p => p.id === postId)?.reactionCount || 0;
