@@ -32,8 +32,8 @@ export default function SharePostPage() {
                 setIsLoading(true);
                 setError(null);
 
-                // Fetch post by share ID
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/p/${shareId}`);
+                // Fetch post by share ID - 使用相对路径以自动使用当前域名
+                const response = await fetch(`/p/${shareId}`);
                 
                 if (!response.ok) {
                     if (response.status === 404) {

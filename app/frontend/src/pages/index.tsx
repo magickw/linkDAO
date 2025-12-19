@@ -137,13 +137,18 @@ export default function Home() {
   const wsConnectedRef = useRef(false);
 
   useEffect(() => {
+    console.log('[HomePage] WebSocket connection useEffect triggered, isConnected:', isConnected);
+    console.log('[HomePage] WebSocket connection useEffect timestamp:', Date.now());
+    
     if (isConnected) {
       // Use setTimeout to defer both content loading and WebSocket connection
       // This ensures navigation can complete without being blocked by WebSocket setup
       const scheduleContentLoad = () => {
+        console.log('[HomePage] Scheduling content load...');
         // Defer content loading first
         setTimeout(() => {
           if (isMounted.current) {
+            console.log('[HomePage] Setting content ready to true');
             setIsContentReady(true);
           }
         }, 50);
@@ -151,13 +156,17 @@ export default function Home() {
         // Then defer WebSocket connection establishment separately
         setTimeout(() => {
           if (isMounted.current && !wsConnectedRef.current) {
+            console.log('[HomePage] Attempting WebSocket connection...');
             setIsConnectionStabilized(true);
             // Connect WebSocket only after wallet is connected and page has stabilized
             webSocket.connect().then(() => {
               if (isMounted.current) {
+                console.log('[HomePage] WebSocket connected successfully');
                 wsConnectedRef.current = true;
               }
-            }).catch(console.error);
+            }).catch((error) => {
+              console.error('[HomePage] WebSocket connection failed:', error);
+            });
           }
         }, 200); // Longer delay to ensure navigation is complete
       };
@@ -172,11 +181,13 @@ export default function Home() {
         wsConnectedRef.current = false;
       };
     } else {
+      console.log('[HomePage] Wallet not connected, setting content ready to true');
       setIsContentReady(true);
       setIsConnectionStabilized(false);
       // Only disconnect WebSocket when wallet is disconnected (not on page navigation)
       // Use setTimeout to ensure disconnection doesn't block navigation
       if (webSocket && typeof webSocket.disconnect === 'function') {
+        console.log('[HomePage] Scheduling WebSocket disconnection...');
         setTimeout(() => {
           webSocket.disconnect();
           wsConnectedRef.current = false; // Reset connection status
@@ -279,18 +290,21 @@ export default function Home() {
   useEffect(() => {
     const handleRouteChangeStart = (url: string) => {
       console.log('[HomePage] Route change start:', url);
+      console.log('[HomePage] Route change start timestamp:', Date.now());
       // Don't modify WebSocket state here to avoid blocking navigation
       // The WebSocket cleanup will happen elsewhere
     };
 
     const handleRouteChangeComplete = (url: string) => {
       console.log('[HomePage] Route change complete:', url);
+      console.log('[HomePage] Route change complete timestamp:', Date.now());
       
       // Re-enable WebSocket if we're back on home page
       // Use setTimeout with 0 delay to ensure this doesn't block the navigation
       if (router.pathname === '/') {
         // Use setTimeout to defer WebSocket reconnection until after navigation completes
         setTimeout(() => {
+          console.log('[HomePage] Attempting WebSocket reconnection...');
           if (isConnected && webSocket && typeof webSocket.connect === 'function' && !webSocket.isConnected) {
             webSocket.connect().catch(console.error);
           }
@@ -300,6 +314,7 @@ export default function Home() {
 
     const handleRouteChangeError = (err: any, url: string) => {
       console.error('[HomePage] Route change error for', url, ':', err);
+      console.log('[HomePage] Route change error timestamp:', Date.now());
       // Don't change isMounted on error
     };
 

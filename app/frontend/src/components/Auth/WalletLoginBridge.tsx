@@ -31,6 +31,10 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
   const { user, isAuthenticated, login } = useAuth();
   const hasHandledAddressRef = useRef<Set<string>>(new Set());
   const isMountedRef = useRef(true);
+  
+  // Use a ref to store the login function to avoid dependency issues
+  const loginRef = useRef(login);
+  loginRef.current = login;
 
   useEffect(() => {
     // Only attempt login if:
@@ -111,7 +115,7 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
     const scheduleLogin = () => {
       // Create a promise to ensure the login process doesn't block the event loop
       Promise.resolve().then(() => {
-        return login(address, connector, 'connected');
+        return loginRef.current(address, connector, 'connected');
       })
       .then(result => {
         if (!isMountedRef.current) {
@@ -152,7 +156,7 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
       console.log('WalletLoginBridge: Cleaning up effect');
       isMountedRef.current = false;
     };
-  }, [address, isConnected, isAuthenticated, autoLogin, login, connector, status, onLoginSuccess, onLoginError]);
+  }, [address, isConnected, isAuthenticated, autoLogin, connector, status, onLoginSuccess, onLoginError]);
   // Reset when wallet disconnects
   useEffect(() => {
     if (!isConnected) {

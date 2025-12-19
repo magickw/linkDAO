@@ -76,27 +76,29 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
         setLoading(true);
         setError(null);
 
-        // Better approach: Try to fetch by slug first, and only try by ID if slug returns null
-        let data = null;
+        // Use setTimeout to defer community data loading and avoid blocking navigation
+        setTimeout(async () => {
+          // Better approach: Try to fetch by slug first, and only try by ID if slug returns null
+          let data = null;
 
-        // Try fetching by slug first (most common case for user navigation)
-        data = await CommunityService.getCommunityBySlug(communitySlug);
+          // Try fetching by slug first (most common case for user navigation)
+          data = await CommunityService.getCommunityBySlug(communitySlug);
 
-        // If slug fetch didn't work (returned null), try by ID if it looks like a UUID
-        if (!data) {
-          // Check if it looks like a UUID before trying
-          const isUuidFormat = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(communitySlug);
-          if (isUuidFormat) {
-            data = await CommunityService.getCommunityById(communitySlug);
+          // If slug fetch didn't work (returned null), try by ID if it looks like a UUID
+          if (!data) {
+            // Check if it looks like a UUID before trying
+            const isUuidFormat = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(communitySlug);
+            if (isUuidFormat) {
+              data = await CommunityService.getCommunityById(communitySlug);
+            }
           }
-        }
 
-        if (!data) {
-          setError('Community not found');
-          setCommunityData(null);
-          setPosts([]);
-          return;
-        }
+          if (!data) {
+            setError('Community not found');
+            setCommunityData(null);
+            setPosts([]);
+            return;
+          }
 
         // Ensure community data has all required properties with defaults
         const processedCommunityData = {

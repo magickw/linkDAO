@@ -239,24 +239,28 @@ const CommunitiesPage: React.FC = () => {
         setLoading(true);
         setError(null);
 
-        // Load communities with fallback for 503 errors
-        const communitiesData = await CommunityService.getAllCommunities({
-          isPublic: true,
-          limit: 50
-        });
+        // Use setTimeout to defer community loading and avoid blocking navigation
+        setTimeout(async () => {
+          // Load communities with fallback for 503 errors
+          const communitiesData = await CommunityService.getAllCommunities({
+            isPublic: true,
+            limit: 50
+          });
 
-        if (!isMounted.current) return;
-        setCommunities(communitiesData);
+          if (!isMounted.current) return;
+          setCommunities(communitiesData);
 
 
         // Load user's community memberships if wallet is connected AND authenticated with backend
         // Check both wallet connection and backend authentication to avoid 401 errors
         if (address && isConnected && isAuthenticated) {
           try {
-            // Fetch user's communities (both created and joined)
-            const myCommunitiesResponse = await CommunityService.getMyCommunities(1, 100).catch(() => ({ communities: [], pagination: null }));
+            // Use setTimeout to defer user communities loading and avoid blocking navigation
+            setTimeout(async () => {
+              // Fetch user's communities (both created and joined)
+              const myCommunitiesResponse = await CommunityService.getMyCommunities(1, 100).catch(() => ({ communities: [], pagination: null }));
 
-            if (!isMounted.current) return;
+              if (!isMounted.current) return;
 
             // Set community IDs
             const allUserCommunityIds = new Set<string>();
@@ -453,40 +457,42 @@ const CommunitiesPage: React.FC = () => {
   // Load Web3 enhanced data
   const loadWeb3EnhancedData = async (communitiesData: Community[]) => {
     try {
-      // Initialize with empty data instead of mock data
-      const userRoles: Record<string, string> = {};
-      const userAdminRoles: Record<string, string> = {};
-      const tokenBalances: Record<string, number> = {};
-      const liveTokenPrices: Record<string, number> = {};
-      const stakingData: Record<string, any> = {};
+      // Use setTimeout to defer Web3 enhanced data loading and avoid blocking navigation
+      setTimeout(() => {
+        // Initialize with empty data instead of mock data
+        const userRoles: Record<string, string> = {};
+        const userAdminRoles: Record<string, string> = {};
+        const tokenBalances: Record<string, number> = {};
+        const liveTokenPrices: Record<string, number> = {};
+        const stakingData: Record<string, any> = {};
 
-      communitiesData.forEach(community => {
-        userRoles[community.id] = 'visitor';
-        // Check if user is an admin/moderator of this community (based on moderators field)
-        if (community.moderators && Array.isArray(community.moderators) &&
-          address && community.moderators.includes(address)) {
-          userRoles[community.id] = 'admin';
-          userAdminRoles[community.id] = 'admin'; // Track admin roles separately for MyCommunitiesCard
-        }
-        tokenBalances[community.id] = 0;
-        liveTokenPrices[community.id] = 0;
-        stakingData[community.id] = {
-          totalStaked: 0,
-          stakerCount: 0,
-          stakingTier: 'bronze',
-          userStake: 0
-        };
-      });
+        communitiesData.forEach(community => {
+          userRoles[community.id] = 'visitor';
+          // Check if user is an admin/moderator of this community (based on moderators field)
+          if (community.moderators && Array.isArray(community.moderators) &&
+            address && community.moderators.includes(address)) {
+            userRoles[community.id] = 'admin';
+            userAdminRoles[community.id] = 'admin'; // Track admin roles separately for MyCommunitiesCard
+          }
+          tokenBalances[community.id] = 0;
+          liveTokenPrices[community.id] = 0;
+          stakingData[community.id] = {
+            totalStaked: 0,
+            stakerCount: 0,
+            stakingTier: 'bronze',
+            userStake: 0
+          };
+        });
 
-      setUserRoles(userRoles);
-      setUserAdminRoles(userAdminRoles);
-      setTokenBalances(tokenBalances);
-      setLiveTokenPrices(liveTokenPrices);
-      setStakingData(stakingData);
+        setUserRoles(userRoles);
+        setUserAdminRoles(userAdminRoles);
+        setTokenBalances(tokenBalances);
+        setLiveTokenPrices(liveTokenPrices);
+        setStakingData(stakingData);
 
-      // Initialize with empty arrays instead of mock data
-      setGovernanceProposals([]);
-      setWalletActivities([]);
+        // Initialize with empty arrays instead of mock data
+        setGovernanceProposals([]);
+        setWalletActivities([]);
 
     } catch (err) {
       console.error('Error loading Web3 enhanced data:', err);
