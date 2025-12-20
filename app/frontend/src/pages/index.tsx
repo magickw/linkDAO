@@ -17,7 +17,7 @@ import SupportWidget from '@/components/SupportWidget';
 import { newsletterService } from '@/services/newsletterService';
 import { usePostModalManager } from '@/hooks/usePostModalManager';
 import PostModal from '@/components/PostModal';
-import { useBatchedWalletUpdates } from '../../hooks/useBatchedWalletUpdates';
+import { useBatchedWalletUpdates } from '@/hooks/useBatchedWalletUpdates';
 
 // Lazy load heavy components
 const SmartRightSidebar = lazy(() => import('@/components/SmartRightSidebar/SmartRightSidebar').catch(() => ({ default: () => <div>Failed to load sidebar</div> })));
