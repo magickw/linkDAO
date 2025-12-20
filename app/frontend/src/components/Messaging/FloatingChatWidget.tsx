@@ -386,9 +386,23 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
       console.log("FloatingChatWidget: Found existing conversation:", existingConversation);
 
       if (existingConversation) {
-        // If conversation exists, select it
+        // If conversation exists, select it (inline the logic to avoid circular dependency)
         console.log("FloatingChatWidget: Selecting existing conversation:", existingConversation);
-        handleConversationSelect(existingConversation);
+        setSelectedConversation(existingConversation);
+        setActiveTab('chat');
+
+        // Join conversation room
+        if (isWebSocketConnected && existingConversation.id) {
+          console.log("FloatingChatWidget: Joining conversation room:", existingConversation.id);
+          joinConversation(existingConversation.id);
+        }
+
+        // Mark messages as read when conversation is opened
+        if (address && existingConversation.unreadCounts?.[address] > 0) {
+          markAsRead(existingConversation.id, []).catch(error => {
+            console.error('Failed to mark as read:', error);
+          });
+        }
       } else {
         // If no conversation exists, start a new one
         console.log("FloatingChatWidget: No existing conversation found, opening new conversation modal with address:", pendingContact.walletAddress);
@@ -400,7 +414,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
       setPendingContact(null);
       console.log("FloatingChatWidget: Cleared pending contact");
     }
-  }, [pendingContact, address, hookConversations, handleConversationSelect, loadConversations]);
+  }, [pendingContact, address, hookConversations, loadConversations, isWebSocketConnected, joinConversation, markAsRead]);
 
   const handleSendMessage = async (content: string) => {
     if (!content.trim() || !selectedConversation || !address) return;

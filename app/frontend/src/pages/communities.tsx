@@ -378,14 +378,15 @@ const CommunitiesPage: React.FC = () => {
         };
         const backendSort = sortMapping[sortBy] || 'new';
 
-        // Use the enhanced feed service to show only community posts
+        // Use the enhanced feed service to show community posts
         const { FeedService } = await import('../services/feedService');
         const filter = {
           feedSource: 'all', // Get all posts including public community posts
           sortBy: sortBy as any,
           timeRange: timeFilter,
           userAddress: address || undefined, // Include user address if authenticated
-          postTypes: ['posts'] // Only show community posts
+          postTypes: ['posts'], // Only show community posts
+          communities: joinedCommunities.length > 0 ? joinedCommunities : undefined // Include joined communities
         };
         const result = await FeedService.getEnhancedFeed(filter, pageNum, 20);
 
@@ -442,7 +443,7 @@ const CommunitiesPage: React.FC = () => {
     if (address && !isAuthenticated) return;
 
     fetchPosts(1, false);
-  }, [sortBy, timeFilter, address, isAuthenticated, isAuthLoading, joinedCommunities]);
+  }, [sortBy, timeFilter, address, isAuthenticated, isAuthLoading, loading, joinedCommunities.length]);
 
   // Infinite scroll handler
   useEffect(() => {

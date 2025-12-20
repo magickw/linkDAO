@@ -22,6 +22,7 @@ import {
   transformDisplayListingToUnified,
   transformSellerListingToUnified,
   transformMarketplaceListingToUnified,
+  transformBackendListingToUnified,
   transformSellerProfileToUnified,
   transformDashboardStatsToUnified
 } from '@/utils/sellerDataTransformers';
@@ -235,7 +236,7 @@ export class UnifiedSellerService {
 
       for (const listing of listingsArray) {
         try {
-          const transformResult = transformSellerListingToUnified(listing, this.transformationOptions);
+          const transformResult = transformBackendListingToUnified(listing, this.transformationOptions);
           
           // Fill in seller information
           transformResult.data.sellerId = walletAddress;
@@ -700,7 +701,7 @@ export class UnifiedSellerService {
    */
   transformExternalListing(
     externalListing: any,
-    source: 'display' | 'marketplace' | 'seller'
+    source: 'display' | 'marketplace' | 'seller' | 'backend'
   ): TransformationResult<UnifiedSellerListing> {
     switch (source) {
       case 'display':
@@ -709,6 +710,8 @@ export class UnifiedSellerService {
         return transformMarketplaceListingToUnified(externalListing, this.transformationOptions);
       case 'seller':
         return transformSellerListingToUnified(externalListing, this.transformationOptions);
+      case 'backend':
+        return transformBackendListingToUnified(externalListing, this.transformationOptions);
       default:
         throw new Error(`Unknown listing source: ${source}`);
     }

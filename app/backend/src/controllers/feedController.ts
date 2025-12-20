@@ -104,7 +104,8 @@ export class FeedController {
         }
 
         // Determine post type based on query parameter or default to 'all'
-        const postTypeFilter = (req.query.postType as string) || 'all';
+        // Handle both 'postType' and 'postTypeFilter' parameters for backward compatibility
+        const postTypeFilter = (req.query.postTypeFilter as string) || (req.query.postType as string) || 'all';
         
         const feedData = await feedService.getEnhancedFeed({
           userAddress: userAddress || null, // Pass null for anonymous users

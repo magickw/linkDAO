@@ -362,7 +362,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
             if (sellerListings && sellerListings.length > 0) {
               // Transform seller listings to unified format
               const transformedListings: UnifiedSellerListing[] = sellerListings.map(listing => {
-                const transformResult = unifiedSellerService.transformExternalListing(listing, 'seller');
+                const transformResult = unifiedSellerService.transformExternalListing(listing, 'backend');
                 return transformResult.data;
               });
               setListings(transformedListings);
@@ -588,7 +588,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
         if (sellerListings && sellerListings.length > 0) {
           // Transform seller listings to unified format
           const transformedListings: UnifiedSellerListing[] = sellerListings.map(listing => {
-            const transformResult = unifiedSellerService.transformExternalListing(listing, 'seller');
+            const transformResult = unifiedSellerService.transformExternalListing(listing, 'backend');
             return transformResult.data;
           });
           setListings(transformedListings);

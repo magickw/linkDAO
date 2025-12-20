@@ -228,7 +228,7 @@ export class FeedService {
 
       // Add postTypes parameter if specified
       if (filter.postTypes && filter.postTypes.length > 0) {
-        params.append('postType', filter.postTypes[0]); // Send first postType as string
+        params.append('postTypeFilter', filter.postTypes[0]); // Send first postType as string
       }
 
       const url = `${BACKEND_API_BASE_URL}/api/feed?${params}`;

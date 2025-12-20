@@ -66,15 +66,13 @@ export function transformDisplayListingToUnified(
       images: displayListing.images && Array.isArray(displayListing.images) 
         ? displayListing.images.filter(img => 
             typeof img === 'string' && 
-            !img.startsWith('0x') && 
             img.length > 0 && 
-            (img.startsWith('http') || img.startsWith('ipfs') || img.startsWith('Qm') || img.startsWith('baf'))
+            (img.startsWith('http') || img.startsWith('https') || img.startsWith('ipfs') || img.startsWith('Qm') || img.startsWith('baf'))
           )
         : [displayListing.image].filter(Boolean).filter(img => 
             typeof img === 'string' && 
-            !img.startsWith('0x') && 
             img.length > 0 && 
-            (img.startsWith('http') || img.startsWith('ipfs') || img.startsWith('Qm') || img.startsWith('baf'))
+            (img.startsWith('http') || img.startsWith('https') || img.startsWith('ipfs') || img.startsWith('Qm') || img.startsWith('baf'))
           ),
       thumbnailUrl: displayListing.image || displayListing.images?.[0] || '',
       featuredImage: displayListing.featuredImage || displayListing.images?.[0],
@@ -234,9 +232,8 @@ export function transformSellerListingToUnified(
     if (Array.isArray(images)) {
       images = images.filter(img => 
         typeof img === 'string' && 
-        !img.startsWith('0x') && 
         img.length > 0 && 
-        (img.startsWith('http') || img.startsWith('ipfs') || img.startsWith('Qm') || img.startsWith('baf'))
+        (img.startsWith('http') || img.startsWith('https') || img.startsWith('ipfs') || img.startsWith('Qm') || img.startsWith('baf'))
       );
     } else {
       images = [];
@@ -340,12 +337,11 @@ export function transformMarketplaceListingToUnified(
     // Ensure images is always an array and doesn't contain wallet addresses
     let images: string[] = [];
     if (Array.isArray(marketplaceListing.images)) {
-      // Filter out any items that look like wallet addresses (0x... format)
+      // Filter out any items that look like wallet addresses (0x... format) but keep valid URLs
       images = marketplaceListing.images.filter(img => 
         typeof img === 'string' && 
-        !img.startsWith('0x') && 
         img.length > 0 && 
-        (img.startsWith('http') || img.startsWith('ipfs') || img.startsWith('Qm') || img.startsWith('baf'))
+        (img.startsWith('http') || img.startsWith('https') || img.startsWith('ipfs') || img.startsWith('Qm') || img.startsWith('baf'))
       );
     } else if (typeof marketplaceListing.images === 'string') {
       // If images is a string, try to parse as JSON
@@ -354,9 +350,8 @@ export function transformMarketplaceListingToUnified(
         if (Array.isArray(parsedImages)) {
           images = parsedImages.filter(img => 
             typeof img === 'string' && 
-            !img.startsWith('0x') && 
             img.length > 0 && 
-            (img.startsWith('http') || img.startsWith('ipfs') || img.startsWith('Qm') || img.startsWith('baf'))
+            (img.startsWith('http') || img.startsWith('https') || img.startsWith('ipfs') || img.startsWith('Qm') || img.startsWith('baf'))
           );
         }
       } catch {
@@ -1108,3 +1103,191 @@ export const MARKETPLACE_LISTING_COMPATIBILITY: BackwardCompatibilityMapping = {
   },
   deprecatedFields: ['isActive'],
 };
+
+/**
+ * Transform Backend ProductListing to UnifiedSellerListing
+ * This function specifically handles the format returned by the backend seller listing service
+ */
+export function transformBackendListingToUnified(
+  backendListing: any,
+  options: Partial<DataTransformationOptions> = {}
+): TransformationResult<UnifiedSellerListing> {
+  const warnings: string[] = [];
+  const errors: string[] = [];
+  const transformedFields: string[] = [];
+
+  try {
+    // Parse metadata if it's a string
+    let metadata = {};
+    if (typeof backendListing.metadata === 'string') {
+      try {
+        metadata = JSON.parse(backendListing.metadata);
+      } catch (e) {
+        console.warn('Failed to parse metadata JSON:', e);
+      }
+    } else if (typeof backendListing.metadata === 'object') {
+      metadata = backendListing.metadata;
+    }
+
+    // Parse images if they're a string
+    let images: string[] = [];
+    if (Array.isArray(backendListing.images)) {
+      images = backendListing.images;
+    } else if (typeof backendListing.images === 'string') {
+      try {
+        images = JSON.parse(backendListing.images);
+      } catch (e) {
+        console.warn('Failed to parse images JSON:', e);
+        images = [];
+      }
+    }
+
+    // Ensure images is always an array and filter appropriately
+    if (Array.isArray(images)) {
+      // Filter out any items that look like wallet addresses (0x... format) but keep valid URLs
+      images = images.filter(img => 
+        typeof img === 'string' && 
+        img.length > 0 && 
+        (img.startsWith('http') || img.startsWith('https') || img.startsWith('ipfs') || img.startsWith('Qm') || img.startsWith('baf'))
+      );
+    } else {
+      images = [];
+    }
+
+    // Parse shipping if it's a string
+    let shipping = null;
+    if (typeof backendListing.shipping === 'string') {
+      try {
+        shipping = JSON.parse(backendListing.shipping);
+      } catch (e) {
+        console.warn('Failed to parse shipping JSON:', e);
+      }
+    } else if (typeof backendListing.shipping === 'object') {
+      shipping = backendListing.shipping;
+    }
+
+    // Parse tags if they're a string
+    let tags: string[] = [];
+    if (Array.isArray(backendListing.tags)) {
+      tags = backendListing.tags;
+    } else if (typeof backendListing.tags === 'string') {
+      try {
+        tags = JSON.parse(backendListing.tags);
+      } catch (e) {
+        console.warn('Failed to parse tags JSON:', e);
+        tags = [];
+      }
+    }
+
+    // Determine availability based on status
+    const availability = backendListing.status === 'active' ? 'available' : 'out_of_stock';
+
+    // Map listing status
+    const statusMap: Record<string, any> = {
+      'active': 'active',
+      'inactive': 'paused',
+      'draft': 'draft',
+      'sold_out': 'sold',
+      'suspended': 'paused'
+    };
+    const mappedStatus = statusMap[backendListing.status] || 'draft';
+
+    // Map listing type from metadata
+    const listingType = metadata.listingType?.toLowerCase() || 'fixed_price';
+    const saleTypeMap: Record<string, any> = {
+      'fixed_price': 'fixed',
+      'auction': 'auction',
+      'negotiable': 'negotiable'
+    };
+    const saleType = saleTypeMap[listingType] || 'fixed';
+
+    // Map condition from metadata
+    const condition = metadata.condition || 'new';
+
+    // Map escrow enabled from metadata
+    const escrowEnabled = metadata.escrowEnabled || false;
+
+    const unified: UnifiedSellerListing = {
+      // Core identification
+      id: backendListing.id,
+      sellerId: backendListing.sellerId || backendListing.sellerAddress,
+      sellerWalletAddress: backendListing.sellerAddress || backendListing.sellerId,
+
+      // Basic listing information
+      title: backendListing.title || 'Untitled',
+      description: backendListing.description || '',
+      category: backendListing.categoryId || 'general',
+      tags: tags,
+
+      // Pricing information
+      price: typeof backendListing.price === 'string' ? parseFloat(backendListing.price) : (backendListing.price || 0),
+      currency: backendListing.currency || 'USD',
+      displayPrice: `${backendListing.price || '0'} ${backendListing.currency || 'USD'}`,
+      displayCurrency: backendListing.currency || 'USD',
+
+      // Inventory and availability
+      quantity: backendListing.inventory || 1,
+      condition: condition as 'new' | 'used' | 'refurbished',
+      availability: availability,
+
+      // Media and presentation
+      images: images,
+      thumbnailUrl: images[0] || '',
+
+      // Status and lifecycle
+      status: mappedStatus,
+      listingType: listingType,
+      saleType: saleType as 'fixed' | 'auction' | 'negotiable',
+      escrowEnabled: escrowEnabled,
+
+      // Shipping and fulfillment
+      shippingOptions: {
+        free: shipping?.freeShipping || false,
+        cost: shipping?.cost || 0,
+        estimatedDays: shipping?.estimatedDelivery || 5,
+        international: shipping?.international || false,
+      },
+
+      // Engagement metrics
+      views: backendListing.views || 0,
+      favorites: backendListing.favorites || 0,
+      questions: 0, // Not available in backend data
+
+      // Metadata
+      specifications: [], // Not directly available in backend data
+      metadata: metadata,
+
+      // Trust and verification
+      trust: {
+        verified: true, // Assume verified for now
+        score: 85, // Default score
+        endorsements: []
+      },
+      verificationStatus: 'verified',
+
+      // Timestamps (unified format)
+      createdAt: backendListing.createdAt ? new Date(backendListing.createdAt).toISOString() : new Date().toISOString(),
+      updatedAt: backendListing.updatedAt ? new Date(backendListing.updatedAt).toISOString() : new Date().toISOString(),
+      publishedAt: backendListing.publishedAt ? new Date(backendListing.publishedAt).toISOString() : undefined,
+      startTime: backendListing.createdAt ? new Date(backendListing.createdAt).toISOString() : new Date().toISOString(),
+      endTime: undefined,
+
+      // Auction-specific fields (set to undefined if not applicable)
+      currentBid: undefined,
+      minimumBid: undefined,
+      reservePrice: undefined,
+      highestBidder: undefined
+    };
+
+    return {
+      data: unified,
+      warnings,
+      errors,
+      originalData: options.preserveOriginalFormat ? backendListing : undefined,
+      transformedFields
+    };
+  } catch (error) {
+    errors.push(`Transformation failed: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Failed to transform BackendListing: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
