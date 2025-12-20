@@ -378,27 +378,29 @@ const CommunitiesPage: React.FC = () => {
         };
         const backendSort = sortMapping[sortBy] || 'new';
 
-        // Use the general feed endpoint which includes public community posts
-        const { PostService } = await import('../services/postService');
-        const result = await PostService.getFeed(
-          pageNum,
-          20,
-          backendSort,
-          'all' // Get all posts including public community posts
-        );
+        // Use the enhanced feed service to show only community posts
+        const { FeedService } = await import('../services/feedService');
+        const filter = {
+          feedSource: 'all', // Get all posts including public community posts
+          sortBy: sortBy as any,
+          timeRange: timeFilter,
+          userAddress: address || undefined, // Include user address if authenticated
+          postTypes: ['posts'] // Only show community posts
+        };
+        const result = await FeedService.getEnhancedFeed(filter, pageNum, 20);
 
         // Debug logging
         console.log(`[COMMUNITY FEED FRONTEND DEBUG] API response:`, {
-          postsCount: result?.posts?.length || result?.length || 0,
+          postsCount: result?.posts?.length || 0,
           pagination: result?.pagination,
-          firstPost: result?.posts?.[0] || result?.[0],
-          allPosts: result?.posts || result
+          firstPost: result?.posts?.[0],
+          hasMore: result?.hasMore
         });
         // Check if component is still mounted before updating state
         if (!isMounted.current) return;
 
-        // Handle different response formats
-        const newPosts = result?.posts || result || [];
+        // Handle FeedService response format
+        const newPosts = result?.posts || [];
 
         console.log(`[COMMUNITY FEED FRONTEND DEBUG] Setting posts state:`, {
           newPostsCount: newPosts.length,
@@ -413,9 +415,7 @@ const CommunitiesPage: React.FC = () => {
           setPosts(newPosts);
         }
 
-        const hasMorePosts = result?.pagination ?
-          result.pagination.page < result.pagination.totalPages :
-          newPosts.length === 20; // Simple heuristic for hasMore
+        const hasMorePosts = result?.hasMore || false;
 
         setHasMore(hasMorePosts);
         setPage(pageNum);

@@ -82,7 +82,8 @@ export default function EnhancedHomeFeed({
       const filter: FeedFilter = {
         feedSource: activeTab,
         userAddress: userProfile?.walletAddress || userProfile?.address,
-        sortBy: FeedSortType.NEW
+        sortBy: FeedSortType.NEW,
+        postTypes: ['quickPosts'] // Only show quick posts on home feed
       };
 
       const response = await FeedService.getEnhancedFeed(filter, pageNum, LIMIT);

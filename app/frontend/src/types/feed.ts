@@ -26,7 +26,7 @@ export interface FeedFilter {
   author?: string;
   feedSource?: 'following' | 'all';
   userAddress?: string;
-  postTypes?: string[];
+  postTypes?: string[]; // Can be used to filter by ['quickPosts'] or ['posts']
   web3Sort?: Web3SortType;
   web3SortDirection?: 'asc' | 'desc';
 }

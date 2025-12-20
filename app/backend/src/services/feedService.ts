@@ -16,6 +16,7 @@ interface FeedOptions {
   feedSource?: 'following' | 'all'; // New field for following feed
   preferredCategories?: string[]; // User's preferred categories from onboarding
   preferredTags?: string[]; // User's preferred tags from onboarding
+  postTypeFilter?: 'quickPosts' | 'posts' | 'all'; // Filter by post table: quickPosts for quick posts, posts for community posts
 }
 
 interface CreatePostData {
@@ -78,7 +79,8 @@ export class FeedService {
       timeRange = 'all', // Default to all time
       feedSource = 'all', // Default to all feed to ensure users see their own posts
       preferredCategories = [],
-      preferredTags = []
+      preferredTags = [],
+      postTypeFilter = 'all' // Default to both quick posts and community posts
     } = options;
 
     console.log('[FEED SERVICE] Parsed options:', { userAddress, page, limit, sort, filterCommunities, timeRange, feedSource });
@@ -173,16 +175,23 @@ export class FeedService {
         console.log('📋 [BACKEND FEED] Including user\'s own posts, total IDs:', followingIds.length);
         console.log('📋 [BACKEND FEED] Following IDs:', followingIds);
 
-        // If user follows no one (only themselves in the list), show ALL posts instead
+        // Always include user's own posts in the filter
+        // If user follows no one (only themselves in the list), show ALL posts 
         // This ensures new users have content to engage with
         if (followingIds.length === 1 && followingIds[0] === userId) {
           console.log('📋 [BACKEND FEED] User follows nobody - showing all posts for better onboarding experience');
           followingFilter = sql`1=1`;
           quickPostFollowingFilter = sql`1=1`;
         } else {
-          // Filter posts to show from followed users AND the user's own posts
-          followingFilter = inArray(posts.authorId, followingIds);
-          quickPostFollowingFilter = inArray(quickPosts.authorId, followingIds);
+          // Filter posts to show from followed users AND ensure user's own posts are included
+          followingFilter = or(
+            inArray(posts.authorId, followingIds),
+            eq(posts.authorId, userId)  // Always include user's own posts
+          );
+          quickPostFollowingFilter = or(
+            inArray(quickPosts.authorId, followingIds),
+            eq(quickPosts.authorId, userId)  // Always include user's own quick posts
+          );
         }
 
         console.log('📋 [BACKEND FEED] Following filter applied');
@@ -242,141 +251,123 @@ export class FeedService {
       console.log('🔍 [DEBUG] followingFilter type:', typeof followingFilter);
       console.log('🔍 [DEBUG] finalFollowingFilter will be:', feedSource === 'following' && userAddress && user && user.length > 0 ? 'OR with user posts' : 'standard filter');
 
-      // For following feed, make sure to include user's own posts
-      let finalFollowingFilter = followingFilter;
-      if (feedSource === 'following' && userAddress && user && user.length > 0) {
-        // When feedSource is 'following', always include user's own posts
-        // Use OR to ensure user sees their own posts regardless of following status
-        finalFollowingFilter = or(
-          followingFilter,  // Posts from followed users (including self if added to followingIds)
-          eq(posts.authorId, user[0].id)  // User's own posts
-        );
-        console.log('🔍 [DEBUG] Using OR filter to include user own posts');
-      }
+      // Use the following filter as-is since it already includes user's own posts
+      const finalFollowingFilter = followingFilter;
 
       console.log('🔍 [DEBUG] Executing posts query NOW...');
 
-      // Get regular posts with engagement metrics
-      const regularPosts = await db
-        .select({
-          id: posts.id,
-          authorId: posts.authorId,
-          dao: posts.dao,
-          title: posts.title,
-          content: posts.content, // Include content directly
-          contentCid: posts.contentCid,
-          shareId: posts.shareId, // Include shareId for share URLs
-          mediaCids: posts.mediaCids,
-          tags: posts.tags,
-          createdAt: posts.createdAt,
-          stakedValue: posts.stakedValue,
-          walletAddress: users.walletAddress,
-          handle: users.handle,
-          displayName: users.displayName,
-          profileCid: users.profileCid,
-          avatarCid: users.avatarCid,
-          // Moderation fields
-          moderationStatus: posts.moderationStatus,
-          moderationWarning: posts.moderationWarning,
-          riskScore: posts.riskScore,
-          isQuickPost: sql`false` // Mark as regular post
-        })
-        .from(posts)
-        .leftJoin(users, eq(posts.authorId, users.id))
-        .where(and(
-          timeFilter,
-          communityFilter,
-          preferenceFilter, // Add preference filter
-          finalFollowingFilter,
-          moderationFilter, // Add moderation filter
-          isNull(posts.parentId), // Only show top-level posts, not comments
-          // Include community posts if they're public or if specific communities are being filtered
-          filterCommunities.length > 0 ? sql`1=1` : or(
-            and(isNull(posts.communityId), isNull(posts.dao)), // Non-community posts
-            // Include public community posts to attract new users
-            and(
-              or(posts.communityId.isNotNull(), posts.dao.isNotNull()), // Has community
-              // Join with communities table to check if public
-              sql`EXISTS (
-                SELECT 1 FROM ${communities} 
-                WHERE (${communities.id} = ${posts.communityId} OR ${communities.id} = ${posts.dao})
-                AND ${communities.isPublic} = true
-              )`
-            )
-          )
-        ));
+      // Initialize arrays for different post types
+      let regularPosts: any[] = [];
+      let quickPostsResults: any[] = [];
 
-      console.log('📊 [BACKEND FEED] Regular posts query result:', {
-        count: regularPosts.length,
-        samplePost: regularPosts[0] ? {
-          id: regularPosts[0].id,
-          authorId: regularPosts[0].authorId,
-          walletAddress: regularPosts[0].walletAddress,
-          contentCid: regularPosts[0].contentCid
-        } : null
-      });
+      // Only fetch regular posts (community posts) if postTypeFilter is 'posts' or 'all'
+      if (postTypeFilter === 'posts' || postTypeFilter === 'all') {
+        regularPosts = await db
+          .select({
+            id: posts.id,
+            authorId: posts.authorId,
+            dao: posts.dao,
+            title: posts.title,
+            content: posts.content, // Include content directly
+            contentCid: posts.contentCid,
+            shareId: posts.shareId, // Include shareId for share URLs
+            mediaCids: posts.mediaCids,
+            tags: posts.tags,
+            createdAt: posts.createdAt,
+            stakedValue: posts.stakedValue,
+            walletAddress: users.walletAddress,
+            handle: users.handle,
+            displayName: users.displayName,
+            profileCid: users.profileCid,
+            avatarCid: users.avatarCid,
+            // Moderation fields
+            moderationStatus: posts.moderationStatus,
+            moderationWarning: posts.moderationWarning,
+            riskScore: posts.riskScore,
+            isQuickPost: sql`false` // Mark as regular post
+          })
+          .from(posts)
+          .leftJoin(users, eq(posts.authorId, users.id))
+          .where(and(
+            timeFilter,
+            communityFilter,
+            preferenceFilter, // Add preference filter
+            finalFollowingFilter,
+            moderationFilter, // Add moderation filter
+            isNull(posts.parentId), // Only show top-level posts, not comments
+            // Always include all posts (both community and non-community) when no specific communities are filtered
+            // When specific communities are filtered, only show posts from those communities
+            filterCommunities.length > 0 ? sql`1=1` : sql`1=1`
+          ));
 
-      // Get quick posts with engagement metrics
-      console.log('🔍 [BACKEND FEED] Executing quick posts query with filters:', {
-        timeFilter: timeFilter.toString(),
-        quickPostFollowingFilter: quickPostFollowingFilter.toString()
-      });
-
-      // For following feed, make sure to include user's own quick posts 
-      let finalQuickPostFollowingFilter = quickPostFollowingFilter;
-      if (feedSource === 'following' && userAddress && user && user.length > 0) {
-        // When feedSource is 'following', always include user's own quick posts
-        // Use OR to ensure user sees their own quick posts regardless of following status
-        finalQuickPostFollowingFilter = or(
-          quickPostFollowingFilter,  // Quick posts from followed users (including self if added to followingIds)
-          eq(quickPosts.authorId, user[0].id)  // User's own quick posts
-        );
+        console.log('📊 [BACKEND FEED] Regular posts query result:', {
+          count: regularPosts.length,
+          samplePost: regularPosts[0] ? {
+            id: regularPosts[0].id,
+            authorId: regularPosts[0].authorId,
+            walletAddress: regularPosts[0].walletAddress,
+            contentCid: regularPosts[0].contentCid
+          } : null
+        });
       }
 
-      const quickPostsResults = await db
-        .select({
-          id: quickPosts.id,
-          authorId: quickPosts.authorId,
-          dao: sql<string>`NULL`, // Quick posts don't have DAO
-          content: quickPosts.content, // Include content directly
-          contentCid: quickPosts.contentCid,
-          shareId: quickPosts.shareId, // Include shareId for share URLs
-          mediaCids: quickPosts.mediaCids,
-          tags: quickPosts.tags,
-          createdAt: quickPosts.createdAt,
-          stakedValue: quickPosts.stakedValue,
-          walletAddress: users.walletAddress,
-          handle: users.handle,
-          displayName: users.displayName,
-          profileCid: users.profileCid,
-          avatarCid: users.avatarCid,
-          // Moderation fields
-          moderationStatus: quickPosts.moderationStatus,
-          moderationWarning: quickPosts.moderationWarning,
-          riskScore: quickPosts.riskScore,
-          isQuickPost: sql`true` // Mark as quick post
-        })
-        .from(quickPosts)
-        .leftJoin(users, eq(quickPosts.authorId, users.id))
-        .where(and(
-          quickPostTimeFilter, // Use quickPostTimeFilter instead of timeFilter
-          finalQuickPostFollowingFilter, // Use the correct filter for quick posts
-          sql`${quickPosts.moderationStatus} IS NULL OR ${quickPosts.moderationStatus} != 'blocked'`, // Quick post moderation filter
-          isNull(quickPosts.parentId) // Only show top-level posts, not comments
-        ));
+      // Only fetch quick posts if postTypeFilter is 'quickPosts' or 'all'
+      if (postTypeFilter === 'quickPosts' || postTypeFilter === 'all') {
+        console.log('🔍 [BACKEND FEED] Executing quick posts query with filters:', {
+          timeFilter: timeFilter.toString(),
+          quickPostFollowingFilter: quickPostFollowingFilter.toString()
+        });
 
-      console.log('📊 [BACKEND FEED] Quick posts query result:', {
-        count: quickPostsResults.length,
-        samplePost: quickPostsResults[0] ? {
-          id: quickPostsResults[0].id,
-          authorId: quickPostsResults[0].authorId,
-          walletAddress: quickPostsResults[0].walletAddress,
-          contentCid: quickPostsResults[0].contentCid
-        } : null
-      });
+        // Use the quick post following filter as-is since it already includes user's own quick posts
+        const finalQuickPostFollowingFilter = quickPostFollowingFilter;
 
-      // Combine regular posts and quick posts
-      let allPosts = [...regularPosts, ...quickPostsResults];
+        quickPostsResults = await db
+          .select({
+            id: quickPosts.id,
+            authorId: quickPosts.authorId,
+            dao: sql<string>`NULL`, // Quick posts don't have DAO
+            content: quickPosts.content, // Include content directly
+            contentCid: quickPosts.contentCid,
+            shareId: quickPosts.shareId, // Include shareId for share URLs
+            mediaCids: quickPosts.mediaCids,
+            tags: quickPosts.tags,
+            createdAt: quickPosts.createdAt,
+            stakedValue: quickPosts.stakedValue,
+            walletAddress: users.walletAddress,
+            handle: users.handle,
+            displayName: users.displayName,
+            profileCid: users.profileCid,
+            avatarCid: users.avatarCid,
+            // Moderation fields
+            moderationStatus: quickPosts.moderationStatus,
+            moderationWarning: quickPosts.moderationWarning,
+            riskScore: quickPosts.riskScore,
+            isQuickPost: sql`true` // Mark as quick post
+          })
+          .from(quickPosts)
+          .leftJoin(users, eq(quickPosts.authorId, users.id))
+          .where(and(
+            quickPostTimeFilter, // Use quickPostTimeFilter instead of timeFilter
+            finalQuickPostFollowingFilter, // Use the correct filter for quick posts
+            sql`${quickPosts.moderationStatus} IS NULL OR ${quickPosts.moderationStatus} != 'blocked'`, // Quick post moderation filter
+            isNull(quickPosts.parentId) // Only show top-level posts, not comments
+          ));
+
+        console.log('📊 [BACKEND FEED] Quick posts query result:', {
+          count: quickPostsResults.length,
+          samplePost: quickPostsResults[0] ? {
+            id: quickPostsResults[0].id,
+            authorId: quickPostsResults[0].authorId,
+            walletAddress: quickPostsResults[0].walletAddress,
+            contentCid: quickPostsResults[0].contentCid
+          } : null
+        });
+      }
+
+      // Combine posts based on postTypeFilter
+      let allPosts = postTypeFilter === 'quickPosts' ? quickPostsResults : 
+                      postTypeFilter === 'posts' ? regularPosts : 
+                      [...regularPosts, ...quickPostsResults];
 
       console.log('📊 [BACKEND FEED] Combined posts before sorting:', {
         totalPosts: allPosts.length,
@@ -606,31 +597,40 @@ export class FeedService {
         };
       });
 
-      // Get total count for pagination (excluding blocked content AND community posts)
-      const totalRegularCount = await db
-        .select({ count: sql<number>`COUNT(*)` })
-        .from(posts)
-        .where(and(
-          timeFilter,
-          communityFilter,
-          finalFollowingFilter,
-          moderationFilter, // Include moderation filter in count
-          isNull(posts.parentId), // Only count top-level posts
-          // Only exclude community posts when no specific communities are being filtered
-          filterCommunities.length > 0 ? sql`1=1` : and(isNull(posts.communityId), isNull(posts.dao))
-        ));
-
-      const totalQuickCount = await db
-        .select({ count: sql<number>`COUNT(*)` })
-        .from(quickPosts)
-        .where(and(
-          quickPostTimeFilter,
-          finalQuickPostFollowingFilter, // Use the correct filter for quick posts
-          sql`${quickPosts.moderationStatus} IS NULL OR ${quickPosts.moderationStatus} != 'blocked'`, // Quick post moderation filter
-          isNull(quickPosts.parentId) // Only count top-level posts
-        ));
-
-      const totalCount = (totalRegularCount[0]?.count || 0) + (totalQuickCount[0]?.count || 0);
+      // Get total count for pagination based on postTypeFilter
+      let totalCount = 0;
+      
+      if (postTypeFilter === 'posts' || postTypeFilter === 'all') {
+        const totalRegularCount = await db
+          .select({ count: sql<number>`COUNT(*)` })
+          .from(posts)
+          .where(and(
+            timeFilter,
+            communityFilter,
+            finalFollowingFilter,
+            moderationFilter, // Include moderation filter in count
+            isNull(posts.parentId), // Only count top-level posts
+            // Always include all posts (both community and non-community) when no specific communities are filtered
+            filterCommunities.length > 0 ? sql`1=1` : sql`1=1`
+          ));
+        totalCount += (totalRegularCount[0]?.count || 0);
+      }
+      
+      if (postTypeFilter === 'quickPosts' || postTypeFilter === 'all') {
+        // Use the quick post following filter as-is since it already includes user's own quick posts
+        const finalQuickPostFollowingFilter = quickPostFollowingFilter;
+        
+        const totalQuickCount = await db
+          .select({ count: sql<number>`COUNT(*)` })
+          .from(quickPosts)
+          .where(and(
+            quickPostTimeFilter,
+            finalQuickPostFollowingFilter, // Use the correct filter for quick posts
+            sql`${quickPosts.moderationStatus} IS NULL OR ${quickPosts.moderationStatus} != 'blocked'`, // Quick post moderation filter
+            isNull(quickPosts.parentId) // Only count top-level posts
+          ));
+        totalCount += (totalQuickCount[0]?.count || 0);
+      }
 
       console.log('📊 [BACKEND FEED] Returning posts:', {
         postsCount: postsWithMetrics.length,

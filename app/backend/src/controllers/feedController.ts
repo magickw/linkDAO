@@ -103,6 +103,9 @@ export class FeedController {
           }
         }
 
+        // Determine post type based on query parameter or default to 'all'
+        const postTypeFilter = (req.query.postType as string) || 'all';
+        
         const feedData = await feedService.getEnhancedFeed({
           userAddress: userAddress || null, // Pass null for anonymous users
           page: Number(page),
@@ -112,7 +115,8 @@ export class FeedController {
           timeRange: timeRange as string,
           feedSource: feedSource as 'following' | 'all',
           preferredCategories,
-          preferredTags
+          preferredTags,
+          postTypeFilter: postTypeFilter as 'quickPosts' | 'posts' | 'all'
         });
 
         res.json(apiResponse.success(feedData, 'Feed retrieved successfully'));
