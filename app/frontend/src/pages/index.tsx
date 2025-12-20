@@ -17,7 +17,7 @@ import SupportWidget from '@/components/SupportWidget';
 import { newsletterService } from '@/services/newsletterService';
 import { usePostModalManager } from '@/hooks/usePostModalManager';
 import PostModal from '@/components/PostModal';
-import { useBatchedWalletUpdates } from '@/hooks/useBatchedWalletUpdates';
+
 
 // Lazy load heavy components
 const SmartRightSidebar = lazy(() => import('@/components/SmartRightSidebar/SmartRightSidebar').catch(() => ({ default: () => <div>Failed to load sidebar</div> })));
@@ -71,18 +71,7 @@ export default function Home() {
   const { createPost, isLoading: isCreatingPost } = useCreatePost();
   const { profile } = useProfile(address);
 
-  // Register profile loading as normal priority batched update when wallet connects
-  useEffect(() => {
-    if (isConnected && address) {
-      registerUpdate(
-        'profile-load',
-        () => {
-          console.log('[HomePage] Profile loading triggered (batched)');
-        },
-        'normal'
-      );
-    }
-  }, [isConnected, address, registerUpdate]);
+  // Profile loading is already handled by useProfile hook
   const { navigationState, openModal, closeModal } = useNavigation();
   const postModalManager = usePostModalManager();
 
@@ -150,14 +139,22 @@ export default function Home() {
   // Track WebSocket connection status to avoid multiple connections
   const wsConnectedRef = useRef(false);
 
-  // Initialize batched updates for wallet connection
-  const { registerUpdate } = useBatchedWalletUpdates();
+  // Simple flag to prevent multiple simultaneous updates
+  const isUpdating = useRef(false);
 
   useEffect(() => {
     console.log('[HomePage] WebSocket connection useEffect triggered, isConnected:', isConnected);
     console.log('[HomePage] WebSocket connection useEffect timestamp:', Date.now());
 
     if (isConnected) {
+      // Prevent multiple simultaneous updates
+      if (isUpdating.current) {
+        console.log('[HomePage] Update already in progress, skipping');
+        return;
+      }
+      
+      isUpdating.current = true;
+      
       // Register content ready update as high priority batched update
       registerUpdate(
         'content-ready',
@@ -165,6 +162,7 @@ export default function Home() {
           console.log('[HomePage] Setting content ready (batched)');
           setIsContentReady(true);
           setIsConnectionStabilized(true);
+          isUpdating.current = false;
         },
         'high'
       );
@@ -176,6 +174,7 @@ export default function Home() {
           if (isConnected && webSocket && !webSocket.isConnected) {
             if (webSocket.connectionState && webSocket.connectionState.status === 'connecting') {
               console.log('[HomePage] WebSocket already connecting, skipping');
+              isUpdating.current = false;
               return;
             }
             
@@ -185,7 +184,11 @@ export default function Home() {
               console.log('[HomePage] WebSocket connected successfully');
             }).catch((error) => {
               console.error('[HomePage] WebSocket connection failed:', error);
+            }).finally(() => {
+              isUpdating.current = false;
             });
+          } else {
+            isUpdating.current = false;
           }
         },
         'normal'
