@@ -54,6 +54,7 @@ import AnnouncementBanner from '@/components/Community/AnnouncementBanner';
 import AnnouncementManager from '@/components/Community/AnnouncementManager';
 import CommunityPostCardEnhanced from '@/components/Community/CommunityPostCardEnhanced';
 import { postManagementService } from '@/services/postManagementService';
+import CommunityOnboarding from '@/components/Community/CommunityOnboarding';
 
 import {
   TrendingUp,
@@ -368,7 +369,6 @@ const CommunitiesPage: React.FC = () => {
       });
       // For all users (authenticated or not), fetch the general feed which includes public community posts
       // This ensures everyone can see community activity
-      {
         // Map frontend sort values to backend expected values
         const sortMapping: Record<string, string> = {
           'hot': 'hot',
@@ -1174,6 +1174,9 @@ const CommunitiesPage: React.FC = () => {
           />
         </Layout>
       </VisualPolishIntegration>
+      
+      {/* Community Onboarding Modal */}
+      <CommunityOnboarding />
     </ErrorBoundary>
   );
 };

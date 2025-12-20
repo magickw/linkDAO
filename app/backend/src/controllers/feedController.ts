@@ -85,6 +85,24 @@ export class FeedController {
           normalizedCommunities = [communities];
         }
 
+        // Fetch user preferences if authenticated
+        let preferredCategories: string[] = [];
+        let preferredTags: string[] = [];
+        
+        if (userAddress) {
+          try {
+            const { onboardingService } = await import('../services/onboardingService');
+            const userPreferences = await onboardingService.getUserPreferences(userAddress);
+            if (userPreferences && !userPreferences.skipOnboarding) {
+              preferredCategories = userPreferences.preferredCategories || [];
+              preferredTags = userPreferences.preferredTags || [];
+            }
+          } catch (error) {
+            console.error('[FEED CONTROLLER] Error fetching user preferences:', error);
+            // Continue without preferences if there's an error
+          }
+        }
+
         const feedData = await feedService.getEnhancedFeed({
           userAddress: userAddress || null, // Pass null for anonymous users
           page: Number(page),
@@ -92,7 +110,9 @@ export class FeedController {
           sort: sort as string,
           communities: normalizedCommunities,
           timeRange: timeRange as string,
-          feedSource: feedSource as 'following' | 'all'
+          feedSource: feedSource as 'following' | 'all',
+          preferredCategories,
+          preferredTags
         });
 
         res.json(apiResponse.success(feedData, 'Feed retrieved successfully'));

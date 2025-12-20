@@ -14,6 +14,8 @@ interface FeedOptions {
   communities: string[];
   timeRange: string;
   feedSource?: 'following' | 'all'; // New field for following feed
+  preferredCategories?: string[]; // User's preferred categories from onboarding
+  preferredTags?: string[]; // User's preferred tags from onboarding
 }
 
 interface CreatePostData {
@@ -74,7 +76,9 @@ export class FeedService {
       sort = 'new', // Default to newest
       communities: filterCommunities,
       timeRange = 'all', // Default to all time
-      feedSource = 'all' // Default to all feed to ensure users see their own posts
+      feedSource = 'all', // Default to all feed to ensure users see their own posts
+      preferredCategories = [],
+      preferredTags = []
     } = options;
 
     console.log('[FEED SERVICE] Parsed options:', { userAddress, page, limit, sort, filterCommunities, timeRange, feedSource });
@@ -92,6 +96,29 @@ export class FeedService {
         inArray(posts.dao, filterCommunities),
         inArray(posts.communityId, filterCommunities)
       );
+    }
+
+    // Build preference filter for categories and tags
+    let preferenceFilter = sql`1=1`;
+    if (preferredCategories.length > 0 || preferredTags.length > 0) {
+      const categoryConditions = preferredCategories.length > 0 
+        ? sql`EXISTS (
+            SELECT 1 FROM ${communities} 
+            WHERE (${communities.id} = ${posts.communityId} OR ${communities.id} = ${posts.dao})
+            AND ${communities.category} = ANY(${preferredCategories})
+          )`
+        : sql`1=1`;
+
+      const tagConditions = preferredTags.length > 0
+        ? sql`${posts.tags} && ${preferredTags}` // Check if posts tags array contains any preferred tags
+        : sql`1=1`;
+
+      // Combine preference filters - show posts that match either preferred categories OR tags
+      if (preferredCategories.length > 0 && preferredTags.length > 0) {
+        preferenceFilter = or(categoryConditions, tagConditions);
+      } else {
+        preferenceFilter = and(categoryConditions, tagConditions);
+      }
     }
 
     // Declare user variable in outer scope so it's accessible to later queries
@@ -259,6 +286,7 @@ export class FeedService {
         .where(and(
           timeFilter,
           communityFilter,
+          preferenceFilter, // Add preference filter
           finalFollowingFilter,
           moderationFilter, // Add moderation filter
           isNull(posts.parentId), // Only show top-level posts, not comments
