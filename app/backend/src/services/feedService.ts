@@ -1,7 +1,7 @@
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
 import { posts, quickPosts, reactions, quickPostReactions, tips, quickPostTips, users, postTags, quickPostTags, views, quickPostViews, bookmarks, quickPostBookmarks, shares, quickPostShares, follows, comments, communityMembers, communities } from '../db/schema';
-import { eq, desc, and, or, inArray, sql, gt, isNull, asc } from 'drizzle-orm';
+import { eq, desc, and, or, inArray, sql, gt, isNull, isNotNull, asc } from 'drizzle-orm';
 import { trendingCacheService } from './trendingCacheService';
 import { getWebSocketService } from './webSocketService';
 import { MetadataService } from './metadataService';

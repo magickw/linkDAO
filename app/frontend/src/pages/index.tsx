@@ -208,11 +208,7 @@ export default function Home() {
         }, 1000); // Longer delay to ensure navigation is complete
       }
 
-      // Initial delay to let navigation start first
-      const timer = setTimeout(scheduleContentLoad, 10);
-
       return () => {
-        clearTimeout(timer);
         // DON'T disconnect WebSocket when leaving the page - let it persist for better UX
         // Only reset the local reference
         wsConnectedRef.current = false;
