@@ -177,6 +177,10 @@ const MarketplaceContent: React.FC = () => {
             }
           }
 
+          // Convert IPFS URLs to use backend proxy (bypasses CORS)
+          const { processImageUrls } = require('@/utils/ipfsProxy');
+          imageUrls = processImageUrls(imageUrls);
+
           // Get price value
           const priceValue = listing.price ?? listing.priceAmount ?? 0;
           const priceNum = typeof priceValue === 'string' ? parseFloat(priceValue) : priceValue;

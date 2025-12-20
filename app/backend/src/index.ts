@@ -314,7 +314,7 @@ dbPool.on('remove', (client) => {
 if (process.env.RENDER || isResourceConstrained) {
   // Adaptive monitoring interval based on environment
   const poolMonitoringInterval = isRenderStandard ? 60000 : 120000; // 1-2 minutes
-    
+
   setInterval(() => {
     const poolStats = {
       total: dbPool.totalCount,
@@ -548,7 +548,7 @@ app.get('/health', async (req, res) => {
       const startTime = Date.now();
       const result = await db.execute(sql`SELECT 1 as test`);
       const queryTime = Date.now() - startTime;
-      
+
       databaseStatus = {
         enabled: true,
         connected: true,
@@ -587,7 +587,7 @@ app.get('/health/redis', async (req, res) => {
     // Only perform actual test if connection is not established or if forced
     const forceTest = req.query.force === 'true';
     let testResult;
-    
+
     if (forceTest || !status.connected) {
       testResult = await redisService.testConnection();
     } else {
@@ -793,6 +793,8 @@ import sellerVerificationRoutes from './routes/sellerVerificationRoutes';
 import ensValidationRoutes from './routes/ensValidationRoutes';
 // Import marketplace listings routes
 import marketplaceListingsRoutes from './routes/marketplaceListingsRoutes';
+// Import IPFS proxy routes
+import ipfsProxyRoutes from './routes/ipfsProxyRoutes';
 // Import marketplace routes
 import marketplaceRoutes from './routes/marketplaceRoutes';
 // Import cart routes
@@ -1093,6 +1095,9 @@ app.use('/api/order-events', orderEventHandlerRoutes);
 // Return and refund routes
 app.use('/api/marketplace/seller/returns', returnRoutes);
 
+// IPFS proxy routes (for serving IPFS content without CORS issues)
+app.use('/api', ipfsProxyRoutes);
+
 // x402 payment routes
 app.use('/api/x402', x402PaymentRoutes);
 
@@ -1241,17 +1246,17 @@ httpServer.listen(PORT, () => {
   console.log(`MakeRange Health check: http://localhost:${PORT}/health`);
   console.log(`📡 API ready: http://localhost:${PORT}/`);
 
-        // Initialize services asynchronously without blocking
-      setImmediate(async () => {
-        // Handle blockchain service separately to avoid blocking other services
-        try {
-          await blockchainEventService.startGlobalMonitoring();
-          console.log('✅ Blockchain event monitoring started');
-        } catch (err) {
-          console.warn('⚠️ Blockchain event monitoring failed to start (this is OK if blockchain is temporarily unavailable):', err);
-        }
-        
-        initializeServices().then(async ({ cacheService, cacheWarmingService }) => {
+  // Initialize services asynchronously without blocking
+  setImmediate(async () => {
+    // Handle blockchain service separately to avoid blocking other services
+    try {
+      await blockchainEventService.startGlobalMonitoring();
+      console.log('✅ Blockchain event monitoring started');
+    } catch (err) {
+      console.warn('⚠️ Blockchain event monitoring failed to start (this is OK if blockchain is temporarily unavailable):', err);
+    }
+
+    initializeServices().then(async ({ cacheService, cacheWarmingService }) => {
       // Initialize performance monitoring integration (disabled for now - requires Redis)
       // try {
       //   const { createPerformanceMonitoringIntegration } = await import('./services/performanceMonitoringIntegration');
