@@ -56,7 +56,7 @@ export {
   PostCardSkeleton,
   SidebarLinkSkeleton,
   UserProfileCardSkeleton,
-  WalletDashboardSkeleton,
+  QuickActionsSkeleton,
   FeedSkeleton,
   NavigationSkeleton,
   TrendingWidgetSkeleton,

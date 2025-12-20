@@ -154,8 +154,8 @@ export function UserProfileCardSkeleton({ className = '' }: { className?: string
   );
 }
 
-// Wallet Dashboard Skeleton
-export function WalletDashboardSkeleton({ className = '' }: { className?: string }) {
+// Quick Actions Skeleton
+export function QuickActionsSkeleton({ className = '' }: { className?: string }) {
   return (
     <div className={`bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-2xl border border-white/30 dark:border-gray-700/50 p-4 ${className}`}>
       {/* Header */}

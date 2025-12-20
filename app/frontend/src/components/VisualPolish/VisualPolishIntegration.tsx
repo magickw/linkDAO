@@ -13,7 +13,7 @@ import {
   EnhancedThemeToggle,
   PostCardSkeleton,
   UserProfileCardSkeleton,
-  WalletDashboardSkeleton,
+  QuickActionsSkeleton,
   PulseLoader,
   ResponsiveContainer,
   ResponsiveGrid,
@@ -49,7 +49,7 @@ export function VisualPolishDashboard({
             {/* Sidebar Skeleton */}
             <div className="w-full lg:w-64 flex-shrink-0 space-y-6">
               <UserProfileCardSkeleton />
-              <WalletDashboardSkeleton />
+              <QuickActionsSkeleton />
               <GlassmorphismCard className="p-4">
                 <div className="space-y-3">
                   {[...Array(5)].map((_, i) => (

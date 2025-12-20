@@ -135,20 +135,6 @@ const MarketplaceContent: React.FC = () => {
         setLoading(true);
       }
 
-      // Check cache first for better performance
-      const cacheKey = `listings-${pageNum}-${JSON.stringify({ sortBy: 'createdAt', sortOrder: 'desc' })}`;
-      const cachedData = await productCache.get(cacheKey) as MarketplaceListing[] | null;
-
-      console.log('Cache check:', { cacheKey, cachedData, hasCachedData: !!cachedData, isArray: Array.isArray(cachedData), length: cachedData?.length });
-
-      // Only use cache if it has valid data with actual items
-      if (cachedData && !append && Array.isArray(cachedData) && cachedData.length > 0) {
-        console.log('Using cached listings data:', cachedData.length, 'items');
-        setListings(cachedData);
-        setLoading(false);
-        return;
-      }
-
       // Use the marketplace service
       console.log('Fetching listings using marketplace service...', { page: pageNum });
 
@@ -164,14 +150,14 @@ const MarketplaceContent: React.FC = () => {
       // The service already returns the listings array extracted from the API response
       if (Array.isArray(data)) {
         console.log('Processing listings data:', data.length, 'items');
-        
+
         if (data.length === 0) {
           console.log('No listings returned from API');
           setListings([]);
           setLoading(false);
           return;
         }
-        
+
         console.log('First listing sample:', data[0]);
 
         // Transform backend data to frontend format
@@ -250,7 +236,7 @@ const MarketplaceContent: React.FC = () => {
               seller: {
                 id: sellerInfo.id || sellerAddress,
                 name: sellerInfo.displayName || sellerInfo.storeName ||
-                      (sellerAddress ? `Seller ${sellerAddress.substring(0, 8)}...` : 'Unknown Seller'),
+                  (sellerAddress ? `Seller ${sellerAddress.substring(0, 8)}...` : 'Unknown Seller'),
                 rating: sellerInfo.rating || 4.5,
                 verified: sellerInfo.verified ?? true,
                 daoApproved: sellerInfo.daoApproved ?? false,
@@ -273,14 +259,7 @@ const MarketplaceContent: React.FC = () => {
         });
 
         console.log('Transformed listings:', transformedListings);
-
-        // Cache the transformed data for better performance
-        if (!append) {
-          await productCache.set(cacheKey, transformedListings, {
-            ttl: 5 * 60 * 1000, // 5 minutes
-            priority: 'high'
-          });
-        }
+        console.log('First transformed listing enhancedData:', transformedListings[0]?.enhancedData);
 
         if (append) {
           setListings(prev => [...prev, ...transformedListings]);

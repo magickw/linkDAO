@@ -8,7 +8,7 @@ import { useRouter } from 'next/router';
 import { paymentRouterAddress, useWritePaymentRouterSendEthPayment, useWritePaymentRouterSendTokenPayment } from '@/generated';
 import { dexService } from '@/services/dexService';
 import TrendingContentWidget from './TrendingContentWidget';
-import WalletDashboard from './WalletDashboard';
+import QuickActions from './QuickActions';
 import TransactionMiniFeed from './TransactionMiniFeed';
 import PortfolioModal from './PortfolioModal';
 import SendTokenModal from '@/components/WalletActions/SendTokenModal';
@@ -329,8 +329,8 @@ export default function SmartRightSidebar({
   return (
     <>
       <div className={`space-y-6 ${className}`}>
-        {/* Wallet Dashboard */}
-        <WalletDashboard
+        {/* Quick Actions */}
+        <QuickActions
           walletData={walletData}
           onQuickAction={handleQuickAction}
           onPortfolioClick={handlePortfolioClick}

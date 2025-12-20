@@ -31,7 +31,7 @@ export const DynamicComponents = {
 
   // Smart Right Sidebar Components
   SmartRightSidebar: lazy(() => import('@/components/SmartRightSidebar/SmartRightSidebar') as any),
-  WalletDashboard: lazy(() => import('@/components/SmartRightSidebar/WalletDashboard') as any),
+  QuickActions: lazy(() => import('@/components/SmartRightSidebar/QuickActions') as any),
   PortfolioModal: lazy(() => import('@/components/SmartRightSidebar/PortfolioModal') as any),
   TrendingContentWidget: lazy(() => import('@/components/SmartRightSidebar/TrendingContentWidget') as any),
 

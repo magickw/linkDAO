@@ -31,7 +31,7 @@ export interface FeatureFlags {
   enableCommunityIcons: boolean;
   enableEnhancedUserCard: boolean;
   enableActivityIndicators: boolean;
-  enableWalletDashboard: boolean;
+  enableQuickActions: boolean;
   enablePortfolioModal: boolean;
   enableTrendingWidget: boolean;
 
@@ -142,7 +142,7 @@ const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   enableCommunityIcons: true,
   enableEnhancedUserCard: true,
   enableActivityIndicators: true,
-  enableWalletDashboard: true,
+  enableQuickActions: true,
   enablePortfolioModal: true,
   enableTrendingWidget: true,
 
