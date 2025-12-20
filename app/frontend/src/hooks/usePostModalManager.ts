@@ -19,7 +19,7 @@ interface PostModalState {
 export function usePostModalManager() {
   const router = useRouter();
   const { addToast } = useToast();
-  
+
   const [modalState, setModalState] = useState<PostModalState>({
     isOpen: false,
     post: null,
@@ -31,7 +31,7 @@ export function usePostModalManager() {
   useEffect(() => {
     const checkUrlForPost = async () => {
       const { post, p, cp } = router.query;
-      
+
       // Handle different URL patterns
       if (p && typeof p === 'string') {
         // Quick post share URL: /p/:shareId
@@ -54,18 +54,18 @@ export function usePostModalManager() {
       setModalState(prev => ({ ...prev, isOpen: true, isLoading: true }));
 
       // Determine API endpoint based on type
-      const endpoint = type === 'community_post' 
+      const endpoint = type === 'community_post'
         ? `${process.env.NEXT_PUBLIC_API_URL}/cp/${shareId}`
         : `${process.env.NEXT_PUBLIC_API_URL}/p/${shareId}`;
 
       const response = await fetch(endpoint);
-      
+
       if (!response.ok) {
         throw new Error('Post not found');
       }
 
       const data = await response.json();
-      
+
       if (data.success && data.data) {
         const postData = {
           ...data.data.post,
@@ -125,18 +125,24 @@ export function usePostModalManager() {
       isLoading: false,
     });
 
-    // Clear post parameter from URL
+    // Clear post parameter from URL only if it exists
     const { pathname, query } = router;
-    const newQuery = { ...query };
-    delete newQuery.post;
-    delete newQuery.p;
-    delete newQuery.cp;
-    
-    router.replace(
-      { pathname, query: newQuery },
-      undefined,
-      { shallow: true }
-    );
+    const hasPostParams = query.post || query.p || query.cp;
+
+    // Only call router.replace if there are actually post parameters to clear
+    // This prevents the navigation blocking loop
+    if (hasPostParams) {
+      const newQuery = { ...query };
+      delete newQuery.post;
+      delete newQuery.p;
+      delete newQuery.cp;
+
+      router.replace(
+        { pathname, query: newQuery },
+        undefined,
+        { shallow: true }
+      );
+    }
   }, [router]);
 
   // Handle browser back button

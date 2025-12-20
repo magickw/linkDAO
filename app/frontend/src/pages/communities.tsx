@@ -251,83 +251,83 @@ const CommunitiesPage: React.FC = () => {
           setCommunities(communitiesData);
 
 
-        // Load user's community memberships if wallet is connected AND authenticated with backend
-        // Check both wallet connection and backend authentication to avoid 401 errors
-        if (address && isConnected && isAuthenticated) {
-          try {
-            // Use setTimeout to defer user communities loading and avoid blocking navigation
-            setTimeout(async () => {
-              // Fetch user's communities (both created and joined)
-              const myCommunitiesResponse = await CommunityService.getMyCommunities(1, 100).catch(() => ({ communities: [], pagination: null }));
+          // Load user's community memberships if wallet is connected AND authenticated with backend
+          // Check both wallet connection and backend authentication to avoid 401 errors
+          if (address && isConnected && isAuthenticated) {
+            try {
+              // Use setTimeout to defer user communities loading and avoid blocking navigation
+              setTimeout(async () => {
+                // Fetch user's communities (both created and joined)
+                const myCommunitiesResponse = await CommunityService.getMyCommunities(1, 100).catch(() => ({ communities: [], pagination: null }));
 
-              if (!isMounted.current) return;
+                if (!isMounted.current) return;
 
-              // Set community IDs
-              const allUserCommunityIds = new Set<string>();
-              myCommunitiesResponse.communities.forEach(c => {
-                if (c && c.id) {
-                  allUserCommunityIds.add(c.id);
-                }
-              });
+                // Set community IDs
+                const allUserCommunityIds = new Set<string>();
+                myCommunitiesResponse.communities.forEach(c => {
+                  if (c && c.id) {
+                    allUserCommunityIds.add(c.id);
+                  }
+                });
 
-              setJoinedCommunities(Array.from(allUserCommunityIds));
+                setJoinedCommunities(Array.from(allUserCommunityIds));
 
-              // Merge user communities into the main list so they appear in the sidebar
-            // The sidebar filters 'communities' based on 'joinedCommunities', so we need to ensure
-            // all joined/created communities are actually present in the 'communities' array.
-            const allUserCommunities = myCommunitiesResponse.communities;
-            setCommunities(prev => {
-              const existingIds = new Set(prev.map(c => c.id));
-              const newCommunities = [...prev];
+                // Merge user communities into the main list so they appear in the sidebar
+                // The sidebar filters 'communities' based on 'joinedCommunities', so we need to ensure
+                // all joined/created communities are actually present in the 'communities' array.
+                const allUserCommunities = myCommunitiesResponse.communities;
+                setCommunities(prev => {
+                  const existingIds = new Set(prev.map(c => c.id));
+                  const newCommunities = [...prev];
 
-              allUserCommunities.forEach(c => {
-                if (c && c.id && !existingIds.has(c.id)) {
-                  newCommunities.push(c);
-                  existingIds.add(c.id);
-                }
-              });
+                  allUserCommunities.forEach(c => {
+                    if (c && c.id && !existingIds.has(c.id)) {
+                      newCommunities.push(c);
+                      existingIds.add(c.id);
+                    }
+                  });
 
-              return newCommunities;
-            });
+                  return newCommunities;
+                });
 
-            // Set admin roles for communities where user is admin (case-insensitive)
-            // Check both the initial communitiesData and the user's communities
-            const adminRoles: Record<string, string> = {};
-            const allCommunitiesToCheck = [...communitiesData, ...allUserCommunities];
+                // Set admin roles for communities where user is admin (case-insensitive)
+                // Check both the initial communitiesData and the user's communities
+                const adminRoles: Record<string, string> = {};
+                const allCommunitiesToCheck = [...communitiesData, ...allUserCommunities];
 
-            // Check all communities for admin/moderator status
-            allCommunitiesToCheck.forEach(community => {
-              if (!community || !community.id) return;
+                // Check all communities for admin/moderator status
+                allCommunitiesToCheck.forEach(community => {
+                  if (!community || !community.id) return;
 
-              // Check if user is the creator (case-insensitive) - creators are always admins
-              if (community.creatorAddress && address &&
-                community.creatorAddress.toLowerCase() === address.toLowerCase()) {
-                adminRoles[community.id] = 'admin';
-                return; // Skip further checks for creators
-              }
+                  // Check if user is the creator (case-insensitive) - creators are always admins
+                  if (community.creatorAddress && address &&
+                    community.creatorAddress.toLowerCase() === address.toLowerCase()) {
+                    adminRoles[community.id] = 'admin';
+                    return; // Skip further checks for creators
+                  }
 
-              // Skip if already marked as admin
-              if (adminRoles[community.id]) return;
+                  // Skip if already marked as admin
+                  if (adminRoles[community.id]) return;
 
-              // Check if user is an admin/moderator of this community (based on moderators field)
-              if (community.moderators && Array.isArray(community.moderators) &&
-                address && community.moderators.some(mod => mod.toLowerCase() === address.toLowerCase())) {
-                adminRoles[community.id] = 'admin';
-              }
-            });
-            if (!isMounted.current) return;
-            setUserAdminRoles(adminRoles);
-            }, 0);
-          } catch (error) {
-            console.error('Error loading user communities:', error);
-            // Continue with empty arrays on error
-            setJoinedCommunities([]);
-            setUserAdminRoles({});
+                  // Check if user is an admin/moderator of this community (based on moderators field)
+                  if (community.moderators && Array.isArray(community.moderators) &&
+                    address && community.moderators.some(mod => mod.toLowerCase() === address.toLowerCase())) {
+                    adminRoles[community.id] = 'admin';
+                  }
+                });
+                if (!isMounted.current) return;
+                setUserAdminRoles(adminRoles);
+              }, 0);
+            } catch (error) {
+              console.error('Error loading user communities:', error);
+              // Continue with empty arrays on error
+              setJoinedCommunities([]);
+              setUserAdminRoles({});
+            }
           }
-        }
 
-        // Load enhanced Web3 data
-        await loadWeb3EnhancedData(communitiesData);
+          // Load enhanced Web3 data
+          await loadWeb3EnhancedData(communitiesData);
         }, 0);
       } catch (err) {
         console.error('Error loading communities:', err);
@@ -357,15 +357,15 @@ const CommunitiesPage: React.FC = () => {
       const { CommunityPostService } = await import('../services/communityPostService');
 
       // Debug logging
-              console.log(`[COMMUNITY FEED FRONTEND DEBUG] Fetching posts:`, {
-              isAuthenticated,
-              joinedCommunities: joinedCommunities.length,
-              joinedCommunityIds: joinedCommunities,
-              pageNum,
-              sortBy,
-              timeFilter,
-              currentPostsCount: posts.length
-            });
+      console.log(`[COMMUNITY FEED FRONTEND DEBUG] Fetching posts:`, {
+        isAuthenticated,
+        joinedCommunities: joinedCommunities.length,
+        joinedCommunityIds: joinedCommunities,
+        pageNum,
+        sortBy,
+        timeFilter,
+        currentPostsCount: posts.length
+      });
       // If user is authenticated, fetch the aggregated feed (now includes public communities)
       if (isAuthenticated) {
         // Map frontend sort values to backend expected values
@@ -386,23 +386,23 @@ const CommunitiesPage: React.FC = () => {
         );
 
         // Debug logging
-                console.log(`[COMMUNITY FEED FRONTEND DEBUG] API response:`, {
-                postsCount: result.posts?.length || 0,
-                pagination: result.pagination,
-                firstPost: result.posts?.[0],
-                allPosts: result.posts
-              });
+        console.log(`[COMMUNITY FEED FRONTEND DEBUG] API response:`, {
+          postsCount: result.posts?.length || 0,
+          pagination: result.pagination,
+          firstPost: result.posts?.[0],
+          allPosts: result.posts
+        });
         // Check if component is still mounted before updating state
         if (!isMounted.current) return;
 
         const newPosts = result.posts || [];
 
         console.log(`[COMMUNITY FEED FRONTEND DEBUG] Setting posts state:`, {
-        newPostsCount: newPosts.length,
-        append,
-        currentPostsCount: posts.length,
-        newPosts: newPosts.slice(0, 3) // Show first 3 posts for debugging
-      });
+          newPostsCount: newPosts.length,
+          append,
+          currentPostsCount: posts.length,
+          newPosts: newPosts.slice(0, 3) // Show first 3 posts for debugging
+        });
 
         if (append) {
           setPosts(prev => [...prev, ...newPosts]);
@@ -419,7 +419,7 @@ const CommunitiesPage: React.FC = () => {
       } else {
         // Not authenticated - show public posts from all communities
         console.log(`[COMMUNITY FEED FRONTEND DEBUG] User not authenticated, fetching public posts from all communities`);
-        
+
         // Map frontend sort values to backend expected values
         const sortMapping: Record<string, string> = {
           'hot': 'hot',
@@ -432,7 +432,7 @@ const CommunitiesPage: React.FC = () => {
         try {
           // Fetch public posts from all communities using the general feed endpoint
           const { PostService } = await import('../services/postService');
-          
+
           // Map time filter to backend format
           const timeMapping: Record<string, string> = {
             'hour': 'hour',
@@ -792,6 +792,20 @@ const CommunitiesPage: React.FC = () => {
   })).filter(community => community.id); // Filter out any communities without valid IDs
 
   // Mobile and desktop now use the same Layout component for consistency
+
+  // Show loading state while auth is initializing to prevent navigation issues
+  if (isAuthLoading) {
+    return (
+      <Layout title="Communities - LinkDAO" fullWidth={true}>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <ErrorBoundary>

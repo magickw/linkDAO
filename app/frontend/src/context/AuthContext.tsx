@@ -106,6 +106,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     // Defer sync to prevent blocking initial render
+    // The 500ms delay prevents infinite reload loops
     const timeoutId = setTimeout(syncOnce, 500);
 
     return () => {

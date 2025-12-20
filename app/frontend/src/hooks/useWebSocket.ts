@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { WebSocketClientService, initializeWebSocketClient, getWebSocketClient } from '../services/webSocketClientService';
 import { webSocketConnectionManager, WebSocketConnectionManager } from '../services/webSocketConnectionManager';
 import { ENV_CONFIG } from '../config/environment';
@@ -264,7 +264,7 @@ export const useWebSocket = (config: UseWebSocketConfig): WebSocketHookReturn =>
     };
   }, []);
 
-  return {
+  return useMemo(() => ({
     connectionState,
     isConnected: connectionState.status === 'connected' || connectionState.status === 'polling',
     isRealTimeAvailable: managerRef.current.isRealTimeAvailable(),
@@ -285,7 +285,25 @@ export const useWebSocket = (config: UseWebSocketConfig): WebSocketHookReturn =>
     send,
     getQueuedMessageCount,
     getRecommendedUpdateInterval
-  };
+  }), [
+    connectionState,
+    connect,
+    disconnect,
+    forceReconnect,
+    subscribe,
+    unsubscribe,
+    joinCommunity,
+    leaveCommunity,
+    joinConversation,
+    leaveConversation,
+    startTyping,
+    stopTyping,
+    on,
+    off,
+    send,
+    getQueuedMessageCount,
+    getRecommendedUpdateInterval
+  ]);
 };
 
 // Specialized hooks for common use cases

@@ -139,7 +139,7 @@ export default function Home() {
   useEffect(() => {
     console.log('[HomePage] WebSocket connection useEffect triggered, isConnected:', isConnected);
     console.log('[HomePage] WebSocket connection useEffect timestamp:', Date.now());
-    
+
     if (isConnected) {
       // Use setTimeout to defer both content loading and WebSocket connection
       // This ensures navigation can complete without being blocked by WebSocket setup
@@ -156,6 +156,19 @@ export default function Home() {
         // Then defer WebSocket connection establishment separately
         setTimeout(() => {
           if (isMounted.current && !wsConnectedRef.current) {
+            // Check if already connected or connecting to prevent loops
+            if (webSocket.isConnected) {
+              console.log('[HomePage] WebSocket already connected, updating ref');
+              wsConnectedRef.current = true;
+              return;
+            }
+
+            // If we have a status, check if we are already connecting
+            if (webSocket.connectionState && webSocket.connectionState.status === 'connecting') {
+              console.log('[HomePage] WebSocket already connecting, skipping');
+              return;
+            }
+
             console.log('[HomePage] Attempting WebSocket connection...');
             setIsConnectionStabilized(true);
             // Connect WebSocket only after wallet is connected and page has stabilized
@@ -187,11 +200,18 @@ export default function Home() {
       // Only disconnect WebSocket when wallet is disconnected (not on page navigation)
       // Use setTimeout to ensure disconnection doesn't block navigation
       if (webSocket && typeof webSocket.disconnect === 'function') {
-        console.log('[HomePage] Scheduling WebSocket disconnection...');
-        setTimeout(() => {
-          webSocket.disconnect();
-          wsConnectedRef.current = false; // Reset connection status
-        }, 0);
+        const shouldDisconnect = webSocket.connectionState?.mode !== 'disabled' && webSocket.isConnected;
+
+        if (shouldDisconnect) {
+          console.log('[HomePage] Scheduling WebSocket disconnection...');
+          setTimeout(() => {
+            // Double check inside timeout to be safe
+            if (webSocket.connectionState?.mode !== 'disabled') {
+              webSocket.disconnect();
+              wsConnectedRef.current = false; // Reset connection status
+            }
+          }, 0);
+        }
       }
     }
   }, [isConnected, webSocket]);
@@ -286,7 +306,12 @@ export default function Home() {
     }
   }, [webSocket, address, wsSubscribed, addToast, debouncedRefresh, isMounted]);
 
-  // Add navigation event listeners to properly handle WebSocket on route changes
+  // Route change listeners removed - they were causing redirects back to homepage
+  // when navigating to other pages. The homepage component stays mounted in Next.js
+  // and these listeners were triggering navigation back to '/' after every route change.
+  // WebSocket management should happen through component lifecycle, not route events.
+
+  /*
   useEffect(() => {
     const handleRouteChangeStart = (url: string) => {
       console.log('[HomePage] Route change start:', url);
@@ -298,10 +323,10 @@ export default function Home() {
     const handleRouteChangeComplete = (url: string) => {
       console.log('[HomePage] Route change complete:', url);
       console.log('[HomePage] Route change complete timestamp:', Date.now());
-      
-      // Re-enable WebSocket if we're back on home page
-      // Use setTimeout with 0 delay to ensure this doesn't block the navigation
-      if (router.pathname === '/') {
+
+      // Only re-enable WebSocket if we're actually on the home page
+      // Check the URL, not router.pathname, because router.pathname might not be updated yet
+      if (url === '/' || url.startsWith('/?')) {
         // Use setTimeout to defer WebSocket reconnection until after navigation completes
         setTimeout(() => {
           console.log('[HomePage] Attempting WebSocket reconnection...');
@@ -328,77 +353,78 @@ export default function Home() {
       router.events.off('routeChangeComplete', handleRouteChangeComplete);
       router.events.off('routeChangeError', handleRouteChangeError);
     };
-  }, [router.pathname, router.events, isConnected, webSocket]);
+  }, [router, isConnected, webSocket]);
+  */
 
   // Handle post creation with useCallback
 
-    const handlePostSubmit = useCallback(async (postData: CreatePostInput) => {
+  const handlePostSubmit = useCallback(async (postData: CreatePostInput) => {
 
-      if (!isConnected || !address) {
+    if (!isConnected || !address) {
 
-        addToast('Please connect your wallet to post', 'error');
+      addToast('Please connect your wallet to post', 'error');
 
-        return;
+      return;
 
-      }
+    }
 
-  
 
-      try {
 
-        let newPost;
+    try {
 
-        // If no communityId is provided, create a quick post
+      let newPost;
 
-        if (!postData.communityId) {
+      // If no communityId is provided, create a quick post
 
-          // Import QuickPostService dynamically to avoid circular dependencies
+      if (!postData.communityId) {
 
-          const { QuickPostService } = await import('@/services/quickPostService');
+        // Import QuickPostService dynamically to avoid circular dependencies
 
-          newPost = await QuickPostService.createQuickPost({ ...postData, author: address.toLowerCase() });
+        const { QuickPostService } = await import('@/services/quickPostService');
 
-        } else {
+        newPost = await QuickPostService.createQuickPost({ ...postData, author: address.toLowerCase() });
 
-          // Otherwise, create a regular post
+      } else {
 
-          newPost = await createPost({ ...postData, author: address.toLowerCase() });
+        // Otherwise, create a regular post
 
-        }
-
-  
-
-        // Defer state updates to prevent blocking navigation
-
-        requestAnimationFrame(() => {
-
-          addToast('Post created successfully!', 'success');
-
-          closeModal('postCreation');
-
-          // Set hasNewPosts to trigger the refresh banner (but don't double refresh)
-
-          setHasNewPosts(true);
-
-        });
-
-      } catch (error) {
-
-        console.error('Error creating post:', error);
-
-        
-
-        // Defer error handling to prevent blocking navigation
-
-        requestAnimationFrame(() => {
-
-          addToast('Failed to create post', 'error');
-
-        });
+        newPost = await createPost({ ...postData, author: address.toLowerCase() });
 
       }
 
-    }, [isConnected, address, createPost, addToast, closeModal]);
+
+
+      // Defer state updates to prevent blocking navigation
+
+      requestAnimationFrame(() => {
+
+        addToast('Post created successfully!', 'success');
+
+        closeModal('postCreation');
+
+        // Set hasNewPosts to trigger the refresh banner (but don't double refresh)
+
+        setHasNewPosts(true);
+
+      });
+
+    } catch (error) {
+
+      console.error('Error creating post:', error);
+
+
+
+      // Defer error handling to prevent blocking navigation
+
+      requestAnimationFrame(() => {
+
+        addToast('Failed to create post', 'error');
+
+      });
+
+    }
+
+  }, [isConnected, address, createPost, addToast, closeModal]);
 
   // If not connected, show enhanced landing page
   if (!isConnected) {
