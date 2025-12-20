@@ -128,6 +128,31 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
       }
     }
   };
+
+  // Add timeout to prevent hanging
+  const [loadTimeout, setLoadTimeout] = useState<NodeJS.Timeout | null>(null);
+  
+  const handleImageLoad = () => {
+    if (loadTimeout) {
+      clearTimeout(loadTimeout);
+      setLoadTimeout(null);
+    }
+  };
+
+  const handleImageLoadStart = () => {
+    // Set a timeout to show error if image takes too long to load
+    const timeout = setTimeout(() => {
+      console.warn('Image loading timeout, skipping to next gateway or showing error');
+      if (isIpfsCid && currentIndex < urls.length - 1) {
+        const nextIndex = currentIndex + 1;
+        setCurrentIndex(nextIndex);
+        setCurrentSrc(urls[nextIndex]);
+      } else {
+        setHasError(true);
+      }
+    }, 5000); // 5 second timeout
+    setLoadTimeout(timeout);
+  };
   
   // If all gateways failed, show error state
   if (hasError) {
@@ -159,6 +184,8 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
             loading={lazy ? 'lazy' : 'eager'}
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             onError={handleImageError}
+            onLoad={handleImageLoad}
+            onLoadStart={handleImageLoadStart}
           />
         </div>
       );

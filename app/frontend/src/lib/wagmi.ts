@@ -1,7 +1,13 @@
-import { createConfig, http } from 'wagmi'
+import { createConfig, http, createStorage } from 'wagmi'
 import { base, baseSepolia, mainnet, polygon, arbitrum, sepolia } from 'wagmi/chains'
 import { injected, metaMask, walletConnect, coinbaseWallet } from 'wagmi/connectors'
 import './devConfig' // Import development configuration
+
+// Create persistent storage for wallet state
+const storage = createStorage({
+  storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+  key: 'linkdao-wallet-storage',
+})
 
 // WalletConnect project ID - in production, this should be from environment variables
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'demo-project-id'
@@ -109,6 +115,8 @@ export const config = createConfig({
     [arbitrum.id]: http(getRpcUrl(arbitrum.id)),
     [sepolia.id]: http(getRpcUrl(sepolia.id)),
   },
+  ssr: false, // Disable SSR for wallet state
+  storage, // Add persistent storage
 })
 
 export { base, baseSepolia, mainnet, polygon, arbitrum, sepolia }

@@ -26,7 +26,7 @@ export class SellerProfileService {
       // Normalize wallet address to handle both formats with and without 0x prefix
       const normalizedAddress = walletAddress.toLowerCase();
       const cleanAddress = normalizedAddress.startsWith('0x') ? normalizedAddress : '0x' + normalizedAddress;
-      
+
       const [seller] = await db
         .select()
         .from(sellers)
@@ -41,11 +41,11 @@ export class SellerProfileService {
           .from(sellers)
           .where(eq(sellers.walletAddress, fallbackAddress))
           .limit(1);
-          
+
         if (fallbackSeller) {
           return this.mapSellerToProfile(fallbackSeller);
         }
-        
+
         return null;
       }
 
@@ -387,6 +387,10 @@ export class SellerProfileService {
       if (updates.socialLinks) {
         dbUpdates.socialLinks = JSON.stringify(updates.socialLinks);
       }
+
+      // Normalize wallet address for database query
+      const normalizedAddress = walletAddress.toLowerCase();
+      const cleanAddress = normalizedAddress.startsWith('0x') ? normalizedAddress : '0x' + normalizedAddress;
 
       // Update database
       await db

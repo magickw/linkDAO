@@ -196,7 +196,7 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const navigateToCommunity = (communityId: string) => {
-    router.push(`/?view=community&community=${communityId}`);
+    router.push(`/communities/${communityId}`);
   };
 
   const navigateToPost = (postId: string, communityId?: string) => {

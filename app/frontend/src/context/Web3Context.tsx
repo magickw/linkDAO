@@ -54,6 +54,23 @@ export function Web3Provider({ children }: Web3ProviderProps) {
     };
   }, []);
 
+  // Add effect to persist connection state
+  useEffect(() => {
+    // Only run in browser
+    if (typeof window === 'undefined') return;
+    
+    // Save connection state to localStorage for persistence across page reloads
+    if (isConnected && address) {
+      localStorage.setItem('linkdao_wallet_connected', 'true');
+      localStorage.setItem('linkdao_wallet_address', address);
+      localStorage.setItem('linkdao_wallet_connector', connector?.id || 'unknown');
+    } else {
+      localStorage.removeItem('linkdao_wallet_connected');
+      localStorage.removeItem('linkdao_wallet_address');
+      localStorage.removeItem('linkdao_wallet_connector');
+    }
+  }, [isConnected, address, connector]);
+
   const handleConnect = (connectorId?: string) => {
     // Find MetaMask connector first, then fall back to injected, then first available
     let connectorToUse;
@@ -81,6 +98,34 @@ export function Web3Provider({ children }: Web3ProviderProps) {
       console.error('Failed to request wallet connection:', error);
     }
   };
+
+  // Attempt to restore previous connection on mount
+  useEffect(() => {
+    // Only run in browser and if not already connected
+    if (typeof window === 'undefined' || isConnected) return;
+    
+    const wasConnected = localStorage.getItem('linkdao_wallet_connected');
+    const savedAddress = localStorage.getItem('linkdao_wallet_address');
+    const savedConnectorId = localStorage.getItem('linkdao_wallet_connector');
+    
+    if (wasConnected === 'true' && savedAddress && savedConnectorId) {
+      // Try to reconnect with the saved connector
+      const savedConnector = connectors.find(c => c.id === savedConnectorId);
+      if (savedConnector) {
+        console.log('Attempting to restore wallet connection...');
+        // Add a small delay to ensure wagmi is fully initialized
+        setTimeout(() => {
+          connect({ connector: savedConnector }).catch(error => {
+            console.warn('Failed to restore wallet connection:', error);
+            // Clear saved connection data if restoration fails
+            localStorage.removeItem('linkdao_wallet_connected');
+            localStorage.removeItem('linkdao_wallet_address');
+            localStorage.removeItem('linkdao_wallet_connector');
+          });
+        }, 100);
+      }
+    }
+  }, [isConnected, connect, connectors]);
 
   const handleSwitchNetwork = (chainId: number) => {
     // Implementation for network switching

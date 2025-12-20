@@ -17,6 +17,7 @@ import SupportWidget from '@/components/SupportWidget';
 import { newsletterService } from '@/services/newsletterService';
 import { usePostModalManager } from '@/hooks/usePostModalManager';
 import PostModal from '@/components/PostModal';
+import { useBatchedWalletUpdates } from '../../hooks/useBatchedWalletUpdates';
 
 // Lazy load heavy components
 const SmartRightSidebar = lazy(() => import('@/components/SmartRightSidebar/SmartRightSidebar').catch(() => ({ default: () => <div>Failed to load sidebar</div> })));
@@ -69,6 +70,19 @@ export default function Home() {
   const { addToast } = useToast();
   const { createPost, isLoading: isCreatingPost } = useCreatePost();
   const { profile } = useProfile(address);
+
+  // Register profile loading as normal priority batched update when wallet connects
+  useEffect(() => {
+    if (isConnected && address) {
+      registerUpdate(
+        'profile-load',
+        () => {
+          console.log('[HomePage] Profile loading triggered (batched)');
+        },
+        'normal'
+      );
+    }
+  }, [isConnected, address, registerUpdate]);
   const { navigationState, openModal, closeModal } = useNavigation();
   const postModalManager = usePostModalManager();
 
@@ -136,53 +150,46 @@ export default function Home() {
   // Track WebSocket connection status to avoid multiple connections
   const wsConnectedRef = useRef(false);
 
+  // Initialize batched updates for wallet connection
+  const { registerUpdate } = useBatchedWalletUpdates();
+
   useEffect(() => {
     console.log('[HomePage] WebSocket connection useEffect triggered, isConnected:', isConnected);
     console.log('[HomePage] WebSocket connection useEffect timestamp:', Date.now());
 
     if (isConnected) {
-      // Use setTimeout to defer both content loading and WebSocket connection
-      // This ensures navigation can complete without being blocked by WebSocket setup
-      const scheduleContentLoad = () => {
-        console.log('[HomePage] Scheduling content load...');
-        // Defer content loading first
-        setTimeout(() => {
-          if (isMounted.current) {
-            console.log('[HomePage] Setting content ready to true');
-            setIsContentReady(true);
-          }
-        }, 50);
+      // Register content ready update as high priority batched update
+      registerUpdate(
+        'content-ready',
+        () => {
+          console.log('[HomePage] Setting content ready (batched)');
+          setIsContentReady(true);
+          setIsConnectionStabilized(true);
+        },
+        'high'
+      );
 
-        // Then defer WebSocket connection establishment separately
-        setTimeout(() => {
-          if (isMounted.current && !wsConnectedRef.current) {
-            // Check if already connected or connecting to prevent loops
-            if (webSocket.isConnected) {
-              console.log('[HomePage] WebSocket already connected, updating ref');
-              wsConnectedRef.current = true;
-              return;
-            }
-
-            // If we have a status, check if we are already connecting
+      // Register WebSocket connection as normal priority batched update
+      registerUpdate(
+        'websocket-connection',
+        () => {
+          if (isConnected && webSocket && !webSocket.isConnected) {
             if (webSocket.connectionState && webSocket.connectionState.status === 'connecting') {
               console.log('[HomePage] WebSocket already connecting, skipping');
               return;
             }
-
-            console.log('[HomePage] Attempting WebSocket connection...');
-            setIsConnectionStabilized(true);
+            
+            console.log('[HomePage] Attempting WebSocket connection (batched)...');
             // Connect WebSocket only after wallet is connected and page has stabilized
             webSocket.connect().then(() => {
-              if (isMounted.current) {
-                console.log('[HomePage] WebSocket connected successfully');
-                wsConnectedRef.current = true;
-              }
+              console.log('[HomePage] WebSocket connected successfully');
             }).catch((error) => {
               console.error('[HomePage] WebSocket connection failed:', error);
             });
           }
-        }, 200); // Longer delay to ensure navigation is complete
-      };
+        },
+        'normal'
+      );
 
       // Initial delay to let navigation start first
       const timer = setTimeout(scheduleContentLoad, 10);

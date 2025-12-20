@@ -12,6 +12,7 @@ import { EnhancedPostCard } from '@/components/Feed/EnhancedPostCard';
 import { ArrowLeft, Loader2, Share2, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/context/ToastContext';
+import { ENV_CONFIG } from '@/config/environment';
 
 interface CommunityPost {
   id: string;
@@ -49,7 +50,7 @@ export default function CommunityPostPage() {
                 setError(null);
 
                 // Fetch post by share ID
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cp/${shareId}`);
+                const response = await fetch(`${ENV_CONFIG.API_URL}/cp/${shareId}`);
                 
                 if (!response.ok) {
                     if (response.status === 404) {
@@ -61,9 +62,22 @@ export default function CommunityPostPage() {
                 }
 
                 const data = await response.json();
+                console.log('[CommunityPostPage] API response:', data);
+                console.log('[CommunityPostPage] Response structure:', {
+                    hasSuccess: 'success' in data,
+                    hasData: 'data' in data,
+                    dataType: data.data ? typeof data.data : 'undefined',
+                    dataKeys: data.data ? Object.keys(data.data) : [],
+                    hasPost: data.data && 'post' in data.data,
+                    hasCanonicalUrl: data.data && 'canonicalUrl' in data.data
+                });
                 
                 if (data.success && data.data) {
-                    const postData = data.data as CommunityPost;
+                    const postData = data.data.post as CommunityPost;
+                    
+                    console.log('[CommunityPostPage] Post data extracted:', postData);
+                    console.log('[CommunityPostPage] Community slug from post:', postData.communitySlug);
+                    console.log('[CommunityPostPage] Community slug from URL:', community);
                     
                     // Verify the community slug matches the post's community
                     if (community && postData.communitySlug !== community) {

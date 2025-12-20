@@ -27,14 +27,14 @@ router.get('/seller/:walletAddress',
   async (req: Request, res: Response) => {
     try {
       const { walletAddress } = req.params;
-  
+
       // Validate wallet address format - more flexible validation
       if (!walletAddress) {
         return validationErrorResponse(res, [
           { field: 'walletAddress', message: 'Wallet address is required' }
         ], 'Wallet address required');
       }
-          
+
       // Basic validation - check if it looks like a wallet address
       if (!/^0x[a-fA-F0-9]{40,42}$/.test(walletAddress) && !/^[a-zA-Z0-9]{40,44}$/.test(walletAddress)) {
         console.warn('Invalid wallet address format received in seller profile request:', walletAddress);
@@ -101,8 +101,8 @@ router.put('/seller/:walletAddress', csrfProtection,
       const { walletAddress } = req.params;
       const updates: UpdateSellerProfileRequest = req.body;
 
-      // Validate wallet address format
-      if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+      // Validate wallet address format (0x + 40 hex characters = 42 total)
+      if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/i.test(walletAddress)) {
         return validationErrorResponse(res, [
           { field: 'walletAddress', message: 'Invalid wallet address format' }
         ], 'Invalid wallet address');
@@ -176,8 +176,8 @@ router.post('/seller/profile', csrfProtection,
         ]);
       }
 
-      // Validate wallet address format
-      if (!/^0x[a-fA-F0-9]{40}$/.test(profileData.walletAddress)) {
+      // Validate wallet address format (0x + 40 hex characters = 42 total)
+      if (!/^0x[a-fA-F0-9]{40}$/i.test(profileData.walletAddress)) {
         return validationErrorResponse(res, [
           { field: 'walletAddress', message: 'Invalid wallet address format' }
         ]);
@@ -276,8 +276,8 @@ router.get('/seller/onboarding/:walletAddress',
     try {
       const { walletAddress } = req.params;
 
-      // Validate wallet address format
-      if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+      // Validate wallet address format (0x + 40 hex characters = 42 total)
+      if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/i.test(walletAddress)) {
         return validationErrorResponse(res, [
           { field: 'walletAddress', message: 'Invalid wallet address format' }
         ]);
@@ -343,8 +343,8 @@ router.put('/seller/onboarding/:walletAddress/:step', csrfProtection, async (req
       ]);
     }
 
-    // Validate wallet address format
-    if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+    // Validate wallet address format (0x + 40 hex characters = 42 total)
+    if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/i.test(walletAddress)) {
       return validationErrorResponse(res, [
         { field: 'walletAddress', message: 'Invalid wallet address format' }
       ]);
@@ -430,8 +430,8 @@ router.get('/seller/:walletAddress/tier',
     try {
       const { walletAddress } = req.params;
 
-      // Validate wallet address format
-      if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+      // Validate wallet address format (0x + 40 hex characters = 42 total)
+      if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/i.test(walletAddress)) {
         return validationErrorResponse(res, [
           { field: 'walletAddress', message: 'Invalid wallet address format' }
         ]);
@@ -499,8 +499,8 @@ router.get('/seller/:walletAddress/tier/progress',
     try {
       const { walletAddress } = req.params;
 
-      // Validate wallet address format
-      if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+      // Validate wallet address format (0x + 40 hex characters = 42 total)
+      if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/i.test(walletAddress)) {
         return validationErrorResponse(res, [
           { field: 'walletAddress', message: 'Invalid wallet address format' }
         ]);

@@ -237,6 +237,7 @@ export class CommunityService {
         .select({
           id: communities.id,
           name: communities.name,
+          slug: communities.slug,
           displayName: communities.displayName,
           description: communities.description,
           category: communities.category,

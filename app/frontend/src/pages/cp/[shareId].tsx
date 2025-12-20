@@ -12,6 +12,7 @@ import { EnhancedPostCard } from '@/components/Feed/EnhancedPostCard';
 import { ArrowLeft, Loader2, ExternalLink, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/context/ToastContext';
+import { ENV_CONFIG } from '@/config/environment';
 
 interface CommunityPost {
   id: string;
@@ -49,8 +50,8 @@ export default function CommunityPostSharePage() {
                 setError(null);
                 console.log(`[CommunityPostSharePage] Fetching post for shareId: ${shareId}`);
 
-                // Fetch community post by share ID - 使用绝对路径确保请求正确
-                const response = await fetch(`${window.location.origin}/cp/${shareId}`, {
+                // Fetch community post by share ID using the API endpoint
+                const response = await fetch(`${ENV_CONFIG.API_URL}/cp/${shareId}`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -76,23 +77,36 @@ export default function CommunityPostSharePage() {
 
                 const result = await response.json();
                 console.log('[CommunityPostSharePage] API response:', result);
+                console.log('[CommunityPostSharePage] Response structure:', {
+                    hasSuccess: 'success' in result,
+                    hasData: 'data' in result,
+                    dataType: result.data ? typeof result.data : 'undefined',
+                    dataKeys: result.data ? Object.keys(result.data) : [],
+                    hasPost: result.data && 'post' in result.data,
+                    hasCanonicalUrl: result.data && 'canonicalUrl' in result.data
+                });
                 
                 if (result.success && result.data) {
                     // 后端返回的数据格式不同，需要从 result.data.post 获取实际帖子数据
                     const postData = result.data.post as CommunityPost;
                     const canonicalUrl = result.data.canonicalUrl;
                     
+                    console.log('[CommunityPostSharePage] Post data extracted:', postData);
+                    console.log('[CommunityPostSharePage] Canonical URL extracted:', canonicalUrl);
+                    
                     console.log('[CommunityPostSharePage] Post data found:', postData);
                     console.log('[CommunityPostSharePage] Canonical URL:', canonicalUrl);
                     
-                    setPost(postData);
-                    setCanonicalUrl(canonicalUrl);
-                    
-                    // 重定向到规范URL
+                    // 重定向到规范URL - 立即重定向，不等待状态更新
                     if (canonicalUrl && canonicalUrl !== window.location.pathname) {
                         console.log('[CommunityPostSharePage] Redirecting to canonical URL:', canonicalUrl);
                         router.replace(canonicalUrl);
+                        return; // 立即返回，不继续执行
                     }
+                    
+                    // 如果不需要重定向，则设置状态
+                    setPost(postData);
+                    setCanonicalUrl(canonicalUrl);
                 } else {
                     console.log('[CommunityPostSharePage] Post not found in response');
                     setError('Community post not found');

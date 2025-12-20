@@ -105,7 +105,16 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
         // If post has contentCid that looks like a valid IPFS CID, fetch from IPFS
         if (post.contentCid && (post.contentCid.startsWith('Qm') || post.contentCid.startsWith('bafy'))) {
           console.log('Fetching content from IPFS for CID:', post.contentCid);
-          const contentText = await IPFSContentService.getContentFromIPFS(post.contentCid);
+          
+          // Add timeout to prevent hanging
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('IPFS fetch timeout')), 3000);
+          });
+          
+          const contentText = await Promise.race([
+            IPFSContentService.getContentFromIPFS(post.contentCid),
+            timeoutPromise
+          ]) as string;
           console.log('Received content from IPFS:', { contentText, length: contentText?.length });
 
           if (contentText && contentText.length > 0) {
