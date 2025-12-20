@@ -257,18 +257,34 @@ export class PostService {
   static async getFeed(
     page: number = 1,
     limit: number = 20,
-    sort: string = 'newest'
+    sort: string = 'newest',
+    feedSource: string = 'all'
   ): Promise<any> {
     try {
       const params = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
-        sort
+        sort,
+        feedSource // Ensure we get all posts including public community posts
       });
+
+      // Use optional auth - try to get auth headers but don't require them
+      let headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      
+      try {
+        // Attempt to get auth headers, but don't fail if not authenticated
+        const authHeaders = await enhancedAuthService.getAuthHeaders();
+        headers = { ...headers, ...authHeaders };
+      } catch (authError) {
+        // User is not authenticated, continue without auth headers
+        console.log('[PostService] No authentication available, fetching public feed');
+      }
 
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed?${params}`, {
         method: 'GET',
-        headers: await enhancedAuthService.getAuthHeaders()
+        headers
       });
 
       return this.handleResponse(response, 'Failed to fetch feed');

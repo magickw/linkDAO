@@ -155,22 +155,14 @@ export default function Home() {
       
       isUpdating.current = true;
       
-      // Register content ready update as high priority batched update
-      registerUpdate(
-        'content-ready',
-        () => {
-          console.log('[HomePage] Setting content ready (batched)');
-          setIsContentReady(true);
-          setIsConnectionStabilized(true);
-          isUpdating.current = false;
-        },
-        'high'
-      );
-
-      // Register WebSocket connection as normal priority batched update
-      registerUpdate(
-        'websocket-connection',
-        () => {
+      // Set content ready first to allow navigation to proceed
+      console.log('[HomePage] Setting content ready');
+      setIsContentReady(true);
+      setIsConnectionStabilized(true);
+      
+      // Then defer WebSocket connection establishment separately with requestIdleCallback
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        window.requestIdleCallback(() => {
           if (isConnected && webSocket && !webSocket.isConnected) {
             if (webSocket.connectionState && webSocket.connectionState.status === 'connecting') {
               console.log('[HomePage] WebSocket already connecting, skipping');
@@ -178,7 +170,7 @@ export default function Home() {
               return;
             }
             
-            console.log('[HomePage] Attempting WebSocket connection (batched)...');
+            console.log('[HomePage] Attempting WebSocket connection during idle time...');
             // Connect WebSocket only after wallet is connected and page has stabilized
             webSocket.connect().then(() => {
               console.log('[HomePage] WebSocket connected successfully');
@@ -190,9 +182,31 @@ export default function Home() {
           } else {
             isUpdating.current = false;
           }
-        },
-        'normal'
-      );
+        }, { timeout: 5000 }); // Fallback timeout if idle callback doesn't fire
+      } else {
+        // Fallback for browsers without requestIdleCallback
+        setTimeout(() => {
+          if (isConnected && webSocket && !webSocket.isConnected) {
+            if (webSocket.connectionState && webSocket.connectionState.status === 'connecting') {
+              console.log('[HomePage] WebSocket already connecting, skipping');
+              isUpdating.current = false;
+              return;
+            }
+            
+            console.log('[HomePage] Attempting WebSocket connection with timeout...');
+            // Connect WebSocket only after wallet is connected and page has stabilized
+            webSocket.connect().then(() => {
+              console.log('[HomePage] WebSocket connected successfully');
+            }).catch((error) => {
+              console.error('[HomePage] WebSocket connection failed:', error);
+            }).finally(() => {
+              isUpdating.current = false;
+            });
+          } else {
+            isUpdating.current = false;
+          }
+        }, 1000); // Longer delay to ensure navigation is complete
+      }
 
       // Initial delay to let navigation start first
       const timer = setTimeout(scheduleContentLoad, 10);

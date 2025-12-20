@@ -366,8 +366,9 @@ const CommunitiesPage: React.FC = () => {
         timeFilter,
         currentPostsCount: posts.length
       });
-      // If user is authenticated, fetch the aggregated feed (now includes public communities)
-      if (isAuthenticated) {
+      // For all users (authenticated or not), fetch the general feed which includes public community posts
+      // This ensures everyone can see community activity
+      {
         // Map frontend sort values to backend expected values
         const sortMapping: Record<string, string> = {
           'hot': 'hot',
@@ -377,25 +378,27 @@ const CommunitiesPage: React.FC = () => {
         };
         const backendSort = sortMapping[sortBy] || 'new';
 
-        // Use the efficient aggregated feed endpoint
-        const result = await CommunityPostService.getFollowedCommunitiesFeed(
+        // Use the general feed endpoint which includes public community posts
+        const { PostService } = await import('../services/postService');
+        const result = await PostService.getFeed(
           pageNum,
           20,
           backendSort,
-          timeFilter
+          'all' // Get all posts including public community posts
         );
 
         // Debug logging
         console.log(`[COMMUNITY FEED FRONTEND DEBUG] API response:`, {
-          postsCount: result.posts?.length || 0,
-          pagination: result.pagination,
-          firstPost: result.posts?.[0],
-          allPosts: result.posts
+          postsCount: result?.posts?.length || result?.length || 0,
+          pagination: result?.pagination,
+          firstPost: result?.posts?.[0] || result?.[0],
+          allPosts: result?.posts || result
         });
         // Check if component is still mounted before updating state
         if (!isMounted.current) return;
 
-        const newPosts = result.posts || [];
+        // Handle different response formats
+        const newPosts = result?.posts || result || [];
 
         console.log(`[COMMUNITY FEED FRONTEND DEBUG] Setting posts state:`, {
           newPostsCount: newPosts.length,
@@ -410,87 +413,12 @@ const CommunitiesPage: React.FC = () => {
           setPosts(newPosts);
         }
 
-        const hasMorePosts = result.pagination ?
+        const hasMorePosts = result?.pagination ?
           result.pagination.page < result.pagination.totalPages :
-          false;
+          newPosts.length === 20; // Simple heuristic for hasMore
 
         setHasMore(hasMorePosts);
         setPage(pageNum);
-      } else {
-        // Not authenticated - show public posts from all communities
-        console.log(`[COMMUNITY FEED FRONTEND DEBUG] User not authenticated, fetching public posts from all communities`);
-
-        // Map frontend sort values to backend expected values
-        const sortMapping: Record<string, string> = {
-          'hot': 'hot',
-          'new': 'new',
-          'top': 'top',
-          'rising': 'rising'
-        };
-        const backendSort = sortMapping[sortBy] || 'new';
-
-        try {
-          // Fetch public posts from all communities using the general feed endpoint
-          const { PostService } = await import('../services/postService');
-
-          // Map time filter to backend format
-          const timeMapping: Record<string, string> = {
-            'hour': 'hour',
-            'day': 'day',
-            'week': 'week',
-            'month': 'month',
-            'year': 'year',
-            'all': 'all'
-          };
-          const backendTimeFilter = timeMapping[timeFilter] || 'all';
-
-          // Use the general feed endpoint which supports optional authentication
-          const result = await PostService.getFeed(
-            pageNum,
-            20,
-            backendSort
-          );
-
-          // Debug logging
-          console.log(`[COMMUNITY FEED FRONTEND DEBUG] Public posts API response:`, {
-            postsCount: result?.posts?.length || result?.length || 0,
-            pagination: result?.pagination,
-            firstPost: result?.posts?.[0] || result?.[0],
-            allPosts: result?.posts || result
-          });
-
-          // Check if component is still mounted before updating state
-          if (!isMounted.current) return;
-
-          // Handle different response formats
-          const newPosts = result?.posts || result || [];
-
-          console.log(`[COMMUNITY FEED FRONTEND DEBUG] Setting public posts state:`, {
-            newPostsCount: newPosts.length,
-            append,
-            currentPostsCount: posts.length,
-            newPosts: newPosts.slice(0, 3) // Show first 3 posts for debugging
-          });
-
-          if (append) {
-            setPosts(prev => [...prev, ...newPosts]);
-          } else {
-            setPosts(newPosts);
-          }
-
-          const hasMorePosts = result?.pagination ?
-            result.pagination.page < result.pagination.totalPages :
-            newPosts.length === 20; // Simple heuristic for hasMore
-
-          setHasMore(hasMorePosts);
-          setPage(pageNum);
-        } catch (publicPostsError) {
-          console.error('Failed to fetch public community posts:', publicPostsError);
-          if (!isMounted.current) return;
-          if (!append) setPosts([]);
-          setHasMore(false);
-        }
-      }
     } catch (error) {
       console.error('Failed to fetch community posts:', error);
       if (!isMounted.current) return;

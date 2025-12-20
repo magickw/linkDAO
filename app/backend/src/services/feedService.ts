@@ -262,9 +262,20 @@ export class FeedService {
           finalFollowingFilter,
           moderationFilter, // Add moderation filter
           isNull(posts.parentId), // Only show top-level posts, not comments
-          // Only exclude community posts when no specific communities are being filtered
-          // If communities filter is applied, show those community posts
-          filterCommunities.length > 0 ? sql`1=1` : and(isNull(posts.communityId), isNull(posts.dao))
+          // Include community posts if they're public or if specific communities are being filtered
+          filterCommunities.length > 0 ? sql`1=1` : or(
+            and(isNull(posts.communityId), isNull(posts.dao)), // Non-community posts
+            // Include public community posts to attract new users
+            and(
+              or(posts.communityId.isNotNull(), posts.dao.isNotNull()), // Has community
+              // Join with communities table to check if public
+              sql`EXISTS (
+                SELECT 1 FROM ${communities} 
+                WHERE (${communities.id} = ${posts.communityId} OR ${communities.id} = ${posts.dao})
+                AND ${communities.isPublic} = true
+              )`
+            )
+          )
         ));
 
       console.log('📊 [BACKEND FEED] Regular posts query result:', {
