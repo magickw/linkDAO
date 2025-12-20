@@ -447,7 +447,9 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
           'Authorization': `Bearer ${address}`,
         },
         body: JSON.stringify({
-          participants: [address, newRecipientAddress.trim()],
+          participantAddress: newRecipientAddress.trim(),
+          initialMessage: "Hello! Let's start chatting.",
+          conversationType: 'direct'
         }),
       });
 
@@ -461,6 +463,8 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
         loadConversations(); // Refresh conversation list
       } else {
         console.error('Failed to create conversation:', response.status, response.statusText);
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Error details:', errorData);
       }
     } catch (error) {
       console.error('Failed to start new conversation:', error);

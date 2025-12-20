@@ -72,7 +72,7 @@ export const users = pgTable("users", {
 
 // Posts
 export const posts = pgTable("posts", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").defaultRandom().primaryKey(),
   shareId: varchar("share_id", { length: 16 }), // Short, shareable ID for community posts
   authorId: uuid("author_id").references(() => users.id),
   title: text("title"), // Making title nullable to handle existing data
@@ -169,7 +169,7 @@ export const quickPostTags = pgTable("quick_post_tags", {
 // Comments - for both regular posts and quick posts
 export const comments = pgTable("comments", {
   id: uuid("id").defaultRandom().primaryKey(),
-  postId: integer("post_id").references(() => posts.id, { onDelete: "cascade" }),
+  postId: uuid("post_id").references(() => posts.id, { onDelete: "cascade" }),
   quickPostId: uuid("quick_post_id").references(() => quickPosts.id, { onDelete: "cascade" }),
   authorId: uuid("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   content: text("content").notNull(),
@@ -330,7 +330,7 @@ export const postTags = pgTable("post_tags", {
 // Reactions - token-based reactions to posts
 export const reactions = pgTable("reactions", {
   id: serial("id").primaryKey(),
-  postId: integer("post_id").references(() => posts.id),
+  postId: uuid("post_id").references(() => posts.id),
   userId: uuid("user_id").references(() => users.id),
   type: varchar("type", { length: 32 }).notNull(), // 'hot', 'diamond', 'bullish', 'governance', 'art'
   amount: numeric("amount").notNull(), // Amount of tokens staked
@@ -351,7 +351,7 @@ export const reactions = pgTable("reactions", {
 // Tips - direct token transfers to post authors
 export const tips = pgTable("tips", {
   id: serial("id").primaryKey(),
-  postId: integer("post_id").references(() => posts.id),
+  postId: uuid("post_id").references(() => posts.id),
   fromUserId: uuid("from_user_id").references(() => users.id),
   toUserId: uuid("to_user_id").references(() => users.id),
   token: varchar("token", { length: 64 }).notNull(), // e.g. USDC, LNK
@@ -378,7 +378,7 @@ export const tips = pgTable("tips", {
 // Views - track post views with deduplication
 export const views = pgTable("views", {
   id: serial("id").primaryKey(),
-  postId: integer("post_id").notNull().references(() => posts.id),
+  postId: uuid("post_id").notNull().references(() => posts.id),
   userId: uuid("user_id").references(() => users.id), // Nullable for anonymous views
   ipAddress: varchar("ip_address", { length: 45 }), // IPv4 or IPv6
   userAgent: text("user_agent"),
@@ -399,7 +399,7 @@ export const views = pgTable("views", {
 // Bookmarks - user-saved posts
 export const bookmarks = pgTable("bookmarks", {
   userId: uuid("user_id").notNull().references(() => users.id),
-  postId: integer("post_id").notNull().references(() => posts.id),
+  postId: uuid("post_id").notNull().references(() => posts.id),
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
   pk: primaryKey(t.userId, t.postId),
@@ -418,7 +418,7 @@ export const bookmarks = pgTable("bookmarks", {
 // Shares - track when users share posts
 export const shares = pgTable("shares", {
   id: serial("id").primaryKey(),
-  postId: integer("post_id").notNull().references(() => posts.id),
+  postId: uuid("post_id").notNull().references(() => posts.id),
   userId: uuid("user_id").notNull().references(() => users.id),
   targetType: varchar("target_type", { length: 32 }).notNull(), // 'community', 'dm', 'external'
   targetId: uuid("target_id"), // Community ID or User ID for DMs
