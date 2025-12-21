@@ -44,7 +44,7 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import EnhancedGovernanceCard from '@/components/Community/EnhancedGovernanceCard';
 import EnhancedTokenPriceWidget from '@/components/Community/EnhancedTokenPriceWidget';
 import OnChainIdentityBadge from '@/components/Community/OnChainIdentityBadge';
-import DAOLeaderboard from '@/components/Community/DAOLeaderboard';
+
 import TreasuryWidget from '@/components/Community/TreasuryWidget';
 import QuestsWidget from '@/components/Community/QuestsWidget';
 import CommunityHealthMetrics from '@/components/Community/CommunityHealthMetrics';
@@ -84,83 +84,6 @@ import { useAuth } from '@/context/AuthContext';
 import { Community } from '@/models/Community';
 import { FeedSortType } from '@/types/feed';
 
-// Mock data for demonstration - will be removed
-const mockCommunities = [
-  {
-    id: 'ethereum-builders',
-    name: 'ethereum-builders',
-    displayName: 'Ethereum Builders',
-    description: 'Building the future of Ethereum ecosystem',
-    memberCount: 12400,
-    avatar: '🔷',
-    banner: 'https://placehold.co/800x200/667eea/ffffff?text=Ethereum+Builders',
-    category: 'Development',
-    tags: ['ethereum', 'development', 'smart-contracts'],
-    isPublic: true,
-    rules: ['Be respectful', 'No spam', 'Share quality content'],
-    moderators: ['0x1234...5678'],
-    treasuryAddress: '0x1234567890123456789012345678901234567890',
-    governanceToken: 'ETH-BUILD',
-    createdAt: new Date('2023-01-15'),
-    updatedAt: new Date(),
-    settings: {
-      allowedPostTypes: [],
-      requireApproval: false,
-      minimumReputation: 0,
-      stakingRequirements: []
-    }
-  },
-  {
-    id: 'defi-traders',
-    name: 'defi-traders',
-    displayName: 'DeFi Traders',
-    description: 'Decentralized Finance trading strategies and insights',
-    memberCount: 8900,
-    avatar: '💰',
-    banner: 'https://placehold.co/800x200/10b981/ffffff?text=DeFi+Traders',
-    category: 'Finance',
-    tags: ['defi', 'trading', 'yield-farming'],
-    isPublic: true,
-    rules: ['No financial advice', 'Share research', 'Verify claims'],
-    moderators: ['0x2345...6789'],
-    treasuryAddress: '0x2345678901234567890123456789012345678901',
-    governanceToken: 'DEFI-TRD',
-    createdAt: new Date('2023-02-20'),
-    updatedAt: new Date(),
-    settings: {
-      allowedPostTypes: [],
-      requireApproval: false,
-      minimumReputation: 100,
-      stakingRequirements: []
-    }
-  },
-  {
-    id: 'nft-collectors',
-    name: 'nft-collectors',
-    displayName: 'NFT Collectors',
-    description: 'Discover, trade, and showcase NFT collections',
-    memberCount: 21000,
-    avatar: '🎨',
-    banner: 'https://placehold.co/800x200/8b5cf6/ffffff?text=NFT+Collectors',
-    category: 'Art',
-    tags: ['nft', 'art', 'collectibles'],
-    isPublic: true,
-    rules: ['Original content only', 'No price manipulation', 'Respect artists'],
-    moderators: ['0x3456...7890'],
-    treasuryAddress: '0x3456789012345678901234567890123456789012',
-    governanceToken: 'NFT-COL',
-    createdAt: new Date('2023-03-10'),
-    updatedAt: new Date(),
-    settings: {
-      allowedPostTypes: [],
-      requireApproval: false,
-      minimumReputation: 50,
-      stakingRequirements: []
-    }
-  }
-];
-
-// Mock posts removed - now fetching from backend API
 
 const CommunitiesPage: React.FC = () => {
   const router = useRouter();
@@ -493,8 +416,6 @@ const CommunitiesPage: React.FC = () => {
         setTokenBalances(tokenBalances);
         setLiveTokenPrices(liveTokenPrices);
         setStakingData(stakingData);
-
-        // Initialize with empty arrays instead of mock data
         setGovernanceProposals([]);
         setWalletActivities([]);
       }, 0);
@@ -1109,12 +1030,7 @@ const CommunitiesPage: React.FC = () => {
                   compact={false}
                 />
 
-                {/* DAO Leaderboard */}
-                <DAOLeaderboard
-                  communityId="global"
-                  maxEntries={5}
-                  currentUserAddress={address}
-                />
+                
 
                 {/* Community Health Metrics */}
                 <CommunityHealthMetrics

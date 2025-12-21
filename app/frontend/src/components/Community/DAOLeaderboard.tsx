@@ -144,7 +144,7 @@ export const DAOLeaderboard: React.FC<DAOLeaderboardProps> = ({
         );
     }
 
-    const currentData = leaderboardData[activeTab];
+    const currentData = leaderboardData[activeTab] || [];
 
     return (
         <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm ${className}`}>
@@ -177,7 +177,7 @@ export const DAOLeaderboard: React.FC<DAOLeaderboardProps> = ({
 
             {/* Leaderboard List */}
             <div className="divide-y divide-gray-200 dark:divide-gray-700">
-                {currentData.slice(0, maxEntries).map((entry) => (
+                {currentData && currentData.length > 0 && currentData.slice(0, maxEntries).map((entry) => (
                     <div
                         key={entry.rank}
                         className={`p-4 transition-colors ${entry.isCurrentUser

@@ -9,7 +9,7 @@ import DAOGovernanceEmbed from './DAOGovernanceEmbed';
 import { SmartRightSidebar } from './SmartRightSidebar';
 import enhancedUserService, { SuggestedUser } from '../services/enhancedUserService';
 import CommunityAvatar from './Community/CommunityAvatar';
-import { DAOLeaderboard } from './Community/DAOLeaderboard';
+
 import { TreasuryWidget } from './Community/TreasuryWidget';
 import { QuestsWidget } from './Community/QuestsWidget';
 import { CommunityHealthMetrics } from './Community/CommunityHealthMetrics';
@@ -680,10 +680,9 @@ const DashboardRightSidebar = memo(() => {
         return renderDeFiMarketsWidget();
       case 'dao-leaderboard':
         return (
-          <DAOLeaderboard
-            maxEntries={10}
-            className="mb-6"
-          />
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 mb-6">
+            <p className="text-gray-500 dark:text-gray-400 text-center">Leaderboard temporarily unavailable</p>
+          </div>
         );
       case 'treasury-info':
         return (
