@@ -136,6 +136,38 @@ router.get('/profile', sellerController.getProfile.bind(sellerController));
 // GET /api/sellers/stats - Get seller statistics
 router.get('/stats', sellerController.getStats.bind(sellerController));
 
+// GET /api/sellers/onboarding - Get onboarding steps
+router.get('/onboarding', sellerController.getOnboardingSteps.bind(sellerController));
+
+// PUT /api/sellers/onboarding/:stepId - Update onboarding step
+router.put('/onboarding/:stepId', csrfProtection,
+  validateRequest({
+    params: {
+      stepId: { type: 'string', required: true }
+    },
+    body: {
+      completed: { type: 'boolean', required: true },
+      data: { type: 'object', optional: true }
+    }
+  }),
+  sellerController.updateOnboardingStep.bind(sellerController)
+);
+
+// GET /api/sellers/tier - Get seller tier information
+router.get('/tier', sellerController.getSellerTier.bind(sellerController));
+
+// GET /api/sellers/tier/progress - Get tier progress
+router.get('/tier/progress', sellerController.getTierProgress.bind(sellerController));
+
+// POST /api/sellers/tier/evaluate - Trigger tier evaluation
+router.post('/tier/evaluate', csrfProtection, sellerController.triggerTierEvaluation.bind(sellerController));
+
+// GET /api/sellers/tier/criteria - Get tier criteria
+router.get('/tier/criteria', sellerController.getTierCriteria.bind(sellerController));
+
+// GET /api/sellers/tier/history - Get tier evaluation history
+router.get('/tier/history', sellerController.getTierEvaluationHistory.bind(sellerController));
+
 // POST /api/sellers/verify - Request seller verification
 router.post('/verify', csrfProtection, 
   validateRequest({

@@ -785,6 +785,7 @@ import { advancedAnalyticsRouter } from './routes/advancedAnalyticsRoutes';
 
 // Import marketplace seller routes
 import marketplaceSellerRoutes from './routes/marketplaceSellerRoutes';
+import sellerRoutes from './routes/sellerRoutes';
 // Import seller profile API routes
 import sellerProfileRoutes from './routes/sellerProfileRoutes';
 // Import seller dashboard routes
@@ -1020,6 +1021,9 @@ app.use('/api/marketplace/ens', ensValidationRoutes);
 
 // Marketplace search routes
 app.use('/api/marketplace/search', marketplaceSearchRoutes);
+
+// Seller routes - main seller API endpoints
+app.use('/api/sellers', sellerRoutes);
 
 // Seller profile API routes - Primary seller endpoints
 // sellerProfileRoutes defines routes like /seller/:walletAddress, so mounting at /api/marketplace

@@ -64,7 +64,7 @@ console.log('[SellerAPI] Initialized with base URL:', SELLER_API_BASE);
 
 interface SellerAPIEndpoints {
   // Profile endpoints
-  getProfile: (walletAddress: string) => string;
+  getProfile: (walletAddress: string) => string; // walletAddress kept for compatibility but not used in URL
   updateProfile: (walletAddress: string) => string;
   createProfile: () => string;
   updateProfileEnhanced: (walletAddress: string) => string;
@@ -158,19 +158,17 @@ export class UnifiedSellerAPIClient {
   // Standardized endpoint patterns
   private endpoints: SellerAPIEndpoints = {
     // Profile endpoints
-    getProfile: (walletAddress: string) => `${this.baseURL}/${walletAddress}`,
-    updateProfile: (walletAddress: string) => `${this.baseURL}/${walletAddress}`,
-    createProfile: () => `${this.baseURL}/profile`,
-    updateProfileEnhanced: (walletAddress: string) => `${this.baseURL}/${walletAddress}/enhanced`,
-
+      getProfile: (walletAddress: string) => `${this.baseURL}/profile`, // Uses authenticated user
+      updateProfile: (walletAddress: string) => `${this.baseURL}/profile`, // Uses authenticated user
+      createProfile: () => `${this.baseURL}/profile`,
+      updateProfileEnhanced: (walletAddress: string) => `${this.baseURL}/profile/enhanced`, // Uses authenticated user
     // Onboarding endpoints
-    getOnboardingSteps: (walletAddress: string) => `${this.baseURL}/onboarding/${walletAddress}`,
-    updateOnboardingStep: (walletAddress: string, stepId: string) => `${this.baseURL}/onboarding/${walletAddress}/${stepId}`,
-
-    // Dashboard endpoints
-    getDashboard: (walletAddress: string) => `${this.baseURL}/dashboard/${walletAddress}`,
-    getAnalytics: (walletAddress: string) => `${this.baseURL}/analytics/${walletAddress}`,
-
+      getOnboardingSteps: (walletAddress: string) => `${this.baseURL}/onboarding`, // Uses authenticated user
+      updateOnboardingStep: (walletAddress: string, stepId: string) => `${this.baseURL}/onboarding/${stepId}`, // Uses authenticated user
+    
+      // Dashboard endpoints
+      getDashboard: (walletAddress: string) => `${this.baseURL}/dashboard`, // Uses authenticated user
+      getAnalytics: (walletAddress: string) => `${this.baseURL}/analytics`, // Uses authenticated user
     // Listings endpoints
     getListings: (walletAddress: string) => `${this.baseURL}/listings`, // Backend uses authenticated user, not wallet address in URL
     getListingById: (listingId: string) => `${this.baseURL}/listings/detail/${listingId}`,
@@ -179,12 +177,12 @@ export class UnifiedSellerAPIClient {
     deleteListing: (listingId: string) => `${this.baseURL}/listings/${listingId}`,
 
     // Orders endpoints
-    getOrders: (walletAddress: string) => `${this.baseURL}/orders/${walletAddress}`,
+    getOrders: (walletAddress: string) => `${this.baseURL}/orders`, // Uses authenticated user
     updateOrderStatus: (orderId: string) => `${this.baseURL}/orders/${orderId}/status`,
     addTrackingNumber: (orderId: string) => `${this.baseURL}/orders/${orderId}/tracking`,
 
     // Notifications endpoints
-    getNotifications: (walletAddress: string) => `${this.baseURL}/notifications/${walletAddress}`,
+    getNotifications: (walletAddress: string) => `${this.baseURL}/notifications`, // Uses authenticated user
     markNotificationRead: (notificationId: string) => `${this.baseURL}/notifications/${notificationId}/read`,
 
     // ENS endpoints
@@ -198,28 +196,28 @@ export class UnifiedSellerAPIClient {
     verifyPhone: () => `${this.baseURL}/verification/phone/verify`,
 
     // KYC endpoints
-    submitKYC: (walletAddress: string) => `${this.baseURL}/kyc/${walletAddress}`,
-    getKYCStatus: (walletAddress: string) => `${this.baseURL}/kyc/${walletAddress}`,
+    submitKYC: (walletAddress: string) => `${this.baseURL}/kyc`, // Uses authenticated user
+    getKYCStatus: (walletAddress: string) => `${this.baseURL}/kyc`, // Uses authenticated user
 
     // Payment endpoints
-    getPaymentHistory: (walletAddress: string) => `${this.baseURL}/payments/${walletAddress}`,
+    getPaymentHistory: (walletAddress: string) => `${this.baseURL}/payments`, // Uses authenticated user
     requestWithdrawal: () => `${this.baseURL}/withdraw`,
 
     // Dispute endpoints
-    getDisputes: (walletAddress: string) => `${this.baseURL}/disputes/${walletAddress}`,
+    getDisputes: (walletAddress: string) => `${this.baseURL}/disputes`, // Uses authenticated user
     respondToDispute: (disputeId: string) => `${this.baseURL}/disputes/${disputeId}/respond`,
 
     // Tier endpoints
-    getSellerTier: (walletAddress: string) => `${this.baseURL}/${walletAddress}/tier`,
-    getTierProgress: (walletAddress: string) => `${this.baseURL}/${walletAddress}/tier/progress`,
-    getTierUpgradeEligibility: (walletAddress: string) => `${this.baseURL}/${walletAddress}/tier/upgrade-eligibility`,
-    refreshTierData: (walletAddress: string) => `${this.baseURL}/${walletAddress}/tier/refresh`,
+    getSellerTier: (walletAddress: string) => `${this.baseURL}/tier`, // Uses authenticated user
+    getTierProgress: (walletAddress: string) => `${this.baseURL}/tier/progress`, // Uses authenticated user
+    getTierUpgradeEligibility: (walletAddress: string) => `${this.baseURL}/tier/upgrade-eligibility`, // Uses authenticated user
+    refreshTierData: (walletAddress: string) => `${this.baseURL}/tier/refresh`, // Uses authenticated user
 
     // Automated tier upgrade endpoints
-    getTierProgressionTracking: (walletAddress: string) => `${this.baseURL}/tier/progression/${walletAddress}`,
+    getTierProgressionTracking: (walletAddress: string) => `${this.baseURL}/tier/progression`, // Uses authenticated user
     triggerTierEvaluation: () => `${this.baseURL}/tier/evaluate`,
     getTierCriteria: () => `${this.baseURL}/tier/criteria`,
-    getTierEvaluationHistory: (walletAddress: string) => `${this.baseURL}/tier/history/${walletAddress}`,
+    getTierEvaluationHistory: (walletAddress: string) => `${this.baseURL}/tier/history`, // Uses authenticated user
     getTierUpgradeNotifications: (walletAddress: string) => `${this.baseURL}/tier/notifications/${walletAddress}`,
   };
 

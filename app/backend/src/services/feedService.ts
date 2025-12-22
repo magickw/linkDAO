@@ -273,6 +273,7 @@ export class FeedService {
             shareId: posts.shareId, // Include shareId for share URLs
             mediaCids: posts.mediaCids,
             tags: posts.tags,
+            communityId: posts.communityId, // Add communityId field
             createdAt: posts.createdAt,
             stakedValue: posts.stakedValue,
             walletAddress: users.walletAddress,

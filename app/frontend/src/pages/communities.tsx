@@ -661,16 +661,16 @@ const CommunitiesPage: React.FC = () => {
 
 
 
-  // Show only community posts (posts with communityId), not quick posts
+  // Show only community posts (isQuickPost: false), not quick posts
   const filteredPosts = useMemo(() => {
     console.log('[CommunitiesPage] posts array length:', posts.length);
     console.log('[CommunitiesPage] posts:', posts);
     
     const communityPosts = posts.filter(post => {
       if (!post || typeof post !== 'object') return false;
-      // Only show posts that have a communityId (community posts)
-      // Exclude quick posts which have communityId: null
-      return post.communityId !== null && post.communityId !== undefined;
+      // Show only posts that are explicitly marked as not quick posts
+      // This ensures we only show regular community posts
+      return post.isQuickPost === false;
     });
     
     console.log('[CommunitiesPage] community posts count:', communityPosts.length);

@@ -1208,6 +1208,174 @@ export class SellerController {
 
     return trend;
   }
+
+  // Get onboarding steps
+  async getOnboardingSteps(req: Request, res: Response) {
+    try {
+      const user = (req as any).user;
+      
+      // Return default onboarding steps
+      const steps = [
+        { id: 'profile_setup', completed: false, title: 'Profile Setup', description: 'Complete your seller profile', component: 'ProfileSetup', required: true },
+        { id: 'payout_setup', completed: false, title: 'Payout Setup', description: 'Set up your payment methods', component: 'PayoutSetup', required: true },
+        { id: 'first_listing', completed: false, title: 'First Listing', description: 'Create your first product listing', component: 'FirstListing', required: false }
+      ];
+
+      res.json({
+        success: true,
+        data: { steps }
+      });
+    } catch (error) {
+      safeLogger.error("Error fetching onboarding steps:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch onboarding steps" });
+    }
+  }
+
+  // Update onboarding step
+  async updateOnboardingStep(req: Request, res: Response) {
+    try {
+      const user = (req as any).user;
+      const { stepId } = req.params;
+      const { completed, data } = req.body;
+
+      // In a real implementation, this would update the database
+      // For now, just return success
+      res.json({
+        success: true,
+        data: { stepId, completed, data }
+      });
+    } catch (error) {
+      safeLogger.error("Error updating onboarding step:", error);
+      res.status(500).json({ success: false, error: "Failed to update onboarding step" });
+    }
+  }
+
+  // Get seller tier
+  async getSellerTier(req: Request, res: Response) {
+    try {
+      const user = (req as any).user;
+      
+      // Return default tier information
+      const tier = {
+        currentTier: 'TIER_1',
+        tierLevel: 1,
+        tierName: 'Basic Seller',
+        benefits: ['Up to 10 listings', 'Standard commission rate'],
+        nextTier: 'TIER_2',
+        progress: {
+          current: 0,
+          required: 100,
+          percentage: 0
+        }
+      };
+
+      res.json({
+        success: true,
+        data: tier
+      });
+    } catch (error) {
+      safeLogger.error("Error fetching seller tier:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch seller tier" });
+    }
+  }
+
+  // Get tier progress
+  async getTierProgress(req: Request, res: Response) {
+    try {
+      const user = (req as any).user;
+      
+      const progress = {
+        current: 0,
+        required: 100,
+        percentage: 0,
+        milestones: [
+          { id: 'first_sale', label: 'First Sale', completed: false },
+          { id: 'five_sales', label: '5 Sales', completed: false },
+          { id: 'ten_sales', label: '10 Sales', completed: false }
+        ]
+      };
+
+      res.json({
+        success: true,
+        data: progress
+      });
+    } catch (error) {
+      safeLogger.error("Error fetching tier progress:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch tier progress" });
+    }
+  }
+
+  // Trigger tier evaluation
+  async triggerTierEvaluation(req: Request, res: Response) {
+    try {
+      const user = (req as any).user;
+      
+      // In a real implementation, this would evaluate the seller's performance
+      // For now, just return success
+      res.json({
+        success: true,
+        data: { message: 'Tier evaluation triggered' }
+      });
+    } catch (error) {
+      safeLogger.error("Error triggering tier evaluation:", error);
+      res.status(500).json({ success: false, error: "Failed to trigger tier evaluation" });
+    }
+  }
+
+  // Get tier criteria
+  async getTierCriteria(req: Request, res: Response) {
+    try {
+      const criteria = {
+        tiers: [
+          {
+            tier: 'TIER_1',
+            name: 'Basic Seller',
+            requirements: {
+              minListings: 0,
+              minSales: 0,
+              minRevenue: 0
+            },
+            benefits: ['Up to 10 listings', 'Standard commission rate']
+          },
+          {
+            tier: 'TIER_2',
+            name: 'Advanced Seller',
+            requirements: {
+              minListings: 10,
+              minSales: 5,
+              minRevenue: 1000
+            },
+            benefits: ['Up to 50 listings', 'Reduced commission rate', 'Priority support']
+          }
+        ]
+      };
+
+      res.json({
+        success: true,
+        data: criteria
+      });
+    } catch (error) {
+      safeLogger.error("Error fetching tier criteria:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch tier criteria" });
+    }
+  }
+
+  // Get tier evaluation history
+  async getTierEvaluationHistory(req: Request, res: Response) {
+    try {
+      const user = (req as any).user;
+      
+      const history = [];
+      
+      res.json({
+        success: true,
+        data: { history }
+      });
+    } catch (error) {
+      safeLogger.error("Error fetching tier history:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch tier history" });
+    }
+  }
 }
 
 export const sellerController = new SellerController();
