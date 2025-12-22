@@ -328,11 +328,21 @@ export class WebSocketClientService {
   }
 
   private processMessageQueue(): void {
-    while (this.messageQueue.length > 0 && this.socket?.connected) {
+    // Process messages in batches to avoid blocking the event loop
+    const batchSize = 10;
+    let processed = 0;
+    
+    while (processed < batchSize && this.messageQueue.length > 0 && this.socket?.connected) {
       const message = this.messageQueue.shift();
       if (message) {
         this.socket.emit(message.event, message.data);
+        processed++;
       }
+    }
+    
+    // If there are more messages, schedule another batch
+    if (this.messageQueue.length > 0 && this.socket?.connected) {
+      setTimeout(() => this.processMessageQueue(), 0);
     }
   }
 

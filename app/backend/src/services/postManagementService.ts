@@ -87,7 +87,7 @@ export class PostManagementService {
             }
 
             
-            if (isNaN(postId)) {
+            if (!postId) {
                 return { success: false, message: 'Invalid post ID' };
             }
 
@@ -137,7 +137,7 @@ export class PostManagementService {
             }
 
             
-            if (isNaN(postId)) {
+            if (!postId) {
                 return { success: false, message: 'Invalid post ID' };
             }
 
@@ -185,7 +185,7 @@ export class PostManagementService {
     /**
      * Get all pinned posts for a community
      */
-    async getPinnedPosts(communityId: string, limit: string = 5) {
+    async getPinnedPosts(communityId: string, limit: number = 5) {
         try {
             if (!db) {
                 return [];

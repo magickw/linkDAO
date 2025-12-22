@@ -254,12 +254,8 @@ class TokenReactionService {
           .orderBy(desc(sql<string>`SUM(${quickPostReactions.amount})`))
           .limit(5);
       } else {
-        // For numeric post IDs, try integer reactions table first
-        // If no results, return empty summary (posts might not have reactions yet)
-        const postIdInt = postId;
-        
-        // Validate that postId is a valid integer
-        if (isNaN(postIdInt)) {
+        // postId is a UUID string
+        if (!postId) {
           safeLogger.warn(`Invalid post ID format: ${postId}`);
           return {
             type,
@@ -278,7 +274,7 @@ class TokenReactionService {
             totalCount: sql<number>`COUNT(${reactions.id})`,
           })
           .from(reactions)
-          .where(and(eq(reactions.postId, postIdInt), eq(reactions.type, type)));
+          .where(and(eq(reactions.postId, postId), eq(reactions.type, type)));
 
         // Get user amount if userId provided
         if (userId) {
@@ -286,7 +282,7 @@ class TokenReactionService {
             .select({ amount: sql<string>`SUM(${reactions.amount})` })
             .from(reactions)
             .where(and(
-              eq(reactions.postId, postIdInt),
+              eq(reactions.postId, postId),
               eq(reactions.type, type),
               eq(reactions.userId, userId)
             ));
@@ -303,7 +299,7 @@ class TokenReactionService {
           })
           .from(reactions)
           .innerJoin(users, eq(reactions.userId, users.id))
-          .where(and(eq(reactions.postId, postIdInt), eq(reactions.type, type)))
+          .where(and(eq(reactions.postId, postId), eq(reactions.type, type)))
           .groupBy(reactions.userId, users.walletAddress, users.handle)
           .orderBy(desc(sql<string>`SUM(${reactions.amount})`))
           .limit(5);

@@ -158,7 +158,7 @@ export class PostService {
         dbPost = await databaseService.createPost(
           user.id,
           contentCid,
-          input.parentId ? parseInt(input.parentId) : undefined,
+          input.parentId || undefined,
           mediaCids.length > 0 ? mediaCids : undefined,
           input.tags && input.tags.length > 0 ? input.tags : undefined,
           input.onchainRef,
@@ -227,7 +227,7 @@ export class PostService {
   async getPostById(id: string): Promise<Post | undefined> {
     // Convert string ID to number
     const postId = id;
-    if (isNaN(postId)) {
+    if (!postId) {
       safeLogger.info(`Invalid post ID: ${id}`);
       return undefined;
     }
@@ -437,7 +437,7 @@ export class PostService {
   async updatePost(id: string, input: UpdatePostInput): Promise<Post | undefined> {
     try {
       const postId = id;
-      if (isNaN(postId)) {
+      if (!postId) {
         return undefined;
       }
 
@@ -496,7 +496,7 @@ export class PostService {
   async deletePost(id: string): Promise<boolean> {
     try {
       const postId = id;
-      if (isNaN(postId)) {
+      if (!postId) {
         return false;
       }
 

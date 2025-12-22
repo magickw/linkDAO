@@ -693,7 +693,7 @@ export class OrderPaymentIntegrationService {
     // Store in database - implementation depends on your database schema
     await this.databaseService.createPaymentTransaction({
       id: transaction.id,
-      orderId: parseInt(transaction.orderId),
+      orderId: transaction.orderId,
       paymentMethod: transaction.paymentMethod,
       transactionHash: transaction.transactionHash,
       paymentIntentId: transaction.paymentIntentId,
@@ -707,7 +707,7 @@ export class OrderPaymentIntegrationService {
       receiptUrl: transaction.receiptUrl,
       receiptData: JSON.stringify(transaction.receiptData),
       failureReason: transaction.failureReason,
-      retryCount: transaction.retryCount,
+      retryCount: String(transaction.retryCount),
       metadata: JSON.stringify(transaction.metadata)
     });
   }
@@ -753,7 +753,7 @@ export class OrderPaymentIntegrationService {
   }
 
   private async getPaymentTransactionsByOrderId(orderId: string): Promise<PaymentTransaction[]> {
-    const dbTransactions = await this.databaseService.getPaymentTransactionsByOrderId(parseInt(orderId));
+    const dbTransactions = await this.databaseService.getPaymentTransactionsByOrderId(orderId);
     return dbTransactions.map(dbTransaction => ({
       id: dbTransaction.id,
       orderId: dbTransaction.orderId.toString(),
@@ -869,7 +869,7 @@ export class OrderPaymentIntegrationService {
     await this.databaseService.createPaymentReceipt({
       id: receipt.id,
       transactionId: receipt.transactionId,
-      orderId: parseInt(receipt.orderId),
+      orderId: receipt.orderId,
       receiptNumber: receipt.receiptNumber,
       paymentMethod: receipt.paymentMethod,
       amount: receipt.amount,
@@ -882,7 +882,7 @@ export class OrderPaymentIntegrationService {
   }
 
   private async getPaymentReceiptsByOrderId(orderId: string): Promise<PaymentReceipt[]> {
-    const dbReceipts = await this.databaseService.getPaymentReceiptsByOrderId(parseInt(orderId));
+    const dbReceipts = await this.databaseService.getPaymentReceiptsByOrderId(orderId);
     return dbReceipts.map(dbReceipt => ({
       id: dbReceipt.id,
       transactionId: dbReceipt.transactionId,

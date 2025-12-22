@@ -229,7 +229,7 @@ export class AdminNotificationService {
     offset: number = 0
   ): Promise<any[]> {
     try {
-      return await databaseService.getAdminNotifications(adminId, String(limit), String(offset));
+      return await databaseService.getAdminNotifications(adminId, limit, offset);
     } catch (error) {
       safeLogger.error('Error getting admin notifications:', error);
       return [];

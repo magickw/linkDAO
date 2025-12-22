@@ -512,11 +512,11 @@ export class DatabaseService {
     }
   }
 
-  async searchEmbeddings(queryEmbedding: string[], limit: string = 5) {
+  async searchEmbeddings(queryEmbedding: string[], limit: number = 5) {
     try {
       // This is a simplified version. In practice, you'd use the pgvector <-> operator
       // For now, we'll return all embeddings (to be replaced with actual similarity search)
-      return await this.db.select().from(schema.embeddings).limit(parseInt(limit));
+      return await this.db.select().from(schema.embeddings).limit(limit);
     } catch (error) {
       safeLogger.error("Error searching embeddings:", error);
       throw error;
@@ -1300,7 +1300,7 @@ export class DatabaseService {
   }
 
   // Search operations
-  async searchUsers(query: string, limit: string = 20, offset: string = 0) {
+  async searchUsers(query: string, limit: number = 20, offset: number = 0): Promise<any[]> {
     try {
       const result = await this.db.select().from(schema.users).where(
         or(
@@ -1315,7 +1315,7 @@ export class DatabaseService {
     }
   }
 
-  async getRecentUsers(limit: string = 10) {
+  async getRecentUsers(limit: number = 10) {
     try {
       const result = await this.db.select().from(schema.users)
         .orderBy(desc(schema.users.createdAt))
@@ -1800,7 +1800,7 @@ export class DatabaseService {
     });
   }
 
-  async getUserNotifications(userAddress: string, limit: string = 50, offset: string = 0) {
+  async getUserNotifications(userAddress: string, limit: number = 50, offset: number = 0) {
     return this.executeQuery(async () => {
       return await this.db.select()
         .from(schema.notifications)
@@ -2070,7 +2070,7 @@ export class DatabaseService {
     }
   }
 
-  async updateModerationCase(id: string, updates: Partial<{
+  async updateModerationCase(id: number, updates: Partial<{
     status: string;
     decision: string;
     reasonCode: string;
@@ -2104,8 +2104,8 @@ export class DatabaseService {
   }
 
   async getUserModerationCases(userId: string, options: {
-    page: string;
-    limit: string;
+    page: number;
+    limit: number;
     status?: string;
   }) {
     try {
@@ -2133,7 +2133,7 @@ export class DatabaseService {
     }
   }
 
-  async getModerationCasesByStatus(status: string, limit: string = 50) {
+  async getModerationCasesByStatus(status: string, limit: number = 50) {
     try {
       return await this.db.select().from(schema.moderationCases)
         .where(eq(schema.moderationCases.status, status))
@@ -2209,7 +2209,7 @@ export class DatabaseService {
     }
   }
 
-  async getUserModerationActions(userId: string, limit: string = 50) {
+  async getUserModerationActions(userId: string, limit: number = 50) {
     try {
       return await this.db.select().from(schema.moderationActions)
         .where(eq(schema.moderationActions.userId, userId))
@@ -2540,7 +2540,7 @@ export class DatabaseService {
   /**
    * Get receipts by user address
    */
-  async getReceiptsByUser(userAddress: string, limit: string = 50, offset: string = 0): Promise<any[]> {
+  async getReceiptsByUser(userAddress: string, limit: number = 50, offset: number = 0): Promise<any[]> {
     try {
       // In a real implementation, this would query the database
       const mockReceipts = (global as any).mockReceipts || [];
@@ -2623,7 +2623,7 @@ export class DatabaseService {
     }
   }
 
-  async getAdminNotifications(adminId: string, limit: string = 50, offset: string = 0): Promise<any[]> {
+  async getAdminNotifications(adminId: string, limit: number = 50, offset: number = 0): Promise<any[]> {
     try {
       return await this.db
         .select()

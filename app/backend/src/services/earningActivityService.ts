@@ -166,7 +166,7 @@ class EarningActivityService {
     try {
       if (data.activityType === 'post' && data.activityId) {
         // Get post engagement metrics
-        const postMetrics = await this.getPostEngagementMetrics(parseInt(data.activityId));
+        const postMetrics = await this.getPostEngagementMetrics(String(data.activityId));
         
         // Calculate quality based on engagement
         const engagementScore = Math.min(2.0, 1.0 + (postMetrics.totalEngagement / 100));

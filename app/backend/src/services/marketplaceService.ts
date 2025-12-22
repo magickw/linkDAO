@@ -60,7 +60,7 @@ export class BlockchainMarketplaceService {
         sellerUser.id,
         input.tokenAddress,
         input.price,
-        input.quantity,
+        String(input.quantity),
         input.itemType,
         input.listingType,
         input.metadataURI,
@@ -960,7 +960,7 @@ export class BlockchainMarketplaceService {
   }
 
   async getDisputeById(id: string): Promise<MarketplaceDispute | null> {
-    const dbDispute = await databaseService.getDisputeById(id);
+    const dbDispute = await databaseService.getDisputeById(parseInt(id));
     if (!dbDispute) return null;
 
     // Get reporter address
@@ -1065,7 +1065,7 @@ export class BlockchainMarketplaceService {
 
     if (!dbReputation) {
       // Create new reputation
-      dbReputation = await databaseService.createUserReputation(address, score, daoApproved);
+      dbReputation = await databaseService.createUserReputation(address, String(score), daoApproved);
     } else {
       // Update existing reputation
       dbReputation = await databaseService.updateUserReputation(address, {

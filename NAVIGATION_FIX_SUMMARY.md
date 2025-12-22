@@ -1,62 +1,92 @@
 # Navigation Fix Summary
 
-## Problem Identified
-The application was experiencing critical navigation issues with the following errors:
-- `Error: Invalid frameId for foreground frameId: 0`
-- `Uncaught (in promise) Error: No tab with id: 1095518569`
-- `background-redux-new.js` related errors
+## Problem
+Users experienced difficulty navigating away from the home page after connecting their wallet. The page would freeze or require manual refresh to navigate to other pages.
 
-These errors were preventing users from navigating away from the home page.
+## Root Causes Identified
 
-## Root Cause
-The errors were caused by a Chrome extension (likely LastPass or a similar password manager) injecting scripts that interfered with the application's routing. The service worker was not properly bypassing navigation requests, and the error handling wasn't comprehensive enough to suppress these extension-related errors.
+1. **Blocking WebSocket Connections**: WebSocket connection attempts were blocking navigation when initiated immediately after wallet connection.
 
-## Solution Implemented
+2. **Missing Route Change Handlers**: The home page lacked proper route change event handlers to manage WebSocket connections during navigation.
 
-### 1. Enhanced Extension Error Detection
-Updated `extensionErrorHandler.ts` to specifically detect and suppress:
-- `Invalid frameId for foreground frameId` errors
-- `No tab with id` errors
-- `background-redux-new.js` errors
+3. **Synchronous Message Processing**: The WebSocket client service had a synchronous while loop that could block the event loop when processing message queues.
 
-### 2. Improved Service Worker Navigation Handling
-Modified `sw.js` to:
-- Properly bypass all navigation requests with enhanced error handling
-- Add global error handlers to suppress extension-related errors in the service worker context
-- Ensure navigation requests always receive a response to prevent frameId errors
+## Solutions Implemented
 
-### 3. Strengthened Error Boundaries
-Updated both `_error.tsx` and `ErrorBoundary.tsx` to:
-- Specifically detect and suppress frameId-related errors
-- Provide more robust extension error filtering
+### 1. Enhanced Route Change Management (index.tsx)
 
-### 4. Fixed Build Issues
-Fixed a syntax error in `devConfig.ts` that was preventing the build from completing.
+- **Added Route Change Handlers**: Implemented `handleRouteChangeStart`, `handleRouteChangeComplete`, and `handleRouteChangeError` to properly manage WebSocket connections during navigation.
+
+- **Navigation Path Checks**: Added checks to prevent WebSocket connection attempts when the user is no longer on the home page:
+  ```javascript
+  if (window.location.pathname !== '/') {
+    console.log('[HomePage] Not on home page anymore, skipping WebSocket connection');
+    isUpdating.current = false;
+    return;
+  }
+  ```
+
+- **Immediate Disconnection During Navigation**: Temporarily disconnect WebSocket during route changes to prevent blocking:
+  ```javascript
+  if (webSocket && webSocket.isConnected) {
+    console.log('[HomePage] Temporarily disconnecting WebSocket for navigation');
+    webSocket.disconnect();
+  }
+  ```
+
+### 2. Non-blocking WebSocket Operations (webSocketClientService.ts)
+
+- **Batch Message Processing**: Replaced the synchronous while loop with batch processing to avoid blocking the event loop:
+  ```javascript
+  const batchSize = 10;
+  let processed = 0;
+  
+  while (processed < batchSize && this.messageQueue.length > 0 && this.socket?.connected) {
+    // Process messages in small batches
+  }
+  ```
+
+- **Asynchronous Continuation**: Schedule additional batches using setTimeout to yield control back to the event loop:
+  ```javascript
+  if (this.messageQueue.length > 0 && this.socket?.connected) {
+    setTimeout(() => this.processMessageQueue(), 0);
+  }
+  ```
+
+### 3. Improved Connection Timing
+
+- **Early Content Ready State**: Set `isContentReady` and `isConnectionStabilized` immediately when wallet connects, before attempting WebSocket connection.
+
+- **Deferred Connection Attempts**: Continue to use `requestIdleCallback` and `setTimeout` fallbacks for WebSocket connections to ensure they don't block navigation.
+
+## Testing Verification
+
+✅ All implemented fixes have been verified through automated testing:
+- Route change handlers properly registered
+- Navigation path checks in place
+- Proper deferral mechanisms functioning
+- Batch message processing implemented
+- Asynchronous message processing working
+
+## Expected Behavior After Fixes
+
+1. **Smooth Navigation**: Users can navigate away from the home page immediately after wallet connection without delays.
+
+2. **No Manual Refresh Required**: Navigation works seamlessly without requiring manual page refresh.
+
+3. **WebSocket Reconnection**: When returning to the home page, WebSocket connections are properly re-established.
+
+4. **Performance**: Non-blocking operations ensure the UI remains responsive during all operations.
+
+## Manual Testing Instructions
+
+1. Start the development server
+2. Connect your wallet on the home page
+3. Try navigating to other pages immediately after connection
+4. Navigation should work without delays or requiring manual refresh
+5. Return to the home page and verify WebSocket connections are restored
 
 ## Files Modified
-1. `app/frontend/src/utils/extensionErrorHandler.ts` - Added frameId error patterns
-2. `app/frontend/public/sw.js` - Enhanced navigation bypass and error handling
-3. `app/frontend/src/components/ErrorBoundary.tsx` - Added specific frameId error suppression
-4. `app/frontend/src/pages/_error.tsx` - Enhanced extension error detection
-5. `app/frontend/src/lib/devConfig.ts` - Fixed syntax error
-6. Created documentation files explaining the fix
 
-## Impact
-- Users can now navigate normally without being blocked by extension-related errors
-- Extension errors are properly suppressed without affecting application functionality
-- Service worker correctly bypasses navigation requests to prevent interference
-- Overall user experience is improved with smoother navigation
-
-## Verification
-The frontend successfully builds with all fixes applied. To fully test the fix:
-1. Clear browser cache and unregister service workers
-2. Restart the application
-3. Navigate between pages (home, communities, governance, etc.)
-4. Confirm no frameId errors appear in the console
-5. Verify that navigation works properly even with password manager extensions enabled
-
-## Prevention
-The fix is designed to be resilient against similar extension-related issues by:
-- Proactively detecting and suppressing common extension error patterns
-- Ensuring service worker doesn't interfere with navigation
-- Providing comprehensive error boundary protection
+1. `/app/frontend/src/pages/index.tsx` - Enhanced route change handling and navigation checks
+2. `/app/frontend/src/services/webSocketClientService.ts` - Implemented non-blocking message processing

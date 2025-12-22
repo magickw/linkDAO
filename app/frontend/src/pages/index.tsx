@@ -147,6 +147,11 @@ export default function Home() {
     console.log('[HomePage] WebSocket connection useEffect timestamp:', Date.now());
 
     if (isConnected) {
+      // Set content ready first to allow navigation to proceed
+      console.log('[HomePage] Setting content ready');
+      setIsContentReady(true);
+      setIsConnectionStabilized(true);
+      
       // Prevent multiple simultaneous updates
       if (isUpdating.current) {
         console.log('[HomePage] Update already in progress, skipping');
@@ -155,14 +160,16 @@ export default function Home() {
       
       isUpdating.current = true;
       
-      // Set content ready first to allow navigation to proceed
-      console.log('[HomePage] Setting content ready');
-      setIsContentReady(true);
-      setIsConnectionStabilized(true);
-      
       // Then defer WebSocket connection establishment separately with requestIdleCallback
       if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
         window.requestIdleCallback(() => {
+          // Check if we're still on the home page and not navigating away
+          if (window.location.pathname !== '/') {
+            console.log('[HomePage] Not on home page anymore, skipping WebSocket connection');
+            isUpdating.current = false;
+            return;
+          }
+          
           if (isConnected && webSocket && !webSocket.isConnected) {
             if (webSocket.connectionState && webSocket.connectionState.status === 'connecting') {
               console.log('[HomePage] WebSocket already connecting, skipping');
@@ -186,6 +193,13 @@ export default function Home() {
       } else {
         // Fallback for browsers without requestIdleCallback
         setTimeout(() => {
+          // Check if we're still on the home page and not navigating away
+          if (window.location.pathname !== '/') {
+            console.log('[HomePage] Not on home page anymore, skipping WebSocket connection');
+            isUpdating.current = false;
+            return;
+          }
+          
           if (isConnected && webSocket && !webSocket.isConnected) {
             if (webSocket.connectionState && webSocket.connectionState.status === 'connecting') {
               console.log('[HomePage] WebSocket already connecting, skipping');
@@ -326,18 +340,23 @@ export default function Home() {
     }
   }, [webSocket, address, wsSubscribed, addToast, debouncedRefresh, isMounted]);
 
-  // Route change listeners removed - they were causing redirects back to homepage
-  // when navigating to other pages. The homepage component stays mounted in Next.js
-  // and these listeners were triggering navigation back to '/' after every route change.
-  // WebSocket management should happen through component lifecycle, not route events.
-
-  /*
+  // Route change listeners to properly handle WebSocket during navigation
   useEffect(() => {
     const handleRouteChangeStart = (url: string) => {
       console.log('[HomePage] Route change start:', url);
       console.log('[HomePage] Route change start timestamp:', Date.now());
-      // Don't modify WebSocket state here to avoid blocking navigation
-      // The WebSocket cleanup will happen elsewhere
+      
+      // Cancel any pending WebSocket connection attempts to prevent blocking navigation
+      if (isUpdating.current) {
+        console.log('[HomePage] Cancelling pending WebSocket connection to allow navigation');
+        isUpdating.current = false;
+      }
+      
+      // Disconnect WebSocket temporarily during navigation to prevent blocking
+      if (webSocket && webSocket.isConnected) {
+        console.log('[HomePage] Temporarily disconnecting WebSocket for navigation');
+        webSocket.disconnect();
+      }
     };
 
     const handleRouteChangeComplete = (url: string) => {
@@ -353,14 +372,22 @@ export default function Home() {
           if (isConnected && webSocket && typeof webSocket.connect === 'function' && !webSocket.isConnected) {
             webSocket.connect().catch(console.error);
           }
-        }, 0); // Run immediately after current execution stack clears
+        }, 100); // Small delay to ensure navigation is fully complete
       }
     };
 
     const handleRouteChangeError = (err: any, url: string) => {
       console.error('[HomePage] Route change error for', url, ':', err);
       console.log('[HomePage] Route change error timestamp:', Date.now());
-      // Don't change isMounted on error
+      
+      // Reconnect WebSocket on navigation error
+      if (url === '/' || url.startsWith('/?')) {
+        setTimeout(() => {
+          if (isConnected && webSocket && typeof webSocket.connect === 'function' && !webSocket.isConnected) {
+            webSocket.connect().catch(console.error);
+          }
+        }, 100);
+      }
     };
 
     // Listen for route changes to properly handle WebSocket
@@ -374,7 +401,6 @@ export default function Home() {
       router.events.off('routeChangeError', handleRouteChangeError);
     };
   }, [router, isConnected, webSocket]);
-  */
 
   // Handle post creation with useCallback
 

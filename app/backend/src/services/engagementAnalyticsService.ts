@@ -407,8 +407,8 @@ export class EngagementAnalyticsService {
         return this.getMockEngagementAggregate(postId, timeWindow);
       }
 
-      const postIdNum = postId;
-      if (isNaN(postIdNum)) {
+      // postId is a UUID string, no need to check if it's a number
+      if (!postId) {
         return this.getMockEngagementAggregate(postId, timeWindow);
       }
 
@@ -423,7 +423,7 @@ export class EngagementAnalyticsService {
         })
           .from(reactions)
           .where(and(
-            eq(reactions.postId, postIdNum),
+            eq(reactions.postId, postId),
             gte(reactions.createdAt, windowStart)
           ))
           .then(r => ({ count: r[0]?.count || 0, uniqueUsers: r[0]?.uniqueUsers || 0 })),
@@ -431,7 +431,7 @@ export class EngagementAnalyticsService {
         db.select({ count: count() })
           .from(comments)
           .where(and(
-            eq(comments.postId, postIdNum),
+            eq(comments.postId, postId),
             gte(comments.createdAt, windowStart)
           ))
           .then(r => r[0]?.count || 0),
@@ -439,7 +439,7 @@ export class EngagementAnalyticsService {
         db.select({ count: count() })
           .from(shares)
           .where(and(
-            eq(shares.postId, postIdNum),
+            eq(shares.postId, postId),
             gte(shares.createdAt, windowStart)
           ))
           .then(r => r[0]?.count || 0),
@@ -447,7 +447,7 @@ export class EngagementAnalyticsService {
         db.select({ count: count() })
           .from(tips)
           .where(and(
-            eq(tips.postId, postIdNum),
+            eq(tips.postId, postId),
             gte(tips.createdAt, windowStart)
           ))
           .then(r => r[0]?.count || 0),
@@ -458,7 +458,7 @@ export class EngagementAnalyticsService {
         })
           .from(views)
           .where(and(
-            eq(views.postId, postIdNum),
+            eq(views.postId, postId),
             gte(views.createdAt, windowStart)
           ))
           .then(r => ({ count: r[0]?.count || 0, uniqueUsers: r[0]?.uniqueUsers || 0 }))

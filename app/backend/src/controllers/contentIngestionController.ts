@@ -309,8 +309,8 @@ export class ContentIngestionController {
       const cases = await databaseService.getUserModerationCases(
         userId3,
         {
-          page: String(pageNum),
-          limit: String(limitNum),
+          page: pageNum,
+          limit: limitNum,
           status: status as string
         }
       );

@@ -40,17 +40,19 @@ export default function CommunityPostSharePage() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [canonicalUrl, setCanonicalUrl] = useState<string>('');
+    const [retryCount, setRetryCount] = useState(0);
 
     useEffect(() => {
         if (!shareId || typeof shareId !== 'string') return;
 
-        const fetchPost = async () => {
+        const fetchPost = async (attemptNumber: number = 1) => {
             try {
                 setIsLoading(true);
                 setError(null);
                 console.log(`[CommunityPostSharePage] Fetching post for shareId: ${shareId}`);
 
                 // Fetch community post by share ID using the API endpoint
+                console.log(`[CommunityPostSharePage] Attempting to fetch: ${ENV_CONFIG.API_URL}/cp/${shareId}`);
                 const response = await fetch(`${ENV_CONFIG.API_URL}/cp/${shareId}`, {
                     method: 'GET',
                     headers: {
@@ -58,6 +60,8 @@ export default function CommunityPostSharePage() {
                         'Accept': 'application/json'
                     }
                 });
+                console.log(`[CommunityPostSharePage] Response status: ${response.status}`);
+                console.log(`[CommunityPostSharePage] Response headers:`, Object.fromEntries(response.headers.entries()));
                 
                 if (!response.ok) {
                     if (response.status === 404) {
@@ -116,16 +120,41 @@ export default function CommunityPostSharePage() {
                 console.error('[CommunityPostSharePage] Error details:', {
                     message: err instanceof Error ? err.message : 'Unknown error',
                     stack: err instanceof Error ? err.stack : 'No stack trace',
-                    shareId
+                    shareId,
+                    apiUrl: `${ENV_CONFIG.API_URL}/cp/${shareId}`,
+                    attemptNumber
                 });
-                setError(err instanceof Error ? err.message : 'Failed to load post');
+                
+                // Retry logic for network errors
+                if (attemptNumber < 3 && err instanceof Error && err.message.includes('fetch')) {
+                    console.log(`[CommunityPostSharePage] Retrying... Attempt ${attemptNumber + 1}`);
+                    setTimeout(() => fetchPost(attemptNumber + 1), 1000 * attemptNumber);
+                    return;
+                }
+                
+                // Fallback: try to redirect to a generic community post URL format
+                if (attemptNumber >= 3) {
+                    console.log('[CommunityPostSharePage] All attempts failed, trying fallback redirect');
+                    // Fallback to a generic URL format - this might not work but provides a better user experience
+                    const fallbackUrl = `/communities/general/posts/${shareId}`;
+                    console.log(`[CommunityPostSharePage] Fallback redirect to: ${fallbackUrl}`);
+                    router.replace(fallbackUrl);
+                    return;
+                }
+                
+                // Check if it's a network error
+                if (err instanceof Error && err.message.includes('fetch')) {
+                    setError('Unable to connect to the server. The community post may not be available at the moment.');
+                } else {
+                    setError(err instanceof Error ? err.message : 'Failed to load post');
+                }
                 addToast('Failed to load community post', 'error');
             } finally {
                 setIsLoading(false);
             }
         };
 
-        fetchPost();
+        fetchPost(1);
     }, [shareId, addToast]);
 
     // Generate meta tags for social sharing
@@ -199,16 +228,27 @@ export default function CommunityPostSharePage() {
                             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                                 Community Post Not Found
                             </h1>
-                            <p className="text-gray-600 dark:text-gray-400 mb-6">
+                            <p className="text-gray-600 dark:text-gray-400 mb-4">
                                 {error || 'The community post you\'re looking for doesn\'t exist or has been removed.'}
                             </p>
-                            <Link
-                                href="/communities"
-                                className="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors duration-200"
-                            >
-                                <ArrowLeft className="w-4 h-4" />
-                                Browse Communities
-                            </Link>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                                Share ID: <code className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{shareId}</code>
+                            </p>
+                            <div className="space-y-3">
+                                <Link
+                                    href="/communities"
+                                    className="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors duration-200 w-full justify-center"
+                                >
+                                    <ArrowLeft className="w-4 h-4" />
+                                    Browse Communities
+                                </Link>
+                                <Link
+                                    href="/"
+                                    className="inline-flex items-center gap-2 px-6 py-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg transition-colors duration-200 w-full justify-center"
+                                >
+                                    Home
+                                </Link>
+                            </div>
                         </div>
                     </div>
                 </div>
