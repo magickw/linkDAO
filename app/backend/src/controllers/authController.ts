@@ -231,6 +231,7 @@ class AuthController {
         // Return success response
         successResponse(res, {
           token,
+          refreshToken, // Add refresh token to response
           user: {
             id: userData.id,
             walletAddress: userData.walletAddress,
