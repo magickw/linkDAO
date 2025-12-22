@@ -4,7 +4,7 @@ import { eq, and, desc, sql, count, sum } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface CreatePollInput {
-  postId: number;
+  postId: string;
   question: string;
   options: string[];
   allowMultiple?: boolean;
@@ -22,7 +22,7 @@ export interface PollVoteInput {
 
 export interface PollResult {
   id: string;
-  postId: number;
+  postId: string;
   question: string;
   allowMultiple: boolean;
   tokenWeighted: boolean;
@@ -163,7 +163,7 @@ export class PollService {
 
     return {
       id: poll.id,
-      postId: poll.postId,
+      postId: String(poll.postId),
       question: poll.question,
       allowMultiple: poll.allowMultiple,
       tokenWeighted: poll.tokenWeighted,
@@ -181,7 +181,7 @@ export class PollService {
   /**
    * Get poll by post ID
    */
-  async getPollByPostId(postId: number, userId?: string): Promise<PollResult | null> {
+  async getPollByPostId(postId: string, userId?: string): Promise<PollResult | null> {
     const pollData = await db
       .select()
       .from(polls)

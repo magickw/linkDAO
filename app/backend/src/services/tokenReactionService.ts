@@ -120,8 +120,8 @@ class TokenReactionService {
         postExists = true;
       }
     } else {
-      // Query posts table for integer ID
-      const post = await db.select().from(posts).where(eq(posts.id, parseInt(postId))).limit(1);
+      // Query posts table for UUID
+      const post = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
       if (post.length > 0) {
         postExists = true;
       }
@@ -152,9 +152,9 @@ class TokenReactionService {
         // For UUID-based reactions, postId is the quickPostId
         newReaction.postId = insertedReaction.quickPostId;
       } else {
-        // Insert into reactions table for integer posts
+        // Insert into reactions table for posts
         const [insertedReaction] = await db.insert(reactions).values({
-          postId: parseInt(postId), // Convert string to integer for integer column
+          postId,
           userId,
           type,
           amount: amount.toString(),
@@ -256,7 +256,7 @@ class TokenReactionService {
       } else {
         // For numeric post IDs, try integer reactions table first
         // If no results, return empty summary (posts might not have reactions yet)
-        const postIdInt = parseInt(postId);
+        const postIdInt = postId;
         
         // Validate that postId is a valid integer
         if (isNaN(postIdInt)) {
@@ -382,7 +382,7 @@ class TokenReactionService {
           .offset(offset);
       } else {
         // Query reactions table for integer posts
-        const whereConditions = [eq(reactions.postId, parseInt(postId))];
+        const whereConditions = [eq(reactions.postId, postId)];
         if (reactionType) {
           whereConditions.push(eq(reactions.type, reactionType));
         }
@@ -463,7 +463,7 @@ class TokenReactionService {
             createdAt: reactions.createdAt,
           })
           .from(reactions)
-          .where(and(eq(reactions.postId, parseInt(postId)), eq(reactions.userId, userId)))
+          .where(and(eq(reactions.postId, postId), eq(reactions.userId, userId)))
           .orderBy(desc(reactions.createdAt));
       }
 
@@ -556,7 +556,7 @@ class TokenReactionService {
         allReactions = await db
           .select()
           .from(reactions)
-          .where(eq(reactions.postId, parseInt(postId)));
+          .where(eq(reactions.postId, postId));
       }
 
       const totalReactions = allReactions.length;

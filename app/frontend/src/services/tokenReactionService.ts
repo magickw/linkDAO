@@ -168,7 +168,7 @@ class TokenReactionService {
   /**
    * Get reaction summaries for a post with improved error handling
    */
-  async getReactionSummaries(postId: string): Promise<ReactionSummary[]> {
+  async getReactionSummaries(postId: string | number): Promise<ReactionSummary[]> {
     try {
       return await this.makeRequest<ReactionSummary[]>(`/api/reactions/${postId}/summaries`);
     } catch (error: any) {
@@ -182,7 +182,7 @@ class TokenReactionService {
   /**
    * Get reaction analytics for a post with improved error handling
    */
-  async getReactionAnalytics(postId: string): Promise<ReactionAnalytics> {
+  async getReactionAnalytics(postId: string | number): Promise<ReactionAnalytics> {
     try {
       return await this.makeRequest<ReactionAnalytics>(`/api/reactions/${postId}/analytics`);
     } catch (error) {
@@ -207,7 +207,7 @@ class TokenReactionService {
   /**
    * Get user's reactions for a post
    */
-  async getUserReactions(postId: string, userId: string): Promise<TokenReaction[]> {
+  async getUserReactions(postId: string | number, userId: string): Promise<TokenReaction[]> {
     return this.makeRequest<TokenReaction[]>(`/api/reactions/${postId}/user/${userId}`);
   }
 
@@ -223,7 +223,7 @@ class TokenReactionService {
   /**
    * Get top reactors for a post
    */
-  async getTopReactors(postId: string, limit: number = 10): Promise<Array<{
+  async getTopReactors(postId: string | number, limit: number = 10): Promise<Array<{
     userId: string;
     walletAddress: string;
     handle?: string;

@@ -112,7 +112,7 @@ export class DatabaseService {
 
 
   // Post operations
-  async createPost(authorId: string, contentCid: string, parentId?: number, mediaCids?: string[], tags?: string[], onchainRef?: string, content?: string, title?: string) {
+  async createPost(authorId: string, contentCid: string, parentId?: string, mediaCids?: string[], tags?: string[], onchainRef?: string, content?: string, title?: string) {
     try {
       const result = await this.db.insert(schema.posts).values({
         authorId,
@@ -168,7 +168,7 @@ export class DatabaseService {
     }
   }
 
-  async getPostById(id: number) {
+  async getPostById(id: string) {
     try {
       const result = await this.db
         .select({
@@ -352,7 +352,7 @@ export class DatabaseService {
     }
   }
 
-  async updatePost(id: number, updates: any) {
+  async updatePost(id: string, updates: any) {
     try {
       const result = await this.db
         .update(schema.posts)
@@ -370,7 +370,7 @@ export class DatabaseService {
     }
   }
 
-  async deletePost(id: number) {
+  async deletePost(id: string) {
     try {
       // Delete related data first (foreign key constraints)
       await Promise.all([
@@ -461,7 +461,7 @@ export class DatabaseService {
   }
 
   // Proposal operations
-  async createProposal(daoId: string, titleCid?: string, bodyCid?: string, startBlock?: number, endBlock?: number) {
+  async createProposal(daoId: string, titleCid?: string, bodyCid?: string, startBlock?: string, endBlock?: string) {
     try {
       const result = await this.db.insert(schema.proposals).values({
         daoId,
@@ -496,7 +496,7 @@ export class DatabaseService {
   }
 
   // Embedding operations
-  async createEmbedding(objectType: string, objectId: number, embedding: number[]) {
+  async createEmbedding(objectType: string, objectId: string, embedding: string[]) {
     try {
       const result = await this.db.insert(schema.embeddings).values({
         objectType,
@@ -512,11 +512,11 @@ export class DatabaseService {
     }
   }
 
-  async searchEmbeddings(queryEmbedding: number[], limit: number = 5) {
+  async searchEmbeddings(queryEmbedding: string[], limit: string = 5) {
     try {
       // This is a simplified version. In practice, you'd use the pgvector <-> operator
       // For now, we'll return all embeddings (to be replaced with actual similarity search)
-      return await this.db.select().from(schema.embeddings).limit(limit);
+      return await this.db.select().from(schema.embeddings).limit(parseInt(limit));
     } catch (error) {
       safeLogger.error("Error searching embeddings:", error);
       throw error;
@@ -525,7 +525,7 @@ export class DatabaseService {
 
   // Marketplace operations
   // Marketplace operations
-  async createListing(sellerId: string, tokenAddress: string, price: string, quantity: number,
+  async createListing(sellerId: string, tokenAddress: string, price: string, quantity: string,
     itemType: string, listingType: string, metadataURI: string,
     nftStandard?: string, tokenId?: string, reservePrice?: string, minIncrement?: string,
     title: string = 'Untitled Listing', description: string = '', categoryId: string = 'general',
@@ -1038,9 +1038,9 @@ export class DatabaseService {
    * Check available inventory for a product
    */
   async checkAvailableInventory(productId: string): Promise<{
-    available: number;
-    held: number;
-    total: number;
+    available: string;
+    held: string;
+    total: string;
   }> {
     try {
       // Check if it's a product or legacy listing
@@ -1050,25 +1050,25 @@ export class DatabaseService {
         // Legacy listing
         const listing = await this.db.select().from(schema.listings).where(eq(schema.listings.id, productId));
         if (listing.length === 0) {
-          return { available: 0, held: 0, total: 0 };
+          return { available: '0', held: '0', total: '0' };
         }
         
         return {
-          available: Math.max(0, listing[0].quantity),
-          held: listing[0].inventoryHolds || 0,
-          total: listing[0].quantity + (listing[0].inventoryHolds || 0)
+          available: String(Math.max(0, listing[0].quantity)),
+          held: String(listing[0].inventoryHolds || 0),
+          total: String(listing[0].quantity + (listing[0].inventoryHolds || 0))
         };
       } else {
         // Product
         return {
-          available: Math.max(0, product[0].inventory),
-          held: product[0].inventoryHolds || 0,
-          total: product[0].inventory + (product[0].inventoryHolds || 0)
+          available: String(Math.max(0, product[0].inventory)),
+          held: String(product[0].inventoryHolds || 0),
+          total: String(product[0].inventory + (product[0].inventoryHolds || 0))
         };
       }
     } catch (error) {
       safeLogger.error("Error checking available inventory:", error);
-      return { available: 0, held: 0, total: 0 };
+      return { available: '0', held: '0', total: '0' };
     }
   }
 
@@ -1205,7 +1205,7 @@ export class DatabaseService {
     }
   }
 
-  async createUserReputation(address: string, score: number, daoApproved: boolean) {
+  async createUserReputation(address: string, score: string, daoApproved: boolean) {
     try {
       const result = await this.db.insert(schema.reputations).values({
         walletAddress: address,
@@ -1300,7 +1300,7 @@ export class DatabaseService {
   }
 
   // Search operations
-  async searchUsers(query: string, limit: number = 20, offset: number = 0) {
+  async searchUsers(query: string, limit: string = 20, offset: string = 0) {
     try {
       const result = await this.db.select().from(schema.users).where(
         or(
@@ -1315,7 +1315,7 @@ export class DatabaseService {
     }
   }
 
-  async getRecentUsers(limit: number = 10) {
+  async getRecentUsers(limit: string = 10) {
     try {
       const result = await this.db.select().from(schema.users)
         .orderBy(desc(schema.users.createdAt))
@@ -1328,7 +1328,7 @@ export class DatabaseService {
   }
 
   // --- Product Category operations ---
-  async createCategory(name: string, slug: string, description?: string, parentId?: string, path?: string, imageUrl?: string, sortOrder?: number) {
+  async createCategory(name: string, slug: string, description?: string, parentId?: string, path?: string, imageUrl?: string, sortOrder?: string) {
     try {
       const result = await this.db.insert(schema.categories).values({
         name,
@@ -1397,7 +1397,7 @@ export class DatabaseService {
 
   // Product operations
   async createProduct(sellerId: string, title: string, description: string, priceAmount: string, priceCurrency: string,
-    categoryId: string, images: string, metadata: string, inventory: number, tags?: string,
+    categoryId: string, images: string, metadata: string, inventory: string, tags?: string,
     shipping?: string, nft?: string) {
     try {
       const result = await this.db.insert(schema.products).values({
@@ -1583,7 +1583,7 @@ export class DatabaseService {
 
       // Calculate base analytics
       const totalOrders = orders.length;
-      const totalVolume = orders.reduce((sum: number, order: any) => sum + parseFloat(order.amount || '0'), 0);
+      const totalVolume = orders.reduce((sum: string, order: any) => sum + parseFloat(order.amount || '0'), 0);
       const averageOrderValue = totalOrders > 0 ? totalVolume / totalOrders : 0;
       const completedOrders = orders.filter((order: any) => order.status === 'completed').length;
       const disputedOrders = orders.filter((order: any) => order.status === 'disputed').length;
@@ -1594,7 +1594,7 @@ export class DatabaseService {
       const cancellationRate = totalOrders > 0 ? cancelledOrders / totalOrders : 0;
 
       // Calculate additional metrics
-      const totalRevenue = orders.reduce((sum: number, order: any) => {
+      const totalRevenue = orders.reduce((sum: string, order: any) => {
         if (['completed', 'delivered'].includes(order.status)) {
           return sum + parseFloat(order.amount || '0');
         }
@@ -1602,14 +1602,14 @@ export class DatabaseService {
       }, 0);
 
       const avgShippingTime = orders.filter((order: any) => order.shippedAt && order.deliveredAt)
-        .reduce((sum: number, order: any) => {
+        .reduce((sum: string, order: any) => {
           const shippedAt = new Date(order.shippedAt);
           const deliveredAt = new Date(order.deliveredAt);
           return sum + (deliveredAt.getTime() - shippedAt.getTime()) / (1000 * 60 * 60); // in hours
         }, 0) / orders.filter((order: any) => order.shippedAt && order.deliveredAt).length || 0;
 
       const avgResponseTime = orders.filter((order: any) => order.respondedAt)
-        .reduce((sum: number, order: any) => {
+        .reduce((sum: string, order: any) => {
           const createdAt = new Date(order.createdAt);
           const respondedAt = new Date(order.respondedAt);
           return sum + (respondedAt.getTime() - createdAt.getTime()) / (1000 * 60); // in minutes
@@ -1637,7 +1637,7 @@ export class DatabaseService {
           monthlyTrends.push({
             month: monthStart.toLocaleString('default', { month: 'short', year: 'numeric' }),
             orderCount: monthOrders.length,
-            volume: monthOrders.reduce((sum: number, order: any) => sum + parseFloat(order.amount || '0'), 0).toString(),
+            volume: monthOrders.reduce((sum: string, order: any) => sum + parseFloat(order.amount || '0'), 0).toString(),
             completionRate: monthOrders.length > 0 ?
               monthOrders.filter((order: any) => order.status === 'completed').length / monthOrders.length : 0
           });
@@ -1657,7 +1657,7 @@ export class DatabaseService {
           monthlyTrends.push({
             date: dayStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
             orderCount: dayOrders.length,
-            volume: dayOrders.reduce((sum: number, order: any) => sum + parseFloat(order.amount || '0'), 0).toString(),
+            volume: dayOrders.reduce((sum: string, order: any) => sum + parseFloat(order.amount || '0'), 0).toString(),
             completionRate: dayOrders.length > 0 ?
               dayOrders.filter((order: any) => order.status === 'completed').length / dayOrders.length : 0
           });
@@ -1681,7 +1681,7 @@ export class DatabaseService {
           monthlyTrends.push({
             date: dayStart.toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' }),
             orderCount: dayOrders.length,
-            volume: dayOrders.reduce((sum: number, order: any) => sum + parseFloat(order.amount || '0'), 0).toString(),
+            volume: dayOrders.reduce((sum: string, order: any) => sum + parseFloat(order.amount || '0'), 0).toString(),
             completionRate: dayOrders.length > 0 ?
               dayOrders.filter((order: any) => order.status === 'completed').length / dayOrders.length : 0
           });
@@ -1800,7 +1800,7 @@ export class DatabaseService {
     });
   }
 
-  async getUserNotifications(userAddress: string, limit: number = 50, offset: number = 0) {
+  async getUserNotifications(userAddress: string, limit: string = 50, offset: string = 0) {
     return this.executeQuery(async () => {
       return await this.db.select()
         .from(schema.notifications)
@@ -1944,7 +1944,7 @@ export class DatabaseService {
     });
   }
 
-  async updateLastSyncedBlock(blockNumber: number) {
+  async updateLastSyncedBlock(blockNumber: string) {
     return this.executeQuery(async () => {
       const [updated] = await this.db.insert(schema.syncStatus)
         .values({
@@ -1971,7 +1971,7 @@ export class DatabaseService {
     id: string;
     walletAddress: string;
     handle?: string;
-    reputationScore: number;
+    reputationScore: string;
   }>> {
     return this.executeQuery(async () => {
       const users = await this.db
@@ -1998,7 +1998,7 @@ export class DatabaseService {
   /**
    * Update user visibility boost based on reputation
    */
-  async updateUserVisibilityBoost(userId: string, visibilityBoost: number): Promise<void> {
+  async updateUserVisibilityBoost(userId: string, visibilityBoost: string): Promise<void> {
     return this.executeQuery(async () => {
       // This would update a visibility_boost field if it existed
       // For now, we'll just log it as this field doesn't exist in current schema
@@ -2033,8 +2033,8 @@ export class DatabaseService {
     contentType: string;
     userId: string;
     status: string;
-    riskScore: number;
-    confidence: number;
+    riskScore: string;
+    confidence: string;
     vendorScores: Record<string, any>;
     evidenceCid: string | null;
   }) {
@@ -2070,12 +2070,12 @@ export class DatabaseService {
     }
   }
 
-  async updateModerationCase(id: number, updates: Partial<{
+  async updateModerationCase(id: string, updates: Partial<{
     status: string;
     decision: string;
     reasonCode: string;
-    confidence: number;
-    riskScore: number;
+    confidence: string;
+    riskScore: string;
     vendorScores: Record<string, any>;
     evidenceCid: string;
     updatedAt: Date;
@@ -2104,8 +2104,8 @@ export class DatabaseService {
   }
 
   async getUserModerationCases(userId: string, options: {
-    page: number;
-    limit: number;
+    page: string;
+    limit: string;
     status?: string;
   }) {
     try {
@@ -2133,7 +2133,7 @@ export class DatabaseService {
     }
   }
 
-  async getModerationCasesByStatus(status: string, limit: number = 50) {
+  async getModerationCasesByStatus(status: string, limit: string = 50) {
     try {
       return await this.db.select().from(schema.moderationCases)
         .where(eq(schema.moderationCases.status, status))
@@ -2151,7 +2151,7 @@ export class DatabaseService {
     reporterId: string;
     reason: string;
     details?: string;
-    weight: number;
+    weight: string;
   }) {
     try {
       const result = await this.db.insert(schema.contentReports).values({
@@ -2187,7 +2187,7 @@ export class DatabaseService {
     userId: string;
     contentId: string;
     action: string;
-    durationSec?: number;
+    durationSec?: string;
     appliedBy?: string;
     rationale?: string;
   }) {
@@ -2209,7 +2209,7 @@ export class DatabaseService {
     }
   }
 
-  async getUserModerationActions(userId: string, limit: number = 50) {
+  async getUserModerationActions(userId: string, limit: string = 50) {
     try {
       return await this.db.select().from(schema.moderationActions)
         .where(eq(schema.moderationActions.userId, userId))
@@ -2228,7 +2228,7 @@ export class DatabaseService {
    */
   async createPaymentTransaction(transactionData: {
     id: string;
-    orderId: number;
+    orderId: string;
     paymentMethod: string;
     transactionHash?: string;
     paymentIntentId?: string;
@@ -2242,7 +2242,7 @@ export class DatabaseService {
     receiptUrl?: string;
     receiptData?: string;
     failureReason?: string;
-    retryCount: number;
+    retryCount: string;
     metadata?: string;
   }): Promise<any> {
     try {
@@ -2326,7 +2326,7 @@ export class DatabaseService {
   /**
    * Get payment transactions by order ID
    */
-  async getPaymentTransactionsByOrderId(orderId: number): Promise<any[]> {
+  async getPaymentTransactionsByOrderId(orderId: string): Promise<any[]> {
     try {
       // Mock implementation - in production, query actual database
       const mockTransactions = [{
@@ -2360,7 +2360,7 @@ export class DatabaseService {
   async createPaymentReceipt(receiptData: {
     id: string;
     transactionId: string;
-    orderId: number;
+    orderId: string;
     receiptNumber: string;
     paymentMethod: string;
     amount: string;
@@ -2398,7 +2398,7 @@ export class DatabaseService {
   /**
    * Get payment receipts by order ID
    */
-  async getPaymentReceiptsByOrderId(orderId: number): Promise<any[]> {
+  async getPaymentReceiptsByOrderId(orderId: string): Promise<any[]> {
     try {
       // Mock implementation - in production, query actual database
       const mockReceipts = [{
@@ -2428,7 +2428,7 @@ export class DatabaseService {
    * Create order tracking entry
    */
   async createOrderTracking(trackingData: {
-    orderId: number;
+    orderId: string;
     status: string;
     message: string;
     timestamp: Date;
@@ -2540,7 +2540,7 @@ export class DatabaseService {
   /**
    * Get receipts by user address
    */
-  async getReceiptsByUser(userAddress: string, limit: number = 50, offset: number = 0): Promise<any[]> {
+  async getReceiptsByUser(userAddress: string, limit: string = 50, offset: string = 0): Promise<any[]> {
     try {
       // In a real implementation, this would query the database
       const mockReceipts = (global as any).mockReceipts || [];
@@ -2623,7 +2623,7 @@ export class DatabaseService {
     }
   }
 
-  async getAdminNotifications(adminId: string, limit: number = 50, offset: number = 0): Promise<any[]> {
+  async getAdminNotifications(adminId: string, limit: string = 50, offset: string = 0): Promise<any[]> {
     try {
       return await this.db
         .select()

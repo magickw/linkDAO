@@ -3,7 +3,7 @@
  * Extends existing WebSocket service for community enhancements
  */
 
-import { webSocketService } from './webSocketService';
+import { webSocketManager } from './webSocketManager';
 import { cacheInvalidationService } from './communityCache';
 import { 
   EnhancedPost, 
@@ -79,6 +79,11 @@ export class CommunityWebSocketService {
   private queueProcessInterval: NodeJS.Timeout | null = null;
 
   constructor() {
+    // Ensure WebSocketManager is initialized
+    if (!webSocketManager.isInitialized()) {
+      console.warn('WebSocketManager not initialized, community WebSocket features may not work');
+    }
+    
     this.initializeWebSocketListeners();
     this.startHeartbeat();
     this.startQueueProcessor();
@@ -88,8 +93,14 @@ export class CommunityWebSocketService {
    * Initialize WebSocket event listeners
    */
   private initializeWebSocketListeners(): void {
+    const webSocketClient = webSocketManager.getPrimaryConnection();
+    if (!webSocketClient) {
+      console.warn('WebSocket client not available for community events');
+      return;
+    }
+    
     // Connection events
-    webSocketService.on('connected', () => {
+    webSocketClient.on('connected', () => {
       this.connectionState.isConnected = true;
       this.connectionState.lastConnected = Date.now();
       this.connectionState.reconnectAttempts = 0;
@@ -103,12 +114,12 @@ export class CommunityWebSocketService {
       this.emit('connection:established');
     });
 
-    webSocketService.on('disconnected', () => {
+    webSocketClient.on('disconnected', () => {
       this.connectionState.isConnected = false;
       this.emit('connection:lost');
     });
 
-    webSocketService.on('error', (error: string) => {
+    webSocketClient.on('error', (error: string) => {
       this.connectionState.reconnectAttempts++;
       this.emit('connection:error', error);
     });
@@ -121,8 +132,14 @@ export class CommunityWebSocketService {
    * Setup community-specific event listeners
    */
   private setupCommunityEventListeners(): void {
+    const webSocketClient = webSocketManager.getPrimaryConnection();
+    if (!webSocketClient) {
+      console.warn('WebSocket client not available for community events');
+      return;
+    }
+    
     // Community updates
-    webSocketService.on('community:updated', (data: any) => {
+    webSocketClient.on('community:updated', (data: any) => {
       cacheInvalidationService.handleRealTimeUpdate({
         type: 'community_updated',
         data: { communityId: data.communityId }
@@ -130,37 +147,37 @@ export class CommunityWebSocketService {
       this.emit('community:updated', data);
     });
 
-    webSocketService.on('community:member_joined', (data: any) => {
+    webSocketClient.on('community:member_joined', (data: any) => {
       this.emit('community:member_joined', data);
     });
 
-    webSocketService.on('community:member_left', (data: any) => {
+    webSocketClient.on('community:member_left', (data: any) => {
       this.emit('community:member_left', data);
     });
 
     // Post updates
-    webSocketService.on('post:created', (data: any) => {
+    webSocketClient.on('post:created', (data: any) => {
       this.emit('post:created', data);
     });
 
-    webSocketService.on('post:updated', (data: any) => {
+    webSocketClient.on('post:updated', (data: any) => {
       this.emit('post:updated', data);
     });
 
-    webSocketService.on('post:reaction', (data: any) => {
+    webSocketClient.on('post:reaction', (data: any) => {
       this.emit('post:reaction', data);
     });
 
-    webSocketService.on('post:tip', (data: any) => {
+    webSocketClient.on('post:tip', (data: any) => {
       this.emit('post:tip', data);
     });
 
     // Governance updates
-    webSocketService.on('governance:proposal_created', (data: any) => {
+    webSocketClient.on('governance:proposal_created', (data: any) => {
       this.emit('governance:proposal_created', data);
     });
 
-    webSocketService.on('governance:proposal_updated', (data: any) => {
+    webSocketClient.on('governance:proposal_updated', (data: any) => {
       cacheInvalidationService.handleRealTimeUpdate({
         type: 'proposal_updated',
         data: { url: data.proposalUrl }
@@ -168,29 +185,29 @@ export class CommunityWebSocketService {
       this.emit('governance:proposal_updated', data);
     });
 
-    webSocketService.on('governance:vote_cast', (data: any) => {
+    webSocketClient.on('governance:vote_cast', (data: any) => {
       this.emit('governance:vote_cast', data);
     });
 
     // Activity updates
-    webSocketService.on('activity:new', (data: any) => {
+    webSocketClient.on('activity:new', (data: any) => {
       this.emit('activity:new', data);
     });
 
-    webSocketService.on('activity:tip_received', (data: any) => {
+    webSocketClient.on('activity:tip_received', (data: any) => {
       this.emit('activity:tip_received', data);
     });
 
-    webSocketService.on('activity:badge_earned', (data: any) => {
+    webSocketClient.on('activity:badge_earned', (data: any) => {
       this.emit('activity:badge_earned', data);
     });
 
     // Live updates
-    webSocketService.on('live:viewers_count', (data: any) => {
+    webSocketClient.on('live:viewers_count', (data: any) => {
       this.emit('live:viewers_count', data);
     });
 
-    webSocketService.on('live:comment_added', (data: any) => {
+    webSocketClient.on('live:comment_added', (data: any) => {
       this.emit('live:comment_added', data);
     });
   }
@@ -199,7 +216,12 @@ export class CommunityWebSocketService {
    * Connect to WebSocket service
    */
   connect(): void {
-    webSocketService.connect();
+    const webSocketClient = webSocketManager.getPrimaryConnection();
+    if (webSocketClient) {
+      webSocketClient.connect();
+    } else {
+      console.warn('Cannot connect: WebSocket client not available');
+    }
   }
 
   /**
@@ -217,7 +239,10 @@ export class CommunityWebSocketService {
       clearInterval(this.queueProcessInterval);
     }
     
-    webSocketService.disconnect();
+    const webSocketClient = webSocketManager.getPrimaryConnection();
+    if (webSocketClient) {
+      webSocketClient.disconnect();
+    }
   }
 
   /**
@@ -234,7 +259,10 @@ export class CommunityWebSocketService {
     };
 
     if (this.connectionState.isConnected) {
-      webSocketService.send(message.event, message.data);
+      const webSocketClient = webSocketManager.getPrimaryConnection();
+      if (webSocketClient) {
+        webSocketClient.send(message.event, message.data);
+      }
       this.connectionState.subscribedCommunities.add(communityId);
     } else {
       this.queueMessage(message.event, message.data);
@@ -255,7 +283,10 @@ export class CommunityWebSocketService {
     };
 
     if (this.connectionState.isConnected) {
-      webSocketService.send(message.event, message.data);
+      const webSocketClient = webSocketManager.getPrimaryConnection();
+      if (webSocketClient) {
+        webSocketClient.send(message.event, message.data);
+      }
     }
 
     this.connectionState.subscribedCommunities.delete(communityId);
@@ -275,7 +306,10 @@ export class CommunityWebSocketService {
     };
 
     if (this.connectionState.isConnected) {
-      webSocketService.send(message.event, message.data);
+      const webSocketClient = webSocketManager.getPrimaryConnection();
+      if (webSocketClient) {
+        webSocketClient.send(message.event, message.data);
+      }
       this.connectionState.subscribedPosts.add(postId);
     } else {
       this.queueMessage(message.event, message.data);
@@ -296,7 +330,10 @@ export class CommunityWebSocketService {
     };
 
     if (this.connectionState.isConnected) {
-      webSocketService.send(message.event, message.data);
+      const webSocketClient = webSocketManager.getPrimaryConnection();
+      if (webSocketClient) {
+        webSocketClient.send(message.event, message.data);
+      }
     }
 
     this.connectionState.subscribedPosts.delete(postId);
@@ -312,7 +349,10 @@ export class CommunityWebSocketService {
     };
 
     if (this.connectionState.isConnected) {
-      webSocketService.send(message.event, message.data);
+      const webSocketClient = webSocketManager.getPrimaryConnection();
+      if (webSocketClient) {
+        webSocketClient.send(message.event, message.data);
+      }
     } else {
       this.queueMessage(message.event, message.data);
     }
@@ -328,7 +368,10 @@ export class CommunityWebSocketService {
     };
 
     if (this.connectionState.isConnected) {
-      webSocketService.send(message.event, message.data);
+      const webSocketClient = webSocketManager.getPrimaryConnection();
+      if (webSocketClient) {
+        webSocketClient.send(message.event, message.data);
+      }
     } else {
       this.queueMessage(message.event, message.data);
     }
@@ -344,7 +387,10 @@ export class CommunityWebSocketService {
     };
 
     if (this.connectionState.isConnected) {
-      webSocketService.send(message.event, message.data);
+      const webSocketClient = webSocketManager.getPrimaryConnection();
+      if (webSocketClient) {
+        webSocketClient.send(message.event, message.data);
+      }
     } else {
       this.queueMessage(message.event, message.data);
     }
@@ -429,7 +475,10 @@ export class CommunityWebSocketService {
 
     messagesToProcess.forEach(message => {
       try {
-        webSocketService.send(message.event, message.data);
+        const webSocketClient = webSocketManager.getPrimaryConnection();
+        if (webSocketClient) {
+          webSocketClient.send(message.event, message.data);
+        }
       } catch (error) {
         console.error('Error processing queued message:', error);
         
@@ -446,14 +495,20 @@ export class CommunityWebSocketService {
    * Resubscribe to all communities and posts after reconnection
    */
   private resubscribeAll(): void {
+    const webSocketClient = webSocketManager.getPrimaryConnection();
+    if (!webSocketClient) {
+      console.warn('Cannot resubscribe: WebSocket client not available');
+      return;
+    }
+    
     // Resubscribe to communities
     this.connectionState.subscribedCommunities.forEach(communityId => {
-      webSocketService.send('subscribe:community', { communityId });
+      webSocketClient.send('subscribe:community', { communityId });
     });
 
     // Resubscribe to posts
     this.connectionState.subscribedPosts.forEach(postId => {
-      webSocketService.send('subscribe:post', { postId });
+      webSocketClient.send('subscribe:post', { postId });
     });
   }
 
@@ -463,7 +518,10 @@ export class CommunityWebSocketService {
   private startHeartbeat(): void {
     this.heartbeatInterval = setInterval(() => {
       if (this.connectionState.isConnected) {
-        webSocketService.send('ping', { timestamp: Date.now() });
+        const webSocketClient = webSocketManager.getPrimaryConnection();
+        if (webSocketClient) {
+          webSocketClient.send('ping', { timestamp: Date.now() });
+        }
       }
     }, 30000); // Send ping every 30 seconds
   }

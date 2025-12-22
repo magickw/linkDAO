@@ -36,7 +36,7 @@ export class CommunityAIModerationService {
    * Analyze community post with AI
    */
   async analyzePost(
-    postId: number,
+    postId: string,
     communityId: string,
     config?: CommunityModerationConfig
   ): Promise<{
@@ -118,7 +118,7 @@ export class CommunityAIModerationService {
 
     for (const postId of postIds) {
       try {
-        const analysis = await this.analyzePost(postId, communityId, config);
+        const analysis = await this.analyzePost(String(postId), communityId, config);
         results.set(postId, analysis);
         
         // Small delay to respect rate limits
@@ -244,7 +244,7 @@ export class CommunityAIModerationService {
    * Execute moderation action
    */
   private async executeAction(
-    postId: number,
+    postId: string,
     communityId: string,
     action: string,
     result: MLModerationResult

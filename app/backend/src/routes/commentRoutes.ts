@@ -39,7 +39,7 @@ router.post('/community-posts/:postId/comments', csrfProtection, authMiddleware,
     // For community posts, we need to use the posts table with integer ID
     // For quick posts, we use the quickPosts table with UUID
     const comment = await commentService.createComment({
-      postId: isQuickPost ? undefined : parseInt(postId),
+      postId: isQuickPost ? undefined : postId,
       quickPostId: isQuickPost ? postId : undefined,
       authorAddress: userAddress,
       content,
@@ -74,7 +74,7 @@ router.get('/community-posts/:postId/comments', async (req: Request, res: Respon
     const isQuickPost = postId.includes('-');
 
     const comments = await commentService.getCommentsByPost(
-      isQuickPost ? undefined : parseInt(postId),
+      isQuickPost ? undefined : postId,
       isQuickPost ? postId : undefined,
       sortBy as 'best' | 'new' | 'top' | 'controversial',
       parseInt(limit as string)

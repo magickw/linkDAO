@@ -86,13 +86,13 @@ export class PostManagementService {
                 return { success: false, message: 'You do not have permission to pin posts in this community' };
             }
 
-            const postIdInt = parseInt(postId);
-            if (isNaN(postIdInt)) {
+            
+            if (isNaN(postId)) {
                 return { success: false, message: 'Invalid post ID' };
             }
 
             // Verify the post exists and belongs to the community
-            const postResult = await db.select().from(posts).where(eq(posts.id, postIdInt)).limit(1);
+            const postResult = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
             const post = postResult[0];
 
             if (!post) {
@@ -116,7 +116,7 @@ export class PostManagementService {
                     pinnedAt: new Date(),
                     pinnedBy: userId, // Storing UUID of the pinner
                 })
-                .where(eq(posts.id, postIdInt));
+                .where(eq(posts.id, postId));
 
             safeLogger.info(`Post ${postId} pinned by ${userId} in community ${communityId}`);
 
@@ -136,13 +136,13 @@ export class PostManagementService {
                 return { success: false, message: 'Database connection not initialized' };
             }
 
-            const postIdInt = parseInt(postId);
-            if (isNaN(postIdInt)) {
+            
+            if (isNaN(postId)) {
                 return { success: false, message: 'Invalid post ID' };
             }
 
             // Verify the post exists to get communityId
-            const postResult = await db.select().from(posts).where(eq(posts.id, postIdInt)).limit(1);
+            const postResult = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
             const post = postResult[0];
 
             if (!post) {
@@ -171,7 +171,7 @@ export class PostManagementService {
                     pinnedAt: null,
                     pinnedBy: null,
                 })
-                .where(eq(posts.id, postIdInt));
+                .where(eq(posts.id, postId));
 
             safeLogger.info(`Post ${postId} unpinned by ${userId}`);
 
@@ -185,7 +185,7 @@ export class PostManagementService {
     /**
      * Get all pinned posts for a community
      */
-    async getPinnedPosts(communityId: string, limit: number = 5) {
+    async getPinnedPosts(communityId: string, limit: string = 5) {
         try {
             if (!db) {
                 return [];

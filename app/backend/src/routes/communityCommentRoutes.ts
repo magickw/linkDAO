@@ -38,7 +38,7 @@ router.post('/:communityId/comments/:commentId/vote', csrfProtection,  authMiddl
     const comment = await db
       .select()
       .from(posts)
-      .where(eq(posts.id, parseInt(commentId)))
+      .where(eq(posts.id, commentId))
       .limit(1);
 
     if (comment.length === 0) {
@@ -54,7 +54,7 @@ router.post('/:communityId/comments/:commentId/vote', csrfProtection,  authMiddl
       .from(reactions)
       .where(
         and(
-          eq(reactions.postId, parseInt(commentId)),
+          eq(reactions.postId, commentId),
           eq(reactions.userId, userAddress),
           eq(reactions.type, voteType)
         )
@@ -68,7 +68,7 @@ router.post('/:communityId/comments/:commentId/vote', csrfProtection,  authMiddl
         .where(eq(reactions.id, existingVote[0].id));
 
       // Get updated vote counts
-      const voteCounts = await getVoteCounts(parseInt(commentId));
+      const voteCounts = await getVoteCounts(commentId);
 
       return res.json({
         success: true,
@@ -87,7 +87,7 @@ router.post('/:communityId/comments/:commentId/vote', csrfProtection,  authMiddl
       .delete(reactions)
       .where(
         and(
-          eq(reactions.postId, parseInt(commentId)),
+          eq(reactions.postId, commentId),
           eq(reactions.userId, userAddress),
           eq(reactions.type, oppositeType)
         )
@@ -95,14 +95,14 @@ router.post('/:communityId/comments/:commentId/vote', csrfProtection,  authMiddl
 
     // Add new vote
     await db.insert(reactions).values({
-      postId: parseInt(commentId),
+      postId: commentId,
       userId: userAddress,
       type: voteType,
       amount: amount.toString(),
     });
 
     // Get updated vote counts
-    const voteCounts = await getVoteCounts(parseInt(commentId));
+    const voteCounts = await getVoteCounts(commentId);
 
     res.json({
       success: true,
@@ -128,7 +128,7 @@ router.get('/:communityId/comments/:commentId/votes', async (req, res) => {
     const { commentId } = req.params;
     const { userAddress } = req.query;
 
-    const voteCounts = await getVoteCounts(parseInt(commentId));
+    const voteCounts = await getVoteCounts(commentId);
     
     // If user address provided, get their vote
     let userVote = null;
@@ -138,7 +138,7 @@ router.get('/:communityId/comments/:commentId/votes', async (req, res) => {
         .from(reactions)
         .where(
           and(
-            eq(reactions.postId, parseInt(commentId)),
+            eq(reactions.postId, commentId),
             eq(reactions.userId, userAddress as string)
           )
         )
@@ -164,7 +164,7 @@ router.get('/:communityId/comments/:commentId/votes', async (req, res) => {
 });
 
 // Helper method to get vote counts
-async function getVoteCounts(commentId: number): Promise<{
+async function getVoteCounts(commentId: string): Promise<{
   upvotes: number;
   downvotes: number;
   score: number;

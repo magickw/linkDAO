@@ -183,6 +183,14 @@ function AppContent({ children }: { children: React.ReactNode }) {
           // Continue without service worker if initialization fails
         }
 
+        // Initialize WebSocket connections
+        try {
+          const { initializeWebSockets } = await import('@/utils/webSocketInitializer');
+          await initializeWebSockets();
+        } catch (wsError) {
+          console.warn('WebSocket initialization failed, continuing without it:', wsError);
+        }
+        
         performanceMonitor.measure('app_init');
       } catch (error) {
         console.error('Failed to initialize services:', error);

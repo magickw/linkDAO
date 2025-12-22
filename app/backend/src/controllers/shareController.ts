@@ -61,7 +61,7 @@ class ShareController {
         return res.status(400).json({ error: 'Invalid post ID' });
       }
 
-      const count = await shareService.getShareCount(parseInt(postId));
+      const count = await shareService.getShareCount(postId);
 
       res.json({ postId, shareCount: count });
     } catch (error) {
@@ -82,7 +82,7 @@ class ShareController {
         return res.status(400).json({ error: 'Invalid post ID' });
       }
 
-      const breakdown = await shareService.getShareBreakdown(parseInt(postId));
+      const breakdown = await shareService.getShareBreakdown(postId);
 
       res.json({ postId, ...breakdown });
     } catch (error) {

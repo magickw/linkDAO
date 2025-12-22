@@ -70,14 +70,10 @@ class BookmarkController {
   async checkBookmark(req: Request, res: Response) {
     try {
       const userId = (req as any).user?.id;
-      const postId = parseInt(req.params.postId, 10);
+      const postId = req.params.postId;
 
       if (!userId) {
         return res.status(401).json({ error: 'Authentication required' });
-      }
-
-      if (isNaN(postId)) {
-        return res.status(400).json({ error: 'Invalid post ID' });
       }
 
       const bookmarked = await bookmarkService.isBookmarked(userId, postId);
@@ -95,11 +91,7 @@ class BookmarkController {
    */
   async getBookmarkCount(req: Request, res: Response) {
     try {
-      const postId = parseInt(req.params.postId, 10);
-
-      if (isNaN(postId)) {
-        return res.status(400).json({ error: 'Invalid post ID' });
-      }
+      const postId = req.params.postId;
 
       const count = await bookmarkService.getBookmarkCount(postId);
 

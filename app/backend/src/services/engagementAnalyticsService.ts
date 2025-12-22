@@ -407,7 +407,7 @@ export class EngagementAnalyticsService {
         return this.getMockEngagementAggregate(postId, timeWindow);
       }
 
-      const postIdNum = parseInt(postId, 10);
+      const postIdNum = postId;
       if (isNaN(postIdNum)) {
         return this.getMockEngagementAggregate(postId, timeWindow);
       }

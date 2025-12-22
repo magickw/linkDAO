@@ -85,7 +85,7 @@ export class SocialMediaIntegrationService {
           createdAt: posts.createdAt
         })
         .from(posts)
-        .where(eq(posts.id, parseInt(config.postId)))
+        .where(eq(posts.id, config.postId))
         .limit(1);
 
       if (postData.length === 0) {

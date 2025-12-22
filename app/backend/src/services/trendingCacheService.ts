@@ -219,7 +219,7 @@ class TrendingCacheService {
   /**
    * Get engagement cache for a post
    */
-  async getEngagementCache(postId: number): Promise<any | null> {
+  async getEngagementCache(postId: string): Promise<any | null> {
     if (!this.useRedis) {
       safeLogger.warn('Redis is disabled, returning null for engagement cache:', postId);
       return null;
@@ -244,7 +244,7 @@ class TrendingCacheService {
   /**
    * Set engagement cache for a post
    */
-  async setEngagementCache(postId: number, data: any, ttl: number = 60): Promise<void> {
+  async setEngagementCache(postId: string, data: any, ttl: number = 60): Promise<void> {
     if (!this.useRedis) {
       safeLogger.warn('Redis is disabled, skipping engagement cache:', postId);
       return;
@@ -262,7 +262,7 @@ class TrendingCacheService {
   /**
    * Invalidate engagement cache for a post
    */
-  async invalidateEngagementCache(postId: number): Promise<void> {
+  async invalidateEngagementCache(postId: string): Promise<void> {
     if (!this.useRedis) {
       safeLogger.warn('Redis is disabled, skipping engagement cache invalidation:', postId);
       return;
@@ -340,7 +340,7 @@ class TrendingCacheService {
     // and update it in the sorted set. For now, we'll just invalidate the trending cache
     // so it gets rebuilt on the next request.
     await this.invalidateTrendingCache();
-    await this.invalidateEngagementCache(parseInt(postId) || 0);
+    if (postId) await this.invalidateEngagementCache(postId);
   }
 
   /**
@@ -348,7 +348,7 @@ class TrendingCacheService {
    */
   async invalidatePost(postId: string): Promise<void> {
     await this.invalidateTrendingCache();
-    await this.invalidateEngagementCache(parseInt(postId) || 0);
+    if (postId) await this.invalidateEngagementCache(postId);
   }
 
   /**

@@ -192,7 +192,7 @@ class EarningActivityService {
   /**
    * Get post engagement metrics for quality scoring
    */
-  private async getPostEngagementMetrics(postId: number): Promise<{ totalEngagement: number }> {
+  private async getPostEngagementMetrics(postId: string): Promise<{ totalEngagement: number }> {
     try {
       // This would typically aggregate reactions, tips, views, etc.
       // For now, return a simple calculation

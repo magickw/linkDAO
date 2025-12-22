@@ -279,7 +279,7 @@ class ContentSharingService {
       const originalPost = await db
         .select()
         .from(posts)
-        .where(eq(posts.id, parseInt(originalPostId)))
+        .where(eq(posts.id, originalPostId))
         .limit(1);
 
       if (originalPost.length === 0) {
@@ -362,7 +362,7 @@ ${post.content}`
         .from(shares)
         .where(
           and(
-            eq(shares.postId, parseInt(contentId)), // Use postId instead of contentId
+            eq(shares.postId, contentId), // Use postId instead of contentId
             eq(shares.targetType, contentType), // Use targetType instead of contentType
             timeFilter
           )
@@ -415,7 +415,7 @@ ${post.content}`
       }
 
       await db.insert(shares).values({
-        postId: parseInt(contentId), // Use postId instead of contentId
+        postId: contentId, // Use postId instead of contentId
         userId: user[0].id, // Use userId instead of userAddress
         targetType: contentType, // Use targetType instead of contentType
         message: JSON.stringify(metadata || {}), // Use message instead of metadata
@@ -442,7 +442,7 @@ ${post.content}`
           const post = await db
             .select()
             .from(posts)
-            .where(and(eq(posts.id, parseInt(contentId)))) // Remove isDeleted check as it doesn't exist
+            .where(and(eq(posts.id, contentId))) // Remove isDeleted check as it doesn't exist
             .limit(1);
           return post.length > 0;
 
@@ -593,7 +593,7 @@ ${post.content}`
     const post = await db
       .select()
       .from(posts)
-      .where(eq(posts.id, parseInt(postId)))
+      .where(eq(posts.id, postId))
       .limit(1);
 
     if (post.length === 0) {

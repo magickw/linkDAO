@@ -11,25 +11,25 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   
-  // Disable Fast Refresh completely
+  // Enable Fast Refresh
   experimental: {
-    esmExternals: false,
+    // esmExternals: false, // Removed to enable Fast Refresh
   },
   
   webpack: (config, { dev }) => {
     if (dev) {
-      // Disable file watching to prevent hot reloads
+      // Enable file watching for proper hot reloads
       config.watchOptions = {
-        poll: false,
-        aggregateTimeout: 0,
+        poll: 1000,
+        aggregateTimeout: 200,
       };
       
-      // Add Fast Refresh disable flag
-      config.plugins.push(
-        new webpack.DefinePlugin({
-          'process.env.__NEXT_DISABLE_FAST_REFRESH': JSON.stringify(true),
-        })
-      );
+      // Enable Fast Refresh by removing disable flag
+      // config.plugins.push(
+      //   new webpack.DefinePlugin({
+      //     'process.env.__NEXT_DISABLE_FAST_REFRESH': JSON.stringify(true),
+      //   })
+      // );
     }
     return config;
   },
@@ -74,27 +74,59 @@ const nextConfig = {
       '@': path.resolve(__dirname, 'src'),
     };
 
-    // Exclude generated files from babel processing to prevent build errors
+    // Optimize babel processing for generated files
     config.module.rules.forEach(rule => {
       if (rule.test && rule.test.toString().includes('tsx?')) {
         if (rule.use && rule.use.loader && rule.use.loader.includes('babel-loader')) {
+          // Remove exclusion for generated files and add optimization
           rule.exclude = [
             ...(rule.exclude || []),
-            /node_modules/,
-            /src\/generated/
+            /node_modules/
           ];
+          
+          // Add optimization options for babel-loader
+          if (rule.use.options) {
+            rule.use.options.cacheDirectory = true;
+            rule.use.options.compact = true;
+          }
         } else if (Array.isArray(rule.use)) {
           rule.use.forEach(useRule => {
             if (useRule.loader && useRule.loader.includes('babel-loader')) {
+              // Remove exclusion for generated files and add optimization
               useRule.exclude = [
                 ...(useRule.exclude || []),
-                /node_modules/,
-                /src\/generated/
+                /node_modules/
               ];
+              
+              // Add optimization options for babel-loader
+              if (useRule.options) {
+                useRule.options.cacheDirectory = true;
+                useRule.options.compact = true;
+              }
             }
           });
         }
       }
+    });
+    
+    // Add specific rule for generated files with optimized settings
+    config.module.rules.push({
+      test: /[\/](generated)[\/].*\.tsx?$/,
+      use: [
+        {
+          loader: 'babel-loader',
+          options: {
+            cacheDirectory: true,
+            compact: true,
+            // Reduce transforms for generated files
+            presets: [
+              ['@babel/preset-env', { targets: { node: 'current' } }],
+              ['@babel/preset-react', { runtime: 'automatic' }],
+              ['@babel/preset-typescript']
+            ]
+          }
+        }
+      ]
     });
 
     // Use IgnorePlugin to completely ignore playwright modules
@@ -138,11 +170,18 @@ const nextConfig = {
             ...config.optimization?.splitChunks?.cacheGroups,
             // Split vendor chunks more aggressively for better caching
             vendor: {
-              test: /[\\/]node_modules[\\/]/,
+              test: /[\/]node_modules[\/]/,
               name: 'vendors',
               chunks: 'all',
               priority: 10,
               reuseExistingChunk: true,
+            },
+            // Code splitting for large generated files
+            generated: {
+              test: /[\/]src[\/]generated[\/]/,
+              name: 'generated',
+              chunks: 'all',
+              enforce: true,
             }
           }
         }

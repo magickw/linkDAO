@@ -111,7 +111,7 @@ export class ContentPerformanceService {
           tags: posts.tags
         })
         .from(posts)
-        .where(eq(posts.id, parseInt(postId)))
+        .where(eq(posts.id, postId))
         .limit(1);
 
       if (postData.length === 0) {
@@ -143,10 +143,10 @@ export class ContentPerformanceService {
 
       // Get engagement metrics
       const [viewCountResult, reactionCountResult, shareCountResult, bookmarkCountResult, commentCountResult] = await Promise.all([
-        db.select({ count: count() }).from(views).where(eq(views.postId, parseInt(postId))),
-        db.select({ count: count() }).from(reactions).where(eq(reactions.postId, parseInt(postId))),
-        db.select({ count: count() }).from(shares).where(eq(shares.postId, parseInt(postId))),
-        db.select({ count: count() }).from(bookmarks).where(eq(bookmarks.postId, parseInt(postId))),
+        db.select({ count: count() }).from(views).where(eq(views.postId, postId)),
+        db.select({ count: count() }).from(reactions).where(eq(reactions.postId, postId)),
+        db.select({ count: count() }).from(shares).where(eq(shares.postId, postId)),
+        db.select({ count: count() }).from(bookmarks).where(eq(bookmarks.postId, postId)),
         // For comment count, we would need to check replies to this post
         Promise.resolve([{ count: 0 }]) // Placeholder
       ]);
@@ -362,7 +362,7 @@ export class ContentPerformanceService {
           createdAt: posts.createdAt
         })
         .from(posts)
-        .where(eq(posts.id, parseInt(postId)))
+        .where(eq(posts.id, postId))
         .limit(1);
 
       if (postData.length === 0) {
@@ -422,7 +422,7 @@ export class ContentPerformanceService {
           createdAt: shares.createdAt
         })
         .from(shares)
-        .where(eq(shares.postId, parseInt(postId)));
+        .where(eq(shares.postId, postId));
       
       // Calculate total shares
       const totalShares = shareData.length;

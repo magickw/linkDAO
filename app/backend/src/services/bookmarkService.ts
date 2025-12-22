@@ -13,7 +13,7 @@ class BookmarkService {
   /**
    * Add a bookmark
    */
-  async addBookmark(userId: string, postId: number): Promise<boolean> {
+  async addBookmark(userId: string, postId: string): Promise<boolean> {
     try {
       // Check if post exists
       const post = await db
@@ -56,7 +56,7 @@ class BookmarkService {
   /**
    * Remove a bookmark
    */
-  async removeBookmark(userId: string, postId: number): Promise<boolean> {
+  async removeBookmark(userId: string, postId: string): Promise<boolean> {
     try {
       const result = await db
         .delete(bookmarks)
@@ -75,7 +75,7 @@ class BookmarkService {
   /**
    * Toggle bookmark (add if not exists, remove if exists)
    */
-  async toggleBookmark(userId: string, postId: number): Promise<{ bookmarked: boolean }> {
+  async toggleBookmark(userId: string, postId: string): Promise<{ bookmarked: boolean }> {
     try {
       const existing = await db
         .select()
@@ -102,7 +102,7 @@ class BookmarkService {
   /**
    * Check if a post is bookmarked by a user
    */
-  async isBookmarked(userId: string, postId: number): Promise<boolean> {
+  async isBookmarked(userId: string, postId: string): Promise<boolean> {
     try {
       const result = await db
         .select()
@@ -163,7 +163,7 @@ class BookmarkService {
   /**
    * Get bookmark count for a post
    */
-  async getBookmarkCount(postId: number): Promise<number> {
+  async getBookmarkCount(postId: string): Promise<number> {
     try {
       const result = await db
         .select({ count: sql<number>`COUNT(*)` })

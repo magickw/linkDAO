@@ -226,7 +226,7 @@ export class PostService {
 
   async getPostById(id: string): Promise<Post | undefined> {
     // Convert string ID to number
-    const postId = parseInt(id);
+    const postId = id;
     if (isNaN(postId)) {
       safeLogger.info(`Invalid post ID: ${id}`);
       return undefined;
@@ -436,7 +436,7 @@ export class PostService {
 
   async updatePost(id: string, input: UpdatePostInput): Promise<Post | undefined> {
     try {
-      const postId = parseInt(id);
+      const postId = id;
       if (isNaN(postId)) {
         return undefined;
       }
@@ -495,7 +495,7 @@ export class PostService {
 
   async deletePost(id: string): Promise<boolean> {
     try {
-      const postId = parseInt(id);
+      const postId = id;
       if (isNaN(postId)) {
         return false;
       }

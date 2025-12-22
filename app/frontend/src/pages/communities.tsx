@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -84,6 +84,40 @@ import { useAuth } from '@/context/AuthContext';
 import { Community } from '@/models/Community';
 import { FeedSortType } from '@/types/feed';
 
+// Constants
+const DEFAULT_COMMUNITIES_LIMIT = 50;
+const DEFAULT_FEED_PAGE_SIZE = 20;
+const DEFAULT_USER_COMMUNITIES_PAGE = 1;
+const DEFAULT_USER_COMMUNITIES_LIMIT = 100;
+
+// Define proper TypeScript interfaces
+interface Post {
+  id: string;
+  title: string;
+  content: string;
+  authorName: string;
+  communityId: string;
+  upvotes: number;
+  downvotes: number;
+  commentCount: number;
+  createdAt: string;
+  tags: string[];
+  stakedTokens: number;
+  [key: string]: any; // Allow additional properties
+}
+
+interface CommunityMembership {
+  id: string;
+  communityId: string;
+  userId: string;
+  role: 'admin' | 'member' | 'visitor';
+  joinedAt: Date;
+  reputation: number;
+  contributions: number;
+  isActive: boolean;
+  lastActivityAt: Date;
+}
+
 
 const CommunitiesPage: React.FC = () => {
   const router = useRouter();
@@ -95,7 +129,7 @@ const CommunitiesPage: React.FC = () => {
   const isMounted = useRef(true);
 
   const [communities, setCommunities] = useState<Community[]>([]);
-  const [posts, setPosts] = useState<any[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [sortBy, setSortBy] = useState<FeedSortType>(FeedSortType.HOT);
   const [timeFilter, setTimeFilter] = useState<'hour' | 'day' | 'week' | 'month' | 'year' | 'all'>('day');
   const [joinedCommunities, setJoinedCommunities] = useState<string[]>([]);
@@ -132,7 +166,7 @@ const CommunitiesPage: React.FC = () => {
   // Hover preview state with debouncing
   const [hoveredPost, setHoveredPost] = useState<any>(null);
   const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
-  const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Quick filter chips state
   const [activeQuickFilters, setActiveQuickFilters] = useState<string[]>([]);
@@ -143,14 +177,15 @@ const CommunitiesPage: React.FC = () => {
   // Create community modal state
   const [showCreateCommunityModal, setShowCreateCommunityModal] = useState(false);
   const [isCreatingCommunity, setIsCreatingCommunity] = useState(false);
+  const [createCommunityError, setCreateCommunityError] = useState<string | null>(null);
 
   // Cleanup on unmount to prevent memory leaks
   useEffect(() => {
     return () => {
       isMounted.current = false;
       // Clear any pending hover timeouts
-      if (hoverTimeout) {
-        clearTimeout(hoverTimeout);
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
       }
     };
   }, []);
@@ -163,96 +198,95 @@ const CommunitiesPage: React.FC = () => {
         setLoading(true);
         setError(null);
 
-        // Use setTimeout to defer community loading and avoid blocking navigation
-        setTimeout(async () => {
-          // Load communities with fallback for 503 errors
-          const communitiesData = await CommunityService.getAllCommunities({
-            isPublic: true,
-            limit: 50
-          });
+        // Load communities with fallback for 503 errors
+        const communitiesData = await CommunityService.getAllCommunities({
+          isPublic: true,
+          limit: DEFAULT_COMMUNITIES_LIMIT
+        });
 
-          if (!isMounted.current) return;
-          setCommunities(communitiesData);
+        if (!isMounted.current) return;
+        setCommunities(communitiesData);
 
 
-          // Load user's community memberships if wallet is connected AND authenticated with backend
-          // Check both wallet connection and backend authentication to avoid 401 errors
-          if (address && isConnected && isAuthenticated) {
-            try {
-              // Use setTimeout to defer user communities loading and avoid blocking navigation
-              setTimeout(async () => {
-                // Fetch user's communities (both created and joined)
-                const myCommunitiesResponse = await CommunityService.getMyCommunities(1, 100).catch(() => ({ communities: [], pagination: null }));
+        // Load user's community memberships if wallet is connected AND authenticated with backend
+        // Check both wallet connection and backend authentication to avoid 401 errors
+        if (address && isConnected && isAuthenticated) {
+          try {
+            // Fetch user's communities (both created and joined)
+            const myCommunitiesResponse = await CommunityService.getMyCommunities(DEFAULT_USER_COMMUNITIES_PAGE, DEFAULT_USER_COMMUNITIES_LIMIT).catch(() => ({ communities: [], pagination: null }));
 
-                if (!isMounted.current) return;
+            if (!isMounted.current) return;
 
-                // Set community IDs
-                const allUserCommunityIds = new Set<string>();
-                myCommunitiesResponse.communities.forEach(c => {
-                  if (c && c.id) {
-                    allUserCommunityIds.add(c.id);
-                  }
-                });
+            // Set community IDs
+            const allUserCommunityIds = new Set<string>();
+            myCommunitiesResponse.communities.forEach(c => {
+              if (c && c.id) {
+                allUserCommunityIds.add(c.id);
+              }
+            });
 
-                setJoinedCommunities(Array.from(allUserCommunityIds));
+            setJoinedCommunities(Array.from(allUserCommunityIds));
 
-                // Merge user communities into the main list so they appear in the sidebar
-                // The sidebar filters 'communities' based on 'joinedCommunities', so we need to ensure
-                // all joined/created communities are actually present in the 'communities' array.
-                const allUserCommunities = myCommunitiesResponse.communities;
-                setCommunities(prev => {
-                  const existingIds = new Set(prev.map(c => c.id));
-                  const newCommunities = [...prev];
+            // Merge user communities into the main list so they appear in the sidebar
+            // The sidebar filters 'communities' based on 'joinedCommunities', so we need to ensure
+            // all joined/created communities are actually present in the 'communities' array.
+            const allUserCommunities = myCommunitiesResponse.communities;
+            setCommunities(prev => {
+              const existingIds = new Set(prev.map(c => c.id));
+              const newCommunities = [...prev];
 
-                  allUserCommunities.forEach(c => {
-                    if (c && c.id && !existingIds.has(c.id)) {
-                      newCommunities.push(c);
-                      existingIds.add(c.id);
-                    }
-                  });
+              allUserCommunities.forEach(c => {
+                if (c && c.id && !existingIds.has(c.id)) {
+                  newCommunities.push(c);
+                  existingIds.add(c.id);
+                }
+              });
 
-                  return newCommunities;
-                });
+              return newCommunities;
+            });
 
-                // Set admin roles for communities where user is admin (case-insensitive)
-                // Check both the initial communitiesData and the user's communities
-                const adminRoles: Record<string, string> = {};
-                const allCommunitiesToCheck = [...communitiesData, ...allUserCommunities];
+            // Set admin roles for communities where user is admin (case-insensitive)
+            // Check both the initial communitiesData and the user's communities
+            const adminRoles: Record<string, string> = {};
+            const allCommunitiesToCheck = [...communitiesData, ...allUserCommunities];
 
-                // Check all communities for admin/moderator status
-                allCommunitiesToCheck.forEach(community => {
-                  if (!community || !community.id) return;
+            // Use Set to deduplicate communities before processing
+            const uniqueCommunities = Array.from(new Set(allCommunitiesToCheck.map(c => c.id)))
+              .map(id => allCommunitiesToCheck.find(c => c.id === id))
+              .filter((c): c is Community => c !== undefined);
 
-                  // Check if user is the creator (case-insensitive) - creators are always admins
-                  if (community.creatorAddress && address &&
-                    community.creatorAddress.toLowerCase() === address.toLowerCase()) {
-                    adminRoles[community.id] = 'admin';
-                    return; // Skip further checks for creators
-                  }
+            // Check all communities for admin/moderator status
+            uniqueCommunities.forEach(community => {
+              if (!community || !community.id) return;
 
-                  // Skip if already marked as admin
-                  if (adminRoles[community.id]) return;
+              // Check if user is the creator (case-insensitive) - creators are always admins
+              if (community.creatorAddress && address &&
+                community.creatorAddress.toLowerCase() === address.toLowerCase()) {
+                adminRoles[community.id] = 'admin';
+                return; // Skip further checks for creators
+              }
 
-                  // Check if user is an admin/moderator of this community (based on moderators field)
-                  if (community.moderators && Array.isArray(community.moderators) &&
-                    address && community.moderators.some(mod => mod.toLowerCase() === address.toLowerCase())) {
-                    adminRoles[community.id] = 'admin';
-                  }
-                });
-                if (!isMounted.current) return;
-                setUserAdminRoles(adminRoles);
-              }, 0);
-            } catch (error) {
-              console.error('Error loading user communities:', error);
-              // Continue with empty arrays on error
-              setJoinedCommunities([]);
-              setUserAdminRoles({});
-            }
+              // Skip if already marked as admin
+              if (adminRoles[community.id]) return;
+
+              // Check if user is an admin/moderator of this community (based on moderators field)
+              if (community.moderators && Array.isArray(community.moderators) &&
+                address && community.moderators.some(mod => mod.toLowerCase() === address.toLowerCase())) {
+                adminRoles[community.id] = 'admin';
+              }
+            });
+            if (!isMounted.current) return;
+            setUserAdminRoles(adminRoles);
+          } catch (error) {
+            console.error('Error loading user communities:', error);
+            // Continue with empty arrays on error
+            setJoinedCommunities([]);
+            setUserAdminRoles({});
           }
+        }
 
-          // Load enhanced Web3 data
-          await loadWeb3EnhancedData(communitiesData);
-        }, 0);
+        // Load enhanced Web3 data
+        await loadWeb3EnhancedData(communitiesData);
       } catch (err) {
         console.error('Error loading communities:', err);
         if (!isMounted.current) return;
@@ -271,7 +305,7 @@ const CommunitiesPage: React.FC = () => {
 
   // Load posts from backend API with pagination
   // This fetches posts ONLY from communities the user has joined/created
-  const fetchPosts = async (pageNum: number = 1, append: boolean = false) => {
+  const fetchPosts = useCallback(async (pageNum: number = 1, append: boolean = false) => {
     try {
       if (!isMounted.current) return;
       if (pageNum === 1) setLoading(true);
@@ -280,16 +314,7 @@ const CommunitiesPage: React.FC = () => {
       // Import CommunityPostService for fetching community-specific posts
       const { CommunityPostService } = await import('../services/communityPostService');
 
-      // Debug logging
-      console.log(`[COMMUNITY FEED FRONTEND DEBUG] Fetching posts:`, {
-        isAuthenticated,
-        joinedCommunities: joinedCommunities.length,
-        joinedCommunityIds: joinedCommunities,
-        pageNum,
-        sortBy,
-        timeFilter,
-        currentPostsCount: posts.length
-      });
+      // Debug logging - removed for production
       // For all users (authenticated or not), fetch the general feed which includes public community posts
       // This ensures everyone can see community activity
         // Map frontend sort values to backend expected values
@@ -311,27 +336,16 @@ const CommunitiesPage: React.FC = () => {
           postTypes: ['posts'], // Only show community posts
           communities: joinedCommunities.length > 0 ? joinedCommunities : undefined // Include joined communities
         };
-        const result = await FeedService.getEnhancedFeed(filter, pageNum, 20);
+        const result = await FeedService.getEnhancedFeed(filter, pageNum, DEFAULT_FEED_PAGE_SIZE);
 
-        // Debug logging
-        console.log(`[COMMUNITY FEED FRONTEND DEBUG] API response:`, {
-          postsCount: result?.posts?.length || 0,
-          pagination: result?.pagination,
-          firstPost: result?.posts?.[0],
-          hasMore: result?.hasMore
-        });
+        // Debug logging - removed for production
         // Check if component is still mounted before updating state
         if (!isMounted.current) return;
 
         // Handle FeedService response format
         const newPosts = result?.posts || [];
 
-        console.log(`[COMMUNITY FEED FRONTEND DEBUG] Setting posts state:`, {
-          newPostsCount: newPosts.length,
-          append,
-          currentPostsCount: posts.length,
-          newPosts: newPosts.slice(0, 3) // Show first 3 posts for debugging
-        });
+        // Debug logging - removed for production
 
         if (append) {
           setPosts(prev => [...prev, ...newPosts]);
@@ -355,7 +369,7 @@ const CommunitiesPage: React.FC = () => {
       }
       setLoadingMore(false);
     }
-  };
+  }, [isMounted, isAuthenticated, joinedCommunities, address, sortBy, timeFilter]);
 
   useEffect(() => {
     // Wait for auth loading to complete to avoid race conditions
@@ -366,7 +380,7 @@ const CommunitiesPage: React.FC = () => {
     if (address && !isAuthenticated) return;
 
     fetchPosts(1, false);
-  }, [sortBy, timeFilter, address, isAuthenticated, isAuthLoading, loading, joinedCommunities.length]);
+  }, [sortBy, timeFilter, address, isAuthenticated, isAuthLoading, joinedCommunities.length, fetchPosts]);
 
   // Infinite scroll handler
   useEffect(() => {
@@ -379,46 +393,43 @@ const CommunitiesPage: React.FC = () => {
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [page, loadingMore, hasMore]);
+  }, [page, loadingMore, hasMore, fetchPosts]);
 
   // Load Web3 enhanced data
   const loadWeb3EnhancedData = async (communitiesData: Community[]) => {
     try {
-      // Use setTimeout to defer Web3 enhanced data loading and avoid blocking navigation
-      setTimeout(() => {
-        // Initialize with empty data instead of mock data
-        const userRoles: Record<string, string> = {};
-        const userAdminRoles: Record<string, string> = {};
-        const tokenBalances: Record<string, number> = {};
-        const liveTokenPrices: Record<string, number> = {};
-        const stakingData: Record<string, any> = {};
+      // Initialize with empty data instead of mock data
+      const userRoles: Record<string, string> = {};
+      const userAdminRoles: Record<string, string> = {};
+      const tokenBalances: Record<string, number> = {};
+      const liveTokenPrices: Record<string, number> = {};
+      const stakingData: Record<string, any> = {};
 
-        communitiesData.forEach(community => {
-          userRoles[community.id] = 'visitor';
-          // Check if user is an admin/moderator of this community (based on moderators field)
-          if (community.moderators && Array.isArray(community.moderators) &&
-            address && community.moderators.includes(address)) {
-            userRoles[community.id] = 'admin';
-            userAdminRoles[community.id] = 'admin'; // Track admin roles separately for MyCommunitiesCard
-          }
-          tokenBalances[community.id] = 0;
-          liveTokenPrices[community.id] = 0;
-          stakingData[community.id] = {
-            totalStaked: 0,
-            stakerCount: 0,
-            stakingTier: 'bronze',
-            userStake: 0
-          };
-        });
+      communitiesData.forEach(community => {
+        userRoles[community.id] = 'visitor';
+        // Check if user is an admin/moderator of this community (based on moderators field)
+        if (community.moderators && Array.isArray(community.moderators) &&
+          address && community.moderators.includes(address)) {
+          userRoles[community.id] = 'admin';
+          userAdminRoles[community.id] = 'admin'; // Track admin roles separately for MyCommunitiesCard
+        }
+        tokenBalances[community.id] = 0;
+        liveTokenPrices[community.id] = 0;
+        stakingData[community.id] = {
+          totalStaked: 0,
+          stakerCount: 0,
+          stakingTier: 'bronze',
+          userStake: 0
+        };
+      });
 
-        setUserRoles(userRoles);
-        setUserAdminRoles(userAdminRoles);
-        setTokenBalances(tokenBalances);
-        setLiveTokenPrices(liveTokenPrices);
-        setStakingData(stakingData);
-        setGovernanceProposals([]);
-        setWalletActivities([]);
-      }, 0);
+      setUserRoles(userRoles);
+      setUserAdminRoles(userAdminRoles);
+      setTokenBalances(tokenBalances);
+      setLiveTokenPrices(liveTokenPrices);
+      setStakingData(stakingData);
+      setGovernanceProposals([]);
+      setWalletActivities([]);
     } catch (err) {
       console.error('Error loading Web3 enhanced data:', err);
       // Provide empty data as fallback
@@ -471,8 +482,9 @@ const CommunitiesPage: React.FC = () => {
 
   const handleCreateCommunity = async (communityData: any) => {
     setIsCreatingCommunity(true);
+    setCreateCommunityError(null);
     try {
-      console.log('Creating community:', communityData);
+      // Creating community
 
       // Create community via API
       const newCommunity = await CommunityService.createCommunity(communityData);
@@ -491,7 +503,9 @@ const CommunitiesPage: React.FC = () => {
       router.push(`/communities/${newCommunity.slug || newCommunity.name || newCommunity.id}`);
     } catch (err) {
       console.error('Error creating community:', err);
-      throw err;
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create community';
+      setCreateCommunityError(errorMessage);
+      // Don't throw error to allow modal to display error message
     } finally {
       setIsCreatingCommunity(false);
     }
@@ -508,7 +522,7 @@ const CommunitiesPage: React.FC = () => {
   const handleBoost = async (postId: string, amount: number) => {
     try {
       // TODO: Implement token boosting
-      console.log('Boosting post:', postId, 'with amount:', amount);
+      // Boosting post
       if (isMobile) triggerHapticFeedback('success');
     } catch (err) {
       console.error('Error boosting post:', err);
@@ -518,7 +532,7 @@ const CommunitiesPage: React.FC = () => {
   const handleTokenReaction = async (postId: string, reactionType: string, amount?: number) => {
     try {
       // TODO: Implement token reactions
-      console.log('Token reaction:', postId, reactionType, amount);
+      // Token reaction
       if (isMobile) triggerHapticFeedback('medium');
     } catch (err) {
       console.error('Error with token reaction:', err);
@@ -553,15 +567,15 @@ const CommunitiesPage: React.FC = () => {
   // Web3 mobile handlers
   const handleUpvote = (postId: string) => handleVote(postId, 'up', 1);
   const handleSave = (postId: string) => {
-    console.log('Saving post:', postId);
+    // Saving post
     if (isMobile) triggerHapticFeedback('light');
   };
   const handleTip = async (postId: string, amount?: number) => {
-    console.log('Tipping post:', postId, 'amount:', amount);
+    // Tipping post
     if (isMobile) triggerHapticFeedback('success');
   };
   const handleStake = (postId: string) => {
-    console.log('Staking on post:', postId);
+    // Staking on post
     if (isMobile) triggerHapticFeedback('heavy');
   };
   const handleComment = (postId: string) => {
@@ -572,7 +586,7 @@ const CommunitiesPage: React.FC = () => {
     }
   };
   const handleShare = (postId: string) => {
-    console.log('Sharing post:', postId);
+    // Sharing post
     if (isMobile) triggerHapticFeedback('light');
   };
   const handleViewPost = (postId: string) => {
@@ -612,34 +626,22 @@ const CommunitiesPage: React.FC = () => {
 
   // Show posts from communities - all posts are now fetched directly from communities
   // No additional filtering needed since we're using CommunityPostService.getCommunityPosts
-  const filteredPosts = posts.filter(post => {
-    // Ensure post is a valid object
-    if (!post || typeof post !== 'object') return false;
-    return true;
-  });
+  const filteredPosts = useMemo(() => {
+    return posts.filter(post => post && typeof post === 'object');
+  }, [posts]);
 
   // Defensive: normalize communities to array for rendering and filter out invalid entries
-  const communityList: Community[] = Array.isArray(communities)
-    ? communities
+  const communityList = useMemo<Community[]>(() => {
+    if (!Array.isArray(communities)) return [];
+    return communities
       .filter(community => community && typeof community === 'object' && community.id)
       .map(community => ({
         ...community,
         tags: Array.isArray(community.tags) ? community.tags : []
-      }))
-    : [];
+      }));
+  }, [communities]);
 
-  // Mobile Web3 community data with defensive checks
-  const communityData = communityList.map(community => ({
-    id: community.id || `community-${Math.random()}`,
-    name: community.displayName || community.name || 'Unnamed Community',
-    avatar: community.avatar || '🏛️',
-    memberCount: typeof community.memberCount === 'number' ? community.memberCount : 0,
-    isActive: joinedCommunities.includes(community.id),
-    userRole: 'member' as const,
-    tokenBalance: Math.floor(Math.random() * 100),
-    governanceNotifications: Math.floor(Math.random() * 5),
-    stakingRewards: Math.floor(Math.random() * 20)
-  })).filter(community => community.id); // Filter out any communities without valid IDs
+
 
   // Mobile and desktop now use the same Layout component for consistency
 
@@ -658,7 +660,12 @@ const CommunitiesPage: React.FC = () => {
   }
 
   return (
-    <ErrorBoundary>
+    <ErrorBoundary 
+      fallback={<div className="flex items-center justify-center min-h-screen"><div className="text-center p-8 bg-white dark:bg-gray-800 rounded-lg shadow-lg"><h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Something went wrong</h2><p className="text-gray-600 dark:text-gray-400 mb-4">Please refresh the page to try again</p><button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Refresh Page</button></div></div>}
+      onError={(error, errorInfo) => {
+        console.error('Error boundary caught:', error, errorInfo);
+      }}
+    >
       <VisualPolishIntegration>
         <Layout title="Communities - LinkDAO" fullWidth={true}>
           <Head>
@@ -721,6 +728,7 @@ const CommunitiesPage: React.FC = () => {
                       <button
                         key={community.id}
                         onClick={() => handleCommunitySelect(community)}
+                        aria-label={`View ${community.displayName || community.name} community`}
                         className="w-full flex items-center space-x-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                       >
                         <CommunityAvatar
@@ -791,6 +799,7 @@ const CommunitiesPage: React.FC = () => {
                           ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
                           : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
                           }`}
+                        aria-label={`Sort by ${tab}`}
                       >
                         {tab === 'hot' && <Flame className="w-3.5 h-3.5" />}
                         {tab === 'new' && <Clock className="w-3.5 h-3.5" />}
@@ -803,6 +812,7 @@ const CommunitiesPage: React.FC = () => {
                   <select
                     value={timeFilter}
                     onChange={(e) => setTimeFilter(e.target.value as any)}
+                    aria-label="Select time filter for top posts"
                     className={`text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 dark:text-white ${sortBy !== 'top' ? 'hidden' : ''
                       }`}
                   >
@@ -891,7 +901,7 @@ const CommunitiesPage: React.FC = () => {
                       handleCreatePost}
                   actionLabel={error ? 'Try Again' :
                     joinedCommunities.length === 0 ? 'Explore Communities' :
-                      undefined}
+                      'Create Post'}
                   activeFilters={activeQuickFilters}
                 />
               )}
@@ -947,19 +957,25 @@ const CommunitiesPage: React.FC = () => {
                     >
                       <div
                         onMouseEnter={(e) => {
-                          if (hoverTimeout) clearTimeout(hoverTimeout);
+                          if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
                           const timeout = setTimeout(() => {
-                            setHoveredPost(post);
-                            setHoverPosition({ x: e.clientX, y: e.clientY });
+                            // Look up current post data to avoid stale closure
+                            const currentPost = posts.find(p => p.id === postId);
+                            if (currentPost) {
+                              setHoveredPost(currentPost);
+                              setHoverPosition({ x: e.clientX, y: e.clientY });
+                            }
                           }, 500);
-                          setHoverTimeout(timeout);
+                          hoverTimeoutRef.current = timeout;
                         }}
                         onMouseLeave={() => {
-                          if (hoverTimeout) clearTimeout(hoverTimeout);
+                          if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
                           setHoveredPost(null);
                         }}
                         onMouseMove={(e) => {
-                          if (hoveredPost?.id === postId) {
+                          // Look up current post data to avoid stale closure
+                          const currentPost = posts.find(p => p.id === postId);
+                          if (currentPost) {
                             setHoverPosition({ x: e.clientX, y: e.clientY });
                           }
                         }}
@@ -981,11 +997,11 @@ const CommunitiesPage: React.FC = () => {
                           onVote={(postId, voteType, stakeAmount) => handleVote(postId, voteType === 'upvote' ? 'up' : 'down', stakeAmount ? parseInt(stakeAmount) : 1)}
                           onReaction={async (postId, reactionType, amount) => {
                             // Handle reaction logic here
-                            console.log('Reaction:', postId, reactionType, amount);
+                            // Reaction
                           }}
                           onTip={async (postId, amount, token) => {
                             // Handle tip logic here
-                            console.log('Tip:', postId, amount, token);
+                            // Tip
                           }}
                         />
                       </div>
@@ -1081,6 +1097,7 @@ const CommunitiesPage: React.FC = () => {
             onClose={handleCloseCreateCommunityModal}
             onSubmit={handleCreateCommunity}
             isLoading={isCreatingCommunity}
+            error={createCommunityError}
           />
 
           {/* Floating Action Button - Desktop and Mobile */}

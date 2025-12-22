@@ -4,7 +4,7 @@ import { earningActivityService } from './earningActivityService';
 import { reputationService } from './reputationService';
 
 export interface PostCreatedEvent {
-  postId: number;
+  postId: string;
   authorId: string;
   title?: string;
   contentCid: string;
@@ -15,7 +15,7 @@ export interface PostCreatedEvent {
 export interface CommentCreatedEvent {
   commentId: number;
   authorId: string;
-  postId: number;
+  postId: string;
   contentCid: string;
   isPremiumUser?: boolean;
 }

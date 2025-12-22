@@ -24,7 +24,7 @@ export class TipService {
    * Record a new tip in the database
    */
   async recordTip(
-    postId: number,
+    postId: string,
     fromUserId: string,
     toUserId: string,
     amount: string,
@@ -53,7 +53,7 @@ export class TipService {
   /**
    * Get tips for a specific post
    */
-  async getTipsForPost(postId: number) {
+  async getTipsForPost(postId: string) {
     try {
       return await db.select().from(schema.tips).where(eq(schema.tips.postId, postId));
     } catch (error) {

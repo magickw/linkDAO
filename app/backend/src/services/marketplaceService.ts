@@ -960,7 +960,7 @@ export class BlockchainMarketplaceService {
   }
 
   async getDisputeById(id: string): Promise<MarketplaceDispute | null> {
-    const dbDispute = await databaseService.getDisputeById(parseInt(id));
+    const dbDispute = await databaseService.getDisputeById(id);
     if (!dbDispute) return null;
 
     // Get reporter address

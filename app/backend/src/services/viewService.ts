@@ -12,7 +12,7 @@ import { views, posts } from '../db/schema';
 import { eq, and, sql, gt } from 'drizzle-orm';
 
 interface ViewTrackingData {
-  postId: number;
+  postId: string;
   userId?: string;
   ipAddress?: string;
   userAgent?: string;
@@ -93,7 +93,7 @@ class ViewService {
   /**
    * Get view count for a post
    */
-  async getViewCount(postId: number): Promise<number> {
+  async getViewCount(postId: string): Promise<number> {
     try {
       const result = await db
         .select({ count: sql<number>`COUNT(*)` })
@@ -110,7 +110,7 @@ class ViewService {
   /**
    * Get view counts for multiple posts
    */
-  async getViewCounts(postIds: number[]): Promise<Map<number, number>> {
+  async getViewCounts(postIds: string[]): Promise<Map<string, number>> {
     try {
       const results = await db
         .select({
@@ -121,7 +121,7 @@ class ViewService {
         .where(sql`${views.postId} = ANY(${postIds})`)
         .groupBy(views.postId);
 
-      const countsMap = new Map<number, number>();
+      const countsMap = new Map<string, number>();
       results.forEach(row => {
         countsMap.set(row.postId, row.count);
       });
@@ -136,7 +136,7 @@ class ViewService {
   /**
    * Get unique viewer count for a post (distinct users + IPs)
    */
-  async getUniqueViewerCount(postId: number): Promise<number> {
+  async getUniqueViewerCount(postId: string): Promise<number> {
     try {
       const result = await db
         .select({
@@ -155,7 +155,7 @@ class ViewService {
   /**
    * Get view analytics for a post
    */
-  async getViewAnalytics(postId: number) {
+  async getViewAnalytics(postId: string) {
     try {
       const [totalViews, uniqueViewers, loggedInViews, anonymousViews] = await Promise.all([
         this.getViewCount(postId),

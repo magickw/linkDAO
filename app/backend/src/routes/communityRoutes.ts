@@ -526,7 +526,7 @@ router.post('/:communityId/token-gated-content', csrfProtection,
       communityId: { type: 'string', required: true }
     },
     body: {
-      postId: { type: 'number', optional: true },
+      postId: { type: 'string', optional: true },
       gatingType: { type: 'string', required: true, enum: ['token_balance', 'nft_ownership', 'subscription'] },
       tokenAddress: { type: 'string', optional: true },
       tokenId: { type: 'string', optional: true },
@@ -543,7 +543,7 @@ router.post('/:communityId/token-gated-content', csrfProtection,
 router.get('/posts/:postId/token-gated-content',
   validateRequest({
     params: {
-      postId: { type: 'number', required: true }
+      postId: { type: 'string', required: true }
     }
   }),
   communityController.getTokenGatedContentByPost

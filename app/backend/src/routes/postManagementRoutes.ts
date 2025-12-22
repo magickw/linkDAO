@@ -99,7 +99,7 @@ router.get('/communities/:id/pinned-posts', async (req, res) => {
 
         const pinnedPosts = await postManagementService.getPinnedPosts(
             communityId,
-            limit ? parseInt(limit as string) : 5
+            limit ? String(limit) : '5'
         );
 
         return res.status(200).json({

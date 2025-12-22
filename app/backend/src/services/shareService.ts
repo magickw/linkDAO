@@ -10,7 +10,7 @@ import { shares, posts } from '../db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 
 interface ShareData {
-  postId: number;
+  postId: string;
   userId: string;
   targetType: 'community' | 'dm' | 'external';
   targetId?: string;
@@ -55,7 +55,7 @@ class ShareService {
   /**
    * Get share count for a post
    */
-  async getShareCount(postId: number): Promise<number> {
+  async getShareCount(postId: string): Promise<number> {
     try {
       const result = await db
         .select({ count: sql<number>`COUNT(*)` })
@@ -72,7 +72,7 @@ class ShareService {
   /**
    * Get share breakdown by type for a post
    */
-  async getShareBreakdown(postId: number) {
+  async getShareBreakdown(postId: string) {
     try {
       const breakdown = await db
         .select({
@@ -98,7 +98,7 @@ class ShareService {
   /**
    * Get recent shares for a post
    */
-  async getRecentShares(postId: number, limit: number = 10) {
+  async getRecentShares(postId: string, limit: number = 10) {
     try {
       const recentShares = await db
         .select()

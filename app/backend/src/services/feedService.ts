@@ -405,7 +405,7 @@ export class FeedService {
       // Instead of 5 queries per post, we do 10 total queries (5 for regular, 5 for quick posts)
 
       // 1. Separate posts by type
-      const regularPostIds = paginatedPosts.filter(p => typeof p.id === 'number').map(p => p.id as number);
+      const regularPostIds = paginatedPosts.filter(p => typeof p.id === 'string').map(p => p.id);
       const quickPostIds = paginatedPosts.filter(p => typeof p.id === 'string').map(p => p.id as string);
 
       console.log('🔍 [BACKEND FEED] Batching engagement queries for:', {
@@ -885,8 +885,8 @@ export class FeedService {
       // Insert tags into post_tags table for efficient querying
       if (tags && tags.length > 0) {
         const tagInserts = tags.map(tag => ({
-          postId: newPost[0].id,
           tag: tag.toLowerCase(),
+          postId: newPost[0].id,
           createdAt: new Date()
         }));
 
@@ -926,8 +926,6 @@ export class FeedService {
     const { postId, userAddress, content, tags } = data;
 
     try {
-      const postIdInt = parseInt(postId);
-
       // Get user ID - use case-insensitive matching
       const normalizedAddress = userAddress.toLowerCase();
       const user = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
@@ -940,7 +938,7 @@ export class FeedService {
         .select()
         .from(posts)
         .where(and(
-          eq(posts.id, postIdInt),
+          eq(posts.id, postId),
           eq(posts.authorId, user[0].id)
         ))
         .limit(1);
@@ -979,7 +977,7 @@ export class FeedService {
         .update(posts)
         .set(updateData)
         .where(and(
-          eq(posts.id, postIdInt),
+          eq(posts.id, postId),
           eq(posts.authorId, user[0].id)
         ))
         .returning();
@@ -987,13 +985,13 @@ export class FeedService {
       // Update tags if provided
       if (tags !== undefined) {
         // Delete existing tags
-        await db.delete(postTags).where(eq(postTags.postId, postIdInt));
+        await db.delete(postTags).where(eq(postTags.postId, postId));
 
         // Insert new tags
         if (tags && tags.length > 0) {
           const tagInserts = tags.map(tag => ({
-            postId: postIdInt,
             tag: tag.toLowerCase(),
+            postId: postId,
             createdAt: new Date()
           }));
           await db.insert(postTags).values(tagInserts);
@@ -1012,7 +1010,7 @@ export class FeedService {
     const { postId, userAddress } = data;
 
     try {
-      const postIdInt = parseInt(postId);
+      
 
       // Get user ID - use case-insensitive matching
       const normalizedAddress = userAddress.toLowerCase();
@@ -1026,7 +1024,7 @@ export class FeedService {
         .select()
         .from(posts)
         .where(and(
-          eq(posts.id, postIdInt),
+          eq(posts.id, postId),
           eq(posts.authorId, user[0].id)
         ))
         .limit(1);
@@ -1036,7 +1034,7 @@ export class FeedService {
       }
 
       // Delete the post
-      await db.delete(posts).where(eq(posts.id, postIdInt));
+      await db.delete(posts).where(eq(posts.id, postId));
 
       return true;
     } catch (error) {
@@ -1105,7 +1103,7 @@ export class FeedService {
           .select()
           .from(reactions)
           .where(and(
-            eq(reactions.postId, parseInt(postId)),
+            eq(reactions.postId, postId),
             eq(reactions.userId, user[0].id)
           ))
           .limit(1);
@@ -1119,7 +1117,7 @@ export class FeedService {
               amount: tokenAmount.toString()
             })
             .where(and(
-              eq(reactions.postId, parseInt(postId)),
+              eq(reactions.postId, postId),
               eq(reactions.userId, user[0].id)
             ))
             .returning();
@@ -1128,7 +1126,7 @@ export class FeedService {
           reaction = await db
             .insert(reactions)
             .values({
-              postId: parseInt(postId),
+              postId: postId,
               userId: user[0].id,
               type,
               amount: tokenAmount.toString(),
@@ -1162,7 +1160,7 @@ export class FeedService {
           throw new Error('From user not found');
         }
 
-        const postResult = await tx.select().from(posts).where(eq(posts.id, parseInt(postId))).limit(1);
+        const postResult = await tx.select().from(posts).where(eq(posts.id, postId)).limit(1);
         if (postResult.length === 0) {
           throw new Error('Post not found');
         }
@@ -1173,7 +1171,7 @@ export class FeedService {
       const tip = await db
         .insert(tips)
         .values({
-          postId: parseInt(postId),
+          postId: postId,
           fromUserId: fromUser[0].id,
           toUserId: post[0].authorId,
           token: tokenType,
@@ -1201,7 +1199,7 @@ export class FeedService {
       
       if (isIntegerId) {
         // Regular post
-        const postIdInt = parseInt(postId);
+        
         const post = await db
           .select({
             id: posts.id,
@@ -1215,7 +1213,7 @@ export class FeedService {
             stakedValue: posts.stakedValue
           })
           .from(posts)
-          .where(eq(posts.id, postIdInt))
+          .where(eq(posts.id, postId))
           .limit(1);
           
         if (post.length === 0) {
@@ -1286,7 +1284,7 @@ export class FeedService {
   // Get engagement data for post
   async getEngagementData(postId: string) {
     try {
-      const postIdInt = parseInt(postId);
+      
 
       // Get post basic info
       const post = await db
@@ -1296,7 +1294,7 @@ export class FeedService {
           createdAt: posts.createdAt
         })
         .from(posts)
-        .where(eq(posts.id, postIdInt))
+        .where(eq(posts.id, postId))
         .limit(1);
 
       if (post.length === 0) {
@@ -1310,21 +1308,21 @@ export class FeedService {
           totalAmount: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL)), 0)`
         })
           .from(reactions)
-          .where(eq(reactions.postId, postIdInt)),
+          .where(eq(reactions.postId, postId)),
 
         db.select({
           count: sql<number>`COUNT(*)`,
           totalAmount: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL)), 0)`
         })
           .from(tips)
-          .where(eq(tips.postId, postIdInt)),
+          .where(eq(tips.postId, postId)),
 
         db.select({
           count: sql<number>`COUNT(*)`
         })
           .from(comments)
           .where(and(
-            eq(comments.postId, postIdInt),
+            eq(comments.postId, postId),
             sql`${comments.moderationStatus} IS NULL OR ${comments.moderationStatus} != 'blocked'`
           )),
 
@@ -1332,19 +1330,19 @@ export class FeedService {
           count: sql<number>`COUNT(*)`
         })
           .from(views)
-          .where(eq(views.postId, postIdInt)),
+          .where(eq(views.postId, postId)),
 
         db.select({
           count: sql<number>`COUNT(*)`
         })
           .from(bookmarks)
-          .where(eq(bookmarks.postId, postIdInt)),
+          .where(eq(bookmarks.postId, postId)),
 
         db.select({
           count: sql<number>`COUNT(*)`
         })
           .from(shares)
-          .where(eq(shares.postId, postIdInt))
+          .where(eq(shares.postId, postId))
       ]);
 
       return {
@@ -1375,10 +1373,10 @@ export class FeedService {
     const { postId, userAddress, targetType, targetId, message } = data;
 
     try {
-      const postIdInt = parseInt(postId);
+      
 
       // Verify post exists
-      const post = await db.select().from(posts).where(eq(posts.id, postIdInt)).limit(1);
+      const post = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
       if (post.length === 0) {
         throw new Error('Post not found');
       }
@@ -1396,7 +1394,7 @@ export class FeedService {
       // Return share data (in production, this might create a share record)
       return {
         id: `share_${Date.now()}`,
-        postId: postIdInt,
+        postId: postId,
         userId: user[0].id,
         targetType,
         targetId,
@@ -1424,7 +1422,7 @@ export class FeedService {
       ];
 
       if (isIntegerId) {
-        conditions.push(eq(comments.postId, parseInt(postId)));
+        conditions.push(eq(comments.postId, postId));
       } else {
         conditions.push(eq(comments.quickPostId, postId));
       }
@@ -1524,12 +1522,12 @@ export class FeedService {
 
       if (isIntegerId) {
         // Verify post exists
-        const post = await db.select().from(posts).where(eq(posts.id, parseInt(postId))).limit(1);
+        const post = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
         if (post.length === 0) {
           safeLogger.error('Post not found for ID:', postId);
           throw new Error('Post not found');
         }
-        commentValues.postId = parseInt(postId);
+        commentValues.postId = postId;
         commentValues.quickPostId = null;
       } else {
         // Verify quick post exists
@@ -1759,7 +1757,7 @@ export class FeedService {
   // Get liked by data for post
   async getLikedByData(postId: string) {
     try {
-      const postIdInt = parseInt(postId);
+      
 
       // Get reactions for the post
       const reactionsData = await db
@@ -1773,7 +1771,7 @@ export class FeedService {
         })
         .from(reactions)
         .leftJoin(users, eq(reactions.userId, users.id))
-        .where(eq(reactions.postId, postIdInt))
+        .where(eq(reactions.postId, postId))
         .orderBy(desc(reactions.createdAt));
 
       // Get tips for the post
@@ -1790,11 +1788,11 @@ export class FeedService {
         })
         .from(tips)
         .leftJoin(users, eq(tips.fromUserId, users.id))
-        .where(eq(tips.postId, postIdInt))
+        .where(eq(tips.postId, postId))
         .orderBy(desc(tips.createdAt));
 
       // Get users that follow the post author
-      const post = await db.select({ authorId: posts.authorId }).from(posts).where(eq(posts.id, postIdInt)).limit(1);
+      const post = await db.select({ authorId: posts.authorId }).from(posts).where(eq(posts.id, postId)).limit(1);
       if (post.length === 0) {
         return { reactions: [], tips: [], followedUsers: [], totalUsers: 0 };
       }
@@ -1871,7 +1869,7 @@ export class FeedService {
   // Get content popularity metrics
   async getContentPopularityMetrics(postId: string) {
     try {
-      const postIdInt = parseInt(postId);
+      
 
       // Get comprehensive engagement data
       const [postData, reactionData, tipData, shareData] = await Promise.all([
@@ -1882,7 +1880,7 @@ export class FeedService {
           tags: posts.tags
         })
           .from(posts)
-          .where(eq(posts.id, postIdInt))
+          .where(eq(posts.id, postId))
           .limit(1),
 
         db.select({
@@ -1891,7 +1889,7 @@ export class FeedService {
           totalAmount: sql<number>`SUM(CAST(amount AS DECIMAL))`
         })
           .from(reactions)
-          .where(eq(reactions.postId, postIdInt))
+          .where(eq(reactions.postId, postId))
           .groupBy(reactions.type),
 
         db.select({
@@ -1900,7 +1898,7 @@ export class FeedService {
           avgAmount: sql<number>`AVG(CAST(amount AS DECIMAL))`
         })
           .from(tips)
-          .where(eq(tips.postId, postIdInt)),
+          .where(eq(tips.postId, postId)),
 
         // Placeholder for shares - would need a shares table
         Promise.resolve([{ count: 0 }])
@@ -2017,7 +2015,7 @@ export class FeedService {
   // Get post reactions
   async getPostReactions(postId: string) {
     try {
-      const postIdInt = parseInt(postId);
+      
 
       // Get all reactions for the post
       const reactionsData = await db
@@ -2033,7 +2031,7 @@ export class FeedService {
         })
         .from(reactions)
         .leftJoin(users, eq(reactions.userId, users.id))
-        .where(eq(reactions.postId, postIdInt))
+        .where(eq(reactions.postId, postId))
         .orderBy(desc(reactions.createdAt));
 
       // Group reactions by type
@@ -2086,10 +2084,10 @@ export class FeedService {
     const { postId, userAddress, platform, message } = data;
 
     try {
-      const postIdInt = parseInt(postId);
+      
 
       // Verify post exists
-      const post = await db.select().from(posts).where(eq(posts.id, postIdInt)).limit(1);
+      const post = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
       if (post.length === 0) {
         throw new Error('Post not found');
       }
@@ -2109,7 +2107,7 @@ export class FeedService {
 
       return {
         id: `share_${Date.now()}`,
-        postId: postIdInt,
+        postId: postId,
         userId: user[0].id,
         platform,
         message,
@@ -2140,14 +2138,14 @@ export class FeedService {
 
       if (isIntegerId) {
         // Regular post bookmark logic
-        const postIdInt = parseInt(postId);
+        
 
         // Check if bookmark already exists
         const existingBookmark = await db
           .select()
           .from(bookmarks)
           .where(and(
-            eq(bookmarks.postId, postIdInt),
+            eq(bookmarks.postId, postId),
             eq(bookmarks.userId, user[0].id)
           ))
           .limit(1);
@@ -2155,14 +2153,14 @@ export class FeedService {
         if (existingBookmark.length > 0) {
           // Remove bookmark
           await db.delete(bookmarks).where(and(
-            eq(bookmarks.postId, postIdInt),
+            eq(bookmarks.postId, postId),
             eq(bookmarks.userId, user[0].id)
           ));
           result = { bookmarked: false };
         } else {
           // Add bookmark
           await db.insert(bookmarks).values({
-            postId: postIdInt,
+            postId: postId,
             userId: user[0].id,
             createdAt: new Date()
           });
@@ -2299,7 +2297,7 @@ export class FeedService {
 
       if (isIntegerId) {
         // It's a regular post
-        const post = await db.select().from(posts).where(eq(posts.id, parseInt(postId))).limit(1);
+        const post = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
 
         if (post.length === 0) {
           throw new Error('Post not found');
@@ -2308,7 +2306,7 @@ export class FeedService {
         // Increment upvotes
         await db.update(posts)
           .set({ upvotes: sql`${posts.upvotes} + 1` })
-          .where(eq(posts.id, parseInt(postId)));
+          .where(eq(posts.id, postId));
 
         return { success: true, message: 'Post upvoted successfully' };
       } else {
@@ -2342,7 +2340,7 @@ export class FeedService {
 
       if (isIntegerId) {
         // It's a regular post
-        const post = await db.select().from(posts).where(eq(posts.id, parseInt(postId))).limit(1);
+        const post = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
 
         if (post.length === 0) {
           throw new Error('Post not found');
@@ -2351,7 +2349,7 @@ export class FeedService {
         // Increment downvotes
         await db.update(posts)
           .set({ downvotes: sql`${posts.downvotes} + 1` })
-          .where(eq(posts.id, parseInt(postId)));
+          .where(eq(posts.id, postId));
 
         return { success: true, message: 'Post downvoted successfully' };
       } else {
@@ -2409,7 +2407,7 @@ export class FeedService {
           })
           .from(reactions)
           .leftJoin(users, eq(reactions.userId, users.id))
-          .where(eq(reactions.postId, parseInt(postId)))
+          .where(eq(reactions.postId, postId))
           .groupBy(reactions.type);
       }
 

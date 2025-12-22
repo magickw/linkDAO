@@ -1,4 +1,4 @@
-import { getWebSocketClient } from './webSocketClientService';
+import { webSocketManager } from './webSocketManager';
 
 interface SellerWebSocketConfig {
   walletAddress: string;
@@ -59,8 +59,11 @@ export class SellerWebSocketService {
   constructor(config: SellerWebSocketConfig) {
     this.config = config;
     
+    // Get WebSocket client from manager
+    this.webSocketClient = webSocketManager.getPrimaryConnection();
+    
     if (!this.webSocketClient) {
-      throw new Error('WebSocket client not initialized. Initialize WebSocket client first.');
+      console.warn('WebSocket client not available. Some features may not work.');
     }
 
     this.setupEventHandlers();

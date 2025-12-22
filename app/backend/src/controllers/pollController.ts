@@ -7,7 +7,7 @@ import { z } from 'zod';
 
 // Validation schemas
 const createPollSchema = z.object({
-  postId: z.number().int().positive(),
+  postId: z.string().uuid(),
   question: z.string().min(1).max(500),
   options: z.array(z.string().min(1).max(200)).min(2).max(10),
   allowMultiple: z.boolean().optional(),
@@ -109,15 +109,14 @@ export class PollController {
   async getPollByPost(req: Request, res: Response): Promise<void> {
     try {
       const { postId } = req.params;
-      const postIdNum = parseInt(postId);
       
-      if (!postId || isNaN(postIdNum)) {
+      if (!postId) {
         res.status(400).json({ error: 'Valid post ID is required' });
         return;
       }
 
       const userId = req.user?.walletAddress;
-      const poll = await pollService.getPollByPostId(postIdNum, userId);
+      const poll = await pollService.getPollByPostId(postId, userId);
 
       if (!poll) {
         res.status(404).json({ error: 'Poll not found for this post' });

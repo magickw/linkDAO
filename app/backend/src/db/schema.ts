@@ -316,7 +316,7 @@ export const quickPostShares = pgTable("quick_post_shares", {
 // Post Tags - for efficient querying of posts by tags
 export const postTags = pgTable("post_tags", {
   id: serial("id").primaryKey(),
-  postId: integer("post_id").references(() => posts.id),
+  postId: uuid("post_id").references(() => posts.id),
   tag: varchar("tag", { length: 64 }).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
@@ -1502,7 +1502,7 @@ export const communityAutomatedExecutions = pgTable("community_automated_executi
 export const communityTokenGatedContent = pgTable("community_token_gated_content", {
   id: uuid("id").defaultRandom().primaryKey(),
   communityId: uuid("community_id").references(() => communities.id, { onDelete: 'cascade' }).notNull(),
-  postId: integer("post_id").references(() => posts.id, { onDelete: 'cascade' }),
+  postId: uuid("post_id").references(() => posts.id, { onDelete: 'cascade' }),
   gatingType: varchar("gating_type", { length: 50 }).notNull(), // 'token_balance', 'nft_ownership', 'subscription'
   tokenAddress: varchar("token_address", { length: 66 }),
   tokenId: varchar("token_id", { length: 128 }),
@@ -1706,7 +1706,7 @@ export const communityTreasuryPools = pgTable("community_treasury_pools", {
 export const communityCreatorRewards = pgTable("community_creator_rewards", {
   id: uuid("id").defaultRandom().primaryKey(),
   communityId: uuid("community_id").references(() => communities.id, { onDelete: 'cascade' }).notNull(),
-  postId: integer("post_id").references(() => posts.id, { onDelete: 'cascade' }),
+  postId: uuid("post_id").references(() => posts.id, { onDelete: 'cascade' }),
   creatorAddress: varchar("creator_address", { length: 66 }).notNull(),
   rewardAmount: numeric("reward_amount", { precision: 20, scale: 8 }).notNull(),
   tokenAddress: varchar("token_address", { length: 66 }).notNull(),
@@ -3385,7 +3385,7 @@ export const orderPaymentEvents = pgTable("order_payment_events", {
 // Quick Polling System Tables
 export const polls = pgTable("polls", {
   id: uuid("id").defaultRandom().primaryKey(),
-  postId: integer("post_id").references(() => posts.id, { onDelete: "cascade" }).notNull(),
+  postId: uuid("post_id").references(() => posts.id, { onDelete: "cascade" }).notNull(),
   question: text("question").notNull(),
   allowMultiple: boolean("allow_multiple").default(false),
   tokenWeighted: boolean("token_weighted").default(false),

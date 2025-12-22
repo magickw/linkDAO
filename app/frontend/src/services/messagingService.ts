@@ -7,7 +7,7 @@ import { ethers } from 'ethers';
 import { OfflineMessageQueueService } from './offlineMessageQueueService';
 import { io, Socket } from 'socket.io-client';
 import { v4 as uuidv4 } from 'uuid';
-import { WebSocketService, webSocketService } from './webSocketService';
+import { webSocketService } from './webSocketService';
 import {
   Message,
   Conversation,
@@ -16,8 +16,8 @@ import {
   MessagePriority
 } from '../types/messaging';
 
-// Create an instance of the WebSocket service
-const webSocketServiceInstance = new WebSocketService();
+// Use the singleton instance of the WebSocket service
+const webSocketServiceInstance = webSocketService;
 
 export interface ChatMessage {
   id: string;

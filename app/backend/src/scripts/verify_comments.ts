@@ -10,7 +10,7 @@ async function verifyComments() {
 
     const testWallet = `0x${uuidv4().replace(/-/g, '').substring(0, 40)}`;
     let userId: string;
-    let regularPostId: number;
+    let regularPostId: string;
     let quickPostId: string;
 
     try {

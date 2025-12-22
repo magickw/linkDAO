@@ -2008,7 +2008,7 @@ export class CommunityService {
           status: 'approved',
           updatedAt: new Date()
         })
-        .where(eq(posts.id, parseInt(postId)));
+        .where(eq(posts.id, postId));
 
       // Record moderation action only if table exists
       if (communityModerationActions) {
@@ -2042,7 +2042,7 @@ export class CommunityService {
           status: 'rejected',
           updatedAt: new Date()
         })
-        .where(eq(posts.id, parseInt(postId)));
+        .where(eq(posts.id, postId));
 
       // Record moderation action
       await db
@@ -3759,7 +3759,7 @@ export class CommunityService {
   // Create token-gated content
   async createTokenGatedContent(data: {
     communityId: string;
-    postId?: number;
+    postId?: string;
     gatingType: 'token_balance' | 'nft_ownership' | 'subscription';
     tokenAddress?: string;
     tokenId?: string;
@@ -3808,7 +3808,7 @@ export class CommunityService {
   }
 
   // Get token-gated content by post ID
-  async getTokenGatedContentByPost(postId: number): Promise<any> {
+  async getTokenGatedContentByPost(postId: string): Promise<any> {
     try {
       const content = await db
         .select()
@@ -4137,7 +4137,7 @@ export class CommunityService {
   // Distribute creator rewards from community fees
   async distributeCreatorRewards(data: {
     communityId: string;
-    postId?: number;
+    postId?: string;
     creatorAddress: string;
     rewardAmount: string;
     tokenAddress: string;

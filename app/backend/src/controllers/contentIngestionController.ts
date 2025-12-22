@@ -55,8 +55,8 @@ export class ContentIngestionController {
         contentType: validatedContent.contentType,
         userId: userId,
         status: 'pending',
-        riskScore: 0,
-        confidence: 0,
+        riskScore: '0',
+        confidence: '0',
         vendorScores: {},
         evidenceCid: null
       });
@@ -305,12 +305,12 @@ export class ContentIngestionController {
       const limitNum = Math.min(parseInt(limit as string), 100); // Max 100 items per page
 
       // Get user's moderation cases
-      const userId3 = user.userId || (user as any).id;
+      const userId3 = String(user.userId || (user as any).id);
       const cases = await databaseService.getUserModerationCases(
         userId3,
         {
-          page: pageNum,
-          limit: limitNum,
+          page: String(pageNum),
+          limit: String(limitNum),
           status: status as string
         }
       );

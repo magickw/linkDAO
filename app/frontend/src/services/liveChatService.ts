@@ -1,4 +1,5 @@
 import { io, Socket } from 'socket.io-client';
+import { webSocketManager } from './webSocketManager';
 
 export interface ChatMessage {
   id: string;
@@ -22,6 +23,17 @@ class LiveChatService {
 
   connect(token: string): Promise<string> {
     return new Promise((resolve, reject) => {
+      // Try to use the WebSocketManager's live chat connection first
+      const managedSocket = webSocketManager.getLiveChatConnection();
+      
+      if (managedSocket && managedSocket.connected) {
+        this.socket = managedSocket;
+        this.sessionId = `managed-${Date.now()}`;
+        resolve(this.sessionId);
+        return;
+      }
+      
+      // Fallback to creating a new connection
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
       
       this.socket = io(`${baseUrl}/chat/user`, {

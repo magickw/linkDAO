@@ -368,7 +368,7 @@ export class BlockchainEventService {
       }
 
       // Update last synced block
-      await databaseService.updateLastSyncedBlock(currentBlock);
+      await databaseService.updateLastSyncedBlock(String(currentBlock));
 
       safeLogger.info(`Synced ${events.length} events up to block ${currentBlock}`);
     } catch (error) {

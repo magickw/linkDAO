@@ -6,11 +6,11 @@
  */
 
 import { EventEmitter } from 'events';
-import { WebSocketService, webSocketService } from './webSocketService';
+import { webSocketService } from './webSocketService';
 import { requestManager } from './requestManager';
 
-// Create an instance of the WebSocket service
-const webSocketServiceInstance = new WebSocketService();
+// Use the singleton instance of the WebSocket service
+const webSocketServiceInstance = webSocketService;
 
 // Fallback configuration
 interface FallbackConfig {

@@ -4,7 +4,7 @@ import { eq, and, desc, asc, isNull, sql } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 
 interface CreateCommentInput {
-  postId?: number;
+  postId?: string;
   quickPostId?: string;
   authorAddress: string;
   content: string;
@@ -115,7 +115,7 @@ export class CommentService {
   /**
    * Get all comments for a post (regular or quick post)
    */
-  async getCommentsByPost(postId?: number, quickPostId?: string, sortBy: 'best' | 'new' | 'top' | 'controversial' = 'best', limit: number = 100) {
+  async getCommentsByPost(postId?: string, quickPostId?: string, sortBy: 'best' | 'new' | 'top' | 'controversial' = 'best', limit: number = 100) {
     try {
       safeLogger.info(`[CommentService] getCommentsByPost called with postId=${postId}, quickPostId=${quickPostId}, sortBy=${sortBy}, limit=${limit}`);
 

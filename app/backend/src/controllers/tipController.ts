@@ -67,7 +67,7 @@ export class TipController {
 
       // Save to database
       // const tip = await tipService.recordTip(
-      //   parseInt(postId),
+      //   postId,
       //   fromAddress,
       //   creatorAddress,
       //   amount,
