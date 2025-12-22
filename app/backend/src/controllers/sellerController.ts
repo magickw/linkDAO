@@ -832,6 +832,16 @@ export class SellerController {
       const db = databaseService.getDatabase();
       const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
 
+      // Get the user's ID from wallet address
+      const userRecord = await db.select({ id: users.id })
+        .from(users)
+        .where(eq(users.walletAddress, user.walletAddress))
+        .limit(1);
+      
+      if (!userRecord.length) {
+        return res.status(404).json({ success: false, error: "User not found" });
+      }
+
       let query = db.select({
         id: marketplaceProducts.id,
         title: marketplaceProducts.title,
@@ -845,8 +855,7 @@ export class SellerController {
         mainCategory: marketplaceProducts.mainCategory
       })
         .from(marketplaceProducts)
-        .leftJoin(users, eq(marketplaceProducts.sellerId, users.id))
-        .where(eq(users.walletAddress, user.walletAddress));
+        .where(eq(marketplaceProducts.sellerId, userRecord[0].id));
 
       // Apply filters
       if (status) {
@@ -869,8 +878,7 @@ export class SellerController {
       // Get total count
       const totalResult = await db.select({ count: sql<number>`count(*)` })
         .from(marketplaceProducts)
-        .leftJoin(users, eq(marketplaceProducts.sellerId, users.id))
-        .where(eq(users.walletAddress, user.walletAddress));
+        .where(eq(marketplaceProducts.sellerId, userRecord[0].id));
 
       const total = totalResult[0]?.count || 0;
 

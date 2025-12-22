@@ -304,107 +304,56 @@ const CommunitiesPage: React.FC = () => {
   }, [address, isConnected, isAuthenticated]);
 
   // Load posts from backend API with pagination
-  // This fetches posts ONLY from communities the user has joined/created
   const fetchPosts = useCallback(async (pageNum: number = 1, append: boolean = false) => {
-    // Check if we're currently navigating away to prevent blocking
-    if (typeof window !== 'undefined' && window.location.pathname !== '/communities') {
-      console.log('[CommunitiesPage] Not on communities page anymore, skipping fetch');
-      return;
-    }
+    // Early return if not mounted
+    if (!isMounted.current) return;
     
     try {
-      if (!isMounted.current) return;
       if (pageNum === 1) setLoading(true);
       else setLoadingMore(true);
 
-      // Import CommunityPostService for fetching community-specific posts
-      const { CommunityPostService } = await import('../services/communityPostService');
+      // Use the enhanced feed service to show community posts
+      const { FeedService } = await import('../services/feedService');
+      
+      const filter = {
+        feedSource: 'all',
+        sortBy: sortBy as any,
+        timeRange: timeFilter,
+        userAddress: address || undefined,
+        postTypes: ['posts'],
+        communities: joinedCommunities.length > 0 ? joinedCommunities : undefined
+      };
+      
+      const result = await FeedService.getEnhancedFeed(filter, pageNum, DEFAULT_FEED_PAGE_SIZE);
 
-      // Debug logging - removed for production
-      // For all users (authenticated or not), fetch the general feed which includes public community posts
-      // This ensures everyone can see community activity
-        // Map frontend sort values to backend expected values
-        const sortMapping: Record<string, string> = {
-          'hot': 'hot',
-          'new': 'new',
-          'top': 'top',
-          'rising': 'rising'
-        };
-        const backendSort = sortMapping[sortBy] || 'new';
+      // Check if component is still mounted
+      if (!isMounted.current) return;
 
-        // Use the enhanced feed service to show community posts
-        const { FeedService } = await import('../services/feedService');
-        
-        console.log('[CommunitiesPage] Fetching posts with:', {
-          joinedCommunities,
-          joinedCommunitiesCount: joinedCommunities.length,
-          address,
-          isAuthenticated,
-          sortBy,
-          timeFilter
-        });
-        
-        const filter = {
-          feedSource: 'all', // Get all posts including public community posts
-          sortBy: sortBy as any,
-          timeRange: timeFilter,
-          userAddress: address || undefined, // Include user address if authenticated
-          postTypes: ['posts'], // Only show community posts
-          communities: joinedCommunities.length > 0 ? joinedCommunities : undefined // Include joined communities
-        };
-        
-        console.log('[CommunitiesPage] Feed filter:', filter);
-        
-        // Add timeout to prevent blocking navigation
-        const result = await Promise.race([
-          FeedService.getEnhancedFeed(filter, pageNum, DEFAULT_FEED_PAGE_SIZE),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Feed request timeout')), 5000)
-          )
-        ]);
+      const newPosts = result?.posts || [];
 
-        // Debug logging - removed for production
-        // Check if component is still mounted before updating state
-        if (!isMounted.current) return;
+      if (append) {
+        setPosts(prev => [...prev, ...newPosts]);
+      } else {
+        setPosts(newPosts);
+      }
 
-        // Handle FeedService response format
-        const newPosts = result?.posts || [];
-
-        console.log('[CommunitiesPage] FeedService returned:', {
-          result,
-          postsCount: newPosts.length,
-          hasMore: result?.hasMore,
-          pageNum,
-          append
-        });
-
-        if (append) {
-          setPosts(prev => [...prev, ...newPosts]);
-        } else {
-          setPosts(newPosts);
-        }
-
-        const hasMorePosts = result?.hasMore || false;
-
-        setHasMore(hasMorePosts);
-        setPage(pageNum);
+      setHasMore(result?.hasMore || false);
+      setPage(pageNum);
     } catch (error) {
       console.error('Failed to fetch community posts:', error);
       if (!isMounted.current) return;
       
-      // If there's an error but we have posts, keep them
       if (!append && posts.length === 0) {
         setPosts([]);
       }
     } finally {
       if (!isMounted.current) return;
-      // Only set loading to false if this was the initial load
       if (pageNum === 1) {
         setLoading(false);
       }
       setLoadingMore(false);
     }
-  }, [isMounted, isAuthenticated, joinedCommunities, address, sortBy, timeFilter]);
+  }, [isMounted, joinedCommunities, address, sortBy, timeFilter, posts.length]);
 
   useEffect(() => {
     // Wait for auth loading to complete to avoid race conditions
@@ -413,7 +362,11 @@ const CommunitiesPage: React.FC = () => {
     // Always fetch posts, even if not authenticated
     // The feed service will handle authentication internally
     fetchPosts(1, false);
-  }, [sortBy, timeFilter, address, isAuthLoading, joinedCommunities.length, fetchPosts]);
+  }, [sortBy, timeFilter, address, isAuthLoading, joinedCommunities.length]);
+
+  // Store fetchPosts in a ref to avoid dependency issues
+  const fetchPostsRef = useRef(fetchPosts);
+  fetchPostsRef.current = fetchPosts;
 
   // Infinite scroll handler
   useEffect(() => {
@@ -421,12 +374,12 @@ const CommunitiesPage: React.FC = () => {
       if (window.innerHeight + document.documentElement.scrollTop !== document.documentElement.offsetHeight || loadingMore || !hasMore) {
         return;
       }
-      fetchPosts(page + 1, true);
+      fetchPostsRef.current(page + 1, true);
     };
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [page, loadingMore, hasMore, fetchPosts]);
+  }, [page, loadingMore, hasMore]);
 
   // Route change handlers to prevent blocking navigation
   useEffect(() => {
