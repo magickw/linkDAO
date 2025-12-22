@@ -51,9 +51,9 @@ export default function CommunityPostSharePage() {
                 setError(null);
                 console.log(`[CommunityPostSharePage] Fetching post for shareId: ${shareId}`);
 
-                // Fetch community post by share ID using the API endpoint
-                console.log(`[CommunityPostSharePage] Attempting to fetch: ${ENV_CONFIG.API_URL}/cp/${shareId}`);
-                const response = await fetch(`${ENV_CONFIG.API_URL}/cp/${shareId}`, {
+                // Fetch community post by share ID using the Next.js rewrite
+                console.log(`[CommunityPostSharePage] Attempting to fetch: /cp/${shareId}`);
+                const response = await fetch(`/cp/${shareId}`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',

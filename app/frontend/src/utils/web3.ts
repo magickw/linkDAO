@@ -145,8 +145,8 @@ export async function getSigner() {
             return signer;
           } catch (signerError) {
             console.error('Error getting signer from provider:', signerError);
-            // Return provider instead of failing completely
-            return provider.getSigner();
+            // Return null to avoid infinite recursion
+            return null;
           }
         } catch (e) {
           console.warn('Failed to create signer from wagmi client:', e);

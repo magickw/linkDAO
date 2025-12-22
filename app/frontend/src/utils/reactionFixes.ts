@@ -66,7 +66,7 @@ export const handleReactionWithAuth = async (
     });
     
     // Try the feed service endpoint first
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.linkdao.io'}/api/feed/${validPostId}/react`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/feed/${validPostId}/react`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -123,9 +123,9 @@ export const getReactionsWithFallback = async (postId: string) => {
   } catch (error) {
     console.warn('Failed to get reactions from token service, trying fallback:', error);
     
-    // Fallback to feed endpoint
+    // Fallback to reactions endpoint
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.linkdao.io'}/api/feed/${validPostId}/reactions`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/reactions/${validPostId}/summaries`, {
         headers: enhancedAuthService.getAuthHeaders()
       });
       

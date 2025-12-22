@@ -58,7 +58,7 @@ class WebSocketService {
       maxReconnectDelay: config.maxReconnectDelay || 30000,
       backoffFactor: config.backoffFactor || 2,
       heartbeatInterval: config.heartbeatInterval || 30000,
-      connectionTimeout: config.connectionTimeout || 20000,
+      connectionTimeout: config.connectionTimeout || 5000,
       resourceAware: config.resourceAware ?? true,
       enableFallback: config.enableFallback ?? true,
       ...config

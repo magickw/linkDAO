@@ -498,8 +498,13 @@ import enhancedCommunityReportingRoutes from './routes/enhancedCommunityReportin
 app.use('/api/community-reporting', enhancedCommunityReportingRoutes);
 
 // Register routes with enhanced error handling
+console.log('Registering /p routes');
 app.use('/p', postShareRoutes); // Short share URLs for timeline posts
+console.log('Registering /cp routes');
 app.use('/cp', communityPostShareRoutes); // Short share URLs for community posts
+console.log('Finished registering share routes');
+
+
 app.use('/api/posts', postRoutes);
 app.use('/api/quick-posts', quickPostRoutes);
 app.use('/api/feed', feedRoutes);
@@ -742,6 +747,11 @@ app.get('/', (req, res) => {
     environment: process.env.NODE_ENV || 'development',
     version: process.env.npm_package_version || '1.0.0'
   });
+});
+
+// Test route for debugging (moved to earlier position)
+app.get('/test-route', (req, res) => {
+  res.json({ success: true, message: 'Test route is working' });
 });
 
 // Proxy routes (should be after specific API routes)
@@ -1224,8 +1234,8 @@ app.get('/cart', (req, res) => {
 });
 
 // Use missing endpoints for better fallbacks (after all specific routes, before error handlers)
+// BUT: Only apply to API routes to avoid interfering with share URL routes
 app.use('/api', missingEndpoints);
-app.use('/', missingEndpoints);
 
 // Catch all API routes (should be just before error handlers)
 app.use('/api/*', (req, res) => {

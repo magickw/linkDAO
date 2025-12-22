@@ -122,34 +122,34 @@ const cacheUtils = {
 };
 
 export class FeedService {
-  // Helper method to clear invalid community from cache/storage
-  private static clearInvalidCommunityFromCache(invalidCommunityId: string): void {
-    try {
-      // Clear from localStorage if present
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && (key.includes('community') || key.includes('feed')) && 
-            localStorage.getItem(key)?.includes(invalidCommunityId)) {
-          keysToRemove.push(key);
-        }
-      }
-      keysToRemove.forEach(key => localStorage.removeItem(key));
+//   // Helper method to clear invalid community from cache/storage
+  // private static clearInvalidCommunityFromCache(invalidCommunityId: string): void {
+  //   try {
+  //     // Clear from localStorage if present
+  //     const keysToRemove: string[] = [];
+  //     for (let i = 0; i < localStorage.length; i++) {
+  //       const key = localStorage.key(i);
+  //       if (key && (key.includes('community') || key.includes('feed')) && 
+  //           localStorage.getItem(key)?.includes(invalidCommunityId)) {
+  //         keysToRemove.push(key);
+  //       }
+  //     }
+  //     keysToRemove.forEach(key => localStorage.removeItem(key));
       
-      // Clear from sessionStorage if present
-      for (let i = 0; i < sessionStorage.length; i++) {
-        const key = sessionStorage.key(i);
-        if (key && (key.includes('community') || key.includes('feed')) && 
-            sessionStorage.getItem(key)?.includes(invalidCommunityId)) {
-          sessionStorage.removeItem(key);
-        }
-      }
+  //     // Clear from sessionStorage if present
+  //     for (let i = 0; i < sessionStorage.length; i++) {
+  //       const key = sessionStorage.key(i);
+  //       if (key && (key.includes('community') || key.includes('feed')) && 
+  //           sessionStorage.getItem(key)?.includes(invalidCommunityId)) {
+  //         sessionStorage.removeItem(key);
+  //       }
+  //     }
       
-      console.log(`[FEED] Cleared invalid community ${invalidCommunityId} from storage`);
-    } catch (error) {
-      console.warn('[FEED] Failed to clear invalid community from storage:', error);
-    }
-  }
+  //     console.log(`[FEED] Cleared invalid community ${invalidCommunityId} from storage`);
+  //   } catch (error) {
+  //     console.warn('[FEED] Failed to clear invalid community from storage:', error);
+  //   }
+  // }
 
   static async getEnhancedFeed(
     filter: FeedFilter,
@@ -191,31 +191,11 @@ export class FeedService {
         params.append('userAddress', filter.userAddress);
       }
 
-      // Validate and filter community IDs before adding to params
+      // Add community IDs to params
       if (filter.communities && filter.communities.length > 0) {
-        // UUID regex pattern to validate community IDs
-        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-        const validCommunityIds = filter.communities.filter(communityId => {
-          const isValid = uuidPattern.test(communityId);
-          if (!isValid) {
-            console.warn(`[FEED] Invalid community ID filtered out: ${communityId}`);
-            // Clear invalid community from any stored state to prevent repeated errors
-            this.clearInvalidCommunityFromCache(communityId);
-          }
-          return isValid;
-        });
-
-        // Only add valid community IDs to params
-        validCommunityIds.forEach(communityId => {
+        filter.communities.forEach(communityId => {
           params.append('communities', communityId);
         });
-
-        // If all community IDs were invalid, log warning and continue without community filter
-        if (filter.communities.length > 0 && validCommunityIds.length === 0) {
-          console.warn('[FEED] All community IDs were invalid and filtered out, fetching general feed');
-          // Don't add any communities parameter to get general feed
-        }
       }
 
       if (filter.tags && filter.tags.length > 0) {

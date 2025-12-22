@@ -207,8 +207,9 @@ export class UnifiedShareResolver {
         return true;
       
       case 'community_post':
-        // TODO: Check community membership
-        return false;
+        // Community posts are public for now
+        // TODO: Add proper community membership checks
+        return true;
       
       case 'proposal':
         // TODO: Check DAO membership

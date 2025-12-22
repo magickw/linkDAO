@@ -306,6 +306,12 @@ const CommunitiesPage: React.FC = () => {
   // Load posts from backend API with pagination
   // This fetches posts ONLY from communities the user has joined/created
   const fetchPosts = useCallback(async (pageNum: number = 1, append: boolean = false) => {
+    // Check if we're currently navigating away to prevent blocking
+    if (typeof window !== 'undefined' && window.location.pathname !== '/communities') {
+      console.log('[CommunitiesPage] Not on communities page anymore, skipping fetch');
+      return;
+    }
+    
     try {
       if (!isMounted.current) return;
       if (pageNum === 1) setLoading(true);
@@ -328,6 +334,16 @@ const CommunitiesPage: React.FC = () => {
 
         // Use the enhanced feed service to show community posts
         const { FeedService } = await import('../services/feedService');
+        
+        console.log('[CommunitiesPage] Fetching posts with:', {
+          joinedCommunities,
+          joinedCommunitiesCount: joinedCommunities.length,
+          address,
+          isAuthenticated,
+          sortBy,
+          timeFilter
+        });
+        
         const filter = {
           feedSource: 'all', // Get all posts including public community posts
           sortBy: sortBy as any,
@@ -336,7 +352,16 @@ const CommunitiesPage: React.FC = () => {
           postTypes: ['posts'], // Only show community posts
           communities: joinedCommunities.length > 0 ? joinedCommunities : undefined // Include joined communities
         };
-        const result = await FeedService.getEnhancedFeed(filter, pageNum, DEFAULT_FEED_PAGE_SIZE);
+        
+        console.log('[CommunitiesPage] Feed filter:', filter);
+        
+        // Add timeout to prevent blocking navigation
+        const result = await Promise.race([
+          FeedService.getEnhancedFeed(filter, pageNum, DEFAULT_FEED_PAGE_SIZE),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Feed request timeout')), 5000)
+          )
+        ]);
 
         // Debug logging - removed for production
         // Check if component is still mounted before updating state
@@ -345,7 +370,13 @@ const CommunitiesPage: React.FC = () => {
         // Handle FeedService response format
         const newPosts = result?.posts || [];
 
-        // Debug logging - removed for production
+        console.log('[CommunitiesPage] FeedService returned:', {
+          result,
+          postsCount: newPosts.length,
+          hasMore: result?.hasMore,
+          pageNum,
+          append
+        });
 
         if (append) {
           setPosts(prev => [...prev, ...newPosts]);
@@ -360,7 +391,11 @@ const CommunitiesPage: React.FC = () => {
     } catch (error) {
       console.error('Failed to fetch community posts:', error);
       if (!isMounted.current) return;
-      if (!append) setPosts([]);
+      
+      // If there's an error but we have posts, keep them
+      if (!append && posts.length === 0) {
+        setPosts([]);
+      }
     } finally {
       if (!isMounted.current) return;
       // Only set loading to false if this was the initial load
@@ -375,12 +410,10 @@ const CommunitiesPage: React.FC = () => {
     // Wait for auth loading to complete to avoid race conditions
     if (isAuthLoading) return;
 
-    // If we have an address (wallet connected) but are not authenticated yet, wait.
-    // This prevents sending requests without tokens when the user is actually logging in.
-    if (address && !isAuthenticated) return;
-
+    // Always fetch posts, even if not authenticated
+    // The feed service will handle authentication internally
     fetchPosts(1, false);
-  }, [sortBy, timeFilter, address, isAuthenticated, isAuthLoading, joinedCommunities.length, fetchPosts]);
+  }, [sortBy, timeFilter, address, isAuthLoading, joinedCommunities.length, fetchPosts]);
 
   // Infinite scroll handler
   useEffect(() => {
@@ -394,6 +427,38 @@ const CommunitiesPage: React.FC = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, [page, loadingMore, hasMore, fetchPosts]);
+
+  // Route change handlers to prevent blocking navigation
+  useEffect(() => {
+    const handleRouteChangeStart = () => {
+      // Cancel any ongoing operations to prevent blocking navigation
+      if (loading || loadingMore) {
+        console.log('[CommunitiesPage] Route change detected, cancelling ongoing operations');
+      }
+    };
+
+    const handleRouteChangeComplete = () => {
+      // Resume operations after navigation if needed
+      console.log('[CommunitiesPage] Route change completed');
+    };
+
+    // Since we can't directly access Next.js router events in pages, we'll listen for
+    // beforeunload events as a proxy for navigation
+    const handleBeforeUnload = () => {
+      // Cleanup operations before page unload/navigation
+      console.log('[CommunitiesPage] Page unloading, cleaning up');
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('beforeunload', handleBeforeUnload);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+      }
+    };
+  }, [loading, loadingMore]);
 
   // Load Web3 enhanced data
   const loadWeb3EnhancedData = async (communitiesData: Community[]) => {

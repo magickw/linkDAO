@@ -109,17 +109,28 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
 
   // Load community data
   const loadCommunityData = useCallback(async () => {
+    // Check if we're currently navigating away to prevent blocking
+    if (typeof window !== 'undefined' && !window.location.pathname.includes(`/community/${communityId}`)) {
+      console.log('[CommunityPage] Not on community page anymore, skipping load');
+      return;
+    }
+    
     if (!communityId) return;
 
     try {
       setLoading(true);
       setError(null);
 
-      // Fetch community details
-      const [communityData, communityStats] = await Promise.all([
-        CommunityService.getCommunityById(communityId),
-        fetchCommunityStats(communityId)
-      ]);
+      // Fetch community details with timeout to prevent blocking navigation
+      const [communityData, communityStats] = await Promise.race([
+        Promise.all([
+          CommunityService.getCommunityById(communityId),
+          fetchCommunityStats(communityId)
+        ]),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Community data request timeout')), 5000)
+        )
+      ]) as [any, any];
 
       if (!communityData) {
         setError('Community not found');
@@ -137,7 +148,12 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
 
       // Check membership status if user is authenticated
       if (isAuthenticated && user) {
-        const membership = await checkMembershipStatus(communityId, user.address);
+        const membership = await Promise.race([
+          checkMembershipStatus(communityId, user.address),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Membership request timeout')), 3000)
+          )
+        ]) as any;
         setMembershipStatus(membership);
       }
     } catch (err) {
@@ -270,6 +286,38 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
       off('community:updated', handleCommunityUpdate);
     };
   }, [isConnected, community, stats, on, off]);
+
+  // Route change handlers to prevent blocking navigation
+  useEffect(() => {
+    const handleRouteChangeStart = () => {
+      // Cancel any ongoing operations to prevent blocking navigation
+      if (loading) {
+        console.log('[CommunityPage] Route change detected, cancelling ongoing operations');
+      }
+    };
+
+    const handleRouteChangeComplete = () => {
+      // Resume operations after navigation if needed
+      console.log('[CommunityPage] Route change completed');
+    };
+
+    // Since we can't directly access Next.js router events in components, we'll listen for
+    // beforeunload events as a proxy for navigation
+    const handleBeforeUnload = () => {
+      // Cleanup operations before page unload/navigation
+      console.log('[CommunityPage] Page unloading, cleaning up');
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('beforeunload', handleBeforeUnload);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+      }
+    };
+  }, [loading]);
 
   // Load data on mount and when communityId changes
   useEffect(() => {

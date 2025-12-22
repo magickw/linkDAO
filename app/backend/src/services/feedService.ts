@@ -1055,12 +1055,23 @@ export class FeedService {
         throw new Error('User not found');
       }
 
-      // Check if postId is a UUID (quick post) or integer (regular post)
-      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(postId);
+      // Check if post exists in posts table (regular post) or quickPosts table
+      // Both tables now use UUID, so we need to check which table contains the post
+      let postExists = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
+      let isQuickPost = false;
+      
+      if (postExists.length === 0) {
+        // Check if it's a quick post
+        const quickPostExists = await db.select().from(quickPosts).where(eq(quickPosts.id, postId)).limit(1);
+        if (quickPostExists.length === 0) {
+          throw new Error('Post not found');
+        }
+        isQuickPost = true;
+      }
 
       let reaction;
 
-      if (isUUID) {
+      if (isQuickPost) {
         // Handle quick post reaction
         const existingReaction = await db
           .select()
@@ -2376,12 +2387,23 @@ export class FeedService {
   // Get reaction summaries for a post
   async getReactionSummaries(postId: string) {
     try {
-      // Check if postId is a UUID (quick post) or integer (regular post)
-      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(postId);
+      // Check if post exists in posts table (regular post) or quickPosts table
+      // Both tables now use UUID, so we need to check which table contains the post
+      let postExists = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
+      let isQuickPost = false;
+      
+      if (postExists.length === 0) {
+        // Check if it's a quick post
+        const quickPostExists = await db.select().from(quickPosts).where(eq(quickPosts.id, postId)).limit(1);
+        if (quickPostExists.length === 0) {
+          return [];
+        }
+        isQuickPost = true;
+      }
 
       let summaries;
 
-      if (isUUID) {
+      if (isQuickPost) {
         // Handle quick post reactions
         summaries = await db
           .select({
