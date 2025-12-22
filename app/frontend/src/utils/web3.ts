@@ -58,7 +58,7 @@ export async function getProvider() {
     // Fallback: prefer an env-driven RPC URL for server-side reads. This lets
     // deployments control which RPC the app uses during SSR/build.
     const envRpc = process.env.NEXT_PUBLIC_RPC_URL;
-    const envChainId = process.env.NEXT_PUBLIC_RPC_CHAIN_ID;
+    const envChainId = process.env.NEXT_PUBLIC_CHAIN_ID;
     console.log('Environment RPC:', envRpc, 'Chain ID:', envChainId);
     
     if (envRpc) {

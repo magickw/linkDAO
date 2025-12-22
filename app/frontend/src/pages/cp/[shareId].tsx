@@ -12,7 +12,6 @@ import { EnhancedPostCard } from '@/components/Feed/EnhancedPostCard';
 import { ArrowLeft, Loader2, ExternalLink, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/context/ToastContext';
-import { ENV_CONFIG } from '@/config/environment';
 
 interface CommunityPost {
   id: string;
@@ -51,15 +50,9 @@ export default function CommunityPostSharePage() {
                 setError(null);
                 console.log(`[CommunityPostSharePage] Fetching post for shareId: ${shareId}`);
 
-                // Fetch community post by share ID using the Next.js rewrite
+                // Fetch community post by share ID - using relative path to automatically use current domain
                 console.log(`[CommunityPostSharePage] Attempting to fetch: /cp/${shareId}`);
-                const response = await fetch(`/cp/${shareId}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    }
-                });
+                const response = await fetch(`/cp/${shareId}`);
                 console.log(`[CommunityPostSharePage] Response status: ${response.status}`);
                 console.log(`[CommunityPostSharePage] Response headers:`, Object.fromEntries(response.headers.entries()));
                 
@@ -121,7 +114,7 @@ export default function CommunityPostSharePage() {
                     message: err instanceof Error ? err.message : 'Unknown error',
                     stack: err instanceof Error ? err.stack : 'No stack trace',
                     shareId,
-                    apiUrl: `${ENV_CONFIG.API_URL}/cp/${shareId}`,
+                    apiUrl: `/cp/${shareId}`,
                     attemptNumber
                 });
                 
@@ -135,8 +128,8 @@ export default function CommunityPostSharePage() {
                 // Fallback: try to redirect to a generic community post URL format
                 if (attemptNumber >= 3) {
                     console.log('[CommunityPostSharePage] All attempts failed, trying fallback redirect');
-                    // Fallback to a generic URL format - this might not work but provides a better user experience
-                    const fallbackUrl = `/communities/general/posts/${shareId}`;
+                    // Fallback to home page since we can't determine the correct community
+                    const fallbackUrl = '/';
                     console.log(`[CommunityPostSharePage] Fallback redirect to: ${fallbackUrl}`);
                     router.replace(fallbackUrl);
                     return;
@@ -165,7 +158,7 @@ export default function CommunityPostSharePage() {
             ? `${post.title} | ${post.communityName} | LinkDAO`
             : `Post in ${post.communityName} | LinkDAO`;
         const description = post.content?.substring(0, 200) || `Check out this post in ${post.communityName} on LinkDAO`;
-        const url = `https://linkdao.io/cp/${shareId}`;
+        const url = `${window.location.origin}/cp/${shareId}`;
 
         return (
             <Head>
@@ -191,7 +184,7 @@ export default function CommunityPostSharePage() {
                 )}
 
                 {/* Canonical URL */}
-                <link rel="canonical" href={`https://linkdao.io${canonicalUrl || `/cp/${shareId}`}`} />
+                <link rel="canonical" href={`${window.location.origin}${canonicalUrl || `/cp/${shareId}`}`} />
             </Head>
         );
     };

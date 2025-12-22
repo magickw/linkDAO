@@ -105,6 +105,16 @@ class EnhancedAuthService {
 
           this.sessionData = sessionData;
           this.token = sessionData.token;
+          
+          // Fallback: ensure refresh token is loaded from separate storage if missing from sessionData
+          if (!this.sessionData.refreshToken) {
+            const storedRefreshToken = localStorage.getItem(this.STORAGE_KEYS.REFRESH_TOKEN);
+            if (storedRefreshToken) {
+              this.sessionData.refreshToken = storedRefreshToken;
+              console.log('🔄 Restored refresh token from separate storage');
+            }
+          }
+          
           console.log('✅ Restored valid session from storage');
         } else {
           console.log('⏰ Stored session expired, clearing...');
@@ -775,6 +785,16 @@ class EnhancedAuthService {
             // Restore in-memory state
             this.sessionData = sessionData;
             this.token = sessionData.token;
+            
+            // Fallback: ensure refresh token is loaded from separate storage if missing from sessionData
+            if (!this.sessionData.refreshToken) {
+              const storedRefreshToken = localStorage.getItem(this.STORAGE_KEYS.REFRESH_TOKEN);
+              if (storedRefreshToken) {
+                this.sessionData.refreshToken = storedRefreshToken;
+                console.log('🔄 Restored refresh token from separate storage in checkAuth');
+              }
+            }
+            
             return true;
           }
         }
@@ -834,6 +854,16 @@ class EnhancedAuthService {
               console.log('🔄 Restored token from localStorage');
               this.token = storedToken;
               this.sessionData = sessionData;
+              
+              // Fallback: ensure refresh token is loaded from separate storage if missing from sessionData
+              if (!this.sessionData.refreshToken) {
+                const storedRefreshToken = localStorage.getItem(this.STORAGE_KEYS.REFRESH_TOKEN);
+                if (storedRefreshToken) {
+                  this.sessionData.refreshToken = storedRefreshToken;
+                  console.log('🔄 Restored refresh token from separate storage in getValidToken');
+                }
+              }
+              
               return storedToken;
             }
           }

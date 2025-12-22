@@ -79,7 +79,7 @@ export default function SharePostPage() {
 
         const title = `Post by ${post.authorProfile?.handle || 'User'} | LinkDAO`;
         const description = post.content?.substring(0, 200) || 'Check out this post on LinkDAO';
-        const url = `https://linkdao.io/p/${shareId}`;
+        const url = `${window.location.origin}/p/${shareId}`;
 
         return (
             <Head>
@@ -104,7 +104,7 @@ export default function SharePostPage() {
                 )}
 
                 {/* Canonical URL */}
-                <link rel="canonical" href={`https://linkdao.io${canonicalUrl || `/p/${shareId}`}`} />
+                <link rel="canonical" href={`${window.location.origin}${canonicalUrl || `/p/${shareId}`}`} />
             </Head>
         );
     };

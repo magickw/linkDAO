@@ -2315,12 +2315,18 @@ export class FeedService {
           throw new Error('Post not found');
         }
 
-        // Increment upvotes
-        await db.update(posts)
+        // Get current post data and increment upvotes
+        const [updatedPost] = await db.update(posts)
           .set({ upvotes: sql`${posts.upvotes} + 1` })
-          .where(eq(posts.id, postId));
+          .where(eq(posts.id, postId))
+          .returning();
 
-        return { success: true, message: 'Post upvoted successfully' };
+        return { 
+          success: true, 
+          message: 'Post upvoted successfully',
+          upvotes: updatedPost.upvotes,
+          downvotes: updatedPost.downvotes
+        };
       } else {
         // It's a quick post
         const quickPost = await db.select().from(quickPosts).where(eq(quickPosts.id, postId)).limit(1);
@@ -2329,12 +2335,18 @@ export class FeedService {
           throw new Error('Post not found');
         }
 
-        // Increment upvotes
-        await db.update(quickPosts)
+        // Get current quick post data and increment upvotes
+        const [updatedQuickPost] = await db.update(quickPosts)
           .set({ upvotes: sql`${quickPosts.upvotes} + 1` })
-          .where(eq(quickPosts.id, postId));
+          .where(eq(quickPosts.id, postId))
+          .returning();
 
-        return { success: true, message: 'Quick post upvoted successfully' };
+        return { 
+          success: true, 
+          message: 'Quick post upvoted successfully',
+          upvotes: updatedQuickPost.upvotes,
+          downvotes: updatedQuickPost.downvotes
+        };
       }
     } catch (error) {
       safeLogger.error('Error upvoting post:', error);
@@ -2358,12 +2370,18 @@ export class FeedService {
           throw new Error('Post not found');
         }
 
-        // Increment downvotes
-        await db.update(posts)
+        // Get current post data and increment downvotes
+        const [updatedPost] = await db.update(posts)
           .set({ downvotes: sql`${posts.downvotes} + 1` })
-          .where(eq(posts.id, postId));
+          .where(eq(posts.id, postId))
+          .returning();
 
-        return { success: true, message: 'Post downvoted successfully' };
+        return { 
+          success: true, 
+          message: 'Post downvoted successfully',
+          upvotes: updatedPost.upvotes,
+          downvotes: updatedPost.downvotes
+        };
       } else {
         // It's a quick post
         const quickPost = await db.select().from(quickPosts).where(eq(quickPosts.id, postId)).limit(1);
@@ -2372,12 +2390,18 @@ export class FeedService {
           throw new Error('Post not found');
         }
 
-        // Increment downvotes
-        await db.update(quickPosts)
+        // Get current quick post data and increment downvotes
+        const [updatedQuickPost] = await db.update(quickPosts)
           .set({ downvotes: sql`${quickPosts.downvotes} + 1` })
-          .where(eq(quickPosts.id, postId));
+          .where(eq(quickPosts.id, postId))
+          .returning();
 
-        return { success: true, message: 'Quick post downvoted successfully' };
+        return { 
+          success: true, 
+          message: 'Quick post downvoted successfully',
+          upvotes: updatedQuickPost.upvotes,
+          downvotes: updatedQuickPost.downvotes
+        };
       }
     } catch (error) {
       safeLogger.error('Error downvoting post:', error);

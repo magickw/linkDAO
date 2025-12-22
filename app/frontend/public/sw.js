@@ -270,7 +270,7 @@ self.addEventListener('fetch', (event) => {
 
   // Handle placeholder requests with local placeholders FIRST
   if (url.hostname === 'placehold.co' || url.hostname === 'via.placeholder.com') {
-    event.respondWith(handlePlaceholderRequest(url).catch(error => {
+    event.respondWith(handlePlaceholderRequest(url).catch(async (error) => {
       console.warn('Failed to generate placeholder:', error);
       // Return a simple fallback PNG using canvas
       const canvas = new OffscreenCanvas(40, 40);

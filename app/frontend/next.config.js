@@ -252,22 +252,6 @@ const nextConfig = {
   // Add trailing slash for SEO consistency
   trailingSlash: false,
   
-  // Add rewrites for API proxying in development
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-            destination: 'http://localhost:10000/api/:path*'      },
-      {
-        source: '/cp/:shareId',
-            destination: 'http://localhost:10000/cp/:shareId'      },
-      {
-        source: '/p/:shareId',
-        destination: 'http://localhost:10000/p/:shareId'
-      }
-    ];
-  },
-  
   // Additional development optimizations
   experimental: {
     // Migrate from deprecated turbo to turbopack
@@ -284,3 +268,19 @@ const nextConfig = {
 };
 
 module.exports = nextConfig;
+
+// Add rewrites for API proxying in development
+if (process.env.NODE_ENV === 'development') {
+  nextConfig.rewrites = async () => {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:10000/api/:path*'
+      },
+      {
+        source: '/cp/:shareId',
+        destination: 'http://localhost:10000/cp/:shareId'
+      }
+    ];
+  };
+}

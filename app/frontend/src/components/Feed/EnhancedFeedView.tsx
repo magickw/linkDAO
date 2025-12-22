@@ -393,7 +393,13 @@ const EnhancedFeedView = React.memo(({
         onUpvote={async (postId) => {
           try {
             const { FeedService } = await import('../../services/feedService');
-            await FeedService.upvotePost(postId);
+            const response = await FeedService.upvotePost(postId);
+            // Update the post in state with new vote counts
+            setPosts(prev => prev.map(post => 
+              post.id === postId 
+                ? { ...post, upvotes: response.upvotes !== undefined ? response.upvotes : (post.upvotes || 0) + 1 }
+                : post
+            ));
             console.log('Upvoted post', postId);
           } catch (error) {
             console.error('Error upvoting post:', error);
@@ -402,7 +408,13 @@ const EnhancedFeedView = React.memo(({
         onDownvote={async (postId) => {
           try {
             const { FeedService } = await import('../../services/feedService');
-            await FeedService.downvotePost(postId);
+            const response = await FeedService.downvotePost(postId);
+            // Update the post in state with new vote counts
+            setPosts(prev => prev.map(post => 
+              post.id === postId 
+                ? { ...post, downvotes: response.downvotes !== undefined ? response.downvotes : (post.downvotes || 0) + 1 }
+                : post
+            ));
             console.log('Downvoted post', postId);
           } catch (error) {
             console.error('Error downvoting post:', error);

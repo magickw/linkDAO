@@ -53,10 +53,10 @@ export function usePostModalManager() {
     try {
       setModalState(prev => ({ ...prev, isOpen: true, isLoading: true }));
 
-      // Determine API endpoint based on type
+      // Determine API endpoint based on type - using relative paths
       const endpoint = type === 'community_post'
-        ? `${process.env.NEXT_PUBLIC_API_URL}/cp/${shareId}`
-        : `${process.env.NEXT_PUBLIC_API_URL}/p/${shareId}`;
+        ? `/cp/${shareId}`
+        : `/p/${shareId}`;
 
       const response = await fetch(endpoint);
 

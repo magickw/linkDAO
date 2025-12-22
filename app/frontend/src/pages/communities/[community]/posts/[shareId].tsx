@@ -12,7 +12,6 @@ import { EnhancedPostCard } from '@/components/Feed/EnhancedPostCard';
 import { ArrowLeft, Loader2, Share2, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/context/ToastContext';
-import { ENV_CONFIG } from '@/config/environment';
 
 interface CommunityPost {
   id: string;
@@ -49,8 +48,8 @@ export default function CommunityPostPage() {
                 setIsLoading(true);
                 setError(null);
 
-                // Fetch post by share ID
-                const response = await fetch(`${ENV_CONFIG.API_URL}/cp/${shareId}`);
+                // Fetch post by share ID - using relative path to automatically use current domain
+                const response = await fetch(`/cp/${shareId}`);
                 
                 if (!response.ok) {
                     if (response.status === 404) {
@@ -117,7 +116,7 @@ export default function CommunityPostPage() {
             ? `${post.title} | ${post.communityName} | LinkDAO`
             : `Post in ${post.communityName} | LinkDAO`;
         const description = post.content?.substring(0, 200) || `Check out this post in ${post.communityName} on LinkDAO`;
-        const url = `https://linkdao.io/communities/${community}/posts/${shareId}`;
+        const url = `${window.location.origin}/communities/${community}/posts/${shareId}`;
 
         return (
             <Head>
@@ -143,7 +142,7 @@ export default function CommunityPostPage() {
                 )}
 
                 {/* Canonical URL */}
-                <link rel="canonical" href={url} />
+                <link rel="canonical" href={`${window.location.origin}/communities/${post.communitySlug}/posts/${shareId}`} />
             </Head>
         );
     };

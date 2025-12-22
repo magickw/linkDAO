@@ -465,7 +465,7 @@ export class UnifiedSellerAPIClient {
   // Profile API methods
   async getProfile(walletAddress: string): Promise<SellerProfile | null> {
     try {
-      return await this.request<SellerProfile>(this.endpoints.getProfile(walletAddress), undefined, false);
+      return await this.request<SellerProfile>(this.endpoints.getProfile(walletAddress), undefined, true);
     } catch (error) {
       if (error instanceof SellerAPIError && error.status === 404) {
         return null;

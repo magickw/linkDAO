@@ -213,7 +213,11 @@ const CommunitiesPage: React.FC = () => {
         if (address && isConnected && isAuthenticated) {
           try {
             // Fetch user's communities (both created and joined)
-            const myCommunitiesResponse = await CommunityService.getMyCommunities(DEFAULT_USER_COMMUNITIES_PAGE, DEFAULT_USER_COMMUNITIES_LIMIT).catch(() => ({ communities: [], pagination: null }));
+            const myCommunitiesResponse = await CommunityService.getMyCommunities(DEFAULT_USER_COMMUNITIES_PAGE, DEFAULT_USER_COMMUNITIES_LIMIT).catch((error) => {
+              console.error('Error fetching user communities:', error);
+              // Return empty communities on error to allow feed to still work
+              return { communities: [], pagination: null };
+            });
 
             if (!isMounted.current) return;
 
@@ -381,7 +385,7 @@ const CommunitiesPage: React.FC = () => {
     // The feed service will handle authentication internally
     console.log('[CommunitiesPage] useEffect triggered, fetching posts...');
     fetchPosts(1, false);
-  }, [sortBy, timeFilter, address, isAuthLoading, joinedCommunities.length]);
+  }, [sortBy, timeFilter, address, isAuthLoading]);
 
   // Store fetchPosts in a ref to avoid dependency issues
   const fetchPostsRef = useRef(fetchPosts);
@@ -584,21 +588,29 @@ const CommunitiesPage: React.FC = () => {
     window.open(`https://etherscan.io/tx/${txHash}`, '_blank');
   };
 
-  const handleVote = (postId: string, type: 'up' | 'down', amount: number) => {
-    if (isMobile) {
-      triggerHapticFeedback('medium');
+  const handleVote = async (postId: string, type: 'up' | 'down', amount: number) => {
+    try {
+      // Make actual API call and get response
+      const response = type === 'up' 
+        ? await FeedService.upvotePost(postId)
+        : await FeedService.downvotePost(postId);
+      
+      // Update state based on API response
+      setPosts(prev => prev.map(post => {
+        if (post.id === postId) {
+          return {
+            ...post,
+            upvotes: response.upvotes !== undefined ? response.upvotes : (type === 'up' ? post.upvotes + amount : post.upvotes),
+            downvotes: response.downvotes !== undefined ? response.downvotes : (type === 'down' ? post.downvotes + amount : post.downvotes),
+            stakedTokens: response.stakedTokens !== undefined ? response.stakedTokens : post.stakedTokens + amount
+          };
+        }
+        return post;
+      }));
+    } catch (error) {
+      console.error('Failed to vote:', error);
+      // Could show error toast here
     }
-    setPosts(prev => prev.map(post => {
-      if (post.id === postId) {
-        return {
-          ...post,
-          upvotes: type === 'up' ? post.upvotes + amount : post.upvotes,
-          downvotes: type === 'down' ? post.downvotes + amount : post.downvotes,
-          stakedTokens: post.stakedTokens + amount
-        };
-      }
-      return post;
-    }));
   };
 
   // Web3 mobile handlers

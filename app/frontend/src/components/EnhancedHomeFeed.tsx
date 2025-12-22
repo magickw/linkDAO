@@ -196,7 +196,13 @@ export default function EnhancedHomeFeed({
               post={post}
               onUpvote={async (postId) => {
                 try {
-                  await FeedService.upvotePost(postId);
+                  const response = await FeedService.upvotePost(postId);
+                  // Update the post in state with new vote counts
+                  setPosts(prev => prev.map(post => 
+                    post.id === postId 
+                      ? { ...post, upvotes: response.upvotes !== undefined ? response.upvotes : (post.upvotes || 0) + 1 }
+                      : post
+                  ));
                   addToast('Post upvoted successfully!', 'success');
                 } catch (error) {
                   addToast('Failed to upvote post', 'error');
@@ -204,7 +210,13 @@ export default function EnhancedHomeFeed({
               }}
               onDownvote={async (postId) => {
                 try {
-                  await FeedService.downvotePost(postId);
+                  const response = await FeedService.downvotePost(postId);
+                  // Update the post in state with new vote counts
+                  setPosts(prev => prev.map(post => 
+                    post.id === postId 
+                      ? { ...post, downvotes: response.downvotes !== undefined ? response.downvotes : (post.downvotes || 0) + 1 }
+                      : post
+                  ));
                   addToast('Post downvoted successfully!', 'success');
                 } catch (error) {
                   addToast('Failed to downvote post', 'error');

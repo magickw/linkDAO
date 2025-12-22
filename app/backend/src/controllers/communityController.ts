@@ -1452,7 +1452,8 @@ export class CommunityController {
   // Get communities created by user
   async getMyCommunities(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = (req as AuthenticatedRequest).user?.address;
+      const user = (req as AuthenticatedRequest).user;
+      const userAddress = user?.address || user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
         return;
