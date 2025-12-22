@@ -312,6 +312,8 @@ const CommunitiesPage: React.FC = () => {
       if (pageNum === 1) setLoading(true);
       else setLoadingMore(true);
 
+      console.log('[CommunitiesPage] fetchPosts called:', { pageNum, append, sortBy, timeFilter, address, joinedCommunities });
+
       // Use the enhanced feed service to show community posts
       const { FeedService } = await import('../services/feedService');
       
@@ -324,6 +326,8 @@ const CommunitiesPage: React.FC = () => {
         communities: joinedCommunities.length > 0 ? joinedCommunities : undefined
       };
       
+      console.log('[CommunitiesPage] Calling FeedService.getEnhancedFeed with filter:', filter);
+      
       const result = await FeedService.getEnhancedFeed(filter, pageNum, DEFAULT_FEED_PAGE_SIZE);
 
       // Check if component is still mounted
@@ -331,10 +335,24 @@ const CommunitiesPage: React.FC = () => {
 
       const newPosts = result?.posts || [];
 
+      console.log('[CommunitiesPage] FeedService returned:', {
+        result,
+        postsCount: newPosts.length,
+        hasMore: result?.hasMore,
+        pageNum,
+        append,
+        newPosts: newPosts.slice(0, 2) // Log first 2 posts
+      });
+
       if (append) {
-        setPosts(prev => [...prev, ...newPosts]);
+        setPosts(prev => {
+          console.log('[CommunitiesPage] Appending posts. Previous count:', prev.length, 'New posts:', newPosts.length);
+          return [...prev, ...newPosts];
+        });
       } else {
+        console.log('[CommunitiesPage] Setting posts. Count:', newPosts.length);
         setPosts(newPosts);
+        console.log('[CommunitiesPage] Posts state after setPosts:', newPosts);
       }
 
       setHasMore(result?.hasMore || false);
@@ -361,6 +379,7 @@ const CommunitiesPage: React.FC = () => {
 
     // Always fetch posts, even if not authenticated
     // The feed service will handle authentication internally
+    console.log('[CommunitiesPage] useEffect triggered, fetching posts...');
     fetchPosts(1, false);
   }, [sortBy, timeFilter, address, isAuthLoading, joinedCommunities.length]);
 
@@ -642,10 +661,20 @@ const CommunitiesPage: React.FC = () => {
 
 
 
-  // Show posts from communities - all posts are now fetched directly from communities
-  // No additional filtering needed since we're using CommunityPostService.getCommunityPosts
+  // Show only community posts (posts with communityId), not quick posts
   const filteredPosts = useMemo(() => {
-    return posts.filter(post => post && typeof post === 'object');
+    console.log('[CommunitiesPage] posts array length:', posts.length);
+    console.log('[CommunitiesPage] posts:', posts);
+    
+    const communityPosts = posts.filter(post => {
+      if (!post || typeof post !== 'object') return false;
+      // Only show posts that have a communityId (community posts)
+      // Exclude quick posts which have communityId: null
+      return post.communityId !== null && post.communityId !== undefined;
+    });
+    
+    console.log('[CommunitiesPage] community posts count:', communityPosts.length);
+    return communityPosts;
   }, [posts]);
 
   // Defensive: normalize communities to array for rendering and filter out invalid entries
