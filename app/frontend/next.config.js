@@ -257,12 +257,10 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: 'http://localhost:10000/api/:path*'
-      },
+            destination: 'http://localhost:10000/api/:path*'      },
       {
         source: '/cp/:shareId',
-        destination: 'http://localhost:10000/cp/:shareId'
-      },
+            destination: 'http://localhost:10000/cp/:shareId'      },
       {
         source: '/p/:shareId',
         destination: 'http://localhost:10000/p/:shareId'

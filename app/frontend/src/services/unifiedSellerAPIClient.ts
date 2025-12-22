@@ -57,7 +57,7 @@ const getBackendURL = (): string => {
 
 const USE_API_ROUTES = process.env.NEXT_PUBLIC_USE_API_ROUTES === 'true' || typeof window !== 'undefined';
 const BACKEND_API_BASE_URL = getBackendURL();
-const SELLER_API_BASE = `${BACKEND_API_BASE_URL}/api/marketplace/seller`;
+const SELLER_API_BASE = `${BACKEND_API_BASE_URL}/api/sellers`;
 
 // Log the final URL being used (helpful for debugging)
 console.log('[SellerAPI] Initialized with base URL:', SELLER_API_BASE);
@@ -172,7 +172,7 @@ export class UnifiedSellerAPIClient {
     getAnalytics: (walletAddress: string) => `${this.baseURL}/analytics/${walletAddress}`,
 
     // Listings endpoints
-    getListings: (walletAddress: string) => `${this.baseURL}/listings/${walletAddress}`,
+    getListings: (walletAddress: string) => `${this.baseURL}/listings`, // Backend uses authenticated user, not wallet address in URL
     getListingById: (listingId: string) => `${this.baseURL}/listings/detail/${listingId}`,
     createListing: () => `${this.baseURL}/listings`,
     updateListing: (listingId: string) => `${this.baseURL}/listings/${listingId}`,
@@ -564,7 +564,7 @@ export class UnifiedSellerAPIClient {
       : this.endpoints.getListings(walletAddress);
     
     try {
-      console.log('[SellerAPI] Fetching listings for wallet:', walletAddress, 'URL:', url);
+      console.log('[SellerAPI] Fetching listings for authenticated user, URL:', url);
       
       const response = await this.request<{ listings: SellerListing[]; total: number } | SellerListing[]>(url, undefined, true);
 
