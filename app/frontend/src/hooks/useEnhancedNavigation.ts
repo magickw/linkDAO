@@ -192,7 +192,7 @@ export function useEnhancedNavigation(): UseEnhancedNavigationReturn {
   }, []);
 
   const handleCommunitySelect = useCallback((communityId: string) => {
-    router.push(`/communities/${communityId}`);
+    router.push(`/communities/${encodeURIComponent(communityId ?? '')}`);
   }, [router]);
 
   const handleCommunityToggle = useCallback((communityId: string) => {

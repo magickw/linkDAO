@@ -1875,7 +1875,7 @@ export default function Profile() {
                                   <span>
                                     in{' '}
                                     <Link 
-                                      href={`/communities/${post.communityId}`}
+                                      href={`/communities/${encodeURIComponent(post.communityId ?? '')}`}
                                       className="text-blue-600 dark:text-blue-400 hover:underline"
                                       onClick={(e) => e.stopPropagation()}
                                     >

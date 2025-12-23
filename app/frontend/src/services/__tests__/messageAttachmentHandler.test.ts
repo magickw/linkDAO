@@ -78,10 +78,10 @@ describe('MessageAttachmentHandler', () => {
     // Setup IndexedDB mocks
     mockIndexedDB.open.mockImplementation(() => {
       const request = { ...mockIDBRequest };
-      setTimeout(() => {
-        request.result = mockIDBDatabase;
-        if (request.onsuccess) request.onsuccess({} as any);
-      }, 0);
+        setTimeout(() => {
+          request.result = mockIDBDatabase;
+          if (request.onsuccess) request.onsuccess({ target: request } as any);
+        }, 0);
       return request as any;
     });
 
@@ -120,7 +120,7 @@ describe('MessageAttachmentHandler', () => {
         const request = { ...mockIDBRequest };
         setTimeout(() => {
           request.result = null;
-          if (request.onsuccess) request.onsuccess({} as any);
+          if (request.onsuccess) request.onsuccess({ target: request } as any);
         }, 0);
         return request;
       });
@@ -139,7 +139,7 @@ describe('MessageAttachmentHandler', () => {
         const request = { ...mockIDBRequest };
         setTimeout(() => {
           request.result = null;
-          if (request.onsuccess) request.onsuccess({} as any);
+          if (request.onsuccess) request.onsuccess({ target: request } as any);
         }, 0);
         return request;
       });
@@ -166,7 +166,7 @@ describe('MessageAttachmentHandler', () => {
       mockIDBObjectStore.put.mockImplementation(() => {
         const request = { ...mockIDBRequest };
         setTimeout(() => {
-          if (request.onsuccess) request.onsuccess({} as any);
+          if (request.onsuccess) request.onsuccess({ target: request } as any);
         }, 0);
         return request;
       });
@@ -175,7 +175,7 @@ describe('MessageAttachmentHandler', () => {
         const request = { ...mockIDBRequest };
         setTimeout(() => {
           request.result = null;
-          if (request.onsuccess) request.onsuccess({} as any);
+          if (request.onsuccess) request.onsuccess({ target: request } as any);
         }, 0);
         return request;
       });
@@ -279,7 +279,7 @@ describe('MessageAttachmentHandler', () => {
         const request = { ...mockIDBRequest };
         setTimeout(() => {
           request.result = null;
-          if (request.onsuccess) request.onsuccess({} as any);
+          if (request.onsuccess) request.onsuccess({ target: request } as any);
         }, 0);
         return request;
       });
@@ -313,7 +313,7 @@ describe('MessageAttachmentHandler', () => {
         const request = { ...mockIDBRequest };
         setTimeout(() => {
           request.result = mockCacheEntry;
-          if (request.onsuccess) request.onsuccess({} as any);
+          if (request.onsuccess) request.onsuccess({ target: request } as any);
         }, 0);
         return request;
       });

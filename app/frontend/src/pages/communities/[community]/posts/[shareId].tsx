@@ -80,8 +80,8 @@ export default function CommunityPostPage() {
                     
                     // Verify the community slug matches the post's community
                     if (community && postData.communitySlug !== community) {
-                        // Redirect to correct canonical URL
-                        router.replace(`/communities/${postData.communitySlug}/posts/${shareId}`);
+                        // Redirect to correct canonical URL (ensure encoded segment)
+                        router.replace(`/communities/${encodeURIComponent(postData.communitySlug)}/posts/${shareId}`);
                         return;
                     }
                     
@@ -116,7 +116,7 @@ export default function CommunityPostPage() {
             ? `${post.title} | ${post.communityName} | LinkDAO`
             : `Post in ${post.communityName} | LinkDAO`;
         const description = post.content?.substring(0, 200) || `Check out this post in ${post.communityName} on LinkDAO`;
-        const url = `${window.location.origin}/communities/${community}/posts/${shareId}`;
+        const url = `${window.location.origin}/communities/${encodeURIComponent(String(community))}/posts/${shareId}`;
 
         return (
             <Head>
@@ -142,7 +142,7 @@ export default function CommunityPostPage() {
                 )}
 
                 {/* Canonical URL */}
-                <link rel="canonical" href={`${window.location.origin}/communities/${post.communitySlug}/posts/${shareId}`} />
+                <link rel="canonical" href={`${window.location.origin}/communities/${encodeURIComponent(post.communitySlug)}/posts/${shareId}`} />
             </Head>
         );
     };
@@ -213,7 +213,7 @@ export default function CommunityPostPage() {
                                 <span>Back</span>
                             </button>
                             <Link
-                                href={`/communities/${post.communitySlug}`}
+                                href={`/communities/${encodeURIComponent(post.communitySlug)}`}
                                 className="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200"
                             >
                                 <Users className="w-4 h-4" />
@@ -247,7 +247,7 @@ export default function CommunityPostPage() {
                                 </div>
                             </div>
                             <Link
-                                href={`/communities/${post.communitySlug}`}
+                                href={`/communities/${encodeURIComponent(post.communitySlug)}`}
                                 className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors duration-200"
                             >
                                 View Community →

@@ -273,7 +273,7 @@ const CreatePostPage: React.FC = () => {
 
       const communityData = userCommunities.find(c => c.id === selectedCommunity);
       if (communityData) {
-        router.push(`/communities/${communityData.slug || communityData.name || communityData.id}`);
+        router.push(`/communities/${encodeURIComponent(communityData.slug ?? communityData.id ?? communityData.name ?? '')}`);
       } else {
         router.push('/communities');
       }

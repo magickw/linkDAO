@@ -473,7 +473,6 @@ export class CommunityPostService {
           ...headers
         },
         body: JSON.stringify({
-          author: data.author,
           content: data.content,
           parentCommentId: data.parentId,
           media: data.media
@@ -577,7 +576,6 @@ export class CommunityPostService {
           
           const { post } = await import('./globalFetchWrapper');
           const fallbackResponse = await post(`${BACKEND_API_BASE_URL}/api/feed/${data.postId}/comments`, {
-            author: data.author,
             content: data.content,
             parentCommentId: data.parentId,
             media: data.media

@@ -87,7 +87,7 @@ export function usePostModalManager() {
 
         // Update URL to canonical if not already there
         if (type === 'community_post') {
-          const canonicalUrl = data.data.canonicalUrl || `/communities/${data.data.owner?.handle}/posts/${shareId}`;
+          const canonicalUrl = data.data.canonicalUrl || `/communities/${encodeURIComponent(data.data.owner?.handle ?? '')}/posts/${shareId}`;
           if (router.asPath !== canonicalUrl) {
             // Use the History API to update the URL to the canonical path without triggering
             // a Next.js navigation (prevents full remounts and re-triggering the router.query effect).
@@ -99,7 +99,7 @@ export function usePostModalManager() {
             lastOpenedWithPushRef.current = false;
           }
         } else if (type === 'quick_post') {
-          const canonicalUrl = data.data.canonicalUrl || `/${data.data.owner?.handle}/posts/${shareId}`;
+          const canonicalUrl = data.data.canonicalUrl || `/${encodeURIComponent(data.data.owner?.handle ?? '')}/posts/${shareId}`;
           if (router.asPath !== canonicalUrl) {
             window.history.replaceState({}, '', canonicalUrl);
             lastOpenedWithPushRef.current = false;

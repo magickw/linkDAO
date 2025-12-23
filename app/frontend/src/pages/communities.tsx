@@ -166,6 +166,14 @@ const CommunitiesPage: React.FC = () => {
   // Hover preview state with debouncing
   const hoverTimeoutRef = useRef<number | null>(null);
 
+  // Helper: build a URL-safe community path segment (prefer slug -> id -> name)
+  const getCommunityPathSegment = (c?: { slug?: string; id?: string; name?: string } | string | undefined | null) => {
+    if (!c) return '';
+    if (typeof c === 'string') return encodeURIComponent(c);
+    const segment = c.slug ?? c.id ?? c.name ?? '';
+    return encodeURIComponent(segment);
+  };
+
   // Quick filter chips state
   const [activeQuickFilters, setActiveQuickFilters] = useState<string[]>([]);
 
@@ -507,8 +515,8 @@ const CommunitiesPage: React.FC = () => {
 
       setShowCreateCommunityModal(false);
 
-      // Navigate to the new community using the slug or name
-      router.push(`/communities/${newCommunity.slug || newCommunity.name || newCommunity.id}`);
+      // Navigate to the new community using the slug or name (URL-safe)
+      router.push(`/communities/${getCommunityPathSegment(newCommunity)}`);
     } catch (err) {
       console.error('Error creating community:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to create community';
@@ -598,7 +606,8 @@ const CommunitiesPage: React.FC = () => {
     const post = posts.find(p => p.id === postId);
     if (post) {
       const community = communityList.find(c => c.id === post.communityId);
-      router.push(`/communities/${community?.slug || community?.name || post.communityId}/posts/${postId}`);
+      const communitySegment = getCommunityPathSegment(community ?? post.communityId);
+      router.push(`/communities/${communitySegment}/posts/${postId}`);
     }
   };
   const handleShare = (postId: string) => {
@@ -609,7 +618,8 @@ const CommunitiesPage: React.FC = () => {
     const post = posts.find(p => p.id === postId);
     if (post) {
       const community = communityList.find(c => c.id === post.communityId);
-      router.push(`/communities/${community?.slug || community?.name || post.communityId}/posts/${postId}`);
+      const communitySegment = getCommunityPathSegment(community ?? post.communityId);
+      router.push(`/communities/${communitySegment}/posts/${postId}`);
     }
   };
 
@@ -753,7 +763,7 @@ const CommunitiesPage: React.FC = () => {
                     {communityList.slice(0, 8).map(community => (
                     <button
                         key={community.id}
-                        onClick={() => router.push(`/communities/${community.slug || community.name || community.id}`)}
+                        onClick={() => router.push(`/communities/${getCommunityPathSegment(community)}`)}
                         aria-label={`View ${community.displayName || community.name} community`}
                         className="w-full flex items-center space-x-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left"
                       >

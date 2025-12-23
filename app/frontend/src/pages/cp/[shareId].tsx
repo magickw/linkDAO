@@ -267,7 +267,7 @@ export default function CommunityPostSharePage() {
                             </button>
                             
                             <Link
-                                href={`/communities/${post.communitySlug}`}
+                                href={`/communities/${encodeURIComponent(post.communitySlug)}`}
                                 className="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200"
                             >
                                 <Users className="w-4 h-4" />

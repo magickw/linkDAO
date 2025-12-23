@@ -409,11 +409,12 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
         // If no conversation exists, automatically create one
         console.log("FloatingChatWidget: No existing conversation found, creating new conversation with address:", pendingContact.walletAddress);
         
-        // Set the recipient address and trigger conversation creation
+        // Set the recipient address in state (keeps UI in sync) and trigger conversation creation
         setNewRecipientAddress(pendingContact.walletAddress);
-        
-        // Call startNewConversation directly
-        startNewConversation()
+
+        // Call startNewConversation with the pending contact address to avoid a race
+        // when relying on the async state update of `newRecipientAddress`.
+        startNewConversation(pendingContact.walletAddress)
           .then(() => {
             console.log("FloatingChatWidget: Successfully started new conversation");
             // The conversation should now be selected and chat tab active
@@ -447,9 +448,15 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
     }
   };
 
-  const startNewConversation = async () => {
-    console.log("FloatingChatWidget: startNewConversation called with address:", newRecipientAddress.trim(), "from user:", address);
-    if (!newRecipientAddress.trim() || !address) {
+  const startNewConversation = async (recipientAddress?: string) => {
+    // Prefer the passed-in recipientAddress (if provided) to avoid races where
+    // `setNewRecipientAddress` hasn't completed yet. Fall back to state for
+    // compatibility with existing callers (e.g. the modal Start button).
+    const recipient = (recipientAddress ?? newRecipientAddress ?? '').trim();
+
+    console.log("FloatingChatWidget: startNewConversation called with address:", recipient, "from user:", address);
+
+    if (!recipient || !address) {
       console.log("FloatingChatWidget: Missing recipient address or user address");
       return;
     }
@@ -473,7 +480,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
         method: 'POST',
         headers,
         body: JSON.stringify({
-          participantAddress: newRecipientAddress.trim(),
+          participantAddress: recipient,
           initialMessage: "Hello! Let's start chatting.",
           conversationType: 'direct'
         }),
@@ -485,6 +492,8 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
         setSelectedConversation(newConversation);
         setActiveTab('chat');
         setShowNewConversationModal(false);
+        // Clear state only if we used the state value; if recipientAddress was passed
+        // explicitly, still clear to keep UI consistent.
         setNewRecipientAddress('');
         loadConversations(); // Refresh conversation list
       } else {

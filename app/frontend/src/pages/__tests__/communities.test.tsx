@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Mock Layout early to avoid importing heavy dependencies (e.g. rainbowkit) when the page module loads
 jest.mock('@/components/Layout', () => ({
@@ -83,28 +84,19 @@ describe('Communities page - comment navigation', () => {
   });
 
   test('clicking comment button navigates to community post page', async () => {
-    // Render a minimal wrapper that mirrors the prop wiring used in the page:
-    // onComment={() => handleComment(postId)}
-    const TestWrapper = () => {
-      const postId = 'post-1';
-      const community = { id: 'comm-1', slug: 'comm-slug', name: 'comm' };
-      const handleComment = (pId: string) => mockPush(`/communities/${community.slug}/posts/${pId}`);
-      // Use the mocked CommunityPostCardEnhanced which renders a button and calls `props.onComment()`
-      const CommunityPostCardEnhanced = require('@/components/Community/CommunityPostCardEnhanced').default;
-      return (
-        <div>
-          <CommunityPostCardEnhanced post={{ id: postId }} community={community} onComment={() => handleComment(postId)} />
-        </div>
-      );
-    };
+    // Render the real Communities page so it consumes our mocked services
+    const queryClient = new QueryClient();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <CommunitiesPage />
+      </QueryClientProvider>
+    );
 
-    render(<TestWrapper />);
+    // The page uses our mocked CommunityPostCardEnhanced which renders a button with data-testid `comment-<postId>`
+    const commentButton = await screen.findByTestId('comment-post-1');
 
-    // Wait for the mocked post button to appear
-    await waitFor(() => expect(screen.getByTestId('comment-post-1')).toBeInTheDocument());
+    fireEvent.click(commentButton);
 
-    fireEvent.click(screen.getByTestId('comment-post-1'));
-
-    expect(mockPush).toHaveBeenCalledWith('/communities/comm-slug/posts/post-1');
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/communities/comm-slug/posts/post-1'));
   });
 });

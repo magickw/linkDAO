@@ -235,7 +235,7 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
                     <>
                       <span>•</span>
                       <Link
-                        href={`/communities/${post.community.slug || post.community.id}`}
+                        href={`/communities/${encodeURIComponent(post.community.slug ?? post.community.id ?? post.community.name ?? '')}`}
                         className="flex items-center space-x-1 text-xs font-medium text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
                         onClick={(e) => e.stopPropagation()}
                       >

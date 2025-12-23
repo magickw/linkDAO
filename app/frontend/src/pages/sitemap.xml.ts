@@ -94,7 +94,7 @@ async function generateSiteMap() {
     const communities = await Promise.race([communitiesPromise, timeoutPromise]);
     if (Array.isArray(communities)) {
       dynamicPages.push(...communities.map(community => ({
-        url: `/communities/${community.slug || community.id}`,
+        url: `/communities/${encodeURIComponent(community.slug ?? community.id ?? '')}`,
         priority: '0.6',
         changefreq: 'weekly'
       })));

@@ -98,8 +98,11 @@ export const RecentAndFollowedCommunities: React.FC<RecentAndFollowedCommunities
     return date.toLocaleDateString();
   };
 
-  const handleCommunityClick = (communityName: string) => {
-    router.push(`/communities/${communityName}`);
+  const handleCommunityClick = (communityName: string | { slug?: string; id?: string; name?: string }) => {
+    const segment = typeof communityName === 'string'
+      ? encodeURIComponent(communityName)
+      : encodeURIComponent(communityName.slug ?? communityName.id ?? communityName.name ?? '');
+    router.push(`/communities/${segment}`);
   };
 
   const handleLeaveCommunity = (e: React.MouseEvent, communityId: string) => {

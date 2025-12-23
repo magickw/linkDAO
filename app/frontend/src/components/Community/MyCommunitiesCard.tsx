@@ -51,7 +51,7 @@ const MyCommunitiesCard: React.FC<MyCommunitiesCardProps> = ({
             {displayedCommunities.map((community) => (
               <Link
                 key={community.id}
-                href={`/communities/${community.slug || community.name}`}
+                href={`/communities/${encodeURIComponent(community.slug ?? community.id ?? community.name ?? '')}`}
                 className="w-full flex items-center space-x-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group"
               >
                 <CommunityAvatar

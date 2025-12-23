@@ -188,16 +188,28 @@ export class LDAOTokenService {
       let signer;
       try {
         signer = await getSigner();
-      } catch (signerError) {
+      } catch (signerError: any) {
         console.warn('Failed to get signer, trying alternative approach:', signerError);
+        
+        // Check for specific error patterns
+        if (signerError.message && signerError.message.includes('could not coalesce error')) {
+          console.warn('Provider coalescing error detected, trying direct provider access');
+        }
         
         // Fallback: try to get signer directly from window.ethereum if available
         if (typeof window !== 'undefined' && window.ethereum) {
           try {
+            // Force a new provider instance
+            await window.ethereum.request({ method: 'eth_requestAccounts' });
             const provider = new ethers.BrowserProvider(window.ethereum as any);
             signer = await provider.getSigner();
-          } catch (fallbackError) {
+          } catch (fallbackError: any) {
             console.error('Fallback signer attempt failed:', fallbackError);
+            
+            // If it's still the same error, provide a better user message
+            if (fallbackError.message && fallbackError.message.includes('could not coalesce error')) {
+              throw new Error('Wallet provider error. Please try refreshing the page or reconnecting your wallet.');
+            }
           }
         }
       }

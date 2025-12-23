@@ -28,7 +28,6 @@ export { default as GovernanceWidget } from './GovernanceWidget';
 export { default as KeyboardShortcutsModal } from './KeyboardShortcutsModal';
 export { default as ModeratorListWidget } from './ModeratorListWidget';
 export { PollDisplay } from './PollDisplay';
-export { default as PostHoverPreview } from './PostHoverPreview';
 export { default as PostSortingTabs } from './PostSortingTabs';
 export { default as QuickFilterChips } from './QuickFilterChips';
 export { default as RelatedCommunitiesWidget } from './RelatedCommunitiesWidget';

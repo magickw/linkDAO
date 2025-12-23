@@ -32,6 +32,12 @@ export const CommunityCardEnhanced: React.FC<CommunityCardProps> = ({
   const [isJoining, setIsJoining] = useState(false);
   const [imageError, setImageError] = useState(false);
 
+  // Helper to build a URL-safe community path. Prefer `slug`, then `name`, then `id` and encode the value.
+  const getCommunityPath = useCallback(() => {
+    const segment = encodeURIComponent(community.slug || community.name || community.id || '');
+    return `/communities/${segment}`;
+  }, [community.slug, community.name, community.id]);
+
   const handleJoin = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!onJoin || isJoining) return;
@@ -42,20 +48,20 @@ export const CommunityCardEnhanced: React.FC<CommunityCardProps> = ({
     } finally {
       setIsJoining(false);
     }
-  };
+  }; 
 
   const handleCardClick = () => {
     if (onSelect) {
       onSelect(community);
     } else {
       // Fallback: navigate directly if no onSelect provided
-      router.push(`/communities/${community.slug || community.name || community.id}`);
+      router.push(getCommunityPath());
     }
-  };
+  }; 
 
   const handleViewClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    router.push(`/communities/${community.slug || community.name || community.id}`);
+    router.push(getCommunityPath());
   };
 
   const getActivityColor = (level?: string) => {

@@ -118,9 +118,9 @@ const EditPostPage: React.FC = () => {
 
       // Redirect back to the community page where the post was originally created
       if (post?.communityId) {
-        router.push(`/communities/${post.communityId}`);
+        router.push(`/communities/${encodeURIComponent(post.communityId ?? '')}`);
       } else {
-        router.push(`/communities/${selectedCommunity}`);
+        router.push(`/communities/${encodeURIComponent(selectedCommunity ?? '')}`);
       }
     } catch (error) {
       console.error('Error updating post:', error);
@@ -159,7 +159,7 @@ const EditPostPage: React.FC = () => {
               onClick={() => {
                 // Go back to the previous page or to the community page
                 if (post?.communityId) {
-                  router.push(`/communities/${post.communityId}`);
+                  router.push(`/communities/${encodeURIComponent(post.communityId ?? '')}`);
                 } else {
                   router.back();
                 }
@@ -278,7 +278,7 @@ const EditPostPage: React.FC = () => {
                 onClick={() => {
                   // Go back to the previous page or to the community page
                   if (post?.communityId) {
-                    router.push(`/communities/${post.communityId}`);
+                    router.push(`/communities/${encodeURIComponent(post.communityId ?? '')}`);
                   } else {
                     router.back();
                   }

@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Mocks to keep the page light-weight
 jest.mock('framer-motion', () => ({
@@ -108,12 +109,53 @@ describe('Communities page integration', () => {
   });
 
   test('clicking comment triggers navigation to community post', async () => {
-    render(<CommunitiesPage />);
+    const queryClient = new QueryClient();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <CommunitiesPage />
+      </QueryClientProvider>
+    );
 
     await waitFor(() => expect(screen.getByTestId('comment-post-1')).toBeInTheDocument());
 
     fireEvent.click(screen.getByTestId('comment-post-1'));
 
     expect(mockPush).toHaveBeenCalledWith('/communities/comm-slug/posts/post-1');
+  });
+
+  test('encodes community names with spaces when no slug is present', async () => {
+    // Override mocks for this test
+    (CommunityService.getAllCommunities as jest.Mock).mockResolvedValueOnce([
+      { id: 'comm-2', slug: undefined, name: 'My Community', displayName: 'My Community' }
+    ]);
+
+    (FeedService.getEnhancedFeed as jest.Mock).mockResolvedValueOnce({
+      posts: [
+        {
+          id: 'post-2',
+          communityId: 'comm-2',
+          content: 'Hello again',
+          author: '0xabc',
+          commentCount: 0,
+          contentCid: '',
+          shareId: 's2',
+          isQuickPost: false,
+          authorProfile: { handle: 'alice' }
+        }
+      ],
+      hasMore: false
+    });
+
+    const queryClient = new QueryClient();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <CommunitiesPage />
+      </QueryClientProvider>
+    );
+
+    const btn = await screen.findByTestId('comment-post-2');
+    fireEvent.click(btn);
+
+    expect(mockPush).toHaveBeenCalledWith('/communities/My%20Community/posts/post-2');
   });
 });

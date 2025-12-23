@@ -447,7 +447,7 @@ const EnhancedPostCard = React.memo(({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              router.push(`/communities/${post.communityId}`);
+                              router.push(`/communities/${encodeURIComponent(post.communityId ?? '')}`);
                             }}
                             className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 truncate"
                             aria-label={`View community ${post.communityName}`}

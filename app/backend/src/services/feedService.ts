@@ -1511,9 +1511,10 @@ export class FeedService {
         throw new Error('User not found');
       }
 
-      // Check if postId is an integer (regular post) or UUID (quick post)
+      // Check if postId is an integer (regular post), UUID (quick post), or shareId (community post)
       const isIntegerId = /^\d+$/.test(postId);
-      safeLogger.info('Post ID type check:', { postId, isIntegerId });
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(postId);
+      safeLogger.info('Post ID type check:', { postId, isIntegerId, isUUID });
 
       // Validate parentCommentId if provided
       if (parentCommentId) {
@@ -1532,8 +1533,10 @@ export class FeedService {
         updatedAt: new Date()
       };
 
+      let postFound = false;
+
       if (isIntegerId) {
-        // Verify post exists
+        // Verify post exists by integer ID
         const post = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
         if (post.length === 0) {
           safeLogger.error('Post not found for ID:', postId);
@@ -1541,15 +1544,40 @@ export class FeedService {
         }
         commentValues.postId = postId;
         commentValues.quickPostId = null;
-      } else {
-        // Verify quick post exists
+        postFound = true;
+      } else if (isUUID) {
+        // Check if it's a quick post ID or a shareId
+        // First try quick posts
         const quickPost = await db.select().from(quickPosts).where(eq(quickPosts.id, postId)).limit(1);
-        if (quickPost.length === 0) {
-          safeLogger.error('Quick post not found for ID:', postId);
+        if (quickPost.length > 0) {
+          commentValues.quickPostId = postId;
+          commentValues.postId = null;
+          postFound = true;
+        } else {
+          // Try finding by shareId in posts table
+          const post = await db.select().from(posts).where(eq(posts.shareId, postId)).limit(1);
+          if (post.length > 0) {
+            commentValues.postId = post[0].id;
+            commentValues.quickPostId = null;
+            postFound = true;
+          }
+        }
+        
+        if (!postFound) {
+          safeLogger.error('Post not found for UUID ID:', postId);
           throw new Error('Post not found');
         }
-        commentValues.quickPostId = postId;
-        commentValues.postId = null;
+      } else {
+        // Try to find by shareId for any other format
+        const post = await db.select().from(posts).where(eq(posts.shareId, postId)).limit(1);
+        if (post.length > 0) {
+          commentValues.postId = post[0].id;
+          commentValues.quickPostId = null;
+          postFound = true;
+        } else {
+          safeLogger.error('Post not found for shareId:', postId);
+          throw new Error('Post not found');
+        }
       }
 
       safeLogger.info('Inserting comment with values:', commentValues);

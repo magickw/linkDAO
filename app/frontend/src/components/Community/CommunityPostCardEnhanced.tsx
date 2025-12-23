@@ -530,7 +530,7 @@ function CommunityPostCardEnhanced({
                 onClick={(e) => {
                   e.stopPropagation();
                   // Navigate to community page
-                  const communitySlug = community.slug || community.name || community.id || 'unknown';
+                  const communitySlug = encodeURIComponent(community.slug ?? community.id ?? community.name ?? 'unknown');
                   router.push(`/communities/${communitySlug}`);
                 }}
                 className="font-medium text-blue-600 dark:text-blue-400 hover:underline"
@@ -586,7 +586,7 @@ function CommunityPostCardEnhanced({
                 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 leading-tight cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 hover:underline"
                 onClick={() => {
                   // Navigate to the specific post page within the community
-                  const communitySlug = community.slug || community.name || community.id || 'unknown';
+                  const communitySlug = encodeURIComponent(community.slug ?? community.id ?? community.name ?? 'unknown');
                   const postPath = `/communities/${communitySlug}/posts/${post.id}`;
                   router.push(postPath);
                 }}
@@ -600,7 +600,7 @@ function CommunityPostCardEnhanced({
                   className="text-lg font-semibold text-gray-900 dark:text-white mb-2 leading-tight cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 hover:underline"
                   onClick={() => {
                     // Navigate to the specific post page within the community
-                    const communitySlug = community.slug || community.name || community.id || 'unknown';
+                    const communitySlug = encodeURIComponent(community.slug ?? community.id ?? community.name ?? 'unknown');
                     const postPath = `/communities/${communitySlug}/posts/${post.id}`;
                     router.push(postPath);
                   }}

@@ -92,7 +92,7 @@ const CreateCommunityPostPage: React.FC = () => {
       await CommunityPostService.createCommunityPost(postData);
 
       addToast('Post created successfully!', 'success');
-      router.push(`/communities/${community}`);
+      router.push(`/communities/${encodeURIComponent(community ?? '')}`);
     } catch (error) {
       console.error('Error creating post:', error);
       addToast(error instanceof Error ? error.message : 'Failed to create post. Please try again.', 'error');
@@ -127,7 +127,7 @@ const CreateCommunityPostPage: React.FC = () => {
           {/* Header */}
           <div className="mb-6">
             <button
-              onClick={() => router.push(`/communities/${community}`)}
+              onClick={() => router.push(`/communities/${encodeURIComponent(community ?? '')}`)}
               className="flex items-center text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 mb-4"
             >
               <ArrowLeft className="w-5 h-5 mr-2" />
@@ -238,7 +238,7 @@ const CreateCommunityPostPage: React.FC = () => {
             <div className="flex justify-end gap-3">
               <button
                 type="button"
-                onClick={() => router.push(`/communities/${community}`)}
+                onClick={() => router.push(`/communities/${encodeURIComponent(community ?? '')}`)}
                 className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Cancel
