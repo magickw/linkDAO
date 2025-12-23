@@ -1,0 +1,172 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`ContactCard matches snapshot with edit button 1`] = `
+<DocumentFragment>
+  <div
+    class="relative p-3 rounded-lg cursor-pointer transition-colors  hover:bg-gray-800"
+    tabindex="0"
+  >
+    <div
+      class="flex items-center gap-3"
+    >
+      <div
+        class="relative"
+      >
+        <div
+          class="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-medium"
+        >
+          A
+        </div>
+        <div
+          class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-gray-900 bg-green-500"
+        />
+      </div>
+      <div
+        class="flex-1 min-w-0"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <h3
+            class="font-medium text-white truncate"
+          >
+            Alice
+          </h3>
+        </div>
+        <p
+          class="text-sm text-gray-400 truncate"
+        >
+          0x1234...5678
+        </p>
+        <p
+          class="text-xs text-gray-500"
+        >
+          Last seen: Never
+        </p>
+      </div>
+      <div
+        class="flex items-center gap-1"
+        style="opacity: 0; transform: translateX(10px);"
+      >
+        <button
+          class="p-1.5 text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-colors"
+          title="Message"
+        >
+          <svg
+            aria-hidden="true"
+            class="w-4 h-4"
+            data-slot="icon"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M2.25 12.76c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.076-4.076a1.526 1.526 0 0 1 1.037-.443 48.282 48.282 0 0 0 5.68-.494c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
+        <button
+          class="p-1.5 text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-colors"
+          title="Edit"
+        >
+          <svg
+            aria-hidden="true"
+            class="w-4 h-4"
+            data-slot="icon"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</DocumentFragment>
+`;
+
+exports[`ContactCard matches snapshot without edit button 1`] = `
+<DocumentFragment>
+  <div
+    class="relative p-3 rounded-lg cursor-pointer transition-colors  hover:bg-gray-800"
+    tabindex="0"
+  >
+    <div
+      class="flex items-center gap-3"
+    >
+      <div
+        class="relative"
+      >
+        <div
+          class="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-medium"
+        >
+          A
+        </div>
+        <div
+          class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-gray-900 bg-green-500"
+        />
+      </div>
+      <div
+        class="flex-1 min-w-0"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <h3
+            class="font-medium text-white truncate"
+          >
+            Alice
+          </h3>
+        </div>
+        <p
+          class="text-sm text-gray-400 truncate"
+        >
+          0x1234...5678
+        </p>
+        <p
+          class="text-xs text-gray-500"
+        >
+          Last seen: Never
+        </p>
+      </div>
+      <div
+        class="flex items-center gap-1"
+        style="opacity: 0; transform: translateX(10px);"
+      >
+        <button
+          class="p-1.5 text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-colors"
+          title="Message"
+        >
+          <svg
+            aria-hidden="true"
+            class="w-4 h-4"
+            data-slot="icon"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M2.25 12.76c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.076-4.076a1.526 1.526 0 0 1 1.037-.443 48.282 48.282 0 0 0 5.68-.494c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</DocumentFragment>
+`;

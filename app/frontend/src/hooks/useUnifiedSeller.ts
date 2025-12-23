@@ -32,7 +32,7 @@ export function useUnifiedSeller(walletAddress?: string) {
   const effectiveAddress = walletAddress || address;
 
   // Debug logging
-  React.useEffect(() => {
+  useEffect(() => {
     console.log('useUnifiedSeller Debug:', {
       walletAddress,
       address,

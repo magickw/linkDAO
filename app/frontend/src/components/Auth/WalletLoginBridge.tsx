@@ -27,7 +27,8 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
   onLoginError,
   skipIfAuthenticated = true,
 }) => {
-  const { address, isConnected, connector, status } = useAccount();
+  const { address, isConnected, connector } = useAccount();
+  // Removed 'status' - it changes too frequently and triggers unnecessary re-renders
   const { user, isAuthenticated, login } = useAuth();
   const hasHandledAddressRef = useRef<Set<string>>(new Set());
   const isMountedRef = useRef(true);
@@ -50,7 +51,7 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
       isConnected,
       address,
       isAuthenticated,
-      connector
+      connector: connector?.name
     });
 
     // FIRST: Check if we have a valid stored session before any other logic
@@ -156,7 +157,8 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
       console.log('WalletLoginBridge: Cleaning up effect');
       isMountedRef.current = false;
     };
-  }, [address, isConnected, isAuthenticated, autoLogin, connector, status, onLoginSuccess, onLoginError]);
+  }, [address, isConnected, isAuthenticated, autoLogin, connector, onLoginSuccess, onLoginError]);
+  // Removed 'status' from dependencies - it changes too frequently and blocks navigation
   // Reset when wallet disconnects
   useEffect(() => {
     if (!isConnected) {

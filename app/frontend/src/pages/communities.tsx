@@ -164,7 +164,7 @@ const CommunitiesPage: React.FC = () => {
   const [walletActivities, setWalletActivities] = useState<any[]>([]);
 
   // Hover preview state with debouncing
-  
+  const hoverTimeoutRef = useRef<number | null>(null);
 
   // Quick filter chips state
   const [activeQuickFilters, setActiveQuickFilters] = useState<string[]>([]);
@@ -1005,7 +1005,7 @@ const CommunitiesPage: React.FC = () => {
                             // Handle tip logic here
                             // Tip
                           }}
-                          onComment={() => {}}
+                          onComment={() => handleComment(postId)}
                         />
                       </div>
                     </Web3SwipeGestureHandler>

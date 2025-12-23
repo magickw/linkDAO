@@ -33,19 +33,6 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
   const profile = sellerData.profile as UnifiedSellerProfile | null | undefined;
   const profileLoading = sellerData.loading;
   const profileError = sellerData.error;
-  
-  // Debug logging
-  React.useEffect(() => {
-    console.log('SellerDashboard Debug:', {
-      mockWalletAddress,
-      profile,
-      profileLoading,
-      profileError,
-      hasProfile: !!profile,
-      profileKeys: profile ? Object.keys(profile) : []
-    });
-  }, [profile, profileLoading, profileError, mockWalletAddress]);
-  
   const { dashboard, stats, notifications, unreadNotifications, loading, markNotificationRead, address: dashboardAddress } = useUnifiedSellerDashboard(mockWalletAddress);
   const { getTierById, getNextTier } = useSellerTiers();
   const { listings, loading: listingsLoading, refetch: fetchListings } = useUnifiedSellerListings(dashboardAddress);

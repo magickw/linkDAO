@@ -118,8 +118,18 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
       } else if (paymentMethod === 'x402') {
         // Check x402 service availability first
         try {
+          // Ensure we have an explicit API base URL configured; fail fast to avoid contacting localhost in production
+          const apiBase = process.env.NEXT_PUBLIC_API_URL;
+          if (!apiBase) {
+            console.warn('NEXT_PUBLIC_API_URL is not set; aborting x402 service check');
+            setErrorMessage('Payment backend not configured. Please set NEXT_PUBLIC_API_URL.');
+            setDexQuotes([]);
+            setIsLoadingQuotes(false);
+            return;
+          }
+
           // Test x402 service by making a lightweight status check
-          const testResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000'}/api/x402/status`, {
+          const testResponse = await fetch(`${apiBase}/api/x402/status`, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' }
           });

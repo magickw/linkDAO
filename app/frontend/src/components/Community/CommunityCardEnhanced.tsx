@@ -1,4 +1,5 @@
 import React, { useState, memo, useCallback } from 'react';
+import { useRouter } from 'next/router';
 import { Community } from '../../models/Community';
 import { formatNumber, formatDate } from '../../utils/formatters';
 import { motion } from 'framer-motion';
@@ -27,6 +28,7 @@ export const CommunityCardEnhanced: React.FC<CommunityCardProps> = ({
   compact = false,
   isLoading = false
 }) => {
+  const router = useRouter();
   const [isJoining, setIsJoining] = useState(false);
   const [imageError, setImageError] = useState(false);
 
@@ -45,7 +47,15 @@ export const CommunityCardEnhanced: React.FC<CommunityCardProps> = ({
   const handleCardClick = () => {
     if (onSelect) {
       onSelect(community);
+    } else {
+      // Fallback: navigate directly if no onSelect provided
+      router.push(`/communities/${community.slug || community.name || community.id}`);
     }
+  };
+
+  const handleViewClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    router.push(`/communities/${community.slug || community.name || community.id}`);
   };
 
   const getActivityColor = (level?: string) => {
@@ -282,6 +292,7 @@ export const CommunityCardEnhanced: React.FC<CommunityCardProps> = ({
           )}
 
           <button 
+            onClick={handleViewClick}
             className="flex-1 py-2 px-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
             aria-label="View community"
           >

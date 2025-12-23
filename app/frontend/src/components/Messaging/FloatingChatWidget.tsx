@@ -26,6 +26,7 @@ import ContactSearch from './Contacts/ContactSearch';
 import ContactList from './Contacts/ContactList';
 import ContactDetail from './Contacts/ContactDetail';
 import AddContactModal from './Contacts/AddContactModal';
+import EditContactModal from './Contacts/EditContactModal';
 import { GlassPanel } from '@/design-system';
 import DiscordStyleMessagingInterface from './DiscordStyleMessagingInterface';
 import { OnlineStatus } from './MessageStatusComponents';
@@ -405,10 +406,23 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
           });
         }
       } else {
-        // If no conversation exists, start a new one
-        console.log("FloatingChatWidget: No existing conversation found, opening new conversation modal with address:", pendingContact.walletAddress);
+        // If no conversation exists, automatically create one
+        console.log("FloatingChatWidget: No existing conversation found, creating new conversation with address:", pendingContact.walletAddress);
+        
+        // Set the recipient address and trigger conversation creation
         setNewRecipientAddress(pendingContact.walletAddress);
-        setShowNewConversationModal(true);
+        
+        // Call startNewConversation directly
+        startNewConversation()
+          .then(() => {
+            console.log("FloatingChatWidget: Successfully started new conversation");
+            // The conversation should now be selected and chat tab active
+          })
+          .catch(error => {
+            console.error("FloatingChatWidget: Failed to start new conversation:", error);
+            // Show the modal as fallback
+            setShowNewConversationModal(true);
+          });
       }
 
       // Clear the pending contact
@@ -857,9 +871,16 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
 const ContactsTabContent: React.FC = () => {
   const { startChat } = useContacts();
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
 
   const handleStartChat = (contact: Contact) => {
     startChat(contact);
+  };
+
+  const handleEditContact = (contact: Contact) => {
+    setEditingContact(contact);
+    setShowEditModal(true);
   };
 
   return (
@@ -883,6 +904,7 @@ const ContactsTabContent: React.FC = () => {
           className="flex-1" 
           flat 
           onContactMessage={handleStartChat}
+          onContactEdit={handleEditContact}
         />
 
         {/* Add Contact */}
@@ -898,6 +920,16 @@ const ContactsTabContent: React.FC = () => {
       <AddContactModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
+      />
+      
+      {/* Edit Contact Modal - rendered outside to avoid z-index issues */}
+      <EditContactModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingContact(null);
+        }}
+        contact={editingContact}
       />
     </div>
   );

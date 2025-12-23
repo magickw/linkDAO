@@ -54,9 +54,19 @@ export default function SharePostPage() {
                     setPost(postData);
                     setCanonicalUrl(canonicalUrl);
                     
-                    // 重定向到规范URL
+                    // Update the URL to the canonical path WITHOUT triggering a Next.js full navigation
+                    // We avoid `router.replace(..., { shallow: true })` here because shallow can still trigger
+                    // Next.js internal behavior that causes page re-mounts in some edge cases. Replacing the
+                    // history entry via the native History API keeps the user on this client-side route and
+                    // lets the app-level modal logic (e.g. `usePostModalManager`) handle any required UI state
+                    // without causing an extra route change event.
                     if (canonicalUrl && canonicalUrl !== window.location.pathname) {
-                        router.replace(canonicalUrl);
+                        try {
+                            window.history.replaceState({}, '', canonicalUrl);
+                        } catch (err) {
+                            // Fallback to Next router.replace if History API is unavailable
+                            router.replace(canonicalUrl);
+                        }
                     }
                 } else {
                     setError('Post not found');

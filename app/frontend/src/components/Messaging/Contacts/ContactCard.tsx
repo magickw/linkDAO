@@ -128,13 +128,15 @@ const ContactCard: React.FC<ContactCardProps> = ({ contact, className = '', onCo
           >
             <ChatBubbleLeftIcon className="w-4 h-4" />
           </button>
-          <button
-            onClick={handleEdit}
-            className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-colors"
-            title="Edit"
-          >
-            <PencilIcon className="w-4 h-4" />
-          </button>
+          {onContactEdit && (
+            <button
+              onClick={handleEdit}
+              className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-colors"
+              title="Edit"
+            >
+              <PencilIcon className="w-4 h-4" />
+            </button>
+          )}
         </motion.div>
       </div>
 
