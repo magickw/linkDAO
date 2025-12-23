@@ -55,9 +55,15 @@ export class MessagingController {
         communityId
       } = req.body;
 
+      // Validate participantAddress
+      if (!participantAddress || typeof participantAddress !== 'string' || participantAddress.trim().length === 0) {
+        res.status(400).json(apiResponse.error('Participant address is required', 400));
+        return;
+      }
+
       const conversation = await messagingService.startConversation({
         initiatorAddress: userAddress,
-        participantAddress,
+        participantAddress: participantAddress.trim(),
         initialMessage,
         conversationType,
         communityId

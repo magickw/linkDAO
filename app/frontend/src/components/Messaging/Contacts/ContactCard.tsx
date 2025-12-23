@@ -7,9 +7,10 @@ import { useContacts } from '@/contexts/ContactContext';
 interface ContactCardProps {
   contact: Contact;
   className?: string;
+  onContactMessage?: (contact: Contact) => void;
 }
 
-const ContactCard: React.FC<ContactCardProps> = ({ contact, className = '' }) => {
+const ContactCard: React.FC<ContactCardProps> = ({ contact, className = '', onContactMessage }) => {
   const { selectContact, startChat } = useContacts();
   const [isHovered, setIsHovered] = useState(false);
 
@@ -48,7 +49,11 @@ const ContactCard: React.FC<ContactCardProps> = ({ contact, className = '' }) =>
 
   const handleMessage = (e: React.MouseEvent) => {
     e.stopPropagation();
-    startChat(contact);
+    if (onContactMessage) {
+      onContactMessage(contact);
+    } else {
+      startChat(contact);
+    }
   };
 
   const handleEdit = (e: React.MouseEvent) => {

@@ -16,35 +16,30 @@ import {
   REACTION_TYPES
 } from '../types/tokenReaction';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
 
 class TokenReactionService {
-  private getAuthToken(): string | null {
-    // Try multiple possible token storage locations
-    return (
-      localStorage.getItem('token') ||
-      localStorage.getItem('authToken') ||
-      localStorage.getItem('auth_token') ||
-      localStorage.getItem('linkdao-auth-token') ||
-      null
-    );
-  }
-
   private async makeRequest<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
     try {
-      // Get auth token and add to headers if available
-      const token = this.getAuthToken();
+      // Import enhancedAuthService only when needed to avoid circular dependencies
+      const { enhancedAuthService } = await import('../services/enhancedAuthService');
+      
+      // Get auth headers from the enhancedAuthService which properly handles token validation
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         ...((options.headers as Record<string, string>) || {})
       };
 
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
+      // Merge the auth headers with the provided headers
+      Object.entries(authHeaders).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          headers[key] = value as string;
+        }
+      });
 
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         headers,

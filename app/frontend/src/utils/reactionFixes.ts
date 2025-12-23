@@ -53,8 +53,8 @@ export const handleReactionWithAuth = async (
   const validPostId = ensureValidPostId(postId);
   
   try {
-    // Get auth headers
-    const authHeaders = enhancedAuthService.getAuthHeaders();
+    // Get auth headers - Awaiting since getAuthHeaders is async
+    const authHeaders = await enhancedAuthService.getAuthHeaders();
     const hasAuthHeader = authHeaders.Authorization && authHeaders.Authorization !== 'Bearer null';
     
     // Debug logging
@@ -126,7 +126,7 @@ export const getReactionsWithFallback = async (postId: string) => {
     // Fallback to reactions endpoint
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/reactions/${validPostId}/summaries`, {
-        headers: enhancedAuthService.getAuthHeaders()
+        headers: await enhancedAuthService.getAuthHeaders()
       });
       
       if (response.ok) {

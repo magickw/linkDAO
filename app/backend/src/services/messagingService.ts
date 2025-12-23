@@ -180,7 +180,35 @@ export class MessagingService {
 
     try {
       this.validateAddress(initiatorAddress);
-      this.validateAddress(participantAddress);
+      
+      // Check if participantAddress is an ENS name and resolve it to a wallet address
+      let resolvedParticipantAddress = participantAddress;
+      if (participantAddress && typeof participantAddress === 'string' && participantAddress.endsWith('.eth')) {
+        // Import ENS service here to avoid circular dependencies
+        const { ensService } = await import('./ensService');
+        const validationResult = await ensService.validateENSHandle(participantAddress);
+        
+        if (!validationResult.isValid || !validationResult.address) {
+          return {
+            success: false,
+            message: `Invalid ENS name: ${participantAddress}. ${validationResult.error || 'ENS name could not be resolved.'}`
+          };
+        }
+        
+        resolvedParticipantAddress = validationResult.address;
+      } else {
+        // Validate that the participant address is a valid Ethereum address
+        if (!/^0x[a-fA-F0-9]{40}$/.test(participantAddress)) {
+          return {
+            success: false,
+            message: 'Invalid participant address format. Please provide a valid Ethereum address or ENS name.'
+          };
+        }
+      }
+
+      // Validate the resolved participant address
+      this.validateAddress(resolvedParticipantAddress);
+
       // Check if conversation already exists between these participants
       const existingConversation = await db
         .select()
@@ -188,7 +216,7 @@ export class MessagingService {
         .where(
           and(
             sql`participants @> ${JSON.stringify([initiatorAddress])}::jsonb`,
-            sql`participants @> ${JSON.stringify([participantAddress])}::jsonb`
+            sql`participants @> ${JSON.stringify([resolvedParticipantAddress])}::jsonb`
           )
         )
         .limit(1);
@@ -202,7 +230,7 @@ export class MessagingService {
       }
 
       // Check if user is blocked
-      const isBlocked = await this.checkIfBlocked(initiatorAddress, participantAddress);
+      const isBlocked = await this.checkIfBlocked(initiatorAddress, resolvedParticipantAddress);
       if (isBlocked) {
         return {
           success: false,
@@ -211,7 +239,7 @@ export class MessagingService {
       }
 
       // Create new conversation
-      const participants = [initiatorAddress, participantAddress];
+      const participants = [initiatorAddress, resolvedParticipantAddress];
 
       const newConversation = await db
         .insert(conversations)

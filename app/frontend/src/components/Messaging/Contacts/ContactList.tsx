@@ -9,6 +9,7 @@ import AddContactModal from './AddContactModal';
 interface ContactListProps {
   className?: string;
   flat?: boolean; // render single-column without group sections
+  onContactMessage?: (contact: Contact) => void;
 }
 
 const ContactList: React.FC<ContactListProps> = ({ className = '', flat = false }) => {
@@ -103,7 +104,12 @@ const ContactList: React.FC<ContactListProps> = ({ className = '', flat = false 
               <div className="p-4 text-center text-gray-500 text-sm">No contacts found</div>
             ) : (
               filteredContacts.map(contact => (
-                <ContactCard key={contact.id} contact={contact} className="mx-1" />
+                <ContactCard 
+                  key={contact.id} 
+                  contact={contact} 
+                  className="mx-1" 
+                  onContactMessage={onContactMessage} 
+                />
               ))
             )}
           </div>
@@ -158,6 +164,7 @@ const ContactList: React.FC<ContactListProps> = ({ className = '', flat = false 
                             key={contact.id}
                             contact={contact}
                             className="mx-2"
+                            onContactMessage={onContactMessage}
                           />
                         ))}
                       </div>

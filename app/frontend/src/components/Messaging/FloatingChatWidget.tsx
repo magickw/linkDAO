@@ -843,6 +843,13 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
 
 // Contacts Tab Content Component
 const ContactsTabContent: React.FC = () => {
+  const { startChat } = useContacts();
+  const [showAddModal, setShowAddModal] = useState(false);
+
+  const handleStartChat = (contact: Contact) => {
+    startChat(contact);
+  };
+
   return (
     <div className="flex h-full">
       {/* Single-column contact list without categories */}
@@ -860,18 +867,26 @@ const ContactsTabContent: React.FC = () => {
         </div>
 
         {/* Flat Contact List */}
-        <ContactList className="flex-1" flat />
+        <ContactList 
+          className="flex-1" 
+          flat 
+          onContactMessage={handleStartChat}
+        />
 
         {/* Add Contact */}
         <div className="p-2 border-t border-gray-700">
           <button
-            onClick={() => alert('Add new contact functionality to be implemented')}
+            onClick={() => setShowAddModal(true)}
             className="w-full py-2 bg-blue-600 rounded-lg text-white text-xs hover:bg-blue-700 transition-colors"
           >
             Add Contact
           </button>
         </div>
       </div>
+      <AddContactModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+      />
     </div>
   );
 };

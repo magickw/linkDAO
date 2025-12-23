@@ -131,7 +131,7 @@ const CommunitiesPage: React.FC = () => {
   const [communities, setCommunities] = useState<Community[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [sortBy, setSortBy] = useState<FeedSortType>(FeedSortType.HOT);
-  const [timeFilter, setTimeFilter] = useState<'hour' | 'day' | 'week' | 'month' | 'year' | 'all'>('day');
+  const [timeFilter, setTimeFilter] = useState<'hour' | 'day' | 'week' | 'month' | 'year' | 'all'>('all');
   const [joinedCommunities, setJoinedCommunities] = useState<string[]>([]);
   const [userAdminRoles, setUserAdminRoles] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -326,7 +326,8 @@ const CommunitiesPage: React.FC = () => {
         sortBy: sortBy as any,
         timeRange: timeFilter,
         userAddress: address || undefined,
-        postTypes: ['posts'],
+        postTypes: ['posts'], // Only fetch community posts (not quick posts)
+        // Only filter by specific communities if user has joined some, otherwise show all community posts
         communities: joinedCommunities.length > 0 ? joinedCommunities : undefined
       };
       

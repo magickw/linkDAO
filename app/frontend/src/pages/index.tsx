@@ -352,11 +352,9 @@ export default function Home() {
         isUpdating.current = false;
       }
       
-      // Disconnect WebSocket temporarily during navigation to prevent blocking
-      if (webSocket && webSocket.isConnected) {
-        console.log('[HomePage] Temporarily disconnecting WebSocket for navigation');
-        webSocket.disconnect();
-      }
+      // Instead of immediately disconnecting WebSocket, just mark that we're navigating
+      // This prevents blocking the navigation while still tracking the navigation state
+      console.log('[HomePage] Navigation in progress, will handle WebSocket after navigation completes');
     };
 
     const handleRouteChangeComplete = (url: string) => {
@@ -373,6 +371,10 @@ export default function Home() {
             webSocket.connect().catch(console.error);
           }
         }, 100); // Small delay to ensure navigation is fully complete
+      } else {
+        // On other pages, we don't need the home page WebSocket connection
+        // but we shouldn't block navigation by disconnecting it
+        console.log('[HomePage] Navigated away from home, WebSocket will be managed by new page if needed');
       }
     };
 

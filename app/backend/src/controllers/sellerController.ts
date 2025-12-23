@@ -360,7 +360,8 @@ export class SellerController {
 
   async updateProfileEnhanced(req: Request, res: Response) {
     try {
-      const { walletAddress } = req.params;
+      const user = (req as any).user;
+      const walletAddress = user.walletAddress;
       const updateData = req.body;
       // Handle file uploads if present
       const files = req.files as any;
@@ -368,11 +369,11 @@ export class SellerController {
       const db = databaseService.getDatabase();
 
       // Find user by wallet address
-      const [user] = await db.select()
+      const [userRecord] = await db.select()
         .from(users)
         .where(eq(users.walletAddress, walletAddress));
 
-      if (!user) {
+      if (!userRecord) {
         return res.status(404).json({ error: "User not found" });
       }
 
@@ -389,7 +390,7 @@ export class SellerController {
 
       const [updatedProfile] = await db.update(marketplaceUsers)
         .set(profileUpdate)
-        .where(eq(marketplaceUsers.userId, user.id))
+        .where(eq(marketplaceUsers.userId, userRecord.id))
         .returning();
 
       if (!updatedProfile) {
@@ -405,7 +406,8 @@ export class SellerController {
 
   async getProfileCompleteness(req: Request, res: Response) {
     try {
-      const { walletAddress } = req.params;
+      const user = (req as any).user;
+      const walletAddress = user.walletAddress;
       const db = databaseService.getDatabase();
 
       const [result] = await db.select()
@@ -457,7 +459,8 @@ export class SellerController {
 
   async getSellerStats(req: Request, res: Response) {
     try {
-      const { walletAddress } = req.params;
+      const user = (req as any).user;
+      const walletAddress = user.walletAddress;
       const db = databaseService.getDatabase();
 
       const [verification] = await db.select()
@@ -517,7 +520,8 @@ export class SellerController {
 
   async forceSyncProfile(req: Request, res: Response) {
     try {
-      const { walletAddress } = req.params;
+      const user = (req as any).user;
+      const walletAddress = user.walletAddress;
 
       // Mock sync - in production, sync with blockchain/IPFS
       res.json({ success: true, message: "Profile synced successfully", walletAddress });
@@ -529,7 +533,8 @@ export class SellerController {
 
   async validateProfileSync(req: Request, res: Response) {
     try {
-      const { walletAddress } = req.params;
+      const user = (req as any).user;
+      const walletAddress = user.walletAddress;
 
       // Mock validation - in production, check sync status
       res.json({ inSync: true, lastSync: new Date(), walletAddress });
@@ -541,7 +546,8 @@ export class SellerController {
 
   async getProfileHistory(req: Request, res: Response) {
     try {
-      const { walletAddress } = req.params;
+      const user = (req as any).user;
+      const walletAddress = user.walletAddress;
 
       // Mock history - in production, fetch from audit log
       res.json({
@@ -1016,7 +1022,9 @@ export class SellerController {
   // Get seller profile (using seller service)
   async getProfile(req: Request, res: Response) {
     try {
-      const { walletAddress } = req.params;
+      const user = (req as any).user;
+      const walletAddress = user.walletAddress;
+      
       const { sellerService } = await import('../services/sellerService');
 
       const profile = await sellerService.getSellerProfile(walletAddress);
@@ -1063,7 +1071,8 @@ export class SellerController {
   // Update seller profile
   async updateSellerProfileByAddress(req: Request, res: Response) {
     try {
-      const { walletAddress } = req.params;
+      const user = (req as any).user;
+      const walletAddress = user.walletAddress;
       const updateData = req.body;
 
       const { sellerService } = await import('../services/sellerService');
@@ -1080,7 +1089,8 @@ export class SellerController {
   // Get seller stats (using seller service)
   async getStats(req: Request, res: Response) {
     try {
-      const { walletAddress } = req.params;
+      const user = (req as any).user;
+      const walletAddress = user.walletAddress;
       const stats = await this.getSellerStatsInternal(walletAddress);
       res.json({ success: true, data: stats });
     } catch (error) {

@@ -75,7 +75,12 @@ export async function getProvider() {
 
     try {
       const chainId = envChainId ? parseInt(envChainId, 10) : 1;
-      const rpcUrl = getChainRpcUrl(chainId);
+      let rpcUrl = getChainRpcUrl(chainId);
+      
+      if (!rpcUrl) {
+        console.warn(`No RPC URL found for chain ID ${chainId}, using fallback public RPC.`);
+        rpcUrl = 'https://ethereum-sepolia-rpc.publicnode.com';
+      }
       
       if (rpcUrl) {
         // Use staticNetwork: true to prevent network detection issues
