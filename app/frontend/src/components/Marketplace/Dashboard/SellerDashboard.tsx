@@ -32,6 +32,20 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
   const sellerData = useUnifiedSeller(mockWalletAddress);
   const profile = sellerData.profile as UnifiedSellerProfile | null | undefined;
   const profileLoading = sellerData.loading;
+  const profileError = sellerData.error;
+  
+  // Debug logging
+  React.useEffect(() => {
+    console.log('SellerDashboard Debug:', {
+      mockWalletAddress,
+      profile,
+      profileLoading,
+      profileError,
+      hasProfile: !!profile,
+      profileKeys: profile ? Object.keys(profile) : []
+    });
+  }, [profile, profileLoading, profileError, mockWalletAddress]);
+  
   const { dashboard, stats, notifications, unreadNotifications, loading, markNotificationRead, address: dashboardAddress } = useUnifiedSellerDashboard(mockWalletAddress);
   const { getTierById, getNextTier } = useSellerTiers();
   const { listings, loading: listingsLoading, refetch: fetchListings } = useUnifiedSellerListings(dashboardAddress);
@@ -337,7 +351,8 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
     );
   }
 
-  if (!profile) {
+  // Show error if there's an API error (different from profile not found)
+  if (profileError && !(profileError instanceof Error && profileError.message.includes('not found'))) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
         <GlassPanel className="max-w-md w-full text-center">
@@ -347,14 +362,77 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-white mb-2">Seller Profile Not Found</h1>
-            <p className="text-gray-300 mb-6">
-              You need to complete the seller onboarding process to access the dashboard.
+            <h1 className="text-2xl font-bold text-white mb-2">Error Loading Profile</h1>
+            <p className="text-gray-300 mb-4">
+              There was an error loading your seller profile. Please try again.
             </p>
+            <div className="text-left bg-red-500/10 rounded-lg p-4 mb-6">
+              <p className="text-red-300 text-sm font-mono break-all">
+                {profileError instanceof Error ? profileError.message : String(profileError)}
+              </p>
+            </div>
           </div>
-          <Button onClick={() => router.push('/marketplace/seller/onboarding')} variant="primary">
-            Start Seller Onboarding
-          </Button>
+          <div className="space-y-3">
+            <Button 
+              onClick={() => window.location.reload()} 
+              variant="primary"
+              className="w-full"
+            >
+              Try Again
+            </Button>
+            <Button 
+              onClick={() => router.push('/marketplace')} 
+              variant="secondary"
+              className="w-full"
+            >
+              Browse Marketplace
+            </Button>
+          </div>
+        </GlassPanel>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
+        <GlassPanel className="max-w-md w-full text-center">
+          <div className="mb-6">
+            <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+            </div>
+            <h1 className="text-2xl font-bold text-white mb-2">Welcome to Seller Dashboard</h1>
+            <p className="text-gray-300 mb-4">
+              To start selling on LinkDAO Marketplace, you'll need to set up your seller profile first.
+            </p>
+            <div className="text-left bg-white/5 rounded-lg p-4 mb-6">
+              <h3 className="text-white font-semibold mb-2">What you'll need:</h3>
+              <ul className="text-gray-300 text-sm space-y-1">
+                <li>• Store name and description</li>
+                <li>• Business information</li>
+                <li>• Payment method setup</li>
+                <li>• Profile verification</li>
+              </ul>
+            </div>
+          </div>
+          <div className="space-y-3">
+            <Button 
+              onClick={() => router.push('/marketplace/seller/onboarding')} 
+              variant="primary"
+              className="w-full"
+            >
+              Complete Seller Setup
+            </Button>
+            <Button 
+              onClick={() => router.push('/marketplace')} 
+              variant="secondary"
+              className="w-full"
+            >
+              Browse Marketplace
+            </Button>
+          </div>
         </GlassPanel>
       </div>
     );

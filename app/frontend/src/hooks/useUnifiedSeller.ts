@@ -31,6 +31,17 @@ export function useUnifiedSeller(walletAddress?: string) {
   const { address } = useAccount();
   const effectiveAddress = walletAddress || address;
 
+  // Debug logging
+  React.useEffect(() => {
+    console.log('useUnifiedSeller Debug:', {
+      walletAddress,
+      address,
+      effectiveAddress,
+      hasEffectiveAddress: !!effectiveAddress,
+      queryEnabled: !!effectiveAddress
+    });
+  }, [walletAddress, address, effectiveAddress]);
+
   const {
     data: profile,
     isLoading: loading,
@@ -38,11 +49,15 @@ export function useUnifiedSeller(walletAddress?: string) {
     refetch
   } = useQuery<UnifiedSellerProfile | null>({
     queryKey: ['unified-seller', 'profile', effectiveAddress],
-    queryFn: () => effectiveAddress ? unifiedSellerService.getProfile(effectiveAddress) : null,
+    queryFn: () => {
+      console.log('useUnifiedSeller queryFn called with address:', effectiveAddress);
+      return effectiveAddress ? unifiedSellerService.getProfile(effectiveAddress) : null;
+    },
     enabled: !!effectiveAddress,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
     retry: (failureCount, error) => {
+      console.log('useUnifiedSeller retry:', { failureCount, error });
       // Don't retry on certain error types
       if (error instanceof SellerAPIError && error.type === SellerErrorType.PERMISSION_ERROR) {
         return false;

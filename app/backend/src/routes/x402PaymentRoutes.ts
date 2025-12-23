@@ -246,4 +246,27 @@ router.get('/health', async (req, res) => {
   }
 });
 
+// Status endpoint for x402 service availability
+router.get('/status', async (req, res) => {
+  try {
+    const status = x402PaymentService.getStatus();
+    res.status(200).json({
+      available: status.available,
+      hasCredentials: status.hasCredentials,
+      usingMock: status.usingMock,
+      message: status.hasCredentials 
+        ? 'x402 payment service is available' 
+        : 'x402 payment requires Coinbase CDP credentials'
+    });
+  } catch (error) {
+    safeLogger.error('Error checking x402 service status:', error);
+    res.status(500).json({
+      available: false,
+      hasCredentials: false,
+      usingMock: true,
+      message: 'x402 service unavailable'
+    });
+  }
+});
+
 export default router;

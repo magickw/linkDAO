@@ -3,18 +3,17 @@ import { motion } from 'framer-motion';
 import { ChatBubbleLeftIcon, PencilIcon, CheckBadgeIcon } from '@heroicons/react/24/outline';
 import { Contact } from '@/types/contacts';
 import { useContacts } from '@/contexts/ContactContext';
-import EditContactModal from './EditContactModal';
 
 interface ContactCardProps {
   contact: Contact;
   className?: string;
   onContactMessage?: (contact: Contact) => void;
+  onContactEdit?: (contact: Contact) => void;
 }
 
-const ContactCard: React.FC<ContactCardProps> = ({ contact, className = '', onContactMessage }) => {
+const ContactCard: React.FC<ContactCardProps> = ({ contact, className = '', onContactMessage, onContactEdit }) => {
   const { selectContact, startChat } = useContacts();
   const [isHovered, setIsHovered] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -60,7 +59,9 @@ const ContactCard: React.FC<ContactCardProps> = ({ contact, className = '', onCo
 
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setShowEditModal(true);
+    if (onContactEdit) {
+      onContactEdit(contact);
+    }
   };
 
   return (
@@ -155,13 +156,6 @@ const ContactCard: React.FC<ContactCardProps> = ({ contact, className = '', onCo
           )}
         </div>
       )}
-      
-      {/* Edit Modal */}
-      <EditContactModal
-        isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        contact={contact}
-      />
     </motion.div>
   );
 };

@@ -84,12 +84,12 @@ export function usePostModalManager() {
         if (type === 'community_post') {
           const canonicalUrl = data.data.canonicalUrl || `/communities/${data.data.owner?.handle}/posts/${shareId}`;
           if (router.asPath !== canonicalUrl) {
-            router.replace(canonicalUrl, undefined, { shallow: true });
+            router.replace(canonicalUrl);
           }
         } else if (type === 'quick_post') {
           const canonicalUrl = data.data.canonicalUrl || `/${data.data.owner?.handle}/posts/${shareId}`;
           if (router.asPath !== canonicalUrl) {
-            router.replace(canonicalUrl, undefined, { shallow: true });
+            router.replace(canonicalUrl);
           }
         }
       } else {
@@ -113,7 +113,7 @@ export function usePostModalManager() {
 
     // Update URL without navigation
     const shareUrl = type === 'community_post' ? `/cp/${post.shareId}` : `/p/${post.shareId}`;
-    router.replace(shareUrl, undefined, { shallow: true });
+    router.replace(shareUrl);
   }, [router]);
 
   // Close modal
@@ -138,9 +138,7 @@ export function usePostModalManager() {
       delete newQuery.cp;
 
       router.replace(
-        { pathname, query: newQuery },
-        undefined,
-        { shallow: true }
+        { pathname, query: newQuery }
       );
     }
   }, [router]);

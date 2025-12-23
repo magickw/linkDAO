@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import ContactSearch from './ContactSearch';
 import ContactList from './ContactList';
 import ContactDetail from './ContactDetail';
+import EditContactModal from './EditContactModal';
 import { useContacts } from '@/contexts/ContactContext';
+import { Contact } from '@/types/contacts';
 
 interface ContactsTabProps {
   className?: string;
@@ -11,9 +13,16 @@ interface ContactsTabProps {
 
 const ContactsTab: React.FC<ContactsTabProps> = ({ className = '' }) => {
   const { selectedContact, startChat } = useContacts();
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
 
   const handleStartChat = (contact: any) => {
     startChat(contact);
+  };
+
+  const handleEditContact = (contact: Contact) => {
+    setEditingContact(contact);
+    setShowEditModal(true);
   };
 
   return (
@@ -26,7 +35,7 @@ const ContactsTab: React.FC<ContactsTabProps> = ({ className = '' }) => {
         </div>
 
         {/* Contact List */}
-        <ContactList className="flex-1" onContactMessage={handleStartChat} />
+        <ContactList className="flex-1" onContactMessage={handleStartChat} onContactEdit={handleEditContact} />
       </div>
 
       {/* Right Panel - Contact Detail or Empty State */}
@@ -80,6 +89,16 @@ const ContactsTab: React.FC<ContactsTabProps> = ({ className = '' }) => {
           </div>
         )}
       </div>
+      
+      {/* Edit Contact Modal - rendered outside to avoid z-index issues */}
+      <EditContactModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingContact(null);
+        }}
+        contact={editingContact}
+      />
     </div>
   );
 };

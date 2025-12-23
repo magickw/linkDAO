@@ -10,9 +10,10 @@ interface ContactListProps {
   className?: string;
   flat?: boolean; // render single-column without group sections
   onContactMessage?: (contact: Contact) => void;
+  onContactEdit?: (contact: Contact) => void;
 }
 
-const ContactList: React.FC<ContactListProps> = ({ className = '', flat = false, onContactMessage }) => {
+const ContactList: React.FC<ContactListProps> = ({ className = '', flat = false, onContactMessage, onContactEdit }) => {
   const { contacts, groups, searchFilters } = useContacts();
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['favorites', 'friends']));
   const [showAddModal, setShowAddModal] = useState(false);
@@ -108,7 +109,8 @@ const ContactList: React.FC<ContactListProps> = ({ className = '', flat = false,
                   key={contact.id} 
                   contact={contact} 
                   className="mx-1" 
-                  onContactMessage={onContactMessage} 
+                  onContactMessage={onContactMessage}
+                  onContactEdit={onContactEdit}
                 />
               ))
             )}
@@ -165,6 +167,7 @@ const ContactList: React.FC<ContactListProps> = ({ className = '', flat = false,
                             contact={contact}
                             className="mx-2"
                             onContactMessage={onContactMessage}
+                            onContactEdit={onContactEdit}
                           />
                         ))}
                       </div>

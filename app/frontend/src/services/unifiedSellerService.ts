@@ -110,9 +110,36 @@ export class UnifiedSellerService {
       return transformResult.data;
     } catch (error) {
       console.error('Failed to get seller profile:', error);
+      
+      // Check if this is a SellerAPIError with specific error details
+      if (error instanceof SellerAPIError) {
+        // Handle 404 Not Found - profile doesn't exist yet
+        if (error.statusCode === 404 || error.message?.includes('not found')) {
+          console.log('Seller profile not found (404), treating as null');
+          this.profileCache.set(walletAddress, { data: null, timestamp: Date.now() });
+          return null;
+        }
+        
+        // Handle 401 Unauthorized - authentication issue
+        if (error.statusCode === 401 || error.type === SellerErrorType.PERMISSION_ERROR) {
+          console.warn('Authentication required for seller profile');
+          throw error; // Re-throw auth errors so they can be handled appropriately
+        }
+      }
+      
+      // Check if this is a "not found" error in the message
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('not found') || errorMessage.includes('404')) {
+        // Profile not found is not an error - return null
+        console.log('Seller profile not found in error message, treating as null');
+        this.profileCache.set(walletAddress, { data: null, timestamp: Date.now() });
+        return null;
+      }
+      
+      // For other errors, still throw
       throw new SellerAPIError(
         SellerErrorType.API_ERROR,
-        `Failed to fetch seller profile: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to fetch seller profile: ${errorMessage}`,
         'PROFILE_FETCH_ERROR'
       );
     }

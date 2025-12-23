@@ -19,7 +19,7 @@ import { EnhancedTipButton } from '@/components/Web3PostInteractions/EnhancedTip
 import { OnChainVerificationBadge } from '@/components/OnChainVerification/OnChainVerificationBadge';
 import { ExplorerLinkButton } from '@/components/OnChainVerification/ExplorerLinkButton';
 import { AdvancedSearchInterface } from '@/components/CommunityDiscovery/AdvancedSearchInterface';
-import PostHoverPreview from '@/components/Community/PostHoverPreview';
+
 
 // Mobile Web3 Components (preserve existing functionality)
 import {
@@ -164,9 +164,7 @@ const CommunitiesPage: React.FC = () => {
   const [walletActivities, setWalletActivities] = useState<any[]>([]);
 
   // Hover preview state with debouncing
-  const [hoveredPost, setHoveredPost] = useState<any>(null);
-  const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
-  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
 
   // Quick filter chips state
   const [activeQuickFilters, setActiveQuickFilters] = useState<string[]>([]);
@@ -983,31 +981,7 @@ const CommunitiesPage: React.FC = () => {
                       walletConnected={walletConnected}
                       userBalance={userBalance}
                     >
-                      <div
-                        onMouseEnter={(e) => {
-                          if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-                          const timeout = setTimeout(() => {
-                            // Look up current post data to avoid stale closure
-                            const currentPost = posts.find(p => p.id === postId);
-                            if (currentPost) {
-                              setHoveredPost(currentPost);
-                              setHoverPosition({ x: e.clientX, y: e.clientY });
-                            }
-                          }, 500);
-                          hoverTimeoutRef.current = timeout;
-                        }}
-                        onMouseLeave={() => {
-                          if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-                          setHoveredPost(null);
-                        }}
-                        onMouseMove={(e) => {
-                          // Look up current post data to avoid stale closure
-                          const currentPost = posts.find(p => p.id === postId);
-                          if (currentPost) {
-                            setHoverPosition({ x: e.clientX, y: e.clientY });
-                          }
-                        }}
-                      >
+                      <div>
                         <CommunityPostCardEnhanced
                           post={post}
                           community={community}
@@ -1031,6 +1005,7 @@ const CommunitiesPage: React.FC = () => {
                             // Handle tip logic here
                             // Tip
                           }}
+                          onComment={() => {}}
                         />
                       </div>
                     </Web3SwipeGestureHandler>
@@ -1094,24 +1069,7 @@ const CommunitiesPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Hover Preview */}
-          {hoveredPost && (
-            <PostHoverPreview
-              post={{
-                id: hoveredPost.id,
-                title: hoveredPost.title,
-                content: hoveredPost.content,
-                authorName: hoveredPost.authorName,
-                communityName: communityList.find(c => c.id === hoveredPost.communityId)?.displayName || 'Unknown',
-                upvotes: hoveredPost.upvotes,
-                commentCount: hoveredPost.commentCount,
-                createdAt: hoveredPost.createdAt,
-                tags: hoveredPost.tags
-              }}
-              isVisible={true}
-              position={hoverPosition}
-            />
-          )}
+          
 
           {/* Keyboard Shortcuts Modal */}
           <KeyboardShortcutsModal

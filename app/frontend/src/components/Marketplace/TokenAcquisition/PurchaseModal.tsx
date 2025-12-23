@@ -116,6 +116,30 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
           setSelectedQuote(quotes[0]);
         }
       } else if (paymentMethod === 'x402') {
+        // Check x402 service availability first
+        try {
+          // Test x402 service by making a lightweight status check
+          const testResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000'}/api/x402/status`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+          });
+
+          if (!testResponse.ok) {
+            throw new Error('x402 service unavailable');
+          }
+
+          const statusData = await testResponse.json();
+          if (!statusData.available || !statusData.hasCredentials) {
+            throw new Error('x402 payment credentials not configured');
+          }
+        } catch (error) {
+          console.warn('x402 service check failed:', error);
+          setErrorMessage('x402 payment option not available. Please configure Coinbase CDP credentials or try another payment method.');
+          setDexQuotes([]);
+          setIsLoadingQuotes(false);
+          return;
+        }
+
         // For x402, create realistic quotes with enhanced fee calculation
         const amountNum = parseFloat(amount);
         const tokenPrice = tokenInfo?.priceUSD || 0.5;
@@ -141,6 +165,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
           slippage: 0.05
         };
         setDexQuotes([mockQuote]);
+        setSelectedQuote(mockQuote);
       } else {
         // Fetch DEX quotes for swapping USDC to LDAO
         const fromToken = 'USDC';
