@@ -479,9 +479,7 @@ const CommunitiesPage: React.FC = () => {
     // TODO: Implement enhanced search logic with Web3 filters
   };
 
-  const handleCommunitySelect = (community: any) => {
-    router.push(`/communities/${community.slug || community.name || community.id}`);
-  };
+
 
   const handleFiltersChange = (filters: string[]) => {
     setSelectedFilters(filters);
@@ -755,9 +753,9 @@ const CommunitiesPage: React.FC = () => {
                   </div>
                   <div className="p-2">
                     {communityList.slice(0, 8).map(community => (
-                      <button
+                    <Link
                         key={community.id}
-                        onClick={() => handleCommunitySelect(community)}
+                        href={`/communities/${community.slug || community.name || community.id}`}
                         aria-label={`View ${community.displayName || community.name} community`}
                         className="w-full flex items-center space-x-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                       >
@@ -774,7 +772,7 @@ const CommunitiesPage: React.FC = () => {
                             {community.memberCount?.toLocaleString() || 0} members
                           </div>
                         </div>
-                      </button>
+                      </Link>
                     ))}
                   </div>
                 </div>

@@ -25,6 +25,7 @@ import { ContactProvider, useContacts } from '@/contexts/ContactContext';
 import ContactSearch from './Contacts/ContactSearch';
 import ContactList from './Contacts/ContactList';
 import ContactDetail from './Contacts/ContactDetail';
+import AddContactModal from './Contacts/AddContactModal';
 import { GlassPanel } from '@/design-system';
 import DiscordStyleMessagingInterface from './DiscordStyleMessagingInterface';
 import { OnlineStatus } from './MessageStatusComponents';

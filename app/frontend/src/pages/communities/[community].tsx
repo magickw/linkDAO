@@ -13,66 +13,20 @@ export default function CommunityPage() {
   const [communityData, setCommunityData] = useState<any>(null);
   
   // Ref to track if we're currently updating to prevent blocking navigation
-  const isUpdating = useRef(false);
-  
-  // Route change handlers to prevent blocking navigation
-  useEffect(() => {
-    const handleRouteChangeStart = (url: string) => {
-      console.log('[CommunityPage] Route change start:', url);
-      
-      // Cancel any pending operations to prevent blocking navigation
-      if (isUpdating.current) {
-        console.log('[CommunityPage] Cancelling pending operations to allow navigation');
-        isUpdating.current = false;
-      }
-    };
-
-    const handleRouteChangeComplete = (url: string) => {
-      console.log('[CommunityPage] Route change complete:', url);
-    };
-
-    const handleRouteChangeError = (err: any, url: string) => {
-      console.error('[CommunityPage] Route change error for', url, ':', err);
-    };
-
-    // Listen for route changes to properly handle navigation
-    router.events.on('routeChangeStart', handleRouteChangeStart);
-    router.events.on('routeChangeComplete', handleRouteChangeComplete);
-    router.events.on('routeChangeError', handleRouteChangeError);
-
-    return () => {
-      router.events.off('routeChangeStart', handleRouteChangeStart);
-      router.events.off('routeChangeComplete', handleRouteChangeComplete);
-      router.events.off('routeChangeError', handleRouteChangeError);
-    };
-  }, [router]);
-
   useEffect(() => {
     // Fetch community data for SEO
     const fetchCommunityData = async () => {
       if (community) {
         try {
-          // Set updating flag to coordinate with navigation handlers
-          isUpdating.current = true;
-          
           // In a real implementation, fetch community data
           // const data = await CommunityService.getCommunityBySlug(community as string);
           // setCommunityData(data);
         } catch (error) {
           console.error('Error fetching community data:', error);
-        } finally {
-          // Clear updating flag when done
-          isUpdating.current = false;
         }
       }
     };
     fetchCommunityData();
-    
-    // Cleanup function
-    return () => {
-      // Clear updating flag when component unmounts
-      isUpdating.current = false;
-    };
   }, [community]);
 
   // Generate SEO metadata
