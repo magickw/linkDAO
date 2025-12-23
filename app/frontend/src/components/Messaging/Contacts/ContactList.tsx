@@ -12,7 +12,7 @@ interface ContactListProps {
   onContactMessage?: (contact: Contact) => void;
 }
 
-const ContactList: React.FC<ContactListProps> = ({ className = '', flat = false }) => {
+const ContactList: React.FC<ContactListProps> = ({ className = '', flat = false, onContactMessage }) => {
   const { contacts, groups, searchFilters } = useContacts();
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['favorites', 'friends']));
   const [showAddModal, setShowAddModal] = useState(false);

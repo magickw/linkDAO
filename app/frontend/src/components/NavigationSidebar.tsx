@@ -28,6 +28,7 @@ interface SidebarCommunity {
   displayName: string;
   memberCount: number;
   avatar?: string;
+  slug: string; // Add slug field for navigation
   isJoined: boolean;
   unreadCount?: number;
   icon?: string;
@@ -103,6 +104,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
           displayName: community.displayName,
           memberCount: community.memberCount,
           avatar: community.avatar,
+          slug: community.slug, // Include slug for navigation
           isJoined: true,
           unreadCount: 0, // Would be calculated from notifications
           // keep role info out of the view model for now
@@ -155,6 +157,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
           displayName: community.displayName,
           memberCount: community.memberCount,
           avatar: community.avatar,
+          slug: community.slug || community.name || community.id, // Include slug for navigation
           icon: community.icon,
           isJoined: communities.some(c => c.id === community.id),
           growthMetrics: {
@@ -176,8 +179,12 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
 
   // Handle community selection with navigation context
   const handleCommunitySelectWithContext = (communityId: string) => {
+    // Find the community to get its slug
+    const community = [...communities, ...trendingCommunities].find(c => c.id === communityId);
+    const slug = community?.slug || communityId; // Fallback to ID if slug not found
+    
     handleCommunitySelect(communityId);
-    navigateToCommunity(communityId);
+    navigateToCommunity(slug);
     // Close sidebar on mobile after selection
     if (isMobile) {
       toggleSidebar();
@@ -367,15 +374,15 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
               {/* Navigation Items */}
               <div className="p-2 space-y-1">
                 {/* Search */}
-                <Link
-                  href="/search"
+                <button
+                  onClick={() => router.push('/search')}
                   className="group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gradient-to-r dark:hover:from-gray-700/50 dark:hover:to-gray-600/50 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm"
                 >
                   <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                   <span>Search & Discovery</span>
-                </Link>
+                </button>
 
                 {/* Communities
                 <button
@@ -389,15 +396,15 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                 </button>
                 */}
                 {/* Replaced Modal button with direct link per standard navigation expectations */}
-                <Link
-                  href="/communities"
+                <button
+                  onClick={() => router.push('/communities')}
                   className="group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gradient-to-r dark:hover:from-gray-700/50 dark:hover:to-gray-600/50 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm"
                 >
                   <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
                   <span>Communities</span>
-                </Link>
+                </button>
 
                 {/* Wallet-to-Wallet Messaging */}
                 {/* <Link
@@ -412,37 +419,37 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                 {/* </Link> */}
 
                 {/* Governance */}
-                <Link
-                  href="/governance"
+                <button
+                  onClick={() => router.push('/governance')}
                   className="group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gradient-to-r dark:hover:from-purple-900/30 dark:hover:to-pink-900/30 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm relative"
                 >
                   <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                   </svg>
                   <span>Governance</span>
-                </Link>
+                </button>
 
                 {/* Marketplace */}
-                <Link
-                  href="/marketplace"
+                <button
+                  onClick={() => router.push('/marketplace')}
                   className="group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gradient-to-r dark:hover:from-green-900/30 dark:hover:to-emerald-900/30 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm"
                 >
                   <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                   </svg>
                   <span>Marketplace</span>
-                </Link>
+                </button>
 
                 {/* LDAO Dashboard */}
-                <Link
-                  href="/ldao-dashboard"
+                <button
+                  onClick={() => router.push('/ldao-dashboard')}
                   className="group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gradient-to-r dark:hover:from-purple-900/30 dark:hover:to-pink-900/30 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm"
                 >
                   <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <span>LDAO Dashboard</span>
-                </Link>
+                </button>
               </div>
             </div>
 
@@ -566,15 +573,15 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
 
             {/* Collapsed Navigation Items */}
             <div className="space-y-2">
-              <Link
-                href="/communities"
+              <button
+                onClick={() => router.push('/communities')}
                 className="block w-full p-2 rounded-lg transition-colors text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700"
                 title="Communities"
               >
                 <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
-              </Link>
+              </button>
 
               {/* <Link
               href="/messaging"

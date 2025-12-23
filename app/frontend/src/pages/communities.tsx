@@ -753,11 +753,11 @@ const CommunitiesPage: React.FC = () => {
                   </div>
                   <div className="p-2">
                     {communityList.slice(0, 8).map(community => (
-                    <Link
+                    <button
                         key={community.id}
-                        href={`/communities/${community.slug || community.name || community.id}`}
+                        onClick={() => router.push(`/communities/${community.slug || community.name || community.id}`)}
                         aria-label={`View ${community.displayName || community.name} community`}
-                        className="w-full flex items-center space-x-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        className="w-full flex items-center space-x-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left"
                       >
                         <CommunityAvatar
                           avatar={community.avatar}
@@ -772,7 +772,7 @@ const CommunitiesPage: React.FC = () => {
                             {community.memberCount?.toLocaleString() || 0} members
                           </div>
                         </div>
-                      </Link>
+                      </button>
                     ))}
                   </div>
                 </div>

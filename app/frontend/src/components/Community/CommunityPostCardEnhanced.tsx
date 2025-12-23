@@ -29,7 +29,7 @@ const isCommunityPost = (post: EnhancedPost): boolean => {
 };
 
 interface Reaction {
-  type: 'hot' | 'diamond' | 'bullish' | 'governance' | 'art';
+  type: string;
   emoji: string;
   label: string;
   totalStaked: number;
@@ -37,6 +37,8 @@ interface Reaction {
   contributors: string[];
   rewardsEarned: number;
 }
+
+
 
 interface CommunityPostCardEnhancedProps {
   post: EnhancedPost; // Changed from CommunityPost to EnhancedPost
@@ -80,12 +82,7 @@ function CommunityPostCardEnhanced({
   const [userVote, setUserVote] = useState<'upvote' | 'downvote' | null>(null);
 
   const [showAnalytics, setShowAnalytics] = useState(false);
-  const [reactions, setReactions] = useState<Reaction[]>([
-    { type: 'hot', emoji: '🔥', label: 'Hot Take', totalStaked: 12, userStaked: 0, contributors: [], rewardsEarned: 2.4 },
-    { type: 'diamond', emoji: '💎', label: 'Diamond Hands', totalStaked: 8, userStaked: 0, contributors: [], rewardsEarned: 1.6 },
-    { type: 'bullish', emoji: '🚀', label: 'Bullish', totalStaked: 21, userStaked: 0, contributors: [], rewardsEarned: 4.2 },
-    { type: 'governance', emoji: '⚖️', label: 'Governance', totalStaked: 9, userStaked: 0, contributors: [], rewardsEarned: 1.8 }
-  ]);
+  const [reactions, setReactions] = useState<Reaction[]>([]);
 
   // Calculate vote score (community posts have upvotes/downvotes, quickPosts don't)
   const voteScore = isCommunityPostType && 'upvotes' in post && typeof (post as any).upvotes === 'number' && 'downvotes' in post && typeof (post as any).downvotes === 'number' ? ((post as any).upvotes - (post as any).downvotes) : 0;
@@ -194,10 +191,87 @@ function CommunityPostCardEnhanced({
     }
   }, [post.id, commentsLoading, addToast]);
 
-  // Load comments when component mounts
+  // Load comments and reactions when component mounts
   useEffect(() => {
     loadComments();
+    loadReactions();
   }, [post.id]); // Only reload when post ID changes
+
+  // Load reactions
+  const loadReactions = useCallback(async () => {
+    try {
+      // Use the post's reactions if available, otherwise fetch from API
+      // The post object should have reactions data from the API
+      if (post.reactions && Array.isArray(post.reactions)) {
+        // Map the API reactions to the expected format
+        const mappedReactions: Reaction[] = post.reactions.map((reaction: any) => ({
+          type: reaction.type || 'hot',
+          emoji: getReactionEmoji(reaction.type),
+          label: getReactionLabel(reaction.type),
+          totalStaked: reaction.totalAmount || 0,
+          userStaked: reaction.users?.reduce((sum: number, user: any) => 
+            user.address === address ? sum + (user.amount || 0) : sum, 0) || 0,
+          contributors: reaction.users?.map((user: any) => user.address) || [],
+          rewardsEarned: 0 // Calculate rewards if needed
+        }));
+        setReactions(mappedReactions);
+      } else {
+        // Fallback: fetch reactions from API
+        // TODO: Implement actual API call to fetch reactions
+        // const reactionsData = await someReactionService.getPostReactions(post.id);
+        setReactions([]);
+      }
+    } catch (err) {
+      console.error('Error loading reactions:', err);
+      // Set empty reactions on error
+      setReactions([]);
+    }
+  }, [post.id, post.reactions, address]);
+
+  // Helper function to get emoji for reaction type
+  const getReactionEmoji = (type: string): string => {
+    const emojiMap: Record<string, string> = {
+      hot: '🔥',
+      diamond: '💎',
+      bullish: '🚀',
+      governance: '⚖️',
+      art: '🎨',
+      'hot-take': '🔥',
+      'diamond-hands': '💎',
+      bullish: '🚀',
+      bearish: '🐻',
+      love: '❤️',
+      laugh: '😂',
+      wow: '😮',
+      sad: '😢',
+      angry: '😠',
+      upvote: '👍',
+      downvote: '👎'
+    };
+    return emojiMap[type.toLowerCase()] || '👍';
+  };
+
+  // Helper function to get label for reaction type
+  const getReactionLabel = (type: string): string => {
+    const labelMap: Record<string, string> = {
+      hot: 'Hot Take',
+      diamond: 'Diamond Hands',
+      bullish: 'Bullish',
+      governance: 'Governance',
+      art: 'Art',
+      'hot-take': 'Hot Take',
+      'diamond-hands': 'Diamond Hands',
+      bearish: 'Bearish',
+      love: 'Love',
+      laugh: 'Laugh',
+      wow: 'Wow',
+      sad: 'Sad',
+      angry: 'Angry',
+      upvote: 'Upvote',
+      downvote: 'Downvote'
+    };
+    return labelMap[type.toLowerCase()] || type;
+  };
 
   // Toggle comments visibility
   const toggleComments = () => {

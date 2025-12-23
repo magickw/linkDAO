@@ -13,6 +13,8 @@ export default function CommunityPage() {
   const [communityData, setCommunityData] = useState<any>(null);
   
   // Ref to track if we're currently updating to prevent blocking navigation
+  const isUpdating = useRef(false);
+  
   useEffect(() => {
     // Fetch community data for SEO
     const fetchCommunityData = async () => {
@@ -28,6 +30,8 @@ export default function CommunityPage() {
     };
     fetchCommunityData();
   }, [community]);
+  
+
 
   // Generate SEO metadata
   const generateSEOMetadata = () => {
