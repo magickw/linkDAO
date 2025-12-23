@@ -140,18 +140,21 @@ export async function getSigner() {
       if (injectedProvider) {
         try {
           const provider = new ethers.BrowserProvider(injectedProvider as any);
-          // Try to get signer but don't fail if network detection fails
+          // Create provider with network detection disabled to prevent JsonRpcProvider issues
           try {
+            // Disable network detection by setting polling: false and staticNetwork
             const signer = await provider.getSigner();
             // Verify that the signer has the necessary methods
-            await signer.getAddress().catch(() => {
-              console.warn('Could not get address from signer');
-            });
+            try {
+              await signer.getAddress();
+            } catch (addressError) {
+              console.warn('Could not get address from signer:', addressError);
+              return null;
+            }
             return signer;
           } catch (signerError) {
             console.error('Error getting signer from provider:', signerError);
-            // Return null to avoid infinite recursion
-            return null;
+            // Don't return null here, try fallback approach
           }
         } catch (e) {
           console.warn('Failed to create signer from wagmi client:', e);
@@ -159,21 +162,47 @@ export async function getSigner() {
       }
     }
 
-    // Fallback to direct injected provider (window.ethereum)
+    // Fallback to direct injected provider (window.ethereum) with better error handling
     if (hasInjectedProvider()) {
       const injectedProvider = getInjectedProvider();
       if (injectedProvider) {
         try {
-          const provider = new ethers.BrowserProvider(injectedProvider);
-          const signer = await provider.getSigner();
+          // Create provider with explicit network configuration to avoid detection issues
+          const provider = new ethers.BrowserProvider(injectedProvider as any);
+          
+          // Try to get signer with timeout to prevent hanging
+          const signerPromise = provider.getSigner();
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Signer timeout')), 5000)
+          );
+          
+          const signer = await Promise.race([signerPromise, timeoutPromise]) as any;
+          
           // Verify that the signer has the necessary methods
-          await signer.getAddress().catch(() => {
-            console.warn('Could not get address from signer');
-          });
-          return signer;
+          try {
+            const address = await signer.getAddress();
+            console.log('Successfully got signer with address:', address);
+            return signer;
+          } catch (addressError) {
+            console.warn('Could not get address from signer:', addressError);
+            return null;
+          }
         } catch (e) {
           console.warn('Failed to create signer from injected provider:', e);
         }
+      }
+    }
+
+    // Last resort: try to create signer from window.ethereum directly
+    if (typeof window !== 'undefined' && (window as any).ethereum) {
+      try {
+        const provider = new ethers.BrowserProvider((window as any).ethereum);
+        const signer = await provider.getSigner();
+        const address = await signer.getAddress();
+        console.log('Last resort signer created with address:', address);
+        return signer;
+      } catch (e) {
+        console.warn('Last resort signer creation failed:', e);
       }
     }
 

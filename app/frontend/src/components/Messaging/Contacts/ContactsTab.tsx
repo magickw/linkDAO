@@ -10,7 +10,11 @@ interface ContactsTabProps {
 }
 
 const ContactsTab: React.FC<ContactsTabProps> = ({ className = '' }) => {
-  const { selectedContact } = useContacts();
+  const { selectedContact, startChat } = useContacts();
+
+  const handleStartChat = (contact: any) => {
+    startChat(contact);
+  };
 
   return (
     <div className={`flex h-full ${className}`}>
@@ -22,7 +26,7 @@ const ContactsTab: React.FC<ContactsTabProps> = ({ className = '' }) => {
         </div>
 
         {/* Contact List */}
-        <ContactList className="flex-1" />
+        <ContactList className="flex-1" onContactMessage={handleStartChat} />
       </div>
 
       {/* Right Panel - Contact Detail or Empty State */}

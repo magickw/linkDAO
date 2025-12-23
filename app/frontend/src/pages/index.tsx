@@ -21,8 +21,10 @@ import PostModal from '@/components/PostModal';
 
 // Lazy load heavy components
 const SmartRightSidebar = lazy(() => import('@/components/SmartRightSidebar/SmartRightSidebar').catch(() => ({ default: () => <div>Failed to load sidebar</div> })));
-const CommunityView = lazy(() => import('@/components/CommunityView').catch(() => ({ default: () => <div>Failed to load community view</div> })));
-const NavigationSidebar = lazy(() => import('@/components/NavigationSidebar').catch(() => ({ default: () => <div>Failed to load navigation</div> })));
+// Import CommunityView directly to avoid router issues
+import CommunityView from '@/components/CommunityView';
+// Import NavigationSidebar directly to avoid router issues
+import NavigationSidebar from '@/components/NavigationSidebar';
 const FacebookStylePostComposer = lazy(() => import('@/components/FacebookStylePostComposer'));
 const PostCreationModal = lazy(() => import('@/components/PostCreationModal').catch(() => ({ default: () => <div>Failed to load post modal</div> })));
 const BottomSheet = lazy(() => import('@/components/BottomSheet'));
@@ -1157,9 +1159,7 @@ export default function Home() {
           {/* Left Sidebar - Navigation - hidden on mobile for home page since we have the burger menu */}
           <div className="hidden lg:block lg:col-span-3">
             <div className="sticky top-24">
-              <Suspense fallback={<SidebarSkeleton />}>
-                <NavigationSidebar className="h-full" />
-              </Suspense>
+              <NavigationSidebar className="h-full" />
             </div>
           </div>
 
@@ -1202,17 +1202,17 @@ export default function Home() {
                 )}
 
                 {/* Enhanced Feed View with Advanced Features */}
-                <Suspense fallback={<FeedSkeleton />}>
-                  {navigationState.activeView === 'community' && navigationState.activeCommunity ? (
-                    <CommunityView communitySlug={navigationState.activeCommunity} />
-                  ) : (
+                {navigationState.activeView === 'community' && navigationState.activeCommunity ? (
+                  <CommunityView communitySlug={navigationState.activeCommunity} />
+                ) : (
+                  <Suspense fallback={<FeedSkeleton />}>
                     <EnhancedHomeFeed
                       externalRefreshKey={feedRefreshKey}
                       userProfile={profile}
                       className=""
                     />
-                  )}
-                </Suspense>
+                  </Suspense>
+                )}
               </div>
             </div>
           </div>

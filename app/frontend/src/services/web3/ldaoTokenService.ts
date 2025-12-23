@@ -172,20 +172,64 @@ export class LDAOTokenService {
     error?: string;
   }> {
     try {
-      // Get signer first to ensure wallet is connected
-      const signer = await getSigner();
-      if (!signer) {
+      // First, check if wallet is connected using wagmi's account state
+      // This is more reliable than relying on getSigner() which can fail due to JsonRpcProvider issues
+      const { getAccount } = await import('@wagmi/core');
+      const { config } = await import('@/lib/wagmi');
+      const account = getAccount(config);
+      
+      if (!account || !account.address) {
         throw new Error('No wallet connected. Please connect your wallet to stake tokens.');
       }
 
-      // Extract address from signer to verify it's properly connected
-      const walletAddress = await signer.getAddress();
-      if (!walletAddress) {
-        throw new Error('Wallet address could not be retrieved. Please reconnect your wallet.');
+      console.log('Wallet connected with address:', account.address);
+
+      // Try to get signer with better error handling
+      let signer;
+      try {
+        signer = await getSigner();
+      } catch (signerError) {
+        console.warn('Failed to get signer, trying alternative approach:', signerError);
+        
+        // Fallback: try to get signer directly from window.ethereum if available
+        if (typeof window !== 'undefined' && window.ethereum) {
+          try {
+            const provider = new ethers.BrowserProvider(window.ethereum as any);
+            signer = await provider.getSigner();
+          } catch (fallbackError) {
+            console.error('Fallback signer attempt failed:', fallbackError);
+          }
+        }
       }
 
-      // Get contract with signer
-      const contract = await this.getContract(true);
+      if (!signer) {
+        throw new Error('Unable to access wallet signer. Please ensure your wallet is unlocked and try again.');
+      }
+
+      // Verify signer address matches wagmi account
+      try {
+        const signerAddress = await signer.getAddress();
+        if (signerAddress.toLowerCase() !== account.address.toLowerCase()) {
+          console.warn('Signer address mismatch:', { signerAddress, wagmiAddress: account.address });
+        }
+      } catch (addressError) {
+        console.warn('Could not verify signer address:', addressError);
+      }
+
+      // Get contract with signer, with retry logic
+      let contract;
+      try {
+        contract = await this.getContract(true);
+      } catch (contractError) {
+        console.warn('Failed to get contract with signer, trying without signer first:', contractError);
+        
+        // Fallback: get contract without signer, then attach signer
+        const providerOnlyContract = await this.getContract(false);
+        if (providerOnlyContract && signer) {
+          contract = providerOnlyContract.connect(signer) as LDAOToken;
+        }
+      }
+
       if (!contract) {
         throw new Error('Unable to connect to LDAO contract. Please check your network connection.');
       }
@@ -202,9 +246,13 @@ export class LDAOTokenService {
         };
       }
 
-      // Execute staking
+      // Execute staking with better error handling
+      console.log('Executing stake transaction:', { amount, tierId, amountWei: amountWei.toString() });
       const tx = await (contract as any).stake(amountWei, tierId);
+      console.log('Transaction submitted:', tx.hash);
+      
       const receipt = await tx.wait();
+      console.log('Transaction confirmed:', receipt.hash);
 
       return {
         success: true,

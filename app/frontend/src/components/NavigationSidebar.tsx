@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { useAccount } from 'wagmi';
 import { useProfile } from '@/hooks/useProfile';
 import {
@@ -46,6 +47,7 @@ interface NavigationSidebarProps {
 }
 
 export default function NavigationSidebar({ className = '' }: NavigationSidebarProps) {
+  const router = useRouter();
   const { address } = useAccount();
   const { isMobile } = useMobileOptimization();
   const { profile } = useProfile(address);

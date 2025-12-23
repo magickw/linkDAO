@@ -223,12 +223,12 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
               : 'The community you are looking for could not be found.'}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link
-              href="/communities"
+            <button
+              onClick={() => router.push('/communities')}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-center"
             >
               ← Back to Communities
-            </Link>
+            </button>
             <button
               onClick={() => window.location.reload()}
               className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors text-center dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
@@ -251,12 +251,12 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
             <h3 className="font-semibold text-gray-900 dark:text-white mb-3 text-sm">
               {communityData.displayName || communityData.name}
             </h3>
-            <Link
-              href="/communities"
+            <button
+              onClick={() => router.push('/communities')}
               className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
             >
               ← Back to Communities
-            </Link>
+            </button>
           </div>
 
           {/* Filters */}
@@ -672,9 +672,12 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
               />
             </div>
             <div className="mt-3 text-center">
-              <Link href="/governance" className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
+              <button 
+                onClick={() => router.push('/governance')} 
+                className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+              >
                 View all proposals
-              </Link>
+              </button>
             </div>
           </div>
 

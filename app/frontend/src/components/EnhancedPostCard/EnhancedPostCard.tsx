@@ -444,13 +444,16 @@ const EnhancedPostCard = React.memo(({
                       {post.communityName && (
                         <>
                           <span aria-hidden="true">•</span>
-                          <Link
-                            href={`/community/${post.communityId}`}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/communities/${post.communityId}`);
+                            }}
                             className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 truncate"
                             aria-label={`View community ${post.communityName}`}
                           >
                             {post.communityName}
-                          </Link>
+                          </button>
                         </>
                       )}
                     </div>
