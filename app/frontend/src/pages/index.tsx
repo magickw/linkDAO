@@ -340,69 +340,14 @@ export default function Home() {
     }
   }, [webSocket, address, wsSubscribed, addToast, debouncedRefresh, isMounted]);
 
-  // Route change listeners to properly handle WebSocket during navigation
+  // Cleanup effect when leaving home page
   useEffect(() => {
-    const handleRouteChangeStart = (url: string) => {
-      console.log('[HomePage] Route change start:', url);
-      console.log('[HomePage] Route change start timestamp:', Date.now());
-      
-      // Cancel any pending WebSocket connection attempts to prevent blocking navigation
-      if (isUpdating.current) {
-        console.log('[HomePage] Cancelling pending WebSocket connection to allow navigation');
-        isUpdating.current = false;
-      }
-      
-      // Instead of immediately disconnecting WebSocket, just mark that we're navigating
-      // This prevents blocking the navigation while still tracking the navigation state
-      console.log('[HomePage] Navigation in progress, will handle WebSocket after navigation completes');
-    };
-
-    const handleRouteChangeComplete = (url: string) => {
-      console.log('[HomePage] Route change complete:', url);
-      console.log('[HomePage] Route change complete timestamp:', Date.now());
-
-      // Only re-enable WebSocket if we're actually on the home page
-      // Check the URL, not router.pathname, because router.pathname might not be updated yet
-      if (url === '/' || url.startsWith('/?')) {
-        // Use setTimeout to defer WebSocket reconnection until after navigation completes
-        setTimeout(() => {
-          console.log('[HomePage] Attempting WebSocket reconnection...');
-          if (isConnected && webSocket && typeof webSocket.connect === 'function' && !webSocket.isConnected) {
-            webSocket.connect().catch(console.error);
-          }
-        }, 100); // Small delay to ensure navigation is fully complete
-      } else {
-        // On other pages, we don't need the home page WebSocket connection
-        // but we shouldn't block navigation by disconnecting it
-        console.log('[HomePage] Navigated away from home, WebSocket will be managed by new page if needed');
-      }
-    };
-
-    const handleRouteChangeError = (err: any, url: string) => {
-      console.error('[HomePage] Route change error for', url, ':', err);
-      console.log('[HomePage] Route change error timestamp:', Date.now());
-      
-      // Reconnect WebSocket on navigation error
-      if (url === '/' || url.startsWith('/?')) {
-        setTimeout(() => {
-          if (isConnected && webSocket && typeof webSocket.connect === 'function' && !webSocket.isConnected) {
-            webSocket.connect().catch(console.error);
-          }
-        }, 100);
-      }
-    };
-
-    // Listen for route changes to properly handle WebSocket
-    router.events.on('routeChangeStart', handleRouteChangeStart);
-    router.events.on('routeChangeComplete', handleRouteChangeComplete);
-    router.events.on('routeChangeError', handleRouteChangeError);
-
     return () => {
-      router.events.off('routeChangeStart', handleRouteChangeStart);
-      router.events.off('routeChangeComplete', handleRouteChangeComplete);
-      router.events.off('routeChangeError', handleRouteChangeError);
+      // Mark that we're no longer on home page to prevent any pending operations
+      isUpdating.current = false;
+      console.log('[HomePage] Unmounting, cleaning up home page state');
     };
-  }, [router, isConnected, webSocket]);
+  }, []);
 
   // Handle post creation with useCallback
 

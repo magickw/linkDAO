@@ -302,7 +302,7 @@ export default function App({ Component, pageProps, router }: AppProps) {
                               <AppContent>
                                 <Component {...pageProps} />
                               </AppContent>
-                              <WalletLoginBridgeWithToast autoLogin={true} />
+                                <WalletLoginBridgeWithToast autoLogin={true} />
                             </EnhancedThemeProvider>
                           </ContactProvider>
                         </NavigationProvider>

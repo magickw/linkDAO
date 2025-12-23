@@ -289,52 +289,35 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
 
   // Route change handlers to prevent blocking navigation
   useEffect(() => {
-    // Check if we're in a Next.js page context to access router events
-    if (typeof window !== 'undefined' && router && router.events) {
-      const handleRouteChangeStart = (url: string) => {
-        // Cancel any ongoing operations to prevent blocking navigation
-        if (loading) {
-          console.log('[CommunityPage] Route change detected, cancelling ongoing operations');
-        }
-      };
-
-      const handleRouteChangeComplete = (url: string) => {
-        // Resume operations after navigation if needed
-        console.log('[CommunityPage] Route change completed for:', url);
-      };
-
-      const handleRouteChangeError = (err: any, url: string) => {
-        console.error('[CommunityPage] Route change error for', url, ':', err);
-      };
-      
-      // Listen for Next.js router events
-      router.events.on('routeChangeStart', handleRouteChangeStart);
-      router.events.on('routeChangeComplete', handleRouteChangeComplete);
-      router.events.on('routeChangeError', handleRouteChangeError);
-
-      return () => {
-        router.events.off('routeChangeStart', handleRouteChangeStart);
-        router.events.off('routeChangeComplete', handleRouteChangeComplete);
-        router.events.off('routeChangeError', handleRouteChangeError);
-      };
-    } else {
-      // Fallback to beforeunload if router events are not available
-      const handleBeforeUnload = () => {
-        // Cleanup operations before page unload/navigation
-        console.log('[CommunityPage] Page unloading, cleaning up');
-      };
-
-      if (typeof window !== 'undefined') {
-        window.addEventListener('beforeunload', handleBeforeUnload);
+    const handleRouteChangeStart = () => {
+      // Cancel any ongoing operations to prevent blocking navigation
+      if (loading) {
+        console.log('[CommunityPage] Route change detected, cancelling ongoing operations');
       }
+    };
 
-      return () => {
-        if (typeof window !== 'undefined') {
-          window.removeEventListener('beforeunload', handleBeforeUnload);
-        }
-      };
+    const handleRouteChangeComplete = () => {
+      // Resume operations after navigation if needed
+      console.log('[CommunityPage] Route change completed');
+    };
+
+    // Since we can't directly access Next.js router events in components, we'll listen for
+    // beforeunload events as a proxy for navigation
+    const handleBeforeUnload = () => {
+      // Cleanup operations before page unload/navigation
+      console.log('[CommunityPage] Page unloading, cleaning up');
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('beforeunload', handleBeforeUnload);
     }
-  }, [loading, router]);
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+      }
+    };
+  }, [loading]);
 
   // Load data on mount and when communityId changes
   useEffect(() => {

@@ -92,12 +92,6 @@ export const CommunityPostList: React.FC<CommunityPostListProps> = ({
 
   // Load posts
   const loadPosts = useCallback(async (pageNum: number = 1, reset: boolean = true) => {
-    // Check if we're still on the same community page to prevent blocking navigation
-    if (typeof window !== 'undefined' && !window.location.pathname.includes(`/communities/${communityId}`)) {
-      console.log('[CommunityPostList] Not on community page anymore, skipping load');
-      return Promise.resolve();
-    }
-
     if (pageNum === 1) {
       setLoading(true);
       setError(null);
@@ -197,12 +191,6 @@ export const CommunityPostList: React.FC<CommunityPostListProps> = ({
   // Real-time updates via WebSocket
   useEffect(() => {
     if (!isConnected) return;
-    
-    // Check if we're still on the same community page to prevent blocking navigation
-    if (typeof window !== 'undefined' && !window.location.pathname.includes(`/communities/${communityId}`)) {
-      console.log('[CommunityPostList] Not on community page anymore, skipping WebSocket handlers');
-      return;
-    }
 
     const handleNewPost = (post: EnhancedPost) => {
       if ((post as any).communityId === communityId) {

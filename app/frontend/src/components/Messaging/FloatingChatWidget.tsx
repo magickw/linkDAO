@@ -440,12 +440,23 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
     }
 
     try {
+      // Get auth token from localStorage - check multiple possible storage keys
+      const token = localStorage.getItem('linkdao_access_token') ||
+        localStorage.getItem('authToken') ||
+        localStorage.getItem('token') ||
+        localStorage.getItem('auth_token');
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch('/api/conversations', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${address}`,
-        },
+        headers,
         body: JSON.stringify({
           participantAddress: newRecipientAddress.trim(),
           initialMessage: "Hello! Let's start chatting.",

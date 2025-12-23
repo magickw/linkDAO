@@ -305,7 +305,7 @@ self.addEventListener('fetch', (event) => {
   // CRITICAL FIX: Bypass ALL navigation requests immediately to prevent blocking
   // This prevents wallet-connected users from being unable to navigate
   if (isEnhancedNavigation(request)) {
-    console.log('SW: Bypassing navigation request:', request.url);
+    console.debug('SW: Bypassing navigation request:', request.url);
     // CRITICAL: Always respond with fetch for navigation requests to prevent frameId errors
     event.respondWith(fetch(request).catch(error => {
       console.error('Navigation request failed:', error);
@@ -364,12 +364,11 @@ self.addEventListener('fetch', (event) => {
 
           for (let attempt = 0; attempt <= maxRetries; attempt++) {
             try {
-              if (attempt > 0) {
-                console.log(`SW: Retry attempt ${attempt} for:`, request.url);
-                // Wait before retry (exponential backoff)
-                await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-              }
-
+                    if (attempt > 0) {
+                      console.debug(`SW: Retry attempt ${attempt} for:`, request.url);
+                      // Wait before retry (exponential backoff)
+                      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+                    }
               const response = await fetch(request.url, {
                 method: request.method,
                 headers: request.headers,
@@ -407,11 +406,11 @@ self.addEventListener('fetch', (event) => {
       );
       return;
     } else {
-      console.log('SW: Handling API request:', request.url); // Keep API logs for debugging
+      console.debug('SW: Handling API request:', request.url); // Keep important API logs but use debug level
       event.respondWith(networkFirst(request, DYNAMIC_CACHE));
     }
   } else {
-    console.log('SW: Handling dynamic request:', request.url); // Keep dynamic request logs for debugging
+    console.debug('SW: Handling dynamic request:', request.url); // Keep dynamic request logs but use debug level
     event.respondWith(networkFirst(request, DYNAMIC_CACHE));
   }
 });
@@ -516,7 +515,7 @@ async function networkFirst(request, cacheName) {
     // Only log rate limit exceeded once per endpoint per minute
     const rateLimitLogKey = `rate_limit_log:${requestKey}`;
     if (!requestCounts.has(rateLimitLogKey)) {
-      console.log('Rate limit exceeded for:', requestKey);
+      console.debug('Rate limit exceeded for:', requestKey);
       requestCounts.set(rateLimitLogKey, { count: 1, windowStart: now });
     }
     return await getCachedResponseWithFallback(request, cacheName, cacheConfig);
@@ -557,7 +556,7 @@ async function networkFirst(request, cacheName) {
       // Only log backing off once per unique backoff period
       const backoffLogKey = `backoff_log:${requestKey}:${failureInfo.lastFailure}`;
       if (!requestCounts.has(backoffLogKey)) {
-        console.log(`Backing off request for ${backoffTime}ms:`, requestKey);
+        console.debug(`Backing off request for ${backoffTime}ms:`, requestKey);
         requestCounts.set(backoffLogKey, { count: 1, windowStart: now });
       }
       return await getCachedResponseWithFallback(request, cacheName, cacheConfig);
@@ -576,7 +575,7 @@ async function networkFirst(request, cacheName) {
   const isImageRequest = isImage(request);
   
   if (pendingRequests.has(requestKey) && !isCriticalRequest(request) && !isCommunityAPI && !isMarketplaceAPI && !isBlockchainAPI && !isImageRequest) {
-    console.log('Request already pending, coalescing:', requestKey);
+    console.debug('Request already pending, coalescing:', requestKey);
     try {
       const sharedPromise = pendingRequests.get(requestKey);
       if (!sharedPromise) {
@@ -1134,25 +1133,24 @@ async function updateCacheInBackground(request, cacheName, requestKey) {
   }
 
   // Skip if recently updated
-  if (lastUpdate && (now - lastUpdate) < throttleTime) {
-    return; // Silently skip
-  }
-
-  // Update timestamp
-  backgroundUpdateTimestamps.set(requestKey, now);
-
-  try {
-    const networkResponse = await fetch(request);
-
-    if (networkResponse.ok) {
-      const cacheConfig = getAPICacheConfig(request);
-      await cacheResponseWithTTL(request, networkResponse, cacheName, cacheConfig.ttl);
-      console.log('Background cache update successful for:', requestKey);
-    }
-  } catch (error) {
-    console.log('Background cache update failed:', error);
-  }
-}
+      if (lastUpdate && (now - lastUpdate) < throttleTime) {
+        return; // Silently skip
+      }
+  
+      // Update timestamp
+      backgroundUpdateTimestamps.set(requestKey, now);
+  
+      try {
+        const networkResponse = await fetch(request);
+  
+        if (networkResponse.ok) {
+          const cacheConfig = getAPICacheConfig(request);
+          await cacheResponseWithTTL(request, networkResponse, cacheName, cacheConfig.ttl);
+          console.debug('Background cache update successful for:', requestKey);
+        }
+      } catch (error) {
+        console.debug('Background cache update failed:', error);
+      }}
 
 // Get cached response with fallback mechanisms
 async function getCachedResponse(request, cacheName) {
@@ -1838,8 +1836,12 @@ self.addEventListener('error', (event) => {
        event.error.message.includes('Assign to read only property') ||
        event.error.message.includes('_eventsCount') ||
        event.error.message.includes('Unchecked runtime.lastError') ||
-       event.error.message.includes('Cannot create item with duplicate id'))) {
-    console.debug('Service Worker: Ignored extension error:', event.error.message);
+       event.error.message.includes('Cannot create item with duplicate id') ||
+       event.error.message.includes('Cannot find menu item with id') ||
+       event.error.message.includes('LastPass') ||
+       event.error.message.includes('chrome-extension') ||
+       event.error.message.includes('contentPage.js'))) {
+    // Don't log these extension errors to avoid console spam
     event.preventDefault();
     return;
   }
@@ -1856,8 +1858,12 @@ self.addEventListener('unhandledrejection', (event) => {
        reason.includes('Assign to read only property') ||
        reason.includes('_eventsCount') ||
        reason.includes('Unchecked runtime.lastError') ||
-       reason.includes('Cannot create item with duplicate id'))) {
-    console.debug('Service Worker: Ignored extension promise rejection:', reason);
+       reason.includes('Cannot create item with duplicate id') ||
+       reason.includes('Cannot find menu item with id') ||
+       reason.includes('LastPass') ||
+       reason.includes('chrome-extension') ||
+       reason.includes('contentPage.js'))) {
+    // Don't log these extension errors to avoid console spam
     event.preventDefault();
     return;
   }

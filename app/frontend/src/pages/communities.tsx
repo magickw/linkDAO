@@ -405,37 +405,7 @@ const CommunitiesPage: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [page, loadingMore, hasMore]);
 
-  // Route change handlers to prevent blocking navigation
-  useEffect(() => {
-    const handleRouteChangeStart = () => {
-      // Cancel any ongoing operations to prevent blocking navigation
-      if (loading || loadingMore) {
-        console.log('[CommunitiesPage] Route change detected, cancelling ongoing operations');
-      }
-    };
 
-    const handleRouteChangeComplete = () => {
-      // Resume operations after navigation if needed
-      console.log('[CommunitiesPage] Route change completed');
-    };
-
-    // Since we can't directly access Next.js router events in pages, we'll listen for
-    // beforeunload events as a proxy for navigation
-    const handleBeforeUnload = () => {
-      // Cleanup operations before page unload/navigation
-      console.log('[CommunitiesPage] Page unloading, cleaning up');
-    };
-
-    if (typeof window !== 'undefined') {
-      window.addEventListener('beforeunload', handleBeforeUnload);
-    }
-
-    return () => {
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('beforeunload', handleBeforeUnload);
-      }
-    };
-  }, [loading, loadingMore]);
 
   // Load Web3 enhanced data
   const loadWeb3EnhancedData = async (communitiesData: Community[]) => {
