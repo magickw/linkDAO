@@ -118,8 +118,29 @@ const nextConfig = {
           },
         ],
       },
+      // Versioned assets (with hash) can be cached long-term
+      {
+        source: '/_next/static/chunks/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      // Other static files with shorter cache times
       {
         source: '/static/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400', // 24 hours
+          },
+        ],
+      },
+      // Next.js static assets with appropriate caching
+      {
+        source: '/_next/static/(.*)',
         headers: [
           {
             key: 'Cache-Control',

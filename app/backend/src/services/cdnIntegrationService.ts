@@ -274,8 +274,15 @@ export class CDNIntegrationService {
       return 'public, max-age=31536000, immutable'; // 1 year for images
     }
     
-    if (contentType.includes('javascript') || contentType.includes('css')) {
-      return 'public, max-age=31536000, immutable'; // 1 year for static assets
+    // JavaScript and CSS files with shorter cache times to allow updates
+    if (contentType.includes('javascript')) {
+      // For JS files, use shorter cache time to allow updates while still caching
+      return 'public, max-age=43200'; // 12 hours for JS files
+    }
+    
+    if (contentType.includes('css')) {
+      // For CSS files, use shorter cache time to allow updates
+      return 'public, max-age=86400'; // 24 hours for CSS files
     }
     
     if (contentType.includes('html')) {

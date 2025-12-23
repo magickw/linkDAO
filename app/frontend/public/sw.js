@@ -347,15 +347,15 @@ self.addEventListener('fetch', (event) => {
 
   // Handle different types of requests with different strategies
   if (isStaticAsset(request)) {
-    console.log('SW: Handling static asset request:', request.url);
+    // Skip logging for static assets to reduce console noise
     event.respondWith(cacheFirst(request, STATIC_CACHE));
   } else if (isImage(request)) {
-    console.log('SW: Handling image request:', request.url);
+    // Skip logging for images to reduce console noise
     event.respondWith(cacheFirst(request, IMAGE_CACHE));
   } else if (isAPI(request)) {
     // Check for bypass header - if present, fetch directly without caching
     if (request.headers.get('X-Service-Worker-Bypass') === 'true') {
-      console.log('SW: Bypassing API request due to bypass header:', request.url);
+      console.log('SW: Bypassing API request due to bypass header:', request.url); // Keep this log as it's important
       event.respondWith(
         (async () => {
           // Try fetch with retry logic
@@ -407,11 +407,11 @@ self.addEventListener('fetch', (event) => {
       );
       return;
     } else {
-      console.log('SW: Handling API request:', request.url);
+      console.log('SW: Handling API request:', request.url); // Keep API logs for debugging
       event.respondWith(networkFirst(request, DYNAMIC_CACHE));
     }
   } else {
-    console.log('SW: Handling dynamic request:', request.url);
+    console.log('SW: Handling dynamic request:', request.url); // Keep dynamic request logs for debugging
     event.respondWith(networkFirst(request, DYNAMIC_CACHE));
   }
 });

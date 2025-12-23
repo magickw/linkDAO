@@ -752,8 +752,15 @@ export class EnhancedCDNOptimizationService {
       return 'public, max-age=31536000, immutable, stale-while-revalidate=86400';
     }
     
-    if (contentType.includes('javascript') || contentType.includes('css')) {
-      return 'public, max-age=31536000, immutable';
+    // JavaScript and CSS files with shorter cache times to allow updates
+    if (contentType.includes('javascript')) {
+      // For JS files, use shorter cache time to allow updates while still caching
+      return 'public, max-age=43200, stale-while-revalidate=3600'; // 12 hours for JS files
+    }
+    
+    if (contentType.includes('css')) {
+      // For CSS files, use shorter cache time to allow updates
+      return 'public, max-age=86400, stale-while-revalidate=3600'; // 24 hours for CSS files
     }
     
     if (contentType.includes('html')) {
