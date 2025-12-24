@@ -1,11 +1,12 @@
 /**
  * TokenReactionSystem Component
  * Handles award reactions using LDAO tokens
+ * Collapsed by default, expands to show award grid
  */
 
 import React, { useState } from 'react';
 import { useWeb3 } from '../../context/Web3Context';
-import AwardPurchaseModal from './AwardPurchaseModal';
+import AwardSelectionModal from './AwardSelectionModal';
 
 interface TokenReactionSystemProps {
   postId: string;
@@ -22,6 +23,7 @@ const TokenReactionSystem: React.FC<TokenReactionSystemProps> = ({
 }) => {
   const { address, isConnected } = useWeb3();
   const [showAwardModal, setShowAwardModal] = useState(false);
+  const [showAwardGrid, setShowAwardGrid] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   // Award emojis and costs (matching reference design)
@@ -50,83 +52,108 @@ const TokenReactionSystem: React.FC<TokenReactionSystemProps> = ({
 
   const handleAwardClick = () => {
     if (!isConnected || !address) {
-      alert('Please connect your wallet to award this post');
+      alert('Please connect your wallet to award posts');
       return;
     }
-    setShowAwardModal(true);
+    setShowAwardGrid(true);
   };
 
-  const handleAwardPurchase = async (packageId: string, paymentMethod: 'card' | 'googlePay') => {
-    setIsLoading(true);
-    try {
-      // In real implementation, process payment and add gold to balance
-      console.log(`Purchasing package ${packageId} with ${paymentMethod}`);
-      
-      // Add gold to user balance (mock)
-      const packageAmount = {
-        'gold-100': 100,
-        'gold-200': 200,
-        'gold-300': 300
-      }[packageId] || 0;
-      
-      setShowAwardModal(false);
-    } catch (error) {
-      console.error('Purchase failed:', error);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleAwardSelection = (awardId: string, amount: number) => {
+    setShowAwardModal(true);
+    // Pass the selected award to the modal
   };
 
   return (
     <div className="token-reaction-system">
-      {/* Awards Grid */}
-      <div className="mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Award this post</h3>
-        <div className="grid grid-cols-4 gap-3">
-          {AWARDS.map((award) => (
-            <button
-              key={award.id}
-              onClick={handleAwardClick}
-              className="relative p-3 rounded-lg border-2 border-gray-200 hover:border-gray-300 transition-all hover:scale-105"
-              title={`${award.name} - ${award.cost} gold`}
-            >
-              <div className="text-center">
-                <div className="text-2xl mb-1">{award.emoji}</div>
-                <div className="text-xs font-medium text-gray-600">{award.cost}</div>
-                <div className="text-xs text-gray-500">⚙️</div>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Collapsed Award Button */}
+      {!showAwardGrid && (
+        <button
+          onClick={handleAwardClick}
+          className="flex items-center space-x-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-medium transition-colors duration-200 hover:scale-105"
+          title="Award this post"
+        >
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+          </svg>
+          <span className="hidden sm:inline">Award</span>
+        </button>
+      )}
 
-      {/* Analytics Section */}
-      {showAnalytics && (
-        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-          <h4 className="font-medium text-gray-900 mb-2">Award Analytics</h4>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="text-gray-600">Your Gold:</span>
-              <span className="ml-2 font-medium">{userGoldBalance}</span>
-            </div>
-            <div>
-              <span className="text-gray-600">To Unlock Leaderboard:</span>
-              <span className="ml-2 font-medium">
-                {Math.max(0, awardsToUnlockLeaderboard - userGoldBalance)} awards
-              </span>
-            </div>
+      {/* Expanded Award Grid */}
+      {showAwardGrid && (
+        <div className="space-y-4">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Award this post</h3>
+            <button
+              onClick={() => setShowAwardGrid(false)}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
+
+          {/* Awards Grid */}
+          <div className="grid grid-cols-4 gap-3">
+            {AWARDS.map((award) => (
+              <button
+                key={award.id}
+                onClick={() => handleAwardSelection(award.id, award.cost)}
+                className={`
+                  relative p-3 rounded-lg border-2 transition-all hover:scale-105
+                  border-gray-200 hover:border-gray-300 hover:bg-gray-50
+                  dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-700
+                `}
+                title={`${award.name} - ${award.cost} gold`}
+              >
+                <div className="text-center">
+                  <div className="text-2xl mb-1">{award.emoji}</div>
+                  <div className="text-xs font-medium text-gray-600 dark:text-gray-400">{award.cost}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Leaderboard Progress */}
+          {awardsToUnlockLeaderboard > 0 && (
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-blue-700 dark:text-blue-300">
+                  {awardsToUnlockLeaderboard} more awards to unlock the leaderboard
+                </span>
+                <span className="text-xs text-blue-600 dark:text-blue-400">
+                  {userGoldBalance} gold balance
+                </span>
+              </div>
+              <div className="mt-2 w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2">
+                <div 
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${Math.min((5 - awardsToUnlockLeaderboard) / 5 * 100, 100)}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Award Purchase Modal */}
-      <AwardPurchaseModal
+      {/* Award Selection Modal */}
+      <AwardSelectionModal
         isOpen={showAwardModal}
-        onClose={() => setShowAwardModal(false)}
-        onPurchase={handleAwardPurchase}
-        currentGoldBalance={userGoldBalance}
-        awardsNeeded={Math.max(0, awardsToUnlockLeaderboard - userGoldBalance)}
-        totalAwardsToUnlock={awardsToUnlockLeaderboard}
+        onClose={() => {
+          setShowAwardModal(false);
+        }}
+        selectedAward={null}
+        onSelectAward={() => {}}
+        onConfirm={(awardId, amount) => {
+          // Handle award confirmation
+          console.log(`Award ${awardId} confirmed with amount ${amount}`);
+          setShowAwardModal(false);
+          setShowAwardGrid(false);
+        }}
+        userGoldBalance={userGoldBalance}
+        awardsToUnlock={awardsToUnlockLeaderboard}
       />
     </div>
   );

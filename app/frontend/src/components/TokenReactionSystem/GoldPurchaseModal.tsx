@@ -1,10 +1,18 @@
 /**
- * Award Purchase Modal Component
- * Modal for purchasing gold/awards with tiered packages
+ * Enhanced Award Purchase Modal Component
+ * Modal for purchasing gold/awards with integrated checkout system supporting USDC and fiat payments
  */
 
 import React, { useState, useEffect } from 'react';
 import { useWeb3 } from '../../context/Web3Context';
+import { useToast } from '../../context/ToastContext';
+import { CheckoutService } from '../../services/checkoutService';
+import { 
+  PrioritizedPaymentMethod, 
+  PaymentMethodType,
+  PrioritizationResult 
+} from '../../types/paymentPrioritization';
+import { PaymentMethodSelector } from '../../components/PaymentMethodPrioritization/PaymentMethodSelector';
 
 interface GoldPackage {
   id: string;
@@ -31,10 +39,15 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
   onClose,
   isLoading = false
 }) => {
-  const { address: walletAddress } = useWeb3();
+  const { address, isConnected } = useWeb3();
+  const { addToast } = useToast();
+  
   const [selectedPackage, setSelectedPackage] = useState<string>('100');
-  const [showPayment, setShowPayment] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'googlepay'>('card');
+  const [showCheckout, setShowCheckout] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PrioritizedPaymentMethod | null>(null);
+  const [prioritizationResult, setPrioritizationResult] = useState<PrioritizationResult | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [checkoutService] = useState(() => new CheckoutService());
 
   const goldPackages: GoldPackage[] = [
     {
@@ -53,12 +66,53 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
       amount: 300,
       price: 5.39,
       bonus: 50,
+    },
+    {
+      id: '500',
+      amount: 500,
+      price: 8.99,
+      bonus: 100,
+    },
+    {
+      id: '1000',
+      amount: 1000,
+      price: 16.99,
+      bonus: 250,
     }
   ];
 
   const selectedPackageData = goldPackages.find(pkg => pkg.id === selectedPackage);
   const goldNeeded = Math.max(0, awardCost - currentGold);
   const remainingGold = currentGold + (selectedPackageData?.amount || 0) - awardCost;
+
+  // Web3-themed package names and icons
+  const packageThemes: { [key: string]: { name: string; icon: string; description: string } } = {
+    '100': { 
+      name: 'Starter Stack', 
+      icon: '🚀', 
+      description: 'Perfect for your first awards' 
+    },
+    '200': { 
+      name: 'DeFi Degen', 
+      icon: '💎', 
+      description: 'For the true degen in you' 
+    },
+    '300': { 
+      name: 'Whale Pack', 
+      icon: '🐋', 
+      description: 'Make a splash with big awards' 
+    },
+    '500': { 
+      name: 'Diamond Hands', 
+      icon: '💎', 
+      description: 'HODL strong, award stronger' 
+    },
+    '1000': { 
+      name: 'OG Collection', 
+      icon: '👑', 
+      description: 'Legendary status unlocked' 
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -67,14 +121,112 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
       if (suitablePackage) {
         setSelectedPackage(suitablePackage.id);
       }
+      loadPaymentMethods();
     }
   }, [isOpen, goldNeeded]);
+
+  const loadPaymentMethods = async () => {
+    try {
+      const result = await checkoutService.getPrioritizedPaymentMethods(
+        selectedPackageData?.price || 1.79,
+        address || undefined
+      );
+      setPrioritizationResult(result);
+      
+      // Auto-select the default method
+      if (result.defaultMethod) {
+        setSelectedPaymentMethod(result.defaultMethod);
+      }
+    } catch (error) {
+      console.error('Failed to load payment methods:', error);
+      addToast('Failed to load payment options', 'error');
+    }
+  };
+
+  const handlePackageSelect = (packageId: string) => {
+    setSelectedPackage(packageId);
+    // Reload payment methods for new price
+    loadPaymentMethods();
+  };
+
+  const handlePaymentMethodSelect = (method: PrioritizedPaymentMethod) => {
+    setSelectedPaymentMethod(method);
+  };
+
+  const handlePurchase = async () => {
+    if (!selectedPaymentMethod || !selectedPackageData) return;
+
+    setIsProcessing(true);
+    try {
+      // Create a mock cart item for the gold package
+      const packageNames: { [key: string]: string } = {
+        '100': 'Starter Stack',
+        '200': 'DeFi Degen',
+        '300': 'Whale Pack',
+        '500': 'Diamond Hands',
+        '1000': 'OG Collection'
+      };
+      
+      const packageName = packageNames[selectedPackage] || `${selectedPackageData.amount} Gold`;
+      
+      const mockCartItem = {
+        id: `gold-${selectedPackage}`,
+        title: `${packageName} - ${selectedPackageData.amount} Gold`,
+        price: {
+          fiat: selectedPackageData.price.toString(),
+          crypto: '0'
+        },
+        quantity: 1,
+        image: '/gold-icon.png',
+        description: `Purchase ${selectedPackageData.amount} gold tokens to award amazing content`,
+        seller: {
+          id: 'linkdao',
+          name: 'LinkDAO'
+        }
+      };
+
+      // Create checkout session
+      const session = await checkoutService.createCheckoutSession(
+        [mockCartItem],
+        address || undefined
+      );
+
+      // Process payment using the selected method
+      const result = await checkoutService.processPrioritizedCheckout({
+        orderId: session.orderId,
+        listingId: `gold-${selectedPackage}`,
+        buyerAddress: address || '',
+        sellerAddress: 'linkdao',
+        amount: selectedPackageData.price,
+        currency: 'USD',
+        selectedPaymentMethod,
+        paymentDetails: {
+          walletAddress: address || undefined,
+          tokenSymbol: selectedPaymentMethod.method.token?.symbol,
+          networkId: selectedPaymentMethod.method.chainId,
+        }
+      });
+
+      if (result.success) {
+        addToast('Gold purchase successful! Award will be given.', 'success');
+        await onPurchase(selectedPackage);
+        onClose();
+      } else {
+        throw new Error(result.error || 'Payment failed');
+      }
+    } catch (error: any) {
+      console.error('Purchase failed:', error);
+      addToast(`Purchase failed: ${error.message}`, 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
@@ -109,148 +261,97 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
 
         {/* Gold Packages */}
         <div className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Award this post</h3>
-          <div className="grid grid-cols-3 gap-4 mb-6">
-            {goldPackages.map((pkg) => (
-              <button
-                key={pkg.id}
-                onClick={() => setSelectedPackage(pkg.id)}
-                className={`
-                  relative p-4 rounded-lg border-2 transition-all
-                  ${selectedPackage === pkg.id
-                    ? 'border-yellow-500 bg-yellow-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                  }
-                `}
-              >
-                {pkg.popular && (
-                  <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-yellow-500 text-white text-xs px-2 py-1 rounded-full">
-                      Popular
-                    </span>
-                  </div>
-                )}
-                <div className="text-center">
-                  <div className="text-2xl mb-1">⭐</div>
-                  <div className="text-lg font-semibold text-gray-900">{pkg.amount}</div>
-                  <div className="text-sm text-gray-600">gold</div>
-                  <div className="text-lg font-bold text-gray-900 mt-2">${pkg.price}</div>
-                  {pkg.bonus && (
-                    <div className="text-xs text-green-600 mt-1">+{pkg.bonus} bonus</div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Choose Gold Package</h3>
+          <div className="grid grid-cols-3 md:grid-cols-5 gap-4 mb-6">
+            {goldPackages.map((pkg) => {
+              const theme = packageThemes[pkg.id];
+              return (
+                <button
+                  key={pkg.id}
+                  onClick={() => handlePackageSelect(pkg.id)}
+                  className={`
+                    relative p-4 rounded-lg border-2 transition-all
+                    ${selectedPackage === pkg.id
+                      ? 'border-yellow-500 bg-yellow-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                    }
+                  `}
+                >
+                  {pkg.popular && (
+                    <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
+                      <span className="bg-yellow-500 text-white text-xs px-2 py-1 rounded-full">
+                        Most Popular
+                      </span>
+                    </div>
                   )}
-                </div>
-              </button>
-            ))}
+                  <div className="text-center">
+                    <div className="text-2xl mb-1">{theme.icon}</div>
+                    <div className="text-xs font-medium text-gray-900 mb-1">{theme.name}</div>
+                    <div className="text-lg font-bold text-gray-900">{pkg.amount}</div>
+                    <div className="text-sm text-gray-600">gold</div>
+                    <div className="text-lg font-bold text-gray-900 mt-2">${pkg.price}</div>
+                    {pkg.bonus && (
+                      <div className="text-xs text-green-600 mt-1">+{pkg.bonus} bonus</div>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
           {/* Payment Method Selection */}
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">Payment method</h3>
-            <div className="flex space-x-4">
-              <button
-                onClick={() => setPaymentMethod('card')}
-                className={`
-                  flex items-center space-x-2 px-4 py-2 rounded-lg border transition-all
-                  ${paymentMethod === 'card'
-                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                    : 'border-gray-300 hover:border-gray-400'
-                  }
-                `}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                </svg>
-                <span>Card</span>
-              </button>
-              <button
-                onClick={() => setPaymentMethod('googlepay')}
-                className={`
-                  flex items-center space-x-2 px-4 py-2 rounded-lg border transition-all
-                  ${paymentMethod === 'googlepay'
-                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                    : 'border-gray-300 hover:border-gray-400'
-                  }
-                `}
-              >
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"/>
-                  <path fill="#34A853" d="M5.255 9.787c-.4-.8-.627-1.68-.627-2.613s.227-1.813.627-2.613V2.4h-2.4C1.733 3.76 1.333 5.387 1.333 7.173s.4 3.413 1.52 4.773l2.4-2.16z"/>
-                  <path fill="#FBBC05" d="M12.48 5.387c1.653 0 3.147.56 4.32 1.667l2.133-2.133C17.227 2.987 15.08 2 12.48 2 8.373 2 4.907 4.427 3.253 8l2.4 1.68c.853-2.613 3.267-4.293 5.827-4.293z"/>
-                  <path fill="#EA4335" d="M12.48 14.613c-2.56 0-4.973-1.68-5.827-4.293l-2.4 1.68c1.653 3.573 5.12 6 9.227 6 3.573 0 6.267-1.173 8.373-3.36l-2.133-2.133c-1.173 1.107-2.667 1.667-4.32 1.667z"/>
-                </svg>
-                <span>Google Pay</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Payment Form (shown after payment method selection) */}
-          {(paymentMethod === 'card' || paymentMethod === 'googlepay') && (
+          {prioritizationResult && (
             <div className="space-y-4">
-              {paymentMethod === 'card' && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Card number
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="1234 5678 9012 3456"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Expiration date
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="MM/YY"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Security code
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="123"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Country
-                    </label>
-                    <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                      <option>United States</option>
-                      <option>Canada</option>
-                      <option>United Kingdom</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      ZIP code
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="12345"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                </>
-              )}
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Payment Method</h3>
+              
+              <PaymentMethodSelector
+                prioritizationResult={prioritizationResult}
+                selectedMethodId={selectedPaymentMethod?.method.id}
+                onMethodSelect={handlePaymentMethodSelect}
+                showCostBreakdown={true}
+                showRecommendations={true}
+                showWarnings={true}
+                layout="grid"
+                responsive={true}
+              />
 
-              {paymentMethod === 'googlepay' && (
-                <div className="text-center py-8">
-                  <button className="bg-black text-white px-6 py-3 rounded-lg flex items-center space-x-2 mx-auto">
-                    <svg className="w-5 h-5" viewBox="0 0 24 24">
-                      <path fill="white" d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"/>
-                    </svg>
-                    <span>Pay with Google Pay</span>
-                  </button>
+              {/* Payment Method Info */}
+              {selectedPaymentMethod && (
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className={`p-2 rounded-lg ${
+                      selectedPaymentMethod.method.type === PaymentMethodType.FIAT_STRIPE
+                        ? 'bg-blue-100'
+                        : 'bg-orange-100'
+                    }`}>
+                      {selectedPaymentMethod.method.type === PaymentMethodType.FIAT_STRIPE ? (
+                        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-900">{selectedPaymentMethod.method.name}</h4>
+                      <p className="text-sm text-gray-600">{selectedPaymentMethod.method.description}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {selectedPaymentMethod.recommendationReason}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-semibold text-gray-900">
+                        ${(selectedPaymentMethod.costEstimate?.totalCost || selectedPackageData?.price || 0).toFixed(2)}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {selectedPaymentMethod.costEstimate?.fees && 
+                          `+ $${selectedPaymentMethod.costEstimate.fees.toFixed(2)} fees`
+                        }
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -261,16 +362,28 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
         <div className="p-6 border-t border-gray-200 bg-gray-50">
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm text-gray-600">
-              By continuing you agree to our <a href="#" className="text-blue-600 hover:underline">Econ Terms</a>.
+              By continuing you agree to our <a href="#" className="text-blue-600 hover:underline">Terms of Service</a>.
             </p>
+            <div className="text-right">
+              <div className="text-sm text-gray-600">Total</div>
+              <div className="text-xl font-bold text-gray-900">
+                ${(selectedPaymentMethod?.costEstimate?.totalCost || selectedPackageData?.price || 0).toFixed(2)}
+              </div>
+            </div>
           </div>
           <div className="flex space-x-3">
             <button
-              onClick={() => onPurchase(selectedPackage)}
-              disabled={isLoading}
+              onClick={onClose}
+              className="px-6 py-3 text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handlePurchase}
+              disabled={!selectedPaymentMethod || isProcessing}
               className="flex-1 bg-blue-900 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? (
+              {isProcessing ? (
                 <div className="flex items-center justify-center space-x-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                   <span>Processing...</span>
@@ -278,12 +391,6 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
               ) : (
                 `Buy Gold and Give Award`
               )}
-            </button>
-            <button
-              onClick={onClose}
-              className="px-6 py-3 text-gray-600 hover:text-gray-800 transition-colors"
-            >
-              Cancel
             </button>
           </div>
         </div>
