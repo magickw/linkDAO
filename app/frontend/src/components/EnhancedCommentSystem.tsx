@@ -3,6 +3,7 @@ import { Comment, CreateCommentInput } from '@/models/CommunityPost';
 import { CommunityMembership } from '@/models/CommunityMembership';
 import { CommunityPostService } from '@/services/communityPostService';
 import { CommunityService } from '@/services/communityService';
+import { FeedService } from '@/services/feedService';
 import { useWeb3 } from '@/context/Web3Context';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
@@ -55,21 +56,37 @@ export default function EnhancedCommentSystem({
   } | null>(null);
 
   // Load comments with sorting
-  // Load comments with sorting
   const loadComments = useCallback(async (sortOption: SortOption = sortBy) => {
     try {
       setCommentsLoading(true);
-      const response = await CommunityPostService.getPostComments(postId, {
-        sortBy: sortOption,
-        limit: 100
-      });
+      let response;
+      
+      // Use different service based on post type
+      if (postType === 'feed' || postType === 'enhanced') {
+        // For quick posts (feed posts), use FeedService
+        response = await FeedService.getPostComments(postId, 1, 100, sortOption);
+      } else {
+        // For community posts, use CommunityPostService
+        response = await CommunityPostService.getPostComments(postId, {
+          sortBy: sortOption,
+          limit: 100
+        });
+      }
 
       // Handle response structure: { comments: [...], pagination: {...} } or just [...]
       const commentsData = Array.isArray(response) ? response : ((response as any).comments || []);
       setComments(commentsData);
 
       // Update comment count
-      const commentCount = await CommunityPostService.getPostCommentCount(postId);
+      let commentCount;
+      if (postType === 'feed' || postType === 'enhanced') {
+        // For feed posts, get comment count from response or use length
+        commentCount = commentsData.length;
+      } else {
+        // For community posts, use the service method
+        commentCount = await CommunityPostService.getPostCommentCount(postId);
+      }
+      
       if (onCommentCountChange) {
         onCommentCountChange(commentCount);
       }
@@ -79,7 +96,7 @@ export default function EnhancedCommentSystem({
     } finally {
       setCommentsLoading(false);
     }
-  }, [postId, sortBy, onCommentCountChange, addToast]);
+  }, [postId, sortBy, postType, onCommentCountChange, addToast]);
 
   // Load community information when communityId is provided
   useEffect(() => {
@@ -203,7 +220,16 @@ export default function EnhancedCommentSystem({
         media: selectedMedia || undefined
       };
 
-      const newCommentObj = await CommunityPostService.createComment(commentData);
+      let newCommentObj;
+      
+      // Use different service based on post type
+      if (postType === 'feed' || postType === 'enhanced') {
+        // For quick posts (feed posts), use FeedService
+        newCommentObj = await FeedService.createComment(commentData);
+      } else {
+        // For community posts, use CommunityPostService
+        newCommentObj = await CommunityPostService.createComment(commentData);
+      }
 
       // Validate comment structure before adding to state
       if (!newCommentObj || typeof newCommentObj !== 'object') {
@@ -219,7 +245,16 @@ export default function EnhancedCommentSystem({
       setShowCommentForm(false);
 
       // Update comment count after adding a new comment
-      const commentCount = await CommunityPostService.getPostCommentCount(postId);
+      let commentCount;
+      if (postType === 'feed' || postType === 'enhanced') {
+        // For feed posts, get updated comments to count
+        const updatedComments = await FeedService.getPostComments(postId, 1, 100, sortBy);
+        commentCount = Array.isArray(updatedComments) ? updatedComments.length : (updatedComments.comments?.length || 0);
+      } else {
+        // For community posts, use the service method
+        commentCount = await CommunityPostService.getPostCommentCount(postId);
+      }
+      
       if (onCommentCountChange) {
         onCommentCountChange(commentCount);
       }

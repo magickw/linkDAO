@@ -47,7 +47,6 @@ import OnChainIdentityBadge from '@/components/Community/OnChainIdentityBadge';
 
 import TreasuryWidget from '@/components/Community/TreasuryWidget';
 import QuestsWidget from '@/components/Community/QuestsWidget';
-import CommunityHealthMetrics from '@/components/Community/CommunityHealthMetrics';
 import FloatingActionButton from '@/components/Community/FloatingActionButton';
 import PinnedPostsSection from '@/components/Community/PinnedPostsSection';
 import AnnouncementBanner from '@/components/Community/AnnouncementBanner';
@@ -1065,12 +1064,7 @@ const CommunitiesPage: React.FC = () => {
 
                 
 
-                {/* Community Health Metrics */}
-                <CommunityHealthMetrics
-                  communityId="global"
-                  timeRange="week"
-                  compact={false}
-                />
+                
 
                 {/* Treasury Widget */}
                 <TreasuryWidget

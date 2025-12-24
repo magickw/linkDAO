@@ -15,7 +15,7 @@ import DOMPurify from 'dompurify';
 import VideoEmbed from '../VideoEmbed';
 import { extractVideoUrls, VideoInfo } from '../../utils/videoUtils';
 import { communityWeb3Service } from '../../services/communityWeb3Service';
-import { feedService } from '../../services/feedService';
+import { FeedService } from '../../services/feedService';
 
 interface EnhancedPostCardProps {
   post: any;
@@ -268,7 +268,7 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
       }
 
       // Use feed service tipping for feed posts
-      const txHash = await feedService.tipPost(post.id, {
+      const txHash = await FeedService.tipPost(post.id, {
         amount: amount,
         tokenType: token || 'LDAO',
         message: message || ''

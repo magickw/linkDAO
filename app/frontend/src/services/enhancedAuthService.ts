@@ -892,6 +892,30 @@ class EnhancedAuthService {
   }
 
   /**
+   * Get wallet address from session or localStorage
+   */
+  getWalletAddress(): string | null {
+    // First check in-memory session
+    if (this.sessionData && this.sessionData.user && this.sessionData.user.address) {
+      return this.sessionData.user.address;
+    }
+
+    // Fallback to localStorage
+    if (typeof window !== 'undefined') {
+      try {
+        const storedAddress = localStorage.getItem(this.STORAGE_KEYS.WALLET_ADDRESS);
+        if (storedAddress) {
+          return storedAddress;
+        }
+      } catch (error) {
+        console.error('Error getting wallet address from storage:', error);
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * Get authentication headers for API requests with automatic token refresh
    */
   async getAuthHeaders(): Promise<Record<string, string>> {

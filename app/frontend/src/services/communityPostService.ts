@@ -175,6 +175,63 @@ export class CommunityPostService {
     }
   }
 
+  static async getPostComments(
+    postId: string,
+    options?: {
+      page?: number;
+      limit?: number;
+      sortBy?: string;
+    }
+  ): Promise<Comment[]> {
+    try {
+      const params = new URLSearchParams({
+        page: (options?.page || 1).toString(),
+        limit: (options?.limit || 20).toString(),
+        sort: options?.sortBy || 'newest'
+      });
+
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/${postId}/comments?${params}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || `Failed to get comments: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.data || result;
+    } catch (error) {
+      console.error('Error getting comments:', error);
+      throw error;
+    }
+  }
+
+  static async getPostCommentCount(postId: string): Promise<number> {
+    try {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/${postId}/comments/count`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || `Failed to get comment count: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.count || 0;
+    } catch (error) {
+      console.error('Error getting comment count:', error);
+      return 0;
+    }
+  }
+
   static async createComment(data: CreateCommentInput): Promise<Comment> {
     try {
       // Get base auth headers from enhancedAuthService

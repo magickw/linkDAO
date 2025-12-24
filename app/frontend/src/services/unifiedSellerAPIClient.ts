@@ -243,7 +243,7 @@ export class UnifiedSellerAPIClient {
         Object.assign(headers, authHeaders);
 
         // Get wallet address for authentication
-        const walletAddress = localStorage.getItem('linkdao_wallet_address');
+        const walletAddress = enhancedAuthService.getWalletAddress();
         if (walletAddress) {
           headers['X-Wallet-Address'] = walletAddress;
         }
@@ -367,7 +367,7 @@ export class UnifiedSellerAPIClient {
         localStorage.getItem('authToken');
 
       // Get wallet address for authentication
-      const walletAddress = localStorage.getItem('linkdao_wallet_address');
+      const walletAddress = enhancedAuthService.getWalletAddress();
 
       const response = await fetch(endpoint, {
         ...options,
