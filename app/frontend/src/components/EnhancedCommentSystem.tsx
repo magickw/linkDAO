@@ -225,7 +225,11 @@ export default function EnhancedCommentSystem({
       // Use different service based on post type
       if (postType === 'feed' || postType === 'enhanced') {
         // For quick posts (feed posts), use FeedService
-        newCommentObj = await FeedService.createComment(commentData);
+        newCommentObj = await FeedService.addComment(
+          commentData.postId,
+          commentData.content,
+          commentData.parentId
+        );
       } else {
         // For community posts, use CommunityPostService
         newCommentObj = await CommunityPostService.createComment(commentData);

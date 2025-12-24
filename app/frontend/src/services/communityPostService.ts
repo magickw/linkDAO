@@ -190,7 +190,8 @@ export class CommunityPostService {
         sort: options?.sortBy || 'newest'
       });
 
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/${postId}/comments?${params}`, {
+      // Use the correct endpoint - community posts use /api/community-posts/
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/community-posts/${postId}/comments?${params}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json'
@@ -212,7 +213,8 @@ export class CommunityPostService {
 
   static async getPostCommentCount(postId: string): Promise<number> {
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/${postId}/comments/count`, {
+      // Since there's no dedicated comment count endpoint, fetch comments and count them
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/community-posts/${postId}/comments?limit=1000`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json'
@@ -225,7 +227,8 @@ export class CommunityPostService {
       }
 
       const result = await response.json();
-      return result.count || 0;
+      const comments = result.data || result || [];
+      return Array.isArray(comments) ? comments.length : 0;
     } catch (error) {
       console.error('Error getting comment count:', error);
       return 0;
@@ -271,7 +274,7 @@ export class CommunityPostService {
       }
 
       // Use the correct endpoint for creating comments
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/${data.postId}/comments`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/community-posts/${data.postId}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

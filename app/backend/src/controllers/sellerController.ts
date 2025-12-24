@@ -1045,7 +1045,27 @@ export class SellerController {
 
       if (!profile) {
         safeLogger.info("Seller profile not found for address:", walletAddress);
-        return res.status(404).json({ success: false, error: "Seller profile not found" });
+        
+        // Create a basic profile for the seller if it doesn't exist
+        try {
+          const basicProfileData = {
+            walletAddress,
+            storeName: `Store for ${walletAddress.substring(0, 6)}...${walletAddress.substring(walletAddress.length - 4)}`,
+            bio: "Welcome to my store!",
+            description: "Seller profile created automatically",
+            createdAt: new Date(),
+            updatedAt: new Date()
+          };
+          
+          const newProfile = await sellerService.createSellerProfile(basicProfileData as any);
+          safeLogger.info("Created basic seller profile for address:", walletAddress);
+          
+          res.json({ success: true, data: newProfile });
+          return;
+        } catch (creationError) {
+          safeLogger.error("Error creating basic profile:", creationError);
+          return res.status(500).json({ success: false, error: "Failed to create basic seller profile" });
+        }
       }
 
       safeLogger.info("Successfully fetched seller profile for address:", walletAddress);

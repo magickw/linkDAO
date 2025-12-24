@@ -8,12 +8,17 @@ import { useWeb3 } from '../../context/Web3Context';
 import { useToast } from '../../context/ToastContext';
 
 // Simple types for now to avoid dependency issues
-type PaymentMethodType = 'FIAT_STRIPE' | 'STABLECOIN_USDC';
+const PaymentMethodType = {
+  FIAT_STRIPE: 'FIAT_STRIPE',
+  STABLECOIN_USDC: 'STABLECOIN_USDC'
+} as const;
+
+type PaymentMethodType = typeof PaymentMethodType[keyof typeof PaymentMethodType];
 
 interface PrioritizedPaymentMethod {
   method: {
     id: string;
-    type: PaymentMethodType;
+    type: string; // Use string to avoid enum issues
     name: string;
     description: string;
     chainId: number;
@@ -147,7 +152,7 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
     setSelectedPaymentMethod({
       method: {
         id: 'stripe-fiat',
-        type: PaymentMethodType.FIAT_STRIPE,
+        type: 'FIAT_STRIPE',
         name: 'Credit/Debit Card',
         description: 'Pay with credit or debit card',
         chainId: 0,
@@ -286,7 +291,7 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
                   setSelectedPaymentMethod({
                     method: {
                       id: 'stripe-fiat',
-                      type: PaymentMethodType.FIAT_STRIPE,
+                      type: 'FIAT_STRIPE',
                       name: 'Credit/Debit Card',
                       description: 'Pay with credit or debit card',
                       chainId: 0,
@@ -306,7 +311,7 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
                   } as any);
                 }}
                 className={`p-4 rounded-lg border-2 transition-all ${
-                  selectedPaymentMethod?.method.type === PaymentMethodType.FIAT_STRIPE
+                  selectedPaymentMethod?.method.type === 'FIAT_STRIPE'
                     ? 'border-blue-500 bg-blue-50'
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
@@ -331,7 +336,7 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
                   setSelectedPaymentMethod({
                     method: {
                       id: 'usdc-ethereum',
-                      type: PaymentMethodType.STABLECOIN_USDC,
+                      type: 'STABLECOIN_USDC',
                       name: 'USDC',
                       description: 'USD Coin on Ethereum',
                       chainId: 1,
@@ -358,7 +363,7 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
                   } as any);
                 }}
                 className={`p-4 rounded-lg border-2 transition-all ${
-                  selectedPaymentMethod?.method.type === PaymentMethodType.STABLECOIN_USDC
+                  selectedPaymentMethod?.method.type === 'STABLECOIN_USDC'
                     ? 'border-orange-500 bg-orange-50'
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
@@ -379,45 +384,44 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
             </div>
 
             {/* Payment Method Info */}
-            {selectedPaymentMethod && (
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className={`p-2 rounded-lg ${
-                    selectedPaymentMethod.method.type === PaymentMethodType.FIAT_STRIPE
-                      ? 'bg-blue-100'
-                      : 'bg-orange-100'
-                  }`}>
-                    {selectedPaymentMethod.method.type === PaymentMethodType.FIAT_STRIPE ? (
-                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                      </svg>
-                    ) : (
-                      <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-medium text-gray-900">{selectedPaymentMethod.method.name}</h4>
-                    <p className="text-sm text-gray-600">{selectedPaymentMethod.method.description}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {selectedPaymentMethod.recommendationReason}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-lg font-semibold text-gray-900">
-                      ${(selectedPaymentMethod.costEstimate?.totalCost || selectedPackageData?.price || 0).toFixed(2)}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {selectedPaymentMethod.costEstimate?.fees && 
-                        `+ $${selectedPaymentMethod.costEstimate.fees.toFixed(2)} fees`
-                      }
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+                          {selectedPaymentMethod && (
+                            <div className="p-4 bg-gray-50 rounded-lg">
+                              <div className="flex items-center space-x-3">
+                                <div className={`p-2 rounded-lg ${
+                                  selectedPaymentMethod.method.type === 'FIAT_STRIPE'
+                                    ? 'bg-blue-100'
+                                    : 'bg-orange-100'
+                                }`}>
+                                  {selectedPaymentMethod.method.type === 'FIAT_STRIPE' ? (
+                                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                                    </svg>
+                                  ) : (
+                                    <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                  )}
+                                </div>
+                                <div className="flex-1">
+                                  <h4 className="font-medium text-gray-900">{selectedPaymentMethod.method.name}</h4>
+                                  <p className="text-sm text-gray-600">{selectedPaymentMethod.method.description}</p>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    {selectedPaymentMethod.recommendationReason}
+                                  </p>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-lg font-semibold text-gray-900">
+                                    ${(selectedPaymentMethod.costEstimate?.totalCost || selectedPackageData?.price || 0).toFixed(2)}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {selectedPaymentMethod.costEstimate?.fees && 
+                                      `+ $${selectedPaymentMethod.costEstimate.fees.toFixed(2)} fees`
+                                    }
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}          </div>
         </div>
 
         {/* Footer */}
