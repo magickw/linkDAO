@@ -32,10 +32,9 @@ interface Reaction {
   type: string;
   emoji: string;
   label: string;
-  totalStaked: number;
-  userStaked: number;
-  contributors: string[];
-  rewardsEarned: number;
+  price: number; // LDAO tokens required to purchase
+  count: number; // How many times this reaction was purchased
+  userOwned: boolean; // Whether current user owns this reaction
 }
 
 
@@ -273,6 +272,19 @@ function CommunityPostCardEnhanced({
     return labelMap[type.toLowerCase()] || type;
   };
 
+  // Get reaction price
+  const getReactionPrice = (type: string): number => {
+    const priceMap: Record<string, number> = {
+      hot: 1,
+      diamond: 2,
+      bullish: 1,
+      love: 1,
+      laugh: 1,
+      wow: 2,
+    };
+    return priceMap[type.toLowerCase()] || 1;
+  };
+
   // Toggle comments visibility
   const toggleComments = () => {
     setShowComments(!showComments);
@@ -352,8 +364,8 @@ function CommunityPostCardEnhanced({
     }
   };
 
-  // Handle web3 reactions (staking tokens)
-  const handleReaction = async (reactionType: string, amount: number) => {
+  // Handle reaction purchase (simplified from staking)
+  const handleReactionPurchase = async (reactionType: string) => {
     if (!hasWallet) {
       addToast('No wallet detected. Please install a wallet like MetaMask.', 'error');
       return;
@@ -369,38 +381,40 @@ function CommunityPostCardEnhanced({
       return;
     }
 
+    const price = getReactionPrice(reactionType);
+    
     try {
-      // Use real LDAO staking functionality
-      const stakeResult = await ldaoTokenService.stakeTokens(amount.toString(), 1); // Use tier 1 (30 days)
+      // Simple token transfer to treasury
+      const result = await ldaoTokenService.transferTokens(
+        '0x074E3874CA62F8cB9be6DDCD23235d0Bb5a8A0b5', // Treasury address
+        price.toString()
+      );
       
-      if (!stakeResult.success) {
-        addToast(stakeResult.error || 'Failed to stake LDAO tokens', 'error');
+      if (!result.success) {
+        addToast(result.error || 'Failed to purchase reaction', 'error');
         return;
       }
 
       if (onReaction) {
-        await onReaction(post.id, reactionType, amount);
+        await onReaction(post.id, reactionType, price);
       }
 
-      // Update local state
+      // Update local state - much simpler
       setReactions(prev => prev.map(reaction => {
         if (reaction.type === reactionType) {
-          const reward = amount * 0.1;
           return {
             ...reaction,
-            totalStaked: reaction.totalStaked + amount,
-            userStaked: reaction.userStaked + amount,
-            rewardsEarned: reaction.rewardsEarned + reward,
-            contributors: [...reaction.contributors, address ? address.substring(0, 6) + '...' + address.substring(38) : '']
+            count: reaction.count + 1,
+            userOwned: true
           };
         }
         return reaction;
       }));
 
-      addToast(`Successfully staked ${amount} $LDAO on ${reactionType} reaction!`, 'success');
+      addToast(`Purchased ${reactionType} reaction for ${price} LDAO!`, 'success');
     } catch (error) {
-      console.error('Error reacting:', error);
-      addToast('Failed to react. Please try again.', 'error');
+      console.error('Error purchasing reaction:', error);
+      addToast('Failed to purchase reaction', 'error');
     }
   };
 
@@ -528,10 +542,10 @@ function CommunityPostCardEnhanced({
               {/* Community Name */}
               <button
                 onClick={(e) => {
+                  e.preventDefault();
                   e.stopPropagation();
-                  // Navigate to community page
                   const communitySlug = encodeURIComponent(community.slug ?? community.id ?? community.name ?? 'unknown');
-                  router.push(`/communities/${communitySlug}`);
+                  setTimeout(() => router.push(`/communities/${communitySlug}`), 0);
                 }}
                 className="font-medium text-blue-600 dark:text-blue-400 hover:underline"
               >
@@ -584,11 +598,12 @@ function CommunityPostCardEnhanced({
             {(post.title && post.title.trim() !== '') ? (
               <h3
                 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 leading-tight cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 hover:underline"
-                onClick={() => {
-                  // Navigate to the specific post page within the community
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   const communitySlug = encodeURIComponent(community.slug ?? community.id ?? community.name ?? 'unknown');
                   const postPath = `/communities/${communitySlug}/posts/${post.id}`;
-                  router.push(postPath);
+                  setTimeout(() => router.push(postPath), 0);
                 }}
               >
                 {post.title}
@@ -598,11 +613,12 @@ function CommunityPostCardEnhanced({
               post.content && post.content.trim() !== '' && (
                 <h3
                   className="text-lg font-semibold text-gray-900 dark:text-white mb-2 leading-tight cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 hover:underline"
-                  onClick={() => {
-                    // Navigate to the specific post page within the community
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     const communitySlug = encodeURIComponent(community.slug ?? community.id ?? community.name ?? 'unknown');
                     const postPath = `/communities/${communitySlug}/posts/${post.id}`;
-                    router.push(postPath);
+                    setTimeout(() => router.push(postPath), 0);
                   }}
                 >
                   {post.content.split('\n')[0].substring(0, 100)}
@@ -815,14 +831,23 @@ function CommunityPostCardEnhanced({
                 </div>
 
                 <button
-                  onClick={toggleComments}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleComments();
+                  }}
                   className="flex items-center space-x-1 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200"
                   aria-label="Toggle comments"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>
-                  <span>{comments.length} comments</span>
+                  <span>
+                    {comments.length === 0 
+                      ? 'Add a comment' 
+                      : `${comments.length} comment${comments.length === 1 ? '' : 's'}`
+                    }
+                  </span>
                 </button>
 
                 <button
@@ -840,6 +865,21 @@ function CommunityPostCardEnhanced({
               <div className="text-xs font-medium">
                 {reactions.reduce((sum, r) => sum + r.totalStaked, 0)} $LDAO staked
               </div>
+            </div>
+          )}
+
+          {/* Comment prompt when no comments and section is collapsed */}
+          {!showComments && comments.length === 0 && (
+            <div className="mt-4 text-center py-3 px-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                No comments yet. 
+                <button
+                  onClick={toggleComments}
+                  className="ml-1 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium"
+                >
+                  Be the first to comment!
+                </button>
+              </p>
             </div>
           )}
 

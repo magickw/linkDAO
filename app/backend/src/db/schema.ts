@@ -375,6 +375,37 @@ export const tips = pgTable("tips", {
   })
 }));
 
+// Reaction Purchases - simplified reaction system with revenue sharing
+export const reactionPurchases = pgTable("reaction_purchases", {
+  id: serial("id").primaryKey(),
+  postId: varchar("post_id", { length: 255 }).notNull(), // Can be UUID or integer for compatibility
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  userAddress: varchar("user_address", { length: 66 }).notNull(),
+  reactionType: varchar("reaction_type", { length: 32 }).notNull(), // 'hot', 'diamond', 'bullish', 'love', 'laugh', 'wow'
+  price: numeric("price", { precision: 20, scale: 8 }).notNull(), // Price paid in LDAO tokens
+  authorEarnings: numeric("author_earnings", { precision: 20, scale: 8 }).notNull(), // 70% to post author
+  treasuryFee: numeric("treasury_fee", { precision: 20, scale: 8 }).notNull(), // 30% to treasury
+  postAuthor: varchar("post_author", { length: 66 }).notNull(), // Post author's wallet address
+  txHash: varchar("tx_hash", { length: 66 }), // Blockchain transaction hash
+  purchasedAt: timestamp("purchased_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  postIdIdx: index("idx_reaction_purchases_post_id").on(t.postId),
+  userIdIdx: index("idx_reaction_purchases_user_id").on(t.userId),
+  userAddressIdx: index("idx_reaction_purchases_user_address").on(t.userAddress),
+  postAuthorIdx: index("idx_reaction_purchases_post_author").on(t.postAuthor),
+  reactionTypeIdx: index("idx_reaction_purchases_reaction_type").on(t.reactionType),
+  purchasedAtIdx: index("idx_reaction_purchases_purchased_at").on(t.purchasedAt),
+  txHashIdx: index("idx_reaction_purchases_tx_hash").on(t.txHash),
+  postTypeIdx: index("idx_reaction_purchases_post_type").on(t.postId, t.reactionType),
+  userPostIdx: index("idx_reaction_purchases_user_post").on(t.userId, t.postId),
+  authorEarningsIdx: index("idx_reaction_purchases_author_earnings").on(t.postAuthor, t.purchasedAt),
+  userFk: foreignKey({
+    columns: [t.userId],
+    foreignColumns: [users.id]
+  })
+}));
+
 // Views - track post views with deduplication
 export const views = pgTable("views", {
   id: serial("id").primaryKey(),

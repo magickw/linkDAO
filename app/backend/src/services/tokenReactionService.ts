@@ -5,7 +5,7 @@
 
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
-import { reactions, quickPostReactions, posts, quickPosts, users } from '../db/schema';
+import { reactions, quickPostReactions, posts, quickPosts, users, reactionPurchases } from '../db/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 
 export type ReactionType = '🔥' | '🚀' | '💎';
@@ -77,22 +77,99 @@ export interface CreateReactionRequest {
   amount: number;
 }
 
-export interface CreateReactionResponse {
+export interface PurchaseReactionRequest {
+  postId: string;
+  userId: string;
+  userAddress: string;
+  reactionType: string;
+  txHash: string;
+}
+
+export interface PurchaseReactionResponse {
   success: boolean;
-  reaction: TokenReaction;
-  newSummary: ReactionSummary;
-  rewardsEarned: number;
-  milestoneReached?: {
-    threshold: number;
-    reward: number;
-    description: string;
+  reaction: {
+    id: number;
+    postId: string;
+    userId: string;
+    reactionType: string;
+    purchasedAt: Date;
   };
+  authorEarnings: number;
+  treasuryFee: number;
 }
 
 class TokenReactionService {
   /**
-   * Create a new token reaction
+   * Purchase a reaction (simplified system)
    */
+  async purchaseReaction(request: PurchaseReactionRequest): Promise<PurchaseReactionResponse> {
+    const { postId, userId, userAddress, reactionType, txHash } = request;
+
+    const PRICES = { hot: 1, diamond: 2, bullish: 1, love: 1, laugh: 1, wow: 2 };
+    const price = PRICES[reactionType as keyof typeof PRICES] || 1;
+    const authorEarnings = Math.floor(price * 0.7);
+    const treasuryFee = price - authorEarnings;
+
+    // Get post author
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(postId);
+    let postAuthor: string;
+    
+    if (isUUID) {
+      const [post] = await db.select({ author: quickPosts.authorId }).from(quickPosts).where(eq(quickPosts.id, postId)).limit(1);
+      if (!post) throw new Error('Post not found');
+      postAuthor = post.author;
+    } else {
+      const [post] = await db.select({ author: posts.authorId }).from(posts).where(eq(posts.id, postId)).limit(1);
+      if (!post) throw new Error('Post not found');
+      postAuthor = post.author;
+    }
+
+    // Store reaction purchase in new dedicated table
+    const [insertedPurchase] = await db.insert(reactionPurchases).values({
+      postId,
+      userId,
+      userAddress,
+      reactionType,
+      price: price.toString(),
+      authorEarnings: authorEarnings.toString(),
+      treasuryFee: treasuryFee.toString(),
+      postAuthor,
+      txHash,
+      purchasedAt: new Date()
+    }).returning();
+
+    // Also update the existing reaction tables for backward compatibility
+    if (isUUID) {
+      await db.insert(quickPostReactions).values({
+        quickPostId: postId,
+        userId,
+        type: reactionType,
+        amount: '1', // Count as 1 purchase
+        rewardsEarned: '0'
+      }).onConflictDoNothing();
+    } else {
+      await db.insert(reactions).values({
+        postId,
+        userId,
+        type: reactionType,
+        amount: '1',
+        rewardsEarned: '0'
+      }).onConflictDoNothing();
+    }
+
+    return {
+      success: true,
+      reaction: {
+        id: insertedPurchase.id,
+        postId,
+        userId,
+        reactionType,
+        purchasedAt: insertedPurchase.purchasedAt!
+      },
+      authorEarnings,
+      treasuryFee
+    };
+  }
   async createReaction(request: CreateReactionRequest): Promise<CreateReactionResponse> {
     const { postId, userId, type, amount } = request;
 

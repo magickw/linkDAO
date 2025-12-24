@@ -13,16 +13,18 @@ import { body, param, query } from 'express-validator';
 const router = Router();
 
 // Validation schemas
-const createReactionValidation = [
+const purchaseReactionValidation = [
   body('postId')
-    .isUUID()
-    .withMessage('postId must be a valid UUID'),
-  body('type')
-    .isIn(['🔥', '🚀', '💎'])
-    .withMessage('type must be one of: 🔥, 🚀, 💎'),
-  body('amount')
-    .isFloat({ min: 0.1, max: 10000 })
-    .withMessage('amount must be between 0.1 and 10000'),
+    .custom((value) => {
+      return /^([0-9]+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.test(value);
+    })
+    .withMessage('postId must be a valid numeric ID or UUID'),
+  body('reactionType')
+    .isIn(['hot', 'diamond', 'bullish', 'love', 'laugh', 'wow'])
+    .withMessage('reactionType must be valid'),
+  body('txHash')
+    .isLength({ min: 66, max: 66 })
+    .withMessage('txHash must be a valid transaction hash'),
 ];
 
 const getReactionsValidation = [
@@ -71,8 +73,21 @@ const userIdValidation = [
 // Routes
 
 /**
+ * @route   POST /api/reactions/purchase
+ * @desc    Purchase a reaction (new simplified system)
+ * @access  Private
+ */
+router.post(
+  '/purchase',
+  authenticateToken,
+  purchaseReactionValidation,
+  validateRequest,
+  tokenReactionController.purchaseReaction
+);
+
+/**
  * @route   POST /api/reactions
- * @desc    Create a new token reaction
+ * @desc    Create a new token reaction (legacy)
  * @access  Private
  */
 router.post(

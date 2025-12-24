@@ -340,28 +340,41 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
 
   // Show error if there's an API error (different from profile not found)
   if (profileError && !(profileError instanceof Error && profileError.message.includes('not found'))) {
+    const errorMessage = profileError instanceof Error ? profileError.message : String(profileError);
+    const isServerError = errorMessage.includes('500') || errorMessage.includes('Server error');
+    
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
         <GlassPanel className="max-w-md w-full text-center">
           <div className="mb-6">
-            <div className="w-16 h-16 bg-gradient-to-r from-red-500 to-orange-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+            <div className={`w-16 h-16 bg-gradient-to-r ${isServerError ? 'from-orange-500 to-red-500' : 'from-red-500 to-orange-500'} rounded-full mx-auto mb-4 flex items-center justify-center`}>
               <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-white mb-2">Error Loading Profile</h1>
+            <h1 className="text-2xl font-bold text-white mb-2">
+              {isServerError ? 'Server Error' : 'Error Loading Profile'}
+            </h1>
             <p className="text-gray-300 mb-4">
-              There was an error loading your seller profile. Please try again.
+              {isServerError 
+                ? 'Our servers are experiencing issues. Please try again in a few minutes.'
+                : 'There was an error loading your seller profile. Please try again.'
+              }
             </p>
             <div className="text-left bg-red-500/10 rounded-lg p-4 mb-6">
               <p className="text-red-300 text-sm font-mono break-all">
-                {profileError instanceof Error ? profileError.message : String(profileError)}
+                {errorMessage}
               </p>
+              {isServerError && (
+                <p className="text-red-300 text-xs mt-2">
+                  Error Code: 500 - Internal Server Error
+                </p>
+              )}
             </div>
           </div>
           <div className="space-y-3">
             <Button 
-              onClick={() => window.location.reload()} 
+              onClick={() => sellerData.refetch()} 
               variant="primary"
               className="w-full"
             >

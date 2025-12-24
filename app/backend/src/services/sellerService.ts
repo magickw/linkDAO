@@ -108,14 +108,27 @@ class SellerService {
 
   async getSellerProfile(walletAddress: string): Promise<SellerProfileData | null> {
     try {
+      // Validate wallet address
+      if (!walletAddress) {
+        throw new Error('Wallet address is required');
+      }
+      
+      if (typeof walletAddress !== 'string') {
+        throw new Error('Wallet address must be a string');
+      }
+      
+      const normalizedAddress = walletAddress.toLowerCase();
+      safeLogger.info('Fetching seller profile for address:', normalizedAddress);
+      
       const [seller] = await db
         .select()
         .from(sellers)
-        .where(eq(sellers.walletAddress, walletAddress.toLowerCase()))
+        .where(eq(sellers.walletAddress, normalizedAddress))
         .limit(1);
 
-      if (!seller) {
-        throw new Error('Seller not found');
+      if (!seller || seller.length === 0) {
+        safeLogger.info('Seller not found in database for address:', normalizedAddress);
+        return null; // Return null instead of throwing for "not found" case
       }
 
       const sellerData = seller[0];

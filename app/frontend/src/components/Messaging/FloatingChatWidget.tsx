@@ -414,16 +414,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
 
         // Call startNewConversation with the pending contact address to avoid a race
         // when relying on the async state update of `newRecipientAddress`.
-        startNewConversation(pendingContact.walletAddress)
-          .then(() => {
-            console.log("FloatingChatWidget: Successfully started new conversation");
-            // The conversation should now be selected and chat tab active
-          })
-          .catch(error => {
-            console.error("FloatingChatWidget: Failed to start new conversation:", error);
-            // Show the modal as fallback
-            setShowNewConversationModal(true);
-          });
+        startNewConversation(pendingContact.walletAddress);
       }
 
       // Clear the pending contact

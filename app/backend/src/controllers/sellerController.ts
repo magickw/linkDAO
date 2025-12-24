@@ -1023,19 +1023,39 @@ export class SellerController {
   async getProfile(req: Request, res: Response) {
     try {
       const user = (req as any).user;
-      const walletAddress = user.walletAddress;
+      
+      // Validate user and wallet address
+      if (!user) {
+        safeLogger.error("No user found in request");
+        return res.status(401).json({ success: false, error: "User not authenticated" });
+      }
+      
+      const walletAddress = user.walletAddress || user.address;
+      
+      if (!walletAddress) {
+        safeLogger.error("No wallet address found in user object:", user);
+        return res.status(400).json({ success: false, error: "Wallet address not found" });
+      }
+      
+      safeLogger.info("Fetching seller profile for address:", walletAddress);
       
       const { sellerService } = await import('../services/sellerService');
 
       const profile = await sellerService.getSellerProfile(walletAddress);
 
       if (!profile) {
+        safeLogger.info("Seller profile not found for address:", walletAddress);
         return res.status(404).json({ success: false, error: "Seller profile not found" });
       }
 
+      safeLogger.info("Successfully fetched seller profile for address:", walletAddress);
       res.json({ success: true, data: profile });
     } catch (error) {
-      safeLogger.error("Error fetching profile:", error);
+      safeLogger.error("Error fetching profile:", {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        user: (req as any).user
+      });
       res.status(500).json({ success: false, error: "Failed to fetch profile" });
     }
   }

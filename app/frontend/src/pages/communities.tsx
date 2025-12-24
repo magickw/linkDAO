@@ -493,7 +493,7 @@ const CommunitiesPage: React.FC = () => {
 
   const handleCreatePost = () => {
     // Redirect to the global create post page
-    router.push('/create-post');
+    setTimeout(() => router.push('/create-post'), 0);
   };
 
   const handleCreateCommunity = async (communityData: any) => {
@@ -516,7 +516,7 @@ const CommunitiesPage: React.FC = () => {
       setShowCreateCommunityModal(false);
 
       // Navigate to the new community using the slug or name (URL-safe)
-      router.push(`/communities/${getCommunityPathSegment(newCommunity)}`);
+      setTimeout(() => router.push(`/communities/${getCommunityPathSegment(newCommunity)}`), 0);
     } catch (err) {
       console.error('Error creating community:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to create community';
@@ -556,7 +556,7 @@ const CommunitiesPage: React.FC = () => {
   };
 
   const handleVoteClick = (proposalId: string) => {
-    router.push(`/governance/proposal/${proposalId}`);
+    setTimeout(() => router.push(`/governance/proposal/${proposalId}`), 0);
   };
 
   const handleViewTransaction = (txHash: string) => {
@@ -607,7 +607,7 @@ const CommunitiesPage: React.FC = () => {
     if (post) {
       const community = communityList.find(c => c.id === post.communityId);
       const communitySegment = getCommunityPathSegment(community ?? post.communityId);
-      router.push(`/communities/${communitySegment}/posts/${postId}`);
+      setTimeout(() => router.push(`/communities/${communitySegment}/posts/${postId}`), 0);
     }
   };
   const handleShare = (postId: string) => {
@@ -619,12 +619,12 @@ const CommunitiesPage: React.FC = () => {
     if (post) {
       const community = communityList.find(c => c.id === post.communityId);
       const communitySegment = getCommunityPathSegment(community ?? post.communityId);
-      router.push(`/communities/${communitySegment}/posts/${postId}`);
+      setTimeout(() => router.push(`/communities/${communitySegment}/posts/${postId}`), 0);
     }
   };
 
   const handleNavigate = (path: string) => {
-    router.push(path);
+    setTimeout(() => router.push(path), 0);
   };
 
   const handleQuickFilterToggle = (filterId: string) => {
@@ -763,7 +763,11 @@ const CommunitiesPage: React.FC = () => {
                     {communityList.slice(0, 8).map(community => (
                     <button
                         key={community.id}
-                        onClick={() => router.push(`/communities/${getCommunityPathSegment(community)}`)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setTimeout(() => router.push(`/communities/${getCommunityPathSegment(community)}`), 0);
+                        }}
                         aria-label={`View ${community.displayName || community.name} community`}
                         className="w-full flex items-center space-x-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left"
                       >

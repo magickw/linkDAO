@@ -22,6 +22,7 @@ import { EnhancedPost as SharedEnhancedPost, AuthorProfile, Reaction, Tip } from
 import OnChainIdentityBadge from '../Community/OnChainIdentityBadge';
 import VideoEmbed from '../VideoEmbed';
 import { extractVideoUrls, VideoInfo } from '@/utils/videoUtils';
+import ReactionPurchaseSystem from '../Community/ReactionPurchaseSystem';
 
 // Use the shared EnhancedPost type with extended properties for component-specific needs
 export interface EnhancedPost extends Omit<SharedEnhancedPost, 'trendingStatus' | 'socialProof'> {
@@ -97,6 +98,28 @@ const EnhancedPostCard = React.memo(({
   const permissions = useMemo(() => {
     return getPostActionPermissions(post as any, address);
   }, [post, address]);
+
+  // Helper functions for reactions
+  const getReactionEmoji = (type: string): string => {
+    const emojiMap: Record<string, string> = {
+      hot: '🔥', diamond: '💎', bullish: '🚀', love: '❤️', laugh: '😂', wow: '😮'
+    };
+    return emojiMap[type.toLowerCase()] || '👍';
+  };
+
+  const getReactionLabel = (type: string): string => {
+    const labelMap: Record<string, string> = {
+      hot: 'Hot', diamond: 'Diamond', bullish: 'Bullish', love: 'Love', laugh: 'Laugh', wow: 'Wow'
+    };
+    return labelMap[type.toLowerCase()] || type;
+  };
+
+  const getReactionPrice = (type: string): number => {
+    const priceMap: Record<string, number> = {
+      hot: 1, diamond: 2, bullish: 1, love: 1, laugh: 1, wow: 2
+    };
+    return priceMap[type.toLowerCase()] || 1;
+  };
 
   // Action handlers
   const handleEdit = useCallback(() => {
@@ -614,6 +637,29 @@ const EnhancedPostCard = React.memo(({
               {showSocialProof && post.socialProof && (
                 <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
                   <SocialProofIndicator socialProof={post.socialProof} />
+                </div>
+              )}
+
+              {/* Reaction Purchase System */}
+              {post.reactions && post.reactions.length > 0 && (
+                <div className="mb-4">
+                  <ReactionPurchaseSystem
+                    postId={post.id}
+                    postAuthor={post.author}
+                    reactions={post.reactions.map(r => ({
+                      type: r.type,
+                      emoji: getReactionEmoji(r.type),
+                      label: getReactionLabel(r.type),
+                      price: getReactionPrice(r.type),
+                      count: r.count || 0,
+                      userOwned: r.users?.some((user: any) => user.address === address) || false
+                    }))}
+                    onReactionPurchase={async (postId, reactionType) => {
+                      if (onReaction) {
+                        await onReaction(postId, reactionType, getReactionPrice(reactionType));
+                      }
+                    }}
+                  />
                 </div>
               )}
 

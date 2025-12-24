@@ -532,7 +532,10 @@ export default function Home() {
                   </ConnectButton.Custom>
 
                   <button
-                    onClick={scrollToFeatures}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      scrollToFeatures();
+                    }}
                     className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white transition-all duration-200 bg-gray-800 border border-gray-700 rounded-xl hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-600"
                   >
                     Explore Features

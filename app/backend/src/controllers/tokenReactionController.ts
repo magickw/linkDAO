@@ -12,9 +12,46 @@ import tokenReactionService, { ReactionType, REACTION_TYPES } from '../services/
 
 export class TokenReactionController {
   /**
-   * Create a new token reaction
-   * POST /api/reactions
+   * Purchase a reaction (new simplified system)
+   * POST /api/reactions/purchase
    */
+  async purchaseReaction(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { postId, reactionType, txHash } = req.body;
+      const userId = req.user?.id;
+      const userAddress = req.user?.walletAddress;
+
+      if (!userId || !userAddress) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required'
+        });
+      }
+
+      if (!postId || !reactionType || !txHash) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required fields: postId, reactionType, txHash'
+        });
+      }
+
+      const result = await tokenReactionService.purchaseReaction({
+        postId,
+        userId,
+        userAddress,
+        reactionType,
+        txHash
+      });
+
+      res.status(201).json(result);
+    } catch (error: any) {
+      safeLogger.error('Error purchasing reaction:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to purchase reaction'
+      });
+    }
+  },
   async createReaction(req: AuthenticatedRequest, res: Response) {
     try {
       const { postId, type, amount } = req.body;

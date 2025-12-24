@@ -125,6 +125,19 @@ export class UnifiedSellerService {
           console.warn('Authentication required for seller profile');
           throw error; // Re-throw auth errors so they can be handled appropriately
         }
+        
+        // Handle 500 Server Error - backend issue
+        if (error.statusCode === 500) {
+          console.error('Server error when fetching seller profile (500), this indicates a backend issue');
+          // Don't cache 500 errors, and re-throw so the UI can show appropriate error
+          throw new SellerAPIError(
+            SellerErrorType.API_ERROR,
+            'Server error when fetching seller profile. Please try again later.',
+            'SERVER_ERROR',
+            { originalError: error.message },
+            500
+          );
+        }
       }
       
       // Check if this is a "not found" error in the message
@@ -134,6 +147,17 @@ export class UnifiedSellerService {
         console.log('Seller profile not found in error message, treating as null');
         this.profileCache.set(walletAddress, { data: null, timestamp: Date.now() });
         return null;
+      }
+      
+      // Check for server error messages
+      if (errorMessage.includes('500') || errorMessage.includes('Internal Server Error')) {
+        console.error('Detected server error in profile fetch');
+        throw new SellerAPIError(
+          SellerErrorType.API_ERROR,
+          'Server error when fetching seller profile. Please try again later.',
+          'SERVER_ERROR',
+          { originalError: errorMessage }
+        );
       }
       
       // For other errors, still throw
