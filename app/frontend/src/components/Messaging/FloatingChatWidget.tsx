@@ -391,6 +391,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
         // If conversation exists, select it (inline the logic to avoid circular dependency)
         console.log("FloatingChatWidget: Selecting existing conversation:", existingConversation);
         setSelectedConversation(existingConversation);
+        console.log("FloatingChatWidget: Setting active tab to 'chat' for existing conversation");
         setActiveTab('chat');
 
         // Join conversation room

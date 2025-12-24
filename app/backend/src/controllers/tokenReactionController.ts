@@ -51,7 +51,8 @@ export class TokenReactionController {
         message: error.message || 'Failed to purchase reaction'
       });
     }
-  },
+  }
+
   async createReaction(req: AuthenticatedRequest, res: Response) {
     try {
       const { postId, type, amount } = req.body;

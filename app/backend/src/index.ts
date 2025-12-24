@@ -1028,12 +1028,13 @@ app.use('/api/sellers', sellerRoutes);
 // Seller profile API routes - Primary seller endpoints
 // sellerProfileRoutes defines routes like /seller/:walletAddress, so mounting at /api/marketplace
 // creates the correct path: /api/marketplace/seller/:walletAddress
+// This allows fetching any seller's profile by wallet address
 // Frontend expects: GET /api/marketplace/seller/:walletAddress
 app.use('/api/marketplace', sellerProfileRoutes);
 
 // Register main marketplace routes - ONLY for endpoints NOT covered by specific routes above
 // This should NOT include /listings as that's handled by marketplaceListingsRoutes
-// This should also NOT include /sellers/:id as that's handled by sellerProfileRoutes
+// NOTE: marketplaceRoutes handles /sellers/:id routes like /api/marketplace/sellers/:id, while sellerProfileRoutes handles /seller/:walletAddress routes like /api/marketplace/seller/:walletAddress - these are different paths and don't conflict
 app.use('/api/marketplace', marketplaceRoutes);
 
 // NOTE: marketplaceSellerRoutes has been removed to prevent route conflicts

@@ -15,10 +15,8 @@ const router = Router();
 // Validation schemas
 const purchaseReactionValidation = [
   body('postId')
-    .custom((value) => {
-      return /^([0-9]+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.test(value);
-    })
-    .withMessage('postId must be a valid numeric ID or UUID'),
+    .isUUID()
+    .withMessage('postId must be a valid UUID'),
   body('reactionType')
     .isIn(['hot', 'diamond', 'bullish', 'love', 'laugh', 'wow'])
     .withMessage('reactionType must be valid'),
@@ -30,11 +28,8 @@ const purchaseReactionValidation = [
 const getReactionsValidation = [
   query('postId')
     .optional()
-    .custom((value) => {
-      // Allow both UUIDs (for quick posts) and numeric IDs (for community posts)
-      return /^([0-9]+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.test(value);
-    })
-    .withMessage('postId must be a valid numeric ID or UUID'),
+    .isUUID()
+    .withMessage('postId must be a valid UUID'),
   query('reactionType')
     .optional()
     .isIn(['🔥', '🚀', '💎'])
@@ -51,11 +46,8 @@ const getReactionsValidation = [
 
 const postIdValidation = [
   param('postId')
-    .custom((value) => {
-      // Allow both UUIDs (for quick posts) and numeric IDs (for community posts)
-      return /^([0-9]+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.test(value);
-    })
-    .withMessage('postId must be a valid numeric ID or UUID'),
+    .isUUID()
+    .withMessage('postId must be a valid UUID'),
 ];
 
 const reactionIdValidation = [
@@ -68,6 +60,23 @@ const userIdValidation = [
   param('userId')
     .isUUID()
     .withMessage('userId must be a valid UUID'),
+];
+
+const createReactionValidation = [
+  body('postId')
+    .isUUID()
+    .withMessage('postId must be a valid UUID'),
+  body('reactionType')
+    .isIn(['hot', 'diamond', 'bullish', 'love', 'laugh', 'wow'])
+    .withMessage('reactionType must be valid'),
+  body('amount')
+    .optional()
+    .isFloat({ min: 0.01 })
+    .withMessage('amount must be a positive number'),
+  body('message')
+    .optional()
+    .isLength({ max: 500 })
+    .withMessage('message must be less than 500 characters'),
 ];
 
 // Routes

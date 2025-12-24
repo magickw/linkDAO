@@ -114,15 +114,7 @@ export interface ReactorModalData {
   isLoading: boolean;
 }
 
-export interface ReactionStakeModalProps {
-  isOpen: boolean;
-  reactionType: ReactionType;
-  postId: string;
-  currentUserStake: number;
-  onStake: (amount: number) => Promise<void>;
-  onClose: () => void;
-  isLoading?: boolean;
-}
+
 
 export interface TokenReactionSystemProps {
   postId: string;
