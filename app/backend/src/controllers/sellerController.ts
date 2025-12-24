@@ -1054,7 +1054,19 @@ export class SellerController {
             bio: "Welcome to my store!",
             description: "Seller profile created automatically",
             createdAt: new Date(),
-            updatedAt: new Date()
+            updatedAt: new Date(),
+            // Set default tier to allow basic seller functionality
+            tier: 'bronze', // Basic tier to allow seller functionality
+            profileCompleteness: {
+              score: 20, // Basic profile completeness
+              missingFields: ['profileImageCdn', 'coverImageCdn', 'bio', 'description'],
+              recommendations: [{
+                action: 'Complete Profile',
+                description: 'Add more information to your profile',
+                impact: 80
+              }],
+              lastCalculated: new Date().toISOString()
+            }
           };
           
           const newProfile = await sellerService.createSellerProfile(basicProfileData as any);

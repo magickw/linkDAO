@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import GoldPurchaseModal from './GoldPurchaseModal';
 
 interface Award {
@@ -231,8 +232,9 @@ const AwardSelectionModal: React.FC<AwardSelectionModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <>
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    createPortal(
+      <>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
           {/* Header */}
           <div className="sticky top-0 bg-white border-b border-gray-200 p-6">
@@ -379,7 +381,9 @@ const AwardSelectionModal: React.FC<AwardSelectionModalProps> = ({
           }}
         />
       )}
-    </>
+      </>,
+      document.body
+    )
   );
 };
 
