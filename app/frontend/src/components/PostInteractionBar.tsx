@@ -4,6 +4,7 @@ import { useToast } from '@/context/ToastContext';
 import TokenReactionSystem from './TokenReactionSystem/TokenReactionSystem';
 import SharePostModal from './SharePostModal';
 import CommunityTipButton from './CommunityTipButton';
+import AwardSelectionModal from './TokenReactionSystem/AwardSelectionModal';
 import { communityWeb3Service } from '@/services/communityWeb3Service';
 
 interface PostInteractionBarProps {
@@ -43,7 +44,7 @@ export default function PostInteractionBar({
 
   const [showShareModal, setShowShareModal] = useState(false);
   const [showTipInput, setShowTipInput] = useState(false);
-  const [showAwardGrid, setShowAwardGrid] = useState(false);
+  const [showAwardModal, setShowAwardModal] = useState(false);
   const [tipAmount, setTipAmount] = useState('');
   const [selectedToken, setSelectedToken] = useState('USDC');
 
@@ -177,7 +178,7 @@ export default function PostInteractionBar({
 
           {/* Award Button */}
           <button
-            onClick={() => setShowAwardGrid(!showAwardGrid)}
+            onClick={() => setShowAwardModal(true)}
             className="flex items-center space-x-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-medium transition-colors duration-200 hover:scale-105"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -238,79 +239,7 @@ export default function PostInteractionBar({
         </form>
       )}
 
-      {/* Award Grid */}
-      {showAwardGrid && (
-        <div className="space-y-4 animate-fadeIn">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Award this post</h3>
-            <button
-              onClick={() => setShowAwardGrid(false)}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Awards Grid */}
-          <div className="grid grid-cols-4 gap-3">
-            {[
-              { emoji: '🎺', cost: 15, name: 'Rainbow Horn' },
-              { emoji: '👏', cost: 15, name: 'Clap Hands' },
-              { emoji: '👍', cost: 15, name: 'Thumbs Up' },
-              { emoji: '🤩', cost: 15, name: 'Star Eyes' },
-              { emoji: '🦭', cost: 15, name: 'Seal' },
-              { emoji: '😢', cost: 15, name: 'Cry Face' },
-              { emoji: '😠', cost: 15, name: 'Angry Face' },
-              { emoji: '🙏', cost: 15, name: 'Pray Hands' },
-              { emoji: '😊', cost: 15, name: 'Smile Face' },
-              { emoji: '🐍', cost: 15, name: 'Snake' },
-              { emoji: '💜', cost: 25, name: 'Purple Heart' },
-              { emoji: '🐸', cost: 25, name: 'Frog' },
-              { emoji: '💙', cost: 25, name: 'Blue Heart' },
-              { emoji: '🐚', cost: 25, name: 'Shell' },
-              { emoji: '💕', cost: 25, name: 'Two Hearts' },
-              { emoji: '💩', cost: 50, name: 'Poop' },
-              { emoji: '🧠', cost: 50, name: 'Brain' },
-              { emoji: '👁️', cost: 50, name: 'Eye' },
-              { emoji: '💎', cost: 50, name: 'Diamond' },
-              { emoji: '👹', cost: 50, name: 'Demon' },
-            ].map((award, index) => (
-              <button
-                key={index}
-                onClick={() => {
-                  if (!isConnected) {
-                    addToast('Please connect your wallet to award posts', 'error');
-                    return;
-                  }
-                  if (onAward) {
-                    onAward(post.id);
-                  }
-                  setShowAwardGrid(false);
-                }}
-                className={`
-                  relative p-3 rounded-lg border-2 transition-all hover:scale-105
-                  border-gray-200 hover:border-gray-300 hover:bg-gray-50
-                  dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-700
-                `}
-                title={`${award.name} - ${award.cost} gold`}
-              >
-                <div className="text-center">
-                  <div className="text-2xl mb-1">{award.emoji}</div>
-                  <div className="flex items-center justify-center space-x-1">
-                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{award.cost}</span>
-                    <svg className="w-3 h-3 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      
 
       {/* Share Modal */}
       <SharePostModal
@@ -320,6 +249,20 @@ export default function PostInteractionBar({
         postType={postType}
         onShare={onShare}
         addToast={addToast}
+      />
+
+      {/* Award Selection Modal */}
+      <AwardSelectionModal
+        isOpen={showAwardModal}
+        postId={post.id}
+        userGoldBalance={0} // TODO: Fetch user's actual gold balance
+        onAwardGiven={async (awardId: string) => {
+          if (onAward) {
+            await onAward(post.id);
+          }
+          addToast('Award given successfully!', 'success');
+        }}
+        onClose={() => setShowAwardModal(false)}
       />
     </div>
   );

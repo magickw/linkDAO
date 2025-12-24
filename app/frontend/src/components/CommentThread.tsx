@@ -5,7 +5,8 @@ import { CommunityPostService } from '@/services/communityPostService';
 import { useWeb3 } from '@/context/Web3Context';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { getDisplayName, getDefaultAvatar } from '@/utils/userDisplay';
+import Avatar from '@/components/Avatar';
+import { getDisplayName } from '@/utils/userDisplay';
 
 interface CommentThreadProps {
   comment: Comment;
@@ -146,15 +147,18 @@ export default function CommentThread({
         {/* Avatar */}
         <div className="flex-shrink-0">
           {comment.author ? (
-            <div className="w-8 h-8 bg-gradient-to-br from-primary-400 to-secondary-500 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-sm">
-                {getDefaultAvatar(getDisplayName({ author: comment.author }))}
-              </span>
-            </div>
+            <Avatar
+              walletAddress={typeof comment.author === 'string' ? comment.author : comment.walletAddress}
+              userHandle={typeof comment.author === 'string' ? comment.author : undefined}
+              size={32}
+              alt={`Avatar for ${getDisplayName({ author: comment.author })}`}
+            />
           ) : (
-            <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center">
-              <span className="text-gray-500 dark:text-gray-400 font-bold text-sm">?</span>
-            </div>
+            <Avatar
+              userId="anonymous"
+              size={32}
+              alt="Anonymous user avatar"
+            />
           )}
         </div>
 
@@ -257,11 +261,12 @@ export default function CommentThread({
               ) : (
                 <form onSubmit={handleReplySubmit}>
                   <div className="flex space-x-2">
-                    <div className="bg-gradient-to-br from-primary-400 to-secondary-500 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">
-                      <span className="text-white font-bold text-xs">
-                        {getDefaultAvatar(getDisplayName({ author: address }))}
-                      </span>
-                    </div>
+                    <Avatar
+                      walletAddress={address}
+                      userHandle={address}
+                      size={24}
+                      alt="Your avatar"
+                    />
                     <div className="flex-1">
                       <textarea
                         value={replyContent}

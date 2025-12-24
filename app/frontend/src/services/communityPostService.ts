@@ -51,149 +51,8 @@ export class CommunityPostService {
     }
   }
 
-  static async createCommunityPost(data: {
-    communityId: string;
-    title: string;
-    content: string;
-    tags?: string[];
-    author: string;
-    flair?: string;
-  }): Promise<Post> {
-    return this.createPost(data.communityId, {
-      title: data.title,
-      content: data.content,
-      tags: data.tags || [],
-      author: data.author,
-      communityId: data.communityId
-    });
-  }
-
-  static async getPostStats(postId: string): Promise<{ commentCount: number }> {
-    try {
-      // Use the same approach as getPostCommentCount to get the comment count
-      const authHeaders = await enhancedAuthService.getAuthHeaders();
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/comments?limit=1`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch post comments');
-      }
-
-      const result = await response.json();
-      const comments = result.data || result;
-      const commentCount = Array.isArray(comments) ? comments.length : 0;
-
-      return { commentCount };
-    } catch (error) {
-      console.error('Error fetching post stats:', error);
-      return { commentCount: 0 };
-    }
-  }
-
-  /**
-   * Get replies to a specific comment with exponential backoff for errors
-   */
-  static async getCommentReplies(
-    commentId: string,
-    options?: {
-      limit?: number;
-    }
-  ): Promise<Comment[]> {
-    const maxRetries = 3;
-    const baseDelay = 1000; // 1 second
-
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      try {
-        const params = new URLSearchParams();
-        if (options?.limit) params.append('limit', options.limit.toString());
-
-        let authHeaders = await enhancedAuthService.getAuthHeaders();
-
-        // Add development token if needed
-        if (!authHeaders['Authorization'] && ENV_CONFIG.IS_DEVELOPMENT) {
-          const devToken = `dev_session_${Date.now()}_0xee034b53d4ccb101b2a4faec27708be507197350_${Date.now()}`;
-          authHeaders['Authorization'] = `Bearer ${devToken}`;
-        }
-
-        const response = await fetch(
-          `${BACKEND_API_BASE_URL}/api/comments/${commentId}/replies?${params}`,
-          {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              ...authHeaders
-            }
-          }
-        );
-
-        // Handle rate limiting and service unavailable with exponential backoff
-        if (response.status === 503 || response.status === 429) {
-          if (attempt < maxRetries) {
-            const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 1000; // Add jitter
-            console.warn(`Service unavailable (${response.status}), retrying in ${delay}ms... (attempt ${attempt + 1}/${maxRetries})`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-            continue; // Retry
-          }
-          // Max retries reached
-          throw new Error(`Service temporarily unavailable. Please try again later.`);
-        }
-
-        if (!response.ok) {
-          const error = await response.json().catch(() => ({ error: response.statusText }));
-          throw new Error(error.error || `Failed to fetch comment replies: ${response.statusText}`);
-        }
-
-        const result = await response.json();
-        return result.data || result;
-      } catch (error) {
-        // If this is the last attempt or a non-retryable error, handle it
-        if (attempt === maxRetries || (error instanceof Error && !error.message.includes('Service temporarily unavailable'))) {
-          console.error('Error fetching comment replies:', error);
-          return []; // Return empty array on error to prevent UI breakage
-        }
-        // Otherwise, retry on next iteration
-      }
-    }
-
-    // Fallback (should not reach here)
-    return [];
-  }
-
-  static async getPost(communityId: string, postId: string): Promise<Post | null> {
-    try {
-      const authHeaders = await enhancedAuthService.getAuthHeaders();
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts/${postId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders
-        }
-      });
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          return null;
-        }
-        const error = await response.json();
-        throw new Error(error.error || `Failed to fetch community post: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      return result.data || result;
-    } catch (error) {
-      console.error('Error fetching community post:', error);
-      throw error;
-    }
-  }
-
   static async updatePost(communityId: string, postId: string, data: UpdatePostInput): Promise<Post> {
     try {
-      // Get base auth headers from enhancedAuthService
       const authHeaders = await enhancedAuthService.getAuthHeaders();
       
       // Add CSRF headers for authenticated requests
@@ -204,14 +63,21 @@ export class CommunityPostService {
       } catch (error) {
         console.warn('Failed to get CSRF headers:', error);
       }
-      
+
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts/${postId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           ...headers
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify({
+          content: data.content,
+          title: data.title,
+          mediaUrls: data.media,
+          tags: data.tags,
+          pollData: data.poll,
+          proposalData: data.proposal
+        })
       });
 
       if (!response.ok) {
@@ -227,9 +93,8 @@ export class CommunityPostService {
     }
   }
 
-  static async deletePost(communityId: string, postId: string): Promise<boolean> {
+  static async deletePost(communityId: string, postId: string, authorAddress: string): Promise<void> {
     try {
-      // Get base auth headers from enhancedAuthService
       const authHeaders = await enhancedAuthService.getAuthHeaders();
       
       // Add CSRF headers for authenticated requests
@@ -240,190 +105,72 @@ export class CommunityPostService {
       } catch (error) {
         console.warn('Failed to get CSRF headers:', error);
       }
-      
+
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts/${postId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
           ...headers
-        }
+        },
+        body: JSON.stringify({
+          authorAddress
+        })
       });
 
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || `Failed to delete community post: ${response.statusText}`);
       }
-
-      return true;
     } catch (error) {
       console.error('Error deleting community post:', error);
       throw error;
     }
   }
 
-  static async getCommunityPosts(
-    communityId: string,
-    page: number = 1,
-    limit: number = 20,
-    sort: string = 'newest'
-  ): Promise<{ posts: CommunityPost[]; pagination: any }> {
+  static async getPost(communityId: string, postId: string): Promise<Post> {
+    try {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts/${postId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to get post: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.data || result;
+    } catch (error) {
+      console.error('Error getting post:', error);
+      throw error;
+    }
+  }
+
+  static async getPosts(communityId: string, page: number = 1, limit: number = 10, filters?: Record<string, any>): Promise<{ posts: Post[], total: number; page: number; totalPages: number }> {
     try {
       const params = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
-        sort
+        ...filters
       });
 
-      const authHeaders = await enhancedAuthService.getAuthHeaders();
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts?${params}`, {
         method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders
+          'Content-Type': 'application/json'
         }
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || `Failed to fetch community posts: ${response.statusText}`);
+        throw new Error(`Failed to get posts: ${response.statusText}`);
       }
 
       const result = await response.json();
       return result.data || result;
     } catch (error) {
-      console.error('Error fetching community posts:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get aggregated feed from all communities the user has joined
-   * This is more efficient than fetching from each community individually
-   */
-  static async getFollowedCommunitiesFeed(
-    page: number = 1,
-    limit: number = 20,
-    sort: string = 'new',
-    timeRange: string = 'all'
-  ): Promise<{ posts: CommunityPost[]; pagination: any }> {
-    try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
-        sort,
-        timeRange
-      });
-
-      const authHeaders = await enhancedAuthService.getAuthHeaders();
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/feed?${params}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders
-        }
-      });
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: response.statusText }));
-        throw new Error(error.error || `Failed to fetch followed communities feed: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      return result.data || result;
-    } catch (error) {
-      console.error('Error fetching followed communities feed:', error);
-      throw error;
-    }
-  }
-
-  
-
-  static async addReaction(
-    communityId: string,
-    postId: string,
-    type: string,
-    tokenAmount: number = 0
-  ): Promise<any> {
-    try {
-      // Get base auth headers from enhancedAuthService
-      const authHeaders = await enhancedAuthService.getAuthHeaders();
-      
-      // Add CSRF headers for authenticated requests
-      let headers = { ...authHeaders };
-      try {
-        const csrfHeaders = await csrfService.getCSRFHeaders();
-        Object.assign(headers, csrfHeaders);
-      } catch (error) {
-        console.warn('Failed to get CSRF headers:', error);
-      }
-      
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts/${postId}/react`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...headers
-        },
-        body: JSON.stringify({
-          type,
-          tokenAmount
-        })
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || `Failed to add reaction: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      return result.data || result;
-    } catch (error) {
-      console.error('Error adding reaction to community post:', error);
-      throw error;
-    }
-  }
-
-  static async sendTip(
-    communityId: string,
-    postId: string,
-    amount: number,
-    tokenType: string,
-    message?: string
-  ): Promise<any> {
-    try {
-      // Get base auth headers from enhancedAuthService
-      const authHeaders = await enhancedAuthService.getAuthHeaders();
-      
-      // Add CSRF headers for authenticated requests
-      let headers = { ...authHeaders };
-      try {
-        const csrfHeaders = await csrfService.getCSRFHeaders();
-        Object.assign(headers, csrfHeaders);
-      } catch (error) {
-        console.warn('Failed to get CSRF headers:', error);
-      }
-      
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts/${postId}/tip`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...headers
-        },
-        body: JSON.stringify({
-          amount,
-          tokenType,
-          message
-        })
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || `Failed to send tip: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      return result.data || result;
-    } catch (error) {
-      console.error('Error sending tip to community post:', error);
+      console.error('Error getting posts:', error);
       throw error;
     }
   }
@@ -466,7 +213,8 @@ export class CommunityPostService {
         console.warn('Failed to get CSRF headers:', error);
       }
 
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${data.postId}/comments`, {
+      // Use the correct endpoint for creating comments
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/${data.postId}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -486,7 +234,7 @@ export class CommunityPostService {
           statusText: response.statusText,
           error,
           hasAuthToken,
-          requestUrl: `${BACKEND_API_BASE_URL}/api/feed/${data.postId}/comments`,
+          requestUrl: `${BACKEND_API_BASE_URL}/api/posts/${data.postId}/comments`,
           requestBody: {
             author: data.author,
             content: data.content,
@@ -516,7 +264,7 @@ export class CommunityPostService {
               }
               
               // Retry the request with fresh token
-              const retryResponse = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${data.postId}/comments`, {
+              const retryResponse = await fetch(`${BACKEND_API_BASE_URL}/api/posts/${data.postId}/comments`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -530,67 +278,23 @@ export class CommunityPostService {
                 })
               });
 
-              if (retryResponse.ok) {
-                const result = await retryResponse.json();
-                return result.data || result;
-              } else {
-                // If retry also fails with 401, the refresh didn't work
-                if (retryResponse.status === 401) {
-                  throw new Error('Authentication failed. Please refresh the page and log in again.');
-                }
+              if (!retryResponse.ok) {
+                const retryError = await retryResponse.json().catch(() => ({}));
+                throw new Error(retryError.error || `Failed to create comment after retry: ${retryResponse.statusText}`);
               }
+
+              const retryResult = await retryResponse.json();
+              return retryResult.data || retryResult;
             } else {
-              console.error('Token refresh failed:', refreshResult.error);
-              throw new Error('Authentication refresh failed. Please log in again.');
+              throw new Error('Authentication refresh failed');
             }
           } catch (refreshError) {
-            console.error('Token refresh failed:', refreshError);
-            // Clear the invalid session
-            enhancedAuthService.clearStoredSession();
-            throw new Error('Authentication failed. Please refresh the page and log in again.');
+            console.error('Authentication refresh failed:', refreshError);
+            throw new Error('Authentication refresh failed');
           }
         }
 
-        // Handle specific error codes
-        if (response.status === 404) {
-          throw new Error('Post not found or has been deleted.');
-        }
-        
-        if (response.status === 403) {
-          throw new Error('You do not have permission to comment on this post.');
-        }
-
-        // Use global fetch wrapper as final fallback
-        try {
-          // Get base auth headers from enhancedAuthService
-          const authHeaders = await enhancedAuthService.getAuthHeaders();
-          
-          // Add CSRF headers for authenticated requests
-          let fallbackHeaders = { ...authHeaders };
-          try {
-            const csrfHeaders = await csrfService.getCSRFHeaders();
-            Object.assign(fallbackHeaders, csrfHeaders);
-          } catch (error) {
-            console.warn('Failed to get CSRF headers for fallback:', error);
-          }
-          
-          const { post } = await import('./globalFetchWrapper');
-          const fallbackResponse = await post(`${BACKEND_API_BASE_URL}/api/feed/${data.postId}/comments`, {
-            content: data.content,
-            parentCommentId: data.parentId,
-            media: data.media
-          }, { headers: fallbackHeaders });
-
-          if (!fallbackResponse.success) {
-            throw new Error(fallbackResponse.error || 'Failed to create comment');
-          }
-
-          return fallbackResponse.data;
-        } catch (fallbackError) {
-          console.error('Fallback request also failed:', fallbackError);
-          const errorMessage = error.error?.message || error.message || `Failed to create comment: ${response.statusText}`;
-          throw new Error(errorMessage);
-        }
+        throw new Error(error.error || `Failed to create comment: ${response.statusText}`);
       }
 
       const result = await response.json();
@@ -601,9 +305,29 @@ export class CommunityPostService {
     }
   }
 
-  static async deleteComment(commentId: string, author: string): Promise<boolean> {
+  static async getCommentReplies(commentId: string): Promise<Comment[]> {
     try {
-      // Get base auth headers from enhancedAuthService
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/comments/${commentId}/replies`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to get comment replies: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.data || result;
+    } catch (error) {
+      console.error('Error getting comment replies:', error);
+      throw error;
+    }
+  }
+
+  static async deleteComment(commentId: string, authorAddress: string): Promise<void> {
+    try {
       const authHeaders = await enhancedAuthService.getAuthHeaders();
       
       // Add CSRF headers for authenticated requests
@@ -614,217 +338,248 @@ export class CommunityPostService {
       } catch (error) {
         console.warn('Failed to get CSRF headers:', error);
       }
-      
+
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/comments/${commentId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
           ...headers
         },
-        body: JSON.stringify({ author })
+        body: JSON.stringify({
+          authorAddress
+        })
       });
 
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || `Failed to delete comment: ${response.statusText}`);
       }
-
-      return true;
     } catch (error) {
       console.error('Error deleting comment:', error);
       throw error;
     }
   }
 
-  static async getPostComments(
-    postId: string,
-    options?: {
-      sortBy?: 'best' | 'new' | 'top' | 'controversial';
-      limit?: number;
-    }
-  ): Promise<Comment[]> {
+  static async voteComment(commentId: string, voteType: 'upvote' | 'downvote'): Promise<void> {
     try {
-      const params = new URLSearchParams();
-      // Backend route expects sortBy parameter
-      if (options?.sortBy) {
-        params.append('sortBy', options.sortBy);
-      }
-      if (options?.limit) params.append('limit', options.limit.toString());
-
       const authHeaders = await enhancedAuthService.getAuthHeaders();
-      const response = await fetch(
-        `${BACKEND_API_BASE_URL}/api/feed/${postId}/comments?${params}`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            ...authHeaders
-          }
-        }
-      );
+      
+      // Add CSRF headers for authenticated requests
+      let headers = { ...authHeaders };
+      try {
+        const csrfHeaders = await csrfService.getCSRFHeaders();
+        Object.assign(headers, csrfHeaders);
+      } catch (error) {
+        console.warn(' failed to get CSRF headers:', error);
+      }
+
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/comments/${commentId}/vote`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers
+        },
+        body: JSON.stringify({
+          voteType
+        })
+      });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || `Failed to fetch comments: ${response.statusText}`);
+        throw new Error(error.error || `Failed to vote on comment: ${response.statusText}`);
       }
-
-      const result = await response.json();
-      // Backend returns { success: true, data: { comments: [...], pagination: {...} } }
-      // Extract the comments array from the response
-      if (result.data) {
-        // If data is an object with a comments property, extract it
-        if (typeof result.data === 'object' && result.data.comments && Array.isArray(result.data.comments)) {
-          return result.data.comments;
-        }
-        // If data is already an array, return it (backward compatibility)
-        if (Array.isArray(result.data)) {
-          return result.data;
-        }
-      }
-      // Fallback: if result is an array, return it
-      if (Array.isArray(result)) {
-        return result;
-      }
-      // If result is an object with comments property, extract it
-      if (result.comments && Array.isArray(result.comments)) {
-        return result.comments;
-      }
-      // Default: return empty array
-      return [];
     } catch (error) {
-      console.error('Error fetching post comments:', error);
+      console.error('Error voting on comment:', error);
       throw error;
     }
   }
 
-
-
-  static async getPinnedPosts(communityId: string): Promise<CommunityPost[]> {
+  static async updateComment(commentId: string, content: string): Promise<Comment> {
     try {
       const authHeaders = await enhancedAuthService.getAuthHeaders();
-      const response = await fetch(
-        `${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts?pinned=true`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            ...authHeaders
-          }
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || `Failed to fetch pinned posts: ${response.statusText}`);
+      
+      // Add CSRF headers for authenticated requests
+      let headers = { ...authHeaders };
+      try {
+        const csrfHeaders = await csrfService.getCSRF();
+        Object.assign(headers, csrfHeaders);
+      } catch (error) {
+        console.warn('Failed to get CSRF headers:', error);
       }
 
-      const result = await response.json();
-      return result.data?.posts || result.posts || [];
-    } catch (error) {
-      console.error('Error fetching pinned posts:', error);
-      throw error;
-    }
-  }
-
-  static async pinPost(postId: string, sortOrder?: number): Promise<CommunityPost> {
-    try {
-      const authHeaders = await enhancedAuthService.getAuthHeaders();
-      const response = await fetch(
-        `${BACKEND_API_BASE_URL}/api/posts/${postId}/pin`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...authHeaders
-          },
-          body: JSON.stringify({ sortOrder })
-        }
-      );
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/comments/${commentId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers
+        },
+        body: JSON.stringify({
+          content,
+          isEdited: true
+        })
+      });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || `Failed to pin post: ${response.statusText}`);
+        throw new Error(error.error || `Failed to update comment: ${response.statusText}`);
       }
 
       const result = await response.json();
       return result.data || result;
     } catch (error) {
-      console.error('Error pinning post:', error);
+      console.error('Error updating comment:', error);
       throw error;
     }
   }
 
-  static async unpinPost(postId: string): Promise<void> {
+  static async getCommunity(communityId: string): Promise<CommunityPost> {
     try {
-      const authHeaders = await enhancedAuthService.getAuthHeaders();
-      const response = await fetch(
-        `${BACKEND_API_BASE_URL}/api/posts/${postId}/unpin`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...authHeaders
-          }
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || `Failed to unpin post: ${response.statusText}`);
-      }
-    } catch (error) {
-      console.error('Error unpinning post:', error);
-      throw error;
-    }
-  }
-
-  static async reorderPinnedPosts(communityId: string, postIds: string[]): Promise<void> {
-    try {
-      const authHeaders = await enhancedAuthService.getAuthHeaders();
-      const response = await fetch(
-        `${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts/reorder`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...authHeaders
-          },
-          body: JSON.stringify({ postIds })
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || `Failed to reorder pinned posts: ${response.statusText}`);
-      }
-    } catch (error) {
-      console.error('Error reordering pinned posts:', error);
-      throw error;
-    }
-  }
-
-  static async getPostCommentCount(postId: string): Promise<number> {
-    try {
-      // Use the same endpoint as getPostComments but with a small limit to just get the count
-      const authHeaders = await enhancedAuthService.getAuthHeaders();
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/comments?limit=1`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}`, {
         method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders
+          'Content-Type': 'application/json'
         }
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch post comments');
+        throw new Error(`Failed to get community: ${response.statusText}`);
       }
 
       const result = await response.json();
-      const comments = result.data || result;
-      return Array.isArray(comments) ? comments.length : 0;
+      return result.data || result;
     } catch (error) {
-      console.error('Error fetching post comment count:', error);
-      return 0;
+      console.error('Error getting community:', error);
+      throw error;
+    }
+  }
+
+  static async getCommunities(page: number = 1, limit: number = 10): Promise<{ communities: CommunityPost[], total: number; page: number; totalPages: number }> {
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString()
+      });
+
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities?${params}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to get communities: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.data || result;
+    } catch (error) {
+      console.error('Error getting communities:', error);
+      throw error;
+    }
+  }
+
+  static async joinCommunity(communityId: string): Promise<any> {
+    try {
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
+      
+      // Add CSRF headers for authenticated requests
+      let headers = { ...authHeaders };
+      try {
+        const csrfHeaders = await csrfService.getCSRFHeaders();
+        Object.assign(headers, csrfHeaders);
+      } catch (error) {
+        console.warn('Failed to get CSRF headers:', error);
+      }
+
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/join`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers
+        }
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || `Failed to join community: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.data || result;
+    } catch (error) {
+      console.error('Error joining community:', error);
+      throw error;
+    }
+  }
+
+  static async leaveCommunity(communityId: string): Promise<any> {
+    try {
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
+      
+      // Add CSRF headers for authenticated requests
+      let headers = { ...authHeaders };
+      try {
+        const csrfHeaders = await csrfService.getCSRFHeaders();
+        Object.assign(headers, csrfHeaders);
+      } catch (error) {
+        console.warn('Failed to get CSRF headers:', error);
+      }
+
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/leave`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers
+        }
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || `Failed to leave community: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.data || result;
+    } catch (error) {
+      console.error('Error leaving community:', error);
+      throw error;
+    }
+  }
+
+  static async getMembershipStatus(communityId: string): Promise<any> {
+    try {
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
+      
+      // Add CSRF headers for authenticated requests
+      let headers = { ...authHeaders };
+      try {
+        const csrfHeaders = await csrfService.getCSRFHeaders();
+        Object.assign(headers, csrfHeaders);
+      } catch (error) {
+        console.warn('Failed to get CSRF headers:', error);
+      }
+
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/membership/status`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers
+        }
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || `Failed to get membership status: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.data || result;
+    } catch (error) {
+      console.error('Error getting membership status:', error);
+      throw error;
     }
   }
 }
+
+export default CommunityPostService;

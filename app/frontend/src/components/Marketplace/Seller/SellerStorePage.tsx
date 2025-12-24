@@ -415,8 +415,81 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
             }
           }
         } else {
-          // If seller not found, set error state instead of using mock data
-          setError('Seller profile not found or unavailable');
+          // Seller profile doesn't exist, but this is not necessarily an error
+          // We should create a minimal seller object with basic info
+          const minimalSeller: SellerInfo = {
+            id: sellerId,
+            name: `Store for ${sellerId.substring(0, 6)}...${sellerId.substring(sellerId.length - 4)}`,
+            avatar: '',
+            coverImage: '',
+            walletAddress: sellerId,
+            ensName: '',
+            description: 'This seller has not set up their store profile yet.',
+            sellerStory: '',
+            memberSince: new Date(),
+            location: '',
+            isOnline: false,
+            lastSeen: new Date(),
+            
+            reputationScore: { 
+              value: '0', 
+              tooltip: 'Based on buyer reviews, DAO endorsements, and community feedback' 
+            },
+            successRate: { 
+              value: '0%',
+              tooltip: 'Percentage of successful transactions without disputes or issues' 
+            },
+            safetyScore: { 
+              value: '0.0',
+              tooltip: 'Calculated from transaction history, dispute resolution, and community trust signals' 
+            },
+            totalTransactions: 0,
+            successfulTransactions: 0,
+            disputesRatio: 0,
+            
+            verificationLevels: {
+              identity: { type: 'ENHANCED', verified: false, verifiedAt: null },
+              business: { type: 'BASIC', verified: false },
+              kyc: { type: 'PREMIUM', verified: false }
+            },
+            socialLinks: {
+              twitter: '',
+              linkedin: '',
+              website: ''
+            },
+            
+            performanceMetrics: {
+              avgDeliveryTime: 'N/A',
+              customerSatisfaction: 0,
+              returnRate: 0,
+              repeatCustomerRate: 0,
+              responseTime: 'N/A',
+              trend: 'neutral',
+              trendValue: '0%'
+            },
+            tier: 'TIER_1',
+            tierProgress: { current: 0, required: 500, nextTier: 'TIER_2' },
+            isKYCVerified: false,
+            isDAOEndorsed: false,
+            hasEscrowProtection: true,
+            followers: 0,
+            following: 0,
+            daoMemberships: [],
+            daoEndorsements: [],
+            topCategories: [],
+            totalListings: 0,
+            activeListings: 0,
+            featuredListings: [],
+            featuredProducts: [],
+            performanceBadges: [],
+            activityTimeline: [],
+            recentTransactions: [],
+            nftPortfolio: [],
+            web3Badges: []
+          };
+          
+          setSeller(minimalSeller);
+          setListings([]); // No listings for a minimal seller
         }
       } catch (error) {
         console.error('Failed to refresh seller data:', error);
@@ -560,7 +633,80 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
           
           setSeller(transformedSeller);
         } else {
-          throw new Error('Seller profile not found');
+          // Seller profile doesn't exist, but this is not necessarily an error
+          // We should create a minimal seller object with basic info
+          const minimalSeller: SellerInfo = {
+            id: sellerId,
+            name: `Store for ${sellerId.substring(0, 6)}...${sellerId.substring(sellerId.length - 4)}`,
+            avatar: '',
+            coverImage: '',
+            walletAddress: sellerId,
+            ensName: '',
+            description: 'This seller has not set up their store profile yet.',
+            sellerStory: '',
+            memberSince: new Date(),
+            location: '',
+            isOnline: false,
+            lastSeen: new Date(),
+            
+            reputationScore: { 
+              value: '0', 
+              tooltip: 'Based on buyer reviews, DAO endorsements, and community feedback' 
+            },
+            successRate: { 
+              value: '0%',
+              tooltip: 'Percentage of successful transactions without disputes or issues' 
+            },
+            safetyScore: { 
+              value: '0.0',
+              tooltip: 'Calculated from transaction history, dispute resolution, and community trust signals' 
+            },
+            totalTransactions: 0,
+            successfulTransactions: 0,
+            disputesRatio: 0,
+            
+            verificationLevels: {
+              identity: { type: 'ENHANCED', verified: false, verifiedAt: null },
+              business: { type: 'BASIC', verified: false },
+              kyc: { type: 'PREMIUM', verified: false }
+            },
+            socialLinks: {
+              twitter: '',
+              linkedin: '',
+              website: ''
+            },
+            
+            performanceMetrics: {
+              avgDeliveryTime: 'N/A',
+              customerSatisfaction: 0,
+              returnRate: 0,
+              repeatCustomerRate: 0,
+              responseTime: 'N/A',
+              trend: 'neutral',
+              trendValue: '0%'
+            },
+            tier: 'TIER_1',
+            tierProgress: { current: 0, required: 500, nextTier: 'TIER_2' },
+            isKYCVerified: false,
+            isDAOEndorsed: false,
+            hasEscrowProtection: true,
+            followers: 0,
+            following: 0,
+            daoMemberships: [],
+            daoEndorsements: [],
+            topCategories: [],
+            totalListings: 0,
+            activeListings: 0,
+            featuredListings: [],
+            featuredProducts: [],
+            performanceBadges: [],
+            activityTimeline: [],
+            recentTransactions: [],
+            nftPortfolio: [],
+            web3Badges: []
+          };
+          
+          setSeller(minimalSeller);
         }
       } catch (profileError) {
         console.warn('Failed to fetch real seller profile:', profileError);
