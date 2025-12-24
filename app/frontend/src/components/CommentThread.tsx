@@ -5,7 +5,6 @@ import { CommunityPostService } from '@/services/communityPostService';
 import { useWeb3 } from '@/context/Web3Context';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import EnhancedReactionSystem from './EnhancedReactionSystem';
 import { getDisplayName, getDefaultAvatar } from '@/utils/userDisplay';
 
 interface CommentThreadProps {
@@ -254,22 +253,6 @@ export default function CommentThread({
                     alt={comment.media.alt || 'Comment media'}
                     className="max-h-64 rounded-lg border border-gray-200 dark:border-gray-600"
                     loading="lazy"
-                  />
-                </div>
-              )}
-
-              {/* Enhanced Reactions for Comments */}
-              {!comment.isDeleted && (
-                <div className="mb-2">
-                  <EnhancedReactionSystem
-                    postId={comment.id}
-                    postType="community"
-                    onReaction={async (commentId, reactionType, amount) => {
-                      // Handle comment reactions
-                      console.log('Comment reaction:', commentId, reactionType, amount);
-                      addToast(`Reacted to comment with ${reactionType}!`, 'success');
-                    }}
-                    className="scale-75 origin-left"
                   />
                 </div>
               )}

@@ -81,11 +81,12 @@ export class UnifiedSellerService {
         return cached.data;
       }
 
-      // Fetch from API without authentication (public profile access)
+      // Fetch from API with authentication (authenticated user profile access)
+      // The /api/sellers/profile endpoint returns the profile of the currently authenticated user
       const response = await unifiedSellerAPIClient.request<SellerProfile>(
         unifiedSellerAPIClient['endpoints'].getProfile(walletAddress),
         undefined,
-        false // requireAuth = false for public access
+        true // requireAuth = true for authenticated access
       );
 
       if (!response) {
