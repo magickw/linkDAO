@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useWeb3 } from '@/context/Web3Context';
 import { useToast } from '@/context/ToastContext';
-import EnhancedReactionSystem from './EnhancedReactionSystem';
+import TokenReactionSystem from './TokenReactionSystem/TokenReactionSystem';
 import SharePostModal from './SharePostModal';
 import CommunityTipButton from './CommunityTipButton';
 import { communityWeb3Service } from '@/services/communityWeb3Service';
@@ -15,7 +15,6 @@ interface PostInteractionBarProps {
     communityId?: string;
     communityName?: string;
     commentCount?: number;
-    stakedValue?: number;
     shareId?: string; // New field for share URLs
   };
   postType: 'feed' | 'community' | 'enhanced';
@@ -127,11 +126,12 @@ export default function PostInteractionBar({
 
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* Enhanced Reaction System */}
-      <EnhancedReactionSystem
+      {/* Token Reaction System */}
+      <TokenReactionSystem
         postId={post.id}
-        postType={postType}
-        onReaction={onReaction}
+        showAnalytics={postType === 'community'}
+        userGoldBalance={0} // TODO: Fetch user's gold balance
+        awardsToUnlockLeaderboard={5}
       />
 
       {/* Action Buttons */}
@@ -192,10 +192,7 @@ export default function PostInteractionBar({
           </button>
         </div>
 
-        {/* Staked Value Display */}
-        <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">
-          {post.stakedValue ? `${post.stakedValue} $LDAO staked` : '0 $LDAO staked'}
-        </div>
+        
       </div>
 
       {/* Quick Tip Input */}

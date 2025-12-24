@@ -16,6 +16,7 @@ import CommunityDeFiEmbed from '../CommunityDeFiEmbed';
 import WalletSnapshotEmbed from '../WalletSnapshotEmbed';
 import CommunityGovernance from '../CommunityGovernance';
 import PostInteractionBar from '../PostInteractionBar';
+import TokenReactionSystem from '../TokenReactionSystem/TokenReactionSystem';
 import OptimizedImage from '../OptimizedImage';
 import { motion } from 'framer-motion';
 import { ldaoTokenService } from '@/services/web3/ldaoTokenService';
@@ -718,36 +719,14 @@ function CommunityPostCardEnhanced({
                   </div>
                 </div>
 
-                {/* Staking Reactions - Now visible on post card */}
-                <div className="mb-4 p-3 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800/50 dark:to-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Stake on Reactions</h4>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {reactions.reduce((sum, r) => sum + r.totalStaked, 0)} $LDAO staked
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-4 gap-2">
-                    {reactions.map((reaction) => (
-                      <button
-                        key={reaction.type}
-                        onClick={() => handleReaction(reaction.type, 1)}
-                        className="flex flex-col items-center p-2 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-primary-500 dark:hover:border-primary-400 hover:shadow-md transition-all duration-200 group"
-                        title={`${reaction.label} - ${reaction.totalStaked} $LDAO staked`}
-                      >
-                        <span className="text-2xl mb-1 group-hover:scale-110 transition-transform duration-200">
-                          {reaction.emoji}
-                        </span>
-                        <span className="text-xs font-medium text-gray-700 dark:text-gray-300 text-center">
-                          {reaction.totalStaked}
-                        </span>
-                        {reaction.userStaked > 0 && (
-                          <span className="text-xs text-primary-600 dark:text-primary-400 font-bold">
-                            +{reaction.userStaked}
-                          </span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
+                {/* Token Reaction System - Award this post */}
+                <div className="mb-4">
+                  <TokenReactionSystem
+                    postId={post.id}
+                    showAnalytics={true}
+                    userGoldBalance={0} // TODO: Fetch user's gold balance
+                    awardsToUnlockLeaderboard={5}
+                  />
                 </div>
 
                 <PostInteractionBar
@@ -759,7 +738,6 @@ function CommunityPostCardEnhanced({
                     author: post.author,
                     communityId: community.id,
                     commentCount: comments.length,
-                    stakedValue: reactions.reduce((sum, r) => sum + r.totalStaked, 0),
                     authorProfile: post.authorProfile // add author profile
                   }}
                   postType="community"
@@ -775,46 +753,7 @@ function CommunityPostCardEnhanced({
               </div>
             )}
 
-            {/* Analytics Section */}
-            {showAnalytics && (
-              <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
-                <div className="grid grid-cols-3 gap-3 text-center">
-                  <div className="bg-white dark:bg-gray-700 p-2 rounded text-center">
-                    <p className="text-lg font-bold text-gray-900 dark:text-white">
-                      {(post.views || post.viewCount || 0).toLocaleString()}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Views</p>
-                  </div>
-                  <div className="bg-white dark:bg-gray-700 p-2 rounded text-center">
-                    <p className="text-lg font-bold text-gray-900 dark:text-white">
-                      {reactions.reduce((sum, r) => sum + r.totalStaked, 0)}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Tokens Staked</p>
-                  </div>
-                  <div className="bg-white dark:bg-gray-700 p-2 rounded text-center">
-                    <p className="text-lg font-bold text-gray-900 dark:text-white">{comments.length}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Comments</p>
-                  </div>
-                </div>
-
-                {reactions.filter(r => r.userStaked > 0).length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
-                    <h5 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Your Stakes</h5>
-                    <div className="space-y-1">
-                      {reactions.filter(r => r.userStaked > 0).map((reaction) => (
-                        <div key={reaction.type} className="flex items-center justify-between text-xs">
-                          <span className="flex items-center space-x-1">
-                            <span>{reaction.emoji}</span>
-                            <span>{reaction.label}</span>
-                          </span>
-                          <span className="font-medium">{reaction.userStaked} $LDAO</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+            
           </div>
 
           {/* Analytics Toggle for Non-Members */}
