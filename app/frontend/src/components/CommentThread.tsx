@@ -82,11 +82,7 @@ export default function CommentThread({
       return;
     }
 
-    if (!userMembership) {
-      addToast('You must join the community to vote', 'error');
-      return;
-    }
-
+    // For public communities, allow voting without membership
     // Toggle vote if clicking the same type
     const finalVoteType = userVote === voteType ? 'remove' : voteType;
 
@@ -97,7 +93,6 @@ export default function CommentThread({
     onVote(comment.id, finalVoteType as 'upvote' | 'downvote');
   };
 
-  // Handle reply submission
   const handleReplySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -112,11 +107,6 @@ export default function CommentThread({
     const authResult = await ensureAuthenticated();
     if (!authResult.success) {
       addToast(authResult.error || 'Please authenticate to reply', 'error');
-      return;
-    }
-
-    if (!userMembership) {
-      addToast('You must join the community to reply', 'error');
       return;
     }
 
@@ -153,267 +143,187 @@ export default function CommentThread({
   return (
     <div className={`${indentClass} ${borderClass} ${className}`}>
       <div className="flex space-x-3">
-        {/* Comment Vote Buttons (Vertical) */}
-        <div className="flex flex-col items-center space-y-1 pt-1">
-          {/* Upvote */}
-          <button
-            onClick={() => handleVote('upvote')}
-            disabled={!userMembership}
-            className={`p-1 rounded transition-colors duration-200 ${userVote === 'upvote'
-              ? 'text-orange-500 bg-orange-100 dark:bg-orange-900/30'
-              : 'text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20'
-              } ${!userMembership ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
-          >
-            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
-            </svg>
-          </button>
-
-          {/* Vote Score */}
-          <span className={`text-xs font-bold ${voteScore > 0
-            ? 'text-orange-500'
-            : voteScore < 0
-              ? 'text-blue-500'
-              : 'text-gray-500 dark:text-gray-400'
-            }`}>
-            {voteScore}
-          </span>
-
-          {/* Downvote */}
-          <button
-            onClick={() => handleVote('downvote')}
-            disabled={!userMembership}
-            className={`p-1 rounded transition-colors duration-200 ${userVote === 'downvote'
-              ? 'text-blue-500 bg-blue-100 dark:bg-blue-900/30'
-              : 'text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-              } ${!userMembership ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
-          >
-            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
-          </button>
+        {/* Avatar */}
+        <div className="flex-shrink-0">
+          {comment.author ? (
+            <div className="w-8 h-8 bg-gradient-to-br from-primary-400 to-secondary-500 rounded-full flex items-center justify-center">
+              <span className="text-white font-bold text-sm">
+                {getDefaultAvatar(getDisplayName({ author: comment.author }))}
+              </span>
+            </div>
+          ) : (
+            <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center">
+              <span className="text-gray-500 dark:text-gray-400 font-bold text-sm">?</span>
+            </div>
+          )}
         </div>
 
         {/* Comment Content */}
         <div className="flex-1 min-w-0">
-          {/* Comment Header */}
-          <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400 mb-1">
+          {/* Header */}
+          <div className="flex items-center space-x-2">
             <span className="font-medium text-gray-900 dark:text-white">
-              u/{getDisplayName(comment)}
+              {comment.author ? getDisplayName({ author: comment.author }) : 'Anonymous'}
             </span>
-            <span>•</span>
-            <span>{formatTimestamp((comment as any).createdAt || new Date())}</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              {formatTimestamp(comment.createdAt)}
+            </span>
             {comment.isEdited && (
-              <>
-                <span>•</span>
-                <span className="italic">edited</span>
-              </>
-            )}
-            {(replies.length > 0 || comment.replyCount > 0) && (
-              <>
-                <span>•</span>
-                <button
-                  onClick={() => {
-                    if (collapsed && !repliesLoaded) {
-                      handleLoadReplies();
-                    }
-                    setCollapsed(!collapsed);
-                  }}
-                  className="hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200"
-                  disabled={loadingReplies}
-                >
-                  {loadingReplies
-                    ? 'Loading...'
-                    : collapsed
-                      ? `[+] ${comment.replyCount || replies.length} ${(comment.replyCount || replies.length) === 1 ? 'reply' : 'replies'}`
-                      : '[-] collapse'}
-                </button>
-              </>
+              <span className="text-xs text-gray-500 dark:text-gray-400">(edited)</span>
             )}
           </div>
 
-          {/* Comment Content */}
-          {!collapsed && (
-            <>
-              {comment.isDeleted ? (
-                <div className="text-gray-500 dark:text-gray-400 italic text-sm">
-                  [deleted]
+          {/* Comment Body */}
+          {comment.isDeleted ? (
+            <p className="text-gray-500 dark:text-gray-400 italic">
+              This comment has been deleted
+            </p>
+          ) : (
+            <div className="mt-1 text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+              {comment.content}
+            </div>
+          )}
+
+          {/* Comment Actions */}
+          <div className="flex items-center space-x-3 text-xs text-gray-500 dark:text-gray-400 mt-2">
+            {/* Reply Button - Always visible */}
+            {!comment.isDeleted && (
+              <button
+                onClick={() => setShowReplyForm(!showReplyForm)}
+                className="flex items-center space-x-1 font-medium text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 transition-colors duration-200"
+                aria-label="Reply to comment"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                </svg>
+                <span>Reply</span>
+              </button>
+            )}
+
+            <button
+              onClick={() => {
+                const commentUrl = `${window.location.href}#comment-${comment.id}`;
+                navigator.clipboard.writeText(commentUrl);
+                addToast('Comment link copied to clipboard!', 'success');
+              }}
+              className="flex items-center space-x-1 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
+              <span>Share</span>
+            </button>
+
+            {/* Delete button - only show for comment author */}
+            {address && comment.author && (
+              address.toLowerCase() === (typeof comment.author === 'string' ? comment.author : comment.walletAddress)?.toLowerCase()
+            ) && !comment.isDeleted && (
+                <button
+                  onClick={async () => {
+                    if (confirm('Are you sure you want to delete this comment? This action cannot be undone.')) {
+                      try {
+                        await CommunityPostService.deleteComment(comment.id, address);
+                        addToast('Comment deleted successfully', 'success');
+                        // Refresh the page to show updated comments
+                        window.location.reload();
+                      } catch (error) {
+                        console.error('Error deleting comment:', error);
+                        addToast('Failed to delete comment', 'error');
+                      }
+                    }
+                  }}
+                  className="flex items-center space-x-1 text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 transition-colors duration-200"
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  <span>Delete</span>
+                </button>
+              )}
+          </div>
+
+          {/* Reply Form */}
+          {showReplyForm && (
+            <div className="mt-3">
+              {depth >= maxDepth ? (
+                <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-md text-sm text-yellow-800 dark:text-yellow-200">
+                  <p className="flex items-center space-x-2">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    <span>Maximum reply depth reached. Please reply to a parent comment.</span>
+                  </p>
                 </div>
               ) : (
-                <div className="text-gray-900 dark:text-white text-sm whitespace-pre-wrap break-words mb-2">
-                  {comment.content}
-                </div>
-              )}
-
-              {/* Media Content */}
-              {!comment.isDeleted && comment.media && (
-                <div className="mb-3">
-                  <img
-                    src={comment.media.url}
-                    alt={comment.media.alt || 'Comment media'}
-                    className="max-h-64 rounded-lg border border-gray-200 dark:border-gray-600"
-                    loading="lazy"
-                  />
-                </div>
-              )}
-
-              {/* Comment Actions */}
-              <div className="flex items-center space-x-3 text-xs text-gray-500 dark:text-gray-400">
-                {/* Reply Button - More prominent and always visible for members */}
-                {userMembership && !comment.isDeleted && (
-                  <button
-                    onClick={() => setShowReplyForm(!showReplyForm)}
-                    className="flex items-center space-x-1 font-medium text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 transition-colors duration-200"
-                    aria-label="Reply to comment"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                    </svg>
-                    <span>Reply</span>
-                  </button>
-                )}
-
-                <button
-                  onClick={() => {
-                    const commentUrl = `${window.location.href}#comment-${comment.id}`;
-                    navigator.clipboard.writeText(commentUrl);
-                    addToast('Comment link copied to clipboard!', 'success');
-                  }}
-                  className="flex items-center space-x-1 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200"
-                >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                  </svg>
-                  <span>Share</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    // TODO: Implement save comment functionality
-                    addToast('Comment saved!', 'success');
-                  }}
-                  className="flex items-center space-x-1 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200"
-                >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                  </svg>
-                  <span>Save</span>
-                </button>
-
-                {/* Delete button - only show for comment author */}
-                {address && comment.author && (
-                  address.toLowerCase() === (typeof comment.author === 'string' ? comment.author : comment.walletAddress)?.toLowerCase()
-                ) && !comment.isDeleted && (
-                    <button
-                      onClick={async () => {
-                        if (confirm('Are you sure you want to delete this comment? This action cannot be undone.')) {
-                          try {
-                            await CommunityPostService.deleteComment(comment.id, address);
-                            addToast('Comment deleted successfully', 'success');
-                            // Refresh the page to show updated comments
-                            window.location.reload();
-                          } catch (error) {
-                            console.error('Error deleting comment:', error);
-                            addToast('Failed to delete comment', 'error');
-                          }
-                        }
-                      }}
-                      className="flex items-center space-x-1 text-red-500 hover:text-red-700 dark:hover:text-red-400 transition-colors duration-200"
-                    >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                      <span>Delete</span>
-                    </button>
-                  )}
-
-                {/* Report/More options */}
-                <div className="relative">
-                  <button
-                    onClick={() => {
-                      // TODO: Implement more options menu
-                      addToast('More options coming soon!', 'info');
-                    }}
-                    className="hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200"
-                  >
-                    •••
-                  </button>
-                </div>
-              </div>
-
-              {/* Reply Form */}
-              {showReplyForm && userMembership && (
-                <div className="mt-3">
-                  {depth >= maxDepth ? (
-                    <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-md text-sm text-yellow-800 dark:text-yellow-200">
-                      <p className="flex items-center space-x-2">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                        </svg>
-                        <span>Maximum reply depth reached. Please reply to a parent comment.</span>
-                      </p>
+                <form onSubmit={handleReplySubmit}>
+                  <div className="flex space-x-2">
+                    <div className="bg-gradient-to-br from-primary-400 to-secondary-500 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">
+                      <span className="text-white font-bold text-xs">
+                        {getDefaultAvatar(getDisplayName({ author: address }))}
+                      </span>
                     </div>
-                  ) : (
-                    <form onSubmit={handleReplySubmit}>
-                      <div className="flex space-x-2">
-                        <div className="bg-gradient-to-br from-primary-400 to-secondary-500 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">
-                          <span className="text-white font-bold text-xs">
-                            {getDefaultAvatar(getDisplayName({ author: address }))}
-                          </span>
-                        </div>
-                        <div className="flex-1">
-                          <textarea
-                            value={replyContent}
-                            onChange={(e) => setReplyContent(e.target.value)}
-                            placeholder="Write a reply..."
-                            className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white resize-none"
-                            rows={2}
-                            disabled={replySubmitting}
-                            autoFocus
-                          />
-                          <div className="flex justify-end space-x-2 mt-1">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setShowReplyForm(false);
-                                setReplyContent('');
-                              }}
-                              className="px-2 py-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors duration-200"
-                              disabled={replySubmitting}
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              type="submit"
-                              disabled={!replyContent.trim() || replySubmitting}
-                              className="px-3 py-1 text-xs bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-                            >
-                              {replySubmitting ? 'Posting...' : 'Reply'}
-                            </button>
-                          </div>
-                        </div>
+                    <div className="flex-1">
+                      <textarea
+                        value={replyContent}
+                        onChange={(e) => setReplyContent(e.target.value)}
+                        placeholder="Write a reply..."
+                        className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white resize-none"
+                        rows={2}
+                        disabled={replySubmitting}
+                        autoFocus
+                      />
+                      <div className="flex justify-end space-x-2 mt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowReplyForm(false);
+                            setReplyContent('');
+                          }}
+                          className="px-2 py-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors duration-200"
+                          disabled={replySubmitting}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={!replyContent.trim() || replySubmitting}
+                          className="px-3 py-1 text-xs bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                        >
+                          {replySubmitting ? 'Posting...' : 'Reply'}
+                        </button>
                       </div>
-                    </form>
-                  )}
-                </div>
+                    </div>
+                  </div>
+                </form>
               )}
+            </div>
+          )}
 
-              {/* Nested Replies */}
-              {!collapsed && replies.length > 0 && (
-                <div className="mt-3 space-y-3">
-                  {replies.map((reply) => (
-                    <CommentThread
-                      key={reply.id}
-                      comment={reply}
-                      onVote={onVote}
-                      userMembership={userMembership}
-                      depth={depth + 1}
-                      maxDepth={maxDepth}
-                    />
-                  ))}
-                </div>
-              )}
-            </>
+          {/* Replies */}
+          {Array.isArray(replies) && replies.length > 0 && (
+            <div className="mt-3 space-y-3">
+              {replies.map((reply) => (
+                <CommentThread
+                  key={reply.id}
+                  comment={reply}
+                  onVote={onVote}
+                  userMembership={userMembership}
+                  depth={depth + 1}
+                  maxDepth={maxDepth}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Load Replies Button */}
+          {comment.replyCount > 0 && !repliesLoaded && (
+            <button
+              onClick={handleLoadReplies}
+              disabled={loadingReplies}
+              className="mt-2 text-xs text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 transition-colors duration-200 disabled:opacity-50"
+            >
+              {loadingReplies ? 'Loading...' : `Load ${comment.replyCount} ${comment.replyCount === 1 ? 'reply' : 'replies'}`}
+            </button>
           )}
         </div>
       </div>

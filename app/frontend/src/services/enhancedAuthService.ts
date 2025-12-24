@@ -116,6 +116,11 @@ class EnhancedAuthService {
           }
           
           console.log('✅ Restored valid session from storage');
+          
+          // Ensure wallet address is also stored separately for API client access
+          if (this.sessionData.user?.address) {
+            localStorage.setItem(this.STORAGE_KEYS.WALLET_ADDRESS, this.sessionData.user.address);
+          }
         } else {
           console.log('⏰ Stored session expired, clearing...');
           this.clearStoredSession();
@@ -795,6 +800,11 @@ class EnhancedAuthService {
               }
             }
             
+            // Ensure wallet address is also stored separately for API client access
+            if (this.sessionData.user?.address) {
+              localStorage.setItem(this.STORAGE_KEYS.WALLET_ADDRESS, this.sessionData.user.address);
+            }
+            
             return true;
           }
         }
@@ -862,6 +872,11 @@ class EnhancedAuthService {
                   this.sessionData.refreshToken = storedRefreshToken;
                   console.log('🔄 Restored refresh token from separate storage in getValidToken');
                 }
+              }
+              
+              // Ensure wallet address is also stored separately for API client access
+              if (this.sessionData.user?.address) {
+                localStorage.setItem(this.STORAGE_KEYS.WALLET_ADDRESS, this.sessionData.user.address);
               }
               
               return storedToken;

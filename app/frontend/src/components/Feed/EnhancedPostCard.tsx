@@ -15,6 +15,7 @@ import DOMPurify from 'dompurify';
 import VideoEmbed from '../VideoEmbed';
 import { extractVideoUrls, VideoInfo } from '../../utils/videoUtils';
 import { communityWeb3Service } from '../../services/communityWeb3Service';
+import { feedService } from '../../services/feedService';
 
 interface EnhancedPostCardProps {
   post: any;
@@ -266,12 +267,10 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
         return;
       }
 
-      // Use real blockchain tipping functionality
-      const txHash = await communityWeb3Service.tipCommunityPost({
-        postId: post.id,
-        recipientAddress: post.author,
+      // Use feed service tipping for feed posts
+      const txHash = await feedService.tipPost(post.id, {
         amount: amount,
-        token: token || 'LDAO',
+        tokenType: token || 'LDAO',
         message: message || ''
       });
 
