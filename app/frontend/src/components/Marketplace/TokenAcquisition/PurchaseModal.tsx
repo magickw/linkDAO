@@ -14,6 +14,7 @@ import { x402PaymentService } from '@/services/x402PaymentService';
 import { x402PaymentMonitor } from '@/services/x402PaymentMonitor';
 import { Button } from '@/design-system/components/Button';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import { 
   X, 
   ShoppingCart, 
@@ -53,6 +54,33 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
   const [isLoadingQuotes, setIsLoadingQuotes] = useState(false);
   const [transactionStatus, setTransactionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [hasRenderError, setHasRenderError] = useState<boolean>(false);
+
+  // Error boundary for modal content
+  const ModalErrorBoundary: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    return (
+      <ErrorBoundary
+        fallback={
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+            <div className="bg-gradient-to-br from-purple-900 to-indigo-900 rounded-2xl w-full max-w-md border border-white/20 p-6 text-center">
+              <AlertCircle className="mx-auto text-red-400 mb-4" size={48} />
+              <h3 className="text-xl font-bold text-white mb-2">Something went wrong</h3>
+              <p className="text-white/70 mb-4">The purchase modal encountered an error. Please try again.</p>
+              <Button variant="primary" onClick={onClose}>
+                Close Modal
+              </Button>
+            </div>
+          </div>
+        }
+        onError={(error) => {
+          console.error('PurchaseModal error boundary caught:', error);
+          setHasRenderError(true);
+        }}
+      >
+        {children}
+      </ErrorBoundary>
+    );
+  };
 
   // Load token info and user balance
   useEffect(() => {
@@ -396,7 +424,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
     setAmount('1000');
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || hasRenderError) return null;
 
   const modalContent = (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
@@ -718,9 +746,25 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
   );
 
   // Render modal in a portal to ensure it's above all other content
-  return typeof document !== 'undefined' 
-    ? createPortal(modalContent, document.body)
-    : null;
+  // Add additional safety checks to prevent React error #31
+  if (typeof document === 'undefined' || !document.body) {
+    return null;
+  }
+  
+  // Wrap with error boundary to catch React rendering errors
+  const contentWithErrorBoundary = (
+    <ModalErrorBoundary>
+      {modalContent}
+    </ModalErrorBoundary>
+  );
+  
+  try {
+    return createPortal(contentWithErrorBoundary, document.body);
+  } catch (error) {
+    console.error('Portal rendering error:', error);
+    // Fallback to regular rendering if portal fails
+    return contentWithErrorBoundary;
+  }
 };
 
 export default PurchaseModal;

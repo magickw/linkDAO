@@ -153,7 +153,7 @@ const DocsPage: NextPage = () => {
           id: 'tier-system',
           title: 'Tier System Guide',
           description: 'Learn about the LinkDAO seller tier system and how to progress through different tiers',
-          path: '/docs/tier-system',
+          path: '/api/docs/tier-system',
           readTime: '12 min',
           lastUpdated: '2025-12-24',
           tags: ['tiers', 'seller', 'progression']
