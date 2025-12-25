@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware } from '../middleware/auth';
-import { csrfProtection } from '../middleware/csrf';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { db } from '../db';
 import { userGoldBalance, goldTransaction } from '../db/schema';
 import { eq, sql } from 'drizzle-orm';
