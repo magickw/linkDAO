@@ -618,8 +618,8 @@ export function transformSellerProfileToUnified(
       // Timestamps
       createdAt: sellerProfile.createdAt,
       updatedAt: sellerProfile.updatedAt,
-      lastActive: sellerProfile.stats.lastActive,
-      joinDate: sellerProfile.stats.joinDate,
+      lastActive: sellerProfile.stats?.lastActive,
+      joinDate: sellerProfile.stats?.joinDate,
     };
 
     return {

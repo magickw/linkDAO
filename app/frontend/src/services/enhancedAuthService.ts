@@ -600,6 +600,8 @@ class EnhancedAuthService {
           localStorage.setItem(this.STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
         }
 
+        this.storeTokenInDB(token);
+
         console.log('✅ Session stored successfully');
       } catch (error) {
         console.error('Failed to store session:', error);
@@ -619,6 +621,7 @@ class EnhancedAuthService {
         localStorage.removeItem(key);
       });
     }
+    this.storeTokenInDB(null);
   }
 
 /**
@@ -1287,6 +1290,40 @@ class EnhancedAuthService {
     }
 
     return message || 'Failed to sign authentication message';
+  }
+
+  private async openDB() {
+    return new Promise<IDBDatabase>((resolve, reject) => {
+      if (typeof window === 'undefined' || !window.indexedDB) {
+        return reject(new Error('IndexedDB not supported'));
+      }
+      const request = window.indexedDB.open('OfflineData', 2);
+  
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result);
+  
+      request.onupgradeneeded = (event: any) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains('authTokens')) {
+          db.createObjectStore('authTokens', { keyPath: 'id' });
+        }
+      };
+    });
+  }
+  
+  private async storeTokenInDB(token: string | null) {
+    try {
+      const db = await this.openDB();
+      const transaction = db.transaction(['authTokens'], 'readwrite');
+      const store = transaction.objectStore('authTokens');
+      if (token) {
+        await store.put({ id: 'current', value: token });
+      } else {
+        await store.delete('current');
+      }
+    } catch (error) {
+      console.error('Failed to store token in IndexedDB:', error);
+    }
   }
 }
 

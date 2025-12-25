@@ -45,19 +45,25 @@ export class UnifiedSellerVerificationService {
     // Notify admins about new verification request
     await this.notifyAdminsOfNewRequest({
       ...verification,
-      sellerId: verification.userId
+      sellerId: verification.userId,
+      status: verification.status as 'pending' | 'verified' | 'rejected' | 'expired',
+      riskScore: verification.riskScore as 'low' | 'medium' | 'high'
     });
 
     // Trigger automated verification process
     this.processVerification({
       ...verification,
-      sellerId: verification.userId
+      sellerId: verification.userId,
+      status: verification.status as 'pending' | 'verified' | 'rejected' | 'expired',
+      riskScore: verification.riskScore as 'low' | 'medium' | 'high'
     }.id);
 
     // Map userId to sellerId for interface compatibility
     return {
       ...verification,
-      sellerId: verification.userId
+      sellerId: verification.userId,
+      status: verification.status as 'pending' | 'verified' | 'rejected' | 'expired',
+      riskScore: verification.riskScore as 'low' | 'medium' | 'high'
     };
   }
 
@@ -73,7 +79,9 @@ export class UnifiedSellerVerificationService {
     if (verifications[0]) {
       return {
         ...verifications[0],
-        sellerId: verifications[0].userId
+        sellerId: verifications[0].userId,
+        status: verifications[0].status as 'pending' | 'verified' | 'rejected' | 'expired',
+        riskScore: verifications[0].riskScore as 'low' | 'medium' | 'high'
       };
     }
     return null;
@@ -89,7 +97,9 @@ export class UnifiedSellerVerificationService {
     if (verifications[0]) {
       return {
         ...verifications[0],
-        sellerId: verifications[0].userId
+        sellerId: verifications[0].userId,
+        status: verifications[0].status as 'pending' | 'verified' | 'rejected' | 'expired',
+        riskScore: verifications[0].riskScore as 'low' | 'medium' | 'high'
       };
     }
     return null;
@@ -178,7 +188,9 @@ export class UnifiedSellerVerificationService {
 
     return {
       ...updated,
-      sellerId: updated.userId
+      sellerId: updated.userId,
+      status: updated.status as 'pending' | 'verified' | 'rejected' | 'expired',
+      riskScore: updated.riskScore as 'low' | 'medium' | 'high'
     };
   }
 
@@ -235,7 +247,9 @@ export class UnifiedSellerVerificationService {
 
     return {
       ...updated,
-      sellerId: updated.userId
+      sellerId: updated.userId,
+      status: updated.status as 'pending' | 'verified' | 'rejected' | 'expired',
+      riskScore: updated.riskScore as 'low' | 'medium' | 'high'
     };
   }
 
@@ -257,7 +271,9 @@ export class UnifiedSellerVerificationService {
 
     return {
       ...updated,
-      sellerId: updated.userId
+      sellerId: updated.userId,
+      status: updated.status as 'pending' | 'verified' | 'rejected' | 'expired',
+      riskScore: updated.riskScore as 'low' | 'medium' | 'high'
     };
   }
 
@@ -278,7 +294,9 @@ export class UnifiedSellerVerificationService {
     // Map userId to sellerId for interface compatibility
     const result = {
       ...updated,
-      sellerId: updated.userId
+      sellerId: updated.userId,
+      status: updated.status as 'pending' | 'verified' | 'rejected' | 'expired',
+      riskScore: updated.riskScore as 'low' | 'medium' | 'high'
     };
 
     return result;

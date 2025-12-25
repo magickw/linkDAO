@@ -8,7 +8,7 @@ import Stripe from 'stripe';
 
 const router = Router();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-10-28.acacia',
+  apiVersion: '2023-10-16',
 });
 
 interface GoldPackage {
@@ -77,11 +77,11 @@ router.post('/complete', async (req, res) => {
     }
 
     // Get or create user gold balance
-    let userBalance = await db.select().from(userGoldBalance).where(eq(userGoldBalance.userId, userId)).limit(1);
+    let userBalance = await db.select().from(userGoldBalance).where(eq(userGoldBalance.userId, String(userId))).limit(1);
 
     if (!userBalance.length) {
       const newBalance = await db.insert(userGoldBalance).values({
-        userId,
+        userId: String(userId),
         balance: 0,
         totalPurchased: 0,
       }).returning();
@@ -91,20 +91,20 @@ router.post('/complete', async (req, res) => {
     // Update gold balance
     const updatedBalance = await db.update(userGoldBalance)
       .set({
-        balance: userBalance[0].balance + parseInt(goldAmount),
-        totalPurchased: userBalance[0].totalPurchased + parseInt(goldAmount),
+        balance: (userBalance[0]?.balance || 0) + parseInt(goldAmount),
+        totalPurchased: (userBalance[0]?.totalPurchased || 0) + parseInt(goldAmount),
         lastPurchaseAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(userGoldBalance.userId, userId))
+      .where(eq(userGoldBalance.userId, String(userId)))
       .returning();
 
     // Create transaction record
     await db.insert(goldTransaction).values({
-      userId,
+      userId: String(userId),
       amount: parseInt(goldAmount),
       type: 'purchase',
-      price: GOLD_PACKAGES.find(p => p.id === packageId)?.price || 0,
+      price: String(GOLD_PACKAGES.find(p => p.id === packageId)?.price || 0),
       paymentMethod: 'stripe',
       paymentIntentId,
       status: 'completed',
@@ -113,7 +113,7 @@ router.post('/complete', async (req, res) => {
 
     res.json({
       success: true,
-      newBalance: updatedBalance.balance,
+      newBalance: updatedBalance[0]?.balance || 0,
       goldAdded: parseInt(goldAmount),
     });
   } catch (error) {
@@ -134,9 +134,9 @@ router.get('/balance', authenticateToken, async (req, res) => {
     const userBalance = await db.select().from(userGoldBalance).where(eq(userGoldBalance.userId, userAddress)).limit(1);
 
     res.json({
-      balance: userBalance?.balance || 0,
-      totalPurchased: userBalance?.totalPurchased || 0,
-      lastPurchaseAt: userBalance?.lastPurchaseAt,
+      balance: userBalance[0]?.balance || 0,
+      totalPurchased: userBalance[0]?.totalPurchased || 0,
+      lastPurchaseAt: userBalance[0]?.lastPurchaseAt,
     });
   } catch (error) {
     console.error('Error fetching gold balance:', error);

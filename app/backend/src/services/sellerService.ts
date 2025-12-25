@@ -14,10 +14,10 @@ import {
   reviews,
   listings,
   products,
-  seller_tier_requirements,
-  seller_tier_benefits,
-  seller_tier_progression,
-  seller_tier_history,
+  sellerTierRequirements,
+  sellerTierBenefits,
+  sellerTierProgression,
+  sellerTierHistory,
   marketplaceOrders,
   marketplaceReviews
 } from '../db/schema';
@@ -1200,16 +1200,16 @@ class SellerService {
       const db2 = databaseService.getDatabase();
       const requirementsData = await db2
         .select()
-        .from(seller_tier_requirements)
-        .where(eq(seller_tier_requirements.tier, seller.tier));
+        .from(sellerTierRequirements)
+        .where(eq(sellerTierRequirements.tier, seller.tier));
       const requirements = requirementsData[0];
 
       // Calculate progress
       const requirementsWithStatus = requirements.map(req => ({
-        type: req.requirement_type,
-        current: metrics[this.getMetricField(req.requirement_type)] || 0,
-        required: parseFloat(req.required_value.toString()),
-        met: this.checkRequirementMet(req.requirement_type, metrics),
+        type: req.requirementType,
+        current: metrics[this.getMetricField(req.requirementType)] || 0,
+        required: parseFloat(req.requiredValue.toString()),
+        met: this.checkRequirementMet(req.requirementType, metrics),
         description: req.description
       }));
 
@@ -1226,8 +1226,8 @@ class SellerService {
       const db3 = databaseService.getDatabase();
       const benefitsData = await db3
         .select()
-        .from(seller_tier_benefits)
-        .where(eq(seller_tier_benefits.tier, seller.tier));
+        .from(sellerTierBenefits)
+        .where(eq(sellerTierBenefits.tier, seller.tier));
       const benefits = benefitsData[0];
 
       return {
@@ -1236,9 +1236,9 @@ class SellerService {
         progressPercentage,
         requirements: requirementsWithStatus,
         benefits: benefits.map(benefit => ({
-          type: benefit.benefit_type,
+          type: benefit.benefitType,
           description: benefit.description,
-          value: benefit.benefit_value
+          value: benefit.benefitValue
         }))
       };
     } catch (error) {
@@ -1281,12 +1281,12 @@ class SellerService {
           .where(eq(sellers.walletAddress, walletAddress));
 
         // Create tier history record
-        await db.insert(seller_tier_history).values({
-          seller_wallet_address: walletAddress,
-          from_tier: previousTier,
-          to_tier: newTier,
-          upgrade_reason: `Performance metrics met: ${tierCalculation.requirements.filter(r => r.met).map(r => r.type).join(', ')}`,
-          auto_upgraded: autoUpgrade
+        await db.insert(sellerTierHistory).values({
+          sellerWalletAddress: walletAddress,
+          fromTier: previousTier,
+          toTier: newTier,
+          upgradeReason: `Performance metrics met: ${tierCalculation.requirements.filter(r => r.met).map(r => r.type).join(', ')}`,
+          autoUpgraded: autoUpgrade
         });
 
         // Update tier progression
@@ -1294,11 +1294,13 @@ class SellerService {
         await this.updateTierProgression(walletAddress, newTier, requirementsMet);
       }
 
+      const requirementsMet = tierCalculation.requirements.filter(req => req.met).map(req => req.type);
+
       return {
         previousTier,
         newTier,
         requirementsMet,
-        autoUpgraded
+        autoUpgraded: autoUpgrade
       };
     } catch (error) {
       safeLogger.error('Error updating seller tier:', error);
@@ -1317,8 +1319,8 @@ class SellerService {
       // Get total requirements for current tier
       const requirementsData = await db
         .select()
-        .from(seller_tier_requirements)
-        .where(eq(seller_tier_requirements.tier, currentTier));
+        .from(sellerTierRequirements)
+        .where(eq(sellerTierRequirements.tier, currentTier));
 
       const requirements = requirementsData[0];
       const totalRequirements = requirementsData.length;
@@ -1341,35 +1343,35 @@ class SellerService {
       // Update or create tier progression record
       const existingProgression = await db
         .select()
-        .from(seller_tier_progression)
-        .where(eq(seller_tier_progression.seller_wallet_address, walletAddress));
+        .from(sellerTierProgression)
+        .where(eq(sellerTierProgression.sellerWalletAddress, walletAddress));
 
       if (existingProgression.length > 0) {
-        await db.update(seller_tier_progression)
+        await db.update(sellerTierProgression)
           .set({
-            current_tier: currentTier,
-            next_eligible_tier: nextEligibleTier,
-            progress_percentage: progressPercentage,
-            requirements_met: requirementsMetCount,
-            total_requirements: totalRequirements,
-            last_evaluation_at: new Date(),
-            next_evaluation_at: nextEvaluationAt,
-            updated_at: new Date()
+            currentTier: currentTier,
+            nextEligibleTier: nextEligibleTier,
+            progressPercentage: progressPercentage,
+            requirementsMet: requirementsMetCount,
+            totalRequirements: totalRequirements,
+            lastEvaluationAt: new Date(),
+            nextEvaluationAt: nextEvaluationAt,
+            updatedAt: new Date()
           })
-          .where(eq(seller_tier_progression.seller_wallet_address, walletAddress));
+          .where(eq(sellerTierProgression.sellerWalletAddress, walletAddress));
       } else {
-        await db.insert(seller_tier_progression)
+        await db.insert(sellerTierProgression)
           .values({
-            seller_wallet_address: walletAddress,
-            current_tier: currentTier,
-            next_eligible_tier: nextEligibleTier,
-            progress_percentage: progressPercentage,
-            requirements_met: requirementsMetCount,
-            total_requirements: totalRequirements,
-            last_evaluation_at: new Date(),
-            next_evaluation_at: nextEvaluation_at,
-            created_at: new Date(),
-            updated_at: new Date()
+            sellerWalletAddress: walletAddress,
+            currentTier: currentTier,
+            nextEligibleTier: nextEligibleTier,
+            progressPercentage: progressPercentage,
+            requirementsMet: requirementsMetCount,
+            totalRequirements: totalRequirements,
+            lastEvaluationAt: new Date(),
+            nextEvaluationAt: nextEvaluationAt,
+            createdAt: new Date(),
+            updatedAt: new Date()
           });
       }
     } catch (error) {
@@ -1394,17 +1396,17 @@ class SellerService {
 
       const history = await db
         .select()
-        .from(seller_tier_history)
-        .where(eq(seller_tier_history.seller_wallet_address, walletAddress))
-        .orderBy(desc(seller_tier_history.created_at))
+        .from(sellerTierHistory)
+        .where(eq(sellerTierHistory.sellerWalletAddress, walletAddress))
+        .orderBy(desc(sellerTierHistory.createdAt))
         .limit(limit);
 
       return history.map(h => ({
-        from_tier: h.from_tier,
-        to_tier: h.to_tier,
-        upgrade_reason: h.upgrade_reason,
-        auto_upgraded: h.auto_upgraded,
-        created_at: h.created_at
+        from_tier: h.fromTier,
+        to_tier: h.toTier,
+        upgrade_reason: h.upgradeReason,
+        auto_upgraded: h.autoUpgraded,
+        created_at: h.createdAt
       }));
     } catch (error) {
       safeLogger.error('Error getting tier history:', error);
@@ -1428,14 +1430,14 @@ class SellerService {
 
       const requirements = await db
         .select()
-        .from(seller_tier_requirements)
-        .where(eq(seller_tier_requirements.tier, tier));
+        .from(sellerTierRequirements)
+        .where(eq(sellerTierRequirements.tier, tier));
 
       return requirements.map(req => ({
-        type: req.requirement_type,
-        required: parseFloat(req.required_value.toString()),
-        current: parseFloat(req.current_value.toString()),
-        met: req.is_met,
+        type: req.requirementType,
+        required: parseFloat(req.requiredValue.toString()),
+        current: parseFloat(req.currentValue.toString()),
+        met: req.isMet,
         description: req.description
       }));
     } catch (error) {
@@ -1458,13 +1460,13 @@ class SellerService {
 
       const benefits = await db
         .select()
-        .from(seller_tier_benefits)
-        .where(eq(seller_tier_benefits.tier, tier));
+        .from(sellerTierBenefits)
+        .where(eq(sellerTierBenefits.tier, tier));
 
       return benefits.map(benefit => ({
-        type: benefit.benefit_type,
+        type: benefit.benefitType,
         description: benefit.description,
-        value: benefit.benefit_value
+        value: benefit.benefitValue
       }));
     } catch (error) {
       safeLogger.error('Error getting tier benefits:', error);

@@ -77,6 +77,24 @@ export interface CreateReactionRequest {
   amount: number;
 }
 
+export interface CreateReactionResponse {
+  success: boolean;
+  reaction: {
+    id: number;
+    postId: string;
+    userId: string;
+    type: ReactionType;
+    amount: number;
+    rewardsEarned: number;
+    createdAt: Date;
+  };
+  authorEarnings: number;
+  treasuryFee: number;
+  rewardsEarned: number;
+  newSummary?: ReactionSummary;
+  milestoneReached?: boolean;
+}
+
 export interface PurchaseReactionRequest {
   postId: string;
   userId: string;
@@ -267,7 +285,7 @@ class TokenReactionService {
       const newSummary = await this.getReactionSummary(postId, type, userId);
 
       // Check for milestones
-      const milestoneReached = this.checkMilestone(newSummary.totalAmount, type);
+      const milestoneReached = this.checkMilestone(newSummary.totalAmount, type) !== null;
 
       return {
         success: true,
@@ -275,6 +293,8 @@ class TokenReactionService {
         newSummary,
         rewardsEarned,
         milestoneReached,
+        authorEarnings: 0,
+        treasuryFee: 0,
       };
     } catch (error) {
       safeLogger.error('Error creating reaction:', error);

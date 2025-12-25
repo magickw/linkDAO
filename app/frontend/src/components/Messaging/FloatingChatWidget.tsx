@@ -72,6 +72,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
   const [newRecipientAddress, setNewRecipientAddress] = useState('');
+  const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [pendingContact, setPendingContact] = useState<Contact | null>(null);
 
@@ -262,7 +263,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
         if (!isOpenRef.current) {
           setIsOpen(true);
           setIsMinimized(false);
-          setActiveTab('messages'); // Ensure we start with messages tab
+          // Don't set activeTab here - let the pending contact processing handle it
           localStorage.setItem('floatingChatWidgetOpen', JSON.stringify(true));
           localStorage.setItem('floatingChatWidgetMinimized', JSON.stringify(false));
           console.log("FloatingChatWidget: Opening chat widget for contact");
@@ -378,7 +379,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
       // Ensure widget is open and not minimized
       setIsOpen(true);
       setIsMinimized(false);
-      setActiveTab('messages'); // Start with messages tab
+      // Don't set activeTab here - wait for conversation to be selected/created
       localStorage.setItem('floatingChatWidgetOpen', JSON.stringify(true));
       localStorage.setItem('floatingChatWidgetMinimized', JSON.stringify(false));
 
@@ -386,6 +387,10 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
       if (!hookConversations) {
         console.log("FloatingChatWidget: Conversations not loaded yet, loading...");
         loadConversations();
+        // Set a flag to switch to chat after loading
+        setTimeout(() => {
+          setActiveTab('chat');
+        }, 100);
         return; // Wait for the next render when conversations are loaded
       }
 
@@ -405,11 +410,9 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
         console.log("FloatingChatWidget: Selecting existing conversation:", existingConversation);
         setSelectedConversation(existingConversation);
         
-        // Use setTimeout to ensure state updates are processed in correct order
-        setTimeout(() => {
-          console.log("FloatingChatWidget: Setting active tab to 'chat' for existing conversation");
-          setActiveTab('chat');
-        }, 0);
+        // Switch to chat tab immediately
+        console.log("FloatingChatWidget: Setting active tab to 'chat' for existing conversation");
+        setActiveTab('chat');
 
         // Join conversation room
         if (isWebSocketConnected && existingConversation.id) {
@@ -458,6 +461,8 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
   };
 
   const startNewConversation = async (recipientAddress?: string) => {
+    console.log("FloatingChatWidget: startNewConversation button clicked!");
+    
     // Prefer the passed-in recipientAddress (if provided) to avoid races where
     // `setNewRecipientAddress` hasn't completed yet. Fall back to state for
     // compatibility with existing callers (e.g. the modal Start button).
@@ -467,9 +472,20 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
 
     if (!recipient || !address) {
       console.log("FloatingChatWidget: Missing recipient address or user address");
+      alert('Please enter a valid wallet address');
       return;
     }
 
+    // Basic validation for wallet address
+    if (!recipient.startsWith('0x') || recipient.length !== 42) {
+      // Check if it might be an ENS name
+      if (!recipient.endsWith('.eth')) {
+        alert('Please enter a valid Ethereum address (0x...) or ENS name (.eth)');
+        return;
+      }
+    }
+
+    setIsCreatingConversation(true);
     try {
       // Get auth token from localStorage - check multiple possible storage keys
       const token = localStorage.getItem('linkdao_access_token') ||
@@ -485,6 +501,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
         headers['Authorization'] = `Bearer ${token}`;
       }
 
+      console.log("FloatingChatWidget: Creating conversation with recipient:", recipient);
       const response = await fetch('/api/conversations', {
         method: 'POST',
         headers,
@@ -500,11 +517,9 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
         console.log("FloatingChatWidget: New conversation created:", newConversation);
         setSelectedConversation(newConversation);
         
-        // Use setTimeout to ensure state updates are processed in correct order
-        setTimeout(() => {
-          console.log("FloatingChatWidget: Setting active tab to 'chat' for new conversation");
-          setActiveTab('chat');
-        }, 0);
+        // Switch to chat tab immediately
+        console.log("FloatingChatWidget: Setting active tab to 'chat' for new conversation");
+        setActiveTab('chat');
         
         setShowNewConversationModal(false);
         // Clear state only if we used the state value; if recipientAddress was passed
@@ -512,12 +527,24 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
         setNewRecipientAddress('');
         loadConversations(); // Refresh conversation list
       } else {
+        const errorText = await response.text();
         console.error('Failed to create conversation:', response.status, response.statusText);
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Error details:', errorData);
+        console.error('Error response:', errorText);
+        
+        // Show user-friendly error message
+        if (response.status === 401) {
+          alert('Please connect your wallet to start a conversation');
+        } else if (response.status === 400) {
+          alert('Invalid address or conversation already exists');
+        } else {
+          alert('Failed to start conversation. Please try again.');
+        }
       }
     } catch (error) {
       console.error('Failed to start new conversation:', error);
+      alert('Network error. Please check your connection and try again.');
+    } finally {
+      setIsCreatingConversation(false);
     }
   };
 
@@ -876,11 +903,18 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
                 </button>
                 <button
                   onClick={startNewConversation}
-                  disabled={!newRecipientAddress.trim()}
+                  disabled={!newRecipientAddress.trim() || isCreatingConversation}
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 
-                           disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                           disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                 >
-                  Start Chat
+                  {isCreatingConversation ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    'Start Chat'
+                  )}
                 </button>
               </div>
             </motion.div>

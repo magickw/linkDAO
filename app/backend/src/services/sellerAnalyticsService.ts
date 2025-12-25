@@ -1,14 +1,14 @@
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
-import { 
-  sellers, 
-  products, 
-  orders, 
+import {
+  sellers,
+  products,
+  orders,
   users,
-  seller_tier_requirements,
-  seller_tier_benefits,
-  seller_tier_progression,
-  seller_tier_history,
+  sellerTierRequirements,
+  sellerTierBenefits,
+  sellerTierProgression,
+  sellerTierHistory,
   marketplaceOrders,
   marketplaceReviews
 } from '../db/schema';
@@ -858,33 +858,32 @@ export class SellerAnalyticsService {
       }
 
       // Get tier progression data
-      const [progression] = await db
-        .select()
-        .from(seller_tier_progression)
-        .where(eq(seller_tier_progression.seller_wallet_address, walletAddress));
-
-      // Get tier history
-      const history = await db
-        .select()
-        .from(seller_tier_history)
-        .where(eq(seller_tier_history.seller_wallet_address, walletAddress))
-        .orderBy(desc(seller_tier_history.created_at))
-        .limit(10);
-
-      // Get requirements for current tier
-      const requirements = await db
-        .select()
-        .from(seller_tier_requirements)
-        .where(eq(seller_tier_requirements.tier, seller.tier));
-
-      // Get benefits for current and next tier
-      const [currentBenefits, nextBenefits] = await Promise.all([
-        db.select().from(seller_tier_benefits).where(eq(seller_tier_benefits.tier, seller.tier)),
-        progression?.next_eligible_tier 
-          ? db.select().from(seller_tier_benefits).where(eq(seller_tier_benefits.tier, progression.next_eligible_tier))
-          : Promise.resolve([])
-      ]);
-
+            const [progression] = await db
+              .select()
+              .from(sellerTierProgression)
+              .where(eq(sellerTierProgression.sellerWalletAddress, walletAddress));
+      
+            // Get tier history
+            const history = await db
+              .select()
+              .from(sellerTierHistory)
+              .where(eq(sellerTierHistory.sellerWalletAddress, walletAddress))
+              .orderBy(desc(sellerTierHistory.createdAt))
+              .limit(10);
+      
+            // Get requirements for current tier
+            const requirements = await db
+              .select()
+              .from(sellerTierRequirements)
+              .where(eq(sellerTierRequirements.tier, seller.tier));
+      
+            // Get benefits for current and next tier
+            const [currentBenefits, nextBenefits] = await Promise.all([
+              db.select().from(sellerTierBenefits).where(eq(sellerTierBenefits.tier, seller.tier)),
+              progression?.nextEligibleTier
+                ? db.select().from(sellerTierBenefits).where(eq(sellerTierBenefits.tier, progression.nextEligibleTier))
+                : Promise.resolve([])
+            ]);
       // Calculate performance metrics
       const performanceMetrics = await this.calculateTierMetrics(walletAddress);
 
@@ -902,31 +901,31 @@ export class SellerAnalyticsService {
         currentTier: seller.tier,
         tierProgression: {
           currentTier: seller.tier,
-          nextTier: progression?.next_eligible_tier || null,
-          progressPercentage: progression?.progress_percentage || 0,
-          requirementsMet: progression?.requirements_met || 0,
-          totalRequirements: progression?.total_requirements || requirements.length,
+          nextTier: progression?.nextEligibleTier || null,
+          progressPercentage: progression?.progressPercentage || 0,
+          requirementsMet: progression?.requirementsMet || 0,
+          totalRequirements: progression?.totalRequirements || requirements.length,
           estimatedTimeToNextTier
         },
         performanceMetrics,
         tierHistory: history.map(h => ({
-          fromTier: h.from_tier,
-          toTier: h.to_tier,
-          date: h.created_at,
-          reason: h.upgrade_reason,
-          autoUpgraded: h.auto_upgraded
+          fromTier: h.fromTier,
+          toTier: h.toTier,
+          date: h.createdAt,
+          reason: h.upgradeReason,
+          autoUpgraded: h.autoUpgraded
         })),
         requirementsStatus,
         tierComparison: {
           currentTierBenefits: currentBenefits.map(b => ({
-            type: b.benefit_type,
+            type: b.benefitType,
             description: b.description,
-            value: b.benefit_value
+            value: b.benefitValue
           })),
           nextTierBenefits: nextBenefits.map(b => ({
-            type: b.benefit_type,
+            type: b.benefitType,
             description: b.description,
-            value: b.benefit_value
+            value: b.benefitValue
           }))
         }
       };
@@ -1047,8 +1046,8 @@ export class SellerAnalyticsService {
       // Get current requirements
       const requirements = await db
         .select()
-        .from(seller_tier_requirements)
-        .where(eq(seller_tier_requirements.tier, tier));
+        .from(sellerTierRequirements)
+        .where(eq(sellerTierRequirements.tier, tier));
 
       // Get current metrics
       const currentMetrics = await this.calculateTierMetrics(walletAddress);
@@ -1145,16 +1144,6 @@ export class SellerAnalyticsService {
       if (!db) throw new Error('Database unavailable');
 
       // Get tier distribution
-      const salesSubquery = db.select({
-        seller_id: marketplaceOrders.sellerId,
-        total_sales: sql<number>`SUM(CASE WHEN o.status = 'completed' THEN o.amount ELSE 0 END)`.as('total_sales'),
-        avg_rating: sql<number>`COALESCE(AVG(r.rating), 0)`.as('avg_rating')
-      })
-        .from(marketplaceOrders)
-        .leftJoin(marketplaceReviews, eq(marketplaceReviews.revieweeId, marketplaceOrders.sellerId))
-        .groupBy(marketplaceOrders.sellerId)
-        .as('sales');
-
       const distribution = await db
         .select({
           tier: sellers.tier,
@@ -1163,7 +1152,18 @@ export class SellerAnalyticsService {
           averageRating: sql<number>`COALESCE(AVG(sales.avg_rating), 0)`.as('average_rating')
         })
         .from(sellers)
-        .leftJoin(salesSubquery, eq(sellers.walletAddress, sql`sales.seller_id`))
+        .leftJoin(
+          db.select({
+            seller_id: marketplaceOrders.sellerId,
+            total_sales: sql<number>`SUM(CASE WHEN o.status = 'completed' THEN o.amount ELSE 0 END)`.as('total_sales'),
+            avg_rating: sql<number>`COALESCE(AVG(r.rating), 0)`.as('avg_rating')
+          })
+            .from(marketplaceOrders)
+            .leftJoin(marketplaceReviews, eq(marketplaceReviews.revieweeId, marketplaceOrders.sellerId))
+            .groupBy(marketplaceOrders.sellerId)
+            .as('sales'),
+          eq(sellers.walletAddress, sql`sales.seller_id`)
+        )
         .groupBy(sellers.tier)
         .orderBy(sellers.tier);
 
@@ -1181,7 +1181,7 @@ export class SellerAnalyticsService {
           upgradesThisMonth: sql<number>`COUNT(CASE WHEN h.created_at >= ${oneMonthAgo} THEN 1 ELSE 0 END)`.as('upgrades')
         })
         .from(sellers)
-        .leftJoin(seller_tier_history, eq(seller_tier_history.seller_wallet_address, sellers.walletAddress))
+        .leftJoin(sellerTierHistory, eq(sellerTierHistory.sellerWalletAddress, sellers.walletAddress))
         .groupBy(sellers.tier);
 
       return {
