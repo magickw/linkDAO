@@ -25,6 +25,7 @@ import { ensService } from './ensService';
 import { profileSyncService } from './profileSyncService';
 import { reputationService } from './reputationService';
 import { transactionService } from './transactionService';
+import { databaseService } from './databaseService';
 import { Request } from 'express';
 import multer from 'multer';
 import { UploadedFile } from 'express-fileupload';
@@ -139,8 +140,6 @@ class SellerService {
         return null; // Return null instead of throwing for "not found" case
       }
 
-      const sellerData = seller[0];
-
       // Get reputation data using wallet address
       let reputation = null;
       try {
@@ -151,7 +150,7 @@ class SellerService {
       }
 
       // Calculate profile completeness
-      const completeness = this.calculateProfileCompleteness(sellerData);
+      const completeness = this.calculateProfileCompleteness(seller);
 
       return {
         ...sellerData,
@@ -1182,10 +1181,10 @@ class SellerService {
           returnRate: sql<number>`COALESCE(COUNT(CASE WHEN o.status = 'completed' AND o.returned = true THEN 1 ELSE 0 END) * 100.0 / COUNT(o.id), 0)`.as('return_rate'),
           repeatRate: sql<number>`COALESCE(COUNT(DISTINCT o.buyer_id) * 100.0 / COUNT(o.id), 0)`.as('repeat_rate')
         })
-        .from(marketplaceOrders o)
-        .leftJoin(marketplaceReviews r ON r.revieweeId = o.sellerId)
-        .where(eq(o.sellerId, walletAddress))
-        .groupBy(o.sellerId);
+        .from(marketplaceOrders)
+        .leftJoin(marketplaceReviews, eq(marketplaceReviews.revieweeId, marketplaceOrders.sellerId))
+        .where(eq(marketplaceOrders.sellerId, walletAddress))
+        .groupBy(marketplaceOrders.sellerId);
 
       const metrics = salesData[0] || {
         totalSales: 0,

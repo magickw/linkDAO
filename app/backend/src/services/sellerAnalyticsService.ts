@@ -14,6 +14,7 @@ import {
 } from '../db/schema';
 import { eq, sql, and, gte, lte, desc, asc, count, sum, avg, isNotNull } from 'drizzle-orm';
 import { Redis } from 'ioredis';
+import { databaseService } from './databaseService';
 
 export interface SellerPerformanceMetrics {
   sellerId: string;
@@ -951,7 +952,7 @@ export class SellerAnalyticsService {
       if (!db) throw new Error('Database unavailable');
 
       // Get metrics from orders and reviews
-      const [metrics] = await db
+      const metrics = await db
         .select({
           totalSales: sql<number>`SUM(CASE WHEN o.status = 'completed' THEN o.amount ELSE 0 END)`.as('total_sales'),
           totalOrders: sql<number>`COUNT(CASE WHEN o.status = 'completed' THEN 1 ELSE 0 END)`.as('total_orders'),
@@ -961,10 +962,10 @@ export class SellerAnalyticsService {
           returnRate: sql<number>`COALESCE(COUNT(CASE WHEN o.status = 'completed' AND o.returned = true THEN 1 ELSE 0 END) * 100.0 / COUNT(o.id), 0)`.as('return_rate'),
           repeatRate: sql<number>`COALESCE(COUNT(DISTINCT o.buyer_id) * 100.0 / COUNT(o.id), 0)`.as('repeat_rate')
         })
-        .from(marketplaceOrders o)
-        .leftJoin(marketplaceReviews r ON r.revieweeId = o.sellerId)
-        .where(eq(o.sellerId, walletAddress))
-        .groupBy(o.sellerId);
+        .from(marketplaceOrders)
+        .leftJoin(marketplaceReviews, eq(marketplaceReviews.revieweeId, marketplaceOrders.sellerId))
+        .where(eq(marketplaceOrders.sellerId, walletAddress))
+        .groupBy(marketplaceOrders.sellerId);
 
       return metrics[0] || {
         totalSales: 0,
@@ -1065,10 +1066,10 @@ export class SellerAnalyticsService {
           disputeRate: sql<number>`COALESCE(COUNT(CASE WHEN o.status = 'disputed' AND o.created_at >= ${thirtyDaysAgo} THEN 1 ELSE 0 END) * 100.0 / COUNT(CASE WHEN o.created_at >= ${thirtyDaysAgo} THEN 1 ELSE NULL END), 0)`.as('dispute_rate'),
           repeatRate: sql<number>`COALESCE(COUNT(DISTINCT CASE WHEN o.created_at >= ${thirtyDaysAgo} THEN o.buyer_id ELSE NULL END) * 100.0 / COUNT(CASE WHEN o.created_at >= ${thirtyDaysAgo} THEN 1 ELSE NULL END), 0)`.as('repeat_rate')
         })
-        .from(marketplaceOrders o)
-        .leftJoin(marketplaceReviews r ON r.revieweeId = o.sellerId)
-        .where(eq(o.sellerId, walletAddress))
-        .groupBy(o.sellerId);
+        .from(marketplaceOrders)
+        .leftJoin(marketplaceReviews, eq(marketplaceReviews.revieweeId, marketplaceOrders.sellerId))
+        .where(eq(marketplaceOrders.sellerId, walletAddress))
+        .groupBy(marketplaceOrders.sellerId);
 
       return requirements.map(req => {
         const metricField = this.getMetricField(req.requirement_type);
@@ -1159,11 +1160,11 @@ export class SellerAnalyticsService {
             avg_rating: sql<number>`COALESCE(AVG(r.rating), 0)`.as('avg_rating')
           })
             .from(marketplaceOrders)
-            .leftJoin(marketplaceReviews r ON r.revieweeId = marketplaceOrders.sellerId)
+            .leftJoin(marketplaceReviews, eq(marketplaceReviews.revieweeId, marketplaceOrders.sellerId))
             .groupBy(marketplaceOrders.sellerId)
             .as('sales'),
           eq(sellers.walletAddress, sql`sales.seller_id`)
-        )
+        ),
         .groupBy(sellers.tier)
         .orderBy(sellers.tier);
 
@@ -1180,7 +1181,7 @@ export class SellerAnalyticsService {
           upgradesThisMonth: sql<number>`COUNT(CASE WHEN h.created_at >= ${oneMonthAgo} THEN 1 ELSE 0 END)`.as('upgrades')
         })
         .from(sellers)
-        .leftJoin(seller_tier_history h ON eq(h.seller_wallet_address, sellers.walletAddress))
+        .leftJoin(seller_tier_history, eq(seller_tier_history.seller_wallet_address, sellers.walletAddress))
         .groupBy(sellers.tier);
 
       return {
