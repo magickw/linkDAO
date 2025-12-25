@@ -1145,6 +1145,16 @@ export class SellerAnalyticsService {
       if (!db) throw new Error('Database unavailable');
 
       // Get tier distribution
+      const salesSubquery = db.select({
+        seller_id: marketplaceOrders.sellerId,
+        total_sales: sql<number>`SUM(CASE WHEN o.status = 'completed' THEN o.amount ELSE 0 END)`.as('total_sales'),
+        avg_rating: sql<number>`COALESCE(AVG(r.rating), 0)`.as('avg_rating')
+      })
+        .from(marketplaceOrders)
+        .leftJoin(marketplaceReviews, eq(marketplaceReviews.revieweeId, marketplaceOrders.sellerId))
+        .groupBy(marketplaceOrders.sellerId)
+        .as('sales');
+
       const distribution = await db
         .select({
           tier: sellers.tier,
@@ -1153,21 +1163,11 @@ export class SellerAnalyticsService {
           averageRating: sql<number>`COALESCE(AVG(sales.avg_rating), 0)`.as('average_rating')
         })
         .from(sellers)
-        .leftJoin(
-          db.select({
-            seller_id: marketplaceOrders.sellerId,
-            total_sales: sql<number>`SUM(CASE WHEN o.status = 'completed' THEN o.amount ELSE 0 END)`.as('total_sales'),
-            avg_rating: sql<number>`COALESCE(AVG(r.rating), 0)`.as('avg_rating')
-          })
-            .from(marketplaceOrders)
-            .leftJoin(marketplaceReviews, eq(marketplaceReviews.revieweeId, marketplaceOrders.sellerId))
-            .groupBy(marketplaceOrders.sellerId)
-            .as('sales'),
-          eq(sellers.walletAddress, sql`sales.seller_id`)
-        ),
+        .leftJoin(salesSubquery, eq(sellers.walletAddress, sql`sales.seller_id`))
         .groupBy(sellers.tier)
         .orderBy(sellers.tier);
 
+      // Calculate total sellers from distribution
       const totalSellers = distribution.reduce((sum, d) => sum + d.count, 0);
 
       // Get tier growth data

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authMiddleware } from '../middleware/auth';
+import { authenticateToken } from '../middleware/auth';
 import { csrfProtection } from '../middleware/csrfProtection';
 import { db } from '../db';
 import { userGoldBalance, goldTransaction } from '../db/schema';
@@ -26,7 +26,7 @@ const GOLD_PACKAGES: GoldPackage[] = [
 ];
 
 // Create payment intent for gold purchase
-router.post('/payment-intent', authMiddleware, csrfProtection, async (req, res) => {
+router.post('/payment-intent', authenticateToken, csrfProtection, async (req, res) => {
   try {
     const { packageId, paymentMethod } = req.body;
     const userAddress = req.user?.address;
@@ -123,7 +123,7 @@ router.post('/complete', async (req, res) => {
 });
 
 // Get user's gold balance
-router.get('/balance', authMiddleware, async (req, res) => {
+router.get('/balance', authenticateToken, async (req, res) => {
   try {
     const userAddress = req.user?.address;
 
@@ -150,7 +150,7 @@ router.get('/packages', (req, res) => {
 });
 
 // Get user's gold transaction history
-router.get('/transactions', authMiddleware, async (req, res) => {
+router.get('/transactions', authenticateToken, async (req, res) => {
   try {
     const userAddress = req.user?.address;
     const { page = 1, limit = 20 } = req.query;
