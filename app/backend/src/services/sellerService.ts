@@ -126,13 +126,15 @@ class SellerService {
       const normalizedAddress = walletAddress.toLowerCase();
       safeLogger.info('Fetching seller profile for address:', normalizedAddress);
       
-      const [seller] = await db
+      const sellerData = await db
         .select()
         .from(sellers)
         .where(eq(sellers.walletAddress, normalizedAddress))
         .limit(1);
 
-      if (!seller || seller.length === 0) {
+      const seller = sellerData[0];
+
+      if (!seller || sellerData.length === 0) {
         safeLogger.info('Seller not found in database for address:', normalizedAddress);
         return null; // Return null instead of throwing for "not found" case
       }
@@ -490,10 +492,12 @@ class SellerService {
         .where(eq(ensVerifications.walletAddress, walletAddress));
 
       // Get user ID from wallet address
-      const [user] = await db.select()
+      const userData = await db.select()
         .from(users)
         .where(eq(users.walletAddress, walletAddress))
         .limit(1);
+
+      const user = userData[0];
 
       if (!user) {
         safeLogger.error('User not found for wallet address:', walletAddress);
@@ -1160,19 +1164,20 @@ class SellerService {
       if (!db) throw new Error('Database unavailable');
 
       // Get seller performance metrics
-      const [seller] = await db.select().from(sellers).where(eq(sellers.walletAddress, walletAddress));
+      const sellerData = await db.select().from(sellers).where(eq(sellers.walletAddress, walletAddress));
+      const seller = sellerData[0];
       
       if (!seller) {
         throw new Error('Seller not found');
       }
 
       // Calculate metrics from orders and reviews
-      const [salesData] = await db
+      const salesData = await db
         .select({
           totalSales: sql<number>`SUM(CASE WHEN o.status = 'completed' THEN o.amount ELSE 0 END)`.as('total_sales'),
           totalOrders: sql<number>`COUNT(CASE WHEN o.status = 'completed' THEN 1 ELSE 0 END)`.as('total_orders'),
           averageRating: sql<number>`COALESCE(AVG(r.rating), 0)`.as('average_rating'),
-          responseTime: sql<number>`COALESCE(AVG(EXTRACT(EPOCH FROM (o.created_at)), 0)`.as('response_time')),
+          responseTime: sql<number>`COALESCE(AVG(EXTRACT(EPOCH FROM (o.created_at))), 0)`.as('response_time'),
           disputeRate: sql<number>`COALESCE(COUNT(CASE WHEN o.status = 'disputed' THEN 1 ELSE 0 END) * 100.0 / COUNT(o.id), 0)`.as('dispute_rate'),
           returnRate: sql<number>`COALESCE(COUNT(CASE WHEN o.status = 'completed' AND o.returned = true THEN 1 ELSE 0 END) * 100.0 / COUNT(o.id), 0)`.as('return_rate'),
           repeatRate: sql<number>`COALESCE(COUNT(DISTINCT o.buyer_id) * 100.0 / COUNT(o.id), 0)`.as('repeat_rate')
@@ -1194,10 +1199,11 @@ class SellerService {
 
       // Get tier requirements
       const db2 = databaseService.getDatabase();
-      const [requirements] = await db2
+      const requirementsData = await db2
         .select()
         .from(seller_tier_requirements)
         .where(eq(seller_tier_requirements.tier, seller.tier));
+      const requirements = requirementsData[0];
 
       // Calculate progress
       const requirementsWithStatus = requirements.map(req => ({
@@ -1219,10 +1225,11 @@ class SellerService {
 
       // Get tier benefits
       const db3 = databaseService.getDatabase();
-      const [benefits] = await db3
+      const benefitsData = await db3
         .select()
         .from(seller_tier_benefits)
         .where(eq(seller_tier_benefits.tier, seller.tier));
+      const benefits = benefitsData[0];
 
       return {
         currentTier: seller.tier,
@@ -1257,7 +1264,8 @@ class SellerService {
       const tierCalculation = await this.calculateSellerTier(walletAddress);
       
       // Get current seller
-      const [currentSeller] = await db.select().from(sellers).where(eq(sellers.walletAddress, walletAddress));
+      const currentSellerData = await db.select().from(sellers).where(eq(sellers.walletAddress, walletAddress));
+      const currentSeller = currentSellerData[0];
       
       if (!currentSeller) {
         throw new Error('Seller not found');
@@ -1308,12 +1316,13 @@ class SellerService {
       if (!db) throw new Error('Database unavailable');
 
       // Get total requirements for current tier
-      const [requirements] = await db
+      const requirementsData = await db
         .select()
         .from(seller_tier_requirements)
         .where(eq(seller_tier_requirements.tier, currentTier));
 
-      const totalRequirements = requirements.length;
+      const requirements = requirementsData[0];
+      const totalRequirements = requirementsData.length;
       const requirementsMetCount = requirementsMet.length;
       const progressPercentage = totalRequirements > 0 ? (requirementsMetCount / totalRequirements) * 100 : 0;
 

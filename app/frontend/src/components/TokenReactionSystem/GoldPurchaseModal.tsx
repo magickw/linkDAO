@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import { useWeb3 } from '../../context/Web3Context';
 import { useToast } from '../../context/ToastContext';
 
@@ -252,9 +253,13 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
-    createPortal(
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+  // Check if document.body exists before creating portal
+  if (typeof document === 'undefined' || !document.body) {
+    return null;
+  }
+
+  const modalContent = (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
       <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -511,9 +516,24 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
         </div>
       </div>
     </div>
-    ),
-    document.body
   );
+
+  try {
+    return createPortal(
+      <ErrorBoundary>
+        {modalContent}
+      </ErrorBoundary>,
+      document.body
+    );
+  } catch (error) {
+    console.error('Error creating portal for GoldPurchaseModal:', error);
+    // Fallback to non-portal rendering with error boundary
+    return (
+      <ErrorBoundary>
+        {modalContent}
+      </ErrorBoundary>
+    );
+  }
 };
 
 export default GoldPurchaseModal;

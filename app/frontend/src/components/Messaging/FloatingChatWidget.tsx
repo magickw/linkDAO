@@ -262,11 +262,17 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
         if (!isOpenRef.current) {
           setIsOpen(true);
           setIsMinimized(false);
+          setActiveTab('messages'); // Ensure we start with messages tab
           localStorage.setItem('floatingChatWidgetOpen', JSON.stringify(true));
           localStorage.setItem('floatingChatWidgetMinimized', JSON.stringify(false));
           console.log("FloatingChatWidget: Opening chat widget for contact");
         } else {
           console.log("FloatingChatWidget: Chat widget already open, setting pending contact");
+          // If widget is already open, ensure it's not minimized
+          if (isMinimized) {
+            setIsMinimized(false);
+            localStorage.setItem('floatingChatWidgetMinimized', JSON.stringify(false));
+          }
         }
       } else {
         console.log("FloatingChatWidget: Ignoring startChat call with invalid contact:", contact);
@@ -281,7 +287,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
       console.log("FloatingChatWidget: Removing startChat callback");
       setOnStartChat(null);
     };
-  }, [setOnStartChat]); // Removed isOpen from dependencies to prevent re-registration
+  }, [setOnStartChat, isMinimized]); // Added isMinimized to dependencies
 
   // Save state to localStorage whenever isOpen or isMinimized changes
   useEffect(() => {
@@ -369,6 +375,13 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
     if (pendingContact && address) {
       console.log("FloatingChatWidget: Processing pending contact:", pendingContact);
 
+      // Ensure widget is open and not minimized
+      setIsOpen(true);
+      setIsMinimized(false);
+      setActiveTab('messages'); // Start with messages tab
+      localStorage.setItem('floatingChatWidgetOpen', JSON.stringify(true));
+      localStorage.setItem('floatingChatWidgetMinimized', JSON.stringify(false));
+
       // If hookConversations is not loaded yet, we might need to load them first
       if (!hookConversations) {
         console.log("FloatingChatWidget: Conversations not loaded yet, loading...");
@@ -391,8 +404,12 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
         // If conversation exists, select it (inline the logic to avoid circular dependency)
         console.log("FloatingChatWidget: Selecting existing conversation:", existingConversation);
         setSelectedConversation(existingConversation);
-        console.log("FloatingChatWidget: Setting active tab to 'chat' for existing conversation");
-        setActiveTab('chat');
+        
+        // Use setTimeout to ensure state updates are processed in correct order
+        setTimeout(() => {
+          console.log("FloatingChatWidget: Setting active tab to 'chat' for existing conversation");
+          setActiveTab('chat');
+        }, 0);
 
         // Join conversation room
         if (isWebSocketConnected && existingConversation.id) {
@@ -482,7 +499,13 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
         const newConversation = await response.json();
         console.log("FloatingChatWidget: New conversation created:", newConversation);
         setSelectedConversation(newConversation);
-        setActiveTab('chat');
+        
+        // Use setTimeout to ensure state updates are processed in correct order
+        setTimeout(() => {
+          console.log("FloatingChatWidget: Setting active tab to 'chat' for new conversation");
+          setActiveTab('chat');
+        }, 0);
+        
         setShowNewConversationModal(false);
         // Clear state only if we used the state value; if recipientAddress was passed
         // explicitly, still clear to keep UI consistent.

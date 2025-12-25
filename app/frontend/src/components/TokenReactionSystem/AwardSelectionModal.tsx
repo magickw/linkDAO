@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import GoldPurchaseModal from './GoldPurchaseModal';
 
 interface Award {
@@ -231,9 +232,13 @@ const AwardSelectionModal: React.FC<AwardSelectionModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
-    createPortal(
-      <>
+  // Check if document.body exists before creating portal
+  if (typeof document === 'undefined' || !document.body) {
+    return null;
+  }
+
+  const modalContent = (
+    <>
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
           {/* Header */}
@@ -381,10 +386,25 @@ const AwardSelectionModal: React.FC<AwardSelectionModalProps> = ({
           }}
         />
       )}
-      </>,
-      document.body
-    )
+      </>
   );
+
+  try {
+    return createPortal(
+      <ErrorBoundary>
+        {modalContent}
+      </ErrorBoundary>,
+      document.body
+    );
+  } catch (error) {
+    console.error('Error creating portal for AwardSelectionModal:', error);
+    // Fallback to non-portal rendering with error boundary
+    return (
+      <ErrorBoundary>
+        {modalContent}
+      </ErrorBoundary>
+    );
+  }
 };
 
 export default AwardSelectionModal;
