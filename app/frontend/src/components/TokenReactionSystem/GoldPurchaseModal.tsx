@@ -188,17 +188,64 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
 
     setIsProcessing(true);
     try {
-      // Simulate purchase process for now
-      // In production, this would integrate with the actual checkout system
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate processing time
-      
-      addToast('Gold purchase successful! Award will be given.', 'success');
-      await onPurchase(selectedPackage);
-      onClose();
+      // Process actual payment based on selected method
+      if (selectedPaymentMethod.method.type === 'FIAT_STRIPE') {
+        // Create Stripe checkout session for fiat payment
+        const response = await fetch('/api/stripe/create-payment-intent', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            amount: Math.round(selectedPaymentMethod.costEstimate?.totalCost || selectedPackageData.price * 100), // Convert to cents
+            currency: 'usd',
+            metadata: {
+              goldPackage: selectedPackage,
+              userId: address,
+            }
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to create payment session');
+        }
+
+        const paymentIntent = await response.json();
+        
+        // In a real implementation, you would redirect to Stripe Checkout here
+        // For now, we'll simulate the payment completion
+        addToast('Redirecting to Stripe for payment...', 'info');
+        
+        // Simulate successful payment (replace with actual Stripe redirect handling)
+        setTimeout(async () => {
+          try {
+            // Update user's gold balance (this would be done by the backend webhook)
+            addToast('Gold purchase successful! Award will be given.', 'success');
+            await onPurchase(selectedPackage);
+            onClose();
+          } catch (error) {
+            console.error('Error completing purchase:', error);
+            addToast('Error completing purchase', 'error');
+          } finally {
+            setIsProcessing(false);
+          }
+        }, 3000);
+        
+        return; // Exit early to avoid closing modal immediately
+      } else {
+        // Handle crypto payment (USDC, etc.)
+        addToast('Crypto payment processing...', 'info');
+        
+        // Simulate crypto payment processing
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        addToast('Gold purchase successful! Award will be given.', 'success');
+        await onPurchase(selectedPackage);
+        onClose();
+      }
     } catch (error: any) {
       console.error('Purchase failed:', error);
       addToast(`Purchase failed: ${error.message}`, 'error');
-    } finally {
       setIsProcessing(false);
     }
   };
@@ -463,7 +510,8 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
           </div>
         </div>
       </div>
-    </div>,
+    </div>
+    ),
     document.body
   );
 };

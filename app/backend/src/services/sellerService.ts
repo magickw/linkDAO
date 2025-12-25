@@ -13,7 +13,13 @@ import {
   userReputation,
   reviews,
   listings,
-  products
+  products,
+  seller_tier_requirements,
+  seller_tier_benefits,
+  seller_tier_progression,
+  seller_tier_history,
+  marketplaceOrders,
+  marketplaceReviews
 } from '../db/schema';
 import { ensService } from './ensService';
 import { profileSyncService } from './profileSyncService';
@@ -1125,6 +1131,425 @@ class SellerService {
       safeLogger.error('Error getting seller dashboard data:', error);
       throw error;
     }
+  }
+
+  // Tier System Methods
+  
+  /**
+   * Calculate seller tier based on performance metrics
+   */
+  async calculateSellerTier(walletAddress: string): Promise<{
+    currentTier: string;
+    nextTier: string | null;
+    progressPercentage: number;
+    requirements: Array<{
+      type: string;
+      current: number;
+      required: number;
+      met: boolean;
+      description: string;
+    }>;
+    benefits: Array<{
+      type: string;
+      description: string;
+      value: string;
+    }>;
+  }> {
+    try {
+      const db = databaseService.getDatabase();
+      if (!db) throw new Error('Database unavailable');
+
+      // Get seller performance metrics
+      const [seller] = await db.select().from(sellers).where(eq(sellers.walletAddress, walletAddress));
+      
+      if (!seller) {
+        throw new Error('Seller not found');
+      }
+
+      // Calculate metrics from orders and reviews
+      const [salesData] = await db
+        .select({
+          totalSales: sql<number>`SUM(CASE WHEN o.status = 'completed' THEN o.amount ELSE 0 END)`.as('total_sales'),
+          totalOrders: sql<number>`COUNT(CASE WHEN o.status = 'completed' THEN 1 ELSE 0 END)`.as('total_orders'),
+          averageRating: sql<number>`COALESCE(AVG(r.rating), 0)`.as('average_rating'),
+          responseTime: sql<number>`COALESCE(AVG(EXTRACT(EPOCH FROM (o.created_at)), 0)`.as('response_time')),
+          disputeRate: sql<number>`COALESCE(COUNT(CASE WHEN o.status = 'disputed' THEN 1 ELSE 0 END) * 100.0 / COUNT(o.id), 0)`.as('dispute_rate'),
+          returnRate: sql<number>`COALESCE(COUNT(CASE WHEN o.status = 'completed' AND o.returned = true THEN 1 ELSE 0 END) * 100.0 / COUNT(o.id), 0)`.as('return_rate'),
+          repeatRate: sql<number>`COALESCE(COUNT(DISTINCT o.buyer_id) * 100.0 / COUNT(o.id), 0)`.as('repeat_rate')
+        })
+        .from(marketplaceOrders o)
+        .leftJoin(marketplaceReviews r ON r.revieweeId = o.sellerId)
+        .where(eq(o.sellerId, walletAddress))
+        .groupBy(o.sellerId);
+
+      const metrics = salesData[0] || {
+        totalSales: 0,
+        totalOrders: 0,
+        averageRating: 0,
+        responseTime: 0,
+        disputeRate: 0,
+        returnRate: 0,
+        repeatRate: 0
+      };
+
+      // Get tier requirements
+      const db2 = databaseService.getDatabase();
+      const [requirements] = await db2
+        .select()
+        .from(seller_tier_requirements)
+        .where(eq(seller_tier_requirements.tier, seller.tier));
+
+      // Calculate progress
+      const requirementsWithStatus = requirements.map(req => ({
+        type: req.requirement_type,
+        current: metrics[this.getMetricField(req.requirement_type)] || 0,
+        required: parseFloat(req.required_value.toString()),
+        met: this.checkRequirementMet(req.requirement_type, metrics),
+        description: req.description
+      }));
+
+      const requirementsMet = requirementsWithStatus.filter(req => req.met).length;
+      const totalRequirements = requirementsWithStatus.length;
+      const progressPercentage = totalRequirements > 0 ? (requirementsMet / totalRequirements) * 100 : 0;
+
+      // Determine next tier
+      const tierOrder = ['bronze', 'silver', 'gold', ' platinum', 'diamond'];
+      const currentIndex = tierOrder.indexOf(seller.tier);
+      const nextTier = currentIndex < tierOrder.length - 1 ? tierOrder[currentIndex + 1] : null;
+
+      // Get tier benefits
+      const db3 = databaseService.getDatabase();
+      const [benefits] = await db3
+        .select()
+        .from(seller_tier_benefits)
+        .where(eq(seller_tier_benefits.tier, seller.tier));
+
+      return {
+        currentTier: seller.tier,
+        nextTier,
+        progressPercentage,
+        requirements: requirementsWithStatus,
+        benefits: benefits.map(benefit => ({
+          type: benefit.benefit_type,
+          description: benefit.description,
+          value: benefit.benefit_value
+        }))
+      };
+    } catch (error) {
+      safeLogger.error('Error calculating seller tier:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update seller tier based on current performance
+   */
+  async updateSellerTier(walletAddress: string, autoUpgrade: boolean = true): Promise<{
+    previousTier: string;
+    newTier: string;
+    requirementsMet: string[];
+    autoUpgraded: boolean;
+  }> {
+    try {
+      const db = databaseService.getDatabase();
+      if (!db) throw new Error('Database unavailable');
+
+      const tierCalculation = await this.calculateSellerTier(walletAddress);
+      
+      // Get current seller
+      const [currentSeller] = await db.select().from(sellers).where(eq(sellers.walletAddress, walletAddress));
+      
+      if (!currentSeller) {
+        throw new Error('Seller not found');
+      }
+
+      const previousTier = currentSeller.tier;
+      const newTier = tierCalculation.currentTier;
+      
+      // Only update if tier has changed
+      if (previousTier !== newTier) {
+        // Update seller tier
+        await db.update(sellers)
+          .set({ tier: newTier })
+          .where(eq(sellers.walletAddress, walletAddress));
+
+        // Create tier history record
+        await db.insert(seller_tier_history).values({
+          seller_wallet_address: walletAddress,
+          from_tier: previousTier,
+          to_tier: newTier,
+          upgrade_reason: `Performance metrics met: ${tierCalculation.requirements.filter(r => r.met).map(r => r.type).join(', ')}`,
+          auto_upgraded: autoUpgrade
+        });
+
+        // Update tier progression
+        const requirementsMet = tierCalculation.requirements.filter(req => req.met).map(req => req.type);
+        await this.updateTierProgression(walletAddress, newTier, requirementsMet);
+      }
+
+      return {
+        previousTier,
+        newTier,
+        requirementsMet,
+        autoUpgraded
+      };
+    } catch (error) {
+      safeLogger.error('Error updating seller tier:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update tier progression tracking
+   */
+  private async updateTierProgression(walletAddress: string, currentTier: string, requirementsMet: string[]): Promise<void> {
+    try {
+      const db = databaseService.getDatabase();
+      if (!db) throw new Error('Database unavailable');
+
+      // Get total requirements for current tier
+      const [requirements] = await db
+        .select()
+        .from(seller_tier_requirements)
+        .where(eq(seller_tier_requirements.tier, currentTier));
+
+      const totalRequirements = requirements.length;
+      const requirementsMetCount = requirementsMet.length;
+      const progressPercentage = totalRequirements > 0 ? (requirementsMetCount / totalRequirements) * 100 : 0;
+
+      // Determine next eligible tier
+      const tierOrder = ['bronze', 'silver', 'gold', 'platinum', 'diamond'];
+      const currentIndex = tierOrder.indexOf(currentTier);
+      const nextEligibleTier = currentIndex < tierOrder.length - 1 ? tierOrder[currentIndex + 1] : null;
+
+      // Set next evaluation time (daily for now, weekly for higher tiers)
+      const nextEvaluationAt = new Date();
+      if (['gold', 'platinum', 'diamond'].includes(currentTier)) {
+        nextEvaluationAt.setDate(nextEvaluationAt.getDate() + 7); // Weekly for higher tiers
+      } else {
+        nextEvaluationAt.setDate(nextEvaluationAt.getDate() + 1); // Daily for lower tiers
+      }
+
+      // Update or create tier progression record
+      const existingProgression = await db
+        .select()
+        .from(seller_tier_progression)
+        .where(eq(seller_tier_progression.seller_wallet_address, walletAddress));
+
+      if (existingProgression.length > 0) {
+        await db.update(seller_tier_progression)
+          .set({
+            current_tier: currentTier,
+            next_eligible_tier: nextEligibleTier,
+            progress_percentage: progressPercentage,
+            requirements_met: requirementsMetCount,
+            total_requirements: totalRequirements,
+            last_evaluation_at: new Date(),
+            next_evaluation_at: nextEvaluationAt,
+            updated_at: new Date()
+          })
+          .where(eq(seller_tier_progression.seller_wallet_address, walletAddress));
+      } else {
+        await db.insert(seller_tier_progression)
+          .values({
+            seller_wallet_address: walletAddress,
+            current_tier: currentTier,
+            next_eligible_tier: nextEligibleTier,
+            progress_percentage: progressPercentage,
+            requirements_met: requirementsMetCount,
+            total_requirements: totalRequirements,
+            last_evaluation_at: new Date(),
+            next_evaluation_at: nextEvaluation_at,
+            created_at: new Date(),
+            updated_at: new Date()
+          });
+      }
+    } catch (error) {
+      safeLogger.error('Error updating tier progression:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get seller tier progression history
+   */
+  async getTierHistory(walletAddress: string, limit: number = 50): Promise<Array<{
+    from_tier: string;
+    to_tier: string;
+    upgrade_reason: string;
+    auto_upgraded: boolean;
+    created_at: Date;
+  }>> {
+    try {
+      const db = databaseService.getDatabase();
+      if (!db) throw new Error('Database unavailable');
+
+      const history = await db
+        .select()
+        .from(seller_tier_history)
+        .where(eq(seller_tier_history.seller_wallet_address, walletAddress))
+        .orderBy(desc(seller_tier_history.created_at))
+        .limit(limit);
+
+      return history.map(h => ({
+        from_tier: h.from_tier,
+        to_tier: h.to_tier,
+        upgrade_reason: h.upgrade_reason,
+        auto_upgraded: h.auto_upgraded,
+        created_at: h.created_at
+      }));
+    } catch (error) {
+      safeLogger.error('Error getting tier history:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get tier requirements for a specific tier
+   */
+  async getTierRequirements(tier: string): Promise<Array<{
+    type: string;
+    required: number;
+    current: number;
+    met: boolean;
+    description: string;
+  }>> {
+    try {
+      const db = databaseService.getDatabase();
+      if (!db) throw new Error('Database unavailable');
+
+      const requirements = await db
+        .select()
+        .from(seller_tier_requirements)
+        .where(eq(seller_tier_requirements.tier, tier));
+
+      return requirements.map(req => ({
+        type: req.requirement_type,
+        required: parseFloat(req.required_value.toString()),
+        current: parseFloat(req.current_value.toString()),
+        met: req.is_met,
+        description: req.description
+      }));
+    } catch (error) {
+      safeLogger.error('Error getting tier requirements:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get tier benefits for a specific tier
+   */
+  async getTierBenefits(tier: string): Promise<Array<{
+    type: string;
+    description: string;
+    value: string;
+  }>> {
+    try {
+      const db = databaseService.getDatabase();
+      if (!db) throw new Error('Database unavailable');
+
+      const benefits = await db
+        .select()
+        .from(seller_tier_benefits)
+        .where(eq(seller_tier_benefits.tier, tier));
+
+      return benefits.map(benefit => ({
+        type: benefit.benefit_type,
+        description: benefit.description,
+        value: benefit.benefit_value
+      }));
+    } catch (error) {
+      safeLogger.error('Error getting tier benefits:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all available tiers with their requirements and benefits
+   */
+  async getAllTiers(): Promise<Array<{
+    tier: string;
+    requirements: Array<{
+      type: string;
+      required: number;
+      description: string;
+    }>;
+    benefits: Array<{
+      type: string;
+      description: string;
+      value: string;
+    }>;
+  }>> {
+    try {
+      const db = databaseService.getDatabase();
+      if (!db) throw new Error('Database unavailable');
+
+      const tiers = ['bronze', 'silver', 'gold', 'platinum', 'diamond'];
+      
+      const tierData = await Promise.all(
+        tiers.map(async (tier) => ({
+          tier,
+          requirements: await this.getTierRequirements(tier),
+          benefits: await this.getTierBenefits(tier)
+        }))
+      );
+
+      return tierData;
+    } catch (error) {
+      safeLogger.error('Error getting all tiers:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Helper function to map requirement type to metric field
+   */
+  private getMetricField(requirementType: string): keyof any {
+    const mapping: Record<string, keyof any> = {
+      'total_sales': 'totalSales',
+      'rating': 'averageRating', 
+      'response_time': 'responseTime',
+      'return_rate': 'returnRate',
+      'dispute_rate': 'disputeRate',
+      'repeat_rate': 'repeatRate'
+    };
+    return mapping[requirementType] || 'totalSales';
+  }
+
+  /**
+   * Helper function to check if requirement is met
+   */
+  private checkRequirementMet(requirementType: string, metrics: any): boolean {
+    const metricField = this.getMetricField(requirementType);
+    const metricValue = metrics[metricField] || 0;
+    const requiredValue = this.getRequiredValue(requirementType);
+    
+    switch (requirementType) {
+      case 'response_time':
+        return metricValue <= requiredValue;
+      case 'return_rate':
+      case 'dispute_rate':
+        return metricValue <= requiredValue;
+      case 'repeat_rate':
+        return metricValue >= requiredValue;
+      default:
+        return metricValue >= requiredValue;
+    }
+  }
+
+  /**
+   * Helper function to get required value for requirement type
+   */
+  private getRequiredValue(requirementType: string): number {
+    const mapping: Record<string, number> = {
+      'total_sales': 0,
+      'rating': 0,
+      'response_time': 0,
+      'return_rate': 100,
+      'dispute_rate': 100,
+      'repeat_rate': 0
+    };
+    return mapping[requirementType] || 0;
   }
 }
 

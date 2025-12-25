@@ -150,6 +150,15 @@ const DocsPage: NextPage = () => {
           tags: ['reputation', 'trust']
         },
         {
+          id: 'tier-system',
+          title: 'Tier System Guide',
+          description: 'Learn about the LinkDAO seller tier system and how to progress through different tiers',
+          path: '/docs/tier-system',
+          readTime: '12 min',
+          lastUpdated: '2025-12-24',
+          tags: ['tiers', 'seller', 'progression']
+        },
+        {
           id: 'escrow-guide',
           title: 'Enhanced Escrow Guide',
           description: 'Complete guide to using LinkDAO\'s enhanced escrow system',

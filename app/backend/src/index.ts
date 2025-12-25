@@ -1050,6 +1050,14 @@ app.use('/api/cart', cartRoutes);
 // Checkout routes
 app.use('/api/checkout', checkoutRoutes);
 
+// Gold purchase routes
+import goldPurchaseRoutes from './routes/goldPurchaseRoutes';
+app.use('/api/gold', goldPurchaseRoutes);
+
+// Gold webhook routes
+import goldWebhookRoutes from './routes/goldWebhookRoutes';
+app.use('/api/gold/webhooks', goldWebhookRoutes);
+
 // Token reaction routes
 app.use('/api/reactions', tokenReactionRoutes);
 

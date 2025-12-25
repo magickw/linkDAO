@@ -799,7 +799,7 @@ export const sellers = pgTable("sellers", {
   verificationLevels: text("verification_levels"), // JSON
   isOnline: boolean("is_online").default(false),
   lastSeen: timestamp("last_seen"),
-  tier: varchar("tier", { length: 32 }).default("basic"),
+  tier: varchar("tier", { length: 32 }).default("bronze"),
   // ENS support columns (nullable - ENS is optional)
   ensHandle: varchar("ens_handle", { length: 255 }),
   ensVerified: boolean("ens_verified").default(false),
@@ -5959,5 +5959,102 @@ export const offlineActions = pgTable("offline_actions", {
 }, (t) => ({
   userIdx: index("idx_offline_actions_user").on(t.userAddress),
   statusIdx: index("idx_offline_actions_status").on(t.status),
+}));
+
+// Gold balance tracking
+export const userGoldBalance = pgTable("user_gold_balance", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: varchar("user_id", { length: 66 }).notNull().unique(),
+  balance: integer("balance").default(0).notNull(),
+  totalPurchased: integer("total_purchased").default(0).notNull(),
+  totalSpent: integer("total_spent").default(0).notNull(),
+  lastPurchaseAt: timestamp("last_purchase_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  userIdx: index("idx_user_gold_balance_user").on(t.userId),
+}));
+
+// Gold transaction history
+export const goldTransaction = pgTable("gold_transaction", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: varchar("user_id", { length: 66 }).notNull(),
+  amount: integer("amount").notNull(),
+  type: varchar("type", { length: 20 }).notNull(), // 'purchase', 'spend', 'refund'
+  price: decimal("price", { precision: 10, scale: 2 }), // Price in USD for purchases
+  paymentMethod: varchar("payment_method", { length: 50 }), // 'stripe', 'crypto', etc.
+  paymentIntentId: varchar("payment_intent_id", { length: 255 }),
+  referenceId: varchar("reference_id", { length: 255 }), // Related post/comment ID for spends
+  status: varchar("status", { length: 20 }).default("completed").notNull(),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  userIdx: index("idx_gold_transaction_user").on(t.userId),
+  typeIdx: index("idx_gold_transaction_type").on(t.type),
+  statusIdx: index("idx_gold_transaction_status").on(t.status),
+  createdAtIdx: index("idx_gold_transaction_created").on(t.createdAt),
+}));
+
+// Seller tier requirements table
+export const sellerTierRequirements = pgTable("seller_tier_requirements", {
+  id: serial("id").primaryKey(),
+  tier: varchar("tier", { length: 20 }).notNull(),
+  requirementType: varchar("requirement_type", { length: 50 }).notNull(),
+  requiredValue: decimal("required_value", { precision: 20, scale: 8 }).notNull(),
+  currentValue: decimal("current_value", { precision: 20, scale: 8 }).default("0"),
+  description: text("description"),
+  isMet: boolean("is_met").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  tierIdx: index("idx_seller_tier_requirements_tier").on(t.tier),
+  requirementTypeIdx: index("idx_seller_tier_requirements_type").on(t.requirementType),
+}));
+
+// Seller tier benefits table
+export const sellerTierBenefits = pgTable("seller_tier_benefits", {
+  id: serial("id").primaryKey(),
+  tier: varchar("tier", { length: 20 }).notNull(),
+  benefitType: varchar("benefit_type", { length: 50 }).notNull(),
+  benefitValue: text("benefit_value").notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  tierIdx: index("idx_seller_tier_benefits_tier").on(t.tier),
+  benefitTypeIdx: index("idx_seller_tier_benefits_type").on(t.benefitType),
+}));
+
+// Seller tier progression tracking table
+export const sellerTierProgression = pgTable("seller_tier_progression", {
+  id: serial("id").primaryKey(),
+  sellerWalletAddress: varchar("seller_wallet_address", { length: 66 }).notNull(),
+  currentTier: varchar("current_tier", { length: 20 }).notNull(),
+  nextEligibleTier: varchar("next_eligible_tier", { length: 20 }),
+  progressPercentage: decimal("progress_percentage", { precision: 5, scale: 2 }).default("0"),
+  requirementsMet: integer("requirements_met").default(0),
+  totalRequirements: integer("total_requirements").default(0),
+  lastEvaluationAt: timestamp("last_evaluation_at").defaultNow(),
+  nextEvaluationAt: timestamp("next_evaluation_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  sellerWalletAddressIdx: index("idx_seller_tier_progression_seller").on(t.sellerWalletAddress),
+  currentTierIdx: index("idx_seller_tier_progression_current_tier").on(t.currentTier),
+  nextEvaluationAtIdx: index("idx_seller_tier_progression_next_evaluation").on(t.nextEvaluationAt),
+}));
+
+// Seller tier history table
+export const sellerTierHistory = pgTable("seller_tier_history", {
+  id: serial("id").primaryKey(),
+  sellerWalletAddress: varchar("seller_wallet_address", { length: 66 }).notNull(),
+  fromTier: varchar("from_tier", { length: 20 }).notNull(),
+  toTier: varchar("to_tier", { length: 20 }).notNull(),
+  upgradeReason: text("upgrade_reason"),
+  autoUpgraded: boolean("auto_upgraded").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  sellerWalletAddressIdx: index("idx_seller_tier_history_seller").on(t.sellerWalletAddress),
+  createdAtIdx: index("idx_seller_tier_history_created_at").on(t.createdAt),
 }));
 

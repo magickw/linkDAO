@@ -1,4 +1,5 @@
 import { pgTable, serial, varchar, text, timestamp, integer, uuid, primaryKey, index, boolean, numeric, foreignKey, jsonb } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { users } from "./schema";
 
 // Marketplace roles (only required for buyers/sellers)
@@ -118,7 +119,7 @@ export const marketplaceVerifications = pgTable("marketplace_verifications", {
 export const sellerVerifications = pgTable("seller_verifications", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
-  currentTier: varchar("current_tier", { length: 20 }).default("unverified").notNull(), // 'unverified' | 'standard' | 'verified' | 'premium'
+  currentTier: varchar("current_tier", { length: 20 }).default("bronze").notNull(), // 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond'
   status: varchar("status", {
     enum: ['pending', 'verified', 'rejected', 'expired']
   }).notNull().default('pending'),
@@ -297,4 +298,69 @@ export const userChallengeProgress = pgTable("user_challenge_progress", {
   userIdx: index("user_challenge_progress_user_idx").on(table.userId),
   isCompletedIdx: index("user_challenge_progress_is_completed_idx").on(table.isCompleted),
   rewardClaimedIdx: index("user_challenge_progress_reward_claimed_idx").on(table.rewardClaimed),
+}));
+
+// Seller Tier System Tables
+
+// Seller tier requirements for tracking tier progression
+export const seller_tier_requirements = pgTable("seller_tier_requirements", {
+  id: serial("id").primaryKey(),
+  tier: varchar("tier", { length: 20 }).notNull().check(sql`tier IN ('bronze', 'silver', 'gold', 'platinum', 'diamond')`),
+  requirement_type: varchar("requirement_type", { length: 50 }).notNull(), // 'total_sales', 'rating', 'response_time', 'return_rate', 'dispute_rate', 'repeat_rate'
+  required_value: numeric("required_value", { precision: 20, scale: 8 }).notNull(),
+  current_value: numeric("current_value", { precision: 20, scale: 8 }).default("0"),
+  description: text("description"),
+  is_met: boolean("is_met").default(false),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  tierIdx: index("seller_tier_requirements_tier_idx").on(table.tier),
+  typeIdx: index("seller_tier_requirements_type_idx").on(table.requirement_type),
+}));
+
+// Seller tier benefits
+export const seller_tier_benefits = pgTable("seller_tier_benefits", {
+  id: serial("id").primaryKey(),
+  tier: varchar("tier", { length: 20 }).notNull().check(sql`tier IN ('bronze', 'silver', 'gold', 'platinum', 'diamond')`),
+  benefit_type: varchar("benefit_type", { length: 50 }).notNull(), // 'commission_rate', 'withdrawal_limit', 'support_level', 'feature_access'
+  benefit_value: text("benefit_value").notNull(),
+  description: text("description"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  tierIdx: index("seller_tier_benefits_tier_idx").on(table.tier),
+  typeIdx: index("seller_tier_benefits_type_idx").on(table.benefit_type),
+}));
+
+// Seller tier progression tracking
+export const seller_tier_progression = pgTable("seller_tier_progression", {
+  id: serial("id").primaryKey(),
+  seller_wallet_address: varchar("seller_wallet_address", { length: 66 }).notNull(),
+  current_tier: varchar("current_tier", { length: 20 }).notNull().check(sql`current_tier IN ('bronze', 'silver', 'gold', 'platinum', 'diamond')`),
+  next_eligible_tier: varchar("next_eligible_tier", { length: 20 }),
+  progress_percentage: numeric("progress_percentage", { precision: 5, scale: 2 }).default("0"),
+  requirements_met: integer("requirements_met").default(0),
+  total_requirements: integer("total_requirements").default(0),
+  last_evaluation_at: timestamp("last_evaluation_at").defaultNow(),
+  next_evaluation_at: timestamp("next_evaluation_at"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  sellerIdx: index("seller_tier_progression_seller_idx").on(table.seller_wallet_address),
+  currentTierIdx: index("seller_tier_progression_current_tier_idx").on(table.current_tier),
+  nextEvaluationIdx: index("seller_tier_progression_next_evaluation_idx").on(table.next_evaluation_at),
+}));
+
+// Seller tier history for tracking changes
+export const seller_tier_history = pgTable("seller_tier_history", {
+  id: serial("id").primaryKey(),
+  seller_wallet_address: varchar("seller_wallet_address", { length: 66 }).notNull(),
+  from_tier: varchar("from_tier", { length: 20 }).notNull().check(sql`from_tier IN ('bronze', 'silver', 'gold', 'platinum', 'diamond')`),
+  to_tier: varchar("to_tier", { length: 20 }).notNull().check(sql`to_tier IN ('bronze', 'silver', 'gold', 'platinum', 'diamond')`),
+  upgrade_reason: text("upgrade_reason"),
+  auto_upgraded: boolean("auto_upgraded").default(false),
+  created_at: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  sellerIdx: index("seller_tier_history_seller_idx").on(table.seller_wallet_address),
+  createdAtIdx: index("seller_tier_history_created_at_idx").on(table.created_at),
 }));

@@ -1,6 +1,17 @@
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
-import { sellers, products, orders, users } from '../db/schema';
+import { 
+  sellers, 
+  products, 
+  orders, 
+  users,
+  seller_tier_requirements,
+  seller_tier_benefits,
+  seller_tier_progression,
+  seller_tier_history,
+  marketplaceOrders,
+  marketplaceReviews
+} from '../db/schema';
 import { eq, sql, and, gte, lte, desc, asc, count, sum, avg, isNotNull } from 'drizzle-orm';
 import { Redis } from 'ioredis';
 
@@ -781,6 +792,467 @@ export class SellerAnalyticsService {
       criticalIssues: bottlenecks.bottlenecks.filter(b => b.severity === 'critical').length,
       improvementOpportunities: insights?.insights.filter(i => i.type === 'opportunity').length || 0
     };
+  }
+
+  // Tier System Analytics Methods
+
+  /**
+   * Get comprehensive tier analytics for a seller
+   */
+  async getTierAnalytics(walletAddress: string): Promise<{
+    currentTier: string;
+    tierProgression: {
+      currentTier: string;
+      nextTier: string | null;
+      progressPercentage: number;
+      requirementsMet: number;
+      totalRequirements: number;
+      estimatedTimeToNextTier: string;
+    };
+    performanceMetrics: {
+      totalSales: number;
+      averageRating: number;
+      responseTime: number;
+      returnRate: number;
+      disputeRate: number;
+      repeatRate: number;
+    };
+    tierHistory: Array<{
+      fromTier: string;
+      toTier: string;
+      date: Date;
+      reason: string;
+      autoUpgraded: boolean;
+    }>;
+    requirementsStatus: Array<{
+      type: string;
+      current: number;
+      required: number;
+      met: boolean;
+      description: string;
+      trend: 'improving' | 'declining' | 'stable';
+    }>;
+    tierComparison: {
+      currentTierBenefits: Array<{
+        type: string;
+        description: string;
+        value: string;
+      }>;
+      nextTierBenefits: Array<{
+        type: string;
+        description: string;
+        value: string;
+      }>;
+    };
+  }> {
+    try {
+      const db = databaseService.getDatabase();
+      if (!db) throw new Error('Database unavailable');
+
+      // Get current seller info
+      const [seller] = await db.select().from(sellers).where(eq(sellers.walletAddress, walletAddress));
+      
+      if (!seller) {
+        throw new Error('Seller not found');
+      }
+
+      // Get tier progression data
+      const [progression] = await db
+        .select()
+        .from(seller_tier_progression)
+        .where(eq(seller_tier_progression.seller_wallet_address, walletAddress));
+
+      // Get tier history
+      const history = await db
+        .select()
+        .from(seller_tier_history)
+        .where(eq(seller_tier_history.seller_wallet_address, walletAddress))
+        .orderBy(desc(seller_tier_history.created_at))
+        .limit(10);
+
+      // Get requirements for current tier
+      const requirements = await db
+        .select()
+        .from(seller_tier_requirements)
+        .where(eq(seller_tier_requirements.tier, seller.tier));
+
+      // Get benefits for current and next tier
+      const [currentBenefits, nextBenefits] = await Promise.all([
+        db.select().from(seller_tier_benefits).where(eq(seller_tier_benefits.tier, seller.tier)),
+        progression?.next_eligible_tier 
+          ? db.select().from(seller_tier_benefits).where(eq(seller_tier_benefits.tier, progression.next_eligible_tier))
+          : Promise.resolve([])
+      ]);
+
+      // Calculate performance metrics
+      const performanceMetrics = await this.calculateTierMetrics(walletAddress);
+
+      // Calculate estimated time to next tier
+      const estimatedTimeToNextTier = this.calculateEstimatedTimeToNextTier(
+        seller.tier,
+        progression?.progress_percentage || 0,
+        performanceMetrics
+      );
+
+      // Get requirements status with trends
+      const requirementsStatus = await this.getRequirementsStatusWithTrends(walletAddress, seller.tier);
+
+      return {
+        currentTier: seller.tier,
+        tierProgression: {
+          currentTier: seller.tier,
+          nextTier: progression?.next_eligible_tier || null,
+          progressPercentage: progression?.progress_percentage || 0,
+          requirementsMet: progression?.requirements_met || 0,
+          totalRequirements: progression?.total_requirements || requirements.length,
+          estimatedTimeToNextTier
+        },
+        performanceMetrics,
+        tierHistory: history.map(h => ({
+          fromTier: h.from_tier,
+          toTier: h.to_tier,
+          date: h.created_at,
+          reason: h.upgrade_reason,
+          autoUpgraded: h.auto_upgraded
+        })),
+        requirementsStatus,
+        tierComparison: {
+          currentTierBenefits: currentBenefits.map(b => ({
+            type: b.benefit_type,
+            description: b.description,
+            value: b.benefit_value
+          })),
+          nextTierBenefits: nextBenefits.map(b => ({
+            type: b.benefit_type,
+            description: b.description,
+            value: b.benefit_value
+          }))
+        }
+      };
+    } catch (error) {
+      safeLogger.error('Error getting tier analytics:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate performance metrics for tier evaluation
+   */
+  private async calculateTierMetrics(walletAddress: string): Promise<{
+    totalSales: number;
+    averageRating: number;
+    responseTime: number;
+    returnRate: number;
+    disputeRate: number;
+    repeatRate: number;
+  }> {
+    try {
+      const db = databaseService.getDatabase();
+      if (!db) throw new Error('Database unavailable');
+
+      // Get metrics from orders and reviews
+      const [metrics] = await db
+        .select({
+          totalSales: sql<number>`SUM(CASE WHEN o.status = 'completed' THEN o.amount ELSE 0 END)`.as('total_sales'),
+          totalOrders: sql<number>`COUNT(CASE WHEN o.status = 'completed' THEN 1 ELSE 0 END)`.as('total_orders'),
+          averageRating: sql<number>`COALESCE(AVG(r.rating), 0)`.as('average_rating'),
+          responseTime: sql<number>`COALESCE(AVG(EXTRACT(EPOCH FROM (o.created_at))), 0)`.as('response_time'),
+          disputeRate: sql<number>`COALESCE(COUNT(CASE WHEN o.status = 'disputed' THEN 1 ELSE 0 END) * 100.0 / COUNT(o.id), 0)`.as('dispute_rate'),
+          returnRate: sql<number>`COALESCE(COUNT(CASE WHEN o.status = 'completed' AND o.returned = true THEN 1 ELSE 0 END) * 100.0 / COUNT(o.id), 0)`.as('return_rate'),
+          repeatRate: sql<number>`COALESCE(COUNT(DISTINCT o.buyer_id) * 100.0 / COUNT(o.id), 0)`.as('repeat_rate')
+        })
+        .from(marketplaceOrders o)
+        .leftJoin(marketplaceReviews r ON r.revieweeId = o.sellerId)
+        .where(eq(o.sellerId, walletAddress))
+        .groupBy(o.sellerId);
+
+      return metrics[0] || {
+        totalSales: 0,
+        totalOrders: 0,
+        averageRating: 0,
+        responseTime: 0,
+        disputeRate: 0,
+        returnRate: 0,
+        repeatRate: 0
+      };
+    } catch (error) {
+      safeLogger.error('Error calculating tier metrics:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate estimated time to reach next tier
+   */
+  private calculateEstimatedTimeToNextTier(
+    currentTier: string,
+    progressPercentage: number,
+    metrics: any
+  ): string {
+    if (progressPercentage >= 100) {
+      return 'Ready for upgrade';
+    }
+
+    // Simple estimation based on current progress and tier
+    const tierOrder = ['bronze', 'silver', 'gold', 'platinum', 'diamond'];
+    const currentIndex = tierOrder.indexOf(currentTier);
+    
+    if (currentIndex >= tierOrder.length - 1) {
+      return 'Maximum tier reached';
+    }
+
+    // Estimate based on sales progress (simplified)
+    const salesProgress = metrics.totalSales / this.getNextTierSalesRequirement(currentTier);
+    const estimatedMonths = Math.ceil((1 - salesProgress) * 12 / Math.max(salesProgress, 0.1));
+
+    if (estimatedMonths <= 1) {
+      return 'Less than 1 month';
+    } else if (estimatedMonths <= 3) {
+      return `${estimatedMonths} months`;
+    } else {
+      return `${estimatedMonths}+ months`;
+    }
+  }
+
+  /**
+   * Get sales requirement for next tier
+   */
+  private getNextTierSalesRequirement(currentTier: string): number {
+    const requirements: Record<string, number> = {
+      'bronze': 5000,    // Need $5,000 for silver
+      'silver': 25000,   // Need $25,000 for gold
+      'gold': 100000,    // Need $100,000 for platinum
+      'platinum': 500000, // Need $500,000 for diamond
+      'diamond': 500000  // Maximum tier
+    };
+    return requirements[currentTier] || 5000;
+  }
+
+  /**
+   * Get requirements status with trend analysis
+   */
+  private async getRequirementsStatusWithTrends(walletAddress: string, tier: string): Promise<Array<{
+    type: string;
+    current: number;
+    required: number;
+    met: boolean;
+    description: string;
+    trend: 'improving' | 'declining' | 'stable';
+  }>> {
+    try {
+      const db = databaseService.getDatabase();
+      if (!db) throw new Error('Database unavailable');
+
+      // Get current requirements
+      const requirements = await db
+        .select()
+        .from(seller_tier_requirements)
+        .where(eq(seller_tier_requirements.tier, tier));
+
+      // Get current metrics
+      const currentMetrics = await this.calculateTierMetrics(walletAddress);
+
+      // Get historical metrics for trend analysis (last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const [historicalMetrics] = await db
+        .select({
+          totalSales: sql<number>`SUM(CASE WHEN o.status = 'completed' AND o.created_at >= ${thirtyDaysAgo} THEN o.amount ELSE 0 END)`.as('total_sales'),
+          averageRating: sql<number>`COALESCE(AVG(CASE WHEN r.created_at >= ${thirtyDaysAgo} THEN r.rating ELSE NULL END), 0)`.as('average_rating'),
+          responseTime: sql<number>`COALESCE(AVG(CASE WHEN o.created_at >= ${thirtyDaysAgo} THEN EXTRACT(EPOCH FROM (o.created_at)) ELSE NULL END), 0)`.as('response_time'),
+          returnRate: sql<number>`COALESCE(COUNT(CASE WHEN o.status = 'completed' AND o.returned = true AND o.created_at >= ${thirtyDaysAgo} THEN 1 ELSE 0 END) * 100.0 / COUNT(CASE WHEN o.created_at >= ${thirtyDaysAgo} THEN 1 ELSE NULL END), 0)`.as('return_rate'),
+          disputeRate: sql<number>`COALESCE(COUNT(CASE WHEN o.status = 'disputed' AND o.created_at >= ${thirtyDaysAgo} THEN 1 ELSE 0 END) * 100.0 / COUNT(CASE WHEN o.created_at >= ${thirtyDaysAgo} THEN 1 ELSE NULL END), 0)`.as('dispute_rate'),
+          repeatRate: sql<number>`COALESCE(COUNT(DISTINCT CASE WHEN o.created_at >= ${thirtyDaysAgo} THEN o.buyer_id ELSE NULL END) * 100.0 / COUNT(CASE WHEN o.created_at >= ${thirtyDaysAgo} THEN 1 ELSE NULL END), 0)`.as('repeat_rate')
+        })
+        .from(marketplaceOrders o)
+        .leftJoin(marketplaceReviews r ON r.revieweeId = o.sellerId)
+        .where(eq(o.sellerId, walletAddress))
+        .groupBy(o.sellerId);
+
+      return requirements.map(req => {
+        const metricField = this.getMetricField(req.requirement_type);
+        const currentValue = currentMetrics[metricField] || 0;
+        const requiredValue = parseFloat(req.required_value.toString());
+        const met = this.checkRequirementMet(req.requirement_type, currentMetrics);
+        
+        // Calculate trend (simplified)
+        const trend = this.calculateTrend(
+          currentValue,
+          historicalMetrics[0]?.[metricField] || 0,
+          req.requirement_type
+        );
+
+        return {
+          type: req.requirement_type,
+          current: currentValue,
+          required: requiredValue,
+          met,
+          description: req.description,
+          trend
+        };
+      });
+    } catch (error) {
+      safeLogger.error('Error getting requirements status with trends:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate trend for a metric
+   */
+  private calculateTrend(current: number, historical: number, requirementType: string): 'improving' | 'declining' | 'stable' {
+    const threshold = 0.05; // 5% threshold for considering a change significant
+    const ratio = historical > 0 ? (current - historical) / historical : 0;
+
+    switch (requirementType) {
+      case 'response_time':
+      case 'return_rate':
+      case 'dispute_rate':
+        // Lower is better for these metrics
+        if (ratio < -threshold) return 'improving';
+        if (ratio > threshold) return 'declining';
+        return 'stable';
+      default:
+        // Higher is better for these metrics
+        if (ratio > threshold) return 'improving';
+        if (ratio < -threshold) return 'declining';
+        return 'stable';
+    }
+  }
+
+  /**
+   * Get tier distribution analytics
+   */
+  async getTierDistributionAnalytics(): Promise<{
+    distribution: Array<{
+      tier: string;
+      count: number;
+      percentage: number;
+      averageSales: number;
+      averageRating: number;
+    }>;
+    totalSellers: number;
+    tierGrowth: Array<{
+      tier: string;
+      newSellersThisMonth: number;
+      upgradesThisMonth: number;
+    }>;
+  }> {
+    try {
+      const db = databaseService.getDatabase();
+      if (!db) throw new Error('Database unavailable');
+
+      // Get tier distribution
+      const distribution = await db
+        .select({
+          tier: sellers.tier,
+          count: sql<number>`COUNT(*)`.as('count'),
+          averageSales: sql<number>`COALESCE(AVG(sales.total_sales), 0)`.as('average_sales'),
+          averageRating: sql<number>`COALESCE(AVG(sales.avg_rating), 0)`.as('average_rating')
+        })
+        .from(sellers)
+        .leftJoin(
+          db.select({
+            seller_id: marketplaceOrders.sellerId,
+            total_sales: sql<number>`SUM(CASE WHEN o.status = 'completed' THEN o.amount ELSE 0 END)`.as('total_sales'),
+            avg_rating: sql<number>`COALESCE(AVG(r.rating), 0)`.as('avg_rating')
+          })
+            .from(marketplaceOrders)
+            .leftJoin(marketplaceReviews r ON r.revieweeId = marketplaceOrders.sellerId)
+            .groupBy(marketplaceOrders.sellerId)
+            .as('sales'),
+          eq(sellers.walletAddress, sql`sales.seller_id`)
+        )
+        .groupBy(sellers.tier)
+        .orderBy(sellers.tier);
+
+      const totalSellers = distribution.reduce((sum, d) => sum + d.count, 0);
+
+      // Get tier growth data
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+      const tierGrowth = await db
+        .select({
+          tier: sellers.tier,
+          newSellersThisMonth: sql<number>`COUNT(CASE WHEN s.created_at >= ${oneMonthAgo} THEN 1 ELSE 0 END)`.as('new_sellers'),
+          upgradesThisMonth: sql<number>`COUNT(CASE WHEN h.created_at >= ${oneMonthAgo} THEN 1 ELSE 0 END)`.as('upgrades')
+        })
+        .from(sellers)
+        .leftJoin(seller_tier_history h ON eq(h.seller_wallet_address, sellers.walletAddress))
+        .groupBy(sellers.tier);
+
+      return {
+        distribution: distribution.map(d => ({
+          tier: d.tier,
+          count: d.count,
+          percentage: totalSellers > 0 ? (d.count / totalSellers) * 100 : 0,
+          averageSales: d.averageSales,
+          averageRating: d.averageRating
+        })),
+        totalSellers,
+        tierGrowth: tierGrowth.map(g => ({
+          tier: g.tier,
+          newSellersThisMonth: g.newSellersThisMonth,
+          upgradesThisMonth: g.upgradesThisMonth
+        }))
+      };
+    } catch (error) {
+      safeLogger.error('Error getting tier distribution analytics:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Helper function to map requirement type to metric field
+   */
+  private getMetricField(requirementType: string): keyof any {
+    const mapping: Record<string, keyof any> = {
+      'total_sales': 'totalSales',
+      'rating': 'averageRating',
+      'response_time': 'responseTime',
+      'return_rate': 'returnRate',
+      'dispute_rate': 'disputeRate',
+      'repeat_rate': 'repeatRate'
+    };
+    return mapping[requirementType] || 'totalSales';
+  }
+
+  /**
+   * Helper function to check if requirement is met
+   */
+  private checkRequirementMet(requirementType: string, metrics: any): boolean {
+    const metricField = this.getMetricField(requirementType);
+    const metricValue = metrics[metricField] || 0;
+    const requiredValue = this.getRequiredValue(requirementType);
+    
+    switch (requirementType) {
+      case 'response_time':
+        return metricValue <= requiredValue;
+      case 'return_rate':
+      case 'dispute_rate':
+        return metricValue <= requiredValue;
+      case 'repeat_rate':
+        return metricValue >= requiredValue;
+      default:
+        return metricValue >= requiredValue;
+    }
+  }
+
+  /**
+   * Helper function to get required value for requirement type
+   */
+  private getRequiredValue(requirementType: string): number {
+    const mapping: Record<string, number> = {
+      'total_sales': 0,
+      'rating': 0,
+      'response_time': 0,
+      'return_rate': 100,
+      'dispute_rate': 100,
+      'repeat_rate': 0
+    };
+    return mapping[requirementType] || 0;
   }
 }
 
