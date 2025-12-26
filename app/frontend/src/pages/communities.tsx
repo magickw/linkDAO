@@ -911,13 +911,14 @@ const CommunitiesPage: React.FC = () => {
               </div>
 
               {/* Pinned Posts Section */}
-              {joinedCommunities.length > 0 && communityList.length > 0 && (
-                <Suspense fallback={<div className="space-y-4 mb-4">
-                  <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-                  <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-                </div>
-              </Suspense>
-              <PinnedPostsSection
+              {joinedCommunities.length > 0 && communityList.length > 0 && (
+                <>
+                <Suspense fallback={<div className="space-y-4 mb-4">
+                  <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                  <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                </div>
+                </Suspense>
+                <PinnedPostsSection
                     communityId={joinedCommunities[0]} // Show pinned posts for the first joined community (simplified for now)
                     community={communityList.find(c => c.id === joinedCommunities[0]) || communityList[0]}
                     userMembership={{
@@ -938,9 +939,10 @@ const CommunitiesPage: React.FC = () => {
                     }}
                     onReaction={handleTokenReaction}
                     onTip={async (postId, amount) => handleTip(postId, parseFloat(amount))}
-                  />
-                </Suspense>
-              )}
+                  />
+              </Suspense>
+              </>
+              )}
 
               {/* Create Post Card - Reddit Style */}
               <div className="bg-white dark:bg-gray-800 rounded-none lg:rounded-b-lg shadow-sm border-x-0 lg:border-x border-t-0 border-gray-200 dark:border-gray-700 mb-0 lg:mb-4">
