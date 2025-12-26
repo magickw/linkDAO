@@ -433,7 +433,7 @@ const CommunitiesPage: React.FC = () => {
     // The feed service will handle authentication internally
     console.log('[CommunitiesPage] useEffect triggered, fetching posts...');
     fetchPosts(1, false);
-  }, [sortBy, timeFilter, address, isAuthLoading]);
+  }, [sortBy, timeFilter, address]);
 
   // Store fetchPosts in a ref to avoid dependency issues
   const fetchPostsRef = useRef(fetchPosts);

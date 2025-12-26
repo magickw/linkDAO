@@ -129,55 +129,55 @@ CREATE TABLE "digital_asset_purchases" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "digital_asset_reports" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"asset_id" uuid NOT NULL,
-	"reporter_id" uuid NOT NULL,
-	"reason" varchar(100) NOT NULL,
-	"description" text,
-	"status" varchar(20) DEFAULT 'pending',
-	"created_at" timestamp DEFAULT now()
-);
+-- CREATE TABLE "digital_asset_reports" (
+-- 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+-- 	"asset_id" uuid NOT NULL,
+-- 	"reporter_id" uuid NOT NULL,
+-- 	"reason" varchar(100) NOT NULL,
+-- 	"description" text,
+-- 	"status" varchar(20) DEFAULT 'pending',
+-- 	"created_at" timestamp DEFAULT now()
+-- );
 --> statement-breakpoint
-CREATE TABLE "digital_assets" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"owner_id" uuid NOT NULL,
-	"title" varchar(255) NOT NULL,
-	"description" text,
-	"file_type" varchar(50) NOT NULL,
-	"file_size" integer NOT NULL,
-	"encrypted_content_hash" text NOT NULL,
-	"preview_hash" text,
-	"metadata_hash" text NOT NULL,
-	"price" numeric(20, 8),
-	"currency" varchar(10) DEFAULT 'USD',
-	"license_type" varchar(50) NOT NULL,
-	"is_public" boolean DEFAULT false,
-	"download_count" integer DEFAULT 0,
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now()
-);
+-- CREATE TABLE "digital_assets" (
+-- 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+-- 	"owner_id" uuid NOT NULL,
+-- 	"title" varchar(255) NOT NULL,
+-- 	"description" text,
+-- 	"file_type" varchar(50) NOT NULL,
+-- 	"file_size" integer NOT NULL,
+-- 	"encrypted_content_hash" text NOT NULL,
+-- 	"preview_hash" text,
+-- 	"metadata_hash" text NOT NULL,
+-- 	"price" numeric(20, 8),
+-- 	"currency" varchar(10) DEFAULT 'USD',
+-- 	"license_type" varchar(50) NOT NULL,
+-- 	"is_public" boolean DEFAULT false,
+-- 	"download_count" integer DEFAULT 0,
+-- 	"created_at" timestamp DEFAULT now(),
+-- 	"updated_at" timestamp DEFAULT now()
+-- );
 --> statement-breakpoint
-CREATE TABLE "dmca_takedown_requests" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"asset_id" uuid NOT NULL,
-	"requester_id" uuid NOT NULL,
-	"reason" text NOT NULL,
-	"evidence" text,
-	"status" varchar(20) DEFAULT 'pending',
-	"reviewed_by" uuid,
-	"reviewed_at" timestamp,
-	"created_at" timestamp DEFAULT now()
-);
+-- CREATE TABLE "dmca_takedown_requests" (
+-- 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+-- 	"asset_id" uuid NOT NULL,
+-- 	"requester_id" uuid NOT NULL,
+-- 	"reason" text NOT NULL,
+-- 	"evidence" text,
+-- 	"status" varchar(20) DEFAULT 'pending',
+-- 	"reviewed_by" uuid,
+-- 	"reviewed_at" timestamp,
+-- 	"created_at" timestamp DEFAULT now()
+-- );
 --> statement-breakpoint
-CREATE TABLE "drm_keys" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"asset_id" uuid NOT NULL,
-	"user_id" uuid NOT NULL,
-	"encrypted_key" text NOT NULL,
-	"expires_at" timestamp,
-	"created_at" timestamp DEFAULT now()
-);
+-- CREATE TABLE "drm_keys" (
+-- 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+-- 	"asset_id" uuid NOT NULL,
+-- 	"user_id" uuid NOT NULL,
+-- 	"encrypted_key" text NOT NULL,
+-- 	"expires_at" timestamp,
+-- 	"created_at" timestamp DEFAULT now()
+-- );
 --> statement-breakpoint
 CREATE TABLE "milestone_payments" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
