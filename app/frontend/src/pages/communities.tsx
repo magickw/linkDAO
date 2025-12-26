@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { FixedSizeList as List } from 'react-window';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -996,68 +995,58 @@ const CommunitiesPage: React.FC = () => {
                 />
               )}
 
-              <div className="space-y-0">
+              <div className="space-y-4">
                 {filteredPosts.length > 0 ? (
-                  <List
-                    height={filteredPosts.length * 300} // Estimate height of each post
-                    itemCount={filteredPosts.length}
-                    itemSize={300} // Average height of a post card
-                    overscanCount={5} // Number of items to render outside visible area
-                  >
-                    {({ index, style }) => {
-                      const post = filteredPosts[index];
-                      
-                      // Defensive checks for post data
-                      if (!post || typeof post !== 'object') return null;
+                  filteredPosts.map((post, index) => {
+                    // Defensive checks for post data
+                    if (!post || typeof post !== 'object') return null;
 
-                      const postCommunityId = post.communityId || post.dao || '';
+                    const postCommunityId = post.communityId || post.dao || '';
 
-                      // Use embedded community data from the post (returned by getFollowedCommunitiesFeed)
-                      // Falls back to looking up from communityList if not embedded
-                      const embeddedCommunity = post.community;
-                      const foundCommunity = communityList.find(c => c.id === postCommunityId);
+                    // Use embedded community data from the post (returned by getFollowedCommunitiesFeed)
+                    // Falls back to looking up from communityList if not embedded
+                    const embeddedCommunity = post.community;
+                    const foundCommunity = communityList.find(c => c.id === postCommunityId);
 
-                      // Create a properly typed community object with all required fields
-                      const community: Community = foundCommunity || {
-                        id: embeddedCommunity?.id || postCommunityId || 'unknown',
-                        name: embeddedCommunity?.name || postCommunityId || 'Unknown Community',
-                        displayName: embeddedCommunity?.displayName || embeddedCommunity?.name || postCommunityId || 'Unknown Community',
-                        slug: embeddedCommunity?.slug || postCommunityId || 'unknown',
-                        avatar: embeddedCommunity?.avatar || undefined,
-                        description: '',
-                        rules: [],
-                        memberCount: 0,
-                        createdAt: new Date(),
-                        updatedAt: new Date(),
-                        isPublic: true,
-                        moderators: [],
-                        tags: [],
-                        category: 'General',
-                        settings: {
-                          allowedPostTypes: [],
-                          requireApproval: false,
-                          minimumReputation: 0,
-                          stakingRequirements: []
-                        }
-                      };
+                    // Create a properly typed community object with all required fields
+                    const community: Community = foundCommunity || {
+                      id: embeddedCommunity?.id || postCommunityId || 'unknown',
+                      name: embeddedCommunity?.name || postCommunityId || 'Unknown Community',
+                      displayName: embeddedCommunity?.displayName || embeddedCommunity?.name || postCommunityId || 'Unknown Community',
+                      slug: embeddedCommunity?.slug || postCommunityId || 'unknown',
+                      avatar: embeddedCommunity?.avatar || undefined,
+                      description: '',
+                      rules: [],
+                      memberCount: 0,
+                      createdAt: new Date(),
+                      updatedAt: new Date(),
+                      isPublic: true,
+                      moderators: [],
+                      tags: [],
+                      category: 'General',
+                      settings: {
+                        allowedPostTypes: [],
+                        requireApproval: false,
+                        minimumReputation: 0,
+                        stakingRequirements: []
+                      }
+                    };
 
-                      const postId = post.id || `post-${Math.random()}`;
+                    const postId = post.id || `post-${index}`;
 
-                      return (
-                        <div style={style}>
-                          <Web3SwipeGestureHandler
-                            key={postId}
-                            postId={postId}
-                            onUpvote={() => handleUpvote(postId)}
-                            onSave={() => handleSave(postId)}
-                            onTip={() => handleTip(postId)}
-                            onStake={() => handleStake(postId)}
-                            walletConnected={walletConnected}
-                            userBalance={userBalance}
-                          >
-                            <div>
-                              <Suspense fallback={<div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 animate-pulse">
-                                <div className="flex space-x-3">
+                    return (
+                      <Web3SwipeGestureHandler
+                        key={postId}
+                        postId={postId}
+                        onUpvote={() => handleUpvote(postId)}
+                        onSave={() => handleSave(postId)}
+                        onTip={() => handleTip(postId)}
+                        onStake={() => handleStake(postId)}
+                        walletConnected={walletConnected}
+                        userBalance={userBalance}
+                      >
+                        <Suspense fallback={<div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 animate-pulse">
+                          <div className="flex space-x-3">
                                   <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full" />
                                   <div className="flex-1 space-y-2">
                                     <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
@@ -1065,39 +1054,37 @@ const CommunitiesPage: React.FC = () => {
                                     <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded" />
                                   </div>
                                 </div>
-                              </div>}>
-                                <CommunityPostCardEnhanced
-                                  post={post}
-                                  community={community}
-                                  userMembership={joinedCommunities.includes(postCommunityId) ? {
-                                    id: `membership-${address}-${postCommunityId}`,
-                                    communityId: postCommunityId,
-                                    userId: address || '',
-                                    role: userAdminRoles[postCommunityId] ? 'admin' : 'member',
-                                    joinedAt: new Date(),
-                                    reputation: 0,
-                                    contributions: 0,
-                                    isActive: true,
-                                    lastActivityAt: new Date()
-                                  } : null}
-                                  onVote={(postId, voteType, stakeAmount) => handleVote(postId, voteType === 'upvote' ? 'up' : 'down', stakeAmount ? parseInt(stakeAmount) : 1)}
-                                  onReaction={async (postId, reactionType, amount) => {
-                                    // Handle reaction logic here
-                                    // Reaction
-                                  }}
-                                  onTip={async (postId, amount, token) => {
-                                    // Handle tip logic here
-                                    // Tip
-                                  }}
-                                  onComment={() => handleComment(postId)}
-                                />
-                              </Suspense>
-                            </div>
+                              </div>
+                            </div>}>
+                              <CommunityPostCardEnhanced
+                                post={post}
+                                community={community}
+                                userMembership={joinedCommunities.includes(postCommunityId) ? {
+                                  id: `membership-${address}-${postCommunityId}`,
+                                  communityId: postCommunityId,
+                                  userId: address || '',
+                                  role: userAdminRoles[postCommunityId] ? 'admin' : 'member',
+                                  joinedAt: new Date(),
+                                  reputation: 0,
+                                  contributions: 0,
+                                  isActive: true,
+                                  lastActivityAt: new Date()
+                                } : null}
+                                onVote={(postId, voteType, stakeAmount) => handleVote(postId, voteType === 'upvote' ? 'up' : 'down', stakeAmount ? parseInt(stakeAmount) : 1)}
+                                onReaction={async (postId, reactionType, amount) => {
+                                  // Handle reaction logic here
+                                  // Reaction
+                                }}
+                                onTip={async (postId, amount, token) => {
+                                  // Handle tip logic here
+                                  // Tip
+                                }}
+                                onComment={() => handleComment(postId)}
+                              />
+                            </Suspense>
                           </Web3SwipeGestureHandler>
-                        </div>
-                      );
-                    }}
-                  </List>
+                        );
+                      })
                 ) : null}
               </div>
 

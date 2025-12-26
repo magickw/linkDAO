@@ -16,7 +16,6 @@ import CommunityDeFiEmbed from '../CommunityDeFiEmbed';
 import WalletSnapshotEmbed from '../WalletSnapshotEmbed';
 import CommunityGovernance from '../CommunityGovernance';
 import PostInteractionBar from '../PostInteractionBar';
-import TokenReactionSystem from '../TokenReactionSystem/TokenReactionSystem';
 import OptimizedImage from '../OptimizedImage';
 import { motion } from 'framer-motion';
 import { ldaoTokenService } from '@/services/web3/ldaoTokenService';
@@ -717,16 +716,6 @@ function CommunityPostCardEnhanced({
                     </svg>
                     <span>{(post.views || post.viewCount || 0).toLocaleString()} views</span>
                   </div>
-                </div>
-
-                {/* Token Reaction System - Award this post */}
-                <div className="mb-4">
-                  <TokenReactionSystem
-                    postId={post.id}
-                    showAnalytics={true}
-                    userGoldBalance={0} // TODO: Fetch user's gold balance
-                    awardsToUnlockLeaderboard={5}
-                  />
                 </div>
 
                 <PostInteractionBar
