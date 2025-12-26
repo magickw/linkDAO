@@ -915,8 +915,9 @@ const CommunitiesPage: React.FC = () => {
                 <Suspense fallback={<div className="space-y-4 mb-4">
                   <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
                   <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-                </div>}>
-                  <PinnedPostsSection
+                </div>
+              </Suspense>
+              <PinnedPostsSection
                     communityId={joinedCommunities[0]} // Show pinned posts for the first joined community (simplified for now)
                     community={communityList.find(c => c.id === joinedCommunities[0]) || communityList[0]}
                     userMembership={{
@@ -1055,8 +1056,9 @@ const CommunitiesPage: React.FC = () => {
                                   </div>
                                 </div>
                               </div>
-                            </div>}>
-                              <CommunityPostCardEnhanced
+                            </div>
+                          </Suspense>
+                          <CommunityPostCardEnhanced
                                 post={post}
                                 community={community}
                                 userMembership={joinedCommunities.includes(postCommunityId) ? {
@@ -1116,8 +1118,9 @@ const CommunitiesPage: React.FC = () => {
                   <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-3"></div>
                   <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-2"></div>
                   <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
-                </div>}>
-                  <EnhancedTokenPriceWidget
+                </div>
+              </Suspense>
+              <EnhancedTokenPriceWidget
                     tokenAddress="0xc9F690B45e33ca909bB9ab97836091673232611B"
                     showBuySellButtons={true}
                     compact={false}
@@ -1132,8 +1135,9 @@ const CommunitiesPage: React.FC = () => {
                     <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
                     <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
                   </div>
-                </div>}>
-                  <QuestsWidget
+                </div>
+              </Suspense>
+              <QuestsWidget
                     userAddress={address}
                     compact={false}
                   />
@@ -1148,8 +1152,9 @@ const CommunitiesPage: React.FC = () => {
                   <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-3"></div>
                   <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-2"></div>
                   <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
-                </div>}>
-                  <TreasuryWidget
+                </div>
+              </Suspense>
+              <TreasuryWidget
                     treasuryAddress="0x074E3874CA62F8cB9be6DDCD23235d0Bb5a8A0b5"
                     compact={false}
                   />
