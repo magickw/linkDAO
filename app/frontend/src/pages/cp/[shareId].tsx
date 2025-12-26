@@ -51,8 +51,8 @@ export default function CommunityPostSharePage() {
                 console.log(`[CommunityPostSharePage] Fetching post for shareId: ${shareId}`);
 
                 // Fetch community post by share ID - using relative path to automatically use current domain
-                console.log(`[CommunityPostSharePage] Attempting to fetch: /cp/${shareId}`);
-                const response = await fetch(`/cp/${shareId}`);
+                console.log(`[CommunityPostSharePage] Attempting to fetch: /api/cp/${shareId}`);
+                const response = await fetch(`/api/cp/${shareId}`);
                 console.log(`[CommunityPostSharePage] Response status: ${response.status}`);
                 console.log(`[CommunityPostSharePage] Response headers:`, Object.fromEntries(response.headers.entries()));
                 

@@ -264,11 +264,11 @@ export class UnifiedSellerService {
         return cached.data;
       }
 
-      // Fetch from API using the proper endpoint without authentication (public listings access)
+      // Fetch from API using the proper endpoint with authentication (seller's own listings)
       const response = await unifiedSellerAPIClient.request<{ listings: SellerListing[]; total: number; page: number; pageSize: number } | SellerListing[]>(
         unifiedSellerAPIClient['endpoints'].getListings(walletAddress),
         undefined,
-        false // requireAuth = false for public access
+        true // requireAuth = true for seller's own listings
       );
 
       // Handle both array response and paginated response format

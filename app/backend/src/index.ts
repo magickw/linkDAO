@@ -499,9 +499,9 @@ app.use('/api/community-reporting', enhancedCommunityReportingRoutes);
 
 // Register routes with enhanced error handling
 console.log('Registering /p routes');
-app.use('/p', postShareRoutes); // Short share URLs for timeline posts
+app.use('/api/p', postShareRoutes); // Short share URLs for timeline posts
 console.log('Registering /cp routes');
-app.use('/cp', communityPostShareRoutes); // Short share URLs for community posts
+app.use('/api/cp', communityPostShareRoutes); // Short share URLs for community posts
 console.log('Finished registering share routes');
 
 
