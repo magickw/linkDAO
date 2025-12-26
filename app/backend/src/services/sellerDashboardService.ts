@@ -133,32 +133,34 @@ class SellerDashboardService {
         safeLogger.warn('Seller not found for dashboard stats, returning default stats');
         return {
           sales: {
-            today: '0',
-            week: '0',
-            month: '0',
-            total: '0',
+            today: 0,
+            thisWeek: 0,
+            thisMonth: 0,
+            total: 0,
           },
           orders: {
             pending: 0,
             processing: 0,
-            completed: 0,
-            total: 0,
+            shipped: 0,
+            delivered: 0,
+            disputed: 0,
           },
           listings: {
             active: 0,
             draft: 0,
-            soldOut: 0,
-            total: 0,
+            sold: 0,
+            expired: 0,
           },
           balance: {
-            available: '0',
-            pending: '0',
-            escrow: '0',
-            total: '0',
+            crypto: {},
+            fiatEquivalent: 0,
+            pendingEscrow: 0,
+            availableWithdraw: 0,
           },
           reputation: {
             score: 0,
-            totalReviews: 0,
+            trend: 'stable',
+            recentReviews: 0,
             averageRating: 0,
           },
           unreadNotifications: 0,
@@ -250,36 +252,34 @@ class SellerDashboardService {
 
       return {
         sales: {
-          today: salesData?.today || '0',
-          week: salesData?.week || '0',
-          month: salesData?.month || '0',
-          total: salesData?.total || '0',
+          today: Number(salesData?.today || 0),
+          thisWeek: Number(salesData?.week || 0),
+          thisMonth: Number(salesData?.month || 0),
+          total: Number(salesData?.total || 0),
         },
         orders: {
           pending: Number(orderCounts?.pending || 0),
           processing: Number(orderCounts?.processing || 0),
-          completed: Number(orderCounts?.completed || 0),
-          total: Number(orderCounts?.total || 0),
+          shipped: 0, // Backend doesn't track shipped separately
+          delivered: Number(orderCounts?.completed || 0),
+          disputed: 0, // Backend doesn't track disputed separately
         },
         listings: {
           active: Number(listingCounts?.active || 0),
           draft: Number(listingCounts?.draft || 0),
-          soldOut: Number(listingCounts?.soldOut || 0),
-          total: Number(listingCounts?.total || 0),
+          sold: Number(listingCounts?.soldOut || 0),
+          expired: 0, // Backend doesn't track expired separately
         },
         balance: {
-          available: balanceData?.available || '0',
-          pending: salesData?.processing || '0',
-          escrow: salesData?.pending || '0',
-          total: String(
-            Number(balanceData?.available || '0') +
-            Number(salesData?.processing || '0') +
-            Number(salesData?.pending || '0')
-          ),
+          crypto: {}, // Backend doesn't track specific crypto balances
+          fiatEquivalent: 0, // Backend doesn't track fiat equivalent
+          pendingEscrow: Number(salesData?.pending || 0),
+          availableWithdraw: Number(balanceData?.available || 0),
         },
         reputation: {
           score: 0, // TODO: Implement reputation calculation
-          totalReviews: 0,
+          trend: 'stable',
+          recentReviews: 0,
           averageRating: 0,
         },
         unreadNotifications: Number(unreadCount?.count || 0),
@@ -295,32 +295,34 @@ class SellerDashboardService {
       // Return default stats on timeout to enable graceful degradation
       stats = {
         sales: {
-          today: '0',
-          week: '0',
-          month: '0',
-          total: '0',
+          today: 0,
+          thisWeek: 0,
+          thisMonth: 0,
+          total: 0,
         },
         orders: {
           pending: 0,
           processing: 0,
-          completed: 0,
-          total: 0,
+          shipped: 0,
+          delivered: 0,
+          disputed: 0,
         },
         listings: {
           active: 0,
           draft: 0,
-          soldOut: 0,
-          total: 0,
+          sold: 0,
+          expired: 0,
         },
         balance: {
-          available: '0',
-          pending: '0',
-          escrow: '0',
-          total: '0',
+          crypto: {},
+          fiatEquivalent: 0,
+          pendingEscrow: 0,
+          availableWithdraw: 0,
         },
         reputation: {
           score: 0,
-          totalReviews: 0,
+          trend: 'stable',
+          recentReviews: 0,
           averageRating: 0,
         },
         unreadNotifications: 0,

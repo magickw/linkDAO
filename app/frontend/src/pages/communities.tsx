@@ -399,10 +399,7 @@ const CommunitiesPage: React.FC = () => {
     } catch (error) {
       console.error('Failed to fetch community posts:', error);
       if (!isMounted.current) return;
-      
-      if (!append && posts.length === 0) {
-        setPosts([]);
-      }
+
     } finally {
       if (!isMounted.current) return;
       if (pageNum === 1) {
@@ -410,14 +407,14 @@ const CommunitiesPage: React.FC = () => {
       }
       setLoadingMore(false);
     }
-  }, [isMounted, joinedCommunities, address, sortBy, timeFilter, posts.length]);
+  }, [isMounted, joinedCommunities, address, sortBy, timeFilter]);
 
   useEffect(() => {
     if (isAuthLoading) return;
 
     console.log('[CommunitiesPage] useEffect triggered, fetching posts...');
     fetchPosts(1, false);
-  }, [sortBy, timeFilter, address, isAuthLoading, fetchPosts]);
+  }, [sortBy, timeFilter, address]);
 
   // Store fetchPosts in a ref
   const fetchPostsRef = useRef(fetchPosts);

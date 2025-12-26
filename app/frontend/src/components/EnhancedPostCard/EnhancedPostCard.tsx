@@ -416,8 +416,9 @@ const EnhancedPostCard = React.memo(({
                 <div className="flex items-center space-x-3 flex-1 min-w-0">
                   {/* Author Avatar */}
                   <div className="relative flex-shrink-0">
-                    <div
-                      className="w-12 h-12 rounded-xl overflow-hidden bg-gradient-to-br from-primary-400 to-secondary-500 border-2 border-white dark:border-gray-800 shadow-md"
+                    <Link
+                      href={`/u/${post.author}`}
+                      className="block w-12 h-12 rounded-xl overflow-hidden bg-gradient-to-br from-primary-400 to-secondary-500 border-2 border-white dark:border-gray-800 shadow-md hover:ring-2 hover:ring-primary-400 transition-all duration-200"
                       aria-label={`${post.authorProfile.handle}'s avatar`}
                     >
                       {post.authorProfile.avatar ? (
@@ -431,7 +432,7 @@ const EnhancedPostCard = React.memo(({
                           {post.authorProfile.handle.charAt(0).toUpperCase()}
                         </div>
                       )}
-                    </div>
+                    </Link>
 
                     {/* Reputation indicator */}
                     {post.authorProfile.reputationTier && (

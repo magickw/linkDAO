@@ -3,6 +3,7 @@ import { Comment } from '@/models/CommunityPost';
 import { CommunityPostService } from '@/services/communityPostService';
 import { useToast } from '@/context/ToastContext';
 import EnhancedCommentSystem from '@/components/EnhancedCommentSystem';
+import Link from 'next/link';
 
 interface CommentPreviewSystemProps {
   postId: string;
@@ -257,9 +258,12 @@ export default function CommentPreviewSystem({
                         {(typeof preview.author === 'string' ? preview.author : preview.author?.walletAddress || preview.author?.address || 'U').charAt(0).toUpperCase()}
                       </span>
                     </div>
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                    <Link
+                      href={`/u/${typeof preview.author === 'string' ? preview.author : preview.author?.walletAddress || preview.author?.address || ''}`}
+                      className="text-sm font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                    >
                       {formatAuthor(preview.author)}
-                    </span>
+                    </Link>
                   </div>
                   {preview.isTopComment && (
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-200">

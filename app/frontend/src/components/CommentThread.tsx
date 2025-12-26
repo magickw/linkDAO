@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import Avatar from '@/components/Avatar';
 import { getDisplayName } from '@/utils/userDisplay';
+import Link from 'next/link';
 
 interface CommentThreadProps {
   comment: Comment;
@@ -159,15 +160,17 @@ export default function CommentThread({
         {/* Comment Content */}
         <div className="flex-1 min-w-0">
           {/* Header */}
-          <div className="flex items-center space-x-2">
-            <span className="font-medium text-gray-900 dark:text-white">
-              {comment.handle || comment.displayName ? `u/${comment.handle || comment.displayName}` :
-               comment.walletAddress ? `${comment.walletAddress.slice(0, 6)}...${comment.walletAddress.slice(-4)}` :
-               typeof comment.author === 'string' ? `${comment.author.slice(0, 6)}...${comment.author.slice(-4)}` :
-               comment.author?.walletAddress ? `${comment.author.walletAddress.slice(0, 6)}...${comment.author.walletAddress.slice(-4)}` :
-               'Anonymous'}
-            </span>
-            <span className="text-xs text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center space-x-2">
+                      <Link
+                        href={`/u/${comment.walletAddress || (typeof comment.author === 'string' ? comment.author : comment.author?.walletAddress)}`}
+                        className="font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                      >
+                        {comment.handle || comment.displayName ? `u/${comment.handle || comment.displayName}` :
+                         comment.walletAddress ? `${comment.walletAddress.slice(0, 6)}...${comment.walletAddress.slice(-4)}` :
+                         typeof comment.author === 'string' ? `${comment.author.slice(0, 6)}...${comment.author.slice(-4)}` :
+                         comment.author?.walletAddress ? `${comment.author.walletAddress.slice(0, 6)}...${comment.author.walletAddress.slice(-4)}` :
+                         'Anonymous'}
+                      </Link>            <span className="text-xs text-gray-500 dark:text-gray-400">
               {formatTimestamp(comment.createdAt)}
             </span>
             {comment.isEdited && (

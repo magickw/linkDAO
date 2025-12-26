@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import { Clock, MessageCircle, Share2, Award, ExternalLink, Pin, Lock, Zap } from 'lucide-react';
 import PostFlair, { FlairConfig } from './PostFlair';
 
@@ -120,12 +121,12 @@ export default function PostMetadata({
         )}
 
         {/* Author */}
-        <button
-          onClick={handleAuthorClick}
-          className="hover:underline transition-colors"
+        <Link
+          href={`/u/${author}`}
+          className="hover:underline transition-colors text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400"
         >
           {formatAuthor(author)}
-        </button>
+        </Link>
 
         <span>•</span>
 
@@ -183,12 +184,12 @@ export default function PostMetadata({
       )}
 
       {/* Author */}
-      <button
-        onClick={handleAuthorClick}
-        className="hover:underline transition-colors"
+      <Link
+        href={`/u/${author}`}
+        className="hover:underline transition-colors text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400"
       >
         {formatAuthor(author)}
-      </button>
+      </Link>
 
       <span>•</span>
 

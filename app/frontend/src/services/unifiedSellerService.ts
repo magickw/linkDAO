@@ -426,26 +426,181 @@ export class UnifiedSellerService {
         throw new Error('Profile not found');
       }
 
-      // Transform dashboard stats to unified format
-      const transformResult = transformDashboardStatsToUnified(
-        dashboardStats,
-        profile,
-        listings,
-        this.transformationOptions
-      );
+      try {
+        // Transform dashboard stats to unified format
+        const transformResult = transformDashboardStatsToUnified(
+          dashboardStats,
+          profile,
+          listings,
+          this.transformationOptions
+        );
 
-      // Log transformation warnings if any
-      if (transformResult.warnings.length > 0) {
-        console.warn('Dashboard transformation warnings:', transformResult.warnings);
+        // Log transformation warnings if any
+        if (transformResult.warnings.length > 0) {
+          console.warn('Dashboard transformation warnings:', transformResult.warnings);
+        }
+
+        // Cache the result
+        this.dashboardCache.set(walletAddress, { 
+          data: transformResult.data, 
+          timestamp: Date.now() 
+        });
+
+        return transformResult.data;
+      } catch (transformError) {
+        console.error('Dashboard transformation failed, using default:', transformError);
+        
+        // Return a default dashboard to allow the seller to access the dashboard
+        const defaultDashboard: UnifiedSellerDashboard = {
+          profile,
+          listings: {
+            items: listings,
+            summary: {
+              total: 0,
+              active: 0,
+              draft: 0,
+              sold: 0,
+              expired: 0,
+              paused: 0,
+              trending: [],
+              recentlyAdded: [],
+            },
+          },
+          orders: {
+            items: [],
+            summary: {
+              total: 0,
+              pending: 0,
+              processing: 0,
+              shipped: 0,
+              delivered: 0,
+              disputed: 0,
+              cancelled: 0,
+              recent: [],
+            },
+          },
+          analytics: {
+            overview: {
+              totalRevenue: 0,
+              totalOrders: 0,
+              conversionRate: 0,
+              averageOrderValue: 0,
+              growthRate: 0,
+            },
+            sales: {
+              daily: [],
+              weekly: [],
+              monthly: [],
+              byCategory: [],
+              byProduct: [],
+              topPerforming: [],
+            },
+            buyers: {
+              demographics: {
+                countries: [],
+                walletTypes: [],
+                returningCustomers: 0,
+              },
+              behavior: {
+                repeatCustomers: 0,
+                averageOrdersPerCustomer: 0,
+                customerLifetimeValue: 0,
+                averageSessionDuration: 0,
+              },
+            },
+            reputation: {
+              ratingHistory: [],
+              reviewSentiment: {
+                positive: 0,
+                neutral: 0,
+                negative: 0,
+              },
+              badges: [],
+              trends: [],
+            },
+            traffic: {
+              views: [],
+              sources: [],
+              topPages: [],
+              bounceRate: 0,
+            },
+          },
+          notifications: [],
+          tierInfo: {
+            current: profile.tier,
+            next: undefined,
+            progress: profile.tierProgress,
+            benefits: profile.tier.benefits,
+            limitations: profile.tier.limitations,
+            upgradeRecommendations: [],
+            history: [],
+          },
+          financial: {
+            balance: {
+              crypto: {},
+              fiatEquivalent: 0,
+              pendingEscrow: 0,
+              availableWithdraw: 0,
+              totalEarnings: 0,
+            },
+            transactions: {
+              recent: [],
+              pending: [],
+              summary: {
+                thisMonth: 0,
+                lastMonth: 0,
+                growth: 0,
+              },
+            },
+            payouts: {
+              scheduled: [],
+              completed: [],
+              failed: [],
+            },
+          },
+          performance: {
+            kpis: {
+              conversionRate: { value: 0, trend: 'stable', change: 0 },
+              averageOrderValue: { value: 0, trend: 'stable', change: 0 },
+              customerSatisfaction: { value: 0, trend: 'stable', change: 0 },
+              responseTime: { value: 0, trend: 'stable', change: 0 },
+            },
+            goals: {
+              monthly: { target: 0, current: 0, progress: 0 },
+              quarterly: { target: 0, current: 0, progress: 0 },
+              yearly: { target: 0, current: 0, progress: 0 },
+            },
+            benchmarks: {
+              industryAverage: {},
+              topPerformers: {},
+              yourRanking: 0,
+            },
+          },
+          recentActivity: [],
+          quickActions: [
+            { id: '1', title: 'Create Listing', description: 'Add a new product', icon: 'plus', url: '/seller/listings/new', priority: 1, enabled: true },
+            { id: '2', title: 'View Orders', description: 'Check pending orders', icon: 'orders', url: '/seller/orders', priority: 2, enabled: true },
+            { id: '3', title: 'Analytics', description: 'View performance', icon: 'chart', url: '/seller/analytics', priority: 3, enabled: true },
+          ],
+          systemStatus: {
+            online: true,
+            lastSync: new Date().toISOString(),
+            pendingUpdates: 0,
+            systemHealth: 'good',
+            maintenanceMode: false,
+            announcements: [],
+          },
+          lastUpdated: new Date().toISOString(),
+        };
+
+        // Cache the default dashboard
+        this.dashboardCache.set(walletAddress, { 
+          data: defaultDashboard, 
+          timestamp: Date.now() 
+        });
+
+        return defaultDashboard;
       }
-
-      // Cache the result
-      this.dashboardCache.set(walletAddress, { 
-        data: transformResult.data, 
-        timestamp: Date.now() 
-      });
-
-      return transformResult.data;
     } catch (error) {
       console.error('Failed to get seller dashboard:', error);
       throw new SellerAPIError(

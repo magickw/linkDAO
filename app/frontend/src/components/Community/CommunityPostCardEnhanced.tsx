@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, memo } from 'react';
 import { useRouter } from 'next/router';
+import Link from 'next/link';
 import { CommunityPost, Comment, CreateCommentInput } from '@/models/CommunityPost';
 import { EnhancedPost } from '@/types/feed';
 import { Community } from '@/models/Community';
@@ -553,12 +554,15 @@ function CommunityPostCardEnhanced({
               </button>
               <span>•</span>
               {/* Author */}
-              <span className="font-medium text-gray-900 dark:text-white">
+              <Link
+                href={`/u/${post.author || post.walletAddress || ''}`}
+                className="font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+              >
                 u/{post.author || post.walletAddress ? 
                   `${(post.author || post.walletAddress)?.slice(0, 6)}...${(post.author || post.walletAddress)?.slice(-4)}` : 
                   'Unknown'
                 }
-              </span>
+              </Link>
               <span>•</span>
               <span>{formatTimestamp(post.createdAt)}</span>
               {/* Only show flair for community posts */}

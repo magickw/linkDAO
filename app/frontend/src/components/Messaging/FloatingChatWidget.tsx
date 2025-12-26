@@ -74,7 +74,6 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
   const [newRecipientAddress, setNewRecipientAddress] = useState('');
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [pendingContact, setPendingContact] = useState<Contact | null>(null);
 
   // ✅ PHASE 1 FIX: Get loading and error states from hook
   const {
@@ -254,41 +253,15 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
   }, [isOpen]);
 
   useEffect(() => {
-    const handleStartChat = (contact: Contact) => {
-      console.log("FloatingChatWidget: startChat called with contact:", contact);
-      // Only open the chat widget if we have a valid contact
-      if (contact && contact.walletAddress) {
-        setPendingContact(contact);
-        // Make sure the chat widget is open using ref to avoid dependency issues
-        if (!isOpenRef.current) {
-          setIsOpen(true);
-          setIsMinimized(false);
-          // Don't set activeTab here - let the pending contact processing handle it
-          localStorage.setItem('floatingChatWidgetOpen', JSON.stringify(true));
-          localStorage.setItem('floatingChatWidgetMinimized', JSON.stringify(false));
-          console.log("FloatingChatWidget: Opening chat widget for contact");
-        } else {
-          console.log("FloatingChatWidget: Chat widget already open, setting pending contact");
-          // If widget is already open, ensure it's not minimized
-          if (isMinimized) {
-            setIsMinimized(false);
-            localStorage.setItem('floatingChatWidgetMinimized', JSON.stringify(false));
-          }
-        }
-      } else {
-        console.log("FloatingChatWidget: Ignoring startChat call with invalid contact:", contact);
-      }
-    };
-
-    console.log("FloatingChatWidget: Registering startChat callback");
+    console.log("FloatingChatWidget: Registering handleStartChat callback");
     setOnStartChat(handleStartChat);
 
     // Cleanup function
     return () => {
-      console.log("FloatingChatWidget: Removing startChat callback");
+      console.log("FloatingChatWidget: Removing handleStartChat callback");
       setOnStartChat(null);
     };
-  }, [setOnStartChat, isMinimized]); // Added isMinimized to dependencies
+  }, [setOnStartChat, handleStartChat]);
 
   // Save state to localStorage whenever isOpen or isMinimized changes
   useEffect(() => {
@@ -335,37 +308,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
 
   const handleConversationSelect = async (conversation: Conversation) => {
     console.log("FloatingChatWidget: handleConversationSelect called with conversation:", conversation);
-    
-    // Leave previous conversation room before switching
-    if (isWebSocketConnected && selectedConversation?.id && selectedConversation.id !== conversation.id) {
-      console.log("FloatingChatWidget: Leaving previous conversation room:", selectedConversation.id);
-      leaveConversation(selectedConversation.id);
-    }
-    
-    setSelectedConversation(conversation);
-    setActiveTab('chat');
-
-    // Join conversation room
-    if (isWebSocketConnected && conversation.id) {
-      console.log("FloatingChatWidget: Joining conversation room:", conversation.id);
-      joinConversation(conversation.id);
-    } else {
-      console.log("FloatingChatWidget: WebSocket not connected or conversation ID missing");
-    }
-
-    // ✅ PHASE 2: Mark messages as read when conversation is opened
-    if (address && conversation.unreadCounts?.[address] > 0) {
-      // Get unread message IDs (this would come from loadMessages in a real implementation)
-      // For now, we'll just mark the conversation as read
-      try {
-        await markAsRead(conversation.id, []);
-        console.log("FloatingChatWidget: Marked conversation as read:", conversation.id);
-      } catch (error) {
-        console.error('Failed to mark as read:', error);
-      }
-    }
-
-    console.log("FloatingChatWidget: Conversation selected, activeTab set to 'chat'");
+    openConversation(conversation);
   };
 
   const handleBackToList = () => {
@@ -378,74 +321,117 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
     }
   };
 
-  // Handle pending contact to start a chat
-  useEffect(() => {
-    if (pendingContact && address) {
-      console.log("FloatingChatWidget: Processing pending contact:", pendingContact);
-
-      // Ensure widget is open and not minimized
-      setIsOpen(true);
-      setIsMinimized(false);
-      localStorage.setItem('floatingChatWidgetOpen', JSON.stringify(true));
-      localStorage.setItem('floatingChatWidgetMinimized', JSON.stringify(false));
-
-      // If hookConversations is not loaded yet, load them and return
-      // State changes will trigger this effect again when conversations are loaded
-      if (!hookConversations || hookConversations.length === 0) {
-        console.log("FloatingChatWidget: Conversations not loaded yet, loading...");
-        loadConversations();
-        return; // Wait for the next render when conversations are loaded
-      }
-
-      console.log("FloatingChatWidget: Looking for existing conversation with:", pendingContact.walletAddress);
-      console.log("FloatingChatWidget: Available conversations:", hookConversations);
-
-      // Find an existing conversation with this contact (case-insensitive address matching)
-      const normalizedContactAddress = pendingContact.walletAddress.toLowerCase();
-      const existingConversation = hookConversations.find(conv =>
-        conv.participants.some(participant => participant.toLowerCase() === normalizedContactAddress)
-      );
-
-      console.log("FloatingChatWidget: Found existing conversation:", existingConversation);
-
-      if (existingConversation) {
-        // If conversation exists, select it (inline the logic to avoid circular dependency)
-        console.log("FloatingChatWidget: Selecting existing conversation:", existingConversation);
-        setSelectedConversation(existingConversation);
-        
-        // Switch to chat tab immediately
-        console.log("FloatingChatWidget: Setting active tab to 'chat' for existing conversation");
-        setActiveTab('chat');
-
-        // Join conversation room
-        if (isWebSocketConnected && existingConversation.id) {
-          console.log("FloatingChatWidget: Joining conversation room:", existingConversation.id);
-          joinConversation(existingConversation.id);
-        }
-
-        // Mark messages as read when conversation is opened
-        if (address && existingConversation.unreadCounts?.[address] > 0) {
-          markAsRead(existingConversation.id, []).catch(error => {
-            console.error('Failed to mark as read:', error);
-          });
-        }
-      } else {
-        // If no conversation exists, automatically create one
-        console.log("FloatingChatWidget: No existing conversation found, creating new conversation with address:", pendingContact.walletAddress);
-        
-        // Set the recipient address in state (keeps UI in sync) and trigger conversation creation
-        setNewRecipientAddress(pendingContact.walletAddress);
-
-        // Call startNewConversation with the pending contact address to avoid a race
-        // when relying on the async state update of `newRecipientAddress`.
-        startNewConversation(pendingContact.walletAddress);
-      }
-
-      // Clear the pending contact
-      setPendingContact(null);
-      console.log("FloatingChatWidget: Cleared pending contact");
+  // 🔑 Single source of truth for opening conversations
+  // Navigation happens synchronously - effects are for syncing, not routing
+  const openConversation = useCallback((conversation: Conversation) => {
+    console.log("FloatingChatWidget: openConversation called with:", conversation.id);
+    
+    // Leave old room before switching
+    if (isWebSocketConnected && selectedConversation?.id && selectedConversation.id !== conversation.id) {
+      console.log("FloatingChatWidget: Leaving previous conversation room:", selectedConversation.id);
+      leaveConversation(selectedConversation.id);
     }
-  }, [pendingContact, address, hookConversations, loadConversations, isWebSocketConnected, joinConversation, markAsRead]);
+
+    // Navigate FIRST - no conditions, no async waits
+    setSelectedConversation(conversation);
+    setActiveTab('chat');
+
+    // Join room async (non-blocking)
+    if (isWebSocketConnected && conversation.id) {
+      console.log("FloatingChatWidget: Joining conversation room:", conversation.id);
+      joinConversation(conversation.id);
+    }
+
+    // Mark as read async (non-blocking)
+    if (address && conversation.unreadCounts?.[address] > 0) {
+      markAsRead(conversation.id, []).catch(error => {
+        console.error('Failed to mark as read:', error);
+      });
+    }
+
+    console.log("FloatingChatWidget: Conversation opened, navigation complete");
+  }, [isWebSocketConnected, selectedConversation, joinConversation, leaveConversation, address, markAsRead]);
+
+  // Helper: Generate deterministic conversation ID from two wallet addresses
+  const getConversationId = (addressA: string, addressB: string): string => {
+    // Sort addresses to ensure both parties get the same ID
+    const [addr1, addr2] = [addressA.toLowerCase(), addressB.toLowerCase()].sort();
+    // Simple hash for now - in production use crypto.subtle.digest
+    return `conv_${addr1}_${addr2}`;
+  };
+
+  // Create a minimal conversation object that works offline
+  const createOfflineConversation = (contact: Contact): Conversation => {
+    const conversationId = getConversationId(address!, contact.walletAddress);
+    return {
+      id: conversationId,
+      participants: [address!, contact.walletAddress],
+      type: 'direct',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      lastActivity: new Date(),
+      unreadCounts: {},
+      isOffline: true // Flag to indicate this is a local-only conversation
+    };
+  };
+
+  // Direct handler for starting chat from contacts - NO pendingContact state
+  const handleStartChat = useCallback((contact: Contact) => {
+    console.log("FloatingChatWidget: handleStartChat called with contact:", contact.walletAddress);
+    
+    if (!address || !contact.walletAddress) {
+      console.log("FloatingChatWidget: Missing address or contact wallet address");
+      return;
+    }
+
+    // Ensure widget is open and not minimized
+    setIsOpen(true);
+    setIsMinimized(false);
+    localStorage.setItem('floatingChatWidgetOpen', JSON.stringify(true));
+    localStorage.setItem('floatingChatWidgetMinimized', JSON.stringify(false));
+
+    const conversationId = getConversationId(address, contact.walletAddress);
+    console.log("FloatingChatWidget: Generated conversation ID:", conversationId);
+
+    // Try to find existing conversation
+    const existing = hookConversations?.find(c => c.id === conversationId);
+
+    if (existing) {
+      console.log("FloatingChatWidget: Found existing conversation, opening:", existing.id);
+      openConversation(existing);
+      return;
+    }
+
+    // Create offline conversation and navigate immediately
+    console.log("FloatingChatWidget: Creating offline conversation and navigating");
+    const offline = createOfflineConversation(contact);
+    openConversation(offline);
+
+    // Background server sync (non-blocking)
+    if (!hookConversations || hookConversations.length === 0) {
+      console.log("FloatingChatWidget: Loading conversations from server in background...");
+      loadConversations();
+    }
+
+    // Create conversation on server if it doesn't exist (non-blocking)
+    if (hookConversations && !hookConversations.some(c => c.id === conversationId)) {
+      console.log("FloatingChatWidget: Creating conversation on server in background...");
+      fetch('/api/conversations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('linkdao_access_token') || localStorage.getItem('authToken')}`
+        },
+        body: JSON.stringify({
+          participantAddress: contact.walletAddress,
+          conversationType: 'direct'
+        })
+      }).catch(err => {
+        console.error('Failed to create conversation on server:', err);
+        // Continue anyway - we have offline conversation
+      });
+    }
+  }, [address, hookConversations, openConversation, loadConversations]);
 
   const handleSendMessage = async (content: string) => {
     if (!content.trim() || !selectedConversation || !address) return;

@@ -166,10 +166,9 @@ export class UnifiedSellerAPIClient {
       getOnboardingSteps: (walletAddress: string) => `${this.baseURL}/onboarding`, // Uses authenticated user
       updateOnboardingStep: (walletAddress: string, stepId: string) => `${this.baseURL}/onboarding/${stepId}`, // Uses authenticated user
     
-      // Dashboard endpoints
-      getDashboard: (walletAddress: string) => `${this.baseURL}/dashboard`, // Uses authenticated user
-      getAnalytics: (walletAddress: string) => `${this.baseURL}/analytics`, // Uses authenticated user
-    // Listings endpoints
+      // Dashboard endpoints - NOTE: These use /api/marketplace/seller prefix, not /api/sellers
+        getDashboard: (walletAddress: string) => `${BACKEND_API_BASE_URL}/api/marketplace/seller/dashboard/${walletAddress}`,
+        getAnalytics: (walletAddress: string) => `${BACKEND_API_BASE_URL}/api/marketplace/seller/dashboard/analytics/${walletAddress}`,    // Listings endpoints
     getListings: (walletAddress: string) => `${this.baseURL}/listings`, // Backend uses authenticated user, not wallet address in URL
     getListingById: (listingId: string) => `${this.baseURL}/listings/detail/${listingId}`,
     createListing: () => `${this.baseURL}/listings`,

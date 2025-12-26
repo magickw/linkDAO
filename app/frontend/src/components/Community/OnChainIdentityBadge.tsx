@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { Shield, Award, Vote, Star, TrendingUp, Zap } from 'lucide-react';
 
 interface XPBadge {
@@ -97,9 +98,9 @@ export const OnChainIdentityBadge: React.FC<OnChainIdentityBadgeProps> = ({
     return (
         <div className={`inline-flex items-center gap-2 ${className}`}>
             {/* ENS Name or Address */}
-            <span className={`font-medium text-gray-900 dark:text-white ${sizeClasses[size]}`}>
+            <Link href={`/u/${data.address}`} className={`font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors ${sizeClasses[size]}`}>
                 {data.ensName || shortenAddress(data.address)}
-            </span>
+            </Link>
 
             {/* Reputation Badge */}
             <div

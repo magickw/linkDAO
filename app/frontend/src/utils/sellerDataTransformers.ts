@@ -653,6 +653,41 @@ export function transformDashboardStatsToUnified(
   const transformedFields: string[] = [];
 
   try {
+    // Ensure dashboardStats has the required structure with default values
+    const safeDashboardStats = {
+      sales: dashboardStats.sales || {
+        today: 0,
+        thisWeek: 0,
+        thisMonth: 0,
+        total: 0,
+      },
+      orders: dashboardStats.orders || {
+        pending: 0,
+        processing: 0,
+        shipped: 0,
+        delivered: 0,
+        disputed: 0,
+      },
+      listings: dashboardStats.listings || {
+        active: 0,
+        draft: 0,
+        sold: 0,
+        expired: 0,
+      },
+      balance: dashboardStats.balance || {
+        crypto: {},
+        fiatEquivalent: 0,
+        pendingEscrow: 0,
+        availableWithdraw: 0,
+      },
+      reputation: dashboardStats.reputation || {
+        score: 0,
+        trend: 'stable',
+        recentReviews: 0,
+        averageRating: 0,
+      }
+    };
+
     const unified: UnifiedSellerDashboard = {
       // Profile information
       profile,
@@ -661,11 +696,11 @@ export function transformDashboardStatsToUnified(
       listings: {
         items: listings,
         summary: {
-          total: dashboardStats.listings.active + dashboardStats.listings.draft + dashboardStats.listings.sold + dashboardStats.listings.expired,
-          active: dashboardStats.listings.active,
-          draft: dashboardStats.listings.draft,
-          sold: dashboardStats.listings.sold,
-          expired: dashboardStats.listings.expired,
+          total: safeDashboardStats.listings.active + safeDashboardStats.listings.draft + safeDashboardStats.listings.sold + safeDashboardStats.listings.expired,
+          active: safeDashboardStats.listings.active,
+          draft: safeDashboardStats.listings.draft,
+          sold: safeDashboardStats.listings.sold,
+          expired: safeDashboardStats.listings.expired,
           paused: 0, // Not available in original
           trending: listings.slice(0, 5), // Top 5 as trending
           recentlyAdded: listings.slice(0, 3), // Top 3 as recently added
@@ -676,12 +711,12 @@ export function transformDashboardStatsToUnified(
       orders: {
         items: [], // Would need to be provided separately
         summary: {
-          total: Object.values(dashboardStats.orders).reduce((sum, count) => sum + count, 0),
-          pending: dashboardStats.orders.pending,
-          processing: dashboardStats.orders.processing,
-          shipped: dashboardStats.orders.shipped,
-          delivered: dashboardStats.orders.delivered,
-          disputed: dashboardStats.orders.disputed,
+          total: Object.values(safeDashboardStats.orders).reduce((sum, count) => sum + count, 0),
+          pending: safeDashboardStats.orders.pending,
+          processing: safeDashboardStats.orders.processing,
+          shipped: safeDashboardStats.orders.shipped,
+          delivered: safeDashboardStats.orders.delivered,
+          disputed: safeDashboardStats.orders.disputed,
           cancelled: 0, // Not available in original
           recent: [], // Would need to be provided separately
         },
@@ -690,10 +725,10 @@ export function transformDashboardStatsToUnified(
       // Analytics and metrics
       analytics: {
         overview: {
-          totalRevenue: dashboardStats.sales.total,
-          totalOrders: Object.values(dashboardStats.orders).reduce((sum, count) => sum + count, 0),
+          totalRevenue: safeDashboardStats.sales.total,
+          totalOrders: Object.values(safeDashboardStats.orders).reduce((sum, count) => sum + count, 0),
           conversionRate: 0, // Would need to be calculated
-          averageOrderValue: dashboardStats.sales.total / Math.max(1, Object.values(dashboardStats.orders).reduce((sum, count) => sum + count, 0)),
+          averageOrderValue: safeDashboardStats.sales.total / Math.max(1, Object.values(safeDashboardStats.orders).reduce((sum, count) => sum + count, 0)),
           growthRate: 0, // Would need historical data
         },
         sales: {
@@ -752,17 +787,17 @@ export function transformDashboardStatsToUnified(
       // Financial overview
       financial: {
         balance: {
-          crypto: dashboardStats.balance.crypto,
-          fiatEquivalent: dashboardStats.balance.fiatEquivalent,
-          pendingEscrow: dashboardStats.balance.pendingEscrow,
-          availableWithdraw: dashboardStats.balance.availableWithdraw,
-          totalEarnings: dashboardStats.sales.total,
+          crypto: safeDashboardStats.balance.crypto,
+          fiatEquivalent: safeDashboardStats.balance.fiatEquivalent,
+          pendingEscrow: safeDashboardStats.balance.pendingEscrow,
+          availableWithdraw: safeDashboardStats.balance.availableWithdraw,
+          totalEarnings: safeDashboardStats.sales.total,
         },
         transactions: {
           recent: [],
           pending: [],
           summary: {
-            thisMonth: dashboardStats.sales.thisMonth,
+            thisMonth: safeDashboardStats.sales.thisMonth,
             lastMonth: 0, // Not available
             growth: 0, // Would need to be calculated
           },
@@ -778,14 +813,14 @@ export function transformDashboardStatsToUnified(
       performance: {
         kpis: {
           conversionRate: { value: 0, trend: 'stable', change: 0 },
-          averageOrderValue: { value: dashboardStats.sales.total / Math.max(1, Object.values(dashboardStats.orders).reduce((sum, count) => sum + count, 0)), trend: 'stable', change: 0 },
-          customerSatisfaction: { value: dashboardStats.reputation.averageRating, trend: dashboardStats.reputation.trend === 'up' ? 'up' : dashboardStats.reputation.trend === 'down' ? 'down' : 'stable', change: 0 },
+          averageOrderValue: { value: safeDashboardStats.sales.total / Math.max(1, Object.values(safeDashboardStats.orders).reduce((sum, count) => sum + count, 0)), trend: 'stable', change: 0 },
+          customerSatisfaction: { value: safeDashboardStats.reputation.averageRating, trend: safeDashboardStats.reputation.trend === 'up' ? 'up' : safeDashboardStats.reputation.trend === 'down' ? 'down' : 'stable', change: 0 },
           responseTime: { value: 0, trend: 'stable', change: 0 },
         },
         goals: {
-          monthly: { target: 0, current: dashboardStats.sales.thisMonth, progress: 0 },
+          monthly: { target: 0, current: safeDashboardStats.sales.thisMonth, progress: 0 },
           quarterly: { target: 0, current: 0, progress: 0 },
-          yearly: { target: 0, current: dashboardStats.sales.total, progress: 0 },
+          yearly: { target: 0, current: safeDashboardStats.sales.total, progress: 0 },
         },
         benchmarks: {
           industryAverage: {},
