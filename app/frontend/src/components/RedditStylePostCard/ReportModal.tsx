@@ -8,7 +8,7 @@ interface ReportModalProps {
   onSubmit: (reason: string, details?: string) => Promise<void>;
   isLoading: boolean;
   postId: string;
-  postAuthor: string;
+  postAuthor: string | { walletAddress?: string; address?: string };
 }
 
 const REPORT_CATEGORIES = [
@@ -243,7 +243,7 @@ export default function ReportModal({
             <div>
               <div className="mb-4">
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Why are you reporting this post by <span className="font-medium">{postAuthor.slice(0, 8)}...{postAuthor.slice(-6)}</span>?
+                  Why are you reporting this post by <span className="font-medium">{typeof postAuthor === 'string' ? `${postAuthor.slice(0, 8)}...${postAuthor.slice(-6)}` : postAuthor?.walletAddress ? `${postAuthor.walletAddress.slice(0, 8)}...${postAuthor.walletAddress.slice(-6)}` : 'Unknown'}</span>?
                 </p>
               </div>
 

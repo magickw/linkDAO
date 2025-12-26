@@ -263,7 +263,7 @@ export default function TrendingContent({
                     </h4>
                     
                     <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                      <span>by {post.author.slice(0, 6)}...{post.author.slice(-4)}</span>
+                      <span>by {typeof post.author === 'string' ? `${post.author.slice(0, 6)}...${post.author.slice(-4)}` : post.author?.walletAddress ? `${post.author.walletAddress.slice(0, 6)}...${post.author.walletAddress.slice(-4)}` : 'Unknown'}</span>
                       <span>{post.tags.length} tags</span>
                       <span>{new Date(post.createdAt).toLocaleDateString()}</span>
                     </div>

@@ -21,7 +21,7 @@ import useENSIntegration from '@/hooks/useENSIntegration';
 import { Conversation, Message } from '@/types/messaging';
 import { Contact } from '@/types/contacts';
 import notificationService from '@/services/notificationService';
-import { ContactProvider, useContacts } from '@/contexts/ContactContext';
+import { useContacts } from '@/contexts/ContactContext';
 import ContactSearch from './Contacts/ContactSearch';
 import ContactList from './Contacts/ContactList';
 import ContactDetail from './Contacts/ContactDetail';
@@ -335,6 +335,13 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
 
   const handleConversationSelect = async (conversation: Conversation) => {
     console.log("FloatingChatWidget: handleConversationSelect called with conversation:", conversation);
+    
+    // Leave previous conversation room before switching
+    if (isWebSocketConnected && selectedConversation?.id && selectedConversation.id !== conversation.id) {
+      console.log("FloatingChatWidget: Leaving previous conversation room:", selectedConversation.id);
+      leaveConversation(selectedConversation.id);
+    }
+    
     setSelectedConversation(conversation);
     setActiveTab('chat');
 
@@ -379,18 +386,14 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
       // Ensure widget is open and not minimized
       setIsOpen(true);
       setIsMinimized(false);
-      // Don't set activeTab here - wait for conversation to be selected/created
       localStorage.setItem('floatingChatWidgetOpen', JSON.stringify(true));
       localStorage.setItem('floatingChatWidgetMinimized', JSON.stringify(false));
 
-      // If hookConversations is not loaded yet, we might need to load them first
-      if (!hookConversations) {
+      // If hookConversations is not loaded yet, load them and return
+      // State changes will trigger this effect again when conversations are loaded
+      if (!hookConversations || hookConversations.length === 0) {
         console.log("FloatingChatWidget: Conversations not loaded yet, loading...");
         loadConversations();
-        // Set a flag to switch to chat after loading
-        setTimeout(() => {
-          setActiveTab('chat');
-        }, 100);
         return; // Wait for the next render when conversations are loaded
       }
 
@@ -843,10 +846,19 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
                     </div>
                   )}
                   {activeTab === 'contacts' && <ContactsTabContent />}
-                  {activeTab === 'chat' && (
+                  {activeTab === 'chat' && !selectedConversation && (
+                    <div className="flex items-center justify-center h-full text-xs text-gray-400">
+                      No conversation selected
+                    </div>
+                  )}
+                  {activeTab === 'chat' && selectedConversation && (
                     <div className="flex flex-col h-full">
                       <div className="flex-1 overflow-y-auto">
-                        <DiscordStyleMessagingInterface className="h-full" onClose={handleBackToList} />
+                        <DiscordStyleMessagingInterface 
+                          className="h-full" 
+                          conversation={selectedConversation}
+                          onClose={handleBackToList} 
+                        />
                       </div>
                     </div>
                   )}
@@ -993,12 +1005,4 @@ const ContactsTabContent: React.FC = () => {
   );
 };
 
-const FloatingChatWidgetWithProvider: React.FC<FloatingChatWidgetProps> = (props) => {
-  return (
-    <ContactProvider>
-      <FloatingChatWidget {...props} />
-    </ContactProvider>
-  );
-};
-
-export default FloatingChatWidgetWithProvider;
+export default FloatingChatWidget;

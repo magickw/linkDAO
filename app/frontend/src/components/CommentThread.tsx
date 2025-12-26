@@ -147,12 +147,12 @@ export default function CommentThread({
         {/* Avatar */}
         <div className="flex-shrink-0">
           <Avatar
-            walletAddress={comment.walletAddress || comment.author}
+            walletAddress={comment.walletAddress || (typeof comment.author === 'string' ? comment.author : comment.author?.walletAddress)}
             userHandle={comment.handle}
             size={32}
             avatarCid={comment.avatarCid}
             profileCid={comment.profileCid}
-            alt={`Avatar for ${comment.handle || comment.displayName || comment.walletAddress || comment.author}`}
+            alt={`Avatar for ${comment.handle || comment.displayName || comment.walletAddress || (typeof comment.author === 'string' ? comment.author : comment.author?.walletAddress)}`}
           />
         </div>
 
@@ -161,9 +161,11 @@ export default function CommentThread({
           {/* Header */}
           <div className="flex items-center space-x-2">
             <span className="font-medium text-gray-900 dark:text-white">
-              {comment.handle || comment.displayName ? `u/${comment.handle || comment.displayName}` : 
-               comment.walletAddress ? `${comment.walletAddress.slice(0, 6)}...${comment.walletAddress.slice(-4)}` : 
-               comment.author ? `${comment.author.slice(0, 6)}...${comment.author.slice(-4)}` : 'Anonymous'}
+              {comment.handle || comment.displayName ? `u/${comment.handle || comment.displayName}` :
+               comment.walletAddress ? `${comment.walletAddress.slice(0, 6)}...${comment.walletAddress.slice(-4)}` :
+               typeof comment.author === 'string' ? `${comment.author.slice(0, 6)}...${comment.author.slice(-4)}` :
+               comment.author?.walletAddress ? `${comment.author.walletAddress.slice(0, 6)}...${comment.author.walletAddress.slice(-4)}` :
+               'Anonymous'}
             </span>
             <span className="text-xs text-gray-500 dark:text-gray-400">
               {formatTimestamp(comment.createdAt)}

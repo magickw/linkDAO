@@ -204,11 +204,11 @@ const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
           <button
             onClick={handleUserPress}
             className={`flex-shrink-0 ${touchTargetClasses} ${accessibilityClasses}`}
-            aria-label={`View ${post.author}'s profile`}
+            aria-label={`View ${typeof post.author === 'string' ? post.author : post.author?.walletAddress || 'User'}'s profile`}
           >
             <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
               <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                {post.author.slice(0, 2).toUpperCase()}
+                {(typeof post.author === 'string' ? post.author : post.author?.walletAddress || 'U').slice(0, 2).toUpperCase()}
               </span>
             </div>
           </button>

@@ -245,7 +245,7 @@ const EnhancedFeedView = React.memo(({
       contentCid: feedPost.contentCid, // Add the missing contentCid field
       author: feedPost.author,
       authorProfile: {
-        handle: profile?.displayName || profile?.handle || feedPost.handle || (feedPost.author ? feedPost.author.slice(0, 8) : 'Unknown'),
+        handle: profile?.displayName || profile?.handle || feedPost.handle || (feedPost.author ? (typeof feedPost.author === 'string' ? feedPost.author.slice(0, 8) : feedPost.author.walletAddress?.slice(0, 8) || 'Unknown') : 'Unknown'),
         verified: profile?.verified || false,
         avatar: avatarUrl,
         reputationTier: profile?.reputationTier

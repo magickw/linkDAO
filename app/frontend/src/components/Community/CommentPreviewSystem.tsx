@@ -93,9 +93,10 @@ export default function CommentPreviewSystem({
   }, [loadCommentPreviews]);
 
   // Format author display
-  const formatAuthor = (author: string) => {
-    if (author.length <= 10) return author;
-    return `${author.slice(0, 6)}...${author.slice(-4)}`;
+  const formatAuthor = (author: string | any) => {
+    const authorAddress = typeof author === 'string' ? author : author?.walletAddress || author?.address || 'Unknown';
+    if (authorAddress.length <= 10) return authorAddress;
+    return `${authorAddress.slice(0, 6)}...${authorAddress.slice(-4)}`;
   };
 
   // Format timestamp
@@ -253,7 +254,7 @@ export default function CommentPreviewSystem({
                   <div className="flex items-center space-x-1">
                     <div className="w-6 h-6 bg-gradient-to-br from-primary-400 to-secondary-500 rounded-full flex items-center justify-center">
                       <span className="text-white font-bold text-xs">
-                        {preview.author.charAt(0).toUpperCase()}
+                        {(typeof preview.author === 'string' ? preview.author : preview.author?.walletAddress || preview.author?.address || 'U').charAt(0).toUpperCase()}
                       </span>
                     </div>
                     <span className="text-sm font-medium text-gray-900 dark:text-white">

@@ -253,7 +253,7 @@ export default function ModeratorTools({ community, isOpen, onClose }: Moderator
                               <div className="flex-1">
                                 <div className="flex items-center space-x-2 mb-2">
                                   <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                    {post.author.slice(0, 6)}...{post.author.slice(-4)}
+                                    {typeof post.author === 'string' ? `${post.author.slice(0, 6)}...${post.author.slice(-4)}` : post.author?.walletAddress ? `${post.author.walletAddress.slice(0, 6)}...${post.author.walletAddress.slice(-4)}` : 'Unknown'}
                                   </span>
                                   <span className="text-xs text-gray-500 dark:text-gray-400">
                                     {new Date(post.createdAt).toLocaleDateString()}
@@ -306,7 +306,7 @@ export default function ModeratorTools({ community, isOpen, onClose }: Moderator
                             <div className="flex-1">
                               <div className="flex items-center space-x-2 mb-2">
                                 <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                  {post.author.slice(0, 6)}...{post.author.slice(-4)}
+                                  {typeof post.author === 'string' ? `${post.author.slice(0, 6)}...${post.author.slice(-4)}` : post.author?.walletAddress ? `${post.author.walletAddress.slice(0, 6)}...${post.author.walletAddress.slice(-4)}` : 'Unknown'}
                                 </span>
                                 <span className="text-xs text-gray-500 dark:text-gray-400">
                                   {new Date(post.createdAt).toLocaleDateString()}
