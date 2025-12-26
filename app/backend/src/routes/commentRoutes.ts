@@ -32,15 +32,10 @@ router.post('/community-posts/:postId/comments', csrfProtection, authMiddleware,
       });
     }
 
-    // Check if it's a quick post (UUID) or regular post (integer)
-    // Community posts use integer IDs, quick posts use UUIDs
-    const isQuickPost = postId.includes('-'); // UUIDs contain dashes
-    
-    // For community posts, we need to use the posts table with integer ID
-    // For quick posts, we use the quickPosts table with UUID
+    // For /community-posts/:postId/comments endpoint, always use the posts table
     const comment = await commentService.createComment({
-      postId: isQuickPost ? undefined : postId,
-      quickPostId: isQuickPost ? postId : undefined,
+      postId: postId,
+      quickPostId: undefined,
       authorAddress: userAddress,
       content,
       // Explicitly set to undefined (not null) for top-level comments
@@ -70,12 +65,10 @@ router.get('/community-posts/:postId/comments', async (req: Request, res: Respon
     const { postId } = req.params;
     const { sortBy = 'best', limit = '100' } = req.query;
 
-    // Check if it's a quick post (UUID) or regular post (integer)
-    const isQuickPost = postId.includes('-');
-
+    // For /community-posts/:postId/comments endpoint, always use the posts table
     const comments = await commentService.getCommentsByPost(
-      isQuickPost ? undefined : postId,
-      isQuickPost ? postId : undefined,
+      postId,
+      undefined,
       sortBy as 'best' | 'new' | 'top' | 'controversial',
       parseInt(limit as string)
     );

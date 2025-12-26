@@ -179,22 +179,22 @@ CREATE TABLE "digital_asset_purchases" (
 -- 	"created_at" timestamp DEFAULT now()
 -- );
 --> statement-breakpoint
-CREATE TABLE "milestone_payments" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"milestone_id" uuid NOT NULL,
-	"booking_id" uuid NOT NULL,
-	"amount" numeric(20, 8) NOT NULL,
-	"currency" varchar(10) NOT NULL,
-	"payment_method" varchar(20) NOT NULL,
-	"escrow_contract" varchar(66),
-	"payment_processor_id" varchar(100),
-	"transaction_hash" varchar(66),
-	"status" varchar(20) DEFAULT 'pending',
-	"held_until" timestamp,
-	"release_conditions" text,
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now()
-);
+-- CREATE TABLE "milestone_payments" (
+-- 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+-- 	"milestone_id" uuid NOT NULL,
+-- 	"booking_id" uuid NOT NULL,
+-- 	"amount" numeric(20, 8) NOT NULL,
+-- 	"currency" varchar(10) NOT NULL,
+-- 	"payment_method" varchar(20) NOT NULL,
+-- 	"escrow_contract" varchar(66),
+-- 	"payment_processor_id" varchar(100),
+-- 	"transaction_hash" varchar(66),
+-- 	"status" varchar(20) DEFAULT 'pending',
+-- 	"held_until" timestamp,
+-- 	"release_conditions" text,
+-- 	"created_at" timestamp DEFAULT now(),
+-- 	"updated_at" timestamp DEFAULT now()
+-- );
 --> statement-breakpoint
 CREATE TABLE "moderation_actions" (
 	"id" serial PRIMARY KEY NOT NULL,

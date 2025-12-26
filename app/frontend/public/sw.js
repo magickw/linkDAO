@@ -714,9 +714,10 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
     // Check if this is an authenticated request and add auth headers if needed
     let fetchRequest = request;
     const isApiRequest = url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/auth');
+    const token = await getAuthToken();
+    const isAuthRequest = isApiRequest && !!token;
     
     if (isApiRequest) {
-        const token = await getAuthToken();
         if (token) {
             const headers = new Headers(request.headers);
             headers.append('Authorization', `Bearer ${token}`);

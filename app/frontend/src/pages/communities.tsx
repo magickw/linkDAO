@@ -330,7 +330,7 @@ const CommunitiesPage: React.FC = () => {
     return () => {
       clearTimeout(timeoutId);
     };
-  }, [address, isConnected, isAuthenticated, communities]);
+  }, [address, isConnected, isAuthenticated]);
 
   // Load posts from backend API with pagination
   const fetchPosts = useCallback(async (pageNum: number = 1, append: boolean = false) => {
