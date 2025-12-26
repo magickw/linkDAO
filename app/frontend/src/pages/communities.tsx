@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { FixedSizeList as List } from 'react-window';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -30,28 +31,35 @@ import {
 } from '@/components/Mobile/Web3';
 
 // Enhanced Components
+import { lazy, Suspense } from 'react';
 import { ErrorBoundary } from '@/components/ErrorHandling/ErrorBoundary';
 import VisualPolishIntegration from '@/components/VisualPolish/VisualPolishIntegration';
 import QuickFilterChips from '@/components/Community/QuickFilterChips';
 import EmptyStates from '@/components/Community/EmptyStates';
-import CreateCommunityModal from '@/components/CommunityEnhancements/Modals/CreateCommunityModal';
-import TokenPriceSparkline, { generateMockPriceHistory } from '@/components/Community/TokenPriceSparkline';
-import GovernanceActivityPulse from '@/components/Community/GovernanceActivityPulse';
-import KeyboardShortcutsModal from '@/components/Community/KeyboardShortcutsModal';
+
+const CreateCommunityModal = lazy(() => import('@/components/CommunityEnhancements/Modals/CreateCommunityModal'));
+const TokenPriceSparkline = lazy(() => import('@/components/Community/TokenPriceSparkline'));
+const GovernanceActivityPulse = lazy(() => import('@/components/Community/GovernanceActivityPulse'));
+const KeyboardShortcutsModal = lazy(() => import('@/components/Community/KeyboardShortcutsModal'));
+
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 // New Enhanced Components
-import EnhancedGovernanceCard from '@/components/Community/EnhancedGovernanceCard';
-import EnhancedTokenPriceWidget from '@/components/Community/EnhancedTokenPriceWidget';
-import OnChainIdentityBadge from '@/components/Community/OnChainIdentityBadge';
+const EnhancedGovernanceCard = lazy(() => import('@/components/Community/EnhancedGovernanceCard'));
+const EnhancedTokenPriceWidget = lazy(() => import('@/components/Community/EnhancedTokenPriceWidget'));
+const OnChainIdentityBadge = lazy(() => import('@/components/Community/OnChainIdentityBadge'));
 
-import TreasuryWidget from '@/components/Community/TreasuryWidget';
-import QuestsWidget from '@/components/Community/QuestsWidget';
-import FloatingActionButton from '@/components/Community/FloatingActionButton';
-import PinnedPostsSection from '@/components/Community/PinnedPostsSection';
-import AnnouncementBanner from '@/components/Community/AnnouncementBanner';
-import AnnouncementManager from '@/components/Community/AnnouncementManager';
-import CommunityPostCardEnhanced from '@/components/Community/CommunityPostCardEnhanced';
+const TreasuryWidget = lazy(() => import('@/components/Community/TreasuryWidget'));
+const QuestsWidget = lazy(() => import('@/components/Community/QuestsWidget'));
+const FloatingActionButton = lazy(() => import('@/components/Community/FloatingActionButton'));
+const PinnedPostsSection = lazy(() => import('@/components/Community/PinnedPostsSection'));
+const AnnouncementBanner = lazy(() => import('@/components/Community/AnnouncementBanner'));
+const AnnouncementManager = lazy(() => import('@/components/Community/AnnouncementManager'));
+const CommunityPostCardEnhanced = lazy(() => import('@/components/Community/CommunityPostCardEnhanced'));
+
+// Non-lazy components (critical path)
+import MyCommunitiesCard from '@/components/Community/MyCommunitiesCard';
+import CommunityCardEnhanced from '@/components/Community/CommunityCardEnhanced';
 import { postManagementService } from '@/services/postManagementService';
 import CommunityOnboarding from '@/components/Community/CommunityOnboarding';
 
@@ -76,8 +84,6 @@ import {
   Trophy,
   Pin
 } from 'lucide-react';
-import CommunityCardEnhanced from '@/components/Community/CommunityCardEnhanced';
-import MyCommunitiesCard from '@/components/Community/MyCommunitiesCard';
 import { CommunityService } from '@/services/communityService';
 import { useAuth } from '@/context/AuthContext';
 import { Community } from '@/models/Community';
@@ -206,93 +212,12 @@ const CommunitiesPage: React.FC = () => {
         // Load communities with fallback for 503 errors
         const communitiesData = await CommunityService.getAllCommunities({
           isPublic: true,
-          limit: DEFAULT_COMMUNITIES_LIMIT
+          limit: DEFAULT_COMMUNITIES_LIMIT,
+          fields: ['id', 'name', 'displayName', 'avatar', 'memberCount', 'description', 'tags', 'category', 'createdAt'] // Only fetch essential fields
         });
 
         if (!isMounted.current) return;
         setCommunities(communitiesData);
-
-
-        // Load user's community memberships if wallet is connected AND authenticated with backend
-        // Check both wallet connection and backend authentication to avoid 401 errors
-        if (address && isConnected && isAuthenticated) {
-          try {
-            // Fetch user's communities (both created and joined)
-            const myCommunitiesResponse = await CommunityService.getMyCommunities(DEFAULT_USER_COMMUNITIES_PAGE, DEFAULT_USER_COMMUNITIES_LIMIT).catch((error) => {
-              console.error('Error fetching user communities:', error);
-              // Return empty communities on error to allow feed to still work
-              return { communities: [], pagination: null };
-            });
-
-            if (!isMounted.current) return;
-
-            // Set community IDs
-            const allUserCommunityIds = new Set<string>();
-            myCommunitiesResponse.communities.forEach(c => {
-              if (c && c.id) {
-                allUserCommunityIds.add(c.id);
-              }
-            });
-
-            setJoinedCommunities(Array.from(allUserCommunityIds));
-
-            // Merge user communities into the main list so they appear in the sidebar
-            // The sidebar filters 'communities' based on 'joinedCommunities', so we need to ensure
-            // all joined/created communities are actually present in the 'communities' array.
-            const allUserCommunities = myCommunitiesResponse.communities;
-            setCommunities(prev => {
-              const existingIds = new Set(prev.map(c => c.id));
-              const newCommunities = [...prev];
-
-              allUserCommunities.forEach(c => {
-                if (c && c.id && !existingIds.has(c.id)) {
-                  newCommunities.push(c);
-                  existingIds.add(c.id);
-                }
-              });
-
-              return newCommunities;
-            });
-
-            // Set admin roles for communities where user is admin (case-insensitive)
-            // Check both the initial communitiesData and the user's communities
-            const adminRoles: Record<string, string> = {};
-            const allCommunitiesToCheck = [...communitiesData, ...allUserCommunities];
-
-            // Use Set to deduplicate communities before processing
-            const uniqueCommunities = Array.from(new Set(allCommunitiesToCheck.map(c => c.id)))
-              .map(id => allCommunitiesToCheck.find(c => c.id === id))
-              .filter((c): c is Community => c !== undefined);
-
-            // Check all communities for admin/moderator status
-            uniqueCommunities.forEach(community => {
-              if (!community || !community.id) return;
-
-              // Check if user is the creator (case-insensitive) - creators are always admins
-              if (community.creatorAddress && address &&
-                community.creatorAddress.toLowerCase() === address.toLowerCase()) {
-                adminRoles[community.id] = 'admin';
-                return; // Skip further checks for creators
-              }
-
-              // Skip if already marked as admin
-              if (adminRoles[community.id]) return;
-
-              // Check if user is an admin/moderator of this community (based on moderators field)
-              if (community.moderators && Array.isArray(community.moderators) &&
-                address && community.moderators.some(mod => mod.toLowerCase() === address.toLowerCase())) {
-                adminRoles[community.id] = 'admin';
-              }
-            });
-            if (!isMounted.current) return;
-            setUserAdminRoles(adminRoles);
-          } catch (error) {
-            console.error('Error loading user communities:', error);
-            // Continue with empty arrays on error
-            setJoinedCommunities([]);
-            setUserAdminRoles({});
-          }
-        }
 
         // Load enhanced Web3 data
         await loadWeb3EnhancedData(communitiesData);
@@ -311,6 +236,101 @@ const CommunitiesPage: React.FC = () => {
 
     loadEnhancedCommunities();
   }, [address, isConnected, isAuthenticated]);
+
+  // Load user-specific data after initial render to defer non-critical operations
+  useEffect(() => {
+    const loadUserSpecificData = async () => {
+      if (!address || !isConnected || !isAuthenticated) return;
+
+      try {
+        if (!isMounted.current) return;
+
+        // Fetch user's communities (both created and joined)
+        const myCommunitiesResponse = await CommunityService.getMyCommunities(DEFAULT_USER_COMMUNITIES_PAGE, DEFAULT_USER_COMMUNITIES_LIMIT).catch((error) => {
+          console.error('Error fetching user communities:', error);
+          // Return empty communities on error to allow feed to still work
+          return { communities: [], pagination: null };
+        });
+
+        if (!isMounted.current) return;
+
+        // Set community IDs
+        const allUserCommunityIds = new Set<string>();
+        myCommunitiesResponse.communities.forEach(c => {
+          if (c && c.id) {
+            allUserCommunityIds.add(c.id);
+          }
+        });
+
+        setJoinedCommunities(Array.from(allUserCommunityIds));
+
+        // Merge user communities into the main list so they appear in the sidebar
+        // The sidebar filters 'communities' based on 'joinedCommunities', so we need to ensure
+        // all joined/created communities are actually present in the 'communities' array.
+        const allUserCommunities = myCommunitiesResponse.communities;
+        setCommunities(prev => {
+          const existingIds = new Set(prev.map(c => c.id));
+          const newCommunities = [...prev];
+
+          allUserCommunities.forEach(c => {
+            if (c && c.id && !existingIds.has(c.id)) {
+              newCommunities.push(c);
+              existingIds.add(c.id);
+            }
+          });
+
+          return newCommunities;
+        });
+
+        // Set admin roles for communities where user is admin (case-insensitive)
+        // Check both the initial communitiesData and the user's communities
+        const adminRoles: Record<string, string> = {};
+        const allCommunitiesToCheck = [...communities, ...allUserCommunities];
+
+        // Use Set to deduplicate communities before processing
+        const uniqueCommunities = Array.from(new Set(allCommunitiesToCheck.map(c => c.id)))
+          .map(id => allCommunitiesToCheck.find(c => c.id === id))
+          .filter((c): c is Community => c !== undefined);
+
+        // Check all communities for admin/moderator status
+        uniqueCommunities.forEach(community => {
+          if (!community || !community.id) return;
+
+          // Check if user is the creator (case-insensitive) - creators are always admins
+          if (community.creatorAddress && address &&
+            community.creatorAddress.toLowerCase() === address.toLowerCase()) {
+            adminRoles[community.id] = 'admin';
+            return; // Skip further checks for creators
+          }
+
+          // Skip if already marked as admin
+          if (adminRoles[community.id]) return;
+
+          // Check if user is an admin/moderator of this community (based on moderators field)
+          if (community.moderators && Array.isArray(community.moderators) &&
+            address && community.moderators.some(mod => mod.toLowerCase() === address.toLowerCase())) {
+            adminRoles[community.id] = 'admin';
+          }
+        });
+        if (!isMounted.current) return;
+        setUserAdminRoles(adminRoles);
+      } catch (error) {
+        console.error('Error loading user communities:', error);
+        // Continue with empty arrays on error
+        setJoinedCommunities([]);
+        setUserAdminRoles({});
+      }
+    };
+
+    // Defer loading of user-specific data to improve initial render
+    const timeoutId = setTimeout(() => {
+      loadUserSpecificData();
+    }, 100); // Small delay to allow initial render
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [address, isConnected, isAuthenticated, communities]);
 
   // Load posts from backend API with pagination
   const fetchPosts = useCallback(async (pageNum: number = 1, append: boolean = false) => {
@@ -343,7 +363,29 @@ const CommunitiesPage: React.FC = () => {
       // Check if component is still mounted
       if (!isMounted.current) return;
 
-      const newPosts = result?.posts || [];
+      // Optimize data by only keeping essential post properties
+      const newPosts = result?.posts?.map(post => ({
+        id: post.id,
+        title: post.title,
+        content: post.content,
+        authorName: post.authorName,
+        communityId: post.communityId,
+        upvotes: post.upvotes,
+        downvotes: post.downvotes,
+        commentCount: post.commentCount,
+        createdAt: post.createdAt,
+        tags: post.tags,
+        isQuickPost: post.isQuickPost,
+        // Only include essential properties to reduce payload
+        ...(post.community && {
+          community: {
+            id: post.community.id,
+            name: post.community.name,
+            displayName: post.community.displayName,
+            avatar: post.community.avatar,
+          }
+        })
+      })) || [];
 
       console.log('[CommunitiesPage] FeedService returned:', {
         result,
@@ -816,13 +858,17 @@ const CommunitiesPage: React.FC = () => {
             <div className="col-span-1 lg:col-span-6">
               {/* Announcement Banner */}
               {joinedCommunities.length > 0 && (
-                <AnnouncementBanner communityId={joinedCommunities[0]} />
+                <Suspense fallback={<div className="h-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-4" />}>
+                  <AnnouncementBanner communityId={joinedCommunities[0]} />
+                </Suspense>
               )}
 
               {/* Announcement Manager (Admin Only) */}
               {joinedCommunities.length > 0 && userAdminRoles[joinedCommunities[0]] === 'admin' && (
                 <div className="mb-4">
-                  <AnnouncementManager communityId={joinedCommunities[0]} />
+                  <Suspense fallback={<div className="h-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />}>  
+                    <AnnouncementManager communityId={joinedCommunities[0]} />
+                  </Suspense>
                 </div>
               )}
 
@@ -867,28 +913,33 @@ const CommunitiesPage: React.FC = () => {
 
               {/* Pinned Posts Section */}
               {joinedCommunities.length > 0 && communityList.length > 0 && (
-                <PinnedPostsSection
-                  communityId={joinedCommunities[0]} // Show pinned posts for the first joined community (simplified for now)
-                  community={communityList.find(c => c.id === joinedCommunities[0]) || communityList[0]}
-                  userMembership={{
-                    id: `membership-${address}-${joinedCommunities[0]}`,
-                    communityId: joinedCommunities[0],
-                    userId: address || '',
-                    role: userAdminRoles[joinedCommunities[0]] ? 'admin' : 'member',
-                    joinedAt: new Date(),
-                    reputation: 0,
-                    contributions: 0,
-                    isActive: true,
-                    lastActivityAt: new Date()
-                  }}
-                  onVote={(postId, voteType, stakeAmount) => {
-                    const type = voteType === 'upvote' ? 'up' : 'down';
-                    const amount = stakeAmount ? parseFloat(stakeAmount) : 1;
-                    handleVote(postId, type, amount);
-                  }}
-                  onReaction={handleTokenReaction}
-                  onTip={async (postId, amount) => handleTip(postId, parseFloat(amount))}
-                />
+                <Suspense fallback={<div className="space-y-4 mb-4">
+                  <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                  <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                </div>}>
+                  <PinnedPostsSection
+                    communityId={joinedCommunities[0]} // Show pinned posts for the first joined community (simplified for now)
+                    community={communityList.find(c => c.id === joinedCommunities[0]) || communityList[0]}
+                    userMembership={{
+                      id: `membership-${address}-${joinedCommunities[0]}`,
+                      communityId: joinedCommunities[0],
+                      userId: address || '',
+                      role: userAdminRoles[joinedCommunities[0]] ? 'admin' : 'member',
+                      joinedAt: new Date(),
+                      reputation: 0,
+                      contributions: 0,
+                      isActive: true,
+                      lastActivityAt: new Date()
+                    }}
+                    onVote={(postId, voteType, stakeAmount) => {
+                      const type = voteType === 'upvote' ? 'up' : 'down';
+                      const amount = stakeAmount ? parseFloat(stakeAmount) : 1;
+                      handleVote(postId, type, amount);
+                    }}
+                    onReaction={handleTokenReaction}
+                    onTip={async (postId, amount) => handleTip(postId, parseFloat(amount))}
+                  />
+                </Suspense>
               )}
 
               {/* Create Post Card - Reddit Style */}
@@ -946,84 +997,108 @@ const CommunitiesPage: React.FC = () => {
               )}
 
               <div className="space-y-0">
-                {filteredPosts.map(post => {
-                  // Defensive checks for post data
-                  if (!post || typeof post !== 'object') return null;
+                {filteredPosts.length > 0 ? (
+                  <List
+                    height={filteredPosts.length * 300} // Estimate height of each post
+                    itemCount={filteredPosts.length}
+                    itemSize={300} // Average height of a post card
+                    overscanCount={5} // Number of items to render outside visible area
+                  >
+                    {({ index, style }) => {
+                      const post = filteredPosts[index];
+                      
+                      // Defensive checks for post data
+                      if (!post || typeof post !== 'object') return null;
 
-                  const postCommunityId = post.communityId || post.dao || '';
+                      const postCommunityId = post.communityId || post.dao || '';
 
-                  // Use embedded community data from the post (returned by getFollowedCommunitiesFeed)
-                  // Falls back to looking up from communityList if not embedded
-                  const embeddedCommunity = post.community;
-                  const foundCommunity = communityList.find(c => c.id === postCommunityId);
+                      // Use embedded community data from the post (returned by getFollowedCommunitiesFeed)
+                      // Falls back to looking up from communityList if not embedded
+                      const embeddedCommunity = post.community;
+                      const foundCommunity = communityList.find(c => c.id === postCommunityId);
 
-                  // Create a properly typed community object with all required fields
-                  const community: Community = foundCommunity || {
-                    id: embeddedCommunity?.id || postCommunityId || 'unknown',
-                    name: embeddedCommunity?.name || postCommunityId || 'Unknown Community',
-                    displayName: embeddedCommunity?.displayName || embeddedCommunity?.name || postCommunityId || 'Unknown Community',
-                    slug: embeddedCommunity?.slug || postCommunityId || 'unknown',
-                    avatar: embeddedCommunity?.avatar || undefined,
-                    description: '',
-                    rules: [],
-                    memberCount: 0,
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                    isPublic: true,
-                    moderators: [],
-                    tags: [],
-                    category: 'General',
-                    settings: {
-                      allowedPostTypes: [],
-                      requireApproval: false,
-                      minimumReputation: 0,
-                      stakingRequirements: []
-                    }
-                  };
+                      // Create a properly typed community object with all required fields
+                      const community: Community = foundCommunity || {
+                        id: embeddedCommunity?.id || postCommunityId || 'unknown',
+                        name: embeddedCommunity?.name || postCommunityId || 'Unknown Community',
+                        displayName: embeddedCommunity?.displayName || embeddedCommunity?.name || postCommunityId || 'Unknown Community',
+                        slug: embeddedCommunity?.slug || postCommunityId || 'unknown',
+                        avatar: embeddedCommunity?.avatar || undefined,
+                        description: '',
+                        rules: [],
+                        memberCount: 0,
+                        createdAt: new Date(),
+                        updatedAt: new Date(),
+                        isPublic: true,
+                        moderators: [],
+                        tags: [],
+                        category: 'General',
+                        settings: {
+                          allowedPostTypes: [],
+                          requireApproval: false,
+                          minimumReputation: 0,
+                          stakingRequirements: []
+                        }
+                      };
 
-                  const postId = post.id || `post-${Math.random()}`;
+                      const postId = post.id || `post-${Math.random()}`;
 
-                  return (
-                    <Web3SwipeGestureHandler
-                      key={postId}
-                      postId={postId}
-                      onUpvote={() => handleUpvote(postId)}
-                      onSave={() => handleSave(postId)}
-                      onTip={() => handleTip(postId)}
-                      onStake={() => handleStake(postId)}
-                      walletConnected={walletConnected}
-                      userBalance={userBalance}
-                    >
-                      <div>
-                        <CommunityPostCardEnhanced
-                          post={post}
-                          community={community}
-                          userMembership={joinedCommunities.includes(postCommunityId) ? {
-                            id: `membership-${address}-${postCommunityId}`,
-                            communityId: postCommunityId,
-                            userId: address || '',
-                            role: userAdminRoles[postCommunityId] ? 'admin' : 'member',
-                            joinedAt: new Date(),
-                            reputation: 0,
-                            contributions: 0,
-                            isActive: true,
-                            lastActivityAt: new Date()
-                          } : null}
-                          onVote={(postId, voteType, stakeAmount) => handleVote(postId, voteType === 'upvote' ? 'up' : 'down', stakeAmount ? parseInt(stakeAmount) : 1)}
-                          onReaction={async (postId, reactionType, amount) => {
-                            // Handle reaction logic here
-                            // Reaction
-                          }}
-                          onTip={async (postId, amount, token) => {
-                            // Handle tip logic here
-                            // Tip
-                          }}
-                          onComment={() => handleComment(postId)}
-                        />
-                      </div>
-                    </Web3SwipeGestureHandler>
-                  );
-                })}
+                      return (
+                        <div style={style}>
+                          <Web3SwipeGestureHandler
+                            key={postId}
+                            postId={postId}
+                            onUpvote={() => handleUpvote(postId)}
+                            onSave={() => handleSave(postId)}
+                            onTip={() => handleTip(postId)}
+                            onStake={() => handleStake(postId)}
+                            walletConnected={walletConnected}
+                            userBalance={userBalance}
+                          >
+                            <div>
+                              <Suspense fallback={<div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 animate-pulse">
+                                <div className="flex space-x-3">
+                                  <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full" />
+                                  <div className="flex-1 space-y-2">
+                                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+                                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+                                    <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded" />
+                                  </div>
+                                </div>
+                              </div>}>
+                                <CommunityPostCardEnhanced
+                                  post={post}
+                                  community={community}
+                                  userMembership={joinedCommunities.includes(postCommunityId) ? {
+                                    id: `membership-${address}-${postCommunityId}`,
+                                    communityId: postCommunityId,
+                                    userId: address || '',
+                                    role: userAdminRoles[postCommunityId] ? 'admin' : 'member',
+                                    joinedAt: new Date(),
+                                    reputation: 0,
+                                    contributions: 0,
+                                    isActive: true,
+                                    lastActivityAt: new Date()
+                                  } : null}
+                                  onVote={(postId, voteType, stakeAmount) => handleVote(postId, voteType === 'upvote' ? 'up' : 'down', stakeAmount ? parseInt(stakeAmount) : 1)}
+                                  onReaction={async (postId, reactionType, amount) => {
+                                    // Handle reaction logic here
+                                    // Reaction
+                                  }}
+                                  onTip={async (postId, amount, token) => {
+                                    // Handle tip logic here
+                                    // Tip
+                                  }}
+                                  onComment={() => handleComment(postId)}
+                                />
+                              </Suspense>
+                            </div>
+                          </Web3SwipeGestureHandler>
+                        </div>
+                      );
+                    }}
+                  </List>
+                ) : null}
               </div>
 
               {/* Load More Indicator */}
@@ -1050,27 +1125,48 @@ const CommunitiesPage: React.FC = () => {
             <div className="hidden lg:block lg:col-span-3">
               <div className="sticky top-24 space-y-4">
                 {/* Token Price Widget */}
-                <EnhancedTokenPriceWidget
-                  tokenAddress="0xc9F690B45e33ca909bB9ab97836091673232611B"
-                  showBuySellButtons={true}
-                  compact={false}
-                />
+                <Suspense fallback={<div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 animate-pulse h-32">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-3"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-2"></div>
+                  <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
+                </div>}>
+                  <EnhancedTokenPriceWidget
+                    tokenAddress="0xc9F690B45e33ca909bB9ab97836091673232611B"
+                    showBuySellButtons={true}
+                    compact={false}
+                  />
+                </Suspense>
 
                 {/* Quests Widget */}
-                <QuestsWidget
-                  userAddress={address}
-                  compact={false}
-                />
+                <Suspense fallback={<div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 animate-pulse h-40">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-3"></div>
+                  <div className="space-y-2">
+                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
+                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
+                  </div>
+                </div>}>
+                  <QuestsWidget
+                    userAddress={address}
+                    compact={false}
+                  />
+                </Suspense>
 
                 
 
                 
 
                 {/* Treasury Widget */}
-                <TreasuryWidget
-                  treasuryAddress="0x074E3874CA62F8cB9be6DDCD23235d0Bb5a8A0b5"
-                  compact={false}
-                />
+                <Suspense fallback={<div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 animate-pulse h-32">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-3"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-2"></div>
+                  <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
+                </div>}>
+                  <TreasuryWidget
+                    treasuryAddress="0x074E3874CA62F8cB9be6DDCD23235d0Bb5a8A0b5"
+                    compact={false}
+                  />
+                </Suspense>
 
 
               </div>
@@ -1080,31 +1176,39 @@ const CommunitiesPage: React.FC = () => {
           
 
           {/* Keyboard Shortcuts Modal */}
-          <KeyboardShortcutsModal
-            isOpen={showKeyboardHelp}
-            onClose={() => setShowKeyboardHelp(false)}
-          />
+          <Suspense fallback={null}>
+            <KeyboardShortcutsModal
+              isOpen={showKeyboardHelp}
+              onClose={() => setShowKeyboardHelp(false)}
+            />
+          </Suspense>
 
           {/* Create Community Modal */}
-          <CreateCommunityModal
-            isOpen={showCreateCommunityModal}
-            onClose={handleCloseCreateCommunityModal}
-            onSubmit={handleCreateCommunity}
-            isLoading={isCreatingCommunity}
-            error={createCommunityError}
-          />
+          <Suspense fallback={null}>
+            <CreateCommunityModal
+              isOpen={showCreateCommunityModal}
+              onClose={handleCloseCreateCommunityModal}
+              onSubmit={handleCreateCommunity}
+              isLoading={isCreatingCommunity}
+              error={createCommunityError}
+            />
+          </Suspense>
 
           {/* Floating Action Button - Desktop and Mobile */}
-          <FloatingActionButton
-            onCreatePost={handleCreatePost}
-            onCreateProposal={() => router.push('/governance/create-proposal')}
-            onStakeTokens={() => router.push('/wallet?tab=stake')}
-          />
+          <Suspense fallback={null}>
+            <FloatingActionButton
+              onCreatePost={handleCreatePost}
+              onCreateProposal={() => router.push('/governance/create-proposal')}
+              onStakeTokens={() => router.push('/wallet?tab=stake')}
+            />
+          </Suspense>
         </Layout>
       </VisualPolishIntegration>
       
       {/* Community Onboarding Modal */}
-      <CommunityOnboarding />
+      <Suspense fallback={null}>
+        <CommunityOnboarding />
+      </Suspense>
     </ErrorBoundary>
   );
 };

@@ -123,8 +123,9 @@ const ContactCard: React.FC<ContactCardProps> = ({ contact, className = '', onCo
         >
           <button
             onClick={handleMessage}
-            className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-colors"
+            className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title="Message"
+            disabled={!contact.walletAddress}
           >
             <ChatBubbleLeftIcon className="w-4 h-4" />
           </button>

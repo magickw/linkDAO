@@ -125,6 +125,95 @@ const ContactContext = createContext<ContactContextType | undefined>(undefined);
 export function ContactProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(contactReducer, initialState);
 
+  const openDB = useCallback(() => {
+    return new Promise<IDBDatabase>((resolve, reject) => {
+      if (typeof window === 'undefined' || !window.indexedDB) {
+        return reject(new Error('IndexedDB not supported'));
+      }
+      const request = window.indexedDB.open('LinkDAOUserData', 1);
+
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result);
+
+      request.onupgradeneeded = (event: any) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains('contacts')) {
+          db.createObjectStore('contacts', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('contactGroups')) {
+          db.createObjectStore('contactGroups', { keyPath: 'id' });
+        }
+      };
+    });
+  }, []);
+
+  const getContactsFromDB = useCallback(async () => {
+    try {
+      const db = await openDB();
+      const transaction = db.transaction(['contacts'], 'readonly');
+      const store = transaction.objectStore('contacts');
+      const contacts = await new Promise<Contact[]>((resolve, reject) => {
+        const request = store.getAll();
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+      });
+      return contacts.map(contact => ({
+        ...contact,
+        createdAt: new Date(contact.createdAt),
+        updatedAt: new Date(contact.updatedAt),
+        lastSeen: contact.lastSeen ? new Date(contact.lastSeen) : undefined,
+      }));
+    } catch (error) {
+      console.error('Failed to get contacts from DB:', error);
+      return [];
+    }
+  }, [openDB]);
+
+  const saveContactToDB = useCallback(async (contact: Contact) => {
+    try {
+      const db = await openDB();
+      const transaction = db.transaction(['contacts'], 'readwrite');
+      const store = transaction.objectStore('contacts');
+      await new Promise<void>((resolve, reject) => {
+        const request = store.put(contact);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve();
+      });
+    } catch (error) {
+      console.error('Failed to save contact to DB:', error);
+    }
+  }, [openDB]);
+
+  const deleteContactFromDB = useCallback(async (id: string) => {
+    try {
+      const db = await openDB();
+      const transaction = db.transaction(['contacts'], 'readwrite');
+      const store = transaction.objectStore('contacts');
+      await new Promise<void>((resolve, reject) => {
+        const request = store.delete(id);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve();
+      });
+    } catch (error) {
+      console.error('Failed to delete contact from DB:', error);
+    }
+  }, [openDB]);
+
+  const saveGroupToDB = useCallback(async (group: ContactGroup) => {
+    try {
+      const db = await openDB();
+      const transaction = db.transaction(['contactGroups'], 'readwrite');
+      const store = transaction.objectStore('contactGroups');
+      await new Promise<void>((resolve, reject) => {
+        const request = store.put(group);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve();
+      });
+    } catch (error) {
+      console.error('Failed to save group to DB:', error);
+    }
+  }, [openDB]);
+
   // Initialize groups from localStorage
   useEffect(() => {
     const initializeGroups = () => {
@@ -140,35 +229,21 @@ export function ContactProvider({ children }: { children: React.ReactNode }) {
     initializeGroups();
   }, []);
 
-  // Load contacts from localStorage
+  // Load contacts from IndexedDB
   useEffect(() => {
-    const loadContacts = () => {
+    const loadContacts = async () => {
+      dispatch({ type: 'SET_LOADING', payload: true });
       try {
-        const savedContacts = localStorage.getItem('linkdao-contacts');
-        if (savedContacts) {
-          const contacts = JSON.parse(savedContacts).map((contact: any) => ({
-            ...contact,
-            createdAt: new Date(contact.createdAt),
-            updatedAt: new Date(contact.updatedAt),
-            lastSeen: contact.lastSeen ? new Date(contact.lastSeen) : undefined
-          }));
-          dispatch({ type: 'SET_CONTACTS', payload: contacts });
-        }
+        const contacts = await getContactsFromDB();
+        dispatch({ type: 'SET_CONTACTS', payload: contacts });
       } catch (error) {
-        console.error('Error loading contacts:', error);
+        console.error('Error loading contacts from DB:', error);
         dispatch({ type: 'SET_ERROR', payload: 'Failed to load contacts' });
       }
     };
 
     loadContacts();
-  }, []);
-
-  // Save contacts to localStorage whenever contacts change
-  useEffect(() => {
-    if (state.contacts.length > 0) {
-      localStorage.setItem('linkdao-contacts', JSON.stringify(state.contacts));
-    }
-  }, [state.contacts]);
+  }, [getContactsFromDB]);
 
   // Save groups to localStorage whenever groups change
   useEffect(() => {
@@ -178,21 +253,12 @@ export function ContactProvider({ children }: { children: React.ReactNode }) {
   const addContact = useCallback(async (contactData: ContactFormData) => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
-
-      // Check if contact already exists
       const existingContact = state.contacts.find(
         contact => contact.walletAddress.toLowerCase() === contactData.walletAddress.toLowerCase()
       );
+      if (existingContact) throw new Error('Contact already exists');
 
-      if (existingContact) {
-        throw new Error('Contact already exists');
-      }
-
-      // Find selected groups
-      const selectedGroups = state.groups.filter(group => 
-        contactData.groups.includes(group.id)
-      );
-
+      const selectedGroups = state.groups.filter(group => contactData.groups.includes(group.id));
       const newContact: Contact = {
         id: `contact-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         walletAddress: contactData.walletAddress,
@@ -207,30 +273,36 @@ export function ContactProvider({ children }: { children: React.ReactNode }) {
         updatedAt: new Date()
       };
 
+      await saveContactToDB(newContact);
       dispatch({ type: 'ADD_CONTACT', payload: newContact });
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Failed to add contact' });
       throw error;
     }
-  }, [state.contacts, state.groups]);
+  }, [state.contacts, state.groups, saveContactToDB]);
 
   const updateContact = useCallback(async (id: string, updates: Partial<Contact>) => {
     try {
+      const contactToUpdate = state.contacts.find(c => c.id === id);
+      if (!contactToUpdate) throw new Error("Contact not found");
+      const updatedContact = { ...contactToUpdate, ...updates, updatedAt: new Date() };
+      await saveContactToDB(updatedContact);
       dispatch({ type: 'UPDATE_CONTACT', payload: { id, updates } });
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: 'Failed to update contact' });
       throw error;
     }
-  }, []);
+  }, [state.contacts, saveContactToDB]);
 
   const deleteContact = useCallback(async (id: string) => {
     try {
+      await deleteContactFromDB(id);
       dispatch({ type: 'DELETE_CONTACT', payload: id });
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: 'Failed to delete contact' });
       throw error;
     }
-  }, []);
+  }, [deleteContactFromDB]);
 
   const selectContact = useCallback((contact: Contact | null) => {
     dispatch({ type: 'SELECT_CONTACT', payload: contact });

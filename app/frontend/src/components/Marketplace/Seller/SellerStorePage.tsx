@@ -726,9 +726,9 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
       // Fetch seller listings with error handling and fallback
       try {
         const { sellerService } = await import('@/services/sellerService');
-        // Use the actual wallet address from the seller profile instead of the sellerId parameter
+        // Use the actual wallet address from the seller state instead of the sellerId parameter
         // This ensures we're using the correct identifier for fetching listings
-        const actualWalletAddress = sellerProfile?.walletAddress || sellerId;
+        const actualWalletAddress = seller?.walletAddress || sellerId;
         const sellerListings = await sellerService.getListings(actualWalletAddress);
         
         if (sellerListings && sellerListings.length > 0) {
@@ -767,7 +767,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
         // Try marketplace service as fallback when seller service fails
         try {
           const { marketplaceService } = await import('@/services/marketplaceService');
-          const actualWalletAddress = sellerProfile?.walletAddress || sellerId;
+          const actualWalletAddress = seller?.walletAddress || sellerId;
           const marketplaceListings = await marketplaceService.getListingsBySeller(actualWalletAddress);
           
           if (marketplaceListings && marketplaceListings.length > 0) {

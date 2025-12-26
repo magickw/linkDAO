@@ -70,6 +70,49 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow()
 });
 
+// Contacts System
+export const contacts = pgTable("contacts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  ownerId: uuid("owner_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  walletAddress: varchar("wallet_address", { length: 66 }).notNull(),
+  nickname: varchar("nickname", { length: 255 }).notNull(),
+  ensName: varchar("ens_name", { length: 255 }),
+  avatar: text("avatar"),
+  notes: text("notes"),
+  isVerified: boolean("is_verified").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  ownerWalletIdx: index("idx_contacts_owner_wallet").on(t.ownerId, t.walletAddress),
+  ownerIdx: index("idx_contacts_owner_id").on(t.ownerId),
+}));
+
+export const contactGroups = pgTable("contact_groups", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  ownerId: uuid("owner_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 100 }).notNull(),
+  icon: varchar("icon", { length: 50 }),
+  color: varchar("color", { length: 7 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  ownerNameIdx: index("idx_contact_groups_owner_name").on(t.ownerId, t.name),
+}));
+
+export const contactToGroups = pgTable("contact_to_groups", {
+  contactId: uuid("contact_id").notNull().references(() => contacts.id, { onDelete: "cascade" }),
+  groupId: uuid("group_id").notNull().references(() => contactGroups.id, { onDelete: "cascade" }),
+}, (t) => ({
+  pk: primaryKey(t.contactId, t.groupId),
+}));
+
+export const contactTags = pgTable("contact_tags", {
+  contactId: uuid("contact_id").notNull().references(() => contacts.id, { onDelete: "cascade" }),
+  tag: varchar("tag", { length: 64 }).notNull(),
+}, (t) => ({
+  pk: primaryKey(t.contactId, t.tag),
+}));
+
 // Posts
 export const posts = pgTable("posts", {
   id: uuid("id").defaultRandom().primaryKey(),
