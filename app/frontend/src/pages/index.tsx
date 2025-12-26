@@ -149,11 +149,11 @@ export default function Home() {
 
     // Track timers for cleanup
     let idleCallbackId: any = null;
-    let timeoutId: NodeJS.Timeout | null = null;
-    let disconnectTimeoutId: NodeJS.Timeout | null = null;
+    let timeoutId: any = null;
+    let disconnectTimeoutId: any = null;
 
     if (isConnected) {
-      // Set content ready first to allow navigation to proceed
+      // Set content ready immediately if valid
       if (isMounted.current) {
         setIsContentReady(true);
         setIsConnectionStabilized(true);
@@ -166,21 +166,21 @@ export default function Home() {
 
       isUpdating.current = true;
 
-      const connectSocket = () => {
-        // Strict check if mounted
+      // Logic to run for connection
+      const runConnection = () => {
         if (!isMounted.current) {
           isUpdating.current = false;
           return;
         }
 
         if (isConnected && webSocket && !webSocket.isConnected) {
+          // Check if already connecting
           if (webSocket.connectionState && webSocket.connectionState.status === 'connecting') {
             isUpdating.current = false;
             return;
           }
 
           console.log('[HomePage] Attempting WebSocket connection...');
-          // Connect WebSocket only after wallet is connected and page has stabilized
           webSocket.connect().then(() => {
             if (isMounted.current) {
               console.log('[HomePage] WebSocket connected successfully');
@@ -195,16 +195,12 @@ export default function Home() {
         }
       };
 
-      // Defer WebSocket connection establishment separately with requestIdleCallback
+      // Defer WebSocket connection establishment
       if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-        idleCallbackId = window.requestIdleCallback(() => {
-          connectSocket();
-        }, { timeout: 5000 });
+        idleCallbackId = window.requestIdleCallback(runConnection, { timeout: 5000 });
       } else {
         // Fallback for browsers without requestIdleCallback
-        timeoutId = setTimeout(() => {
-          connectSocket();
-        }, 1000);
+        timeoutId = setTimeout(runConnection, 1000);
       }
     } else {
       if (isMounted.current) {
@@ -222,7 +218,7 @@ export default function Home() {
             // Double check inside timeout to be safe
             if (webSocket.connectionState?.mode !== 'disabled') {
               webSocket.disconnect();
-              wsConnectedRef.current = false; // Reset connection status
+              wsConnectedRef.current = false;
             }
           }, 0);
         }
@@ -241,8 +237,6 @@ export default function Home() {
         clearTimeout(disconnectTimeoutId);
       }
 
-      // DON'T disconnect WebSocket when leaving the page - let it persist for better UX
-      // Only reset the local reference tracking
       wsConnectedRef.current = false;
       isUpdating.current = false;
     };
