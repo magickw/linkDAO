@@ -147,13 +147,12 @@ export default function Home() {
   useEffect(() => {
     console.log('[HomePage] WebSocket connection useEffect triggered, isConnected:', isConnected);
 
-    // Track timers for cleanup
-    let idleCallbackId: any = null;
+    // Track timer for cleanup
     let timeoutId: any = null;
     let disconnectTimeoutId: any = null;
 
     if (isConnected) {
-      // Set content ready immediately if valid
+      // Set content ready immediately to unblock navigation
       if (isMounted.current) {
         setIsContentReady(true);
         setIsConnectionStabilized(true);
@@ -166,8 +165,9 @@ export default function Home() {
 
       isUpdating.current = true;
 
-      // Logic to run for connection
-      const runConnection = () => {
+      // Use standard setTimeout instead of requestIdleCallback to avoid ReferenceError issues
+      // with minified 'ev' (deadline) variables or polyfills.
+      timeoutId = setTimeout(() => {
         if (!isMounted.current) {
           isUpdating.current = false;
           return;
@@ -180,12 +180,8 @@ export default function Home() {
             return;
           }
 
-          console.log('[HomePage] Attempting WebSocket connection...');
-          webSocket.connect().then(() => {
-            if (isMounted.current) {
-              console.log('[HomePage] WebSocket connected successfully');
-            }
-          }).catch((error) => {
+          console.log('[HomePage] Attempting WebSocket connection (deferred)...');
+          webSocket.connect().catch((error) => {
             console.error('[HomePage] WebSocket connection failed:', error);
           }).finally(() => {
             isUpdating.current = false;
@@ -193,15 +189,7 @@ export default function Home() {
         } else {
           isUpdating.current = false;
         }
-      };
-
-      // Defer WebSocket connection establishment
-      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-        idleCallbackId = window.requestIdleCallback(runConnection, { timeout: 5000 });
-      } else {
-        // Fallback for browsers without requestIdleCallback
-        timeoutId = setTimeout(runConnection, 1000);
-      }
+      }, 500); // 500ms delay is sufficient to unblock main thread for navigation
     } else {
       if (isMounted.current) {
         console.log('[HomePage] Wallet not connected, setting content ready to true');
@@ -215,8 +203,8 @@ export default function Home() {
 
         if (shouldDisconnect) {
           disconnectTimeoutId = setTimeout(() => {
-            // Double check inside timeout to be safe
-            if (webSocket.connectionState?.mode !== 'disabled') {
+            // Check existence and state safely
+            if (webSocket?.connectionState?.mode !== 'disabled') {
               webSocket.disconnect();
               wsConnectedRef.current = false;
             }
@@ -226,10 +214,7 @@ export default function Home() {
     }
 
     return () => {
-      // Cleanup all pending timers/callbacks
-      if (idleCallbackId !== null && typeof window !== 'undefined' && 'cancelIdleCallback' in window) {
-        window.cancelIdleCallback(idleCallbackId);
-      }
+      // Cleanup timers
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
