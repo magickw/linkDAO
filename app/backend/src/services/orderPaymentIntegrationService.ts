@@ -5,6 +5,7 @@ import { PaymentValidationService } from './paymentValidationService';
 import { EnhancedEscrowService } from './enhancedEscrowService';
 import { EnhancedFiatPaymentService } from './enhancedFiatPaymentService';
 import { ReceiptService } from './receiptService';
+import { emailService } from './emailService';
 import { ReceiptStatus } from '../types/receipt';
 import { ethers } from 'ethers';
 
@@ -118,6 +119,19 @@ export class OrderPaymentIntegrationService {
     this.enhancedFiatPaymentService = new EnhancedFiatPaymentService();
     this.receiptService = new ReceiptService();
     this.provider = new ethers.JsonRpcProvider(process.env.RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com');
+  }
+
+  /**
+   * Get user email from user profile
+   */
+  private async getUserEmail(userAddress: string): Promise<string | null> {
+    try {
+      const user = await this.databaseService.getUserByAddress(userAddress);
+      return user?.email || null;
+    } catch (error) {
+      safeLogger.error('Error getting user email:', error);
+      return null;
+    }
   }
 
   /**
@@ -502,6 +516,30 @@ export class OrderPaymentIntegrationService {
       await this.updateStoredPaymentTransaction(transactionId, {
         receiptUrl: receipt.downloadUrl
       });
+
+      // Send receipt email
+      const userEmail = await this.getUserEmail(order.buyerAddress || '');
+      if (userEmail) {
+        await emailService.sendMarketplaceReceiptEmail(userEmail, {
+          orderId: transaction.orderId,
+          transactionId: transaction.id,
+          items: receiptItems,
+          subtotal: parseFloat(transaction.amount),
+          shipping: 0,
+          tax: 0,
+          platformFee: parseFloat(transaction.platformFee || '0'),
+          total: parseFloat(transaction.amount) + parseFloat(transaction.platformFee || '0'),
+          paymentMethod: transaction.paymentMethod,
+          network: transaction.metadata?.network,
+          transactionHash: transaction.transactionHash,
+          sellerName: order.sellerName || 'Unknown Seller',
+          shippingAddress: order.shippingAddress,
+          timestamp: new Date()
+        });
+        safeLogger.info(`Receipt email sent to ${userEmail} for order ${transaction.orderId}`);
+      } else {
+        safeLogger.warn(`No email found for user ${order.buyerAddress}, skipping receipt email`);
+      }
 
       safeLogger.info(`🧾 Payment receipt ${receipt.receiptNumber} generated for transaction ${transactionId}`);
       return receipt;

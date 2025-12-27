@@ -5,6 +5,8 @@ import { db } from '../db';
 import { userGoldBalance, goldTransaction } from '../db/schema';
 import { eq, sql } from 'drizzle-orm';
 import Stripe from 'stripe';
+import { emailService } from '../services/emailService';
+import { safeLogger } from '../utils/safeLogger';
 
 const router = Router();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -68,7 +70,7 @@ router.post('/payment-intent', authenticateToken, csrfProtection, async (req, re
 // Complete gold purchase (called by Stripe webhook)
 router.post('/complete', async (req, res) => {
   try {
-    const { paymentIntentId, userId, packageId, goldAmount } = req.body;
+    const { paymentIntentId, userId, packageId, goldAmount, paymentMethod = 'stripe', network, transactionHash } = req.body;
 
     // Verify payment intent
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
@@ -105,11 +107,39 @@ router.post('/complete', async (req, res) => {
       amount: parseInt(goldAmount),
       type: 'purchase',
       price: String(GOLD_PACKAGES.find(p => p.id === packageId)?.price || 0),
-      paymentMethod: 'stripe',
+      paymentMethod: paymentMethod,
       paymentIntentId,
+      transactionHash,
       status: 'completed',
       createdAt: new Date(),
     });
+
+    // Get user email for receipt
+    const user = await db.select().from(db.schema.users).where(eq(db.schema.users.walletAddress, userId)).limit(1);
+    const userEmail = user[0]?.email;
+
+    // Send receipt email
+    if (userEmail) {
+      const goldPackage = GOLD_PACKAGES.find(p => p.id === packageId);
+      if (goldPackage) {
+        try {
+          await emailService.sendPurchaseReceiptEmail(userEmail, {
+            orderId: `GOLD-${Date.now()}`,
+            goldAmount: parseInt(goldAmount),
+            totalCost: goldPackage.price,
+            paymentMethod: paymentMethod === 'stripe' ? 'Credit/Debit Card' : `USDC on ${network || 'Ethereum'}`,
+            network,
+            transactionHash,
+            timestamp: new Date()
+          });
+          safeLogger.info(`Gold purchase receipt sent to ${userEmail}`);
+        } catch (emailError) {
+          safeLogger.error('Error sending gold purchase receipt email:', emailError);
+        }
+      }
+    } else {
+      safeLogger.warn(`No email found for user ${userId}, skipping receipt email`);
+    }
 
     res.json({
       success: true,
@@ -117,7 +147,7 @@ router.post('/complete', async (req, res) => {
       goldAdded: parseInt(goldAmount),
     });
   } catch (error) {
-    console.error('Error completing gold purchase:', error);
+    safeLogger.error('Error completing gold purchase:', error);
     res.status(500).json({ error: 'Failed to complete gold purchase' });
   }
 });

@@ -13,6 +13,7 @@ import {
 } from '../types/ldaoAcquisition';
 import { LDAOAcquisitionConfigManager } from '../config/ldaoAcquisitionConfig';
 import { LDAOReceiptService } from './ldaoReceiptService';
+import { emailService } from './emailService';
 import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
 import { purchaseTransactions, earningActivities } from '../db/schema';
@@ -110,6 +111,28 @@ export class LDAOAcquisitionService {
     this.pricingEngine = pricing;
   }
 
+  /**
+   * Get user email from user profile
+   */
+  private async getUserEmail(userAddress: string): Promise<string | null> {
+    try {
+      // Query user profile by wallet address
+      const users = await this.db.select()
+        .from(this.db.schema.users)
+        .where(eq(this.db.schema.users.walletAddress, userAddress))
+        .limit(1);
+      
+      if (users && users.length > 0) {
+        return users[0].email || null;
+      }
+      
+      return null;
+    } catch (error) {
+      safeLogger.error('Error getting user email:', error);
+      return null;
+    }
+  }
+
   // Main acquisition methods
   public async purchaseWithFiat(request: PurchaseRequest): Promise<PurchaseResult> {
     try {
@@ -163,7 +186,7 @@ export class LDAOAcquisitionService {
       if (result.success && result.transactionId) {
         try {
           const quote = await this.getPriceQuote(sanitizedAmount, 'USD');
-          await this.receiptService.generateLDAOPurchaseReceipt({
+          const receipt = await this.receiptService.generateLDAOPurchaseReceipt({
             transactionId: result.transactionId,
             buyerAddress: sanitizedUserAddress,
             amount: sanitizedAmount.toString(),
@@ -177,8 +200,31 @@ export class LDAOAcquisitionService {
               total: (0.30 + (sanitizedAmount * 0.005)).toString()
             }
           });
+
+          // Send receipt email
+          const userEmail = await this.getUserEmail(sanitizedUserAddress);
+          if (userEmail) {
+            await emailService.sendLDAOReceiptEmail(userEmail, {
+              orderId: receipt.receiptNumber,
+              transactionId: result.transactionId,
+              tokensPurchased: result.estimatedTokens?.toString() || '0',
+              amount: sanitizedAmount,
+              currency: 'USD',
+              pricePerToken: quote.pricePerToken.toString(),
+              paymentMethod: 'fiat',
+              fees: {
+                processing: '0.30',
+                platform: (sanitizedAmount * 0.005).toString(),
+                total: (0.30 + (sanitizedAmount * 0.005)).toString()
+              },
+              timestamp: new Date()
+            });
+            safeLogger.info(`Receipt email sent to ${userEmail} for transaction ${result.transactionId}`);
+          } else {
+            safeLogger.warn(`No email found for user ${sanitizedUserAddress}, skipping receipt email`);
+          }
         } catch (receiptError) {
-          safeLogger.error('Error generating LDAO purchase receipt:', receiptError);
+          safeLogger.error('Error generating or sending LDAO purchase receipt:', receiptError);
         }
       }
       
@@ -236,7 +282,7 @@ export class LDAOAcquisitionService {
       // Generate receipt if purchase was successful
       if (result.success && result.transactionId) {
         try {
-          await this.receiptService.generateLDAOPurchaseReceipt({
+          const receipt = await this.receiptService.generateLDAOPurchaseReceipt({
             transactionId: result.transactionId,
             buyerAddress: sanitizedUserAddress,
             amount: sanitizedAmount.toString(),
@@ -252,8 +298,34 @@ export class LDAOAcquisitionService {
               total: (sanitizedAmount * 0.005 + 0.01).toString()
             }
           });
+
+          // Send receipt email
+          const userEmail = await this.getUserEmail(sanitizedUserAddress);
+          if (userEmail) {
+            await emailService.sendLDAOReceiptEmail(userEmail, {
+              orderId: receipt.receiptNumber,
+              transactionId: result.transactionId,
+              tokensPurchased: result.estimatedTokens?.toString() || '0',
+              amount: sanitizedAmount,
+              currency: sanitizedPaymentToken,
+              pricePerToken: quote.pricePerToken.toString(),
+              paymentMethod: 'crypto',
+              network: sanitizedPaymentToken === 'ETH' ? 'Ethereum' : 'Base',
+              transactionHash: result.txHash,
+              fees: {
+                processing: '0',
+                platform: (sanitizedAmount * 0.005).toString(),
+                gas: '0.01',
+                total: (sanitizedAmount * 0.005 + 0.01).toString()
+              },
+              timestamp: new Date()
+            });
+            safeLogger.info(`Receipt email sent to ${userEmail} for transaction ${result.transactionId}`);
+          } else {
+            safeLogger.warn(`No email found for user ${sanitizedUserAddress}, skipping receipt email`);
+          }
         } catch (receiptError) {
-          safeLogger.error('Error generating LDAO purchase receipt:', receiptError);
+          safeLogger.error('Error generating or sending LDAO purchase receipt:', receiptError);
         }
       }
       

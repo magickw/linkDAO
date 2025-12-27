@@ -227,13 +227,11 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
         // Simulate successful payment (replace with actual Stripe redirect handling)
         setTimeout(async () => {
           try {
-            // Update user's gold balance (this would be done by the backend webhook)
+            // Call backend endpoint to complete purchase and send receipt
+            await completeGoldPurchase(paymentIntent.id || 'stripe-' + Date.now(), selectedPackage, 'stripe');
+            
             addToast('Gold purchase successful! Award will be given.', 'success');
             await onPurchase(selectedPackage);
-            
-            // Send receipt email
-            await sendReceiptEmail(paymentIntent.id || 'stripe-' + Date.now());
-            
             onClose();
           } catch (error) {
             console.error('Error completing purchase:', error);
@@ -252,13 +250,13 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
         await new Promise(resolve => setTimeout(resolve, 3000));
         
         const transactionHash = '0x' + Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('');
+        const network = selectedPaymentMethod.method.id?.replace('usdc-', '') || 'Ethereum';
+        
+        // Call backend endpoint to complete purchase and send receipt
+        await completeGoldPurchase('crypto-' + Date.now(), selectedPackage, 'usdc', network, transactionHash);
         
         addToast('Gold purchase successful! Award will be given.', 'success');
         await onPurchase(selectedPackage);
-        
-        // Send receipt email
-        await sendReceiptEmail('crypto-' + Date.now(), transactionHash);
-        
         onClose();
       }
     } catch (error: any) {
@@ -268,56 +266,42 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
     }
   };
 
-  const sendReceiptEmail = async (orderId: string, transactionHash?: string) => {
+  const completeGoldPurchase = async (
+    paymentIntentId: string, 
+    packageId: string, 
+    paymentMethod: string,
+    network?: string,
+    transactionHash?: string
+  ) => {
     try {
-      // Get user email from user profile or context
-      const userEmail = await getUserEmail();
-      
-      if (!userEmail) {
-        console.warn('No user email found, skipping receipt email');
-        return;
-      }
-
-      const response = await fetch('/api/receipts/send-email', {
+      const response = await fetch('/api/gold/complete', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email: userEmail,
-          orderId,
+          paymentIntentId,
+          userId: address,
+          packageId,
           goldAmount: selectedPackageData?.amount || 0,
-          totalCost: selectedPaymentMethod?.costEstimate?.totalCost || selectedPackageData?.price || 0,
-          paymentMethod: selectedPaymentMethod?.method.name || 'Unknown',
-          network: selectedPaymentMethod?.method.id?.includes('usdc-') 
-            ? selectedPaymentMethod.method.name.replace('USDC on ', '') 
-            : undefined,
+          paymentMethod,
+          network,
           transactionHash
         }),
       });
 
-      if (response.ok) {
-        addToast('Receipt sent to your email!', 'success');
-      } else {
-        console.error('Failed to send receipt email');
+      if (!response.ok) {
+        throw new Error('Failed to complete gold purchase on backend');
       }
-    } catch (error) {
-      console.error('Error sending receipt email:', error);
-    }
-  };
 
-  const getUserEmail = async (): Promise<string | null> => {
-    try {
-      // Try to get user email from user profile API
-      const response = await fetch(`/api/users/${address}`);
-      if (response.ok) {
-        const userData = await response.json();
-        return userData.email || null;
+      const result = await response.json();
+      if (result.success) {
+        addToast('Receipt sent to your email!', 'success');
       }
     } catch (error) {
-      console.error('Error fetching user email:', error);
+      console.error('Error completing gold purchase on backend:', error);
+      throw error;
     }
-    return null;
   };
 
   if (!isOpen) return null;

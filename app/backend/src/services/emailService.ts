@@ -726,6 +726,384 @@ export class EmailService {
   }
 
   /**
+   * Send LDAO token purchase receipt email
+   */
+  async sendLDAOReceiptEmail(
+    email: string,
+    data: {
+      orderId: string;
+      transactionId: string;
+      tokensPurchased: string;
+      amount: number;
+      currency: string;
+      pricePerToken: string;
+      paymentMethod: string;
+      network?: string;
+      transactionHash?: string;
+      fees?: {
+        processing?: string;
+        platform?: string;
+        gas?: string;
+        total?: string;
+      };
+      timestamp: Date;
+    }
+  ): Promise<boolean> {
+    const html = this.getLDAOReceiptTemplate(data);
+    return this.sendEmail({
+      to: email,
+      subject: `Receipt: LDAO Token Purchase #${data.orderId}`,
+      html,
+    });
+  }
+
+  private getLDAOReceiptTemplate(data: {
+    orderId: string;
+    transactionId: string;
+    tokensPurchased: string;
+    amount: number;
+    currency: string;
+    pricePerToken: string;
+    paymentMethod: string;
+    network?: string;
+    transactionHash?: string;
+    fees?: {
+      processing?: string;
+      platform?: string;
+      gas?: string;
+      total?: string;
+    };
+    timestamp: Date;
+  }): string {
+    const formattedDate = data.timestamp.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const totalFees = (parseFloat(data.fees?.processing || '0') + 
+                       parseFloat(data.fees?.platform || '0') + 
+                       parseFloat(data.fees?.gas || '0')).toFixed(2);
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>LDAO Token Purchase Receipt</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #f4f5f7;">
+        <div style="max-width: 600px; margin: 40px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+            <div style="background: white; border-radius: 50%; width: 60px; height: 60px; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;">
+              <svg style="width: 40px; height: 40px;" fill="none" stroke="#667eea" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">LDAO Token Purchase Receipt</h1>
+            <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">Order #${data.orderId}</p>
+          </div>
+
+          <div style="padding: 40px 30px;">
+            <div style="background: #f0fdf4; padding: 20px; border-radius: 8px; margin-bottom: 24px; border-left: 4px solid #10b981;">
+              <p style="color: #15803d; font-size: 16px; font-weight: 600; margin: 0;">Payment Successful!</p>
+              <p style="color: #15803d; font-size: 14px; margin: 8px 0 0 0;">Your LDAO tokens have been added to your wallet.</p>
+            </div>
+
+            <h2 style="color: #1a1a1a; font-size: 20px; margin: 0 0 20px 0;">Order Details</h2>
+
+            <div style="background: #f8f9fa; padding: 24px; border-radius: 8px; margin-bottom: 24px;">
+              <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
+                <span style="color: #6b7280; font-size: 14px;">Date</span>
+                <span style="color: #1f2937; font-size: 14px; font-weight: 500;">${formattedDate}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
+                <span style="color: #6b7280; font-size: 14px;">Transaction ID</span>
+                <span style="color: #1f2937; font-size: 14px; font-weight: 500; font-family: monospace;">${data.transactionId}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
+                <span style="color: #6b7280; font-size: 14px;">Payment Method</span>
+                <span style="color: #1f2937; font-size: 14px; font-weight: 500;">${data.paymentMethod}</span>
+              </div>
+              ${data.network ? `
+                <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
+                  <span style="color: #6b7280; font-size: 14px;">Network</span>
+                  <span style="color: #1f2937; font-size: 14px; font-weight: 500;">${data.network}</span>
+                </div>
+              ` : ''}
+              ${data.transactionHash ? `
+                <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
+                  <span style="color: #6b7280; font-size: 14px;">Transaction Hash</span>
+                  <span style="color: #1f2937; font-size: 12px; font-weight: 500; font-family: monospace; word-break: break-all;">${data.transactionHash.substring(0, 20)}...${data.transactionHash.substring(data.transactionHash.length - 8)}</span>
+                </div>
+              ` : ''}
+            </div>
+
+            <h2 style="color: #1a1a1a; font-size: 20px; margin: 0 0 20px 0;">Purchase Summary</h2>
+
+            <div style="background: #dbeafe; padding: 24px; border-radius: 8px; margin-bottom: 24px; border: 2px solid #3b82f6;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <span style="color: #1e40af; font-size: 16px;">LDAO Tokens Purchased</span>
+                <span style="color: #1e40af; font-size: 24px; font-weight: 700;">${data.tokensPurchased} LDAO</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <span style="color: #1e40af; font-size: 14px;">Price per Token</span>
+                <span style="color: #1e40af; font-size: 16px; font-weight: 500;">$${data.pricePerToken}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <span style="color: #1e40af; font-size: 14px;">Subtotal</span>
+                <span style="color: #1e40af; font-size: 16px; font-weight: 500;">$${data.amount.toFixed(2)}</span>
+              </div>
+              ${totalFees > 0 ? `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                  <span style="color: #1e40af; font-size: 14px;">Fees</span>
+                  <span style="color: #1e40af; font-size: 16px; font-weight: 500;">$${totalFees}</span>
+                </div>
+              ` : ''}
+              <div style="display: flex; justify-content: space-between; align-items: center; border-top: 2px solid #3b82f6; padding-top: 16px; margin-top: 8px;">
+                <span style="color: #1e40af; font-size: 18px; font-weight: 600;">Total Paid</span>
+                <span style="color: #1e40af; font-size: 28px; font-weight: 700;">$${(data.amount + parseFloat(totalFees)).toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div style="background: #eff6ff; padding: 16px; border-radius: 6px; margin-bottom: 24px;">
+              <p style="color: #1e40af; font-size: 14px; margin: 0;">
+                💡 <strong>Tip:</strong> LDAO tokens give you voting rights and access to exclusive features!
+              </p>
+            </div>
+
+            <a href="${process.env.FRONTEND_URL || 'https://linkdao.io'}/ldao-dashboard" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-top: 20px;">
+              View Your LDAO Balance
+            </a>
+          </div>
+
+          <div style="background: #f8f9fa; padding: 30px 20px; text-align: center; border-radius: 0 0 8px 8px; margin-top: 30px;">
+            <p style="color: #6c757d; font-size: 14px; margin: 0 0 10px 0;">LinkDAO - Decentralized Community Platform</p>
+            <p style="color: #6c757d; font-size: 12px; margin: 0;">
+              Questions? Contact us at <a href="mailto:support@linkdao.io" style="color: #667eea; text-decoration: none;">support@linkdao.io</a>
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  /**
+   * Send marketplace purchase receipt email
+   */
+  async sendMarketplaceReceiptEmail(
+    email: string,
+    data: {
+      orderId: string;
+      transactionId: string;
+      items: Array<{
+        name: string;
+        quantity: number;
+        unitPrice: string;
+        totalPrice: string;
+      }>;
+      subtotal: number;
+      shipping: number;
+      tax: number;
+      platformFee: number;
+      total: number;
+      paymentMethod: string;
+      network?: string;
+      transactionHash?: string;
+      sellerName: string;
+      shippingAddress?: {
+        name: string;
+        street: string;
+        city: string;
+        state: string;
+        postalCode: string;
+        country: string;
+      };
+      timestamp: Date;
+    }
+  ): Promise<boolean> {
+    const html = this.getMarketplaceReceiptTemplate(data);
+    return this.sendEmail({
+      to: email,
+      subject: `Receipt: Marketplace Order #${data.orderId}`,
+      html,
+    });
+  }
+
+  private getMarketplaceReceiptTemplate(data: {
+    orderId: string;
+    transactionId: string;
+    items: Array<{
+      name: string;
+      quantity: number;
+      unitPrice: string;
+      totalPrice: string;
+    }>;
+    subtotal: number;
+    shipping: number;
+    tax: number;
+    platformFee: number;
+    total: number;
+    paymentMethod: string;
+    network?: string;
+    transactionHash?: string;
+    sellerName: string;
+    shippingAddress?: {
+      name: string;
+      street: string;
+      city: string;
+      state: string;
+      postalCode: string;
+      country: string;
+    };
+    timestamp: Date;
+  }): string {
+    const formattedDate = data.timestamp.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const itemsHtml = data.items.map(item => `
+      <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
+        <div>
+          <div style="color: #1f2937; font-size: 14px; font-weight: 500;">${item.name}</div>
+          <div style="color: #6b7280; font-size: 12px;">Qty: ${item.quantity} × $${item.unitPrice}</div>
+        </div>
+        <span style="color: #1f2937; font-size: 14px; font-weight: 500;">$${item.totalPrice}</span>
+      </div>
+    `).join('');
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Marketplace Purchase Receipt</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #f4f5f7;">
+        <div style="max-width: 600px; margin: 40px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+            <div style="background: white; border-radius: 50%; width: 60px; height: 60px; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;">
+              <svg style="width: 40px; height: 40px;" fill="none" stroke="#667eea" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+              </svg>
+            </div>
+            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">Marketplace Order Receipt</h1>
+            <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">Order #${data.orderId}</p>
+          </div>
+
+          <div style="padding: 40px 30px;">
+            <div style="background: #f0fdf4; padding: 20px; border-radius: 8px; margin-bottom: 24px; border-left: 4px solid #10b981;">
+              <p style="color: #15803d; font-size: 16px; font-weight: 600; margin: 0;">Order Confirmed!</p>
+              <p style="color: #15803d; font-size: 14px; margin: 8px 0 0 0;">Your order has been placed successfully. The seller will ship your items soon.</p>
+            </div>
+
+            <h2 style="color: #1a1a1a; font-size: 20px; margin: 0 0 20px 0;">Order Details</h2>
+
+            <div style="background: #f8f9fa; padding: 24px; border-radius: 8px; margin-bottom: 24px;">
+              <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
+                <span style="color: #6b7280; font-size: 14px;">Date</span>
+                <span style="color: #1f2937; font-size: 14px; font-weight: 500;">${formattedDate}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
+                <span style="color: #6b7280; font-size: 14px;">Transaction ID</span>
+                <span style="color: #1f2937; font-size: 14px; font-weight: 500; font-family: monospace;">${data.transactionId}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
+                <span style="color: #6b7280; font-size: 14px;">Seller</span>
+                <span style="color: #1f2937; font-size: 14px; font-weight: 500;">${data.sellerName}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
+                <span style="color: #6b7280; font-size: 14px;">Payment Method</span>
+                <span style="color: #1f2937; font-size: 14px; font-weight: 500;">${data.paymentMethod}</span>
+              </div>
+              ${data.network ? `
+                <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
+                  <span style="color: #6b7280; font-size: 14px;">Network</span>
+                  <span style="color: #1f2937; font-size: 14px; font-weight: 500;">${data.network}</span>
+                </div>
+              ` : ''}
+              ${data.transactionHash ? `
+                <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
+                  <span style="color: #6b7280; font-size: 14px;">Transaction Hash</span>
+                  <span style="color: #1f2937; font-size: 12px; font-weight: 500; font-family: monospace; word-break: break-all;">${data.transactionHash.substring(0, 20)}...${data.transactionHash.substring(data.transactionHash.length - 8)}</span>
+                </div>
+              ` : ''}
+            </div>
+
+            ${data.shippingAddress ? `
+              <h2 style="color: #1a1a1a; font-size: 20px; margin: 0 0 20px 0;">Shipping Address</h2>
+              <div style="background: #f8f9fa; padding: 24px; border-radius: 8px; margin-bottom: 24px;">
+                <p style="color: #1f2937; font-size: 14px; margin: 0 0 4px 0; font-weight: 500;">${data.shippingAddress.name}</p>
+                <p style="color: #6b7280; font-size: 14px; margin: 0 0 4px 0;">${data.shippingAddress.street}</p>
+                <p style="color: #6b7280; font-size: 14px; margin: 0 0 4px 0;">${data.shippingAddress.city}, ${data.shippingAddress.state} ${data.shippingAddress.postalCode}</p>
+                <p style="color: #6b7280; font-size: 14px; margin: 0;">${data.shippingAddress.country}</p>
+              </div>
+            ` : ''}
+
+            <h2 style="color: #1a1a1a; font-size: 20px; margin: 0 0 20px 0;">Order Items</h2>
+
+            <div style="background: #f8f9fa; padding: 24px; border-radius: 8px; margin-bottom: 24px;">
+              ${itemsHtml}
+            </div>
+
+            <h2 style="color: #1a1a1a; font-size: 20px; margin: 0 0 20px 0;">Payment Summary</h2>
+
+            <div style="background: #dbeafe; padding: 24px; border-radius: 8px; margin-bottom: 24px; border: 2px solid #3b82f6;">
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #3b82f6;">
+                <span style="color: #1e40af; font-size: 14px;">Subtotal</span>
+                <span style="color: #1e40af; font-size: 16px; font-weight: 500;">$${data.subtotal.toFixed(2)}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #3b82f6;">
+                <span style="color: #1e40af; font-size: 14px;">Shipping</span>
+                <span style="color: #1e40af; font-size: 16px; font-weight: 500;">$${data.shipping.toFixed(2)}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #3b82f6;">
+                <span style="color: #1e40af; font-size: 14px;">Tax</span>
+                <span style="color: #1e40af; font-size: 16px; font-weight: 500;">$${data.tax.toFixed(2)}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #3b82f6;">
+                <span style="color: #1e40af; font-size: 14px;">Platform Fee</span>
+                <span style="color: #1e40af; font-size: 16px; font-weight: 500;">$${data.platformFee.toFixed(2)}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; border-top: 2px solid #3b82f6; padding-top: 16px; margin-top: 8px;">
+                <span style="color: #1e40af; font-size: 18px; font-weight: 600;">Total</span>
+                <span style="color: #1e40af; font-size: 28px; font-weight: 700;">$${data.total.toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div style="background: #eff6ff; padding: 16px; border-radius: 6px; margin-bottom: 24px;">
+              <p style="color: #1e40af; font-size: 14px; margin: 0;">
+                📦 <strong>Shipping Info:</strong> You'll receive tracking information once the seller ships your items.
+              </p>
+            </div>
+
+            <a href="${process.env.FRONTEND_URL || 'https://linkdao.io'}/marketplace/orders/${data.orderId}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-top: 20px;">
+              Track Your Order
+            </a>
+          </div>
+
+          <div style="background: #f8f9fa; padding: 30px 20px; text-align: center; border-radius: 0 0 8px 8px; margin-top: 30px;">
+            <p style="color: #6c757d; font-size: 14px; margin: 0 0 10px 0;">LinkDAO - Decentralized Community Platform</p>
+            <p style="color: #6c757d; font-size: 12px; margin: 0;">
+              Questions? Contact us at <a href="mailto:support@linkdao.io" style="color: #667eea; text-decoration: none;">support@linkdao.io</a>
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  /**
    * Check if email service is enabled
    */
   isEnabled(): boolean {
