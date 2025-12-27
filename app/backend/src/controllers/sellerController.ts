@@ -2,12 +2,14 @@ import { Request, Response } from "express";
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { safeLogger } from '../utils/safeLogger';
 import { databaseService } from "../services/databaseService";
+import { sellerService } from "../services/sellerService";
 import { eq, and, or, ilike, desc, lt, gte, lte, sql } from 'drizzle-orm';
 import * as schema from '../db/schema';
 import { marketplaceUsers, sellerVerifications } from "../db/marketplaceSchema";
 import { users, products, categories } from "../db/schema";
 
 export class SellerController {
+  private sellerService = sellerService;
   // Get seller applications
   async getSellerApplications(req: Request, res: Response) {
     try {
@@ -748,6 +750,9 @@ export class SellerController {
       const { period = '30d', includeOrders = 'true', includeAnalytics = 'true' } = req.query;
       const db = databaseService.getDatabase();
 
+      // Get seller profile information
+      const sellerProfile = await this.sellerService.getSellerProfile(user.walletAddress);
+
       // Get basic stats
       const stats = await this.getSellerStatsInternal(user.walletAddress);
 
@@ -767,6 +772,7 @@ export class SellerController {
         .limit(5);
 
       const dashboardData: any = {
+        profile: sellerProfile, // Include seller profile data
         stats,
         recentListings: recentListings.map(listing => ({
           ...listing,

@@ -108,30 +108,29 @@ class ProductionServerManager {
     try {
       const { getMonitoringIntegrationService } = await import('../monitoring/monitoring-integration');
       const monitoringService = getMonitoringIntegrationService();
-      
+
       // Setup monitoring middleware
       monitoringService.setupMiddleware(this.app);
-      
+
       // Setup monitoring routes
       monitoringService.setupMonitoringRoutes(this.app);
     } catch (error) {
       safeLogger.warn('⚠️ Monitoring integration not available:', error);
     }
-    
+
     // Import and setup your application routes here
     // This is where you'd import your actual API routes
-    
+
     // Example route imports (adjust based on your actual route structure)
     try {
       // Health check routes are already set up by gatewayManager
-      
+
       // Import marketplace API routes
       const { default: marketplaceSellerRoutes } = await import('../routes/marketplaceSellerRoutes');
       const { default: sellerProfileRoutes } = await import('../routes/sellerProfileRoutes');
       const { default: sellerDashboardRoutes } = await import('../routes/sellerDashboardRoutes');
       const { default: sellerOrderRoutes } = await import('../routes/sellerOrderRoutes');
       const { default: sellerListingRoutes } = await import('../routes/sellerListingRoutes');
-      const { default: sellerImageUploadRoutes } = await import('../routes/sellerImageUploadRoutes');
       const { default: sellerVerificationRoutes } = await import('../routes/sellerVerificationRoutes');
       const { sellerImageRoutes } = await import('../routes/sellerImageRoutes');
       const { default: listingRoutes } = await import('../routes/marketplaceListingsRoutes');
@@ -141,12 +140,12 @@ class ProductionServerManager {
       const { default: authRoutes } = await import('../routes/authRoutes');
       const { default: reputationRoutes } = await import('../routes/reputationRoutes');
       const { default: healthRoutes } = await import('../routes/healthRoutes');
-      
+
       // Import feed and post API routes
       const { default: feedRoutes } = await import('../routes/feedRoutes');
       const { default: postRoutes } = await import('../routes/postRoutes');
       const { default: quickPostRoutes } = await import('../routes/quickPostRoutes');
-      
+
       // Import other essential API routes
       const { default: userRoutes } = await import('../routes/userRoutes');
       const { default: commentRoutes } = await import('../routes/commentRoutes');
@@ -178,7 +177,6 @@ class ProductionServerManager {
       this.app.use('/api/marketplace', sellerDashboardRoutes);
       this.app.use('/api/marketplace', sellerOrderRoutes);
       this.app.use('/api/marketplace', sellerListingRoutes);
-      this.app.use('/api/marketplace', sellerImageUploadRoutes);
       this.app.use('/api/marketplace', sellerVerificationRoutes);
       this.app.use('/api/marketplace/seller/images', sellerImageRoutes);
       // Mount specific marketplace routes that have named endpoints FIRST
@@ -195,12 +193,12 @@ class ProductionServerManager {
       this.app.use('/api/auth', authRoutes);
       this.app.use('/marketplace/reputation', reputationRoutes);
       this.app.use('/health', healthRoutes);
-      
+
       // Mount feed and post routes
       this.app.use('/api/feed', feedRoutes);
       this.app.use('/api/posts', postRoutes);
       this.app.use('/api/quick-posts', quickPostRoutes);
-      
+
       // Mount other essential routes
       this.app.use('/api/users', userRoutes);
       this.app.use('/api/comments', commentRoutes);
@@ -223,7 +221,7 @@ class ProductionServerManager {
       this.app.use('/api/user-profile', userProfileRoutes);
       this.app.use('/api/community-comments', communityCommentRoutes);
       this.app.use('/api/content-report', contentReportRoutes);
-      
+
       // Mount newsletter routes
       this.app.use('/api/newsletter', newsletterRoutes);
       // Mount enhanced fiat payment routes
@@ -310,22 +308,22 @@ class ProductionServerManager {
     safeLogger.info('======================');
     safeLogger.info(`Environment: ${this.config.environment}`);
     safeLogger.info(`HTTP URL: http://${this.config.host}:${this.config.port}`);
-    
+
     if (this.httpsServer) {
       safeLogger.info(`HTTPS URL: https://${this.config.host}:${this.config.sslPort}`);
     }
-    
+
     safeLogger.info(`Process ID: ${process.pid}`);
     safeLogger.info(`Node.js Version: ${process.version}`);
     safeLogger.info(`Memory Usage: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)} MB`);
-    
+
     // Load balancer info
     if (process.env.LB_ENABLED === 'true') {
       const loadBalancer = getLoadBalancerManager();
       const status = loadBalancer.getStatus();
       safeLogger.info(`Load Balancer: ${status.algorithm} (${status.healthyServers}/${status.totalServers} healthy)`);
     }
-    
+
     safeLogger.info('\n🔗 Available Endpoints:');
     safeLogger.info('  GET  /health - Basic health check');
     safeLogger.info('  GET  /health/detailed - Detailed health check');
@@ -339,7 +337,7 @@ class ProductionServerManager {
 
   private setupGracefulShutdown(): void {
     const signals = ['SIGTERM', 'SIGINT', 'SIGUSR2'];
-    
+
     signals.forEach(signal => {
       process.on(signal, () => {
         safeLogger.info(`\n🛑 Received ${signal}, starting graceful shutdown...`);

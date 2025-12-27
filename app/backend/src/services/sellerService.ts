@@ -16,8 +16,7 @@ import {
   sellerTierRequirements,
   sellerTierBenefits,
   sellerTierProgression,
-  sellerTierHistory,
-  marketplaceReviews
+  sellerTierHistory
 } from '../db/schema';
 import { ensService } from './ensService';
 import { profileSyncService } from './profileSyncService';
@@ -1177,7 +1176,7 @@ class SellerService {
           repeatRate: sql<number>`COALESCE(COUNT(DISTINCT o.buyer_id) * 100.0 / COUNT(o.id), 0)`.as('repeat_rate')
         })
         .from(schema.orders)
-        .leftJoin(marketplaceReviews, eq(marketplaceReviews.revieweeId, schema.orders.sellerId))
+        .leftJoin(reviews, eq(reviews.revieweeId, schema.orders.sellerId))
         .where(eq(schema.orders.sellerId, walletAddress))
         .groupBy(schema.orders.sellerId);
 

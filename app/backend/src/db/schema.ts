@@ -3391,20 +3391,15 @@ export const imageStorage = pgTable("image_storage", {
 }));
 // ENS Verifications table is defined earlier in the file (line 725)
 
-// Export all marketplace tables
+// Export only active marketplace tables (not commented out)
 export const {
   marketplaceUsers,
-  marketplaceProducts,
-  marketplaceOrders,
-  marketplaceDisputes,
-  disputeJudges,
   marketplaceVerifications,
   sellerVerifications,
-  marketplaceReviews,
-  reviewHelpfulness,
-  reviewReports,
-  marketplaceAnalytics,
-  marketplaceConfig
+  marketplaceConfig,
+  marketplaceRewards,
+  earningChallenges,
+  userChallengeProgress
 } = marketplaceSchema;
 
 // Payment Transaction Tables for Order-Payment Integration

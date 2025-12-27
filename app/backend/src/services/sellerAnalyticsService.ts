@@ -9,8 +9,7 @@ import {
   sellerTierBenefits,
   sellerTierProgression,
   sellerTierHistory,
-  marketplaceOrders,
-  marketplaceReviews
+  reviews
 } from '../db/schema';
 import { eq, sql, and, gte, lte, desc, asc, count, sum, avg, isNotNull } from 'drizzle-orm';
 import { Redis } from 'ioredis';
@@ -961,10 +960,10 @@ export class SellerAnalyticsService {
           returnRate: sql<number>`COALESCE(COUNT(CASE WHEN o.status = 'completed' AND o.returned = true THEN 1 ELSE 0 END) * 100.0 / COUNT(o.id), 0)`.as('return_rate'),
           repeatRate: sql<number>`COALESCE(COUNT(DISTINCT o.buyer_id) * 100.0 / COUNT(o.id), 0)`.as('repeat_rate')
         })
-        .from(marketplaceOrders)
-        .leftJoin(marketplaceReviews, eq(marketplaceReviews.revieweeId, marketplaceOrders.sellerId))
-        .where(eq(marketplaceOrders.sellerId, walletAddress))
-        .groupBy(marketplaceOrders.sellerId);
+        .from(orders)
+        .leftJoin(reviews, eq(reviews.revieweeId, orders.sellerId))
+        .where(eq(orders.sellerId, walletAddress))
+        .groupBy(orders.sellerId);
 
       return metrics[0] || {
         totalSales: 0,
@@ -1065,11 +1064,10 @@ export class SellerAnalyticsService {
           disputeRate: sql<number>`COALESCE(COUNT(CASE WHEN o.status = 'disputed' AND o.created_at >= ${thirtyDaysAgo} THEN 1 ELSE 0 END) * 100.0 / COUNT(CASE WHEN o.created_at >= ${thirtyDaysAgo} THEN 1 ELSE NULL END), 0)`.as('dispute_rate'),
           repeatRate: sql<number>`COALESCE(COUNT(DISTINCT CASE WHEN o.created_at >= ${thirtyDaysAgo} THEN o.buyer_id ELSE NULL END) * 100.0 / COUNT(CASE WHEN o.created_at >= ${thirtyDaysAgo} THEN 1 ELSE NULL END), 0)`.as('repeat_rate')
         })
-        .from(marketplaceOrders)
-        .leftJoin(marketplaceReviews, eq(marketplaceReviews.revieweeId, marketplaceOrders.sellerId))
-        .where(eq(marketplaceOrders.sellerId, walletAddress))
-        .groupBy(marketplaceOrders.sellerId);
-
+        .from(orders)
+              .leftJoin(reviews, eq(reviews.revieweeId, orders.sellerId))
+              .where(eq(orders.sellerId, walletAddress))
+              .groupBy(orders.sellerId);
       return requirements.map(req => {
         const metricField = this.getMetricField(req.requirement_type);
         const currentValue = currentMetrics[metricField] || 0;
@@ -1154,13 +1152,13 @@ export class SellerAnalyticsService {
         .from(sellers)
         .leftJoin(
           db.select({
-            seller_id: marketplaceOrders.sellerId,
+            seller_id: orders.sellerId,
             total_sales: sql<number>`SUM(CASE WHEN o.status = 'completed' THEN o.amount ELSE 0 END)`.as('total_sales'),
             avg_rating: sql<number>`COALESCE(AVG(r.rating), 0)`.as('avg_rating')
           })
-            .from(marketplaceOrders)
-            .leftJoin(marketplaceReviews, eq(marketplaceReviews.revieweeId, marketplaceOrders.sellerId))
-            .groupBy(marketplaceOrders.sellerId)
+            .from(orders)
+            .leftJoin(reviews, eq(reviews.revieweeId, orders.sellerId))
+            .groupBy(orders.sellerId)
             .as('sales'),
           eq(sellers.walletAddress, sql`sales.seller_id`)
         )

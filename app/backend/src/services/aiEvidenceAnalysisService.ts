@@ -17,7 +17,7 @@ try {
 }
 import crypto from 'crypto';
 import { db } from '../db';
-import { marketplaceDisputes as disputeEvidence, disputes } from '../db/schema';
+import { disputes } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
 export interface EvidenceAnalysisResult {
@@ -331,7 +331,7 @@ export class AIEvidenceAnalysisService {
   ): Promise<Array<{ evidenceId: string; similarity: number; disputeId: string }>> {
     try {
       // Get all evidence from database
-      const allEvidence = await db.select().from(disputeEvidence);
+      const allEvidence = await db.select().from(disputes);
       
       const similarities: Array<{ evidenceId: string; similarity: number; disputeId: string }> = [];
       
@@ -348,7 +348,7 @@ export class AIEvidenceAnalysisService {
           similarities.push({
             evidenceId: evidence.id.toString(),
             similarity,
-            disputeId: evidence.orderId
+            disputeId: evidence.escrowId
           });
         }
       }
@@ -478,8 +478,8 @@ export class AIEvidenceAnalysisService {
     try {
       // Get dispute context to determine relevance
       const evidence = await db.select()
-        .from(disputeEvidence)
-        .where(eq(disputeEvidence.id, evidenceId))
+        .from(disputes)
+        .where(eq(disputes.id, parseInt(evidenceId)))
         .limit(1);
 
       if (evidence.length === 0) {
@@ -689,8 +689,8 @@ export class AIEvidenceAnalysisService {
     try {
       // Get dispute context
       const evidence = await db.select()
-        .from(disputeEvidence)
-        .where(eq(disputeEvidence.id, evidenceId))
+        .from(disputes)
+        .where(eq(disputes.id, parseInt(evidenceId)))
         .limit(1);
 
       if (evidence.length === 0) {

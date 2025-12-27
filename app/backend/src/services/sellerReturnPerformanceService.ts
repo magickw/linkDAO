@@ -1,6 +1,6 @@
 import { db } from '../db';
-import { users } from '../db/schema';
-import { marketplaceUsers, marketplaceOrders } from '../db/marketplaceSchema';
+import { users, orders } from '../db/schema';
+import { marketplaceUsers } from '../db/marketplaceSchema';
 import { eq, and, gte, lte, sql, desc, asc } from 'drizzle-orm';
 import { EventEmitter } from 'events';
 import { realTimeComplianceMonitoringService } from './realTimeComplianceMonitoringService';
@@ -166,12 +166,12 @@ export class SellerReturnPerformanceService extends EventEmitter {
       // Get total orders for return rate calculation
       const sellerOrders = await db
         .select({ count: sql<number>`count(*)` })
-        .from(marketplaceOrders)
+        .from(orders)
         .where(
           and(
-            eq(marketplaceOrders.sellerId, sellerId),
-            gte(marketplaceOrders.createdAt, startDate),
-            lte(marketplaceOrders.createdAt, endDate)
+            eq(orders.sellerId, sellerId),
+            gte(orders.createdAt, startDate),
+            lte(orders.createdAt, endDate)
           )
         );
 
@@ -276,7 +276,7 @@ export class SellerReturnPerformanceService extends EventEmitter {
 
       // Calculate compliance metrics
       const platformAverages = await this.getPlatformAverages(startDate, endDate);
-      
+
       const totalReturns = sellerReturns.length;
       const approvedReturns = sellerReturns.filter(r => r.status === 'approved').length;
       const approvalRate = totalReturns > 0 ? (approvedReturns / totalReturns) * 100 : 0;
@@ -361,7 +361,7 @@ export class SellerReturnPerformanceService extends EventEmitter {
         .from(users)
         .innerJoin(marketplaceUsers, eq(users.id, marketplaceUsers.userId))
         .where(eq(marketplaceUsers.role, 'seller'));
-      
+
       const allSellerMetrics = await Promise.all(
         allSellers.map(s => this.getSellerReturnMetrics(s.users.id, startDate, endDate))
       );
@@ -393,7 +393,7 @@ export class SellerReturnPerformanceService extends EventEmitter {
       const sellerApprovalRateRank = approvalRateRanking.findIndex(m => m.sellerId === sellerId) + 1;
       const sellerProcessingTimeRank = processingTimeRanking.findIndex(m => m.sellerId === sellerId) + 1;
       const sellerSatisfactionRank = satisfactionRanking.findIndex(m => m.sellerId === sellerId) + 1;
-      
+
       const overallRank = Math.round(
         (sellerReturnRateRank + sellerApprovalRateRank + sellerProcessingTimeRank + sellerSatisfactionRank) / 4
       );
@@ -442,7 +442,7 @@ export class SellerReturnPerformanceService extends EventEmitter {
         .from(users)
         .innerJoin(marketplaceUsers, eq(users.id, marketplaceUsers.userId))
         .where(eq(marketplaceUsers.role, 'seller'));
-      
+
       const allMetrics = await Promise.all(
         allSellers.map(s => this.getSellerReturnMetrics(s.users.id, startDate, endDate))
       );
@@ -504,7 +504,7 @@ export class SellerReturnPerformanceService extends EventEmitter {
       : 0;
 
     const approvalRateDeviation = Math.abs(approvalRate - platformAverages.averageApprovalRate);
-    
+
     if (approvalRateDeviation > 20) {
       violations.push({
         violationType: 'approval_rate',

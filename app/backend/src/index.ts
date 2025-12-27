@@ -794,8 +794,6 @@ import sellerDashboardRoutes from './routes/sellerDashboardRoutes';
 import sellerOrderRoutes from './routes/sellerOrderRoutes';
 // Import seller listing routes
 import sellerListingRoutes from './routes/sellerListingRoutes';
-// Import seller image upload routes
-import sellerImageUploadRoutes from './routes/sellerImageUploadRoutes';
 // Import unified seller image routes
 import { sellerImageRoutes } from './routes/sellerImageRoutes';
 // Import seller verification routes
@@ -987,54 +985,42 @@ app.use('/api/listings', listingRoutes);
 app.use('/api/orders', orderCreationRoutes);
 
 // =============================================================================
-// MARKETPLACE ROUTES - Order matters! More specific paths must come FIRST
+// MARKETPLACE ROUTES - Optimized Order (Most Specific → Most Generic)
 // =============================================================================
+// Route resolution order matters! More specific paths MUST come before generic ones.
+// This prevents route conflicts and improves performance.
 
-// Marketplace listings routes - MUST be before generic /api/marketplace routes
-// Frontend expects: GET /api/marketplace/listings
-app.use('/api/marketplace/listings', marketplaceListingsRoutes);
-
-// Product variant routes
-const productVariantRoutes = require('./routes/productVariantRoutes').default;
-app.use('/api/marketplace', productVariantRoutes);
-
-// Seller dashboard routes
+// 1. MOST SPECIFIC SELLER ROUTES (seller dashboard & management)
+// -------------------------------------------------------------------------
 app.use('/api/marketplace/seller/dashboard', sellerDashboardRoutes);
-
-// Seller order routes
 app.use('/api/marketplace/seller/orders', sellerOrderRoutes);
-
-// Seller listing routes
 app.use('/api/marketplace/seller/listings', sellerListingRoutes);
-
-// Seller image upload routes (legacy)
-app.use('/api/marketplace/seller/images/upload', sellerImageUploadRoutes);
-
-// Unified seller image routes
 app.use('/api/marketplace/seller/images', sellerImageRoutes);
-
-// Seller verification routes
 app.use('/api/marketplace/seller/verification', sellerVerificationRoutes);
 
-// ENS validation routes
+// 2. MARKETPLACE-SPECIFIC FEATURES (specific paths)
+// -------------------------------------------------------------------------
+app.use('/api/marketplace/search', marketplaceSearchRoutes);
+app.use('/api/marketplace/listings', marketplaceListingsRoutes);
 app.use('/api/marketplace/ens', ensValidationRoutes);
 
-// Marketplace search routes
-app.use('/api/marketplace/search', marketplaceSearchRoutes);
+// 3. PRODUCT VARIANTS (specific pattern matching)
+// -------------------------------------------------------------------------
+const productVariantRoutes = require('./routes/productVariantRoutes').default;
+app.use('/api/marketplace/products', productVariantRoutes);
 
-// Seller routes - main seller API endpoints
+// 4. SEPARATE SELLER NAMESPACE (alternative API path)
+// -------------------------------------------------------------------------
 app.use('/api/sellers', sellerRoutes);
 
-// Seller profile API routes - Primary seller endpoints
-// sellerProfileRoutes defines routes like /seller/:walletAddress, so mounting at /api/marketplace
-// creates the correct path: /api/marketplace/seller/:walletAddress
-// This allows fetching any seller's profile by wallet address
+// 5. CATCH-ALL MARKETPLACE ROUTES (MUST BE LAST)
+// -------------------------------------------------------------------------
+// Seller profiles - handles /seller/:walletAddress pattern
 // Frontend expects: GET /api/marketplace/seller/:walletAddress
 app.use('/api/marketplace', sellerProfileRoutes);
 
-// Register main marketplace routes - ONLY for endpoints NOT covered by specific routes above
-// This should NOT include /listings as that's handled by marketplaceListingsRoutes
-// NOTE: marketplaceRoutes handles /sellers/:id routes like /api/marketplace/sellers/:id, while sellerProfileRoutes handles /seller/:walletAddress routes like /api/marketplace/seller/:walletAddress - these are different paths and don't conflict
+// Generic marketplace routes - handles all other /api/marketplace/* patterns
+// This should be LAST to avoid conflicts with specific routes above
 app.use('/api/marketplace', marketplaceRoutes);
 
 // NOTE: marketplaceSellerRoutes has been removed to prevent route conflicts
