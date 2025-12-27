@@ -43,23 +43,23 @@ function contactReducer(state: ContactState, action: ContactAction): ContactStat
   switch (action.type) {
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
-    
+
     case 'SET_ERROR':
       return { ...state, error: action.payload, isLoading: false };
-    
+
     case 'SET_CONTACTS':
       return { ...state, contacts: action.payload, isLoading: false };
-    
+
     case 'SET_GROUPS':
       return { ...state, groups: action.payload };
-    
+
     case 'ADD_CONTACT':
-      return { 
-        ...state, 
+      return {
+        ...state,
         contacts: [...state.contacts, action.payload],
-        isLoading: false 
+        isLoading: false
       };
-    
+
     case 'UPDATE_CONTACT':
       return {
         ...state,
@@ -72,29 +72,29 @@ function contactReducer(state: ContactState, action: ContactAction): ContactStat
           ? { ...state.selectedContact, ...action.payload.updates, updatedAt: new Date() }
           : state.selectedContact
       };
-    
+
     case 'DELETE_CONTACT':
       return {
         ...state,
         contacts: state.contacts.filter(contact => contact.id !== action.payload),
         selectedContact: state.selectedContact?.id === action.payload ? null : state.selectedContact
       };
-    
+
     case 'SELECT_CONTACT':
       return { ...state, selectedContact: action.payload };
-    
+
     case 'SET_SEARCH_FILTERS':
       return {
         ...state,
         searchFilters: { ...state.searchFilters, ...action.payload }
       };
-    
+
     case 'ADD_GROUP':
       return {
         ...state,
         groups: [...state.groups, action.payload]
       };
-    
+
     case 'UPDATE_GROUP':
       return {
         ...state,
@@ -104,7 +104,7 @@ function contactReducer(state: ContactState, action: ContactAction): ContactStat
             : group
         )
       };
-    
+
     case 'DELETE_GROUP':
       return {
         ...state,
@@ -114,7 +114,7 @@ function contactReducer(state: ContactState, action: ContactAction): ContactStat
           groups: contact.groups.filter(group => group.id !== action.payload)
         }))
       };
-    
+
     default:
       return state;
   }
@@ -349,7 +349,8 @@ export function ContactProvider({ children }: { children: React.ReactNode }) {
 
   const setOnStartChat = useCallback((callback: ((contact: Contact) => void) | null) => {
     console.log("ContactContext: setOnStartChat called with callback:", !!callback);
-    setOnStartChatCallback(callback);
+    // Wrap in function to prevent React from treating it as a state update function
+    setOnStartChatCallback(() => callback);
   }, []);
 
   const startChat = useCallback((contact: Contact | null) => {
@@ -358,7 +359,7 @@ export function ContactProvider({ children }: { children: React.ReactNode }) {
       console.log("ContactContext: Ignoring startChat call with null contact");
       return;
     }
-    
+
     if (onStartChatCallback) {
       console.log("ContactContext: Calling onStartChatCallback with contact:", contact);
       onStartChatCallback(contact);

@@ -335,13 +335,13 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
 
   const handleConversationSelect = async (conversation: Conversation) => {
     console.log("FloatingChatWidget: handleConversationSelect called with conversation:", conversation);
-    
+
     // Leave previous conversation room before switching
     if (isWebSocketConnected && selectedConversation?.id && selectedConversation.id !== conversation.id) {
       console.log("FloatingChatWidget: Leaving previous conversation room:", selectedConversation.id);
       leaveConversation(selectedConversation.id);
     }
-    
+
     setSelectedConversation(conversation);
     setActiveTab('chat');
 
@@ -412,7 +412,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
         // If conversation exists, select it (inline the logic to avoid circular dependency)
         console.log("FloatingChatWidget: Selecting existing conversation:", existingConversation);
         setSelectedConversation(existingConversation);
-        
+
         // Switch to chat tab immediately
         console.log("FloatingChatWidget: Setting active tab to 'chat' for existing conversation");
         setActiveTab('chat');
@@ -432,7 +432,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
       } else {
         // If no conversation exists, automatically create one
         console.log("FloatingChatWidget: No existing conversation found, creating new conversation with address:", pendingContact.walletAddress);
-        
+
         // Set the recipient address in state (keeps UI in sync) and trigger conversation creation
         setNewRecipientAddress(pendingContact.walletAddress);
 
@@ -465,7 +465,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
 
   const startNewConversation = async (recipientAddress?: string) => {
     console.log("FloatingChatWidget: startNewConversation button clicked!");
-    
+
     // Prefer the passed-in recipientAddress (if provided) to avoid races where
     // `setNewRecipientAddress` hasn't completed yet. Fall back to state for
     // compatibility with existing callers (e.g. the modal Start button).
@@ -495,7 +495,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
         localStorage.getItem('authToken') ||
         localStorage.getItem('token') ||
         localStorage.getItem('auth_token');
-      
+
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
@@ -519,11 +519,11 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
         const newConversation = await response.json();
         console.log("FloatingChatWidget: New conversation created:", newConversation);
         setSelectedConversation(newConversation);
-        
+
         // Switch to chat tab immediately
         console.log("FloatingChatWidget: Setting active tab to 'chat' for new conversation");
         setActiveTab('chat');
-        
+
         setShowNewConversationModal(false);
         // Clear state only if we used the state value; if recipientAddress was passed
         // explicitly, still clear to keep UI consistent.
@@ -533,7 +533,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
         const errorText = await response.text();
         console.error('Failed to create conversation:', response.status, response.statusText);
         console.error('Error response:', errorText);
-        
+
         // Show user-friendly error message
         if (response.status === 401) {
           alert('Please connect your wallet to start a conversation');
@@ -854,10 +854,10 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
                   {activeTab === 'chat' && selectedConversation && (
                     <div className="flex flex-col h-full">
                       <div className="flex-1 overflow-y-auto">
-                        <DiscordStyleMessagingInterface 
-                          className="h-full" 
+                        <DiscordStyleMessagingInterface
+                          className="h-full"
                           conversation={selectedConversation}
-                          onClose={handleBackToList} 
+                          onClose={handleBackToList}
                         />
                       </div>
                     </div>
@@ -914,7 +914,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
                   Cancel
                 </button>
                 <button
-                  onClick={startNewConversation}
+                  onClick={() => startNewConversation()}
                   disabled={!newRecipientAddress.trim() || isCreatingConversation}
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 
                            disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
@@ -970,9 +970,9 @@ const ContactsTabContent: React.FC = () => {
         </div>
 
         {/* Flat Contact List */}
-        <ContactList 
-          className="flex-1" 
-          flat 
+        <ContactList
+          className="flex-1"
+          flat
           onContactMessage={handleStartChat}
           onContactEdit={handleEditContact}
         />
@@ -991,7 +991,7 @@ const ContactsTabContent: React.FC = () => {
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
       />
-      
+
       {/* Edit Contact Modal - rendered outside to avoid z-index issues */}
       <EditContactModal
         isOpen={showEditModal}
