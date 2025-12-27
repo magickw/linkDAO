@@ -87,4 +87,36 @@ router.get('/receipts/:id/pdf', async (req: Request, res: Response) => {
   }
 });
 
+// Send receipt email
+router.post('/receipts/send-email', async (req: Request, res: Response) => {
+  try {
+    const { email, orderId, goldAmount, totalCost, paymentMethod, network, transactionHash } = req.body;
+    
+    if (!email || !orderId || !goldAmount || !totalCost || !paymentMethod) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const { emailService } = await import('../services/emailService');
+    
+    const success = await emailService.sendPurchaseReceiptEmail(email, {
+      orderId,
+      goldAmount,
+      totalCost,
+      paymentMethod,
+      network,
+      transactionHash,
+      timestamp: new Date()
+    });
+    
+    if (success) {
+      res.json({ success: true, message: 'Receipt sent successfully' });
+    } else {
+      res.status(500).json({ error: 'Failed to send receipt' });
+    }
+  } catch (error) {
+    safeLogger.error('Error sending receipt email:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;

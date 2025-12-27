@@ -150,27 +150,34 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
   }, [isOpen, goldNeeded]);
 
   const loadPaymentMethods = () => {
-    // Set default payment method to Credit/Debit Card
+    // Set default payment method to USDC on Base (low gas fees)
     setSelectedPaymentMethod({
       method: {
-        id: 'stripe-fiat',
-        type: 'FIAT_STRIPE',
-        name: 'Credit/Debit Card',
-        description: 'Pay with credit or debit card',
-        chainId: 0,
+        id: 'usdc-base',
+        type: 'STABLECOIN_USDC',
+        name: 'USDC on Base',
+        description: 'USD Coin on Base network',
+        chainId: 8453,
         enabled: true,
-        supportedNetworks: []
+        supportedNetworks: [8453],
+        token: {
+          address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bA029339',
+          symbol: 'USDC',
+          decimals: 6,
+          name: 'USD Coin',
+          chainId: 8453
+        }
       },
       availabilityStatus: 'available',
       costEstimate: {
-        totalCost: selectedPackageData?.price || 1.79,
-        fees: 0,
-        gasFees: 0,
-        processingFees: (selectedPackageData?.price || 1.79) * 0.029,
+        totalCost: (selectedPackageData?.price || 0) + 0.01, // Very low gas on Base
+        fees: 0.01,
+        gasFees: 0.01,
+        processingFees: 0,
         exchangeRateFees: 0
       },
       confidence: 0.95,
-      recommendationReason: 'Fast and secure payment with no crypto wallet needed'
+      recommendationReason: 'Low fees on Base network'
     } as any);
   };
 
@@ -223,6 +230,10 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
             // Update user's gold balance (this would be done by the backend webhook)
             addToast('Gold purchase successful! Award will be given.', 'success');
             await onPurchase(selectedPackage);
+            
+            // Send receipt email
+            await sendReceiptEmail(paymentIntent.id || 'stripe-' + Date.now());
+            
             onClose();
           } catch (error) {
             console.error('Error completing purchase:', error);
@@ -240,8 +251,14 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
         // Simulate crypto payment processing
         await new Promise(resolve => setTimeout(resolve, 3000));
         
+        const transactionHash = '0x' + Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('');
+        
         addToast('Gold purchase successful! Award will be given.', 'success');
         await onPurchase(selectedPackage);
+        
+        // Send receipt email
+        await sendReceiptEmail('crypto-' + Date.now(), transactionHash);
+        
         onClose();
       }
     } catch (error: any) {
@@ -249,6 +266,58 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
       addToast(`Purchase failed: ${error.message}`, 'error');
       setIsProcessing(false);
     }
+  };
+
+  const sendReceiptEmail = async (orderId: string, transactionHash?: string) => {
+    try {
+      // Get user email from user profile or context
+      const userEmail = await getUserEmail();
+      
+      if (!userEmail) {
+        console.warn('No user email found, skipping receipt email');
+        return;
+      }
+
+      const response = await fetch('/api/receipts/send-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: userEmail,
+          orderId,
+          goldAmount: selectedPackageData?.amount || 0,
+          totalCost: selectedPaymentMethod?.costEstimate?.totalCost || selectedPackageData?.price || 0,
+          paymentMethod: selectedPaymentMethod?.method.name || 'Unknown',
+          network: selectedPaymentMethod?.method.id?.includes('usdc-') 
+            ? selectedPaymentMethod.method.name.replace('USDC on ', '') 
+            : undefined,
+          transactionHash
+        }),
+      });
+
+      if (response.ok) {
+        addToast('Receipt sent to your email!', 'success');
+      } else {
+        console.error('Failed to send receipt email');
+      }
+    } catch (error) {
+      console.error('Error sending receipt email:', error);
+    }
+  };
+
+  const getUserEmail = async (): Promise<string | null> => {
+    try {
+      // Try to get user email from user profile API
+      const response = await fetch(`/api/users/${address}`);
+      if (response.ok) {
+        const userData = await response.json();
+        return userData.email || null;
+      }
+    } catch (error) {
+      console.error('Error fetching user email:', error);
+    }
+    return null;
   };
 
   if (!isOpen) return null;
@@ -339,6 +408,114 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
             
             {/* Simple Payment Method Selection */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* USDC with Network Selector */}
+              <div className={`p-4 rounded-lg border-2 transition-all ${
+                selectedPaymentMethod?.method.type === 'STABLECOIN_USDC'
+                  ? 'border-green-500 bg-green-50'
+                  : 'border-gray-200'
+              }`}>
+                <div className="flex items-center space-x-3 mb-3">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div className="text-left">
+                    <div className="flex items-center space-x-2">
+                      <h4 className="font-medium text-gray-900">USDC</h4>
+                      <span className="bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">Recommended</span>
+                    </div>
+                    <p className="text-sm text-gray-600">No platform fees, you pay gas</p>
+                  </div>
+                </div>
+                <select
+                  value={selectedPaymentMethod?.method.id || 'usdc-base'}
+                  onChange={(e) => {
+                    const networkId = e.target.value;
+                    const networks = {
+                      'usdc-base': {
+                        id: 'usdc-base',
+                        name: 'Base',
+                        chainId: 8453,
+                        address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bA029339',
+                        gasFees: 0.01,
+                        description: 'Lowest gas fees'
+                      },
+                      'usdc-ethereum': {
+                        id: 'usdc-ethereum',
+                        name: 'Ethereum',
+                        chainId: 1,
+                        address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+                        gasFees: 2.00,
+                        description: 'Mainnet'
+                      },
+                      'usdc-polygon': {
+                        id: 'usdc-polygon',
+                        name: 'Polygon',
+                        chainId: 137,
+                        address: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174',
+                        gasFees: 0.05,
+                        description: 'Low fees'
+                      },
+                      'usdc-arbitrum': {
+                        id: 'usdc-arbitrum',
+                        name: 'Arbitrum',
+                        chainId: 42161,
+                        address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+                        gasFees: 0.02,
+                        description: 'Layer 2'
+                      },
+                      'usdc-optimism': {
+                        id: 'usdc-optimism',
+                        name: 'Optimism',
+                        chainId: 10,
+                        address: '0x7F5c764cBc14f9669B88837ca1490cCa17c31607',
+                        gasFees: 0.02,
+                        description: 'Layer 2'
+                      }
+                    };
+                    const network = networks[networkId as keyof typeof networks];
+                    if (network) {
+                      setSelectedPaymentMethod({
+                        method: {
+                          id: network.id,
+                          type: 'STABLECOIN_USDC',
+                          name: `USDC on ${network.name}`,
+                          description: `USD Coin on ${network.name} network`,
+                          chainId: network.chainId,
+                          enabled: true,
+                          supportedNetworks: [network.chainId],
+                          token: {
+                            address: network.address,
+                            symbol: 'USDC',
+                            decimals: 6,
+                            name: 'USD Coin',
+                            chainId: network.chainId
+                          }
+                        },
+                        availabilityStatus: 'available',
+                        costEstimate: {
+                          totalCost: (selectedPackageData?.price || 0) + network.gasFees,
+                          fees: network.gasFees,
+                          gasFees: network.gasFees,
+                          processingFees: 0,
+                          exchangeRateFees: 0
+                        },
+                        confidence: 0.95,
+                        recommendationReason: network.description
+                      } as any);
+                    }
+                  }}
+                  className="w-full p-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                >
+                  <option value="usdc-base">Base (~$0.01 gas) - Recommended</option>
+                  <option value="usdc-polygon">Polygon (~$0.05 gas)</option>
+                  <option value="usdc-arbitrum">Arbitrum (~$0.02 gas)</option>
+                  <option value="usdc-optimism">Optimism (~$0.02 gas)</option>
+                  <option value="usdc-ethereum">Ethereum (~$2.00 gas)</option>
+                </select>
+              </div>
+
               {/* Credit/Debit Card */}
               <button
                 onClick={() => {
@@ -378,60 +555,8 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
                   </div>
                   <div className="text-left">
                     <h4 className="font-medium text-gray-900">Credit/Debit Card</h4>
-                    <p className="text-sm text-gray-600">Fast and secure payment</p>
+                    <p className="text-sm text-gray-600">Fast and secure</p>
                     <p className="text-xs text-green-600 mt-1">No wallet required</p>
-                  </div>
-                </div>
-              </button>
-
-              {/* USDC */}
-              <button
-                onClick={() => {
-                  setSelectedPaymentMethod({
-                    method: {
-                      id: 'usdc-ethereum',
-                      type: 'STABLECOIN_USDC',
-                      name: 'USDC',
-                      description: 'USD Coin on Ethereum',
-                      chainId: 1,
-                      enabled: true,
-                      supportedNetworks: [1],
-                      token: {
-                        address: '0xA0b86a33E6441E6C7C5c8b0b8c8b0b8c8b0b8c8b',
-                        symbol: 'USDC',
-                        decimals: 6,
-                        name: 'USD Coin',
-                        chainId: 1
-                      }
-                    },
-                    availabilityStatus: 'available',
-                    costEstimate: {
-                      totalCost: (selectedPackageData?.price || 0) + 0.50, // Add estimated gas
-                      fees: 0.50,
-                      gasFees: 0.50,
-                      processingFees: 0,
-                      exchangeRateFees: 0
-                    },
-                    confidence: 0.90,
-                    recommendationReason: 'Low fees with stablecoin'
-                  } as any);
-                }}
-                className={`p-4 rounded-lg border-2 transition-all ${
-                  selectedPaymentMethod?.method.type === 'STABLECOIN_USDC'
-                    ? 'border-orange-500 bg-orange-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-orange-100 rounded-lg">
-                    <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div className="text-left">
-                    <h4 className="font-medium text-gray-900">USDC</h4>
-                    <p className="text-sm text-gray-600">USD Coin on Ethereum</p>
-                    <p className="text-xs text-gray-500 mt-1">Low fees, stable value</p>
                   </div>
                 </div>
               </button>
@@ -444,7 +569,9 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
                                 <div className={`p-2 rounded-lg ${
                                   selectedPaymentMethod.method.type === 'FIAT_STRIPE'
                                     ? 'bg-blue-100'
-                                    : 'bg-orange-100'
+                                    : selectedPaymentMethod.method.id === 'usdc-base'
+                                      ? 'bg-green-100'
+                                      : 'bg-orange-100'
                                 }`}>
                                   {selectedPaymentMethod.method.type === 'FIAT_STRIPE' ? (
                                     <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -468,8 +595,11 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
                                     ${(selectedPaymentMethod.costEstimate?.totalCost || selectedPackageData?.price || 0).toFixed(2)}
                                   </div>
                                   <div className="text-xs text-gray-500">
-                                    {selectedPaymentMethod.costEstimate?.fees && 
-                                      `+ $${selectedPaymentMethod.costEstimate.fees.toFixed(2)} fees`
+                                    {selectedPaymentMethod.costEstimate?.gasFees > 0 && 
+                                      `+ $${selectedPaymentMethod.costEstimate.gasFees.toFixed(2)} gas (you pay)`
+                                    }
+                                    {selectedPaymentMethod.costEstimate?.processingFees > 0 && 
+                                      `+ $${selectedPaymentMethod.costEstimate.processingFees.toFixed(2)} processing fee`
                                     }
                                   </div>
                                 </div>

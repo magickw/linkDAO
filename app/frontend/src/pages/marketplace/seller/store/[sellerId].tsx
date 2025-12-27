@@ -32,19 +32,19 @@ export default function SellerStorePageRoute() {
         {/* Breadcrumb Navigation */}
         <div className="bg-white border-b">
           <div className="container mx-auto px-4 py-3">
-            <MarketplaceBreadcrumbs 
+            <MarketplaceBreadcrumbs
               items={breadcrumbItems}
               className="text-gray-600"
               preserveFilters={true}
             />
           </div>
         </div>
-        
-        <SellerStorePage 
-          sellerId={sellerId} 
+
+        <SellerStorePage
+          sellerId={sellerId}
           onProductClick={handleProductClick}
           // Pass isEditable prop when this is the seller's own store
-          isEditable={address === sellerId}
+          isEditable={address?.toLowerCase() === sellerId?.toLowerCase()}
         />
       </MarketplaceErrorBoundary>
     </Layout>

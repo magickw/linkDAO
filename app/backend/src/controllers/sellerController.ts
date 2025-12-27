@@ -906,7 +906,8 @@ export class SellerController {
         data: {
           listings: listings.map(listing => ({
             ...listing,
-            priceCrypto: parseFloat(listing.priceCrypto)
+            priceCrypto: parseFloat(listing.priceCrypto),
+            price: parseFloat(listing.priceCrypto) // Ensure price field is available for frontend
           })),
           pagination: {
             page: parseInt(page as string),

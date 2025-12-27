@@ -196,7 +196,7 @@ class SellerService {
       const result = await db
         .insert(sellers)
         .values({
-          walletAddress: profileData.walletAddress,
+          walletAddress: profileData.walletAddress.toLowerCase(),
           storeName: profileData.storeName,
           bio: profileData.bio,
           description: profileData.description,
@@ -283,7 +283,7 @@ class SellerService {
           ...updates,
           updatedAt: new Date(),
         })
-        .where(eq(sellers.walletAddress, walletAddress))
+        .where(eq(sellers.walletAddress, walletAddress.toLowerCase()))
         .returning();
 
       if (result.length === 0) {

@@ -289,7 +289,7 @@ const AwardSelectionModal: React.FC<AwardSelectionModalProps> = ({
                         ? 'border-blue-500 bg-blue-50'
                         : canAfford
                           ? 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                          : 'border-gray-200 opacity-50 cursor-not-allowed'
+                          : 'border-gray-200 opacity-70 cursor-not-allowed'
                       }
                     `}
                     disabled={isGiving}
@@ -303,8 +303,8 @@ const AwardSelectionModal: React.FC<AwardSelectionModalProps> = ({
                     </div>
                     
                     {!canAfford && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-lg">
-                        <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <div className="absolute top-1 right-1">
+                        <svg className="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                         </svg>
                       </div>
