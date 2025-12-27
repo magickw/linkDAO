@@ -505,7 +505,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
       }
 
       console.log("FloatingChatWidget: Creating conversation with recipient:", recipient);
-      const response = await fetch('/api/conversations', {
+      const response = await fetch('/api/messaging/conversations', {
         method: 'POST',
         headers,
         body: JSON.stringify({

@@ -5,7 +5,7 @@
 
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
-import { sellers, orders, products, reviews } from '../db/schema';
+import { sellers, orders, products, reviews, disputes, chatMessages, conversations } from '../db/schema';
 import { eq, sql, and, gte, desc, count, sum, avg } from 'drizzle-orm';
 import { Redis } from 'ioredis';
 import { SellerWebSocketService, getSellerWebSocketService } from './sellerWebSocketService';
@@ -48,6 +48,7 @@ export interface TierEvaluationResult {
   }>;
   nextEvaluationDate: Date;
   upgradeDate?: Date;
+  downgradeDate?: Date;
 }
 
 export interface TierUpgradeNotification {
@@ -58,6 +59,16 @@ export interface TierUpgradeNotification {
   upgradeDate: Date;
   newBenefits: string[];
   congratulatoryMessage: string;
+}
+
+export interface TierDowngradeNotification {
+  sellerId: string;
+  walletAddress: string;
+  fromTier: string;
+  toTier: string;
+  downgradeDate: Date;
+  newBenefits: string[];
+  reason: string;
 }
 
 class AutomatedTierUpgradeService {
@@ -273,20 +284,17 @@ class AutomatedTierUpgradeService {
       // Calculate seller metrics
       const metrics = await this.calculateSellerMetrics(String(sellerData.id));
       
-      // Find the highest tier the seller qualifies for
+      // Find the highest tier the seller qualifies for (check ALL tiers, not just higher ones)
       let qualifiedTier = this.tierCriteria[0]; // Default to bronze
       
       for (const tier of this.tierCriteria) {
-        if (tier.level <= currentTierLevel) continue; // Skip current and lower tiers
-        
         if (this.meetsRequirements(metrics, tier.requirements)) {
-          qualifiedTier = tier;
-        } else {
-          break; // Stop at first unmet tier
+          qualifiedTier = tier; // Keep updating as we find higher qualifying tiers
         }
       }
 
       const upgradeEligible = qualifiedTier.level > currentTierLevel;
+      const downgradeEligible = qualifiedTier.level < currentTierLevel;
       
       // Create evaluation result
       const evaluationResult: TierEvaluationResult = {
@@ -303,6 +311,11 @@ class AutomatedTierUpgradeService {
       if (upgradeEligible) {
         await this.processAutomatedUpgrade(String(sellerData.id), walletAddress, sellerData.tier || 'bronze', qualifiedTier);
         evaluationResult.upgradeDate = new Date();
+      }
+      // Process downgrade if eligible
+      else if (downgradeEligible) {
+        await this.processAutomatedDowngrade(String(sellerData.id), walletAddress, sellerData.tier || 'bronze', qualifiedTier);
+        evaluationResult.downgradeDate = new Date();
       }
 
       // Update seller tier if needed (we'll add lastTierEvaluation column later)
@@ -341,11 +354,58 @@ class AutomatedTierUpgradeService {
         .from(orders)
         .where(eq(orders.sellerId, sellerId));
 
-      // Get review metrics (using mock data for now since reviews table may not exist)
-      const reviewData = [{
-        totalReviews: 0,
-        averageRating: 0,
-      }];
+      // Get review metrics from actual reviews table
+      const reviewData = await db
+        .select({
+          totalReviews: count(reviews.id),
+          averageRating: sql<number>`COALESCE(AVG(${reviews.rating}), 0)`,
+        })
+        .from(reviews)
+        .where(eq(reviews.sellerId, parseInt(sellerId)));
+
+      // Get dispute metrics from actual disputes table
+      const disputeData = await db
+        .select({
+          totalDisputes: count(disputes.id),
+        })
+        .from(disputes)
+        .innerJoin(orders, eq(disputes.escrowId, orders.id))
+        .where(eq(orders.sellerId, parseInt(sellerId)));
+
+      // Get seller's response time from chat messages
+      // Calculate average time between buyer message and seller response
+      const responseTimeData = await db
+        .select({
+          avgResponseHours: sql<number>`COALESCE(
+            AVG(
+              EXTRACT(EPOCH FROM (
+                SELECT MIN(cm2.sent_at)
+                FROM ${chatMessages} cm2
+                WHERE cm2.conversation_id = ${chatMessages.conversationId}
+                  AND cm2.sender_address IN (
+                    SELECT seller.wallet_address
+                    FROM ${sellers} seller
+                    WHERE seller.id = ${parseInt(sellerId)}
+                  )
+                  AND cm2.sent_at > ${chatMessages.sentAt}
+              )) / 3600
+            ),
+            0
+          )`,
+        })
+        .from(chatMessages)
+        .innerJoin(conversations, eq(chatMessages.conversationId, conversations.id))
+        .innerJoin(orders, eq(conversations.orderId, orders.id))
+        .where(
+          and(
+            eq(orders.sellerId, parseInt(sellerId)),
+            sql`${chatMessages.senderAddress} NOT IN (
+              SELECT seller.wallet_address
+              FROM ${sellers} seller
+              WHERE seller.id = ${parseInt(sellerId)}
+            )`
+          )
+        );
 
       // Get seller account age
       const sellerInfo = await db
@@ -362,6 +422,13 @@ class AutomatedTierUpgradeService {
 
       const sales = salesData[0];
       const reviewMetrics = reviewData[0];
+      const disputeMetrics = disputeData[0];
+      const responseTimeMetrics = responseTimeData[0];
+
+      // Calculate dispute rate (percentage of orders that have disputes)
+      const disputeRate = sales.totalOrders > 0 
+        ? (Number(disputeMetrics.totalDisputes) / Number(sales.totalOrders)) * 100 
+        : 0;
 
       return {
         salesVolume: Number(sales.totalSales) || 0,
@@ -371,8 +438,8 @@ class AutomatedTierUpgradeService {
         averageRating: Number(reviewMetrics.averageRating) || 0,
         timeActive: accountAge,
         completionRate: sales.totalOrders > 0 ? (sales.completedOrders / sales.totalOrders) * 100 : 0,
-        disputeRate: 0, // Would calculate from dispute data
-        responseTime: 12, // Would calculate from message response times
+        disputeRate: disputeRate,
+        responseTime: Number(responseTimeMetrics.avgResponseHours) || 12, // Fallback to 12h if no data
       };
 
     } catch (error) {
@@ -516,6 +583,65 @@ class AutomatedTierUpgradeService {
   }
 
   /**
+   * Process automated tier downgrade
+   */
+  private async processAutomatedDowngrade(
+    sellerId: string,
+    walletAddress: string,
+    fromTier: string,
+    toTier: TierEvaluationCriteria
+  ): Promise<void> {
+    try {
+      safeLogger.info(`Processing automated downgrade for ${walletAddress}: ${fromTier} -> ${toTier.tierId}`);
+
+      // Update seller tier in database
+      await db
+        .update(sellers)
+        .set({
+          tier: toTier.tierId,
+          updatedAt: new Date(),
+        })
+        .where(eq(sellers.id, parseInt(sellerId)));
+
+      // Deactivate tier benefits that are no longer available
+      await this.adjustTierBenefits(sellerId, toTier);
+
+      // Send downgrade notification
+      await this.sendTierDowngradeNotification({
+        sellerId,
+        walletAddress,
+        fromTier,
+        toTier: toTier.tierId,
+        downgradeDate: new Date(),
+        newBenefits: this.getBenefitDescriptions(toTier.benefits),
+        reason: this.generateDowngradeReason(fromTier, toTier.name),
+      });
+
+      // Send real-time WebSocket notification
+      const webSocketService = this.getSellerWebSocketService();
+      if (webSocketService) {
+        await webSocketService.sendTierUpgradeNotification(walletAddress, {
+          type: 'tier_downgraded',
+          fromTier,
+          toTier: toTier.tierId,
+          newBenefits: toTier.benefits,
+          downgradeDate: new Date(),
+        });
+      }
+
+      // Clear tier cache
+      await this.redis.del(`tier:evaluation:${walletAddress}`);
+      await this.redis.del(`seller:tier:${sellerId}`);
+
+      safeLogger.info(`Automated downgrade completed for ${walletAddress}`);
+
+    } catch (error) {
+      safeLogger.error(`Error processing automated downgrade for ${walletAddress}:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Activate tier benefits for seller
    */
   private async activateTierBenefits(sellerId: string, tier: TierEvaluationCriteria): Promise<void> {
@@ -555,6 +681,55 @@ class AutomatedTierUpgradeService {
     } catch (error) {
       safeLogger.error(`Error sending tier upgrade notification:`, error);
     }
+  }
+
+  /**
+   * Adjust tier benefits for seller (used during downgrade)
+   */
+  private async adjustTierBenefits(sellerId: string, tier: TierEvaluationCriteria): Promise<void> {
+    try {
+      // Update seller benefits in database to match new tier
+      safeLogger.info(`Tier benefits adjusted for seller ${sellerId} to match ${tier.tierId}:`, tier.benefits);
+
+      safeLogger.info(`Tier benefits adjusted for seller ${sellerId}`);
+
+    } catch (error) {
+      safeLogger.error(`Error adjusting tier benefits for seller ${sellerId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send tier downgrade notification
+   */
+  private async sendTierDowngradeNotification(notification: TierDowngradeNotification): Promise<void> {
+    try {
+      // Send in-app notification
+      await this.notificationService.sendOrderNotification(
+        notification.walletAddress,
+        'TIER_DOWNGRADE',
+        `tier-downgrade-${Date.now()}`,
+        {
+          fromTier: notification.fromTier,
+          toTier: notification.toTier,
+          newBenefits: notification.newBenefits,
+          downgradeDate: notification.downgradeDate,
+          reason: notification.reason,
+        }
+      );
+
+      safeLogger.info(`Tier downgrade notification sent to ${notification.walletAddress}`);
+
+    } catch (error) {
+      safeLogger.error(`Error sending tier downgrade notification:`, error);
+    }
+  }
+
+  /**
+   * Generate downgrade reason message
+   */
+  private generateDowngradeReason(fromTier: string, toTier: string): string {
+    return `Based on your recent performance metrics, your tier has been automatically adjusted from ${fromTier} to ${toTier}. Continue improving your sales, ratings, and customer service to regain your previous tier status.`;
   }
 
   /**

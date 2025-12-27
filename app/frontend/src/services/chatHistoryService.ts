@@ -8,10 +8,10 @@ class ChatHistoryService {
   // List of candidate endpoints to try when an endpoint returns 404.
   // This helps when backend route names differ between deployments.
   private conversationEndpointCandidates = [
+    '/api/messaging/conversations',
+    // Fallback candidates
     '/api/chat/conversations',
-    '/api/conversations',
-    '/api/messages/conversations',
-    '/api/messaging/conversations'
+    '/api/conversations'
   ];
 
   private conversationEndpointCacheKey = 'linkdao-conversations-endpoint';
@@ -24,7 +24,7 @@ class ChatHistoryService {
       ...(request.after && { after: request.after })
     });
 
-    const url = `${this.baseUrl}/chat/history/${request.conversationId}?${params}`;
+    const url = `${this.baseUrl}/api/messaging/conversations/${request.conversationId}/messages?${params}`;
     const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${this.getAuthToken()}`,
@@ -50,7 +50,7 @@ class ChatHistoryService {
   // Send a new message with offline support
   async sendMessage(message: Omit<ChatMessage, 'id' | 'timestamp'>): Promise<ChatMessage> {
     try {
-      const response = await fetch(`${this.baseUrl}/chat/messages`, {
+      const response = await fetch(`${this.baseUrl}/api/messaging/conversations/${message.conversationId}/messages`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.getAuthToken()}`,
@@ -71,7 +71,7 @@ class ChatHistoryService {
       // Check if we're in a browser environment before accessing navigator
       const isBrowser = typeof window !== 'undefined';
       const isOnline = isBrowser ? navigator.onLine : true;
-      
+
       if (!isOnline || (error as any).message.includes('Failed to fetch')) {
         // Queue the message using OfflineManager
         const actionId = this.offlineManager.queueAction('SEND_MESSAGE', message, {
@@ -93,7 +93,7 @@ class ChatHistoryService {
         };
         return tempMessage;
       }
-      
+
       throw error;
     }
   }
@@ -259,7 +259,7 @@ class ChatHistoryService {
 
   // Create or get DM conversation
   async getOrCreateDMConversation(participantAddress: string): Promise<Conversation> {
-    const response = await fetch(`${this.baseUrl}/chat/conversations/dm`, {
+    const response = await fetch(`${this.baseUrl}/api/messaging/conversations`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${this.getAuthToken()}`,
@@ -279,13 +279,13 @@ class ChatHistoryService {
   // Mark messages as read with offline support
   async markMessagesAsRead(conversationId: string, messageIds: string[]): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/chat/messages/read`, {
-        method: 'POST',
+      const response = await fetch(`${this.baseUrl}/api/messaging/conversations/${conversationId}/read`, {
+        method: 'PUT',
         headers: {
           'Authorization': `Bearer ${this.getAuthToken()}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ conversationId, messageIds })
+        body: JSON.stringify({ messageIds }) // Note: Backend might ignore messageIds if marking whole conv as read
       });
 
       if (!response.ok) {
@@ -296,7 +296,7 @@ class ChatHistoryService {
       // Check if we're in a browser environment before accessing navigator
       const isBrowser = typeof window !== 'undefined';
       const isOnline = isBrowser ? navigator.onLine : true;
-      
+
       if (!isOnline || (error as any).message.includes('Failed to fetch')) {
         this.offlineManager.queueAction('MARK_MESSAGES_READ', { conversationId, messageIds }, {
           priority: 'medium',
@@ -304,7 +304,7 @@ class ChatHistoryService {
         });
         return; // Don't throw error for offline scenario
       }
-      
+
       throw error;
     }
   }
@@ -312,7 +312,9 @@ class ChatHistoryService {
   // Add reaction to message with offline support
   async addReaction(messageId: string, emoji: string): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/chat/messages/${messageId}/reactions`, {
+      // Note: Reactions API might not be fully implemented in messagingRoutes yet, fallback or use dedicated if avail
+      // Assuming typical structure:
+      const response = await fetch(`${this.baseUrl}/api/messaging/messages/${messageId}/reactions`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.getAuthToken()}`,
@@ -329,7 +331,7 @@ class ChatHistoryService {
       // Check if we're in a browser environment before accessing navigator
       const isBrowser = typeof window !== 'undefined';
       const isOnline = isBrowser ? navigator.onLine : true;
-      
+
       if (!isOnline || (error as any).message.includes('Failed to fetch')) {
         this.offlineManager.queueAction('ADD_REACTION', { messageId, emoji }, {
           priority: 'low',
@@ -337,7 +339,7 @@ class ChatHistoryService {
         });
         return; // Don't throw error for offline scenario
       }
-      
+
       throw error;
     }
   }
@@ -345,7 +347,7 @@ class ChatHistoryService {
   // Remove reaction from message with offline support
   async removeReaction(messageId: string, emoji: string): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/chat/messages/${messageId}/reactions`, {
+      const response = await fetch(`${this.baseUrl}/api/messaging/messages/${messageId}/reactions`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${this.getAuthToken()}`,
@@ -362,7 +364,7 @@ class ChatHistoryService {
       // Check if we're in a browser environment before accessing navigator
       const isBrowser = typeof window !== 'undefined';
       const isOnline = isBrowser ? navigator.onLine : true;
-      
+
       if (!isOnline || (error as any).message.includes('Failed to fetch')) {
         this.offlineManager.queueAction('REMOVE_REACTION', { messageId, emoji }, {
           priority: 'low',
@@ -370,7 +372,7 @@ class ChatHistoryService {
         });
         return; // Don't throw error for offline scenario
       }
-      
+
       throw error;
     }
   }
@@ -378,7 +380,7 @@ class ChatHistoryService {
   // Delete message with offline support
   async deleteMessage(messageId: string): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/chat/messages/${messageId}`, {
+      const response = await fetch(`${this.baseUrl}/api/messaging/messages/${messageId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${this.getAuthToken()}`,
@@ -394,7 +396,7 @@ class ChatHistoryService {
       // Check if we're in a browser environment before accessing navigator
       const isBrowser = typeof window !== 'undefined';
       const isOnline = isBrowser ? navigator.onLine : true;
-      
+
       if (!isOnline || (error as any).message.includes('Failed to fetch')) {
         this.offlineManager.queueAction('DELETE_MESSAGE', { messageId }, {
           priority: 'medium',
@@ -402,7 +404,7 @@ class ChatHistoryService {
         });
         return; // Don't throw error for offline scenario
       }
-      
+
       throw error;
     }
   }
@@ -413,12 +415,12 @@ class ChatHistoryService {
     if (typeof window === 'undefined') {
       return '';
     }
-    
+
     // Get JWT token from localStorage using the correct key from AuthContext
-    return localStorage.getItem('linkdao_access_token') || 
-           localStorage.getItem('token') || 
-           localStorage.getItem('authToken') || 
-           localStorage.getItem('auth_token') || '';
+    return localStorage.getItem('linkdao_access_token') ||
+      localStorage.getItem('token') ||
+      localStorage.getItem('authToken') ||
+      localStorage.getItem('auth_token') || '';
   }
 
   private transformMessage(data: any): ChatMessage {

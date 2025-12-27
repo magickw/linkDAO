@@ -564,5 +564,39 @@ router.get('/seller/:walletAddress/tier/progress',
       );
     }
   });
+// Duplicate router declaration removed
+
+/**
+ * GET /api/marketplace/seller/{walletAddress}/messaging-analytics
+ * Get messaging analytics for seller dashboard
+ */
+router.get('/seller/:walletAddress/messaging-analytics',
+  rateLimitWithCache(req => `seller_msg_analytics:${req.ip}`, 30, 60),
+  cachingMiddleware.cache('sellerMessagingAnalytics', { ttl: 300 }),
+  async (req: Request, res: Response) => {
+    try {
+      const { walletAddress } = req.params;
+
+      // Basic validation
+      if (!walletAddress || !/^0x[a-fA-F0-9]{40,42}$/i.test(walletAddress)) {
+        return validationErrorResponse(res, [{ field: 'walletAddress', message: 'Invalid wallet address' }]);
+      }
+
+      // Mock response for now, to be connected to actual messaging service when available
+      // This stops the 404 errors on the frontend
+      const analytics = {
+        totalConversations: 0,
+        unreadMessages: 0,
+        responseRate: 100,
+        responseTime: 0,
+        activeChats: 0
+      };
+
+      return successResponse(res, analytics, 200);
+    } catch (error) {
+      safeLogger.error('Error fetching messaging analytics:', error);
+      return errorResponse(res, 'ANALYTICS_ERROR', 'Failed to fetch messaging analytics', 500);
+    }
+  });
 
 export default router;
