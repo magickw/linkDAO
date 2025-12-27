@@ -754,13 +754,22 @@ export const products = pgTable("products", {
   subCategory: varchar("sub_category", { length: 100 }),
   isPhysical: boolean("is_physical").default(false),
   priceFiat: numeric("price_fiat", { precision: 20, scale: 2 }),
+  metadataUri: text("metadata_uri"), // IPFS hash for digital goods/metadata
   // DeFi specific fields from marketplace_products
   defiProtocol: varchar("defi_protocol", { length: 100 }),
   defiAssetType: varchar("defi_asset_type", { length: 50 }),
+  underlyingAssets: jsonb("underlying_assets"), // Array of { address, symbol, weight }
   currentApy: numeric("current_apy", { precision: 5, scale: 2 }),
-  // Physical goods specific fields from marketplace_products (merged/aliased)
-  weight: numeric("weight", { precision: 10, scale: 3 }),
-  condition: varchar("condition", { length: 20 }).default("new"),
+  lockPeriod: integer("lock_period"), // Lock period in days
+  maturityDate: timestamp("maturity_date"), // For time-locked positions
+  riskLevel: varchar("risk_level", { length: 20 }).default("medium"), // 'low' | 'medium' | 'high'
+  // Physical goods specific fields from marketplace_products
+  weight: numeric("weight", { precision: 10, scale: 3 }), // Weight in kg
+  dimensions: jsonb("dimensions"), // { length, width, height } in cm
+  condition: varchar("condition", { length: 20 }).default("new"), // 'new' | 'used' | 'refurbished'
+  // Service specific fields from marketplace_products
+  serviceDuration: integer("service_duration"), // Duration in hours
+  deliveryMethod: varchar("delivery_method", { length: 20 }), // 'online' | 'in-person' | 'hybrid'
 }, (t) => ({
   sellerFk: foreignKey({
     columns: [t.sellerId],

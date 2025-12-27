@@ -17,7 +17,6 @@ import {
   sellerTierBenefits,
   sellerTierProgression,
   sellerTierHistory,
-  marketplaceOrders,
   marketplaceReviews
 } from '../db/schema';
 import { ensService } from './ensService';
@@ -689,11 +688,10 @@ class SellerService {
         .where(eq(schema.products.sellerId, user.id));
 
       // Get order statistics from orders table
-      // Orders table connects directly to sellerId
       const orderStats = await db
         .select({
           totalSales: sql<number>`count(*) filter (where status = 'completed')`,
-          totalRevenue: sql<string>`coalesce(sum(amount) filter (where status = 'completed'), 0)`,
+          totalRevenue: sql<string>`coalesce(sum(total_amount) filter (where status = 'completed'), 0)`,
           completedOrders: sql<number>`count(*) filter (where status = 'completed')`,
           pendingOrders: sql<number>`count(*) filter (where status in ('pending'))`,
           disputedOrders: sql<number>`count(*) filter (where status = 'disputed')`,
@@ -1178,10 +1176,10 @@ class SellerService {
           returnRate: sql<number>`COALESCE(COUNT(CASE WHEN o.status = 'completed' AND o.returned = true THEN 1 ELSE 0 END) * 100.0 / COUNT(o.id), 0)`.as('return_rate'),
           repeatRate: sql<number>`COALESCE(COUNT(DISTINCT o.buyer_id) * 100.0 / COUNT(o.id), 0)`.as('repeat_rate')
         })
-        .from(marketplaceOrders)
-        .leftJoin(marketplaceReviews, eq(marketplaceReviews.revieweeId, marketplaceOrders.sellerId))
-        .where(eq(marketplaceOrders.sellerId, walletAddress))
-        .groupBy(marketplaceOrders.sellerId);
+        .from(schema.orders)
+        .leftJoin(marketplaceReviews, eq(marketplaceReviews.revieweeId, schema.orders.sellerId))
+        .where(eq(schema.orders.sellerId, walletAddress))
+        .groupBy(schema.orders.sellerId);
 
       const metrics = salesData[0] || {
         totalSales: 0,

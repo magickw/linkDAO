@@ -543,8 +543,6 @@ export class DatabaseService {
       };
 
       // Ensure category exists or use default
-      // Note: In a real app we'd lookup or create, here we assume IDs are managed or we use a known default
-      // For now, let's look for the category ID
       let finalCategoryId = categoryId;
       try {
         const catResult = await this.db.select().from(schema.categories).where(eq(schema.categories.slug, categoryId.toLowerCase())).limit(1);
@@ -563,20 +561,19 @@ export class DatabaseService {
         sellerId,
         title,
         description,
-        priceAmount: price,
-        priceCurrency,
+        priceAmount: price, // products uses priceAmount
+        priceCurrency, // products uses priceCurrency
         categoryId: finalCategoryId,
         images: JSON.stringify(images),
         metadata: JSON.stringify(metadataObj),
-        inventory: quantity,
+        inventory: parseInt(quantity), // products uses inventory
         status: 'active',
         listingStatus: 'active',
         publishedAt: new Date(),
-        // Map other fields that were previously in listings but now part of metadata or specialized columns
-        // We'll store the itemType as the mainCategory for products
         mainCategory: itemType.toLowerCase(),
-        priceCrypto: price,
-        metadataUri: metadataURI
+        metadataUri: metadataURI,
+        createdAt: new Date(),
+        updatedAt: new Date()
       }).returning();
 
       return result[0];
@@ -800,18 +797,18 @@ export class DatabaseService {
             WHERE id = ${variantId}
             FOR UPDATE
           `);
-          
+
           if (variantResult.rows.length === 0) {
             throw new Error('Product variant not found');
           }
-          
+
           const variant = variantResult.rows[0];
           const availableInventory = variant.inventory - variant.reserved_inventory;
-          
+
           if (!variant.is_available || availableInventory < 1) {
             throw new Error('Selected variant is out of stock');
           }
-          
+
           // Reserve inventory for this variant
           await tx.execute(sql`
             UPDATE product_variants
@@ -819,10 +816,10 @@ export class DatabaseService {
             WHERE id = ${variantId}
           `);
         }
-        
+
         // 1b. Check and hold inventory with pessimistic locking
         const product = await tx.select().from(schema.products).where(eq(schema.products.id, listingId));
-        
+
         if (product.length === 0) {
           // Fallback to listings table check if not found in products (backward compatibility)
           const listing = await tx.select().from(schema.listings).where(eq(schema.listings.id, listingId));
@@ -852,7 +849,7 @@ export class DatabaseService {
 
           // Decrement legacy listing
           await tx.update(schema.listings)
-            .set({ 
+            .set({
               quantity: sql`${schema.listings.quantity} - 1`
               // inventoryHolds: sql`${schema.listings.inventoryHolds} + 1`  // TODO: Add field to schema
             })
@@ -881,7 +878,7 @@ export class DatabaseService {
 
           // Decrement product inventory and increment holds
           await tx.update(schema.products)
-            .set({ 
+            .set({
               inventory: sql`${schema.products.inventory} - 1`,
               inventoryHolds: sql`${schema.products.inventoryHolds} + 1`
             })
@@ -904,7 +901,7 @@ export class DatabaseService {
         // 3. Update inventory hold with order ID
         const orderId = result[0].id;
         await tx.update(schema.inventoryHolds)
-          .set({ 
+          .set({
             orderId: orderId.toString(),
             status: 'order_created'
           })
@@ -930,16 +927,16 @@ export class DatabaseService {
     try {
       await this.db.transaction(async (tx: any) => {
         const hold = await tx.select().from(schema.inventoryHolds).where(eq(schema.inventoryHolds.id, holdId));
-        
+
         if (hold.length === 0) {
           throw new Error('Inventory hold not found');
         }
 
         const inventoryHold = hold[0];
-        
+
         // Update hold status
         await tx.update(schema.inventoryHolds)
-          .set({ 
+          .set({
             status: reason === 'order_completed' ? 'consumed' : 'released',
             releasedAt: new Date(),
             releaseReason: reason
@@ -950,11 +947,11 @@ export class DatabaseService {
         if (reason !== 'order_completed') {
           // Check if it's a legacy listing or product
           const product = await tx.select().from(schema.products).where(eq(schema.products.id, inventoryHold.productId));
-          
+
           if (product.length === 0) {
             // Legacy listing - restore quantity
             await tx.update(schema.listings)
-              .set({ 
+              .set({
                 quantity: sql`${schema.listings.quantity} + 1`,
                 inventoryHolds: sql`${schema.listings.inventoryHolds} - 1`
               })
@@ -962,7 +959,7 @@ export class DatabaseService {
           } else {
             // Product - restore inventory
             await tx.update(schema.products)
-              .set({ 
+              .set({
                 inventory: sql`${schema.products.inventory} + 1`,
                 inventoryHolds: sql`${schema.products.inventoryHolds} - 1`
               })
@@ -971,11 +968,11 @@ export class DatabaseService {
         } else {
           // When order is completed, increment sales count for the product
           const product = await tx.select().from(schema.products).where(eq(schema.products.id, inventoryHold.productId));
-          
+
           if (product.length > 0) {
             // Product - increment sales count
             await tx.update(schema.products)
-              .set({ 
+              .set({
                 salesCount: sql`${schema.products.salesCount} + 1`
               })
               .where(eq(schema.products.id, inventoryHold.productId));
@@ -1005,15 +1002,15 @@ export class DatabaseService {
         );
 
       let releasedCount = 0;
-      
+
       for (const hold of expiredHolds) {
         try {
           await this.releaseInventoryHold(hold.id, 'expired');
           releasedCount++;
-          
+
           // Update associated order if it exists
           if (hold.orderId) {
-            await this.updateOrder(hold.orderId, { 
+            await this.updateOrder(hold.orderId, {
               status: 'cancelled',
               metadata: JSON.stringify({
                 reason: 'Inventory hold expired',
@@ -1045,14 +1042,14 @@ export class DatabaseService {
     try {
       // Check if it's a product or legacy listing
       const product = await this.db.select().from(schema.products).where(eq(schema.products.id, productId));
-      
+
       if (product.length === 0) {
         // Legacy listing
         const listing = await this.db.select().from(schema.listings).where(eq(schema.listings.id, productId));
         if (listing.length === 0) {
           return { available: '0', held: '0', total: '0' };
         }
-        
+
         return {
           available: String(Math.max(0, listing[0].quantity)),
           held: String(listing[0].inventoryHolds || 0),
@@ -1079,16 +1076,16 @@ export class DatabaseService {
     try {
       await this.db.transaction(async (tx: any) => {
         const order = await tx.select().from(schema.orders).where(eq(schema.orders.id, orderId));
-        
+
         if (order.length === 0) {
           throw new Error('Order not found');
         }
 
         const orderData = order[0];
-        
+
         // Update order status
         await tx.update(schema.orders)
-          .set({ 
+          .set({
             status: 'completed',
             completedAt: new Date()
           })
@@ -1100,7 +1097,7 @@ export class DatabaseService {
           SET sales_count = COALESCE(sales_count, 0) + 1
           WHERE id = ${orderData.listingId}
         `);
-        
+
         await tx.execute(sql`
           UPDATE listings 
           SET sales_count = COALESCE(sales_count, 0) + 1

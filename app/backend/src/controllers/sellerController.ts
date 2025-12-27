@@ -4,7 +4,7 @@ import { safeLogger } from '../utils/safeLogger';
 import { databaseService } from "../services/databaseService";
 import { eq, and, or, ilike, desc, lt, gte, lte, sql } from 'drizzle-orm';
 import * as schema from '../db/schema';
-import { marketplaceUsers, sellerVerifications, marketplaceOrders } from "../db/marketplaceSchema";
+import { marketplaceUsers, sellerVerifications } from "../db/marketplaceSchema";
 import { users, products, categories } from "../db/schema";
 
 export class SellerController {
@@ -936,11 +936,11 @@ export class SellerController {
         productId: schema.orders.listingId,
         productTitle: schema.products.title,
         buyerId: schema.orders.buyerId,
-        amount: schema.orders.totalAmount, // Map amount -> totalAmount
+        amount: schema.orders.totalAmount,
         currency: schema.orders.currency,
         status: schema.orders.status,
         createdAt: schema.orders.createdAt,
-        updatedAt: schema.orders.createdAt // schema.orders might not have updatedAt? Using createdAt as fallback or check schema
+        updatedAt: schema.orders.createdAt
       })
         .from(schema.orders)
         .leftJoin(schema.products, eq(schema.orders.listingId, schema.products.id))
@@ -1217,8 +1217,7 @@ export class SellerController {
         .from(schema.products)
         .leftJoin(schema.users, eq(schema.products.sellerId, schema.users.id))
         .where(eq(schema.users.walletAddress, walletAddress))
-        .leftJoin(schema.categories, eq(schema.products.categoryId, schema.categories.id))
-        .groupBy(schema.categories.name)
+        .groupBy(schema.products.mainCategory)
         .orderBy(desc(sql<number>`count(*)`))
         .limit(5);
 
@@ -1238,7 +1237,7 @@ export class SellerController {
       const products = await db.select({
         id: schema.products.id,
         title: schema.products.title,
-        priceCrypto: schema.products.priceAmount, // Mapping priceAmount to priceCrypto for frontend compatibility
+        priceCrypto: schema.products.priceAmount,
         currency: schema.products.priceCurrency
       })
         .from(schema.products)
@@ -1252,7 +1251,7 @@ export class SellerController {
 
       return products.map(product => ({
         ...product,
-        priceCrypto: parseFloat(product.priceCrypto), // Ensure it's a number
+        priceCrypto: parseFloat(product.priceCrypto),
         sales: Math.floor(Math.random() * 50) // Mock sales data
       }));
     } catch (error) {
