@@ -9,11 +9,9 @@ import {
   sellerActivities,
   sellerBadges,
   marketplaceListings,
-  orders,
   userReputation,
   reviews,
   listings,
-  products,
   sellerTierRequirements,
   sellerTierBenefits,
   sellerTierProgression,
@@ -119,14 +117,14 @@ class SellerService {
       if (!walletAddress) {
         throw new Error('Wallet address is required');
       }
-      
+
       if (typeof walletAddress !== 'string') {
         throw new Error('Wallet address must be a string');
       }
-      
+
       const normalizedAddress = walletAddress.toLowerCase();
       safeLogger.info('Fetching seller profile for address:', normalizedAddress);
-      
+
       const sellerData = await db
         .select()
         .from(sellers)
@@ -680,7 +678,7 @@ class SellerService {
         };
       }
 
-      // Get listing counts from products table (same as listings tab)
+      // Get listing counts from products table
       const listingStats = await db
         .select({
           totalListings: sql<number>`count(*)`,
@@ -689,20 +687,18 @@ class SellerService {
         .from(products)
         .where(eq(products.sellerId, user.id));
 
-      // Get order statistics through listings->products join
-      // orders.listingId -> listings.id, listings.productId -> products.id
+      // Get order statistics from orders table
+      // Orders table connects directly to sellerId
       const orderStats = await db
         .select({
-          totalSales: sql<number>`count(*) filter (where ${orders.status} = 'completed')`,
-          totalRevenue: sql<string>`coalesce(sum(${orders.totalAmount}) filter (where ${orders.status} = 'completed'), 0)`,
-          completedOrders: sql<number>`count(*) filter (where ${orders.status} = 'completed')`,
-          pendingOrders: sql<number>`count(*) filter (where ${orders.status} in ('pending', 'processing', 'shipped'))`,
-          disputedOrders: sql<number>`count(*) filter (where ${orders.status} = 'disputed')`,
+          totalSales: sql<number>`count(*) filter (where status = 'completed')`,
+          totalRevenue: sql<string>`coalesce(sum(amount) filter (where status = 'completed'), 0)`,
+          completedOrders: sql<number>`count(*) filter (where status = 'completed')`,
+          pendingOrders: sql<number>`count(*) filter (where status in ('pending'))`,
+          disputedOrders: sql<number>`count(*) filter (where status = 'disputed')`,
         })
         .from(orders)
-        .innerJoin(listings, eq(orders.listingId, listings.id))
-        .innerJoin(products, eq(listings.productId, products.id))
-        .where(eq(products.sellerId, user.id));
+        .where(eq(orders.sellerId, user.id));
 
       // Get reputation data
       const reputationData = await db
@@ -733,15 +729,15 @@ class SellerService {
       const rating = ratingData[0] || { averageRating: 0 };
 
       return {
-        totalListings: stats.totalListings,
-        activeListings: stats.activeListings,
-        totalSales: orderAgg.totalSales,
+        totalListings: Number(stats.totalListings),
+        activeListings: Number(stats.activeListings),
+        totalSales: Number(orderAgg.totalSales),
         averageRating: Number(rating.averageRating),
         profileCompleteness: completeness.score,
         totalRevenue: orderAgg.totalRevenue,
-        completedOrders: orderAgg.completedOrders,
-        pendingOrders: orderAgg.pendingOrders,
-        disputedOrders: orderAgg.disputedOrders,
+        completedOrders: Number(orderAgg.completedOrders),
+        pendingOrders: Number(orderAgg.pendingOrders),
+        disputedOrders: Number(orderAgg.disputedOrders),
         reputationScore: Number(reputation.reputationScore),
       };
     } catch (error) {
@@ -1137,7 +1133,7 @@ class SellerService {
   }
 
   // Tier System Methods
-  
+
   /**
    * Calculate seller tier based on performance metrics
    */
@@ -1165,7 +1161,7 @@ class SellerService {
       // Get seller performance metrics
       const sellerData = await db.select().from(sellers).where(eq(sellers.walletAddress, walletAddress));
       const seller = sellerData[0];
-      
+
       if (!seller) {
         throw new Error('Seller not found');
       }
@@ -1261,18 +1257,18 @@ class SellerService {
       if (!db) throw new Error('Database unavailable');
 
       const tierCalculation = await this.calculateSellerTier(walletAddress);
-      
+
       // Get current seller
       const currentSellerData = await db.select().from(sellers).where(eq(sellers.walletAddress, walletAddress));
       const currentSeller = currentSellerData[0];
-      
+
       if (!currentSeller) {
         throw new Error('Seller not found');
       }
 
       const previousTier = currentSeller.tier;
       const newTier = tierCalculation.currentTier;
-      
+
       // Only update if tier has changed
       if (previousTier !== newTier) {
         // Update seller tier
@@ -1495,7 +1491,7 @@ class SellerService {
       if (!db) throw new Error('Database unavailable');
 
       const tiers = ['bronze', 'silver', 'gold', 'platinum', 'diamond'];
-      
+
       const tierData = await Promise.all(
         tiers.map(async (tier) => ({
           tier,
@@ -1517,7 +1513,7 @@ class SellerService {
   private getMetricField(requirementType: string): keyof any {
     const mapping: Record<string, keyof any> = {
       'total_sales': 'totalSales',
-      'rating': 'averageRating', 
+      'rating': 'averageRating',
       'response_time': 'responseTime',
       'return_rate': 'returnRate',
       'dispute_rate': 'disputeRate',
@@ -1533,7 +1529,7 @@ class SellerService {
     const metricField = this.getMetricField(requirementType);
     const metricValue = metrics[metricField] || 0;
     const requiredValue = this.getRequiredValue(requirementType);
-    
+
     switch (requirementType) {
       case 'response_time':
         return metricValue <= requiredValue;

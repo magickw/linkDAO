@@ -335,6 +335,16 @@ const EnhancedPostCard = React.memo(({
 
   // Keyboard event handler for accessibility
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    // Don't handle keyboard shortcuts when typing in inputs or textareas
+    const target = e.target as HTMLElement;
+    if (
+      target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.isContentEditable
+    ) {
+      return;
+    }
+
     // Space or Enter to expand/collapse
     if (e.key === ' ' || e.key === 'Enter') {
       e.preventDefault();

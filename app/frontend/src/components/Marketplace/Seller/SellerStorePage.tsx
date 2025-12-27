@@ -10,12 +10,12 @@ import { useUnifiedSeller, useUnifiedSellerListings } from '@/hooks/useUnifiedSe
 import { DAOEndorsementModal } from './DAOEndorsementModal';
 import { withSellerErrorBoundary } from './ErrorHandling';
 import { mapLegacyTierToUnified } from '@/utils/tierMapping';
-import { 
-  Star, 
-  Shield, 
-  Award, 
-  Users, 
-  MessageCircle, 
+import {
+  Star,
+  Shield,
+  Award,
+  Users,
+  MessageCircle,
   Calendar,
   TrendingUp,
   Filter,
@@ -104,7 +104,7 @@ interface SellerInfo {
   location?: string;
   isOnline: boolean;
   lastSeen?: Date;
-  
+
   // Trust & Reputation
   reputationScore: TrustMetric;
   successRate: TrustMetric;
@@ -112,7 +112,7 @@ interface SellerInfo {
   totalTransactions: number;
   successfulTransactions: number;
   disputesRatio: number;
-  
+
   // Enhanced Verification
   verificationLevels: {
     identity: VerificationLevel;
@@ -120,30 +120,30 @@ interface SellerInfo {
     kyc: VerificationLevel;
   };
   socialLinks: SocialLinks;
-  
+
   // Performance Analytics
   performanceMetrics: PerformanceMetrics;
-  
+
   // Verification & Badges
   tier: 'TIER_1' | 'TIER_2' | 'TIER_3';
   tierProgress: { current: number; required: number; nextTier: string };
   isKYCVerified: boolean;
   isDAOEndorsed: boolean;
   hasEscrowProtection: boolean;
-  
+
   // Social & DAO
   followers: number;
   following: number;
   daoMemberships: DAOMembership[];
   daoEndorsements: DAOEndorsement[];
-  
+
   // Analytics
   topCategories: string[];
   totalListings: number;
   activeListings: number;
   featuredListings: UnifiedSellerListing[];
   featuredProducts: FeaturedProduct[];
-  
+
   // Performance & Activity
   performanceBadges: PerformanceBadge[];
   activityTimeline: ActivityEvent[];
@@ -154,7 +154,7 @@ interface SellerInfo {
     timestamp: string;
     counterparty: string;
   }>;
-  
+
   // NFT & Web3 Flair
   nftPortfolio?: NFTItem[];
   web3Badges: Badge[];
@@ -236,7 +236,7 @@ interface SellerStorePageProps {
 const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, onProductClick, isEditable = false }) => {
   const router = useRouter();
   const { address } = useAccount();
-  
+
   // State management
   const [seller, setSeller] = useState<SellerInfo | null>(null);
   const [listings, setListings] = useState<UnifiedSellerListing[]>([]);
@@ -263,10 +263,10 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
         const { sellerService } = await import('@/services/sellerService');
         // Clear cache to ensure fresh data
         sellerService.clearProfileCache(sellerId);
-        
+
         // Add a small delay to ensure cache clearing is complete
         await new Promise(resolve => setTimeout(resolve, 100));
-        
+
         // Re-fetch the data with cache bypass
         const sellerProfile = await sellerService.getSellerProfile(sellerId);
         if (sellerProfile) {
@@ -278,7 +278,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
             description: sellerProfile.description,
             walletAddress: sellerProfile.walletAddress
           });
-          
+
           // Transform and update seller data (same logic as in useEffect)
           const transformedSeller: SellerInfo = {
             id: sellerProfile.walletAddress,
@@ -293,23 +293,23 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
             location: sellerProfile.location || '',
             isOnline: true,
             lastSeen: new Date(sellerProfile.updatedAt),
-            
-            reputationScore: { 
-              value: sellerProfile.stats?.reputationScore?.toString() || '0', 
-              tooltip: 'Based on buyer reviews, DAO endorsements, and community feedback' 
+
+            reputationScore: {
+              value: sellerProfile.stats?.reputationScore?.toString() || '0',
+              tooltip: 'Based on buyer reviews, DAO endorsements, and community feedback'
             },
-            successRate: { 
+            successRate: {
               value: '98.5%',
-              tooltip: 'Percentage of successful transactions without disputes or issues' 
+              tooltip: 'Percentage of successful transactions without disputes or issues'
             },
-            safetyScore: { 
+            safetyScore: {
               value: '9.2',
-              tooltip: 'Calculated from transaction history, dispute resolution, and community trust signals' 
+              tooltip: 'Calculated from transaction history, dispute resolution, and community trust signals'
             },
             totalTransactions: sellerProfile.stats?.completedOrders || 0,
             successfulTransactions: sellerProfile.stats?.completedOrders || 0,
             disputesRatio: 0.02,
-            
+
             verificationLevels: {
               identity: { type: 'ENHANCED', verified: sellerProfile.ensVerified, verifiedAt: new Date() },
               business: { type: 'BASIC', verified: false },
@@ -320,7 +320,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
               linkedin: sellerProfile.socialLinks?.linkedin,
               website: sellerProfile.websiteUrl || sellerProfile.socialLinks?.website
             },
-            
+
             performanceMetrics: {
               avgDeliveryTime: '1.2 days',
               customerSatisfaction: sellerProfile.stats?.averageRating || 0,
@@ -350,15 +350,15 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
             nftPortfolio: [],
             web3Badges: []
           };
-          
+
           setSeller(transformedSeller);
-          
+
           // Fetch listings using the actual wallet address from the profile
           try {
             const { sellerService } = await import('@/services/sellerService');
             const actualWalletAddress = transformedSeller.walletAddress;
             const sellerListings = await sellerService.getListings(actualWalletAddress);
-            
+
             if (sellerListings && sellerListings.length > 0) {
               // Transform seller listings to unified format
               const transformedListings: UnifiedSellerListing[] = sellerListings.map(listing => {
@@ -372,7 +372,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
               try {
                 const { marketplaceService } = await import('@/services/marketplaceService');
                 const marketplaceListings = await marketplaceService.getListingsBySeller(actualWalletAddress);
-                
+
                 if (marketplaceListings && marketplaceListings.length > 0) {
                   // Transform marketplace listings to unified format
                   const transformedListings: UnifiedSellerListing[] = marketplaceListings.map(listing => {
@@ -391,13 +391,13 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
             }
           } catch (listingsError) {
             console.warn('Failed to fetch seller listings during refresh:', listingsError);
-            
+
             // Try marketplace service as fallback when seller service fails
             try {
               const { marketplaceService } = await import('@/services/marketplaceService');
               const actualWalletAddress = transformedSeller.walletAddress;
               const marketplaceListings = await marketplaceService.getListingsBySeller(actualWalletAddress);
-              
+
               if (marketplaceListings && marketplaceListings.length > 0) {
                 // Transform marketplace listings to unified format
                 const transformedListings: UnifiedSellerListing[] = marketplaceListings.map(listing => {
@@ -430,23 +430,23 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
             location: '',
             isOnline: false,
             lastSeen: new Date(),
-            
-            reputationScore: { 
-              value: '0', 
-              tooltip: 'Based on buyer reviews, DAO endorsements, and community feedback' 
+
+            reputationScore: {
+              value: '0',
+              tooltip: 'Based on buyer reviews, DAO endorsements, and community feedback'
             },
-            successRate: { 
+            successRate: {
               value: '0%',
-              tooltip: 'Percentage of successful transactions without disputes or issues' 
+              tooltip: 'Percentage of successful transactions without disputes or issues'
             },
-            safetyScore: { 
+            safetyScore: {
               value: '0.0',
-              tooltip: 'Calculated from transaction history, dispute resolution, and community trust signals' 
+              tooltip: 'Calculated from transaction history, dispute resolution, and community trust signals'
             },
             totalTransactions: 0,
             successfulTransactions: 0,
             disputesRatio: 0,
-            
+
             verificationLevels: {
               identity: { type: 'ENHANCED', verified: false, verifiedAt: null },
               business: { type: 'BASIC', verified: false },
@@ -457,7 +457,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
               linkedin: '',
               website: ''
             },
-            
+
             performanceMetrics: {
               avgDeliveryTime: 'N/A',
               customerSatisfaction: 0,
@@ -487,7 +487,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
             nftPortfolio: [],
             web3Badges: []
           };
-          
+
           setSeller(minimalSeller);
           setListings([]); // No listings for a minimal seller
         }
@@ -521,7 +521,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
 
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('sellerProfileUpdated', handleProfileUpdate as EventListener);
-    
+
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('sellerProfileUpdated', handleProfileUpdate as EventListener);
@@ -539,12 +539,12 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
     try {
       setLoading(true);
       setError(null);
-      
+
       // Try to fetch real seller profile data first
       try {
         const { sellerService } = await import('@/services/sellerService');
         const sellerProfile = await sellerService.getSellerProfile(sellerId);
-        
+
         if (sellerProfile) {
           console.log('🔍 Initial Profile data received:', {
             storeName: sellerProfile.storeName,
@@ -553,7 +553,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
             bio: sellerProfile.bio,
             description: sellerProfile.description
           });
-          
+
           // Transform backend profile to store page format
           const transformedSeller: SellerInfo = {
             id: sellerProfile.walletAddress,
@@ -568,28 +568,28 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
             location: sellerProfile.location || '',
             isOnline: true, // Default to online
             lastSeen: new Date(sellerProfile.updatedAt),
-            
+
             // Use stats from profile or defaults
-            reputationScore: { 
-              value: sellerProfile.stats?.reputationScore?.toString() || '0', 
-              tooltip: 'Based on buyer reviews, DAO endorsements, and community feedback' 
+            reputationScore: {
+              value: sellerProfile.stats?.reputationScore?.toString() || '0',
+              tooltip: 'Based on buyer reviews, DAO endorsements, and community feedback'
             },
-            successRate: { 
-              value: sellerProfile.stats?.completedOrders > 0 ? 
-                `${Math.round((sellerProfile.stats.completedOrders / sellerProfile.stats.completedOrders) * 100)}%` : 
+            successRate: {
+              value: sellerProfile.stats?.completedOrders > 0 ?
+                `${Math.round((sellerProfile.stats.completedOrders / sellerProfile.stats.completedOrders) * 100)}%` :
                 '98.5%',
-              tooltip: 'Percentage of successful transactions without disputes or issues' 
+              tooltip: 'Percentage of successful transactions without disputes or issues'
             },
-            safetyScore: { 
-              value: sellerProfile.stats?.reputationScore ? 
-                Math.min(10, Math.max(1, sellerProfile.stats.reputationScore * 2)).toFixed(1) : 
+            safetyScore: {
+              value: sellerProfile.stats?.reputationScore ?
+                Math.min(10, Math.max(1, sellerProfile.stats.reputationScore * 2)).toFixed(1) :
                 '9.2',
-              tooltip: 'Calculated from transaction history, dispute resolution, and community trust signals' 
+              tooltip: 'Calculated from transaction history, dispute resolution, and community trust signals'
             },
             totalTransactions: sellerProfile.stats?.completedOrders || 0,
             successfulTransactions: sellerProfile.stats?.completedOrders || 0,
             disputesRatio: 0.02, // Default
-            
+
             verificationLevels: {
               identity: { type: 'ENHANCED', verified: sellerProfile.ensVerified, verifiedAt: new Date() },
               business: { type: 'BASIC', verified: false },
@@ -600,7 +600,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
               linkedin: sellerProfile.socialLinks?.linkedin,
               website: sellerProfile.websiteUrl || sellerProfile.socialLinks?.website
             },
-            
+
             performanceMetrics: {
               avgDeliveryTime: '1.2 days',
               customerSatisfaction: sellerProfile.stats?.averageRating || 0,
@@ -630,7 +630,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
             nftPortfolio: [],
             web3Badges: []
           };
-          
+
           setSeller(transformedSeller);
         } else {
           // Seller profile doesn't exist, but this is not necessarily an error
@@ -648,23 +648,23 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
             location: '',
             isOnline: false,
             lastSeen: new Date(),
-            
-            reputationScore: { 
-              value: '0', 
-              tooltip: 'Based on buyer reviews, DAO endorsements, and community feedback' 
+
+            reputationScore: {
+              value: '0',
+              tooltip: 'Based on buyer reviews, DAO endorsements, and community feedback'
             },
-            successRate: { 
+            successRate: {
               value: '0%',
-              tooltip: 'Percentage of successful transactions without disputes or issues' 
+              tooltip: 'Percentage of successful transactions without disputes or issues'
             },
-            safetyScore: { 
+            safetyScore: {
               value: '0.0',
-              tooltip: 'Calculated from transaction history, dispute resolution, and community trust signals' 
+              tooltip: 'Calculated from transaction history, dispute resolution, and community trust signals'
             },
             totalTransactions: 0,
             successfulTransactions: 0,
             disputesRatio: 0,
-            
+
             verificationLevels: {
               identity: { type: 'ENHANCED', verified: false, verifiedAt: null },
               business: { type: 'BASIC', verified: false },
@@ -675,7 +675,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
               linkedin: '',
               website: ''
             },
-            
+
             performanceMetrics: {
               avgDeliveryTime: 'N/A',
               customerSatisfaction: 0,
@@ -705,24 +705,24 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
             nftPortfolio: [],
             web3Badges: []
           };
-          
+
           setSeller(minimalSeller);
         }
       } catch (profileError) {
         console.warn('Failed to fetch real seller profile:', profileError);
-        
+
         if (!isRetry && retryCount < 2) {
           // Retry once for network issues
           setRetryCount(prev => prev + 1);
           setTimeout(() => fetchSellerData(true), 1000);
           return;
         }
-        
+
         // Instead of using mock data, set error state to show appropriate message
         setError('Seller profile not found or unavailable');
         setLoading(false);
       }
-      
+
       // Fetch seller listings with error handling and fallback
       try {
         const { sellerService } = await import('@/services/sellerService');
@@ -730,7 +730,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
         // This ensures we're using the correct identifier for fetching listings
         const actualWalletAddress = seller?.walletAddress || sellerId;
         const sellerListings = await sellerService.getListings(actualWalletAddress);
-        
+
         if (sellerListings && sellerListings.length > 0) {
           // Transform seller listings to unified format
           const transformedListings: UnifiedSellerListing[] = sellerListings.map(listing => {
@@ -744,7 +744,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
           try {
             const { marketplaceService } = await import('@/services/marketplaceService');
             const marketplaceListings = await marketplaceService.getListingsBySeller(actualWalletAddress);
-            
+
             if (marketplaceListings && marketplaceListings.length > 0) {
               // Transform marketplace listings to unified format
               const transformedListings: UnifiedSellerListing[] = marketplaceListings.map(listing => {
@@ -763,13 +763,13 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
         }
       } catch (listingsError) {
         console.warn('Failed to fetch seller listings:', listingsError);
-        
+
         // Try marketplace service as fallback when seller service fails
         try {
           const { marketplaceService } = await import('@/services/marketplaceService');
           const actualWalletAddress = seller?.walletAddress || sellerId;
           const marketplaceListings = await marketplaceService.getListingsBySeller(actualWalletAddress);
-          
+
           if (marketplaceListings && marketplaceListings.length > 0) {
             // Transform marketplace listings to unified format
             const transformedListings: UnifiedSellerListing[] = marketplaceListings.map(listing => {
@@ -786,10 +786,10 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
           setListings([]);
         }
       }
-      
+
       // Initialize reviews as empty array instead of mock data
       setReviews([]);
-      
+
     } catch (err) {
       console.error('Error fetching seller data:', err);
       setError(err instanceof Error ? err.message : 'Failed to load seller store. Please try again later.');
@@ -841,7 +841,8 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
     return Math.round((seller.successfulTransactions / seller.totalTransactions) * 100);
   };
 
-  const formatWalletAddress = (address: string) => {
+  const formatWalletAddress = (address?: string) => {
+    if (!address) return 'Unknown';
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
@@ -938,7 +939,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
         )}
 
         {/* Header Section with Cover Image */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="bg-white/10 backdrop-blur-lg rounded-2xl overflow-hidden mb-8"
@@ -955,7 +956,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
             )}
             <div className="absolute inset-0 bg-black/20" />
           </div>
-          
+
           <div className="p-8 -mt-16 relative">
             <div className="flex flex-col md:flex-row items-start gap-6">
               {/* Avatar & Basic Info */}
@@ -975,7 +976,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                     </div>
                   )}
                 </div>
-                
+
                 {/* Tier Badge with Progress */}
                 <div className={`mt-4 px-3 py-1 rounded-full text-sm font-semibold ${getTierColor(seller.tier)}`}>
                   {seller.tier.replace('_', ' ')}
@@ -985,7 +986,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                     {seller.tierProgress.current}/{seller.tierProgress.required} to {seller.tierProgress.nextTier}
                   </div>
                   <div className="w-24 h-1 bg-white/20 rounded-full overflow-hidden">
-                    <div 
+                    <div
                       className="h-full bg-gradient-to-r from-blue-400 to-purple-400 transition-all duration-300"
                       style={{ width: `${(seller.tierProgress.current / seller.tierProgress.required) * 100}%` }}
                     />
@@ -1002,23 +1003,21 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                         <h1 className="text-3xl font-bold text-white">{seller.name}</h1>
                         {/* Online Status */}
                         <div className="flex items-center gap-2">
-                          <div className={`w-3 h-3 rounded-full ${
-                            seller.isOnline ? 'bg-green-400 animate-pulse' : 'bg-gray-400'
-                          }`} />
+                          <div className={`w-3 h-3 rounded-full ${seller.isOnline ? 'bg-green-400 animate-pulse' : 'bg-gray-400'
+                            }`} />
                           <span className="text-sm text-white/70">
                             {seller.isOnline ? 'Online now' : `Last seen ${seller.lastSeen?.toLocaleDateString()}`}
                           </span>
                         </div>
                       </div>
-                      
+
                       {/* Enhanced Verification Badges */}
                       <div className="flex gap-2">
                         {seller.verificationLevels.identity.verified && (
-                          <span className={`px-2 py-1 rounded-full text-xs flex items-center gap-1 ${
-                            seller.verificationLevels.identity.type === 'PREMIUM' ? 'bg-purple-500/20 text-purple-400' :
-                            seller.verificationLevels.identity.type === 'ENHANCED' ? 'bg-blue-500/20 text-blue-400' :
-                            'bg-green-500/20 text-green-400'
-                          }`}>
+                          <span className={`px-2 py-1 rounded-full text-xs flex items-center gap-1 ${seller.verificationLevels.identity.type === 'PREMIUM' ? 'bg-purple-500/20 text-purple-400' :
+                              seller.verificationLevels.identity.type === 'ENHANCED' ? 'bg-blue-500/20 text-blue-400' :
+                                'bg-green-500/20 text-green-400'
+                            }`}>
                             <BadgeCheck className="w-3 h-3" />
                             {seller.verificationLevels.identity.type} ID
                           </span>
@@ -1066,14 +1065,14 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                       {/* Social Links */}
                       <div className="flex items-center gap-2">
                         {seller.socialLinks.twitter && (
-                          <a href={seller.socialLinks.twitter} target="_blank" rel="noopener noreferrer" 
-                             className="text-white/60 hover:text-blue-400 transition-colors">
+                          <a href={seller.socialLinks.twitter} target="_blank" rel="noopener noreferrer"
+                            className="text-white/60 hover:text-blue-400 transition-colors">
                             <ExternalLink className="w-4 h-4" />
                           </a>
                         )}
                         {seller.socialLinks.website && (
                           <a href={seller.socialLinks.website} target="_blank" rel="noopener noreferrer"
-                             className="text-white/60 hover:text-blue-400 transition-colors">
+                            className="text-white/60 hover:text-blue-400 transition-colors">
                             <Globe className="w-4 h-4" />
                           </a>
                         )}
@@ -1084,7 +1083,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                   {/* Enhanced CTA Button Group */}
                   <div className="flex flex-wrap gap-3 mt-4 md:mt-0">
                     {/* Refresh Button for Testing */}
-                    <button 
+                    <button
                       onClick={refreshSellerData}
                       className="px-4 py-2 bg-blue-600 rounded-lg text-white hover:bg-blue-700 transition-all font-medium flex items-center gap-2"
                       disabled={loading}
@@ -1100,11 +1099,10 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
 
                     <button
                       onClick={() => setIsFollowing(!isFollowing)}
-                      className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
-                        isFollowing 
-                          ? 'bg-gray-600 text-white' 
+                      className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${isFollowing
+                          ? 'bg-gray-600 text-white'
                           : 'bg-gradient-to-r from-gray-100/20 to-gray-200/20 text-white hover:from-gray-200/30 hover:to-gray-300/30'
-                      }`}
+                        }`}
                     >
                       <Heart className={`w-4 h-4 ${isFollowing ? 'fill-current' : ''}`} />
                       {isFollowing ? 'Following' : 'Follow'}
@@ -1113,7 +1111,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                       <Share2 className="w-4 h-4" />
                     </button>
                   </div>
-              </div>
+                </div>
 
                 <p className="text-white/80 mb-6">{seller.description}</p>
 
@@ -1135,7 +1133,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                       <span className="text-green-400">{seller.performanceMetrics.trendValue} this week</span>
                     </div>
                   </div>
-                  
+
                   <div className="bg-white/15 rounded-xl p-6 text-center backdrop-blur-sm hover:bg-white/20 transition-all duration-300 cursor-pointer">
                     <div className="flex items-center justify-center mb-2 group relative">
                       <CheckCircle className="w-6 h-6 text-green-400 mr-1" />
@@ -1150,7 +1148,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                       Above average
                     </span>
                   </div>
-                  
+
                   {/* Performance Metrics */}
                   <div className="bg-white/10 rounded-xl p-4 text-center backdrop-blur-sm hover:bg-white/15 transition-all duration-300 cursor-pointer">
                     <div className="flex items-center justify-center mb-2">
@@ -1160,7 +1158,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                     <p className="text-xs text-white/70 mb-1">Avg Delivery</p>
                     <span className="text-xs text-blue-400">Fast shipper</span>
                   </div>
-                  
+
                   <div className="bg-white/10 rounded-xl p-4 text-center backdrop-blur-sm hover:bg-white/15 transition-all duration-300 cursor-pointer">
                     <div className="flex items-center justify-center mb-2">
                       <Repeat className="w-5 h-5 text-purple-400 mr-1" />
@@ -1230,7 +1228,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                       <Star className="w-5 h-5 mr-2 text-yellow-400" />
                       Featured Items
                     </h3>
-                    <button 
+                    <button
                       onClick={() => setActiveTab('listings')}
                       className="text-blue-300 hover:text-blue-100 text-sm font-medium"
                     >
@@ -1241,8 +1239,8 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                     {seller.featuredProducts.map((product) => (
                       <div key={product.id} className="group cursor-pointer">
                         <div className="aspect-square bg-white/5 rounded-lg overflow-hidden mb-3">
-                          <img 
-                            src={product.image} 
+                          <img
+                            src={product.image}
                             alt={product.name}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                           />
@@ -1310,16 +1308,16 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
 
         {/* Featured Listings Section */}
         {seller.featuredListings.length > 0 && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 mb-8"
           >
             <h2 className="text-xl font-bold text-white mb-4">Featured Listings</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {seller.featuredListings.slice(0, 3).map((listing) => (
+              {seller.featuredListings?.slice(0, 3).map((listing) => (
                 <div key={listing.id} className="bg-white/10 rounded-lg overflow-hidden cursor-pointer hover:bg-white/15 transition-colors"
-                     onClick={() => handleProductClick(listing.id)}>
+                  onClick={() => handleProductClick(listing.id)}>
                   <div className="relative h-32">
                     {listing.images && listing.images.length > 0 ? (
                       <Image src={listing.images[0]} alt={listing.title} fill className="object-cover" />
@@ -1340,20 +1338,20 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
         )}
 
         {/* Breadcrumb Navigation */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-6"
         >
           <nav className="flex items-center space-x-2 text-sm text-white/70">
-            <button 
+            <button
               onClick={() => router.push('/marketplace')}
               className="hover:text-white transition-colors"
             >
               Marketplace
             </button>
             <span>›</span>
-            <button 
+            <button
               onClick={() => router.push('/marketplace?tab=sellers')}
               className="hover:text-white transition-colors"
             >
@@ -1372,11 +1370,10 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
             <button
               key={tab}
               onClick={() => setActiveTab(tab as any)}
-              className={`px-4 md:px-6 py-3 rounded-lg font-semibold transition-all capitalize whitespace-nowrap ${
-                activeTab === tab
+              className={`px-4 md:px-6 py-3 rounded-lg font-semibold transition-all capitalize whitespace-nowrap ${activeTab === tab
                   ? 'bg-white/20 text-white shadow-lg'
                   : 'text-white/70 hover:text-white hover:bg-white/10'
-              }`}
+                }`}
             >
               {tab === 'activity' && <Clock className="w-4 h-4 inline mr-2" />}
               {tab === 'transactions' && <TrendingUp className="w-4 h-4 inline mr-2" />}
@@ -1443,22 +1440,20 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setViewMode('grid')}
-                    className={`p-3 rounded-lg transition-colors ${
-                      viewMode === 'grid' 
-                        ? 'bg-white/20 text-white shadow-md' 
+                    className={`p-3 rounded-lg transition-colors ${viewMode === 'grid'
+                        ? 'bg-white/20 text-white shadow-md'
                         : 'bg-white/10 text-white/70 hover:text-white hover:bg-white/15'
-                    }`}
+                      }`}
                     title="Grid view"
                   >
                     <Grid className="w-5 h-5" />
                   </button>
                   <button
                     onClick={() => setViewMode('list')}
-                    className={`p-3 rounded-lg transition-colors ${
-                      viewMode === 'list' 
-                        ? 'bg-white/20 text-white shadow-md' 
+                    className={`p-3 rounded-lg transition-colors ${viewMode === 'list'
+                        ? 'bg-white/20 text-white shadow-md'
                         : 'bg-white/10 text-white/70 hover:text-white hover:bg-white/15'
-                    }`}
+                      }`}
                     title="List view"
                   >
                     <List className="w-5 h-5" />
@@ -1512,11 +1507,10 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                         </div>
                         <div className="flex items-center justify-between text-xs text-white/60">
                           <span>{listing.views || 0} views</span>
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            listing.status === 'active' ? 'bg-green-500/20 text-green-400' :
-                            listing.status === 'sold' ? 'bg-red-500/20 text-red-400' :
-                            'bg-gray-500/20 text-gray-400'
-                          }`}>
+                          <span className={`px-2 py-1 rounded-full text-xs ${listing.status === 'active' ? 'bg-green-500/20 text-green-400' :
+                              listing.status === 'sold' ? 'bg-red-500/20 text-red-400' :
+                                'bg-gray-500/20 text-gray-400'
+                            }`}>
                             {listing.status.toLowerCase()}
                           </span>
                         </div>
@@ -1531,7 +1525,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                   </div>
                   <h3 className="text-2xl font-semibold text-white mb-3">No listings found</h3>
                   <p className="text-white/70 mb-8 max-w-md mx-auto">
-                    {searchQuery || selectedCategory !== 'all' 
+                    {searchQuery || selectedCategory !== 'all'
                       ? 'Try adjusting your search or filters to find more products.'
                       : 'This seller hasn\'t listed any products yet.'}
                   </p>
@@ -1568,18 +1562,17 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                     <span className="text-white/70">({reviews.length} reviews)</span>
                   </div>
                 </div>
-                
+
                 {/* Review Filters */}
                 <div className="flex gap-2">
                   {[{ key: 'recent', label: 'Most Recent' }, { key: 'highest', label: 'Highest Rated' }, { key: 'verified', label: 'Verified Purchases' }].map((filter) => (
                     <button
                       key={filter.key}
                       onClick={() => setReviewFilter(filter.key as any)}
-                      className={`px-3 py-1 rounded-lg text-sm transition-all ${
-                        reviewFilter === filter.key
+                      className={`px-3 py-1 rounded-lg text-sm transition-all ${reviewFilter === filter.key
                           ? 'bg-white/20 text-white'
                           : 'bg-white/10 text-white/70 hover:bg-white/15'
-                      }`}
+                        }`}
                     >
                       {filter.label}
                     </button>
@@ -1593,7 +1586,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
-                          {(review.buyerENS || review.buyerAddress).slice(0, 2).toUpperCase()}
+                          {(review.buyerENS || review.buyerAddress || 'User').slice(0, 2).toUpperCase()}
                         </div>
                         <div>
                           <div className="text-white font-semibold">
@@ -1643,12 +1636,11 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                       </div>
                       <p className="text-white/80 text-sm">{event.description}</p>
                       <div className="mt-2">
-                        <span className={`px-2 py-1 rounded-full text-xs ${
-                          event.type === 'SALE' ? 'bg-green-500/20 text-green-400' :
-                          event.type === 'LISTING' ? 'bg-blue-500/20 text-blue-400' :
-                          event.type === 'ENDORSEMENT' ? 'bg-purple-500/20 text-purple-400' :
-                          'bg-gray-500/20 text-gray-400'
-                        }`}>
+                        <span className={`px-2 py-1 rounded-full text-xs ${event.type === 'SALE' ? 'bg-green-500/20 text-green-400' :
+                            event.type === 'LISTING' ? 'bg-blue-500/20 text-blue-400' :
+                              event.type === 'ENDORSEMENT' ? 'bg-purple-500/20 text-purple-400' :
+                                'bg-gray-500/20 text-gray-400'
+                          }`}>
                           {event.type.toLowerCase()}
                         </span>
                       </div>
@@ -1672,15 +1664,14 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                 {seller.recentTransactions.map((tx) => (
                   <div key={tx.id} className="flex items-center justify-between p-4 bg-white/10 rounded-lg">
                     <div className="flex items-center space-x-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        tx.type === 'sale' ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'
-                      }`}>
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${tx.type === 'sale' ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'
+                        }`}>
                         {tx.type === 'sale' ? '↗' : '↙'}
                       </div>
                       <div>
                         <div className="font-medium text-white capitalize">{tx.type}</div>
                         <div className="text-sm text-white/60">
-                          {tx.counterparty.slice(0, 6)}...{tx.counterparty.slice(-4)}
+                          {tx.counterparty ? `${tx.counterparty.slice(0, 6)}...${tx.counterparty.slice(-4)}` : 'Unknown'}
                         </div>
                       </div>
                     </div>
@@ -1704,7 +1695,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                   <h3 className="text-xl font-bold text-white mb-4">DAO Memberships</h3>
                   <div className="space-y-3">
                     {seller.daoMemberships.map((dao, index) => (
-                      <div 
+                      <div
                         key={index}
                         className="flex items-center justify-between p-4 bg-white/10 rounded-lg hover:bg-white/15 transition-colors cursor-pointer"
                       >
@@ -1750,7 +1741,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                 <div>
                   <h3 className="text-xl font-bold text-white mb-4">NFT Portfolio</h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {seller.nftPortfolio.slice(0, 8).map((nft) => (
+                    {seller.nftPortfolio?.slice(0, 8).map((nft) => (
                       <div key={nft.id} className="bg-white/10 rounded-lg overflow-hidden">
                         <Image
                           src={nft.image}
@@ -1771,7 +1762,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
             </div>
           )}
         </motion.div>
-        
+
         {/* DAO Endorsement Modal */}
         <DAOEndorsementModal
           isOpen={showDAOModal}

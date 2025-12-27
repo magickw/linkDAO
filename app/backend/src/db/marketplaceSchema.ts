@@ -19,6 +19,10 @@ export const marketplaceUsers = pgTable("marketplace_users", {
 });
 
 // Products (for marketplace listings)
+/**
+ * @deprecated Use `products` table in `schema.ts` instead.
+ * This table is being removed in favor of the consolidated `products` table.
+ */
 export const marketplaceProducts = pgTable("marketplace_products", {
   id: uuid("id").defaultRandom().primaryKey(),
   sellerId: uuid("seller_id").references(() => users.id, { onDelete: "cascade" }).notNull(),

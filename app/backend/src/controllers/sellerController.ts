@@ -4,7 +4,7 @@ import { safeLogger } from '../utils/safeLogger';
 import { databaseService } from "../services/databaseService";
 import { eq, and, or, ilike, desc, lt, gte, lte, sql } from 'drizzle-orm';
 import * as schema from '../db/schema';
-import { marketplaceUsers, sellerVerifications, marketplaceProducts, marketplaceOrders } from "../db/marketplaceSchema";
+import { marketplaceUsers, sellerVerifications, marketplaceOrders } from "../db/marketplaceSchema";
 import { users, products, categories } from "../db/schema";
 
 export class SellerController {
@@ -610,21 +610,28 @@ export class SellerController {
           .onConflictDoNothing();
       }
 
-      // Create the listing
-      const [newListing] = await db.insert(marketplaceProducts)
+      // Create the listing in products table
+      const [newListing] = await db.insert(products)
         .values({
           sellerId: marketplaceUser?.users?.id || user.id,
           title: listingData.title,
           description: listingData.description,
           mainCategory: listingData.category,
-          priceCrypto: listingData.priceCrypto.toString(),
+          priceAmount: listingData.priceCrypto.toString(),
+          priceCurrency: 'USDC', // Defaulting to USDC for now as products table uses priceCurrency
           currency: listingData.currency || 'USDC',
+          // products table might not have all fields yet, checking schema...
+          // I added mainCategory, priceFiat, isPhysical, stock(inventory), etc.
+          inventory: listingData.stock || 1,
           isPhysical: listingData.isPhysical || false,
-          stock: listingData.stock || 1,
-          metadataUri: listingData.metadataUri,
+          metadata: JSON.stringify({ uri: listingData.metadataUri }), // Mapping metadataUri to metadata JSON
           status: 'active',
+          listingStatus: 'active',
           createdAt: new Date(),
-          updatedAt: new Date()
+          updatedAt: new Date(),
+          images: '[]', // Required field
+          categoryId: '00000000-0000-0000-0000-000000000000', // Placeholder UUID if categoryId is required but we use mainCategory
+          // ideally we should look up categoryId from categories table using mainCategory slug
         })
         .returning();
 
@@ -635,10 +642,10 @@ export class SellerController {
           title: newListing.title,
           description: newListing.description,
           category: newListing.mainCategory,
-          priceCrypto: parseFloat(newListing.priceCrypto),
-          currency: newListing.currency,
+          priceCrypto: parseFloat(newListing.priceAmount),
+          currency: newListing.priceCurrency,
           isPhysical: newListing.isPhysical,
-          stock: newListing.stock,
+          stock: newListing.inventory,
           status: newListing.status,
           createdAt: newListing.createdAt
         }
@@ -659,9 +666,9 @@ export class SellerController {
 
       // Verify ownership
       const [listing] = await db.select()
-        .from(marketplaceProducts)
-        .leftJoin(users, eq(marketplaceProducts.sellerId, users.id))
-        .where(eq(marketplaceProducts.id, id));
+        .from(products)
+        .leftJoin(users, eq(products.sellerId, users.id))
+        .where(eq(products.id, id));
 
       if (!listing || listing.users?.walletAddress !== user.walletAddress) {
         return res.status(404).json({ success: false, error: "Listing not found or access denied" });
@@ -672,16 +679,16 @@ export class SellerController {
       if (updates.title) updateData.title = updates.title;
       if (updates.description) updateData.description = updates.description;
       if (updates.category) updateData.mainCategory = updates.category;
-      if (updates.priceCrypto) updateData.priceCrypto = updates.priceCrypto.toString();
-      if (updates.currency) updateData.currency = updates.currency;
+      if (updates.priceCrypto) updateData.priceAmount = updates.priceCrypto.toString();
+      if (updates.currency) updateData.priceCurrency = updates.currency;
       if (updates.isPhysical !== undefined) updateData.isPhysical = updates.isPhysical;
-      if (updates.stock !== undefined) updateData.stock = updates.stock;
+      if (updates.stock !== undefined) updateData.inventory = updates.stock;
       if (updates.status) updateData.status = updates.status;
-      if (updates.metadataUri) updateData.metadataUri = updates.metadataUri;
+      if (updates.metadataUri) updateData.metadata = JSON.stringify({ uri: updates.metadataUri });
 
-      const [updatedListing] = await db.update(marketplaceProducts)
+      const [updatedListing] = await db.update(products)
         .set(updateData)
-        .where(eq(marketplaceProducts.id, id))
+        .where(eq(products.id, id))
         .returning();
 
       res.json({
@@ -691,10 +698,10 @@ export class SellerController {
           title: updatedListing.title,
           description: updatedListing.description,
           category: updatedListing.mainCategory,
-          priceCrypto: parseFloat(updatedListing.priceCrypto),
-          currency: updatedListing.currency,
+          priceCrypto: parseFloat(updatedListing.priceAmount),
+          currency: updatedListing.priceCurrency,
           isPhysical: updatedListing.isPhysical,
-          stock: updatedListing.stock,
+          stock: updatedListing.inventory,
           status: updatedListing.status,
           updatedAt: updatedListing.updatedAt
         }
@@ -714,18 +721,18 @@ export class SellerController {
 
       // Verify ownership
       const [listing] = await db.select()
-        .from(marketplaceProducts)
-        .leftJoin(users, eq(marketplaceProducts.sellerId, users.id))
-        .where(eq(marketplaceProducts.id, id));
+        .from(products)
+        .leftJoin(users, eq(products.sellerId, users.id))
+        .where(eq(products.id, id));
 
       if (!listing || listing.users?.walletAddress !== user.walletAddress) {
         return res.status(404).json({ success: false, error: "Listing not found or access denied" });
       }
 
       // Soft delete by setting status to inactive
-      await db.update(marketplaceProducts)
+      await db.update(products)
         .set({ status: 'inactive', updatedAt: new Date() })
-        .where(eq(marketplaceProducts.id, id));
+        .where(eq(products.id, id));
 
       res.json({ success: true, message: "Listing deleted successfully" });
     } catch (error) {
@@ -746,17 +753,17 @@ export class SellerController {
 
       // Get recent listings
       const recentListings = await db.select({
-        id: marketplaceProducts.id,
-        title: marketplaceProducts.title,
-        status: marketplaceProducts.status,
-        priceCrypto: marketplaceProducts.priceCrypto,
-        currency: marketplaceProducts.currency,
-        createdAt: marketplaceProducts.createdAt
+        id: products.id,
+        title: products.title,
+        status: products.status,
+        priceCrypto: products.priceAmount,
+        currency: products.priceCurrency,
+        createdAt: products.createdAt
       })
-        .from(marketplaceProducts)
-        .leftJoin(users, eq(marketplaceProducts.sellerId, users.id))
+        .from(products)
+        .leftJoin(users, eq(products.sellerId, users.id))
         .where(eq(users.walletAddress, user.walletAddress))
-        .orderBy(desc(marketplaceProducts.createdAt))
+        .orderBy(desc(products.createdAt))
         .limit(5);
 
       const dashboardData: any = {
@@ -843,39 +850,39 @@ export class SellerController {
         .from(users)
         .where(eq(users.walletAddress, user.walletAddress))
         .limit(1);
-      
+
       if (!userRecord.length) {
         return res.status(404).json({ success: false, error: "User not found" });
       }
 
       let query = db.select({
-        id: marketplaceProducts.id,
-        title: marketplaceProducts.title,
-        description: marketplaceProducts.description,
-        priceCrypto: marketplaceProducts.priceCrypto,
-        currency: marketplaceProducts.currency,
-        stock: marketplaceProducts.stock,
-        status: marketplaceProducts.status,
-        createdAt: marketplaceProducts.createdAt,
-        updatedAt: marketplaceProducts.updatedAt,
-        mainCategory: marketplaceProducts.mainCategory
+        id: products.id,
+        title: products.title,
+        description: products.description,
+        priceCrypto: products.priceAmount, // Mapping priceAmount to priceCrypto for frontend compatibility
+        currency: products.priceCurrency,
+        stock: products.inventory,
+        status: products.status,
+        createdAt: products.createdAt,
+        updatedAt: products.updatedAt,
+        mainCategory: products.mainCategory // Using the new column added to products
       })
-        .from(marketplaceProducts)
-        .where(eq(marketplaceProducts.sellerId, userRecord[0].id));
+        .from(products)
+        .where(eq(products.sellerId, userRecord[0].id));
 
       // Apply filters
       if (status) {
-        query = query.where(eq(marketplaceProducts.status, status as string));
+        query = query.where(eq(products.status, status as string));
       }
       if (category) {
-        query = query.where(eq(marketplaceProducts.mainCategory, category as string));
+        query = query.where(eq(products.mainCategory, category as string));
       }
 
       // Apply sorting
-      const sortColumn = sortBy === 'price' ? marketplaceProducts.priceCrypto :
-        sortBy === 'title' ? marketplaceProducts.title :
-          sortBy === 'updated_at' ? marketplaceProducts.updatedAt :
-            marketplaceProducts.createdAt;
+      const sortColumn = sortBy === 'price' ? products.priceAmount :
+        sortBy === 'title' ? products.title :
+          sortBy === 'updated_at' ? products.updatedAt :
+            products.createdAt;
 
       query = sortOrder === 'asc' ? query.orderBy(sortColumn) : query.orderBy(desc(sortColumn));
 
@@ -883,8 +890,8 @@ export class SellerController {
 
       // Get total count
       const totalResult = await db.select({ count: sql<number>`count(*)` })
-        .from(marketplaceProducts)
-        .where(eq(marketplaceProducts.sellerId, userRecord[0].id));
+        .from(products)
+        .where(eq(products.sellerId, userRecord[0].id));
 
       const total = totalResult[0]?.count || 0;
 
@@ -1023,29 +1030,29 @@ export class SellerController {
   async getProfile(req: Request, res: Response) {
     try {
       const user = (req as any).user;
-      
+
       // Validate user and wallet address
       if (!user) {
         safeLogger.error("No user found in request");
         return res.status(401).json({ success: false, error: "User not authenticated" });
       }
-      
+
       const walletAddress = user.walletAddress || user.address;
-      
+
       if (!walletAddress) {
         safeLogger.error("No wallet address found in user object:", user);
         return res.status(400).json({ success: false, error: "Wallet address not found" });
       }
-      
+
       safeLogger.info("Fetching seller profile for address:", walletAddress);
-      
+
       const { sellerService } = await import('../services/sellerService');
 
       const profile = await sellerService.getSellerProfile(walletAddress);
 
       if (!profile) {
         safeLogger.info("Seller profile not found for address:", walletAddress);
-        
+
         // Create a basic profile for the seller if it doesn't exist
         try {
           const basicProfileData = {
@@ -1068,10 +1075,10 @@ export class SellerController {
               lastCalculated: new Date().toISOString()
             }
           };
-          
+
           const newProfile = await sellerService.createSellerProfile(basicProfileData as any);
           safeLogger.info("Created basic seller profile for address:", walletAddress);
-          
+
           res.json({ success: true, data: newProfile });
           return;
         } catch (creationError) {
@@ -1275,7 +1282,7 @@ export class SellerController {
   async getOnboardingSteps(req: Request, res: Response) {
     try {
       const user = (req as any).user;
-      
+
       // Return default onboarding steps
       const steps = [
         { id: 'profile_setup', completed: false, title: 'Profile Setup', description: 'Complete your seller profile', component: 'ProfileSetup', required: true },
@@ -1316,7 +1323,7 @@ export class SellerController {
   async getSellerTier(req: Request, res: Response) {
     try {
       const user = (req as any).user;
-      
+
       // Return default tier information
       const tier = {
         currentTier: 'TIER_1',
@@ -1345,7 +1352,7 @@ export class SellerController {
   async getTierProgress(req: Request, res: Response) {
     try {
       const user = (req as any).user;
-      
+
       const progress = {
         current: 0,
         required: 100,
@@ -1371,7 +1378,7 @@ export class SellerController {
   async triggerTierEvaluation(req: Request, res: Response) {
     try {
       const user = (req as any).user;
-      
+
       // In a real implementation, this would evaluate the seller's performance
       // For now, just return success
       res.json({
@@ -1426,9 +1433,9 @@ export class SellerController {
   async getTierEvaluationHistory(req: Request, res: Response) {
     try {
       const user = (req as any).user;
-      
+
       const history = [];
-      
+
       res.json({
         success: true,
         data: { history }

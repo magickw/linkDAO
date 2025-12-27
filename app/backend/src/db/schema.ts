@@ -748,6 +748,19 @@ export const products = pgTable("products", {
   seoKeywords: text("seo_keywords"), // JSON array of SEO keywords
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+
+  // Consolidated fields from marketplace_products
+  mainCategory: varchar("main_category", { length: 50 }), // For easier categorization without joins
+  subCategory: varchar("sub_category", { length: 100 }),
+  isPhysical: boolean("is_physical").default(false),
+  priceFiat: numeric("price_fiat", { precision: 20, scale: 2 }),
+  // DeFi specific fields from marketplace_products
+  defiProtocol: varchar("defi_protocol", { length: 100 }),
+  defiAssetType: varchar("defi_asset_type", { length: 50 }),
+  currentApy: numeric("current_apy", { precision: 5, scale: 2 }),
+  // Physical goods specific fields from marketplace_products (merged/aliased)
+  weight: numeric("weight", { precision: 10, scale: 3 }),
+  condition: varchar("condition", { length: 20 }).default("new"),
 }, (t) => ({
   sellerFk: foreignKey({
     columns: [t.sellerId],
@@ -764,6 +777,7 @@ export const products = pgTable("products", {
   priceIdx: index("product_price_idx").on(t.priceAmount),
   listingStatusIdx: index("idx_products_listing_status").on(t.listingStatus),
   publishedAtIdx: index("idx_products_published_at").on(t.publishedAt),
+  mainCategoryIdx: index("idx_products_main_category").on(t.mainCategory),
 }));
 
 // Product Tags - for efficient querying
@@ -961,6 +975,10 @@ export const sellerTransactions = pgTable("seller_transactions", {
 
 
 // Marketplace listings (keeping for backward compatibility)
+/**
+ * @deprecated Use `products` table instead.
+ * This table is redundant and will be removed.
+ */
 export const listings = pgTable("listings", {
   id: uuid("id").defaultRandom().primaryKey(),
   sellerId: uuid("seller_id").references(() => users.id),
@@ -5554,7 +5572,7 @@ export const refundProviderTransactions = pgTable("refund_provider_transactions"
 
   // Webhook tracking
   webhookReceived: boolean("webhook_received").default(false),
-  
+
   // Additional tracking fields
   providerRefundId: varchar("provider_refund_id", { length: 255 }),
   responsePayload: jsonb("response_payload"),
