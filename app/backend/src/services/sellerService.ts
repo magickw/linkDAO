@@ -1,6 +1,7 @@
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
+import * as schema from '../db/schema';
 import {
   sellers,
   users,
@@ -684,8 +685,8 @@ class SellerService {
           totalListings: sql<number>`count(*)`,
           activeListings: sql<number>`count(*) filter (where status = 'active')`,
         })
-        .from(products)
-        .where(eq(products.sellerId, user.id));
+        .from(schema.products)
+        .where(eq(schema.products.sellerId, user.id));
 
       // Get order statistics from orders table
       // Orders table connects directly to sellerId
@@ -697,8 +698,8 @@ class SellerService {
           pendingOrders: sql<number>`count(*) filter (where status in ('pending'))`,
           disputedOrders: sql<number>`count(*) filter (where status = 'disputed')`,
         })
-        .from(orders)
-        .where(eq(orders.sellerId, user.id));
+        .from(schema.orders)
+        .where(eq(schema.orders.sellerId, user.id));
 
       // Get reputation data
       const reputationData = await db
@@ -1050,26 +1051,26 @@ class SellerService {
     try {
       const query = db
         .select({
-          orderId: orders.id,
-          listingId: orders.listingId,
-          listingTitle: marketplaceListings.title,
+          orderId: schema.orders.id,
+          listingId: schema.orders.listingId,
+          listingTitle: schema.marketplaceListings.title,
           buyerAddress: sql<string>`orders.buyer_id::text`,
-          amount: orders.totalAmount,
-          currency: orders.currency,
-          status: orders.status,
-          paymentMethod: orders.paymentMethod,
-          createdAt: orders.createdAt,
+          amount: schema.orders.totalAmount,
+          currency: schema.orders.currency,
+          status: schema.orders.status,
+          paymentMethod: schema.orders.paymentMethod,
+          createdAt: schema.orders.createdAt,
           updatedAt: sql<Date>`orders.created_at`, // Using created_at as updated_at placeholder
         })
-        .from(orders)
-        .innerJoin(marketplaceListings, eq(orders.listingId, marketplaceListings.id))
+        .from(schema.orders)
+        .innerJoin(schema.marketplaceListings, eq(schema.orders.listingId, schema.marketplaceListings.id))
         .where(and(
-          eq(marketplaceListings.sellerAddress, walletAddress),
-          status ? eq(orders.status, status) : sql<boolean>`true`
+          eq(schema.marketplaceListings.sellerAddress, walletAddress),
+          status ? eq(schema.orders.status, status) : sql<boolean>`true`
         ));
 
       const orderResults = await query
-        .orderBy(desc(orders.createdAt))
+        .orderBy(desc(schema.orders.createdAt))
         .limit(50);
 
       return orderResults.map(order => {

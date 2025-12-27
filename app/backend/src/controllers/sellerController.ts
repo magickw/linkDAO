@@ -932,30 +932,30 @@ export class SellerController {
       const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
 
       let query = db.select({
-        id: marketplaceOrders.id,
-        productId: marketplaceOrders.productId,
-        productTitle: marketplaceProducts.title,
-        buyerId: marketplaceOrders.buyerId,
-        amount: marketplaceOrders.amount,
-        currency: marketplaceOrders.currency,
-        status: marketplaceOrders.status,
-        createdAt: marketplaceOrders.createdAt,
-        updatedAt: marketplaceOrders.updatedAt
+        id: schema.orders.id,
+        productId: schema.orders.listingId,
+        productTitle: schema.products.title,
+        buyerId: schema.orders.buyerId,
+        amount: schema.orders.totalAmount, // Map amount -> totalAmount
+        currency: schema.orders.currency,
+        status: schema.orders.status,
+        createdAt: schema.orders.createdAt,
+        updatedAt: schema.orders.createdAt // schema.orders might not have updatedAt? Using createdAt as fallback or check schema
       })
-        .from(marketplaceOrders)
-        .leftJoin(marketplaceProducts, eq(marketplaceOrders.productId, marketplaceProducts.id))
-        .leftJoin(users, eq(marketplaceProducts.sellerId, users.id))
-        .where(eq(users.walletAddress, user.walletAddress));
+        .from(schema.orders)
+        .leftJoin(schema.products, eq(schema.orders.listingId, schema.products.id))
+        .leftJoin(schema.users, eq(schema.products.sellerId, schema.users.id))
+        .where(eq(schema.users.walletAddress, user.walletAddress));
 
       // Apply filters
       if (status) {
-        query = query.where(eq(marketplaceOrders.status, status as string));
+        query = query.where(eq(schema.orders.status, status as string));
       }
 
       // Apply sorting
-      const sortColumn = sortBy === 'amount' ? marketplaceOrders.amount :
-        sortBy === 'updated_at' ? marketplaceOrders.updatedAt :
-          marketplaceOrders.createdAt;
+      const sortColumn = sortBy === 'amount' ? schema.orders.totalAmount :
+        sortBy === 'updated_at' ? schema.orders.createdAt :
+          schema.orders.createdAt;
 
       query = sortOrder === 'asc' ? query.orderBy(sortColumn) : query.orderBy(desc(sortColumn));
 
@@ -963,10 +963,10 @@ export class SellerController {
 
       // Get total count
       const totalResult = await db.select({ count: sql<number>`count(*)` })
-        .from(marketplaceOrders)
-        .leftJoin(marketplaceProducts, eq(marketplaceOrders.productId, marketplaceProducts.id))
-        .leftJoin(users, eq(marketplaceProducts.sellerId, users.id))
-        .where(eq(users.walletAddress, user.walletAddress));
+        .from(schema.orders)
+        .leftJoin(schema.products, eq(schema.orders.listingId, schema.products.id))
+        .leftJoin(schema.users, eq(schema.products.sellerId, schema.users.id))
+        .where(eq(schema.users.walletAddress, user.walletAddress));
 
       const total = totalResult[0]?.count || 0;
 
@@ -1211,14 +1211,14 @@ export class SellerController {
     try {
       const db = databaseService.getDatabase();
       const topCategories = await db.select({
-        category: marketplaceProducts.mainCategory,
+        category: schema.products.mainCategory,
         count: sql<number>`count(*)`
       })
-        .from(products)
-        .leftJoin(users, eq(products.sellerId, users.id))
-        .where(eq(users.walletAddress, walletAddress))
-        .leftJoin(categories, eq(products.categoryId, categories.id))
-        .groupBy(categories.name)
+        .from(schema.products)
+        .leftJoin(schema.users, eq(schema.products.sellerId, schema.users.id))
+        .where(eq(schema.users.walletAddress, walletAddress))
+        .leftJoin(schema.categories, eq(schema.products.categoryId, schema.categories.id))
+        .groupBy(schema.categories.name)
         .orderBy(desc(sql<number>`count(*)`))
         .limit(5);
 
@@ -1236,23 +1236,23 @@ export class SellerController {
     try {
       const db = databaseService.getDatabase();
       const products = await db.select({
-        id: marketplaceProducts.id,
-        title: marketplaceProducts.title,
-        priceCrypto: marketplaceProducts.priceCrypto,
-        currency: marketplaceProducts.currency
+        id: schema.products.id,
+        title: schema.products.title,
+        priceCrypto: schema.products.priceAmount, // Mapping priceAmount to priceCrypto for frontend compatibility
+        currency: schema.products.priceCurrency
       })
-        .from(marketplaceProducts)
-        .leftJoin(users, eq(marketplaceProducts.sellerId, users.id))
+        .from(schema.products)
+        .leftJoin(schema.users, eq(schema.products.sellerId, schema.users.id))
         .where(and(
-          eq(users.walletAddress, walletAddress),
-          eq(marketplaceProducts.status, 'active')
+          eq(schema.users.walletAddress, walletAddress),
+          eq(schema.products.status, 'active')
         ))
-        .orderBy(desc(marketplaceProducts.createdAt))
+        .orderBy(desc(schema.products.publishedAt))
         .limit(5);
 
       return products.map(product => ({
         ...product,
-        priceCrypto: parseFloat(product.priceCrypto),
+        priceCrypto: parseFloat(product.priceCrypto), // Ensure it's a number
         sales: Math.floor(Math.random() * 50) // Mock sales data
       }));
     } catch (error) {
