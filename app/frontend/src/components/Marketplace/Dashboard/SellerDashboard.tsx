@@ -596,34 +596,6 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
             </div>
           </div>
 
-          {/* Tier Upgrade Banner */}
-          {nextTier && (
-            <GlassPanel className="mb-8 p-6 border-l-4 border-purple-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-1">
-                    Upgrade to {nextTier.name}
-                  </h3>
-                  <p className="text-gray-300 text-sm mb-2">{nextTier.description}</p>
-                  <div className="flex flex-wrap gap-2">
-                    {nextTier.benefits.slice(0, 3).map((benefit, index) => (
-                      <span key={index} className="text-xs bg-purple-600 text-white px-2 py-1 rounded">
-                        {benefit.description}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <Button
-                  onClick={() => router.push('/marketplace/seller/upgrade')}
-                  variant="primary"
-                  size="sm"
-                >
-                  Upgrade Now
-                </Button>
-              </div>
-            </GlassPanel>
-          )}
-
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <StatCard

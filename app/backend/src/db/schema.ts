@@ -1091,7 +1091,7 @@ export const disputeEvidence = pgTable("dispute_evidence", {
 // Orders
 export const orders = pgTable("orders", {
   id: uuid("id").defaultRandom().primaryKey(),
-  listingId: uuid("listing_id").references(() => listings.id),
+  listingId: uuid("listing_id").references(() => products.id),
   buyerId: uuid("buyer_id").references(() => users.id),
   sellerId: uuid("seller_id").references(() => users.id),
   escrowId: uuid("escrow_id").references(() => escrows.id),

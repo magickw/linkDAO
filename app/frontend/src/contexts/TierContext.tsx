@@ -82,7 +82,7 @@ export const TierProvider: React.FC<TierProviderProps> = ({ children, walletAddr
           return {
             isAllowed: false,
             reason: 'Analytics access requires Silver tier or higher',
-            alternativeAction: 'Upgrade to Silver tier to access analytics',
+            alternativeAction: 'Reach Silver tier through sales performance to unlock analytics',
             upgradeRequired: true,
           };
         }
@@ -94,7 +94,7 @@ export const TierProvider: React.FC<TierProviderProps> = ({ children, walletAddr
           return {
             isAllowed: false,
             reason: 'Priority support requires Gold tier or higher',
-            alternativeAction: 'Upgrade to Gold tier for priority support',
+            alternativeAction: 'Reach Gold tier through sales performance to unlock priority support',
             upgradeRequired: true,
           };
         }
@@ -105,7 +105,7 @@ export const TierProvider: React.FC<TierProviderProps> = ({ children, walletAddr
           return {
             isAllowed: false,
             reason: 'Custom branding requires Gold tier or higher',
-            alternativeAction: 'Upgrade to Gold tier for custom branding',
+            alternativeAction: 'Reach Gold tier through sales performance to unlock custom branding',
             upgradeRequired: true,
           };
         }

@@ -1046,12 +1046,24 @@ class SellerService {
     updatedAt: string;
   }>> {
     try {
+      // First get the user ID for the seller wallet address
+      const userResult = await db.select({ id: schema.users.id })
+        .from(schema.users)
+        .where(eq(schema.users.walletAddress, walletAddress))
+        .limit(1);
+
+      if (!userResult.length) {
+        return [];
+      }
+
+      const sellerId = userResult[0].id;
+
       const query = db
         .select({
           orderId: schema.orders.id,
           listingId: schema.orders.listingId,
-          listingTitle: schema.marketplaceListings.title,
-          buyerAddress: sql<string>`orders.buyer_id::text`,
+          listingTitle: schema.products.title,
+          buyerAddress: sql<string>`orders.buyer_id::text`, // Fallback since we might need to join users for address
           amount: schema.orders.totalAmount,
           currency: schema.orders.currency,
           status: schema.orders.status,
@@ -1060,15 +1072,22 @@ class SellerService {
           updatedAt: sql<Date>`orders.created_at`, // Using created_at as updated_at placeholder
         })
         .from(schema.orders)
-        .innerJoin(schema.marketplaceListings, eq(schema.orders.listingId, schema.marketplaceListings.id))
+        .leftJoin(schema.products, eq(schema.orders.listingId, schema.products.id))
         .where(and(
-          eq(schema.marketplaceListings.sellerAddress, walletAddress),
+          eq(schema.orders.sellerId, sellerId),
           status ? eq(schema.orders.status, status) : sql<boolean>`true`
         ));
 
       const orderResults = await query
         .orderBy(desc(schema.orders.createdAt))
         .limit(50);
+
+      const listingIds = orderResults
+        .map(o => o.listingId)
+        .filter((id): id is string => id !== null);
+
+      // If we need to fetch legacy listings (from marketplace_listings table) if product join failed?
+      // For now assume migration handled it or new system uses products.
 
       return orderResults.map(order => {
         return {

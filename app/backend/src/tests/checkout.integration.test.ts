@@ -1,5 +1,6 @@
 import request from 'supertest';
 import express from 'express';
+import { describe, it, expect } from '@jest/globals';
 import hybridPaymentRoutes from '../routes/hybridPaymentRoutes';
 
 const app = express();
@@ -68,7 +69,7 @@ describe('Checkout Integration Tests', () => {
         req.user = { address: '0x1234567890123456789012345678901234567890' };
         next();
       };
-      
+
       app.use('/api/hybrid-payment/checkout', mockAuth);
 
       const response = await request(app)
@@ -141,12 +142,12 @@ describe('Checkout Integration Tests', () => {
       expect(response.body.data).toHaveProperty('progress');
       expect(response.body.data).toHaveProperty('actions');
       expect(response.body.data).toHaveProperty('timeline');
-      
+
       // Check progress structure
       expect(response.body.data.progress).toHaveProperty('step');
       expect(response.body.data.progress).toHaveProperty('totalSteps');
       expect(response.body.data.progress).toHaveProperty('currentStep');
-      
+
       // Check actions structure
       expect(response.body.data.actions).toHaveProperty('canConfirmDelivery');
       expect(response.body.data.actions).toHaveProperty('canReleaseFunds');
