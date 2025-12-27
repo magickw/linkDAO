@@ -146,85 +146,110 @@ export default function Home() {
 
   useEffect(() => {
     console.log('[HomePage] WebSocket connection useEffect triggered, isConnected:', isConnected);
-
-    // Track timer for cleanup
-    let timeoutId: any = null;
-    let disconnectTimeoutId: any = null;
+    console.log('[HomePage] WebSocket connection useEffect timestamp:', Date.now());
 
     if (isConnected) {
-      // Set content ready immediately to unblock navigation
-      if (isMounted.current) {
-        setIsContentReady(true);
-        setIsConnectionStabilized(true);
-      }
-
+      // Set content ready first to allow navigation to proceed
+      console.log('[HomePage] Setting content ready');
+      setIsContentReady(true);
+      setIsConnectionStabilized(true);
+      
       // Prevent multiple simultaneous updates
       if (isUpdating.current) {
+        console.log('[HomePage] Update already in progress, skipping');
         return;
       }
-
+      
       isUpdating.current = true;
-
-      // Use standard setTimeout instead of requestIdleCallback to avoid ReferenceError issues
-      // with minified 'ev' (deadline) variables or polyfills.
-      timeoutId = setTimeout(() => {
-        if (!isMounted.current) {
-          isUpdating.current = false;
-          return;
-        }
-
-        if (isConnected && webSocket && !webSocket.isConnected) {
-          // Check if already connecting
-          if (webSocket.connectionState && webSocket.connectionState.status === 'connecting') {
+      
+      // Then defer WebSocket connection establishment separately with requestIdleCallback
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        window.requestIdleCallback(() => {
+          // Check if we're still on the home page and not navigating away
+          if (window.location.pathname !== '/') {
+            console.log('[HomePage] Not on home page anymore, skipping WebSocket connection');
             isUpdating.current = false;
             return;
           }
-
-          console.log('[HomePage] Attempting WebSocket connection (deferred)...');
-          webSocket.connect().catch((error) => {
-            console.error('[HomePage] WebSocket connection failed:', error);
-          }).finally(() => {
+          
+          if (isConnected && webSocket && !webSocket.isConnected) {
+            if (webSocket.connectionState && webSocket.connectionState.status === 'connecting') {
+              console.log('[HomePage] WebSocket already connecting, skipping');
+              isUpdating.current = false;
+              return;
+            }
+            
+            console.log('[HomePage] Attempting WebSocket connection during idle time...');
+            // Connect WebSocket only after wallet is connected and page has stabilized
+            webSocket.connect().then(() => {
+              console.log('[HomePage] WebSocket connected successfully');
+            }).catch((error) => {
+              console.error('[HomePage] WebSocket connection failed:', error);
+            }).finally(() => {
+              isUpdating.current = false;
+            });
+          } else {
             isUpdating.current = false;
-          });
-        } else {
-          isUpdating.current = false;
-        }
-      }, 500); // 500ms delay is sufficient to unblock main thread for navigation
-    } else {
-      if (isMounted.current) {
-        console.log('[HomePage] Wallet not connected, setting content ready to true');
-        setIsContentReady(true);
-        setIsConnectionStabilized(false);
+          }
+        }, { timeout: 5000 }); // Fallback timeout if idle callback doesn't fire
+      } else {
+        // Fallback for browsers without requestIdleCallback
+        setTimeout(() => {
+          // Check if we're still on the home page and not navigating away
+          if (window.location.pathname !== '/') {
+            console.log('[HomePage] Not on home page anymore, skipping WebSocket connection');
+            isUpdating.current = false;
+            return;
+          }
+          
+          if (isConnected && webSocket && !webSocket.isConnected) {
+            if (webSocket.connectionState && webSocket.connectionState.status === 'connecting') {
+              console.log('[HomePage] WebSocket already connecting, skipping');
+              isUpdating.current = false;
+              return;
+            }
+            
+            console.log('[HomePage] Attempting WebSocket connection with timeout...');
+            // Connect WebSocket only after wallet is connected and page has stabilized
+            webSocket.connect().then(() => {
+              console.log('[HomePage] WebSocket connected successfully');
+            }).catch((error) => {
+              console.error('[HomePage] WebSocket connection failed:', error);
+            }).finally(() => {
+              isUpdating.current = false;
+            });
+          } else {
+            isUpdating.current = false;
+          }
+        }, 1000); // Longer delay to ensure navigation is complete
       }
 
-      // Only disconnect WebSocket when wallet is disconnected
+      return () => {
+        // DON'T disconnect WebSocket when leaving the page - let it persist for better UX
+        // Only reset the local reference
+        wsConnectedRef.current = false;
+      };
+    } else {
+      console.log('[HomePage] Wallet not connected, setting content ready to true');
+      setIsContentReady(true);
+      setIsConnectionStabilized(false);
+      // Only disconnect WebSocket when wallet is disconnected (not on page navigation)
+      // Use setTimeout to ensure disconnection doesn't block navigation
       if (webSocket && typeof webSocket.disconnect === 'function') {
         const shouldDisconnect = webSocket.connectionState?.mode !== 'disabled' && webSocket.isConnected;
 
         if (shouldDisconnect) {
-          disconnectTimeoutId = setTimeout(() => {
-            // Check existence and state safely
-            if (webSocket?.connectionState?.mode !== 'disabled') {
+          console.log('[HomePage] Scheduling WebSocket disconnection...');
+          setTimeout(() => {
+            // Double check inside timeout to be safe
+            if (webSocket.connectionState?.mode !== 'disabled') {
               webSocket.disconnect();
-              wsConnectedRef.current = false;
+              wsConnectedRef.current = false; // Reset connection status
             }
           }, 0);
         }
       }
     }
-
-    return () => {
-      // Cleanup timers
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      if (disconnectTimeoutId) {
-        clearTimeout(disconnectTimeoutId);
-      }
-
-      wsConnectedRef.current = false;
-      isUpdating.current = false;
-    };
   }, [isConnected, webSocket]);
 
 
