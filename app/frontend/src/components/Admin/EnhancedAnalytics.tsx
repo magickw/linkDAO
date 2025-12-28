@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  BarChart3, 
-  TrendingUp, 
-  Users, 
-  ShoppingBag, 
+import {
+  BarChart3,
+  TrendingUp,
+  Users,
+  ShoppingBag,
   AlertTriangle,
   DollarSign,
   Calendar,
@@ -102,23 +102,23 @@ export function EnhancedAnalytics() {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Fetch real analytics data from services
       const [usersResponse, sellersResponse, platformHealthResponse] = await Promise.all([
         adminService.getUsers({ limit: 1000 }),
         adminService.getSellerApplications({ limit: 1000 }),
         analyticsService.getOverviewMetrics()
       ]);
-      
+
       // Process user growth data
       const userGrowthData = processUserGrowthData(usersResponse.users);
-      
+
       // Process seller growth data
       const sellerGrowthData = processSellerGrowthData(sellersResponse.applications);
-      
+
       // Process revenue data from backend
       const revenueData = await processRevenueData();
-      
+
       // Create analytics object with real data
       const analyticsData: AnalyticsData = {
         userGrowth: userGrowthData,
@@ -135,7 +135,7 @@ export function EnhancedAnalytics() {
         userDemographics: await fetchUserDemographics(),
         contentMetrics: await fetchContentMetrics()
       };
-      
+
       setAnalytics(analyticsData);
     } catch (err) {
       console.error('Failed to load analytics:', err);
@@ -148,38 +148,38 @@ export function EnhancedAnalytics() {
   // Process user growth data by month
   const processUserGrowthData = (users: any[]) => {
     const monthlyData: Record<string, number> = {};
-    
+
     users.forEach(user => {
       const date = new Date(user.createdAt);
       const month = date.toLocaleString('default', { month: 'short' });
       const year = date.getFullYear();
       const key = `${month} ${year}`;
-      
+
       monthlyData[key] = (monthlyData[key] || 0) + 1;
     });
-    
+
     const labels = Object.keys(monthlyData);
     const data = Object.values(monthlyData);
-    
+
     return { labels, data };
   };
 
   // Process seller growth data by month
   const processSellerGrowthData = (applications: any[]) => {
     const monthlyData: Record<string, number> = {};
-    
+
     applications.forEach(app => {
       const date = new Date(app.submittedAt || app.createdAt);
       const month = date.toLocaleString('default', { month: 'short' });
       const year = date.getFullYear();
       const key = `${month} ${year}`;
-      
+
       monthlyData[key] = (monthlyData[key] || 0) + 1;
     });
-    
+
     const labels = Object.keys(monthlyData);
     const data = Object.values(monthlyData);
-    
+
     return { labels, data };
   };
 
@@ -193,11 +193,11 @@ export function EnhancedAnalytics() {
           'Authorization': `Bearer ${localStorage.getItem('linkdao_access_token') || localStorage.getItem('token')}`,
         },
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch revenue data');
       }
-      
+
       const data = await response.json();
       return data.data || { labels: [], data: [] };
     } catch (error) {
@@ -216,11 +216,11 @@ export function EnhancedAnalytics() {
           'Authorization': `Bearer ${localStorage.getItem('linkdao_access_token') || localStorage.getItem('token')}`,
         },
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch dispute stats');
       }
-      
+
       const data = await response.json();
       return data.data || { total: 0, resolved: 0, pending: 0, averageResolutionTime: 0 };
     } catch (error) {
@@ -239,11 +239,11 @@ export function EnhancedAnalytics() {
           'Authorization': `Bearer ${localStorage.getItem('linkdao_access_token') || localStorage.getItem('token')}`,
         },
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch moderation stats');
       }
-      
+
       const data = await response.json();
       return data.data || { total: 0, approved: 0, rejected: 0, pending: 0 };
     } catch (error) {
@@ -262,11 +262,11 @@ export function EnhancedAnalytics() {
           'Authorization': `Bearer ${localStorage.getItem('linkdao_access_token') || localStorage.getItem('token')}`,
         },
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch user demographics');
       }
-      
+
       const data = await response.json();
       return data.data || { ageGroups: {}, locations: {} };
     } catch (error) {
@@ -285,11 +285,11 @@ export function EnhancedAnalytics() {
           'Authorization': `Bearer ${localStorage.getItem('linkdao_access_token') || localStorage.getItem('token')}`,
         },
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch content metrics');
       }
-      
+
       const data = await response.json();
       return data.data || { totalPosts: 0, totalComments: 0, engagementRate: 0 };
     } catch (error) {
@@ -303,15 +303,15 @@ export function EnhancedAnalytics() {
       // In a real implementation, this would call an API endpoint
       // For now, we'll simulate the export
       console.log('Exporting data with options:', exportOptions);
-      
+
       // Create a simple CSV export for demonstration
-      const csvContent = "data:text/csv;charset=utf-8," 
+      const csvContent = "data:text/csv;charset=utf-8,"
         + "Metric,Value\\n"
         + `Active Users,${analytics?.platformHealth.activeUsers}\\n`
         + `Active Sellers,${analytics?.platformHealth.activeSellers}\\n`
         + `Total Transactions,${analytics?.platformHealth.totalTransactions}\\n`
         + `Total Volume,${analytics?.platformHealth.totalVolume}\\n`;
-      
+
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement("a");
       link.setAttribute("href", encodedUri);
@@ -319,7 +319,7 @@ export function EnhancedAnalytics() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       setShowExportModal(false);
     } catch (err) {
       console.error('Export failed:', err);
@@ -369,17 +369,17 @@ export function EnhancedAnalytics() {
               </div>
             ));
           }
-          
+
           return data.labels.map((label: string, index: number) => {
             const value = data.data[index] || 0;
             const percentage = (value / maxValue) * 100;
-            
+
             return (
               <div key={label} className="flex items-center justify-between">
                 <span className="text-gray-400 text-sm w-12">{label}</span>
                 <div className="flex-1 mx-3">
                   <div className="w-full bg-gray-700 rounded-full h-2">
-                    <div 
+                    <div
                       className={`h-2 rounded-full ${color}`}
                       style={{ width: `${percentage}%` }}
                     ></div>
@@ -398,7 +398,7 @@ export function EnhancedAnalytics() {
     const values = Object.values(data);
     const total = values.reduce((sum, value) => sum + value, 0);
     const colors = ['bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500', 'bg-red-500', 'bg-indigo-500'];
-    
+
     // Handle edge case where total is 0
     if (total === 0) {
       return (
@@ -410,7 +410,7 @@ export function EnhancedAnalytics() {
         </GlassPanel>
       );
     }
-    
+
     return (
       <GlassPanel className="p-6">
         <h3 className="text-lg font-bold text-white mb-4">{title}</h3>
@@ -420,7 +420,7 @@ export function EnhancedAnalytics() {
               {values.map((value, index) => {
                 const percentage = (value / total) * 100;
                 const rotation = index === 0 ? 0 : values.slice(0, index).reduce((sum, val) => sum + (val / total) * 360, 0);
-                
+
                 return (
                   <div
                     key={index}
@@ -504,9 +504,9 @@ export function EnhancedAnalytics() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
         <div>
-          <h2 className="text-2xl font-bold text-white">Enhanced Analytics</h2>
+          <h2 className="text-2xl font-bold text-white">Platform Analytics</h2>
           <p className="text-gray-400">Comprehensive platform insights and metrics</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -520,8 +520,8 @@ export function EnhancedAnalytics() {
             <option value="90d">Last 90 days</option>
             <option value="1y">Last year</option>
           </select>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="flex items-center gap-2"
             onClick={() => setShowExportModal(true)}
           >
@@ -535,33 +535,30 @@ export function EnhancedAnalytics() {
       <div className="flex flex-wrap gap-2 border-b border-gray-700 pb-2">
         <button
           onClick={() => setActiveTab('overview')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium ${
-            activeTab === 'overview' 
-              ? 'bg-purple-600 text-white' 
+          className={`px-4 py-2 rounded-lg text-sm font-medium ${activeTab === 'overview'
+              ? 'bg-purple-600 text-white'
               : 'text-gray-400 hover:text-white hover:bg-white/10'
-          }`}
+            }`}
         >
           <BarChart3 className="w-4 h-4 inline mr-2" />
           Overview
         </button>
         <button
           onClick={() => setActiveTab('demographics')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium ${
-            activeTab === 'demographics' 
-              ? 'bg-purple-600 text-white' 
+          className={`px-4 py-2 rounded-lg text-sm font-medium ${activeTab === 'demographics'
+              ? 'bg-purple-600 text-white'
               : 'text-gray-400 hover:text-white hover:bg-white/10'
-          }`}
+            }`}
         >
           <PieChart className="w-4 h-4 inline mr-2" />
           Demographics
         </button>
         <button
           onClick={() => setActiveTab('content')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium ${
-            activeTab === 'content' 
-              ? 'bg-purple-600 text-white' 
+          className={`px-4 py-2 rounded-lg text-sm font-medium ${activeTab === 'content'
+              ? 'bg-purple-600 text-white'
               : 'text-gray-400 hover:text-white hover:bg-white/10'
-          }`}
+            }`}
         >
           <Activity className="w-4 h-4 inline mr-2" />
           Content Metrics
@@ -628,7 +625,7 @@ export function EnhancedAnalytics() {
               color="bg-yellow-500"
               id="revenue"
             />
-            
+
             {/* Moderation & Dispute Stats */}
             <div className="space-y-6">
               <GlassPanel className="p-6">
@@ -650,7 +647,7 @@ export function EnhancedAnalytics() {
                     <span className="text-gray-400">Pending</span>
                     <span className="text-yellow-400 font-bold">{analytics.moderationStats.pending}</span>
                   </div>
-                  
+
                   {/* Approval Rate */}
                   <div className="pt-4 border-t border-gray-700">
                     <div className="flex items-center justify-between mb-2">
@@ -660,10 +657,10 @@ export function EnhancedAnalytics() {
                       </span>
                     </div>
                     <div className="w-full bg-gray-700 rounded-full h-2">
-                      <div 
+                      <div
                         className="h-2 rounded-full bg-green-500"
-                        style={{ 
-                          width: `${(analytics.moderationStats.approved / (analytics.moderationStats.total - analytics.moderationStats.pending)) * 100}%` 
+                        style={{
+                          width: `${(analytics.moderationStats.approved / (analytics.moderationStats.total - analytics.moderationStats.pending)) * 100}%`
                         }}
                       ></div>
                     </div>
@@ -690,7 +687,7 @@ export function EnhancedAnalytics() {
                     <span className="text-gray-400">Avg Resolution Time</span>
                     <span className="text-white font-bold">{analytics.disputeStats.averageResolutionTime} days</span>
                   </div>
-                  
+
                   {/* Resolution Rate */}
                   <div className="pt-4 border-t border-gray-700">
                     <div className="flex items-center justify-between mb-2">
@@ -700,10 +697,10 @@ export function EnhancedAnalytics() {
                       </span>
                     </div>
                     <div className="w-full bg-gray-700 rounded-full h-2">
-                      <div 
+                      <div
                         className="h-2 rounded-full bg-blue-500"
-                        style={{ 
-                          width: `${(analytics.disputeStats.resolved / analytics.disputeStats.total) * 100}%` 
+                        style={{
+                          width: `${(analytics.disputeStats.resolved / analytics.disputeStats.total) * 100}%`
                         }}
                       ></div>
                     </div>
@@ -719,13 +716,13 @@ export function EnhancedAnalytics() {
       {activeTab === 'demographics' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <PieChartComponent 
-              title="User Age Distribution" 
-              data={analytics.userDemographics.ageGroups} 
+            <PieChartComponent
+              title="User Age Distribution"
+              data={analytics.userDemographics.ageGroups}
             />
-            <PieChartComponent 
-              title="User Geographic Distribution" 
-              data={analytics.userDemographics.locations} 
+            <PieChartComponent
+              title="User Geographic Distribution"
+              data={analytics.userDemographics.locations}
             />
           </div>
         </div>
@@ -755,7 +752,7 @@ export function EnhancedAnalytics() {
               suffix="%"
             />
           </div>
-          
+
           <GlassPanel className="p-6">
             <h3 className="text-lg font-bold text-white mb-4">Content Performance</h3>
             <div className="h-64 bg-gray-800 rounded-lg flex items-center justify-center">
@@ -770,13 +767,13 @@ export function EnhancedAnalytics() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <GlassPanel className="max-w-md w-full p-6">
             <h3 className="text-lg font-bold text-white mb-4">Export Analytics</h3>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-gray-400 text-sm mb-1">Format</label>
                 <select
                   value={exportOptions.format}
-                  onChange={(e) => setExportOptions({...exportOptions, format: e.target.value as any})}
+                  onChange={(e) => setExportOptions({ ...exportOptions, format: e.target.value as any })}
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white"
                 >
                   <option value="csv">CSV</option>
@@ -784,7 +781,7 @@ export function EnhancedAnalytics() {
                   <option value="pdf">PDF</option>
                 </select>
               </div>
-              
+
               <div>
                 <label className="block text-gray-400 text-sm mb-1">Date Range</label>
                 <div className="grid grid-cols-2 gap-2">
@@ -792,8 +789,8 @@ export function EnhancedAnalytics() {
                     type="date"
                     value={exportOptions.dateRange.start}
                     onChange={(e) => setExportOptions({
-                      ...exportOptions, 
-                      dateRange: {...exportOptions.dateRange, start: e.target.value}
+                      ...exportOptions,
+                      dateRange: { ...exportOptions.dateRange, start: e.target.value }
                     })}
                     className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white"
                   />
@@ -801,14 +798,14 @@ export function EnhancedAnalytics() {
                     type="date"
                     value={exportOptions.dateRange.end}
                     onChange={(e) => setExportOptions({
-                      ...exportOptions, 
-                      dateRange: {...exportOptions.dateRange, end: e.target.value}
+                      ...exportOptions,
+                      dateRange: { ...exportOptions.dateRange, end: e.target.value }
                     })}
                     className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white"
                   />
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-gray-400 text-sm mb-1">Metrics to Include</label>
                 <div className="space-y-2">
@@ -840,13 +837,13 @@ export function EnhancedAnalytics() {
                   ))}
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   id="includeCharts"
                   checked={exportOptions.includeCharts}
-                  onChange={(e) => setExportOptions({...exportOptions, includeCharts: e.target.checked})}
+                  onChange={(e) => setExportOptions({ ...exportOptions, includeCharts: e.target.checked })}
                   className="rounded"
                 />
                 <label htmlFor="includeCharts" className="text-white text-sm">
@@ -854,7 +851,7 @@ export function EnhancedAnalytics() {
                 </label>
               </div>
             </div>
-            
+
             <div className="flex gap-2 mt-6">
               <Button onClick={exportData} variant="primary">
                 Export Data

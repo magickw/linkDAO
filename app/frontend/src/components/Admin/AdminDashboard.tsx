@@ -49,7 +49,6 @@ import { SellerPerformance } from './SellerPerformance';
 import { CharityVerification } from './CharityVerification';
 import { DisputeResolution } from './DisputeResolution';
 import { UserManagement } from './UserManagement';
-import { AdminAnalytics } from './AdminAnalytics';
 import { AuditDashboard } from './AuditSystem';
 import { NotificationCenter } from './Notifications/NotificationCenter';
 import { MobilePushSetup } from './Notifications/MobilePushSetup';
@@ -546,8 +545,7 @@ export function AdminDashboard() {
       'performance': 'Seller Performance',
       'disputes': 'Disputes',
       'users': 'User Management',
-      'analytics': 'Analytics',
-      'enhanced-analytics': 'Enhanced Analytics'
+      'analytics': 'Analytics'
     };
 
     if (activeTab !== 'overview' && tabMap[activeTab]) {
@@ -576,8 +574,7 @@ export function AdminDashboard() {
     { id: 'charity-verification', label: 'Charity Verification', icon: Heart, permission: 'governance.verify' },
     { id: 'disputes', label: 'Disputes', icon: AlertTriangle, permission: 'disputes.view' },
     { id: 'users', label: 'User Management', icon: Users, permission: 'users.view' },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3, permission: 'system.analytics' },
-    { id: 'enhanced-analytics', label: 'Enhanced Analytics', icon: LineChart, permission: 'system.analytics' },
+    { id: 'analytics', label: 'Analytics', icon: LineChart, permission: 'system.analytics' },
     { id: 'system-health', label: 'System Health', icon: Activity, permission: 'system.monitor' },
   ].filter(tab => !tab.permission || hasPermission(tab.permission));
 
@@ -737,7 +734,7 @@ export function AdminDashboard() {
 
         {/* Content */}
         {activeTab === 'overview' && (
-          <div className="space-y-4 sm:space-y-8">
+          <div className="space-y-6">
             {/* Stats Grid */}
             {loading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
@@ -1071,10 +1068,6 @@ export function AdminDashboard() {
         )}
 
         {activeTab === 'analytics' && hasPermission('system.analytics') && (
-          <AdminAnalytics />
-        )}
-
-        {activeTab === 'enhanced-analytics' && hasPermission('system.analytics') && (
           <EnhancedAnalytics />
         )}
 

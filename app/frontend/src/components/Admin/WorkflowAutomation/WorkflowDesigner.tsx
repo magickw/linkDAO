@@ -14,13 +14,13 @@ import { Button, GlassPanel } from '@/design-system';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { TextArea } from '@/components/ui/textarea';
-import { 
-  Plus, 
-  Save, 
-  Play, 
-  Trash2, 
-  Settings, 
-  ArrowRight, 
+import {
+  Plus,
+  Save,
+  Play,
+  Trash2,
+  Settings,
+  ArrowRight,
   AlertCircle,
   CheckCircle,
   XCircle
@@ -32,10 +32,10 @@ interface WorkflowDesignerProps {
   onCancel?: () => void;
 }
 
-export const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({ 
-  templateId, 
-  onSave, 
-  onCancel 
+export const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
+  templateId,
+  onSave,
+  onCancel
 }) => {
   const [workflowData, setWorkflowData] = useState<WorkflowDesignerData>({
     nodes: [],
@@ -48,7 +48,7 @@ export const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       triggerConfig: {}
     }
   });
-  
+
   const [selectedNode, setSelectedNode] = useState<WorkflowDesignerNode | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -83,7 +83,7 @@ export const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         conditions: {}
       }
     };
-    
+
     setWorkflowData(prev => ({
       ...prev,
       nodes: [...prev.nodes, newNode]
@@ -93,7 +93,7 @@ export const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   const updateNode = (nodeId: string, updates: Partial<WorkflowDesignerNode>) => {
     setWorkflowData(prev => ({
       ...prev,
-      nodes: prev.nodes.map(node => 
+      nodes: prev.nodes.map(node =>
         node.id === nodeId ? { ...node, ...updates } : node
       )
     }));
@@ -119,7 +119,7 @@ export const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       target,
       type: 'default'
     };
-    
+
     setWorkflowData(prev => ({
       ...prev,
       edges: [...prev.edges, newEdge]
@@ -137,21 +137,21 @@ export const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     setIsSaving(true);
     setError(null);
     setSuccess(null);
-    
+
     try {
       // Validate workflow
       if (!workflowData.metadata.name.trim()) {
         throw new Error('Workflow name is required');
       }
-      
+
       if (workflowData.nodes.length === 0) {
         throw new Error('Workflow must have at least one step');
       }
-      
+
       // TODO: Implement API call to save workflow template
       // This would require creating a new endpoint or using existing workflow engine endpoints
       console.log('Saving workflow:', workflowData);
-      
+
       setSuccess('Workflow saved successfully');
       if (onSave) {
         // Create a mock template for the callback
@@ -190,16 +190,15 @@ export const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   // Render node based on type
   const renderNode = (node: WorkflowDesignerNode) => {
     const isSelected = selectedNode?.id === node.id;
-    
+
     return (
-      <div 
-        className={`absolute p-4 rounded-lg shadow-lg cursor-pointer transition-all duration-200 ${
-          isSelected 
-            ? 'ring-2 ring-blue-500 bg-blue-100' 
+      <div
+        className={`absolute p-4 rounded-lg shadow-lg cursor-pointer transition-all duration-200 ${isSelected
+            ? 'ring-2 ring-blue-500 bg-blue-100'
             : 'bg-white hover:shadow-xl'
-        }`}
-        style={{ 
-          left: node.position.x, 
+          }`}
+        style={{
+          left: node.position.x,
           top: node.position.y,
           minWidth: '200px'
         }}
@@ -207,8 +206,8 @@ export const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       >
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-semibold text-gray-800">{node.data.label}</h3>
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
@@ -218,11 +217,11 @@ export const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
             <Trash2 className="w-4 h-4 text-red-500" />
           </Button>
         </div>
-        
+
         <div className="text-sm text-gray-600 mb-2">
           Type: {node.type}
         </div>
-        
+
         {node.data.config && Object.keys(node.data.config).length > 0 && (
           <div className="text-xs text-gray-500">
             Configured
@@ -237,11 +236,11 @@ export const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     // In a real implementation, this would use a library like react-flow
     // For now, we'll just show a simple representation
     return (
-      <div 
+      <div
         key={edge.id}
         className="absolute text-xs text-gray-400 flex items-center"
-        style={{ 
-          left: '50%', 
+        style={{
+          left: '50%',
           top: '50%',
           transform: 'translate(-50%, -50%)'
         }}
@@ -259,14 +258,14 @@ export const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           <h2 className="text-xl font-bold text-gray-800">
             {templateId ? 'Edit Workflow' : 'Create Workflow'}
           </h2>
-          
+
           {error && (
             <div className="flex items-center text-red-600 bg-red-50 px-3 py-1 rounded-md">
               <AlertCircle className="w-4 h-4 mr-1" />
               <span className="text-sm">{error}</span>
             </div>
           )}
-          
+
           {success && (
             <div className="flex items-center text-green-600 bg-green-50 px-3 py-1 rounded-md">
               <CheckCircle className="w-4 h-4 mr-1" />
@@ -274,18 +273,18 @@ export const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
             </div>
           )}
         </div>
-        
+
         <div className="flex space-x-2">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={handleTest}
             disabled={isSaving}
           >
             <Play className="w-4 h-4 mr-2" />
             Test
           </Button>
-          
-          <Button 
+
+          <Button
             onClick={handleSave}
             disabled={isSaving}
           >
@@ -301,10 +300,10 @@ export const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
               </>
             )}
           </Button>
-          
+
           {onCancel && (
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               onClick={onCancel}
             >
               <XCircle className="w-4 h-4 mr-2" />
@@ -313,10 +312,10 @@ export const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           )}
         </div>
       </div>
-      
+
       {/* Workflow Metadata Form */}
       <GlassPanel className="p-4 m-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Input
             label="Workflow Name"
             value={workflowData.metadata.name}
@@ -324,7 +323,7 @@ export const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
             placeholder="Enter workflow name"
             required
           />
-          
+
           <Select
             label="Category"
             value={workflowData.metadata.category}
@@ -339,7 +338,7 @@ export const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
             <option value="compliance">Compliance</option>
             <option value="security">Security</option>
           </Select>
-          
+
           <Select
             label="Trigger Type"
             value={workflowData.metadata.triggerType}
@@ -352,7 +351,7 @@ export const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
             <option value="webhook">Webhook</option>
             <option value="api_call">API Call</option>
           </Select>
-          
+
           <TextArea
             label="Description"
             value={workflowData.metadata.description || ''}
@@ -362,13 +361,13 @@ export const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           />
         </div>
       </GlassPanel>
-      
+
       {/* Designer Canvas */}
       <div className="flex-1 flex">
         {/* Toolbar */}
         <div className="w-64 p-4 border-r border-gray-200 bg-gray-50">
           <h3 className="font-semibold text-gray-700 mb-4">Workflow Steps</h3>
-          
+
           <div className="space-y-2">
             <Button
               variant="outline"
@@ -378,7 +377,7 @@ export const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
               <Plus className="w-4 h-4 mr-2" />
               Action Step
             </Button>
-            
+
             <Button
               variant="outline"
               className="w-full justify-start"
@@ -387,7 +386,7 @@ export const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
               <Plus className="w-4 h-4 mr-2" />
               Condition Step
             </Button>
-            
+
             <Button
               variant="outline"
               className="w-full justify-start"
@@ -396,7 +395,7 @@ export const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
               <Plus className="w-4 h-4 mr-2" />
               Assignment Step
             </Button>
-            
+
             <Button
               variant="outline"
               className="w-full justify-start"
@@ -405,7 +404,7 @@ export const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
               <Plus className="w-4 h-4 mr-2" />
               Notification Step
             </Button>
-            
+
             <Button
               variant="outline"
               className="w-full justify-start"
@@ -414,7 +413,7 @@ export const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
               <Plus className="w-4 h-4 mr-2" />
               Escalation Step
             </Button>
-            
+
             <Button
               variant="outline"
               className="w-full justify-start"
@@ -424,7 +423,7 @@ export const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
               Approval Step
             </Button>
           </div>
-          
+
           {selectedNode && (
             <div className="mt-6">
               <h3 className="font-semibold text-gray-700 mb-2">Step Configuration</h3>
@@ -437,7 +436,7 @@ export const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                   })}
                   className="mb-2"
                 />
-                
+
                 <TextArea
                   label="Step Configuration"
                   value={JSON.stringify(selectedNode.data.config, null, 2)}
@@ -454,7 +453,7 @@ export const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                   rows={4}
                   className="font-mono text-xs"
                 />
-                
+
                 <Button
                   variant="outline"
                   className="w-full mt-2"
@@ -467,22 +466,22 @@ export const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
             </div>
           )}
         </div>
-        
+
         {/* Canvas Area */}
         <div className="flex-1 relative bg-gray-100 overflow-hidden">
-          <div 
+          <div
             className="w-full h-full relative"
-            style={{ 
+            style={{
               backgroundImage: 'radial-gradient(circle, #ddd 1px, transparent 1px)',
               backgroundSize: '20px 20px'
             }}
           >
             {/* Render nodes */}
             {workflowData.nodes.map(node => renderNode(node))}
-            
+
             {/* Render edges */}
             {workflowData.edges.map(edge => renderEdge(edge))}
-            
+
             {/* Empty state */}
             {workflowData.nodes.length === 0 && (
               <div className="absolute inset-0 flex items-center justify-center">

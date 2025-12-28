@@ -149,7 +149,7 @@ export function DisputeResolution() {
 
   const handleResolve = async () => {
     if (!selectedDispute) return;
-    
+
     try {
       await adminService.resolveDispute(selectedDispute.id, resolutionData);
       setResolutionModal(false);
@@ -171,7 +171,7 @@ export function DisputeResolution() {
 
   const addNote = async (note: string) => {
     if (!selectedDispute) return;
-    
+
     try {
       await adminService.addDisputeNote(selectedDispute.id, note);
       // Refresh dispute details
@@ -276,7 +276,7 @@ export function DisputeResolution() {
             <Filter className="w-4 h-4 text-gray-400" />
             <span className="text-white font-medium">Filters:</span>
           </div>
-          
+
           <select
             value={filters.status}
             onChange={(e) => setFilters({ ...filters, status: e.target.value })}
@@ -332,7 +332,7 @@ export function DisputeResolution() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-4">
           <h2 className="text-xl font-bold text-white">Disputes ({pagination.total})</h2>
-          
+
           {loading ? (
             <div className="space-y-4">
               {[...Array(5)].map((_, i) => (
@@ -346,9 +346,8 @@ export function DisputeResolution() {
               {disputes.map((dispute) => (
                 <GlassPanel
                   key={dispute.id}
-                  className={`p-4 cursor-pointer transition-colors ${
-                    selectedDispute?.id === dispute.id ? 'ring-2 ring-purple-500' : 'hover:bg-white/5'
-                  }`}
+                  className={`p-4 cursor-pointer transition-colors ${selectedDispute?.id === dispute.id ? 'ring-2 ring-purple-500' : 'hover:bg-white/5'
+                    }`}
                   onClick={() => setSelectedDispute(dispute)}
                 >
                   <div className="flex items-start justify-between">
@@ -433,9 +432,9 @@ export function DisputeResolution() {
                   )}
                 </div>
               </div>
-              
+
               <div className="space-y-4 max-h-[600px] overflow-y-auto">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-6">
                   <div>
                     <label className="text-gray-400 text-sm">Status</label>
                     <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedDispute.status)}`}>
@@ -449,23 +448,23 @@ export function DisputeResolution() {
                     </span>
                   </div>
                 </div>
-                
+
                 <div>
                   <label className="text-gray-400 text-sm">Type</label>
                   <p className="text-white capitalize">{selectedDispute.type.replace(/_/g, ' ')}</p>
                 </div>
-                
+
                 <div>
                   <label className="text-gray-400 text-sm">Amount</label>
                   <p className="text-white">{selectedDispute.amount} {selectedDispute.currency}</p>
                 </div>
-                
+
                 <div>
                   <label className="text-gray-400 text-sm">Description</label>
                   <p className="text-white">{selectedDispute.description}</p>
                 </div>
-                
-                <div className="grid grid-cols-2 gap-4">
+
+                <div className="grid grid-cols-2 gap-6">
                   <div>
                     <label className="text-gray-400 text-sm">Buyer ID</label>
                     <p className="text-white text-sm">{selectedDispute.buyerId}</p>
@@ -663,11 +662,10 @@ export function DisputeResolution() {
                                         {evidence.filename || `Evidence ${index + 1}`}
                                       </span>
                                       {evidence.status && (
-                                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                          evidence.status === 'verified' ? 'bg-green-500/20 text-green-400' :
-                                          evidence.status === 'rejected' ? 'bg-red-500/20 text-red-400' :
-                                          'bg-yellow-500/20 text-yellow-400'
-                                        }`}>
+                                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${evidence.status === 'verified' ? 'bg-green-500/20 text-green-400' :
+                                            evidence.status === 'rejected' ? 'bg-red-500/20 text-red-400' :
+                                              'bg-yellow-500/20 text-yellow-400'
+                                          }`}>
                                           {evidence.status}
                                         </span>
                                       )}
@@ -761,11 +759,10 @@ export function DisputeResolution() {
                                         {evidence.filename || `Evidence ${index + 1}`}
                                       </span>
                                       {evidence.status && (
-                                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                          evidence.status === 'verified' ? 'bg-green-500/20 text-green-400' :
-                                          evidence.status === 'rejected' ? 'bg-red-500/20 text-red-400' :
-                                          'bg-yellow-500/20 text-yellow-400'
-                                        }`}>
+                                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${evidence.status === 'verified' ? 'bg-green-500/20 text-green-400' :
+                                            evidence.status === 'rejected' ? 'bg-red-500/20 text-red-400' :
+                                              'bg-yellow-500/20 text-yellow-400'
+                                          }`}>
                                           {evidence.status}
                                         </span>
                                       )}
@@ -917,13 +914,13 @@ export function DisputeResolution() {
 
                     {/* No Evidence Message */}
                     {(!selectedDispute.evidence.buyerEvidence || selectedDispute.evidence.buyerEvidence.length === 0) &&
-                     (!selectedDispute.evidence.sellerEvidence || selectedDispute.evidence.sellerEvidence.length === 0) &&
-                     (!selectedDispute.evidence.adminEvidence || selectedDispute.evidence.adminEvidence.length === 0) && (
-                      <div className="text-center py-8">
-                        <FileText className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                        <p className="text-gray-400 text-sm">No evidence uploaded yet</p>
-                      </div>
-                    )}
+                      (!selectedDispute.evidence.sellerEvidence || selectedDispute.evidence.sellerEvidence.length === 0) &&
+                      (!selectedDispute.evidence.adminEvidence || selectedDispute.evidence.adminEvidence.length === 0) && (
+                        <div className="text-center py-8">
+                          <FileText className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                          <p className="text-gray-400 text-sm">No evidence uploaded yet</p>
+                        </div>
+                      )}
                   </div>
                 </div>
 
@@ -946,7 +943,7 @@ export function DisputeResolution() {
                     </div>
                   </div>
                 )}
-                
+
                 <div>
                   <label className="text-gray-400 text-sm">Created</label>
                   <p className="text-white">{new Date(selectedDispute.createdAt).toLocaleString()}</p>
@@ -967,7 +964,7 @@ export function DisputeResolution() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <GlassPanel className="max-w-md w-full p-6">
             <h3 className="text-lg font-bold text-white mb-4">Resolve Dispute</h3>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-gray-400 text-sm mb-1">Outcome</label>
@@ -982,7 +979,7 @@ export function DisputeResolution() {
                   <option value="no_action">No Action Required</option>
                 </select>
               </div>
-              
+
               {(resolutionData.outcome === 'buyer_favor' || resolutionData.outcome === 'partial_refund') && (
                 <div>
                   <label className="block text-gray-400 text-sm mb-1">Refund Amount</label>
@@ -996,7 +993,7 @@ export function DisputeResolution() {
                   />
                 </div>
               )}
-              
+
               <div>
                 <label className="block text-gray-400 text-sm mb-1">Reasoning</label>
                 <textarea
@@ -1007,7 +1004,7 @@ export function DisputeResolution() {
                   placeholder="Explain the resolution decision..."
                 />
               </div>
-              
+
               <div>
                 <label className="block text-gray-400 text-sm mb-1">Admin Notes</label>
                 <textarea
@@ -1019,7 +1016,7 @@ export function DisputeResolution() {
                 />
               </div>
             </div>
-            
+
             <div className="flex gap-2 mt-6">
               <Button onClick={handleResolve} variant="primary">
                 Resolve Dispute

@@ -168,7 +168,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Product Images */}
           <div className="w-full lg:w-1/2">
-            <GlassPanel variant="secondary" className="p-4 mb-4">
+            <GlassPanel variant="secondary" className="p-4 mb-6">
               <OptimizedImage
                 src={selectedImage || product.media?.[0]?.url || ''}
                 alt={product.title || 'Product'}
@@ -181,7 +181,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
             </GlassPanel>
 
             {product.media && product.media.length > 0 && (
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-4 gap-4">
                 {product.media.map((media, index) => (
                   <GlassPanel
                     key={index}
@@ -605,7 +605,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
           </div>
         </div>
       </div>
-      
+
       {/* Messaging Modal */}
       {showMessageModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
@@ -613,20 +613,20 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-bold text-white">Message {product.seller.name}</h3>
-                <button 
+                <button
                   onClick={() => setShowMessageModal(false)}
                   className="text-gray-400 hover:text-white"
                 >
                   <X size={24} />
                 </button>
               </div>
-              
+
               <div className="mb-4">
                 <p className="text-gray-300 text-sm mb-2">
                   Send a direct message to the seller about this product
                 </p>
               </div>
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -638,7 +638,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                     placeholder={`Hi ${product.seller.name}, I'm interested in "${product.title}"...`}
                   />
                 </div>
-                
+
                 <div className="flex justify-end space-x-3">
                   <button
                     onClick={() => setShowMessageModal(false)}

@@ -494,7 +494,7 @@ export function UserManagement() {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-6">
       {/* Header with Export and Create User */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
@@ -539,7 +539,7 @@ export function UserManagement() {
         </div>
 
         {loadingStats ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[...Array(4)].map((_, i) => (
               <div key={i} className="p-4 bg-white/5 rounded-lg animate-pulse">
                 <div className="h-4 bg-white/10 rounded w-3/4 mb-2"></div>
@@ -548,7 +548,7 @@ export function UserManagement() {
             ))}
           </div>
         ) : userStats ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="p-4 bg-white/5 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
                 <Users className="w-4 h-4 text-purple-400" />
@@ -834,7 +834,7 @@ export function UserManagement() {
       )}
 
       {/* Users List */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg sm:text-xl font-bold text-white">Users ({pagination.total})</h2>

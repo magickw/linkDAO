@@ -254,7 +254,7 @@ export function SellerPerformance() {
       </GlassPanel>
 
       {/* Performance Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <GlassPanel className="p-4">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-green-500/20 rounded-lg">
@@ -332,9 +332,8 @@ export function SellerPerformance() {
                 return (
                   <GlassPanel
                     key={seller.id}
-                    className={`p-4 cursor-pointer transition-colors ${
-                      selectedSeller?.id === seller.id ? 'ring-2 ring-purple-500' : 'hover:bg-white/5'
-                    }`}
+                    className={`p-4 cursor-pointer transition-colors ${selectedSeller?.id === seller.id ? 'ring-2 ring-purple-500' : 'hover:bg-white/5'
+                      }`}
                     onClick={() => setSelectedSeller(seller)}
                   >
                     <div className="space-y-3">

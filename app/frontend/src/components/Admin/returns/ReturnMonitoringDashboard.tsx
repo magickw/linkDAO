@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  FunnelIcon, 
-  CalendarIcon, 
+import {
+  FunnelIcon,
+  CalendarIcon,
   ArrowPathIcon,
   ChartBarIcon,
   ExclamationTriangleIcon
@@ -62,7 +62,7 @@ export const ReturnMonitoringDashboard: React.FC = () => {
         returnAnalyticsService.getAnalytics(filters.dateRange, filters.sellerId),
         returnAnalyticsService.getStatusDistribution(filters.dateRange),
       ]);
-      
+
       setAnalytics(analyticsData);
       setStatusDistribution(statusDist);
       setError(null);
@@ -141,13 +141,13 @@ export const ReturnMonitoringDashboard: React.FC = () => {
                 Real-time monitoring and analytics for return operations
               </p>
             </div>
-            
+
             <div className="flex items-center space-x-4">
               {/* Last Update Indicator */}
               <div className="text-sm text-gray-400">
                 Last updated: {lastUpdate.toLocaleTimeString()}
               </div>
-              
+
               {/* Refresh Button */}
               <button
                 onClick={handleRefresh}
@@ -182,8 +182,8 @@ export const ReturnMonitoringDashboard: React.FC = () => {
             <FunnelIcon className="w-5 h-5 text-gray-400" />
             <span className="text-white font-medium">Filters</span>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
             {/* Date Range Filter */}
             <div>
               <label className="block text-sm font-medium text-gray-400 mb-2">
@@ -279,14 +279,14 @@ export const ReturnMonitoringDashboard: React.FC = () => {
           <StatusDistributionChart data={statusDistribution} isLoading={isLoading || isRefreshing} />
 
           {/* Return Trends */}
-          <ReturnTrendsChart 
-            data={analytics?.returnsByDay || []} 
-            isLoading={isLoading || isRefreshing} 
+          <ReturnTrendsChart
+            data={analytics?.returnsByDay || []}
+            isLoading={isLoading || isRefreshing}
           />
         </div>
 
         {/* Recent Returns Table */}
-        <RecentReturnsTable 
+        <RecentReturnsTable
           events={[]}
           isLoading={isLoading || isRefreshing}
         />

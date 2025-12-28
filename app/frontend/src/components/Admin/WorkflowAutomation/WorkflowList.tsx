@@ -3,12 +3,12 @@ import { WorkflowTemplate } from '@/types/workflow';
 import { Button, GlassPanel } from '@/design-system';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { 
-  Plus, 
-  Play, 
-  Edit, 
-  Trash2, 
-  Eye, 
+import {
+  Plus,
+  Play,
+  Edit,
+  Trash2,
+  Eye,
   BarChart3,
   Filter,
   Search,
@@ -23,12 +23,12 @@ interface WorkflowListProps {
   onExecute: (id: string) => void;
 }
 
-export const WorkflowList: React.FC<WorkflowListProps> = ({ 
-  onCreate, 
-  onEdit, 
+export const WorkflowList: React.FC<WorkflowListProps> = ({
+  onCreate,
+  onEdit,
   onEditEnhanced,
-  onView, 
-  onExecute 
+  onView,
+  onExecute
 }) => {
   const [workflows, setWorkflows] = useState<WorkflowTemplate[]>([]);
   const [filteredWorkflows, setFilteredWorkflows] = useState<WorkflowTemplate[]>([]);
@@ -75,7 +75,7 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({
         updatedAt: new Date('2023-01-12')
       }
     ];
-    
+
     setWorkflows(mockWorkflows);
     setFilteredWorkflows(mockWorkflows);
     setLoading(false);
@@ -84,27 +84,27 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({
   // Filter workflows based on search and filters
   useEffect(() => {
     let result = [...workflows];
-    
+
     // Apply search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      result = result.filter(workflow => 
-        workflow.name.toLowerCase().includes(term) || 
+      result = result.filter(workflow =>
+        workflow.name.toLowerCase().includes(term) ||
         workflow.description?.toLowerCase().includes(term)
       );
     }
-    
+
     // Apply category filter
     if (categoryFilter !== 'all') {
       result = result.filter(workflow => workflow.category === categoryFilter);
     }
-    
+
     // Apply status filter
     if (statusFilter !== 'all') {
       const isActive = statusFilter === 'active';
       result = result.filter(workflow => workflow.isActive === isActive);
     }
-    
+
     setFilteredWorkflows(result);
   }, [workflows, searchTerm, categoryFilter, statusFilter]);
 
@@ -132,7 +132,7 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({
       compliance: 'bg-indigo-100 text-indigo-800',
       security: 'bg-orange-100 text-orange-800'
     };
-    
+
     return colors[category] || 'bg-gray-100 text-gray-800';
   };
 
@@ -161,16 +161,16 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 className="text-2xl font-bold text-gray-900">Workflow Automation</h2>
-        
+
         <Button onClick={onCreate} className="flex items-center">
           <Plus className="w-4 h-4 mr-2" />
           Create Workflow
         </Button>
       </div>
-      
+
       {/* Filters */}
       <GlassPanel className="p-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
@@ -180,7 +180,7 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({
               className="pl-10"
             />
           </div>
-          
+
           <Select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
@@ -195,7 +195,7 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({
             <option value="compliance">Compliance</option>
             <option value="security">Security</option>
           </Select>
-          
+
           <Select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -204,14 +204,14 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
           </Select>
-          
+
           <Button variant="outline" className="flex items-center justify-center">
             <Filter className="w-4 h-4 mr-2" />
             More Filters
           </Button>
         </div>
       </GlassPanel>
-      
+
       {/* Workflow List */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {filteredWorkflows.map((workflow) => (
@@ -227,7 +227,7 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({
               </div>
               {getStatusBadge(workflow.isActive)}
             </div>
-            
+
             <div className="flex flex-wrap gap-2 mb-4">
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(workflow.category)}`}>
                 {workflow.category.replace('_', ' ')}
@@ -236,30 +236,30 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({
                 {workflow.triggerType}
               </span>
             </div>
-            
+
             <div className="flex items-center text-xs text-gray-500 mb-4">
               <span>Created: {workflow.createdAt.toLocaleDateString()}</span>
               <span className="mx-2">•</span>
               <span>Updated: {workflow.updatedAt.toLocaleDateString()}</span>
             </div>
-            
+
             <div className="flex space-x-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={() => onEdit(workflow.id)}
               >
                 <Edit className="w-4 h-4" />
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={() => onEditEnhanced(workflow.id)}
               >
                 <Palette className="w-4 h-4" />
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={() => onExecute(workflow.id)}
               >
@@ -269,7 +269,7 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({
           </GlassPanel>
         ))}
       </div>
-      
+
       {filteredWorkflows.length === 0 && (
         <div className="text-center py-12">
           <BarChart3 className="mx-auto h-12 w-12 text-gray-400" />

@@ -133,11 +133,11 @@ export function ReceiptsManagement({ onBack }: ReceiptsManagementProps) {
   };
 
   const filteredReceipts = receipts.filter(receipt => {
-    const matchesSearch = 
+    const matchesSearch =
       receipt.receiptNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
       receipt.orderId.toLowerCase().includes(searchQuery.toLowerCase()) ||
       receipt.buyerAddress.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesType = filterType === 'all' || receipt.type === filterType;
     const matchesStatus = filterStatus === 'all' || receipt.status === filterStatus;
 
@@ -182,7 +182,7 @@ export function ReceiptsManagement({ onBack }: ReceiptsManagementProps) {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
         <GlassPanel className="p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -225,7 +225,7 @@ export function ReceiptsManagement({ onBack }: ReceiptsManagementProps) {
       </div>
 
       {/* Type Breakdown */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-6">
         <GlassPanel className="p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-500/20 rounded-lg">

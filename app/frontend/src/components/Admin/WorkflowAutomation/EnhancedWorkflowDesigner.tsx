@@ -14,13 +14,13 @@ import { Button, GlassPanel } from '@/design-system';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { TextArea } from '@/components/ui/textarea';
-import { 
-  Plus, 
-  Save, 
-  Play, 
-  Trash2, 
-  Settings, 
-  ArrowRight, 
+import {
+  Plus,
+  Save,
+  Play,
+  Trash2,
+  Settings,
+  ArrowRight,
   AlertCircle,
   CheckCircle,
   XCircle,
@@ -52,10 +52,10 @@ interface WorkflowTemplateVersion {
   changes: string;
 }
 
-export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> = ({ 
-  templateId, 
-  onSave, 
-  onCancel 
+export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> = ({
+  templateId,
+  onSave,
+  onCancel
 }) => {
   const [workflowData, setWorkflowData] = useState<WorkflowDesignerData>({
     nodes: [],
@@ -71,7 +71,7 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
       priority: 'medium'
     }
   });
-  
+
   const [selectedNode, setSelectedNode] = useState<WorkflowDesignerNode | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -140,7 +140,7 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
         conditions: {}
       }
     };
-    
+
     setWorkflowData(prev => ({
       ...prev,
       nodes: [...prev.nodes, newNode]
@@ -150,7 +150,7 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
   const updateNode = (nodeId: string, updates: Partial<WorkflowDesignerNode>) => {
     setWorkflowData(prev => ({
       ...prev,
-      nodes: prev.nodes.map(node => 
+      nodes: prev.nodes.map(node =>
         node.id === nodeId ? { ...node, ...updates } : node
       )
     }));
@@ -175,7 +175,7 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
       id: `node-${Date.now()}`,
       position: { x: node.position.x + 50, y: node.position.y + 50 }
     };
-    
+
     setWorkflowData(prev => ({
       ...prev,
       nodes: [...prev.nodes, duplicatedNode]
@@ -189,7 +189,7 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
       target,
       type: 'default'
     };
-    
+
     setWorkflowData(prev => ({
       ...prev,
       edges: [...prev.edges, newEdge]
@@ -207,20 +207,20 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
     setIsSaving(true);
     setError(null);
     setSuccess(null);
-    
+
     try {
       // Validate workflow
       if (!workflowData.metadata.name.trim()) {
         throw new Error('Workflow name is required');
       }
-      
+
       if (workflowData.nodes.length === 0) {
         throw new Error('Workflow must have at least one step');
       }
-      
+
       // In a real implementation, this would call an API endpoint
       console.log('Saving workflow:', workflowData);
-      
+
       setSuccess('Workflow saved successfully');
       if (onSave) {
         // Create a mock template for the callback
@@ -298,16 +298,15 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
   // Render node based on type
   const renderNode = (node: WorkflowDesignerNode) => {
     const isSelected = selectedNode?.id === node.id;
-    
+
     return (
-      <div 
-        className={`absolute p-4 rounded-lg shadow-lg cursor-pointer transition-all duration-200 border-2 ${
-          isSelected 
-            ? 'ring-2 ring-blue-500 bg-blue-50' 
+      <div
+        className={`absolute p-4 rounded-lg shadow-lg cursor-pointer transition-all duration-200 border-2 ${isSelected
+            ? 'ring-2 ring-blue-500 bg-blue-50'
             : getNodeColor(node.type)
-        }`}
-        style={{ 
-          left: node.position.x, 
+          }`}
+        style={{
+          left: node.position.x,
           top: node.position.y,
           minWidth: '220px'
         }}
@@ -321,8 +320,8 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
             <h3 className="font-semibold text-gray-800 truncate">{node.data.label}</h3>
           </div>
           <div className="flex gap-1">
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               size="sm"
               onClick={(e) => {
                 e.stopPropagation();
@@ -331,8 +330,8 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
             >
               <Copy className="w-3 h-3 text-gray-500" />
             </Button>
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               size="sm"
               onClick={(e) => {
                 e.stopPropagation();
@@ -343,7 +342,7 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
             </Button>
           </div>
         </div>
-        
+
         <div className="text-xs text-gray-600 mb-2 flex items-center">
           <span className="bg-gray-200 px-2 py-1 rounded mr-2">{node.type}</span>
           {node.data.config && Object.keys(node.data.config).length > 0 && (
@@ -353,7 +352,7 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
             </span>
           )}
         </div>
-        
+
         {node.data.conditions && Object.keys(node.data.conditions).length > 0 && (
           <div className="text-xs text-purple-600 flex items-center">
             <GitBranch className="w-3 h-3 mr-1" />
@@ -369,11 +368,11 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
     // In a real implementation, this would use a library like react-flow
     // For now, we'll just show a simple representation
     return (
-      <div 
+      <div
         key={edge.id}
         className="absolute text-xs text-gray-400 flex items-center"
-        style={{ 
-          left: '50%', 
+        style={{
+          left: '50%',
           top: '50%',
           transform: 'translate(-50%, -50%)'
         }}
@@ -392,11 +391,11 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
             <Palette className="w-5 h-5 mr-2 text-blue-600" />
             {templateId ? 'Edit Workflow' : 'Create Workflow'}
           </h2>
-          
+
           <div className="flex items-center space-x-2">
             <span className="text-sm text-gray-500">v{workflowData.metadata.version}</span>
             {versions.length > 0 && (
-              <button 
+              <button
                 onClick={() => setShowVersions(!showVersions)}
                 className="text-xs text-blue-600 hover:text-blue-800"
               >
@@ -404,14 +403,14 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
               </button>
             )}
           </div>
-          
+
           {error && (
             <div className="flex items-center text-red-600 bg-red-50 px-3 py-1 rounded-md">
               <AlertCircle className="w-4 h-4 mr-1" />
               <span className="text-sm">{error}</span>
             </div>
           )}
-          
+
           {success && (
             <div className="flex items-center text-green-600 bg-green-50 px-3 py-1 rounded-md">
               <CheckCircle className="w-4 h-4 mr-1" />
@@ -419,42 +418,42 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
             </div>
           )}
         </div>
-        
+
         <div className="flex space-x-2">
-          <Button 
-            variant={previewMode ? "primary" : "outline"} 
+          <Button
+            variant={previewMode ? "primary" : "outline"}
             onClick={() => setPreviewMode(!previewMode)}
           >
             {previewMode ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
             {previewMode ? 'Exit Preview' : 'Preview'}
           </Button>
-          
-          <Button 
-            variant="outline" 
+
+          <Button
+            variant="outline"
             onClick={() => setShowExecutionHistory(!showExecutionHistory)}
           >
             <Clock className="w-4 h-4 mr-2" />
             History
           </Button>
-          
-          <Button 
-            variant="outline" 
+
+          <Button
+            variant="outline"
             onClick={handleTest}
             disabled={isSaving}
           >
             <Play className="w-4 h-4 mr-2" />
             Test
           </Button>
-          
-          <Button 
+
+          <Button
             onClick={handlePublish}
             disabled={isSaving}
           >
             <Zap className="w-4 h-4 mr-2" />
             Publish
           </Button>
-          
-          <Button 
+
+          <Button
             onClick={handleSave}
             disabled={isSaving}
           >
@@ -470,10 +469,10 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
               </>
             )}
           </Button>
-          
+
           {onCancel && (
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               onClick={onCancel}
             >
               <XCircle className="w-4 h-4 mr-2" />
@@ -482,10 +481,10 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
           )}
         </div>
       </div>
-      
+
       {/* Workflow Metadata Form */}
       <GlassPanel className="p-4 m-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Input
             label="Workflow Name"
             value={workflowData.metadata.name}
@@ -493,7 +492,7 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
             placeholder="Enter workflow name"
             required
           />
-          
+
           <Select
             label="Category"
             value={workflowData.metadata.category}
@@ -510,7 +509,7 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
             <option value="analytics">Analytics</option>
             <option value="notifications">Notifications</option>
           </Select>
-          
+
           <Select
             label="Trigger Type"
             value={workflowData.metadata.triggerType}
@@ -523,7 +522,7 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
             <option value="webhook">Webhook</option>
             <option value="api_call">API Call</option>
           </Select>
-          
+
           <Select
             label="Priority"
             value={workflowData.metadata.priority || 'medium'}
@@ -534,18 +533,18 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
             <option value="high">High</option>
             <option value="critical">Critical</option>
           </Select>
-          
+
           <div className="lg:col-span-2">
             <Input
               label="Tags"
               value={workflowData.metadata.tags?.join(', ') || ''}
-              onChange={(e) => updateMetadata({ 
-                tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag) 
+              onChange={(e) => updateMetadata({
+                tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag)
               })}
               placeholder="Enter tags separated by commas"
             />
           </div>
-          
+
           <TextArea
             label="Description"
             value={workflowData.metadata.description || ''}
@@ -555,12 +554,12 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
           />
         </div>
       </GlassPanel>
-      
+
       <div className="flex flex-1 overflow-hidden">
         {/* Toolbar */}
         <div className="w-64 p-4 border-r border-gray-200 bg-gray-50 overflow-y-auto">
           <h3 className="font-semibold text-gray-700 mb-4">Workflow Steps</h3>
-          
+
           <div className="space-y-2">
             <Button
               variant="outline"
@@ -570,7 +569,7 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
               <Zap className="w-4 h-4 mr-2 text-blue-500" />
               Action Step
             </Button>
-            
+
             <Button
               variant="outline"
               className="w-full justify-start"
@@ -579,7 +578,7 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
               <GitBranch className="w-4 h-4 mr-2 text-yellow-500" />
               Condition Step
             </Button>
-            
+
             <Button
               variant="outline"
               className="w-full justify-start"
@@ -588,7 +587,7 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
               <Users className="w-4 h-4 mr-2 text-purple-500" />
               Assignment Step
             </Button>
-            
+
             <Button
               variant="outline"
               className="w-full justify-start"
@@ -597,7 +596,7 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
               <Bell className="w-4 h-4 mr-2 text-green-500" />
               Notification Step
             </Button>
-            
+
             <Button
               variant="outline"
               className="w-full justify-start"
@@ -606,7 +605,7 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
               <AlertTriangle className="w-4 h-4 mr-2 text-red-500" />
               Escalation Step
             </Button>
-            
+
             <Button
               variant="outline"
               className="w-full justify-start"
@@ -615,7 +614,7 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
               <CheckCircle className="w-4 h-4 mr-2 text-indigo-500" />
               Approval Step
             </Button>
-            
+
             <Button
               variant="outline"
               className="w-full justify-start"
@@ -624,7 +623,7 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
               <Database className="w-4 h-4 mr-2 text-teal-500" />
               Data Step
             </Button>
-            
+
             <Button
               variant="outline"
               className="w-full justify-start"
@@ -634,7 +633,7 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
               Delay Step
             </Button>
           </div>
-          
+
           {selectedNode && (
             <div className="mt-6">
               <h3 className="font-semibold text-gray-700 mb-2">Step Configuration</h3>
@@ -647,7 +646,7 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
                   })}
                   className="mb-2"
                 />
-                
+
                 <TextArea
                   label="Step Configuration"
                   value={JSON.stringify(selectedNode.data.config, null, 2)}
@@ -664,7 +663,7 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
                   rows={4}
                   className="font-mono text-xs"
                 />
-                
+
                 <Button
                   variant="outline"
                   className="w-full mt-2"
@@ -676,7 +675,7 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
               </div>
             </div>
           )}
-          
+
           {/* Versions Panel */}
           {showVersions && versions.length > 0 && (
             <div className="mt-6">
@@ -695,7 +694,7 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
               </div>
             </div>
           )}
-          
+
           {/* Execution History Panel */}
           {showExecutionHistory && executionHistory.length > 0 && (
             <div className="mt-6">
@@ -704,9 +703,8 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
                 {executionHistory.map(history => (
                   <div key={history.id} className="py-2 border-b border-gray-100 last:border-0">
                     <div className="flex justify-between">
-                      <span className={`font-medium ${
-                        history.status === 'completed' ? 'text-green-600' : 'text-red-600'
-                      }`}>
+                      <span className={`font-medium ${history.status === 'completed' ? 'text-green-600' : 'text-red-600'
+                        }`}>
                         {history.status}
                       </span>
                       <span className="text-xs text-gray-500">
@@ -720,22 +718,22 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
             </div>
           )}
         </div>
-        
+
         {/* Canvas Area */}
         <div className="flex-1 relative bg-gray-100 overflow-hidden">
-          <div 
+          <div
             className="w-full h-full relative"
-            style={{ 
+            style={{
               backgroundImage: 'radial-gradient(circle, #ddd 1px, transparent 1px)',
               backgroundSize: '20px 20px'
             }}
           >
             {/* Render nodes */}
             {workflowData.nodes.map(node => renderNode(node))}
-            
+
             {/* Render edges */}
             {workflowData.edges.map(edge => renderEdge(edge))}
-            
+
             {/* Empty state */}
             {workflowData.nodes.length === 0 && (
               <div className="absolute inset-0 flex items-center justify-center">
@@ -745,7 +743,7 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
                 </div>
               </div>
             )}
-            
+
             {/* Preview Overlay */}
             {previewMode && (
               <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
