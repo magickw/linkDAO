@@ -150,7 +150,7 @@ class SellerService {
       const completeness = this.calculateProfileCompleteness(seller);
 
       return {
-        ...sellerData,
+        ...seller,
         reputation: reputation ? {
           overallScore: reputation.overallScore,
           moderationScore: reputation.moderationScore,
