@@ -241,8 +241,10 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
       )}
 
       {/* All cards at the same level with consistent spacing - no padding on container */}
-      <div className="space-y-4">
-        {/* Enhanced User Profile Card */}
+      <div className={!navigationState.sidebarCollapsed ? 'space-y-4' : 'space-y-2'}>
+        {!navigationState.sidebarCollapsed ? (
+          <>
+            {/* Enhanced User Profile Card */}
             <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
               <div className="p-4">
                 {enhancedUser ? (
@@ -456,6 +458,20 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
             {/* Enhanced Communities Section Card */}
             <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
               <div className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  {/* User Preferences Controls */}
+                  <div className="flex space-x-1">
+                    <button
+                      onClick={() => updateUserPreferences({ sidebarCollapsed: !userPreferences.sidebarCollapsed })}
+                      className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                      title={userPreferences.sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={userPreferences.sidebarCollapsed ? "M4 6h16M4 12h16m-7 6h7" : "M4 6h16M4 12h16M4 18h16"} />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
 
                 <CommunityIconList
                   communities={enhancedCommunities}
@@ -511,10 +527,166 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                     </div>
                   </div>
                 )}
-                )}
 
                 {/* Create Post action removed per user request */}
               </div>
             </div>
+          </>
+        ) : (
+          /* Collapsed Navigation */
+          <>
+            {/* Sidebar Toggle Button */}
+            <div className="flex justify-end p-2">
+              <button
+                onClick={() => updateUserPreferences({ sidebarCollapsed: !userPreferences.sidebarCollapsed })}
+                className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                title={userPreferences.sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={userPreferences.sidebarCollapsed ? "M4 6h16M4 12h16m-7 6h7" : "M4 6h16M4 12h16M4 18h16"} />
+                </svg>
+              </button>
+            </div>
+            {/* Collapsed User Profile Card */}
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
+              <div className="p-3 flex justify-center">
+                {address ? (
+                  <div className="relative">
+                    {/* Avatar */}
+                    <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold shadow-lg">
+                      {(profile as any)?.handle
+                        ? (profile as any).handle.charAt(0).toUpperCase()
+                        : (profile as any)?.ens
+                          ? (profile as any).ens.charAt(0).toUpperCase()
+                          : address.slice(2, 4).toUpperCase()}
+                    </div>
+                    {/* Online status indicator */}
+                    <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
+                  </div>
+                ) : (
+                  <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
+                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Collapsed Navigation Items */}
+            <div className="space-y-2">
+              <button
+                onClick={() => router.push('/communities')}
+                className="block w-full p-2 rounded-lg transition-colors text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700"
+                title="Communities"
+              >
+                <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </button>
+
+              {/* <Link
+              href="/messaging"
+              className="block w-full p-2 rounded-lg transition-colors text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700 relative"
+              title="Messages"
+            >
+              <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              {/* Message notification indicator will be loaded from real data */}
+              {/* </Link> */}
+
+              {/* Collapsed joined communities with favorites */}
+              {enhancedCommunities.filter(c => c.isJoined).slice(0, 5).map((community) => (
+                <button
+                  key={community.id}
+                  onClick={() => handleCommunitySelectWithContext(community.id)}
+                  className={`w-full p-2 rounded-lg transition-colors relative ${navigationState.activeCommunity === community.id
+                    ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
+                    : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700'
+                    }`}
+                  title={community.displayName}
+                >
+                  <span className="text-lg">{community.icon || community.avatar}</span>
+                  {community.unreadCount && community.unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 w-2 h-2 bg-primary-500 rounded-full"></span>
+                  )}
+                  {userPreferences.favoriteCommunities.includes(community.id) && (
+                    <span className="absolute -bottom-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full"></span>
+                  )}
+                </button>
+              ))}
+
+              {/* Activity Indicators in Collapsed Mode */}
+              {activityIndicators.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex flex-col space-y-1">
+                    {activityIndicators.slice(0, 2).map((indicator) => (
+                      <button
+                        key={indicator.id}
+                        onClick={() => handleActivityIndicatorClick(indicator)}
+                        className="w-full p-2 rounded-lg transition-colors text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700 relative"
+                        title={`${indicator.type} - ${indicator.count} items`}
+                      >
+                        <span className="text-lg">
+                          {indicator.type === 'notification' && '🔔'}
+                          {indicator.type === 'transaction' && '💰'}
+                          {indicator.type === 'community' && '👥'}
+                          {indicator.type === 'governance' && '🗳️'}
+                        </span>
+                        {indicator.count > 0 && (
+                          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
+
+      {/* Community Creation Modal */}
+      <CommunityCreationModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={(community) => {
+          // This will be handled by the enhanced navigation hook
+          // For now, we can trigger a refresh or update
+          console.log('Community created:', community);
+        }}
+      />
+
+      {/* Community Discovery Modal */}
+      {showDiscoveryModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                Discover Communities
+              </h2>
+              <button
+                onClick={() => setShowDiscoveryModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6 max-h-[calc(90vh-140px)] overflow-y-auto">
+              <CommunityDiscovery
+                onCommunitySelect={(community) => {
+                  handleCommunitySelect(community.id);
+                  setShowDiscoveryModal(false);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
