@@ -70,9 +70,9 @@ export class AdvancedTradingService {
     this.portfolios = new Map();
     this.tradingHistory = new Map();
   }
-}  /**
- 
-  * Create a limit order
+
+  /**
+   * Create a limit order
    */
   async createLimitOrder(
     userId: string,
@@ -103,7 +103,7 @@ export class AdvancedTradingService {
     };
 
     this.limitOrders.set(orderId, limitOrder);
-    
+
     // Start monitoring this order
     this.monitorLimitOrder(orderId);
 
@@ -115,7 +115,7 @@ export class AdvancedTradingService {
    */
   async cancelLimitOrder(userId: string, orderId: string): Promise<boolean> {
     const order = this.limitOrders.get(orderId);
-    
+
     if (!order || order.userId !== userId) {
       throw new Error('Order not found or unauthorized');
     }
@@ -135,7 +135,7 @@ export class AdvancedTradingService {
    */
   getUserLimitOrders(userId: string, status?: string): LimitOrder[] {
     const userOrders: LimitOrder[] = [];
-    
+
     for (const order of this.limitOrders.values()) {
       if (order.userId === userId) {
         if (!status || order.status === status) {
@@ -173,7 +173,7 @@ export class AdvancedTradingService {
     };
 
     this.priceAlerts.set(alertId, priceAlert);
-    
+
     // Start monitoring this alert
     this.monitorPriceAlert(alertId);
 
@@ -185,7 +185,7 @@ export class AdvancedTradingService {
    */
   async removePriceAlert(userId: string, alertId: string): Promise<boolean> {
     const alert = this.priceAlerts.get(alertId);
-    
+
     if (!alert || alert.userId !== userId) {
       throw new Error('Alert not found or unauthorized');
     }
@@ -199,7 +199,7 @@ export class AdvancedTradingService {
    */
   getUserPriceAlerts(userId: string, isActive?: boolean): PriceAlert[] {
     const userAlerts: PriceAlert[] = [];
-    
+
     for (const alert of this.priceAlerts.values()) {
       if (alert.userId === userId) {
         if (isActive === undefined || alert.isActive === isActive) {
@@ -209,8 +209,9 @@ export class AdvancedTradingService {
     }
 
     return userAlerts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-  }  /
-**
+  }
+
+  /**
    * Update user's portfolio
    */
   async updatePortfolio(userId: string, walletAddress: string, chainId: number): Promise<PortfolioPosition[]> {
@@ -282,7 +283,7 @@ export class AdvancedTradingService {
 
     const userHistory = this.tradingHistory.get(userId) || [];
     userHistory.unshift(historyEntry); // Add to beginning
-    
+
     // Keep only last 100 entries
     if (userHistory.length > 100) {
       userHistory.splice(100);
@@ -313,15 +314,15 @@ export class AdvancedTradingService {
     const yearStart = new Date(year, 0, 1);
     const yearEnd = new Date(year + 1, 0, 1);
 
-    const yearTrades = allHistory.filter(trade => 
+    const yearTrades = allHistory.filter(trade =>
       trade.timestamp >= yearStart && trade.timestamp < yearEnd
     );
 
-    const totalVolume = yearTrades.reduce((sum, trade) => 
+    const totalVolume = yearTrades.reduce((sum, trade) =>
       sum + parseFloat(trade.amountIn), 0
     ).toString();
 
-    const totalGasCost = yearTrades.reduce((sum, trade) => 
+    const totalGasCost = yearTrades.reduce((sum, trade) =>
       sum + parseFloat(trade.gasCost), 0
     ).toString();
 
@@ -335,8 +336,9 @@ export class AdvancedTradingService {
       profitLoss,
       trades: yearTrades,
     };
-  }  /
-**
+  }
+
+  /**
    * Monitor limit order for execution
    */
   private async monitorLimitOrder(orderId: string): Promise<void> {
@@ -367,7 +369,7 @@ export class AdvancedTradingService {
         order.status = 'filled';
         order.filledAt = new Date();
         order.transactionHash = '0x' + Math.random().toString(16).substr(2, 64);
-        
+
         this.limitOrders.set(orderId, order);
 
         // Add to trading history
@@ -427,8 +429,8 @@ export class AdvancedTradingService {
       const targetPrice = parseFloat(alert.targetPrice);
 
       // Check if alert condition is met
-      const shouldTrigger = alert.condition === 'above' 
-        ? currentPrice >= targetPrice 
+      const shouldTrigger = alert.condition === 'above'
+        ? currentPrice >= targetPrice
         : currentPrice <= targetPrice;
 
       if (shouldTrigger) {
@@ -484,9 +486,9 @@ export class AdvancedTradingService {
   }> {
     const history = this.getUserTradingHistory(userId, 1000);
     const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-    
+
     const recentTrades = history.filter(trade => trade.timestamp >= cutoffDate);
-    
+
     if (recentTrades.length === 0) {
       return {
         totalTrades: 0,
@@ -499,11 +501,11 @@ export class AdvancedTradingService {
       };
     }
 
-    const totalVolume = recentTrades.reduce((sum, trade) => 
+    const totalVolume = recentTrades.reduce((sum, trade) =>
       sum + parseFloat(trade.amountIn), 0
     );
 
-    const totalGasCost = recentTrades.reduce((sum, trade) => 
+    const totalGasCost = recentTrades.reduce((sum, trade) =>
       sum + parseFloat(trade.gasCost), 0
     );
 

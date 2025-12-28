@@ -135,8 +135,9 @@ export class AdvancedTradingController {
         error: error.message
       });
     }
-  }  /
-**
+  }
+
+  /**
    * Create a price alert
    */
   async createPriceAlert(req: Request, res: Response): Promise<void> {
@@ -302,7 +303,7 @@ export class AdvancedTradingController {
       const userId = (req as any).user?.id || 'anonymous';
       const portfolio = this.advancedTradingService.getUserPortfolio(userId);
 
-      const totalValue = portfolio.reduce((sum, position) => 
+      const totalValue = portfolio.reduce((sum, position) =>
         sum + parseFloat(position.valueUSD), 0
       );
 

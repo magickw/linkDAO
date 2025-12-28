@@ -16,18 +16,25 @@ rm -rf dist
 echo "📁 Creating dist directory..."
 mkdir -p dist
 
-echo "🔨 Compiling TypeScript to JavaScript..."
-# Use TypeScript compiler with optimized settings (Render Pro - 4GB RAM)
-NODE_OPTIONS="--max-old-space-size=3500" npx tsc --project tsconfig.production.json --noEmitOnError false
-tsc_result=$?
+echo "🔨 Compiling TypeScript to JavaScript with SWC..."
+# Use SWC for fast compilation (10-30x faster than TSC)
+npx swc src -d dist --copy-files --strip-leading-paths
+swc_result=$?
 
-if [ $tsc_result -ne 0 ]; then
-    echo "⚠️  TypeScript compilation had errors but continuing..."
+if [ $swc_result -eq 0 ]; then
+    echo "✅ SWC compilation completed!"
 else
-    echo "✅ TypeScript compilation completed!"
+    echo "⚠️  SWC compilation failed, falling back to TypeScript compiler..."
+    # Fallback to TSC if SWC fails
+    NODE_OPTIONS="--max-old-space-size=3500" npx tsc --project tsconfig.production.json --noEmitOnError false
+    tsc_result=$?
+    
+    if [ $tsc_result -ne 0 ]; then
+        echo "⚠️  TypeScript compilation had errors but continuing..."
+    else
+        echo "✅ TypeScript compilation completed!"
+    fi
 fi
-
-# Type checking is already done by tsc above
 
 # The compilation should have created dist/index.js from src/index.ts
 # Make sure it's executable
