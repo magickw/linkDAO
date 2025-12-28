@@ -53,7 +53,7 @@ const MessagesPage: React.FC = () => {
   const router = useRouter();
   const { to } = router.query;
   const { address: account, signer } = useWeb3();
-  
+
   const formatAddress = (addr: string) => {
     if (!addr) return '';
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
@@ -78,25 +78,25 @@ const MessagesPage: React.FC = () => {
   useEffect(() => {
     const initializeMessaging = async () => {
       console.log('Initializing messaging service...', { account, signer: !!signer });
-      
+
       if (account && signer) {
         try {
           setLoading(true);
           setMessagingInitialized(false);
           setError(null);
-          
+
           console.log('Starting messaging service initialization');
-          
+
           // Add timeout to prevent infinite loading
           const initPromise = messagingService.initialize(signer);
-          const timeoutPromise = new Promise<void>((_, reject) => 
+          const timeoutPromise = new Promise<void>((_, reject) =>
             setTimeout(() => reject(new Error('Messaging service initialization timeout')), 15000)
           );
-          
+
           console.log('Waiting for initialization or timeout');
           await Promise.race([initPromise, timeoutPromise]);
           console.log('Messaging service initialization completed');
-          
+
           setMessagingInitialized(true);
           setError(null);
         } catch (error) {
@@ -120,25 +120,25 @@ const MessagesPage: React.FC = () => {
     const loadConversations = async () => {
       try {
         setLoading(true);
-        
+
         // Wait for messaging service to be initialized
         if (!messagingInitialized) {
           return;
         }
-        
+
         // Get all conversations from the messaging service
         const allConversations = messagingService.getConversations();
-        
+
         // Transform to our format and fetch user details
         const transformedConversations = await Promise.all(
           allConversations.map(async (conv) => {
             // Find the other participant (not current user)
             const otherParticipant = conv.participants.find(p => p !== account?.toLowerCase());
-            
+
             // Get user details if available
             let participantName = otherParticipant || 'Unknown User';
             let participantAvatar = '/images/default-avatar.png';
-            
+
             if (otherParticipant) {
               try {
                 // Try to get user details from marketplace service
@@ -146,8 +146,17 @@ const MessagesPage: React.FC = () => {
                 if (userResponse.ok) {
                   const userData = await userResponse.json();
                   console.log('User data for ' + otherParticipant + ':', userData.data);
-                  participantName = userData.data?.displayName || userData.data?.storeName || formatAddress(otherParticipant);
-                  const rawAvatarUrl = userData.data?.avatarCid || userData.data?.profileImageUrl;
+                  // Prioritize storeName for sellers, then displayName, username, or name for regular users
+                  participantName = userData.data?.storeName ||
+                    userData.data?.displayName ||
+                    userData.data?.username ||
+                    userData.data?.name ||
+                    formatAddress(otherParticipant);
+                  const rawAvatarUrl = userData.data?.profileImageCdn ||
+                    userData.data?.profilePicture ||
+                    userData.data?.avatarUrl ||
+                    userData.data?.avatarCid ||
+                    userData.data?.profileImageUrl;
                   participantAvatar = getAvatarUrl(rawAvatarUrl) || '/images/default-avatar.png';
                   console.log('Raw avatar URL for ' + otherParticipant + ':', rawAvatarUrl);
                   console.log('Resolved avatar for ' + otherParticipant + ':', participantAvatar);
@@ -159,7 +168,7 @@ const MessagesPage: React.FC = () => {
                 participantName = formatAddress(otherParticipant);
               }
             }
-            
+
             return {
               id: conv.id,
               participants: conv.participants,
@@ -172,17 +181,17 @@ const MessagesPage: React.FC = () => {
             };
           })
         );
-        
+
         setConversations(transformedConversations);
-        
+
         // If a specific recipient was passed in the query, set them as active
         if (to && account) {
           // Create conversation ID using the same logic as the messaging service
           const [addr1, addr2] = [account.toLowerCase(), (to as string).toLowerCase()].sort();
           const conversationId = `${addr1}_${addr2}`;
-          
+
           const targetConversation = transformedConversations.find(c => c.id === conversationId);
-          
+
           if (targetConversation) {
             setActiveConversation(targetConversation);
           } else {
@@ -217,7 +226,7 @@ const MessagesPage: React.FC = () => {
   useEffect(() => {
     if (activeConversation && messagingInitialized) {
       const convMessages = messagingService.getMessages(activeConversation.id);
-      
+
       // Transform to our format
       const transformedMessages = convMessages.map(msg => ({
         id: msg.id,
@@ -229,9 +238,9 @@ const MessagesPage: React.FC = () => {
         isRead: msg.isRead,
         isDelivered: msg.isDelivered
       }));
-      
+
       setMessages(transformedMessages);
-      
+
       // Mark messages as read
       messagingService.markMessagesAsRead(activeConversation.id);
     } else {
@@ -257,10 +266,10 @@ const MessagesPage: React.FC = () => {
 
       // Send message using messaging service
       await messagingService.sendMessage(recipientAddress, newMessage);
-      
+
       // Clear input
       setNewMessage('');
-      
+
       // Reload messages to get the new one
       if (activeConversation) {
         const convMessages = messagingService.getMessages(activeConversation.id);
@@ -284,7 +293,7 @@ const MessagesPage: React.FC = () => {
 
   const handleConversationSelect = (conversation: Conversation) => {
     setActiveConversation(conversation);
-    
+
     // Get the other participant's address
     const otherParticipant = conversation.participants.find(p => p !== account);
     if (otherParticipant && account) {
@@ -315,7 +324,7 @@ const MessagesPage: React.FC = () => {
               )}
             </p>
             {error && (
-              <button 
+              <button
                 className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 onClick={() => window.location.reload()}
               >
@@ -364,11 +373,10 @@ const MessagesPage: React.FC = () => {
                     {conversations.map((conversation) => (
                       <div
                         key={conversation.id}
-                        className={`flex items-center p-3 rounded-lg cursor-pointer transition-colors ${
-                          activeConversation?.id === conversation.id
-                            ? 'bg-blue-600/30 border border-blue-500/50'
-                            : 'hover:bg-white/10'
-                        }`}
+                        className={`flex items-center p-3 rounded-lg cursor-pointer transition-colors ${activeConversation?.id === conversation.id
+                          ? 'bg-blue-600/30 border border-blue-500/50'
+                          : 'hover:bg-white/10'
+                          }`}
                         onClick={() => handleConversationSelect(conversation)}
                       >
                         <div className="relative">
@@ -446,17 +454,15 @@ const MessagesPage: React.FC = () => {
                               className={`flex mb-4 ${message.isOwn ? 'justify-end' : 'justify-start'}`}
                             >
                               <div
-                                className={`max-w-xs md:max-w-md lg:max-w-lg rounded-2xl px-4 py-2 ${
-                                  message.isOwn
-                                    ? 'bg-blue-600 text-white rounded-br-none'
-                                    : 'bg-white/10 text-white rounded-bl-none'
-                                }`}
+                                className={`max-w-xs md:max-w-md lg:max-w-lg rounded-2xl px-4 py-2 ${message.isOwn
+                                  ? 'bg-blue-600 text-white rounded-br-none'
+                                  : 'bg-white/10 text-white rounded-bl-none'
+                                  }`}
                               >
                                 <div className="text-white/90">{message.content}</div>
                                 <div
-                                  className={`text-xs mt-1 flex justify-end ${
-                                    message.isOwn ? 'text-blue-200' : 'text-white/50'
-                                  }`}
+                                  className={`text-xs mt-1 flex justify-end ${message.isOwn ? 'text-blue-200' : 'text-white/50'
+                                    }`}
                                 >
                                   {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </div>

@@ -914,7 +914,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                               <p className="text-gray-300 text-sm mb-2 line-clamp-2">{listing.description}</p>
                               <div className="flex items-center gap-4 text-sm">
                                 <span className="text-green-400 font-medium">
-                                  {typeof listing.price === 'string' ? listing.price : listing.price.toString()} {listing.currency || 'ETH'}
+                                  {listing.price ? (typeof listing.price === 'string' ? listing.price : listing.price.toString()) : 'N/A'} {listing.currency || 'ETH'}
                                 </span>
                                 <span className="text-gray-400">
                                   Qty: {listing.quantity}

@@ -9,7 +9,7 @@ import { UnifiedSellerProfile, UnifiedSellerListing } from '@/types/unifiedSelle
 import { useUnifiedSeller, useUnifiedSellerListings } from '@/hooks/useUnifiedSeller';
 import { DAOEndorsementModal } from './DAOEndorsementModal';
 import { withSellerErrorBoundary } from './ErrorHandling';
-import { mapLegacyTierToUnified } from '@/utils/tierMapping';
+import { normalizeTier, getTierDisplayName } from '@/utils/tierMapping';
 import {
   Star,
   Shield,
@@ -125,7 +125,7 @@ interface SellerInfo {
   performanceMetrics: PerformanceMetrics;
 
   // Verification & Badges
-  tier: 'TIER_1' | 'TIER_2' | 'TIER_3';
+  tier: 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
   tierProgress: { current: number; required: number; nextTier: string };
   isKYCVerified: boolean;
   isDAOEndorsed: boolean;
@@ -283,7 +283,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
           const transformedSeller: SellerInfo = {
             id: sellerProfile.walletAddress,
             name: sellerProfile.storeName || 'Anonymous Seller',
-            avatar: sellerProfile.profilePicture || sellerProfile.profileImageCdn || '',
+            avatar: sellerProfile.profileImageCdn || sellerProfile.profilePicture || '',
             coverImage: sellerProfile.coverImage || sellerProfile.coverImageCdn || '',
             walletAddress: sellerProfile.walletAddress,
             ensName: sellerProfile.ensHandle,
@@ -330,8 +330,8 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
               trend: 'up',
               trendValue: '+12%'
             },
-            tier: mapLegacyTierToUnified(sellerProfile.tier),
-            tierProgress: { current: 150, required: 500, nextTier: 'TIER_3' },
+            tier: normalizeTier(sellerProfile.tier),
+            tierProgress: { current: 150, required: 500, nextTier: 'gold' },
             isKYCVerified: sellerProfile.ensVerified,
             isDAOEndorsed: false,
             hasEscrowProtection: true,
@@ -467,8 +467,8 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
               trend: 'neutral',
               trendValue: '0%'
             },
-            tier: 'TIER_1',
-            tierProgress: { current: 0, required: 500, nextTier: 'TIER_2' },
+            tier: 'bronze',
+            tierProgress: { current: 0, required: 500, nextTier: 'silver' },
             isKYCVerified: false,
             isDAOEndorsed: false,
             hasEscrowProtection: true,
@@ -558,7 +558,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
           const transformedSeller: SellerInfo = {
             id: sellerProfile.walletAddress,
             name: sellerProfile.storeName || 'Anonymous Seller',
-            avatar: sellerProfile.profilePicture || sellerProfile.profileImageCdn || '',
+            avatar: sellerProfile.profileImageCdn || sellerProfile.profilePicture || '',
             coverImage: sellerProfile.coverImage || sellerProfile.coverImageCdn || '',
             walletAddress: sellerProfile.walletAddress,
             ensName: sellerProfile.ensHandle,
@@ -610,8 +610,8 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
               trend: 'up',
               trendValue: '+12%'
             },
-            tier: mapLegacyTierToUnified(sellerProfile.tier),
-            tierProgress: { current: 150, required: 500, nextTier: 'TIER_3' },
+            tier: normalizeTier(sellerProfile.tier),
+            tierProgress: { current: 150, required: 500, nextTier: 'gold' },
             isKYCVerified: sellerProfile.ensVerified,
             isDAOEndorsed: false, // Default
             hasEscrowProtection: true,
@@ -685,8 +685,8 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
               trend: 'neutral',
               trendValue: '0%'
             },
-            tier: 'TIER_1',
-            tierProgress: { current: 0, required: 500, nextTier: 'TIER_2' },
+            tier: 'bronze',
+            tierProgress: { current: 0, required: 500, nextTier: 'silver' },
             isKYCVerified: false,
             isDAOEndorsed: false,
             hasEscrowProtection: true,
@@ -827,12 +827,15 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
   };
 
   // Helper functions
-  const getTierColor = (tier: string) => {
-    switch (tier) {
-      case 'TIER_3': return 'text-purple-400 bg-purple-500/20';
-      case 'TIER_2': return 'text-blue-400 bg-blue-500/20';
-      case 'TIER_1': return 'text-green-400 bg-green-500/20';
-      default: return 'text-gray-400 bg-gray-500/20';
+  const getTierBadgeColor = (tier: string) => {
+    const tierLower = tier?.toLowerCase() || '';
+    switch (tierLower) {
+      case 'diamond': return 'text-cyan-400 bg-cyan-500/20';
+      case 'platinum': return 'text-purple-400 bg-purple-500/20';
+      case 'gold': return 'text-yellow-400 bg-yellow-500/20';
+      case 'silver': return 'text-gray-300 bg-gray-500/20';
+      case 'bronze': return 'text-orange-400 bg-orange-500/20';
+      default: return 'text-green-400 bg-green-500/20';
     }
   };
 
@@ -978,8 +981,8 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                 </div>
 
                 {/* Tier Badge with Progress */}
-                <div className={`mt-4 px-3 py-1 rounded-full text-sm font-semibold ${getTierColor(seller.tier)}`}>
-                  {seller.tier.replace('_', ' ')}
+                <div className={`mt-4 px-3 py-1 rounded-full text-sm font-semibold ${getTierBadgeColor(seller.tier)}`}>
+                  {getTierDisplayName(seller.tier)}
                 </div>
                 <div className="mt-2 text-center">
                   <div className="text-xs text-white/70 mb-1">
@@ -1015,8 +1018,8 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                       <div className="flex gap-2">
                         {seller.verificationLevels.identity.verified && (
                           <span className={`px-2 py-1 rounded-full text-xs flex items-center gap-1 ${seller.verificationLevels.identity.type === 'PREMIUM' ? 'bg-purple-500/20 text-purple-400' :
-                              seller.verificationLevels.identity.type === 'ENHANCED' ? 'bg-blue-500/20 text-blue-400' :
-                                'bg-green-500/20 text-green-400'
+                            seller.verificationLevels.identity.type === 'ENHANCED' ? 'bg-blue-500/20 text-blue-400' :
+                              'bg-green-500/20 text-green-400'
                             }`}>
                             <BadgeCheck className="w-3 h-3" />
                             {seller.verificationLevels.identity.type} ID
@@ -1100,8 +1103,8 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                     <button
                       onClick={() => setIsFollowing(!isFollowing)}
                       className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${isFollowing
-                          ? 'bg-gray-600 text-white'
-                          : 'bg-gradient-to-r from-gray-100/20 to-gray-200/20 text-white hover:from-gray-200/30 hover:to-gray-300/30'
+                        ? 'bg-gray-600 text-white'
+                        : 'bg-gradient-to-r from-gray-100/20 to-gray-200/20 text-white hover:from-gray-200/30 hover:to-gray-300/30'
                         }`}
                     >
                       <Heart className={`w-4 h-4 ${isFollowing ? 'fill-current' : ''}`} />
@@ -1371,8 +1374,8 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
               key={tab}
               onClick={() => setActiveTab(tab as any)}
               className={`px-4 md:px-6 py-3 rounded-lg font-semibold transition-all capitalize whitespace-nowrap ${activeTab === tab
-                  ? 'bg-white/20 text-white shadow-lg'
-                  : 'text-white/70 hover:text-white hover:bg-white/10'
+                ? 'bg-white/20 text-white shadow-lg'
+                : 'text-white/70 hover:text-white hover:bg-white/10'
                 }`}
             >
               {tab === 'activity' && <Clock className="w-4 h-4 inline mr-2" />}
@@ -1441,8 +1444,8 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                   <button
                     onClick={() => setViewMode('grid')}
                     className={`p-3 rounded-lg transition-colors ${viewMode === 'grid'
-                        ? 'bg-white/20 text-white shadow-md'
-                        : 'bg-white/10 text-white/70 hover:text-white hover:bg-white/15'
+                      ? 'bg-white/20 text-white shadow-md'
+                      : 'bg-white/10 text-white/70 hover:text-white hover:bg-white/15'
                       }`}
                     title="Grid view"
                   >
@@ -1451,8 +1454,8 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                   <button
                     onClick={() => setViewMode('list')}
                     className={`p-3 rounded-lg transition-colors ${viewMode === 'list'
-                        ? 'bg-white/20 text-white shadow-md'
-                        : 'bg-white/10 text-white/70 hover:text-white hover:bg-white/15'
+                      ? 'bg-white/20 text-white shadow-md'
+                      : 'bg-white/10 text-white/70 hover:text-white hover:bg-white/15'
                       }`}
                     title="List view"
                   >
@@ -1508,8 +1511,8 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                         <div className="flex items-center justify-between text-xs text-white/60">
                           <span>{listing.views || 0} views</span>
                           <span className={`px-2 py-1 rounded-full text-xs ${listing.status === 'active' ? 'bg-green-500/20 text-green-400' :
-                              listing.status === 'sold' ? 'bg-red-500/20 text-red-400' :
-                                'bg-gray-500/20 text-gray-400'
+                            listing.status === 'sold' ? 'bg-red-500/20 text-red-400' :
+                              'bg-gray-500/20 text-gray-400'
                             }`}>
                             {listing.status.toLowerCase()}
                           </span>
@@ -1570,8 +1573,8 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                       key={filter.key}
                       onClick={() => setReviewFilter(filter.key as any)}
                       className={`px-3 py-1 rounded-lg text-sm transition-all ${reviewFilter === filter.key
-                          ? 'bg-white/20 text-white'
-                          : 'bg-white/10 text-white/70 hover:bg-white/15'
+                        ? 'bg-white/20 text-white'
+                        : 'bg-white/10 text-white/70 hover:bg-white/15'
                         }`}
                     >
                       {filter.label}
@@ -1637,9 +1640,9 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                       <p className="text-white/80 text-sm">{event.description}</p>
                       <div className="mt-2">
                         <span className={`px-2 py-1 rounded-full text-xs ${event.type === 'SALE' ? 'bg-green-500/20 text-green-400' :
-                            event.type === 'LISTING' ? 'bg-blue-500/20 text-blue-400' :
-                              event.type === 'ENDORSEMENT' ? 'bg-purple-500/20 text-purple-400' :
-                                'bg-gray-500/20 text-gray-400'
+                          event.type === 'LISTING' ? 'bg-blue-500/20 text-blue-400' :
+                            event.type === 'ENDORSEMENT' ? 'bg-purple-500/20 text-purple-400' :
+                              'bg-gray-500/20 text-gray-400'
                           }`}>
                           {event.type.toLowerCase()}
                         </span>
