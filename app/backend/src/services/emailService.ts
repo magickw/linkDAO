@@ -784,8 +784,8 @@ export class EmailService {
     });
 
     const totalFees = (parseFloat(data.fees?.processing || '0') +
-                       parseFloat(data.fees?.platform || '0') +
-                       parseFloat(data.fees?.gas || '0')).toFixed(2);
+      parseFloat(data.fees?.platform || '0') +
+      parseFloat(data.fees?.gas || '0')).toFixed(2);
     const totalFeesNum = parseFloat(totalFees);
 
     return `
@@ -1104,12 +1104,617 @@ export class EmailService {
     `;
   }
 
+  // ============ Security Notification Methods ============
+
+  /**
+   * Send new device login notification
+   */
+  async sendNewDeviceLoginEmail(
+    email: string,
+    data: {
+      userName?: string;
+      device: string;
+      browser?: string;
+      os?: string;
+      location?: string;
+      ipAddress?: string;
+      timestamp: Date;
+      sessionId: string;
+    }
+  ): Promise<boolean> {
+    const html = this.getNewDeviceLoginTemplate(data);
+    return this.sendEmail({
+      to: email,
+      subject: '🔐 New Device Login Detected',
+      html,
+    });
+  }
+
+  /**
+   * Send 2FA status change notification
+   */
+  async send2FAChangeEmail(
+    email: string,
+    data: {
+      userName?: string;
+      action: 'enabled' | 'disabled';
+      timestamp: Date;
+      ipAddress?: string;
+    }
+  ): Promise<boolean> {
+    const html = this.get2FAChangeTemplate(data);
+    const subject = data.action === 'enabled'
+      ? '✅ Two-Factor Authentication Enabled'
+      : '⚠️ Two-Factor Authentication Disabled';
+    return this.sendEmail({
+      to: email,
+      subject,
+      html,
+    });
+  }
+
+  /**
+   * Send suspicious activity alert
+   */
+  async sendSuspiciousActivityEmail(
+    email: string,
+    data: {
+      userName?: string;
+      activityType: string;
+      description: string;
+      timestamp: Date;
+      ipAddress?: string;
+      location?: string;
+    }
+  ): Promise<boolean> {
+    const html = this.getSuspiciousActivityTemplate(data);
+    return this.sendEmail({
+      to: email,
+      subject: '⚠️ Suspicious Activity Detected',
+      html,
+    });
+  }
+
+  /**
+   * Send large transaction alert
+   */
+  async sendLargeTransactionEmail(
+    email: string,
+    data: {
+      userName?: string;
+      amount: string;
+      currency: string;
+      recipient?: string;
+      timestamp: Date;
+      transactionHash?: string;
+    }
+  ): Promise<boolean> {
+    const html = this.getLargeTransactionTemplate(data);
+    return this.sendEmail({
+      to: email,
+      subject: '💰 Large Transaction Alert',
+      html,
+    });
+  }
+
+  /**
+   * Send security settings change notification
+   */
+  async sendSecurityChangeEmail(
+    email: string,
+    data: {
+      userName?: string;
+      changeType: string;
+      description: string;
+      timestamp: Date;
+      ipAddress?: string;
+    }
+  ): Promise<boolean> {
+    const html = this.getSecurityChangeTemplate(data);
+    return this.sendEmail({
+      to: email,
+      subject: '🔒 Security Settings Changed',
+      html,
+    });
+  }
+
+  /**
+   * Send all sessions terminated notification
+   */
+  async sendSessionsTerminatedEmail(
+    email: string,
+    data: {
+      userName?: string;
+      timestamp: Date;
+      ipAddress?: string;
+      device?: string;
+    }
+  ): Promise<boolean> {
+    const html = this.getSessionsTerminatedTemplate(data);
+    return this.sendEmail({
+      to: email,
+      subject: '🚪 All Sessions Terminated',
+      html,
+    });
+  }
+
+  // Security Email Templates
+
+  private getNewDeviceLoginTemplate(data: {
+    userName?: string;
+    device: string;
+    browser?: string;
+    os?: string;
+    location?: string;
+    ipAddress?: string;
+    timestamp: Date;
+    sessionId: string;
+  }): string {
+    const formattedDate = data.timestamp.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>New Device Login</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #f4f5f7;">
+        <div style="max-width: 600px; margin: 40px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 40px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+            <div style="background: white; border-radius: 50%; width: 60px; height: 60px; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;">
+              <span style="font-size: 32px;">🔐</span>
+            </div>
+            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">New Device Login</h1>
+          </div>
+
+          <div style="padding: 40px 30px;">
+            <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">
+              ${data.userName ? `Hi ${data.userName},` : 'Hello,'}
+            </p>
+
+            <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">
+              We detected a login to your LinkDAO account from a new device. If this was you, you can safely ignore this email.
+            </p>
+
+            <div style="background: #fef2f2; padding: 20px; border-radius: 8px; border-left: 4px solid #ef4444; margin: 24px 0;">
+              <h3 style="color: #991b1b; font-size: 16px; margin: 0 0 12px 0;">Login Details:</h3>
+              <div style="color: #7f1d1d; font-size: 14px; line-height: 1.8;">
+                <p style="margin: 4px 0;"><strong>Device:</strong> ${data.device}</p>
+                ${data.browser ? `<p style="margin: 4px 0;"><strong>Browser:</strong> ${data.browser}</p>` : ''}
+                ${data.os ? `<p style="margin: 4px 0;"><strong>OS:</strong> ${data.os}</p>` : ''}
+                ${data.location ? `<p style="margin: 4px 0;"><strong>Location:</strong> ${data.location}</p>` : ''}
+                ${data.ipAddress ? `<p style="margin: 4px 0;"><strong>IP Address:</strong> ${data.ipAddress}</p>` : ''}
+                <p style="margin: 4px 0;"><strong>Time:</strong> ${formattedDate}</p>
+              </div>
+            </div>
+
+            <div style="background: #fff7ed; padding: 16px; border-radius: 6px; margin: 24px 0;">
+              <p style="color: #9a3412; font-size: 14px; margin: 0;">
+                ⚠️ <strong>Wasn't you?</strong> Secure your account immediately by changing your password and reviewing your security settings.
+              </p>
+            </div>
+
+            <div style="margin-top: 30px;">
+              <a href="${process.env.FRONTEND_URL || 'https://linkdao.io'}/settings?tab=security" style="display: inline-block; background: #ef4444; color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-right: 12px;">
+                Secure My Account
+              </a>
+              <a href="${process.env.FRONTEND_URL || 'https://linkdao.io'}/settings?tab=security&action=terminate&session=${data.sessionId}" style="display: inline-block; background: #6b7280; color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px;">
+                This Wasn't Me
+              </a>
+            </div>
+          </div>
+
+          <div style="background: #f8f9fa; padding: 30px 20px; text-align: center; border-radius: 0 0 8px 8px; margin-top: 30px;">
+            <p style="color: #6c757d; font-size: 14px; margin: 0 0 10px 0;">LinkDAO Security Team</p>
+            <p style="color: #6c757d; font-size: 12px; margin: 0;">
+              This is an automated security notification. Please do not reply to this email.
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  private get2FAChangeTemplate(data: {
+    userName?: string;
+    action: 'enabled' | 'disabled';
+    timestamp: Date;
+    ipAddress?: string;
+  }): string {
+    const formattedDate = data.timestamp.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const isEnabled = data.action === 'enabled';
+    const bgColor = isEnabled ? '#10b981' : '#f59e0b';
+    const textColor = isEnabled ? '#065f46' : '#92400e';
+    const emoji = isEnabled ? '✅' : '⚠️';
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>2FA ${isEnabled ? 'Enabled' : 'Disabled'}</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #f4f5f7;">
+        <div style="max-width: 600px; margin: 40px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <div style="background: linear-gradient(135deg, ${bgColor} 0%, ${bgColor}dd 100%); padding: 40px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+            <span style="font-size: 48px;">${emoji}</span>
+            <h1 style="color: white; margin: 16px 0 0 0; font-size: 28px; font-weight: 600;">
+              Two-Factor Authentication ${isEnabled ? 'Enabled' : 'Disabled'}
+            </h1>
+          </div>
+
+          <div style="padding: 40px 30px;">
+            <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">
+              ${data.userName ? `Hi ${data.userName},` : 'Hello,'}
+            </p>
+
+            <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">
+              Two-factor authentication has been <strong>${data.action}</strong> on your LinkDAO account.
+            </p>
+
+            <div style="background: ${isEnabled ? '#f0fdf4' : '#fef3c7'}; padding: 20px; border-radius: 8px; border-left: 4px solid ${bgColor}; margin: 24px 0;">
+              <p style="color: ${textColor}; font-size: 14px; line-height: 1.8; margin: 0;">
+                <strong>Time:</strong> ${formattedDate}<br>
+                ${data.ipAddress ? `<strong>IP Address:</strong> ${data.ipAddress}` : ''}
+              </p>
+            </div>
+
+            ${isEnabled ? `
+              <div style="background: #eff6ff; padding: 16px; border-radius: 6px; margin: 24px 0;">
+                <p style="color: #1e40af; font-size: 14px; margin: 0;">
+                  💡 <strong>Tip:</strong> Save your backup codes in a secure location. You'll need them if you lose access to your authenticator app.
+                </p>
+              </div>
+            ` : `
+              <div style="background: #fef2f2; padding: 16px; border-radius: 6px; margin: 24px 0;">
+                <p style="color: #991b1b; font-size: 14px; margin: 0;">
+                  ⚠️ <strong>Security Notice:</strong> Your account is now less secure. We recommend re-enabling 2FA to protect your account.
+                </p>
+              </div>
+            `}
+
+            <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 24px 0 0 0;">
+              If you didn't make this change, please secure your account immediately.
+            </p>
+
+            <a href="${process.env.FRONTEND_URL || 'https://linkdao.io'}/settings?tab=security" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-top: 20px;">
+              Manage Security Settings
+            </a>
+          </div>
+
+          <div style="background: #f8f9fa; padding: 30px 20px; text-align: center; border-radius: 0 0 8px 8px; margin-top: 30px;">
+            <p style="color: #6c757d; font-size: 14px; margin: 0 0 10px 0;">LinkDAO Security Team</p>
+            <p style="color: #6c757d; font-size: 12px; margin: 0;">
+              This is an automated security notification.
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  private getSuspiciousActivityTemplate(data: {
+    userName?: string;
+    activityType: string;
+    description: string;
+    timestamp: Date;
+    ipAddress?: string;
+    location?: string;
+  }): string {
+    const formattedDate = data.timestamp.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Suspicious Activity Alert</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #f4f5f7;">
+        <div style="max-width: 600px; margin: 40px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <div style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); padding: 40px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+            <span style="font-size: 48px;">⚠️</span>
+            <h1 style="color: white; margin: 16px 0 0 0; font-size: 28px; font-weight: 600;">Suspicious Activity Detected</h1>
+          </div>
+
+          <div style="padding: 40px 30px;">
+            <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">
+              ${data.userName ? `Hi ${data.userName},` : 'Hello,'}
+            </p>
+
+            <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">
+              We detected unusual activity on your LinkDAO account that requires your attention.
+            </p>
+
+            <div style="background: #fef2f2; padding: 20px; border-radius: 8px; border-left: 4px solid #dc2626; margin: 24px 0;">
+              <h3 style="color: #991b1b; font-size: 16px; margin: 0 0 12px 0;">Activity Details:</h3>
+              <div style="color: #7f1d1d; font-size: 14px; line-height: 1.8;">
+                <p style="margin: 4px 0;"><strong>Type:</strong> ${data.activityType}</p>
+                <p style="margin: 4px 0;"><strong>Description:</strong> ${data.description}</p>
+                ${data.location ? `<p style="margin: 4px 0;"><strong>Location:</strong> ${data.location}</p>` : ''}
+                ${data.ipAddress ? `<p style="margin: 4px 0;"><strong>IP Address:</strong> ${data.ipAddress}</p>` : ''}
+                <p style="margin: 4px 0;"><strong>Time:</strong> ${formattedDate}</p>
+              </div>
+            </div>
+
+            <div style="background: #fff7ed; padding: 20px; border-radius: 6px; margin: 24px 0;">
+              <h3 style="color: #92400e; font-size: 16px; margin: 0 0 12px 0;">Recommended Actions:</h3>
+              <ul style="color: #92400e; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
+                <li>Review your recent account activity</li>
+                <li>Change your password if you don't recognize this activity</li>
+                <li>Enable two-factor authentication if not already enabled</li>
+                <li>Terminate any suspicious sessions</li>
+              </ul>
+            </div>
+
+            <a href="${process.env.FRONTEND_URL || 'https://linkdao.io'}/settings?tab=security" style="display: inline-block; background: #dc2626; color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-top: 20px;">
+              Secure My Account Now
+            </a>
+          </div>
+
+          <div style="background: #f8f9fa; padding: 30px 20px; text-align: center; border-radius: 0 0 8px 8px; margin-top: 30px;">
+            <p style="color: #6c757d; font-size: 14px; margin: 0 0 10px 0;">LinkDAO Security Team</p>
+            <p style="color: #6c757d; font-size: 12px; margin: 0;">
+              This is a critical security alert. Please take action immediately.
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  private getLargeTransactionTemplate(data: {
+    userName?: string;
+    amount: string;
+    currency: string;
+    recipient?: string;
+    timestamp: Date;
+    transactionHash?: string;
+  }): string {
+    const formattedDate = data.timestamp.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Large Transaction Alert</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #f4f5f7;">
+        <div style="max-width: 600px; margin: 40px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 40px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+            <span style="font-size: 48px;">💰</span>
+            <h1 style="color: white; margin: 16px 0 0 0; font-size: 28px; font-weight: 600;">Large Transaction Alert</h1>
+          </div>
+
+          <div style="padding: 40px 30px;">
+            <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">
+              ${data.userName ? `Hi ${data.userName},` : 'Hello,'}
+            </p>
+
+            <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">
+              A large transaction was processed on your LinkDAO account.
+            </p>
+
+            <div style="background: #fef3c7; padding: 20px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 24px 0;">
+              <h3 style="color: #92400e; font-size: 16px; margin: 0 0 12px 0;">Transaction Details:</h3>
+              <div style="color: #78350f; font-size: 14px; line-height: 1.8;">
+                <p style="margin: 4px 0;"><strong>Amount:</strong> ${data.amount} ${data.currency}</p>
+                ${data.recipient ? `<p style="margin: 4px 0;"><strong>Recipient:</strong> ${data.recipient}</p>` : ''}
+                ${data.transactionHash ? `<p style="margin: 4px 0; word-break: break-all;"><strong>Transaction:</strong> ${data.transactionHash}</p>` : ''}
+                <p style="margin: 4px 0;"><strong>Time:</strong> ${formattedDate}</p>
+              </div>
+            </div>
+
+            <div style="background: #eff6ff; padding: 16px; border-radius: 6px; margin: 24px 0;">
+              <p style="color: #1e40af; font-size: 14px; margin: 0;">
+                💡 If you didn't authorize this transaction, please contact support immediately.
+              </p>
+            </div>
+
+            <a href="${process.env.FRONTEND_URL || 'https://linkdao.io'}/settings?tab=security" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-top: 20px;">
+              View Account Activity
+            </a>
+          </div>
+
+          <div style="background: #f8f9fa; padding: 30px 20px; text-align: center; border-radius: 0 0 8px 8px; margin-top: 30px;">
+            <p style="color: #6c757d; font-size: 14px; margin: 0 0 10px 0;">LinkDAO Security Team</p>
+            <p style="color: #6c757d; font-size: 12px; margin: 0;">
+              This is an automated transaction alert.
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  private getSecurityChangeTemplate(data: {
+    userName?: string;
+    changeType: string;
+    description: string;
+    timestamp: Date;
+    ipAddress?: string;
+  }): string {
+    const formattedDate = data.timestamp.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Security Settings Changed</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #f4f5f7;">
+        <div style="max-width: 600px; margin: 40px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+            <span style="font-size: 48px;">🔒</span>
+            <h1 style="color: white; margin: 16px 0 0 0; font-size: 28px; font-weight: 600;">Security Settings Changed</h1>
+          </div>
+
+          <div style="padding: 40px 30px;">
+            <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">
+              ${data.userName ? `Hi ${data.userName},` : 'Hello,'}
+            </p>
+
+            <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">
+              Your security settings have been updated.
+            </p>
+
+            <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea; margin: 24px 0;">
+              <h3 style="color: #1f2937; font-size: 16px; margin: 0 0 12px 0;">Change Details:</h3>
+              <div style="color: #4b5563; font-size: 14px; line-height: 1.8;">
+                <p style="margin: 4px 0;"><strong>Type:</strong> ${data.changeType}</p>
+                <p style="margin: 4px 0;"><strong>Description:</strong> ${data.description}</p>
+                ${data.ipAddress ? `<p style="margin: 4px 0;"><strong>IP Address:</strong> ${data.ipAddress}</p>` : ''}
+                <p style="margin: 4px 0;"><strong>Time:</strong> ${formattedDate}</p>
+              </div>
+            </div>
+
+            <div style="background: #fef2f2; padding: 16px; border-radius: 6px; margin: 24px 0;">
+              <p style="color: #991b1b; font-size: 14px; margin: 0;">
+                ⚠️ If you didn't make this change, please secure your account immediately.
+              </p>
+            </div>
+
+            <a href="${process.env.FRONTEND_URL || 'https://linkdao.io'}/settings?tab=security" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-top: 20px;">
+              Review Security Settings
+            </a>
+          </div>
+
+          <div style="background: #f8f9fa; padding: 30px 20px; text-align: center; border-radius: 0 0 8px 8px; margin-top: 30px;">
+            <p style="color: #6c757d; font-size: 14px; margin: 0 0 10px 0;">LinkDAO Security Team</p>
+            <p style="color: #6c757d; font-size: 12px; margin: 0;">
+              This is an automated security notification.
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  private getSessionsTerminatedTemplate(data: {
+    userName?: string;
+    timestamp: Date;
+    ipAddress?: string;
+    device?: string;
+  }): string {
+    const formattedDate = data.timestamp.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>All Sessions Terminated</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #f4f5f7;">
+        <div style="max-width: 600px; margin: 40px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 40px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+            <span style="font-size: 48px;">🚪</span>
+            <h1 style="color: white; margin: 16px 0 0 0; font-size: 28px; font-weight: 600;">All Sessions Terminated</h1>
+          </div>
+
+          <div style="padding: 40px 30px;">
+            <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">
+              ${data.userName ? `Hi ${data.userName},` : 'Hello,'}
+            </p>
+
+            <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">
+              All active sessions on your LinkDAO account have been terminated.
+            </p>
+
+            <div style="background: #fef3c7; padding: 20px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 24px 0;">
+              <h3 style="color: #92400e; font-size: 16px; margin: 0 0 12px 0;">Action Details:</h3>
+              <div style="color: #78350f; font-size: 14px; line-height: 1.8;">
+                ${data.device ? `<p style="margin: 4px 0;"><strong>Initiated From:</strong> ${data.device}</p>` : ''}
+                ${data.ipAddress ? `<p style="margin: 4px 0;"><strong>IP Address:</strong> ${data.ipAddress}</p>` : ''}
+                <p style="margin: 4px 0;"><strong>Time:</strong> ${formattedDate}</p>
+              </div>
+            </div>
+
+            <div style="background: #eff6ff; padding: 16px; border-radius: 6px; margin: 24px 0;">
+              <p style="color: #1e40af; font-size: 14px; margin: 0;">
+                💡 You'll need to log in again on all devices. This is a security measure to protect your account.
+              </p>
+            </div>
+
+            <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 24px 0 0 0;">
+              If you didn't initiate this action, please contact support immediately.
+            </p>
+
+            <a href="${process.env.FRONTEND_URL || 'https://linkdao.io'}/login" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-top: 20px;">
+              Log In
+            </a>
+          </div>
+
+          <div style="background: #f8f9fa; padding: 30px 20px; text-align: center; border-radius: 0 0 8px 8px; margin-top: 30px;">
+            <p style="color: #6c757d; font-size: 14px; margin: 0 0 10px 0;">LinkDAO Security Team</p>
+            <p style="color: #6c757d; font-size: 12px; margin: 0;">
+              This is an automated security notification.
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
   /**
    * Check if email service is enabled
    */
   isEnabled(): boolean {
     return this.enabled;
   }
+
 }
 
 export const emailService = EmailService.getInstance();
