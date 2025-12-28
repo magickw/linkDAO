@@ -186,7 +186,10 @@ export function EnhancedSecuritySettings() {
                                 <div className="text-sm font-medium text-gray-900 dark:text-white">Authenticator App (TOTP)</div>
                                 <div className="text-xs text-gray-600 dark:text-gray-400">Use an authenticator app for additional security</div>
                             </div>
-                            <button className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors">
+                            <button
+                                onClick={handleSetup2FA}
+                                className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors"
+                            >
                                 Enable
                             </button>
                         </div>
@@ -195,7 +198,10 @@ export function EnhancedSecuritySettings() {
                                 <div className="text-sm font-medium text-gray-900 dark:text-white">Email Verification</div>
                                 <div className="text-xs text-gray-600 dark:text-gray-400">Receive verification codes via email</div>
                             </div>
-                            <button className="px-4 py-2 text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 bg-primary-50 hover:bg-primary-100 dark:bg-primary-900/50 rounded-lg transition-colors">
+                            <button
+                                onClick={() => alert('Email verification setup coming soon! This will allow you to receive verification codes via email for additional security.')}
+                                className="px-4 py-2 text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 bg-primary-50 hover:bg-primary-100 dark:bg-primary-900/50 rounded-lg transition-colors"
+                            >
                                 Configure
                             </button>
                         </div>
@@ -290,6 +296,56 @@ export function EnhancedSecuritySettings() {
                     </div>
                 </div>
 
+                {/* Email Notification Preferences */}
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Email Notification Preferences</h3>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                                Email Frequency
+                            </label>
+                            <select className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+                                <option value="immediate">Immediate - Receive emails as events occur</option>
+                                <option value="hourly">Hourly Digest - Batched summary every hour</option>
+                                <option value="daily">Daily Digest - One email per day</option>
+                                <option value="weekly">Weekly Digest - One email per week</option>
+                                <option value="off">Off - No emails (except critical alerts)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                                Digest Time (for daily/weekly)
+                            </label>
+                            <input
+                                type="time"
+                                defaultValue="09:00"
+                                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                                Large Transaction Threshold
+                            </label>
+                            <div className="flex items-center gap-2">
+                                <span className="text-gray-600 dark:text-gray-400">$</span>
+                                <input
+                                    type="number"
+                                    defaultValue="1000"
+                                    min="0"
+                                    step="100"
+                                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                />
+                                <span className="text-sm text-gray-600 dark:text-gray-400">USD</span>
+                            </div>
+                        </div>
+                        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                            <p className="text-xs text-blue-800 dark:text-blue-200">
+                                💡 Critical security alerts (new device, suspicious activity) will always be sent immediately regardless of your email frequency setting.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Trusted Devices */}
                 <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
                     <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Trusted Devices</h3>
@@ -380,6 +436,97 @@ export function EnhancedSecuritySettings() {
                     </div>
                 </div>
             </div>
+
+            {/* 2FA Setup Modal */}
+            {show2FASetup && (
+                <div className="fixed inset-0 z-50 overflow-y-auto">
+                    <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setShow2FASetup(false)}></div>
+
+                        <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+                        <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                            <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                                <div className="sm:flex sm:items-start">
+                                    <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
+                                        <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4">
+                                            Set Up Two-Factor Authentication
+                                        </h3>
+
+                                        <div className="mt-4 space-y-4">
+                                            {/* QR Code */}
+                                            {qrCode && (
+                                                <div className="flex flex-col items-center">
+                                                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                                                        Scan this QR code with your authenticator app
+                                                    </p>
+                                                    <div className="bg-white p-4 rounded-lg">
+                                                        <img src={qrCode} alt="2FA QR Code" className="w-48 h-48" />
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Backup Codes */}
+                                            {backupCodes.length > 0 && (
+                                                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                                                    <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-2">
+                                                        Backup Codes
+                                                    </h4>
+                                                    <p className="text-xs text-yellow-700 dark:text-yellow-300 mb-2">
+                                                        Save these codes in a safe place. You can use them to access your account if you lose your device.
+                                                    </p>
+                                                    <div className="grid grid-cols-2 gap-2 font-mono text-xs">
+                                                        {backupCodes.map((code, index) => (
+                                                            <div key={index} className="bg-white dark:bg-gray-700 p-2 rounded">
+                                                                {code}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Verification Code Input */}
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                    Enter verification code from your app
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={verificationCode}
+                                                    onChange={(e) => setVerificationCode(e.target.value)}
+                                                    placeholder="000000"
+                                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-center text-lg tracking-widest"
+                                                    maxLength={6}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                                <button
+                                    type="button"
+                                    onClick={handleVerify2FA}
+                                    disabled={verificationCode.length !== 6}
+                                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary-600 text-base font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    Verify and Enable
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShow2FASetup(false);
+                                        setVerificationCode('');
+                                    }}
+                                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:w-auto sm:text-sm"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

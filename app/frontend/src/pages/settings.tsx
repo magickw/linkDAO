@@ -74,8 +74,7 @@ export default function Settings() {
     { id: 'profile', name: 'Profile', icon: '👤' },
     { id: 'wallet', name: 'Wallet', icon: '💰' },
     { id: 'preferences', name: 'Preferences', icon: '⚙️' },
-    { id: 'security', name: 'Security', icon: '🔒' },
-    { id: 'email', name: 'Email Notifications', icon: '📧' },
+    { id: 'security', name: 'Security & Notifications', icon: '🔒' },
   ];
 
   if (!isConnected) {
@@ -380,6 +379,20 @@ export default function Settings() {
                           </div>
                           <input type="checkbox" className="rounded" />
                         </div>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <label className="text-sm font-medium text-gray-900 dark:text-white">Hide Transaction History</label>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Make your transaction history private</p>
+                          </div>
+                          <input type="checkbox" className="rounded" />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <label className="text-sm font-medium text-gray-900 dark:text-white">Anonymous Mode</label>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Hide your wallet address from public view</p>
+                          </div>
+                          <input type="checkbox" className="rounded" />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -390,74 +403,7 @@ export default function Settings() {
                 <EnhancedSecuritySettings />
               )}
 
-              {activeTab === 'email' && (
-                <div className="p-6">
-                  <EmailPreferences />
-                </div>
-              )}
-              <div className="p-6">
-                <div className="flex items-center mb-6">
-                  <span className="text-2xl mr-3">🔒</span>
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Security</h2>
-                </div>
 
-                <div className="space-y-6">
-                  <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-                    <div className="flex items-start">
-                      <div className="flex-shrink-0">
-                        <span className="text-yellow-500 text-xl">⚠️</span>
-                      </div>
-                      <div className="ml-3">
-                        <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                          Security Notice
-                        </h3>
-                        <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-300">
-                          Your security is managed through your connected wallet. Never share your private keys or seed phrase.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Connection Status</h3>
-                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900 dark:text-white">Wallet Connection</div>
-                          <div className="text-xs text-gray-600 dark:text-gray-400">Connected via RainbowKit</div>
-                        </div>
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                          Active
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Security Actions</h3>
-                    <div className="space-y-3">
-                      <button className="w-full text-left p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                        <div className="flex items-center">
-                          <span className="text-lg mr-3">🔄</span>
-                          <div>
-                            <div className="text-sm font-medium text-gray-900 dark:text-white">Disconnect Wallet</div>
-                            <div className="text-xs text-gray-600 dark:text-gray-400">Safely disconnect your wallet</div>
-                          </div>
-                        </div>
-                      </button>
-                      <button className="w-full text-left p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                        <div className="flex items-center">
-                          <span className="text-lg mr-3">📋</span>
-                          <div>
-                            <div className="text-sm font-medium text-gray-900 dark:text-white">View Transactions</div>
-                            <div className="text-xs text-gray-600 dark:text-gray-400">Review your transaction history</div>
-                          </div>
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
