@@ -151,10 +151,10 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
         location: profile.location || '',
         websiteUrl: profile.websiteUrl || '',
 
-        // Images
-        profileImageCdn: profile.profileImageCdn || profile.profilePicture || '',
+        // Images - use standardized field names
+        profileImageCdn: profile.profileImageCdn || '',
         profileImageIpfs: profile.profileImageIpfs || '',
-        coverImageCdn: profile.coverImageCdn || profile.coverImage || '',
+        coverImageCdn: profile.coverImageCdn || '',
         coverImageIpfs: profile.coverImageIpfs || '',
 
         // Business Information
@@ -217,12 +217,8 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
         registeredAddressPostalCode: formData.registeredAddressPostalCode,
         registeredAddressCountry: formData.registeredAddressCountry,
 
-        // Transform socialLinks to individual fields
-        twitterHandle: formData.socialLinks.twitter,
-        linkedinHandle: formData.socialLinks.linkedin,
-        facebookHandle: formData.socialLinks.facebook,
-        discordHandle: formData.socialLinks.discord,
-        telegramHandle: formData.socialLinks.telegram,
+        // Social Links - send as object to match backend schema
+        socialLinks: formData.socialLinks,
 
         // ENS
         ensHandle: formData.ensHandle,
@@ -342,7 +338,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
   if (profileError && !(profileError instanceof Error && profileError.message.includes('not found'))) {
     const errorMessage = profileError instanceof Error ? profileError.message : String(profileError);
     const isServerError = errorMessage.includes('500') || errorMessage.includes('Server error');
-    
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
         <GlassPanel className="max-w-md w-full text-center">
@@ -356,7 +352,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
               {isServerError ? 'Server Error' : 'Error Loading Profile'}
             </h1>
             <p className="text-gray-300 mb-4">
-              {isServerError 
+              {isServerError
                 ? 'Our servers are experiencing issues. Please try again in a few minutes.'
                 : 'There was an error loading your seller profile. Please try again.'
               }
@@ -373,15 +369,15 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
             </div>
           </div>
           <div className="space-y-3">
-            <Button 
-              onClick={() => sellerData.refetch()} 
+            <Button
+              onClick={() => sellerData.refetch()}
               variant="primary"
               className="w-full"
             >
               Try Again
             </Button>
-            <Button 
-              onClick={() => router.push('/marketplace')} 
+            <Button
+              onClick={() => router.push('/marketplace')}
               variant="secondary"
               className="w-full"
             >
@@ -418,15 +414,15 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
             </div>
           </div>
           <div className="space-y-3">
-            <Button 
-              onClick={() => router.push('/marketplace/seller/onboarding')} 
+            <Button
+              onClick={() => router.push('/marketplace/seller/onboarding')}
               variant="primary"
               className="w-full"
             >
               Complete Seller Setup
             </Button>
-            <Button 
-              onClick={() => router.push('/marketplace')} 
+            <Button
+              onClick={() => router.push('/marketplace')}
               variant="secondary"
               className="w-full"
             >
@@ -490,9 +486,9 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
             <div className="flex items-center mb-4 md:mb-0">
-              {profile?.coverImage ? (
+              {profile?.coverImageCdn ? (
                 <img
-                  src={profile.coverImage}
+                  src={profile.coverImageCdn}
                   alt={profile.storeName || 'Seller'}
                   className="w-16 h-16 rounded-full object-cover border-2 border-purple-500 mr-4"
                 />
@@ -724,13 +720,12 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                               <h5 className="text-white font-medium">{listing.title}</h5>
                               <div className="flex items-center gap-3 mt-1">
                                 <span className="text-green-400 text-sm">
-                                  {typeof listing.price === 'string' ? listing.price : listing.price.toString()} {listing.currency || 'ETH'}
+                                  {listing.price?.toFixed(4) || '0'} {listing.currency || 'ETH'}
                                 </span>
-                                <span className={`px-2 py-0.5 rounded text-xs ${
-                                  listing.status === 'active' ? 'bg-green-600 text-white' :
+                                <span className={`px-2 py-0.5 rounded text-xs ${listing.status === 'active' ? 'bg-green-600 text-white' :
                                   listing.status === 'sold' ? 'bg-blue-600 text-white' :
-                                  'bg-gray-600 text-white'
-                                }`}>
+                                    'bg-gray-600 text-white'
+                                  }`}>
                                   {listing.status?.toUpperCase()}
                                 </span>
                               </div>

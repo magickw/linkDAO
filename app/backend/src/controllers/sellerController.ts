@@ -753,6 +753,15 @@ export class SellerController {
       // Get seller profile information
       const sellerProfile = await this.sellerService.getSellerProfile(user.walletAddress);
 
+      // Check if profile exists
+      if (!sellerProfile) {
+        return res.status(404).json({
+          success: false,
+          error: 'Seller profile not found. Please complete seller onboarding first.',
+          redirectTo: '/marketplace/seller/onboarding'
+        });
+      }
+
       // Get basic stats
       const stats = await this.getSellerStatsInternal(user.walletAddress);
 
@@ -776,7 +785,8 @@ export class SellerController {
         stats,
         recentListings: recentListings.map(listing => ({
           ...listing,
-          priceCrypto: parseFloat(listing.priceCrypto)
+          price: parseFloat(listing.priceCrypto || '0'),
+          priceCrypto: parseFloat(listing.priceCrypto || '0')
         }))
       };
 
@@ -906,8 +916,8 @@ export class SellerController {
         data: {
           listings: listings.map(listing => ({
             ...listing,
-            priceCrypto: parseFloat(listing.priceCrypto),
-            price: parseFloat(listing.priceCrypto) // Ensure price field is available for frontend
+            price: parseFloat(listing.priceCrypto || '0'),
+            priceCrypto: parseFloat(listing.priceCrypto || '0')
           })),
           pagination: {
             page: parseInt(page as string),

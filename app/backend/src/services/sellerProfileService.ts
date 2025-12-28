@@ -12,20 +12,14 @@ import {
 import { encrypt } from '../utils/encryption';
 
 export class SellerProfileService {
-  /**
-   * Get seller profile by wallet address
-   * Returns null if profile doesn't exist (no 404 error)
-   */
   async getProfile(walletAddress: string): Promise<SellerProfile | null> {
     try {
-      // Validate wallet address format
+      // Validate and normalize wallet address
       if (!this.isValidWalletAddress(walletAddress)) {
         throw new Error('Invalid wallet address format');
       }
 
-      // Normalize wallet address to handle both formats with and without 0x prefix
-      const normalizedAddress = walletAddress.toLowerCase();
-      const cleanAddress = normalizedAddress.startsWith('0x') ? normalizedAddress : '0x' + normalizedAddress;
+      const cleanAddress = this.normalizeWalletAddress(walletAddress);
 
       const [seller] = await db
         .select()
@@ -78,6 +72,8 @@ export class SellerProfileService {
         throw new Error('Invalid wallet address format');
       }
 
+      const cleanAddress = this.normalizeWalletAddress(profileData.walletAddress);
+
       // Validate ENS handle if provided
       if (profileData.ensHandle && !this.isValidEnsHandle(profileData.ensHandle)) {
         throw new Error('Invalid ENS handle format');
@@ -97,7 +93,7 @@ export class SellerProfileService {
       const result = await db
         .insert(sellers)
         .values({
-          walletAddress: profileData.walletAddress,
+          walletAddress: cleanAddress,
           storeName: profileData.storeName,
           bio: profileData.bio,
           description: profileData.description,
@@ -136,12 +132,9 @@ export class SellerProfileService {
     }
   }
 
-  /**
-   * Update existing seller profile
-   */
   async updateProfile(walletAddress: string, updates: UpdateSellerProfileRequest): Promise<SellerProfile> {
     try {
-      // Validate wallet address format
+      // Validate and normalize wallet address
       if (!this.isValidWalletAddress(walletAddress)) {
         throw new Error('Invalid wallet address format');
       }
@@ -151,9 +144,7 @@ export class SellerProfileService {
         throw new Error('Invalid ENS handle format');
       }
 
-      // Normalize wallet address to handle both formats with and without 0x prefix
-      const normalizedAddress = walletAddress.toLowerCase();
-      const cleanAddress = normalizedAddress.startsWith('0x') ? normalizedAddress : '0x' + normalizedAddress;
+      const cleanAddress = this.normalizeWalletAddress(walletAddress);
 
       // Check if profile exists
       const existingProfile = await this.getProfile(walletAddress);
@@ -283,6 +274,14 @@ export class SellerProfileService {
     'payout_setup',
     'first_listing'
   ] as const;
+
+  /**
+   * Normalize wallet address to lowercase with 0x prefix
+   */
+  private normalizeWalletAddress(address: string): string {
+    const normalized = address.toLowerCase();
+    return normalized.startsWith('0x') ? normalized : '0x' + normalized;
+  }
 
   /**
    * Update onboarding step completion
