@@ -458,20 +458,6 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
             {/* Enhanced Communities Section Card */}
             <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
               <div className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  {/* User Preferences Controls */}
-                  <div className="flex space-x-1">
-                    <button
-                      onClick={() => updateUserPreferences({ sidebarCollapsed: !userPreferences.sidebarCollapsed })}
-                      className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-                      title={userPreferences.sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={userPreferences.sidebarCollapsed ? "M4 6h16M4 12h16m-7 6h7" : "M4 6h16M4 12h16M4 18h16"} />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
 
                 <CommunityIconList
                   communities={enhancedCommunities}
@@ -533,21 +519,8 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
             </div>
           </>
         ) : (
-          /* Collapsed Navigation */
+          /* Collapsed Navigation */}
           <>
-            {/* Sidebar Toggle Button */}
-            <div className="flex justify-end p-2">
-              <button
-                onClick={() => updateUserPreferences({ sidebarCollapsed: !userPreferences.sidebarCollapsed })}
-                className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-                title={userPreferences.sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={userPreferences.sidebarCollapsed ? "M4 6h16M4 12h16m-7 6h7" : "M4 6h16M4 12h16M4 18h16"} />
-                </svg>
-              </button>
-            </div>
-            {/* Collapsed User Profile Card */}
             <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
               <div className="p-3 flex justify-center">
                 {address ? (
