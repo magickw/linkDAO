@@ -241,10 +241,8 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
       )}
 
       {/* All cards at the same level with consistent spacing - no padding on container */}
-      <div className={!navigationState.sidebarCollapsed ? 'space-y-4' : 'space-y-2'}>
-        {!navigationState.sidebarCollapsed ? (
-          <>
-            {/* Enhanced User Profile Card */}
+      <div className="space-y-4">
+        {/* Enhanced User Profile Card */}
             <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
               <div className="p-4">
                 {enhancedUser ? (
@@ -513,11 +511,10 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                     </div>
                   </div>
                 )}
+                )}
 
                 {/* Create Post action removed per user request */}
               </div>
             </div>
-          </>
-        ) : null}
       </div>
 

@@ -1,5 +1,5 @@
 import { pgTable, uuid, varchar, text, timestamp, boolean, jsonb, index, foreignKey } from "drizzle-orm/pg-core";
-import { users } from "./schema";
+import { users } from "../schema";
 
 // Two-Factor Authentication
 export const twoFactorAuth = pgTable("two_factor_auth", {

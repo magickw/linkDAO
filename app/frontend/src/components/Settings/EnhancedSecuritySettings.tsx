@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { securityService } from '@/services/securityService';
 import type { Session, ActivityLogEntry, TrustedDevice, SecurityAlert, SecurityAlertsConfig, PrivacySettings } from '@/services/securityService';
 
-import type { Session, ActivityLogEntry, TrustedDevice, SecurityAlert, SecurityAlertsConfig, PrivacySettings } from '@/services/securityService';
-
 export function EnhancedSecuritySettings() {
     // State management
     const [loading, setLoading] = useState(true);
