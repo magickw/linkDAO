@@ -5,7 +5,7 @@
 
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
-import { sellers, orders, products, reviews, disputes, chatMessages, conversations } from '../db/schema';
+import { sellers, orders, products, reviews, disputes, chatMessages, conversations, users } from '../db/schema';
 import { eq, sql, and, gte, desc, count, sum, avg } from 'drizzle-orm';
 import { Redis } from 'ioredis';
 import { SellerWebSocketService, getSellerWebSocketService } from './sellerWebSocketService';
@@ -280,9 +280,9 @@ class AutomatedTierUpgradeService {
 
       const sellerData = seller[0];
       const currentTierLevel = this.getTierLevel(sellerData.tier || 'bronze');
-      
+
       // Calculate seller metrics
-      const metrics = await this.calculateSellerMetrics(String(sellerData.id));
+      const metrics = await this.calculateSellerMetrics(walletAddress);
       
       // Find the highest tier the seller qualifies for (check ALL tiers, not just higher ones)
       let qualifiedTier = this.tierCriteria[0]; // Default to bronze
@@ -342,8 +342,21 @@ class AutomatedTierUpgradeService {
   /**
    * Calculate seller performance metrics
    */
-  private async calculateSellerMetrics(sellerId: string): Promise<any> {
+  private async calculateSellerMetrics(walletAddress: string): Promise<any> {
     try {
+      // Get the user ID associated with this wallet address
+      const userData = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.walletAddress, walletAddress))
+        .limit(1);
+
+      if (!userData.length) {
+        throw new Error(`User not found for wallet address: ${walletAddress}`);
+      }
+
+      const userId = userData[0].id;
+
       // Get sales volume and order metrics
       const salesData = await db
         .select({
@@ -352,7 +365,7 @@ class AutomatedTierUpgradeService {
           completedOrders: count(sql`CASE WHEN ${orders.status} = 'completed' THEN 1 END`),
         })
         .from(orders)
-        .where(eq(orders.sellerId, sellerId));
+        .where(eq(orders.sellerId, userId));
 
       // Get review metrics from actual reviews table
       const reviewData = await db
@@ -361,7 +374,7 @@ class AutomatedTierUpgradeService {
           averageRating: sql<number>`COALESCE(AVG(${reviews.rating}), 0)`,
         })
         .from(reviews)
-        .where(eq(reviews.sellerId, parseInt(sellerId)));
+        .where(eq(reviews.revieweeId, userId));
 
       // Get dispute metrics from actual disputes table
       const disputeData = await db
@@ -370,7 +383,7 @@ class AutomatedTierUpgradeService {
         })
         .from(disputes)
         .innerJoin(orders, eq(disputes.escrowId, orders.id))
-        .where(eq(orders.sellerId, parseInt(sellerId)));
+        .where(eq(orders.sellerId, userId));
 
       // Get seller's response time from chat messages
       // Calculate average time between buyer message and seller response
@@ -382,11 +395,7 @@ class AutomatedTierUpgradeService {
                 SELECT MIN(cm2.sent_at)
                 FROM ${chatMessages} cm2
                 WHERE cm2.conversation_id = ${chatMessages.conversationId}
-                  AND cm2.sender_address IN (
-                    SELECT seller.wallet_address
-                    FROM ${sellers} seller
-                    WHERE seller.id = ${parseInt(sellerId)}
-                  )
+                  AND cm2.sender_address = ${walletAddress}
                   AND cm2.sent_at > ${chatMessages.sentAt}
               )) / 3600
             ),
@@ -398,12 +407,8 @@ class AutomatedTierUpgradeService {
         .innerJoin(orders, eq(conversations.orderId, orders.id))
         .where(
           and(
-            eq(orders.sellerId, parseInt(sellerId)),
-            sql`${chatMessages.senderAddress} NOT IN (
-              SELECT seller.wallet_address
-              FROM ${sellers} seller
-              WHERE seller.id = ${parseInt(sellerId)}
-            )`
+            eq(orders.sellerId, userId),
+            sql`${chatMessages.senderAddress} != ${walletAddress}`
           )
         );
 
@@ -413,7 +418,7 @@ class AutomatedTierUpgradeService {
           createdAt: sellers.createdAt,
         })
         .from(sellers)
-        .where(eq(sellers.id, parseInt(sellerId)))
+        .where(eq(sellers.walletAddress, walletAddress))
         .limit(1);
 
       const accountAge = sellerInfo.length > 0 
@@ -572,7 +577,7 @@ class AutomatedTierUpgradeService {
 
       // Clear tier cache
       await this.redis.del(`tier:evaluation:${walletAddress}`);
-      await this.redis.del(`seller:tier:${sellerId}`);
+      await this.redis.del(`seller:tier:${walletAddress}`);
 
       safeLogger.info(`Automated upgrade completed for ${walletAddress}`);
 
@@ -625,13 +630,13 @@ class AutomatedTierUpgradeService {
           fromTier,
           toTier: toTier.tierId,
           newBenefits: toTier.benefits,
-          downgradeDate: new Date(),
+          upgradeDate: new Date(),
         });
       }
 
       // Clear tier cache
       await this.redis.del(`tier:evaluation:${walletAddress}`);
-      await this.redis.del(`seller:tier:${sellerId}`);
+      await this.redis.del(`seller:tier:${walletAddress}`);
 
       safeLogger.info(`Automated downgrade completed for ${walletAddress}`);
 

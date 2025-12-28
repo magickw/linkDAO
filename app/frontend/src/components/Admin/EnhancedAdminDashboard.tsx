@@ -36,7 +36,8 @@ import {
   Package,
   Activity,
   Heart, // Changed from HeartHandshake to Heart
-  Mail // Added for Newsletter
+  Mail, // Added for Newsletter
+  Receipt // Added for Receipts management
 } from 'lucide-react';
 import { usePermissions, useAuth } from '@/hooks/useAuth';
 import { adminService } from '@/services/adminService';
@@ -66,6 +67,7 @@ import { CharityProposal } from '../Governance/CharityProposalCard';
 import { UserMonitoringDashboard } from './UserMonitoringDashboard';
 import { NewsletterManagement } from './NewsletterManagement';
 import { ReturnMonitoringDashboard } from './returns/ReturnMonitoringDashboard';
+import { ReceiptsManagement } from './ReceiptsManagement';
 
 interface AdminStats {
   pendingModerations: number;
@@ -320,6 +322,7 @@ export function EnhancedAdminDashboard() {
     { id: 'enhanced-analytics', label: 'Enhanced Analytics', icon: LineChart, permission: 'system.analytics', category: 'analytics' },
     { id: 'monitoring', label: 'User Monitoring', icon: Activity, permission: 'system.analytics', category: 'analytics' },
     { id: 'returns', label: 'Return Monitoring', icon: Package, permission: 'marketplace.seller_view', category: 'business' },
+    { id: 'receipts', label: 'Receipts', icon: Receipt, permission: 'system.audit', category: 'finance' },
     { id: 'charity-verification', label: 'Charity Verification', icon: Heart, permission: 'governance.verify', category: 'governance' },
   ].filter(tab => !tab.permission || hasPermission(tab.permission));
 
@@ -843,9 +846,13 @@ export function EnhancedAdminDashboard() {
                 }}
               />
             )}
-            
+
             {activeTab === 'returns' && hasPermission('marketplace.seller_view') && (
               <ReturnMonitoringDashboard />
+            )}
+
+            {activeTab === 'receipts' && hasPermission('system.audit') && (
+              <ReceiptsManagement />
             )}
           </div>
         </main>

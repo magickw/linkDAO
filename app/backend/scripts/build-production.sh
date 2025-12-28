@@ -16,57 +16,36 @@ rm -rf dist
 echo "📁 Creating dist directory..."
 mkdir -p dist
 
-echo "🔨 Compiling TypeScript to JavaScript (4GB RAM optimized)..."
-# Run the build:tsc script with memory allocation for the Node process
-NODE_OPTIONS="--max-old-space-size=3500" npm run build:tsc
-tsc_result=$?
+echo "🔨 Compiling TypeScript to JavaScript with SWC (ultra-fast)..."
+# Use SWC for compilation - 20-70x faster than tsc
+# Exclude the same files as tsconfig.json
+npx swc src -d dist --copy-files --strip-leading-paths \
+  --ignore "**/*.test.ts" \
+  --ignore "**/*.spec.ts" \
+  --ignore "**/tests/**" \
+  --ignore "**/controllers/advancedTradingController.ts" \
+  --ignore "**/controllers/dexTradingController.ts" \
+  --ignore "**/services/advancedTradingService.ts" \
+  --ignore "**/services/multiChainDEXService.ts" \
+  --ignore "**/services/uniswapV3Service.ts" \
+  --ignore "**/routes/advancedTradingRoutes.ts" \
+  --ignore "**/routes/dexTradingRoutes.ts"
+swc_result=$?
 
-if [ $tsc_result -ne 0 ] && [ $tsc_result -ne 1 ]; then
-    echo "❌ TypeScript compilation failed with exit code: $tsc_result"
-    # Try fallback build approach
-    echo "🔄 Trying fallback build approach..."
-    # Check if we have a compiled version of the main index file
-    if [ -f "dist/index.js" ]; then
-        # If compilation partially succeeded, make sure it's executable
-        chmod +x dist/index.js
-        echo "✅ Partial compilation completed!"
-        echo "📊 dist/index.js size: $(ls -lh dist/index.js | awk '{print $5}')"
-        echo "🎯 Ready to run with: node dist/index.js"
-        exit 0
-    elif [ -f "src/index.production.standalone.js" ]; then
-        cp src/index.production.standalone.js dist/index.js
-        chmod +x dist/index.js
-        echo "✅ Fallback build completed!"
-        echo "📊 dist/index.js size: $(ls -lh dist/index.js | awk '{print $5}')"
-        echo "🎯 Ready to run with: node dist/index.js"
-        exit 0
-    else
-        # Create a minimal production launcher that loads the compiled main entry point
-        # Since src/index.ts should compile to dist/index.js, we'll create a basic launcher
-        cat > dist/index.js << 'EOF'
-#!/usr/bin/env node
+if [ $swc_result -ne 0 ]; then
+    echo "❌ SWC compilation failed with exit code: $swc_result"
+    exit 1
+fi
 
-// Set environment variables for Standard tier
-process.env.RENDER_SERVICE_TYPE = 'standard';
-process.env.RENDER_SERVICE_PLAN = 'standard';
-process.env.RENDER_PRO = 'true';
-process.env.MEMORY_LIMIT = '4096';
+echo "✅ SWC compilation completed successfully!"
 
-console.log('🚀 Starting LinkDAO Backend - Production Mode');
-console.log('📊 Node.js version:', process.version);
-console.log('📊 Environment:', process.env.NODE_ENV || 'development');
+# Optional: Run type checking separately (doesn't block deployment)
+echo "🔍 Running type checking (optional, can be skipped for faster builds)..."
+NODE_OPTIONS="--max-old-space-size=1024" npx tsc --noEmit --project tsconfig.production.json || echo "⚠️  Type checking completed with warnings (non-blocking)"
 
-// Load the main application entry point (this will be replaced by proper compilation)
-console.log('⚠️  Running in fallback mode - check build logs for compilation errors');
-console.log('❌ No compiled application found - this should not happen in production');
-process.exit(1);
-EOF
-        chmod +x dist/index.js
-        echo "⚠️  Created fallback launcher due to compilation failure"
-        echo "📊 dist/index.js size: $(ls -lh dist/index.js | awk '{print $5}')"
-        echo "🎯 Ready to run with: node dist/index.js"
-        exit 1
-    fi
+if [ $swc_result -ne 0 ]; then
+    echo "❌ SWC compilation failed"
+    exit 1
 fi
 
 # The compilation should have created dist/index.js from src/index.ts

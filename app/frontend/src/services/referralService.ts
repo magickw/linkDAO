@@ -45,7 +45,7 @@ export class FrontendReferralService {
 
   async generateReferralCode(userAddress: string): Promise<{ success: boolean; referralCode?: string; referralLink?: string; error?: string }> {
     const code = randomHex(8);
-    const link = typeof window !== 'undefined' ? `${window.location.origin}/token?ref=${code}` : `/token?ref=${code}`;
+    const link = typeof window !== 'undefined' ? `${window.location.origin}/ldao-dashboard?ref=${code}` : `/ldao-dashboard?ref=${code}`;
     return { success: true, referralCode: code, referralLink: link };
   }
 

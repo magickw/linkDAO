@@ -783,9 +783,10 @@ export class EmailService {
       minute: '2-digit'
     });
 
-    const totalFees = (parseFloat(data.fees?.processing || '0') + 
-                       parseFloat(data.fees?.platform || '0') + 
+    const totalFees = (parseFloat(data.fees?.processing || '0') +
+                       parseFloat(data.fees?.platform || '0') +
                        parseFloat(data.fees?.gas || '0')).toFixed(2);
+    const totalFeesNum = parseFloat(totalFees);
 
     return `
       <!DOCTYPE html>
@@ -857,7 +858,7 @@ export class EmailService {
                 <span style="color: #1e40af; font-size: 14px;">Subtotal</span>
                 <span style="color: #1e40af; font-size: 16px; font-weight: 500;">$${data.amount.toFixed(2)}</span>
               </div>
-              ${totalFees > 0 ? `
+              ${totalFeesNum > 0 ? `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                   <span style="color: #1e40af; font-size: 14px;">Fees</span>
                   <span style="color: #1e40af; font-size: 16px; font-weight: 500;">$${totalFees}</span>
@@ -865,7 +866,7 @@ export class EmailService {
               ` : ''}
               <div style="display: flex; justify-content: space-between; align-items: center; border-top: 2px solid #3b82f6; padding-top: 16px; margin-top: 8px;">
                 <span style="color: #1e40af; font-size: 18px; font-weight: 600;">Total Paid</span>
-                <span style="color: #1e40af; font-size: 28px; font-weight: 700;">$${(data.amount + parseFloat(totalFees)).toFixed(2)}</span>
+                <span style="color: #1e40af; font-size: 28px; font-weight: 700;">$${(data.amount + totalFeesNum).toFixed(2)}</span>
               </div>
             </div>
 

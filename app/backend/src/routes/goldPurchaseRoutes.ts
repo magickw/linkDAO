@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { authenticateToken } from '../middleware/auth';
 import { csrfProtection } from '../middleware/csrfProtection';
 import { db } from '../db';
-import { userGoldBalance, goldTransaction } from '../db/schema';
+import { userGoldBalance, goldTransaction, users } from '../db/schema';
 import { eq, sql } from 'drizzle-orm';
 import Stripe from 'stripe';
 import { emailService } from '../services/emailService';
@@ -109,13 +109,14 @@ router.post('/complete', async (req, res) => {
       price: String(GOLD_PACKAGES.find(p => p.id === packageId)?.price || 0),
       paymentMethod: paymentMethod,
       paymentIntentId,
-      transactionHash,
+      network: network,
+      transactionHash: transactionHash || undefined,
       status: 'completed',
       createdAt: new Date(),
     });
 
     // Get user email for receipt
-    const user = await db.select().from(db.schema.users).where(eq(db.schema.users.walletAddress, userId)).limit(1);
+    const user = await db.select().from(users).where(eq(users.walletAddress, String(userId))).limit(1);
     const userEmail = user[0]?.email;
 
     // Send receipt email

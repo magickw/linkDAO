@@ -23,8 +23,6 @@ async function generateSiteMap() {
     { url: '/governance', priority: '0.8', changefreq: 'weekly' },
     { url: '/charity-dashboard', priority: '0.8', changefreq: 'weekly' },
     { url: '/communities', priority: '0.8', changefreq: 'daily' },
-
-    { url: '/trending', priority: '0.7', changefreq: 'daily' },
     { url: '/hashtags', priority: '0.6', changefreq: 'daily' },
     { url: '/blog', priority: '0.7', changefreq: 'weekly' },
     { url: '/docs', priority: '0.7', changefreq: 'weekly' },
@@ -48,7 +46,6 @@ async function generateSiteMap() {
     { url: '/support/dashboard', priority: '0.5', changefreq: 'weekly' },
     { url: '/support/documents', priority: '0.4', changefreq: 'monthly' },
     { url: '/support/live-chat', priority: '0.5', changefreq: 'weekly' },
-    { url: '/token', priority: '0.7', changefreq: 'weekly' },
     { url: '/wallet', priority: '0.7', changefreq: 'weekly' },
     { url: '/wallet/transactions', priority: '0.6', changefreq: 'weekly' },
     { url: '/ldao-dashboard', priority: '0.7', changefreq: 'daily' },

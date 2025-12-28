@@ -174,7 +174,7 @@ class LDAOAcquisitionService {
     try {
       // Generate MoonPay URL with parameters
       const moonPayApiKey = process.env.NEXT_PUBLIC_MOONPAY_API_KEY || 'pk_test_placeholder';
-      const redirectUrl = encodeURIComponent(`${window.location.origin}/token?purchase=success`);
+      const redirectUrl = encodeURIComponent(`${window.location.origin}/ldao-dashboard?purchase=success`);
       const moonPayUrl = `https://buy.moonpay.com?apiKey=${moonPayApiKey}&currencyCode=eth&baseCurrencyCode=${currency.toLowerCase()}&baseCurrencyAmount=${amount}&redirectURL=${redirectUrl}`;
 
       // Open MoonPay widget in popup

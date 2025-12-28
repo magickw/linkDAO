@@ -1135,12 +1135,6 @@ const DashboardRightSidebar = memo(() => {
               </div>
             ))}
           </div>
-          <Link 
-            href="/trending" 
-            className="block mt-4 text-center text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
-          >
-            See More Trends →
-          </Link>
         </div>
       </div>
     );

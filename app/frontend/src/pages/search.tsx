@@ -22,8 +22,6 @@ export default function SearchPage() {
   useEffect(() => {
     if (initialQuery) {
       setActiveTab('search');
-    } else if (router.pathname === '/trending') {
-      setActiveTab('trending');
     } else if (router.pathname === '/recommendations') {
       setActiveTab('recommendations');
     }

@@ -20,6 +20,7 @@ interface CacheMiddlewareConfig {
   sellerAnalytics: CacheOptions;
   sellerListings: CacheOptions;
   sellerOrders: CacheOptions;
+  sellerMessagingAnalytics: CacheOptions;
   listingDetail: CacheOptions;
   orderDetail: CacheOptions;
   default: CacheOptions;
@@ -98,6 +99,13 @@ class CachingMiddleware {
         keyGenerator: (req) => `seller:orders:${req.params.walletAddress?.toLowerCase()}`,
         condition: (req, res) => req.method === 'GET' && res.statusCode === 200,
         invalidateOn: ['POST', 'PUT', 'PATCH', 'DELETE'],
+        varyBy: ['walletAddress']
+      },
+      sellerMessagingAnalytics: {
+        ttl: 300, // 5 minutes
+        keyGenerator: (req) => `seller:messaging_analytics:${req.params.walletAddress?.toLowerCase()}`,
+        condition: (req, res) => req.method === 'GET' && res.statusCode === 200,
+        invalidateOn: ['POST', 'PUT', 'PATCH'],
         varyBy: ['walletAddress']
       },
       listingDetail: {

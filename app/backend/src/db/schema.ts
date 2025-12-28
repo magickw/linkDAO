@@ -1093,6 +1093,7 @@ export const orders = pgTable("orders", {
   id: uuid("id").defaultRandom().primaryKey(),
   listingId: uuid("listing_id").references(() => products.id),
   buyerId: uuid("buyer_id").references(() => users.id),
+  buyerAddress: varchar("buyer_address", { length: 66 }), // Buyer wallet address for easier lookup
   sellerId: uuid("seller_id").references(() => users.id),
   escrowId: uuid("escrow_id").references(() => escrows.id),
   amount: numeric("amount").notNull(), // Using numeric for better precision
@@ -1125,6 +1126,7 @@ export const orders = pgTable("orders", {
   trackingNumberIdx: index("idx_orders_tracking_number").on(t.trackingNumber),
   estimatedDeliveryIdx: index("idx_orders_estimated_delivery").on(t.estimatedDelivery),
   paymentConfirmationIdx: index("idx_orders_payment_confirmation_hash").on(t.paymentConfirmationHash),
+  buyerAddressIdx: index("idx_orders_buyer_address").on(t.buyerAddress),
 }));
 
 // AI Moderation table for marketplace listings
@@ -3452,13 +3454,25 @@ export const paymentReceipts = pgTable("payment_receipts", {
   transactionDetails: text("transaction_details").notNull(), // JSON
   receiptUrl: varchar("receipt_url", { length: 500 }).notNull(),
   metadata: text("metadata"), // JSON
+  // Marketplace receipt fields
+  items: jsonb("items"), // Array of order items
+  subtotal: numeric("subtotal", { precision: 20, scale: 8 }).default('0'),
+  shipping: numeric("shipping", { precision: 20, scale: 8 }).default('0'),
+  tax: numeric("tax", { precision: 20, scale: 8 }).default('0'),
+  sellerName: varchar("seller_name", { length: 255 }),
+  // LDAO receipt fields
+  tokensPurchased: varchar("tokens_purchased", { length: 255 }),
+  pricePerToken: varchar("price_per_token", { length: 50 }),
   createdAt: timestamp("created_at").defaultNow()
 }, (t) => ({
   transactionIdIdx: index("idx_payment_receipts_transaction_id").on(t.transactionId),
   orderIdIdx: index("idx_payment_receipts_order_id").on(t.orderId),
   receiptNumberIdx: index("idx_payment_receipts_receipt_number").on(t.receiptNumber),
   paymentMethodIdx: index("idx_payment_receipts_payment_method").on(t.paymentMethod),
-  createdAtIdx: index("idx_payment_receipts_created_at").on(t.createdAt)
+  createdAtIdx: index("idx_payment_receipts_created_at").on(t.createdAt),
+  sellerNameIdx: index("idx_payment_receipts_seller_name").on(t.sellerName),
+  tokensPurchasedIdx: index("idx_payment_receipts_tokens_purchased").on(t.tokensPurchased),
+  pricePerTokenIdx: index("idx_payment_receipts_price_per_token").on(t.pricePerToken)
 }));
 
 export const orderPaymentEvents = pgTable("order_payment_events", {
@@ -6052,12 +6066,19 @@ export const goldTransaction = pgTable("gold_transaction", {
   referenceId: varchar("reference_id", { length: 255 }), // Related post/comment ID for spends
   status: varchar("status", { length: 20 }).default("completed").notNull(),
   metadata: jsonb("metadata"),
+  // New fields for receipt generation
+  orderId: varchar("order_id", { length: 255 }).unique(), // Unique order ID for tracking
+  network: varchar("network", { length: 50 }), // Blockchain network (e.g., Ethereum, Base, Polygon)
+  transactionHash: varchar("transaction_hash", { length: 66 }), // Blockchain transaction hash
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
   userIdx: index("idx_gold_transaction_user").on(t.userId),
   typeIdx: index("idx_gold_transaction_type").on(t.type),
   statusIdx: index("idx_gold_transaction_status").on(t.status),
   createdAtIdx: index("idx_gold_transaction_created").on(t.createdAt),
+  networkIdx: index("idx_gold_transaction_network").on(t.network),
+  transactionHashIdx: index("idx_gold_transaction_hash").on(t.transactionHash),
+  orderNetworkIdx: index("idx_gold_transaction_order_network").on(t.orderId, t.network),
 }));
 
 // Seller tier requirements table

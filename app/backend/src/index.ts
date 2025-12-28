@@ -730,9 +730,6 @@ app.use('/api/profiles', userProfileRoutes);
 // Backward compatibility alias for user profiles (legacy path)
 app.use('/users/profile', userProfileRoutes);
 
-// Import proxy routes
-import proxyRoutes from './routes/proxyRoutes';
-
 // Import storage routes
 import { storageRoutes } from './routes/storageRoutes';
 
@@ -754,9 +751,6 @@ app.get('/', (req, res) => {
 app.get('/test-route', (req, res) => {
   res.json({ success: true, message: 'Test route is working' });
 });
-
-// Proxy routes (should be after specific API routes)
-app.use('/', proxyRoutes);
 
 // Import security routes
 import marketplaceVerificationRoutes from './routes/marketplaceVerificationRoutes';

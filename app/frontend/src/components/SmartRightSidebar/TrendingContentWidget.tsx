@@ -247,12 +247,9 @@ export default function TrendingContentWidget({
 
         {/* View More */}
         {!isLoading && filteredItems.length > 8 && (
-          <Link
-            href={`/trending?filter=${activeFilter}&context=${context}`}
-            className="block mt-4 text-center text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium transition-colors"
-          >
-            View All Trending {activeFilter === 'all' ? 'Content' : activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1)} →
-          </Link>
+          <div className="block mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
+            Showing {filteredItems.length} {activeFilter === 'all' ? 'items' : activeFilter}
+          </div>
         )}
 
         {/* Context Info */}

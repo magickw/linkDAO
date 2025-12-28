@@ -101,12 +101,6 @@ const MarketplaceContent: React.FC = () => {
         action: undefined as string | undefined,
       },
       {
-        label: 'Get LDAO Tokens',
-        description: 'Buy, stake, and earn with LDAO tokens',
-        href: '/token' as const,
-        action: undefined as string | undefined,
-      },
-      {
         label: 'Orders & tracking',
         description: 'View your purchase history',
         href: '/orders' as const,

@@ -428,7 +428,7 @@ export class SellerWebSocketService {
 
   // Automated tier upgrade notification
   sendTierUpgradeNotification(walletAddress: string, upgradeData: {
-    type: 'tier_upgraded';
+    type: 'tier_upgraded' | 'tier_downgraded';
     fromTier: string;
     toTier: string;
     newBenefits: any;
