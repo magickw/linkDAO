@@ -467,6 +467,7 @@ import enhancedFiatPaymentRoutes from './routes/enhancedFiatPaymentRoutes';
 import mobileRoutes from './routes/mobileRoutes';
 import securityRoutes from './routes/security';
 import emailRoutes from './routes/email';
+import adminAnalyticsRoutes from './routes/adminAnalytics';
 import searchRoutes from './routes/searchRoutes';
 // Import reputation routes
 import reputationRoutes from './routes/reputationRoutes';
@@ -930,6 +931,7 @@ app.use('/api/link-safety', linkSafetyRoutes);
 
 // Admin routes - Apply authMiddleware first to populate req.user
 app.use('/api/admin', authMiddleware, adminRoutes);
+app.use('/api/admin', adminAnalyticsRoutes); // Email analytics endpoint
 
 // Admin dashboard routes
 app.use('/api/admin/dashboard', authMiddleware, adminDashboardRoutes);

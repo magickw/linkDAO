@@ -60,6 +60,9 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
   });
   const { userPreferences, updateUserPreferences, toggleFavoriteCommunity, setSidebarCollapsed } = useNavigation(); // Add user preferences and setSidebarCollapsed
 
+  // Check if we're on the home/feed page - skip community data fetching there
+  const isHomePage = router.pathname === '/';
+
   // Replace direct service calls with React Query
   const {
     data: communities = [],
@@ -119,7 +122,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 2,
-    enabled: !!address, // Only run query when address is available
+    enabled: !!address && !isHomePage, // Only run query when address is available and NOT on home page
   });
 
   // const { getCommunityUnreadCount } = useNotifications();
@@ -147,8 +150,13 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
   // Add state for trending communities
   const [trendingCommunities, setTrendingCommunities] = useState<SidebarCommunity[]>([]);
 
-  // Fetch trending communities
+  // Fetch trending communities (skip on home page)
   useEffect(() => {
+    // Skip fetching trending communities on home/feed page
+    if (isHomePage) {
+      return;
+    }
+
     const fetchTrendingCommunities = async () => {
       try {
         const trendingData = await SearchService.getTrendingContent('day', 5);
