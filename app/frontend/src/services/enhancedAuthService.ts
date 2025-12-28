@@ -284,6 +284,68 @@ class EnhancedAuthService {
   }
 
   /**
+   * Verify 2FA token and complete login
+   */
+  async verify2FAAndCompleteLogin(
+    userId: string,
+    walletAddress: string,
+    token: string
+  ): Promise<AuthResponse & { refreshToken?: string }> {
+    try {
+      console.log('🔐 Verifying 2FA token for user:', userId);
+
+      const response = await enhancedRequestManager.request<any>(
+        `${this.baseUrl}/api/auth/wallet-connect/verify-2fa`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId,
+            walletAddress,
+            token
+          })
+        },
+        { timeout: 15000, retries: 2 }
+      );
+
+      if (!response.success) {
+        throw new Error(response.error || '2FA verification failed');
+      }
+
+      // Handle token response
+      const sessionToken = response.token || (response.data && response.data.token);
+      const refreshToken = response.refreshToken || (response.data && response.data.refreshToken) || undefined;
+
+      if (!sessionToken) {
+        throw new Error('No session token received after 2FA verification');
+      }
+
+      // Use user data from response
+      const responseUserData = (response.data && response.data.user) || response.user;
+      const userData: AuthUser = this.createUserData(walletAddress, responseUserData);
+
+      // Store session
+      this.storeSession(sessionToken, userData, refreshToken);
+
+      console.log('✅ 2FA verification successful');
+
+      return {
+        success: true,
+        token: sessionToken,
+        user: userData,
+        refreshToken: refreshToken
+      };
+    } catch (error: any) {
+      console.error('❌ 2FA verification failed:', error);
+      return {
+        success: false,
+        error: this.getErrorMessage(error),
+        retryable: this.isRetryableError(error)
+      };
+    }
+  }
+
+  /**
    * Perform the actual authentication process
    */
   private async performAuthentication(
@@ -449,7 +511,7 @@ class EnhancedAuthService {
     address: string,
     signature: string,
     message: string
-  ): Promise<AuthResponse & { refreshToken?: string }> {
+  ): Promise<AuthResponse & { refreshToken?: string; requires2FA?: boolean; userId?: string }> {
     return await apiCircuitBreaker.execute(
       async () => {
         const response = await enhancedRequestManager.request<any>(
@@ -468,6 +530,19 @@ class EnhancedAuthService {
 
         if (!response.success) {
           throw new Error(response.error || 'Authentication failed');
+        }
+
+        // Check if 2FA is required
+        const requires2FA = response.requires2FA || (response.data && response.data.requires2FA);
+
+        if (requires2FA) {
+          console.log('🔐 2FA is required for this account');
+          return {
+            success: true,
+            requires2FA: true,
+            userId: response.userId || (response.data && response.data.userId),
+            walletAddress: response.walletAddress || (response.data && response.data.walletAddress)
+          } as any;
         }
 
         // Handle both direct token response and nested data response

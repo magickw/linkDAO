@@ -154,6 +154,13 @@ router.post('/wallet', authRateLimit, ...walletConnectValidation, (req, res) => 
 router.post('/wallet-connect', authRateLimit, walletConnectValidation, authController.walletConnect);
 
 /**
+ * @route POST /api/auth/wallet-connect/verify-2fa
+ * @desc Verify 2FA token and complete login
+ * @access Public (but requires previous wallet-connect that returned requires2FA=true)
+ */
+router.post('/wallet-connect/verify-2fa', authRateLimit, authController.verify2FAAndCompleteLogin);
+
+/**
  * @route GET /api/auth/profile
  * @desc Get authenticated user profile
  * @access Private

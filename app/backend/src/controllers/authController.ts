@@ -8,7 +8,7 @@ import { ethers } from 'ethers';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { eq } from 'drizzle-orm';
-import { users, authSessions } from '../db/schema';
+import { users, authSessions, twoFactorAuth } from '../db/schema';
 import { successResponse, errorResponse, validationErrorResponse } from '../utils/apiResponse';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
 import { referralService } from '../services/referralService';
@@ -178,6 +178,33 @@ class AuthController {
           safeLogger.error('Error processing referral during signup:', error);
           // Don't fail signup if referral processing fails
         }
+      }
+
+      // Check if user has 2FA enabled
+      let userHas2FA = false;
+      try {
+        const [authRecord] = await db
+          .select()
+          .from(twoFactorAuth)
+          .where(eq(twoFactorAuth.userId, userData.id))
+          .limit(1);
+
+        userHas2FA = authRecord?.isEnabled || false;
+        safeLogger.info('2FA status checked', { userId: userData.id, has2FA: userHas2FA });
+      } catch (twoFactorError) {
+        safeLogger.error('Error checking 2FA status:', twoFactorError);
+        // Continue without 2FA check if there's an error
+      }
+
+      // If user has 2FA enabled, return a response requiring 2FA verification
+      if (userHas2FA) {
+        safeLogger.info('2FA required for login', { userId: userData.id, walletAddress });
+        return successResponse(res, {
+          requires2FA: true,
+          userId: userData.id,
+          walletAddress: userData.walletAddress,
+          message: 'Two-factor authentication is required. Please enter your verification code.'
+        }, 200);
       }
 
       // Generate JWT token
@@ -369,6 +396,177 @@ class AuthController {
     } catch (error) {
       safeLogger.error('Update profile error:', error);
       errorResponse(res, 'UPDATE_ERROR', 'Failed to update profile', 500);
+    }
+  }
+
+  /**
+   * Verify 2FA token and complete login
+   * POST /api/auth/wallet-connect/verify-2fa
+   */
+  async verify2FAAndCompleteLogin(req: Request, res: Response) {
+    try {
+      const { userId, walletAddress, token } = req.body;
+
+      if (!userId || !walletAddress || !token) {
+        return errorResponse(res, 'INVALID_REQUEST', 'userId, walletAddress, and token are required', 400);
+      }
+
+      safeLogger.info('Verifying 2FA for login', { userId, walletAddress });
+
+      // Import speakeasy for TOTP verification
+      const speakeasy = require('speakeasy');
+
+      // Get user's 2FA record
+      const [authRecord] = await db
+        .select()
+        .from(twoFactorAuth)
+        .where(eq(twoFactorAuth.userId, userId))
+        .limit(1);
+
+      if (!authRecord || !authRecord.isEnabled) {
+        safeLogger.warn('2FA not enabled for user', { userId });
+        return errorResponse(res, '2FA_NOT_ENABLED', '2FA is not enabled for this account', 400);
+      }
+
+      // Decrypt the secret
+      const crypto = require('crypto');
+      const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-encryption-key-32-bytes';
+      const IV_LENGTH = 16;
+
+      const decrypt = (text: string) => {
+        try {
+          const iv = Buffer.from(text.slice(0, IV_LENGTH * 2), 'hex');
+          const encrypted = Buffer.from(text.slice(IV_LENGTH * 2), 'hex');
+          const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(ENCRYPTION_KEY.slice(0, 32)), iv);
+          let decrypted = decipher.update(encrypted);
+          decrypted = Buffer.concat([decrypted, decipher.final()]);
+          return decrypted.toString();
+        } catch (error) {
+          safeLogger.error('Decryption error:', error);
+          return null;
+        }
+      };
+
+      const decryptedSecret = decrypt(authRecord.secret);
+
+      if (!decryptedSecret) {
+        safeLogger.error('Failed to decrypt 2FA secret', { userId });
+        return errorResponse(res, 'DECRYPTION_ERROR', 'Failed to verify 2FA token', 500);
+      }
+
+      // Verify the TOTP token
+      const verified = speakeasy.totp.verify({
+        secret: decryptedSecret,
+        encoding: 'base32',
+        token,
+        window: 2
+      });
+
+      if (!verified) {
+        safeLogger.warn('Invalid 2FA token', { userId, walletAddress });
+        return errorResponse(res, 'INVALID_2FA_TOKEN', 'Invalid verification code', 400);
+      }
+
+      // Get user data
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      if (!user) {
+        return errorResponse(res, 'USER_NOT_FOUND', 'User not found', 404);
+      }
+
+      // Update lastLogin timestamp
+      try {
+        await db
+          .update(users)
+          .set({
+            lastLogin: new Date(),
+            updatedAt: new Date()
+          })
+          .where(eq(users.id, userId));
+      } catch (updateError) {
+        safeLogger.warn('Failed to update lastLogin timestamp:', updateError);
+      }
+
+      // Generate JWT token
+      const jwtSecret = process.env.JWT_SECRET;
+      if (!jwtSecret || jwtSecret.length < 32) {
+        throw new Error('JWT_SECRET not configured properly');
+      }
+
+      const authToken = jwt.sign(
+        {
+          userId: user.id,
+          walletAddress: user.walletAddress,
+          timestamp: Date.now()
+        },
+        jwtSecret,
+        { expiresIn: '24h' }
+      );
+
+      // Generate refresh token
+      const refreshToken = jwt.sign(
+        {
+          userId: user.id,
+          walletAddress: user.walletAddress,
+          type: 'refresh',
+          timestamp: Date.now()
+        },
+        jwtSecret,
+        { expiresIn: '7d' }
+      );
+
+      // Create session record
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      const refreshExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      try {
+        await db.insert(authSessions).values({
+          walletAddress: user.walletAddress.toLowerCase(),
+          sessionToken: authToken,
+          refreshToken: refreshToken,
+          expiresAt: expiresAt,
+          refreshExpiresAt: refreshExpiresAt,
+          isActive: true,
+          lastUsedAt: new Date(),
+          createdAt: new Date()
+        });
+        safeLogger.info('Session created after 2FA verification', { walletAddress: user.walletAddress });
+      } catch (sessionError) {
+        safeLogger.error('Failed to create session record:', sessionError);
+      }
+
+      // Log successful 2FA login
+      const { securityService } = require('../services/securityService');
+      if (securityService && securityService.logActivity) {
+        try {
+          await securityService.logActivity(userId, 'login', 'User logged in with 2FA', { ipAddress: req.ip, deviceInfo: req.headers['user-agent'] });
+        } catch (logError) {
+          safeLogger.error('Failed to log 2FA login activity:', logError);
+        }
+      }
+
+      // Return success response with tokens
+      successResponse(res, {
+        token: authToken,
+        refreshToken,
+        user: {
+          id: user.id,
+          walletAddress: user.walletAddress,
+          handle: user.handle,
+          profileCid: user.profileCid,
+          role: user.role,
+          email: user.email,
+          permissions: user.permissions
+        },
+        expiresIn: '24h'
+      }, 200);
+
+    } catch (error) {
+      safeLogger.error('2FA verification error:', error);
+      errorResponse(res, '2FA_VERIFICATION_ERROR', 'Failed to verify 2FA token', 500);
     }
   }
 

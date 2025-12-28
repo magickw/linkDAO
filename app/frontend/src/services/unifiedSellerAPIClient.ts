@@ -158,19 +158,19 @@ export class UnifiedSellerAPIClient {
   // Standardized endpoint patterns
   private endpoints: SellerAPIEndpoints = {
     // Profile endpoints
-      getProfile: (walletAddress: string) => `${this.baseURL}/profile`, // Uses authenticated user
-      updateProfile: (walletAddress: string) => `${this.baseURL}/profile`, // Uses authenticated user
-      createProfile: () => `${this.baseURL}/profile`,
-      updateProfileEnhanced: (walletAddress: string) => `${this.baseURL}/profile/enhanced`, // Uses authenticated user
+    getProfile: (walletAddress: string) => `${this.baseURL}/profile`, // Uses authenticated user
+    updateProfile: (walletAddress: string) => `${this.baseURL}/profile`, // Uses authenticated user
+    createProfile: () => `${this.baseURL}/profile`,
+    updateProfileEnhanced: (walletAddress: string) => `${this.baseURL}/profile/enhanced`, // Uses authenticated user
     // Onboarding endpoints
-      getOnboardingSteps: (walletAddress: string) => `${this.baseURL}/onboarding`, // Uses authenticated user
-      updateOnboardingStep: (walletAddress: string, stepId: string) => `${this.baseURL}/onboarding/${stepId}`, // Uses authenticated user
-    
-      // Dashboard endpoints - NOTE: These use /api/marketplace/seller prefix, not /api/sellers
-        getDashboard: (walletAddress: string) => `${BACKEND_API_BASE_URL}/api/marketplace/seller/dashboard/${walletAddress}`,
-        getAnalytics: (walletAddress: string) => `${BACKEND_API_BASE_URL}/api/marketplace/seller/dashboard/analytics/${walletAddress}`,    // Listings endpoints
+    getOnboardingSteps: (walletAddress: string) => `${this.baseURL}/onboarding`, // Uses authenticated user
+    updateOnboardingStep: (walletAddress: string, stepId: string) => `${this.baseURL}/onboarding/${stepId}`, // Uses authenticated user
+
+    // Dashboard endpoints - NOTE: These use /api/marketplace/seller prefix, not /api/sellers
+    getDashboard: (walletAddress: string) => `${BACKEND_API_BASE_URL}/api/marketplace/seller/dashboard/${walletAddress}`,
+    getAnalytics: (walletAddress: string) => `${BACKEND_API_BASE_URL}/api/marketplace/seller/dashboard/analytics/${walletAddress}`,    // Listings endpoints
     getListings: (walletAddress: string) => `${this.baseURL}/listings`, // Backend uses authenticated user, not wallet address in URL
-    getListingById: (listingId: string) => `${this.baseURL}/listings/detail/${listingId}`,
+    getListingById: (listingId: string) => `${BACKEND_API_BASE_URL}/api/marketplace/seller/listings/detail/${listingId}`,
     createListing: () => `${this.baseURL}/listings`,
     updateListing: (listingId: string) => `${this.baseURL}/listings/${listingId}`,
     deleteListing: (listingId: string) => `${this.baseURL}/listings/${listingId}`,
@@ -559,14 +559,14 @@ export class UnifiedSellerAPIClient {
     const url = status
       ? `${this.endpoints.getListings(walletAddress)}?status=${status}`
       : this.endpoints.getListings(walletAddress);
-    
+
     try {
       console.log('[SellerAPI] Fetching listings for authenticated user, URL:', url);
-      
+
       const response = await this.request<{ listings: SellerListing[]; total: number } | SellerListing[]>(url, undefined, true);
 
       console.log('[SellerAPI] Listings response:', response);
-      
+
       // Handle both array response and paginated response format
       if (Array.isArray(response)) {
         console.log('[SellerAPI] Returning array response with', response.length, 'listings');
@@ -575,7 +575,7 @@ export class UnifiedSellerAPIClient {
         console.log('[SellerAPI] Returning paginated response with', response.listings.length, 'listings');
         return response.listings;
       }
-      
+
       console.log('[SellerAPI] Returning empty array - unexpected response format');
       return [];
     } catch (error) {
@@ -583,7 +583,7 @@ export class UnifiedSellerAPIClient {
       // Return empty array instead of throwing to prevent UI crashes
       return [];
     }
-  }  async createListing(listingData: Partial<SellerListing>): Promise<SellerListing> {
+  } async createListing(listingData: Partial<SellerListing>): Promise<SellerListing> {
     return await this.request<SellerListing>(this.endpoints.createListing(), {
       method: 'POST',
       body: JSON.stringify(listingData),
@@ -611,7 +611,8 @@ export class UnifiedSellerAPIClient {
     const url = status
       ? `${this.endpoints.getOrders(walletAddress)}?status=${status}`
       : this.endpoints.getOrders(walletAddress);
-    return await this.request<SellerOrder[]>(url, undefined, true);  }
+    return await this.request<SellerOrder[]>(url, undefined, true);
+  }
 
   async updateOrderStatus(orderId: string, status: string, data?: any): Promise<void> {
     await this.request<void>(this.endpoints.updateOrderStatus(orderId), {

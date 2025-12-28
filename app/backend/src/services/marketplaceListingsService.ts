@@ -93,7 +93,7 @@ export class MarketplaceListingsService {
       try {
         const totalResult = await Promise.race([
           db.select({ count: count() }).from(products).where(whereClause),
-          new Promise((_, reject) => 
+          new Promise((_, reject) =>
             setTimeout(() => reject(new Error('COUNT query timeout')), 5000)
           )
         ]);
@@ -120,6 +120,7 @@ export class MarketplaceListingsService {
               images: products.images,
               status: products.status,
               shipping: products.shipping,
+              views: products.views,
               createdAt: products.createdAt,
               updatedAt: products.updatedAt,
             })
@@ -128,7 +129,7 @@ export class MarketplaceListingsService {
             .orderBy(orderByClause)
             .limit(limit)
             .offset(offset),
-          new Promise((_, reject) => 
+          new Promise((_, reject) =>
             setTimeout(() => reject(new Error('LISTINGS query timeout')), 10000)
           )
         ]) as any[];
@@ -157,11 +158,11 @@ export class MarketplaceListingsService {
               .select({ id: users.id, walletAddress: users.walletAddress })
               .from(users)
               .where(sql`${users.id} IN (${sql.join(sellerIds.map(id => sql`${id}`), sql`, `)})`),
-            new Promise((_, reject) => 
+            new Promise((_, reject) =>
               setTimeout(() => reject(new Error('SELLER query timeout')), 5000)
             )
           ]) as any[];
-          
+
           sellerAddressMap = new Map(sellerUsers.map(u => [u.id, u.walletAddress]));
         } catch (sellerError) {
           safeLogger.warn('Failed to get seller addresses, continuing with empty map:', sellerError);
@@ -196,6 +197,7 @@ export class MarketplaceListingsService {
           category: listing.categoryId || undefined,
           isActive: listing.status === 'active',
           shipping: parsedShipping,
+          views: listing.views || 0,
           createdAt: listing.createdAt || new Date(),
           updatedAt: listing.updatedAt || new Date()
         };
@@ -244,13 +246,14 @@ export class MarketplaceListingsService {
               images: products.images,
               status: products.status,
               shipping: products.shipping,
+              views: products.views,
               createdAt: products.createdAt,
               updatedAt: products.updatedAt,
             })
             .from(products)
             .where(eq(products.id, id))
             .limit(1),
-          new Promise((_, reject) => 
+          new Promise((_, reject) =>
             setTimeout(() => reject(new Error('LISTING_BY_ID query timeout')), 5000)
           )
         ]) as any[];
@@ -274,7 +277,7 @@ export class MarketplaceListingsService {
             .from(users)
             .where(eq(users.id, listing.sellerId))
             .limit(1),
-          new Promise((_, reject) => 
+          new Promise((_, reject) =>
             setTimeout(() => reject(new Error('SELLER_ADDRESS query timeout')), 3000)
           )
         ]) as any[];
@@ -308,6 +311,7 @@ export class MarketplaceListingsService {
         category: listing.categoryId || undefined,
         isActive: listing.status === 'active',
         shipping: parsedShipping,
+        views: listing.views || 0,
         createdAt: listing.createdAt || new Date(),
         updatedAt: listing.updatedAt || new Date()
       };
@@ -544,7 +548,7 @@ export class MarketplaceListingsService {
               .from(users)
               .where(eq(users.walletAddress, filters.sellerAddress))
               .limit(1),
-            new Promise((_, reject) => 
+            new Promise((_, reject) =>
               setTimeout(() => reject(new Error('USER_SEARCH query timeout')), 3000)
             )
           ]) as any[];
@@ -597,11 +601,11 @@ export class MarketplaceListingsService {
             .select({ count: count() })
             .from(products)
             .where(whereClause),
-          new Promise((_, reject) => 
+          new Promise((_, reject) =>
             setTimeout(() => reject(new Error('SEARCH_COUNT query timeout')), 5000)
           )
         ]) as any[];
-        
+
         total = totalResult[0]?.count || 0;
       } catch (countError) {
         safeLogger.warn('Failed to get search total count, using estimate:', countError);
@@ -631,7 +635,7 @@ export class MarketplaceListingsService {
             .orderBy(orderByClause)
             .limit(limit)
             .offset(offset),
-          new Promise((_, reject) => 
+          new Promise((_, reject) =>
             setTimeout(() => reject(new Error('SEARCH_LISTINGS query timeout')), 10000)
           )
         ]) as any[];
@@ -659,11 +663,11 @@ export class MarketplaceListingsService {
               .select({ id: users.id, walletAddress: users.walletAddress })
               .from(users)
               .where(sql`${users.id} IN (${sql.join(sellerIds.map(id => sql`${id}`), sql`, `)})`),
-            new Promise((_, reject) => 
+            new Promise((_, reject) =>
               setTimeout(() => reject(new Error('SEARCH_SELLERS query timeout')), 5000)
             )
           ]) as any[];
-          
+
           sellerAddressMap = new Map(sellerUsers.map(u => [u.id, u.walletAddress]));
         } catch (sellerError) {
           safeLogger.warn('Failed to get seller addresses for search results:', sellerError);
@@ -739,7 +743,7 @@ export class MarketplaceListingsService {
             ))
             .groupBy(products.categoryId)
             .orderBy(desc(count())),
-          new Promise((_, reject) => 
+          new Promise((_, reject) =>
             setTimeout(() => reject(new Error('CATEGORIES query timeout')), 5000)
           )
         ]) as any[];

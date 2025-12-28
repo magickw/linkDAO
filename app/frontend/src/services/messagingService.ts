@@ -173,17 +173,12 @@ class MessagingService {
   async initialize(wallet: ethers.Wallet | ethers.Signer): Promise<void> {
     console.log('Starting messaging service initialization...');
     try {
-      if (wallet instanceof ethers.Wallet) {
-        this.wallet = wallet;
-      } else {
-        // Convert signer to wallet if possible
-        const address = await wallet.getAddress();
-        this.currentAddress = address.toLowerCase();
-      }
+      // Store the wallet/signer for signing operations
+      this.wallet = wallet;
 
-      if (this.wallet) {
-        this.currentAddress = this.wallet.address.toLowerCase();
-      }
+      // Get the address
+      const address = await wallet.getAddress();
+      this.currentAddress = address.toLowerCase();
 
       console.log('Wallet address:', this.currentAddress);
 
@@ -198,19 +193,19 @@ class MessagingService {
 
       // Connect to WebSocket and authenticate with timeout
       console.log('Connecting to WebSocket...');
-      
+
       // Check if WebSocket URL is configured
       const wsUrl = webSocketServiceInstance.getUrl();
       console.log('WebSocket URL:', wsUrl);
-      
+
       if (!wsUrl) {
         console.warn('WebSocket URL not configured, skipping WebSocket connection');
       } else {
         const connectPromise = webSocketServiceInstance.connect();
-        const timeoutPromise = new Promise<void>((_, reject) => 
+        const timeoutPromise = new Promise<void>((_, reject) =>
           setTimeout(() => reject(new Error('WebSocket connection timeout')), 10000)
         );
-        
+
         try {
           await Promise.race([connectPromise, timeoutPromise]);
           console.log('WebSocket connected, authenticating...');
@@ -226,7 +221,7 @@ class MessagingService {
       console.log('Loading conversations...');
       await this.loadConversations();
       console.log('Conversations loaded');
-      
+
       console.log('Loading blocked users...');
       await this.loadBlockedUsers();
       console.log('Blocked users loaded');
@@ -1257,11 +1252,11 @@ class MessagingService {
   private async loadFromSecureStorage(key: string): Promise<any> {
     try {
       // Add timeout to prevent hanging
-      const timeoutPromise = new Promise<null>((_, reject) => 
+      const timeoutPromise = new Promise<null>((_, reject) =>
         setTimeout(() => reject(new Error(`Timeout loading ${key} from secure storage`)), 5000)
       );
       const loadPromise = this.loadFromIndexedDB(key);
-      
+
       const result = await Promise.race([loadPromise, timeoutPromise]);
       return result;
     } catch (error) {
@@ -1312,14 +1307,14 @@ class MessagingService {
       const timeoutId = setTimeout(() => {
         reject(new Error(`Timeout storing ${key} to IndexedDB`));
       }, 5000);
-      
+
       const request = indexedDB.open('LinkDAOMessaging', 1);
 
       request.onerror = () => {
         clearTimeout(timeoutId);
         reject(request.error);
       };
-      
+
       request.onsuccess = () => {
         try {
           const db = request.result;
@@ -1361,14 +1356,14 @@ class MessagingService {
       const timeoutId = setTimeout(() => {
         reject(new Error(`Timeout loading ${key} from IndexedDB`));
       }, 5000);
-      
+
       const request = indexedDB.open('LinkDAOMessaging', 1);
 
       request.onerror = () => {
         clearTimeout(timeoutId);
         reject(request.error);
       };
-      
+
       request.onsuccess = () => {
         try {
           const db = request.result;
