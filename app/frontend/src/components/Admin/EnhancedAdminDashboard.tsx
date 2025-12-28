@@ -48,7 +48,6 @@ import { SellerApplications } from './SellerApplications';
 import { SellerPerformance } from './SellerPerformance';
 import { DisputeResolution } from './DisputeResolution';
 import { UserManagement } from './UserManagement';
-import { AdminAnalytics } from './AdminAnalytics';
 import { AuditDashboard } from './AuditSystem';
 import { NotificationCenter } from './Notifications/NotificationCenter';
 import { MobilePushSetup } from './Notifications/MobilePushSetup';
@@ -318,8 +317,7 @@ export function EnhancedAdminDashboard() {
     { id: 'performance', label: 'Seller Performance', icon: TrendingUp, permission: 'marketplace.seller_view', category: 'business' },
     { id: 'disputes', label: 'Disputes', icon: AlertTriangle, permission: 'disputes.view', category: 'business' },
     { id: 'users', label: 'User Management', icon: Users, permission: 'users.view', category: 'user' },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3, permission: 'system.analytics', category: 'analytics' },
-    { id: 'enhanced-analytics', label: 'Enhanced Analytics', icon: LineChart, permission: 'system.analytics', category: 'analytics' },
+    { id: 'analytics', label: 'Analytics', icon: LineChart, permission: 'system.analytics', category: 'analytics' },
     { id: 'monitoring', label: 'User Monitoring', icon: Activity, permission: 'system.analytics', category: 'analytics' },
     { id: 'returns', label: 'Return Monitoring', icon: Package, permission: 'marketplace.seller_view', category: 'business' },
     { id: 'receipts', label: 'Receipts', icon: Receipt, permission: 'system.audit', category: 'finance' },
@@ -806,10 +804,6 @@ export function EnhancedAdminDashboard() {
             )}
 
             {activeTab === 'analytics' && hasPermission('system.analytics') && (
-              <AdminAnalytics />
-            )}
-
-            {activeTab === 'enhanced-analytics' && hasPermission('system.analytics') && (
               <EnhancedAnalytics />
             )}
 
