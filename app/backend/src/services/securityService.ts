@@ -8,12 +8,14 @@ import {
     securityAlerts,
     privacySettings
 } from '../db/schema/securitySchema';
+import { emailAnalytics } from '../db/schema/emailAnalyticsSchema';
 import { users } from '../db/schema';
-import { eq, and, desc, gte } from 'drizzle-orm';
+import { eq, and, desc, gte, count, sql } from 'drizzle-orm';
 import * as speakeasy from 'speakeasy';
 import * as QRCode from 'qrcode';
 import * as crypto from 'crypto';
 import { emailService } from './emailService';
+import { generateTrackingId, generateUnsubscribeToken } from '../routes/email';
 
 export class SecurityService {
     // ============ Helper Methods ============
@@ -25,6 +27,140 @@ export class SecurityService {
         const [user] = await db.select({ email: users.email }).from(users)
             .where(eq(users.id, userId));
         return user?.email || null;
+    }
+
+    /**
+     * Check if email should be sent based on user preferences
+     */
+    private async shouldSendEmail(userId: string, emailType: string): Promise<boolean> {
+        const config = await this.getAlertsConfig(userId);
+
+        // Critical emails always send (unless user explicitly unsubscribed)
+        const criticalEmails = ['new_device_login', '2fa_disabled', 'suspicious_activity'];
+        if (criticalEmails.includes(emailType)) {
+            // Even critical emails respect complete unsubscribe
+            return !config.unsubscribedAt;
+        }
+
+        // Check if email notifications are enabled
+        if (!config.emailNotificationsEnabled) return false;
+
+        // Check if user unsubscribed
+        if (config.unsubscribedAt) return false;
+
+        // Check email frequency
+        if (config.emailFrequency === 'off') return false;
+
+        // For now, only support immediate delivery
+        // TODO: Implement digest functionality for hourly/daily/weekly
+        if (config.emailFrequency !== 'immediate') {
+            // Queue for digest delivery
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Track email sent for analytics
+     */
+    private async trackEmailSent(
+        userId: string,
+        emailType: string,
+        emailSubject: string,
+        metadata?: any
+    ): Promise<string> {
+        const trackingId = generateTrackingId();
+
+        await db.insert(emailAnalytics).values({
+            userId,
+            emailType,
+            emailSubject,
+            trackingId,
+            metadata
+        });
+
+        return trackingId;
+    }
+
+    /**
+     * Ensure unsubscribe token exists for user
+     */
+    private async ensureUnsubscribeToken(userId: string): Promise<string> {
+        const config = await this.getAlertsConfig(userId);
+
+        if (config.unsubscribeToken) {
+            return config.unsubscribeToken;
+        }
+
+        const token = generateUnsubscribeToken(userId);
+        await db.update(securityAlertsConfig)
+            .set({ unsubscribeToken: token })
+            .where(eq(securityAlertsConfig.userId, userId));
+
+        return token;
+    }
+
+    /**
+     * Detect suspicious activity patterns
+     */
+    async detectSuspiciousActivity(userId: string): Promise<void> {
+        const now = new Date();
+        const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
+        const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+
+        // Check for multiple failed login attempts
+        const [failedLogins] = await db
+            .select({ count: count() })
+            .from(userActivityLog)
+            .where(and(
+                eq(userActivityLog.userId, userId),
+                eq(userActivityLog.activityType, 'failed_login'),
+                gte(userActivityLog.createdAt, tenMinutesAgo)
+            ));
+
+        if (failedLogins.count >= 3) {
+            await this.createAlert(
+                userId,
+                'suspicious_activity',
+                'high',
+                'Multiple Failed Login Attempts',
+                `${failedLogins.count} failed login attempts detected in the last 10 minutes`,
+                { failedAttempts: failedLogins.count }
+            );
+
+            // Send email if preferences allow
+            if (await this.shouldSendEmail(userId, 'suspicious_activity')) {
+                const email = await this.getUserEmail(userId);
+                if (email) {
+                    await emailService.sendSuspiciousActivityEmail(email, {
+                        activityType: 'Multiple Failed Logins',
+                        description: `${failedLogins.count} failed login attempts in 10 minutes`,
+                        timestamp: now
+                    }).catch(err => console.error('Failed to send suspicious activity email:', err));
+                }
+            }
+        }
+
+        // Check for rapid session creation
+        const [rapidSessions] = await db
+            .select({ count: count() })
+            .from(userSessions)
+            .where(and(
+                eq(userSessions.userId, userId),
+                gte(userSessions.createdAt, oneHourAgo)
+            ));
+
+        if (rapidSessions.count >= 5) {
+            await this.createAlert(
+                userId,
+                'suspicious_activity',
+                'medium',
+                'Unusual Session Activity',
+                `${rapidSessions.count} new sessions created in the last hour`,
+                { sessionCount: rapidSessions.count }
+            );
+        }
     }
 
     // ============ 2FA Methods ============
@@ -102,13 +238,16 @@ export class SecurityService {
         // Log activity
         await this.logActivity(userId, 'security_change', '2FA enabled', { method: 'totp' });
 
-        // Send email notification
-        const email = await this.getUserEmail(userId);
-        if (email) {
-            await emailService.send2FAChangeEmail(email, {
-                action: 'enabled',
-                timestamp: new Date()
-            }).catch(err => console.error('Failed to send 2FA email:', err));
+        // Send email notification if preferences allow
+        if (await this.shouldSendEmail(userId, '2fa_enabled')) {
+            const email = await this.getUserEmail(userId);
+            if (email) {
+                const trackingId = await this.trackEmailSent(userId, '2fa_enabled', 'Two-Factor Authentication Enabled');
+                await emailService.send2FAChangeEmail(email, {
+                    action: 'enabled',
+                    timestamp: new Date()
+                }).catch(err => console.error('Failed to send 2FA email:', err));
+            }
         }
 
         return { success: true };
@@ -148,13 +287,16 @@ export class SecurityService {
 
         await this.logActivity(userId, 'security_change', '2FA disabled', { method: 'totp' });
 
-        // Send email notification
-        const email = await this.getUserEmail(userId);
-        if (email) {
-            await emailService.send2FAChangeEmail(email, {
-                action: 'disabled',
-                timestamp: new Date()
-            }).catch(err => console.error('Failed to send 2FA email:', err));
+        // Send email notification (critical - always send unless unsubscribed)
+        if (await this.shouldSendEmail(userId, '2fa_disabled')) {
+            const email = await this.getUserEmail(userId);
+            if (email) {
+                const trackingId = await this.trackEmailSent(userId, '2fa_disabled', 'Two-Factor Authentication Disabled');
+                await emailService.send2FAChangeEmail(email, {
+                    action: 'disabled',
+                    timestamp: new Date()
+                }).catch(err => console.error('Failed to send 2FA email:', err));
+            }
         }
     }
 
@@ -178,17 +320,20 @@ export class SecurityService {
 
         await this.logActivity(userId, 'login', 'User logged in', { ipAddress, deviceInfo }, session.id);
 
-        // Send new device login email
-        const email = await this.getUserEmail(userId);
-        if (email) {
-            await emailService.sendNewDeviceLoginEmail(email, {
-                device: deviceInfo?.device || 'Unknown Device',
-                browser: deviceInfo?.browser,
-                os: deviceInfo?.os,
-                ipAddress,
-                timestamp: new Date(),
-                sessionId: session.id
-            }).catch(err => console.error('Failed to send new device email:', err));
+        // Send new device login email (critical - always send unless unsubscribed)
+        if (await this.shouldSendEmail(userId, 'new_device_login')) {
+            const email = await this.getUserEmail(userId);
+            if (email) {
+                const trackingId = await this.trackEmailSent(userId, 'new_device_login', 'New Device Login Detected');
+                await emailService.sendNewDeviceLoginEmail(email, {
+                    device: deviceInfo?.device || 'Unknown Device',
+                    browser: deviceInfo?.browser,
+                    os: deviceInfo?.os,
+                    ipAddress,
+                    timestamp: new Date(),
+                    sessionId: session.id
+                }).catch(err => console.error('Failed to send new device email:', err));
+            }
         }
 
         return session;
@@ -239,12 +384,15 @@ export class SecurityService {
 
         await this.logActivity(userId, 'security_change', 'All other sessions terminated');
 
-        // Send email notification
-        const email = await this.getUserEmail(userId);
-        if (email) {
-            await emailService.sendSessionsTerminatedEmail(email, {
-                timestamp: new Date()
-            }).catch(err => console.error('Failed to send sessions terminated email:', err));
+        // Send email notification if preferences allow
+        if (await this.shouldSendEmail(userId, 'sessions_terminated')) {
+            const email = await this.getUserEmail(userId);
+            if (email) {
+                const trackingId = await this.trackEmailSent(userId, 'sessions_terminated', 'All Sessions Terminated');
+                await emailService.sendSessionsTerminatedEmail(email, {
+                    timestamp: new Date()
+                }).catch(err => console.error('Failed to send sessions terminated email:', err));
+            }
         }
     }
 

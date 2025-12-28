@@ -466,6 +466,7 @@ import notificationPreferencesRoutes from './routes/notificationPreferencesRoute
 import enhancedFiatPaymentRoutes from './routes/enhancedFiatPaymentRoutes';
 import mobileRoutes from './routes/mobileRoutes';
 import securityRoutes from './routes/security';
+import emailRoutes from './routes/email';
 import searchRoutes from './routes/searchRoutes';
 // Import reputation routes
 import reputationRoutes from './routes/reputationRoutes';
@@ -915,6 +916,7 @@ process.stdout.write('✅ Leaderboard, Treasury, Post Management, Announcement, 
 app.use('/api/auth', require('./routes/authRoutes').default);
 // Security routes
 app.use('/api/security', securityRoutes);
+app.use('/api/email', emailRoutes);
 
 // Return and refund routes
 // import returnRoutes from './routes/returnRoutes';

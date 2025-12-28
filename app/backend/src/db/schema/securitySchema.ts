@@ -102,6 +102,15 @@ export const securityAlertsConfig = pgTable("security_alerts_config", {
     securityChangeAlerts: boolean("security_change_alerts").default(true),
     loginAlerts: boolean("login_alerts").default(false),
     alertChannels: jsonb("alert_channels").default('["email"]'), // ['email', 'push', 'sms']
+
+    // Email Preferences
+    emailNotificationsEnabled: boolean("email_notifications_enabled").default(true),
+    emailFrequency: varchar("email_frequency", { length: 20 }).default("immediate"), // 'immediate', 'hourly', 'daily', 'weekly', 'off'
+    digestTime: varchar("digest_time", { length: 8 }).default("09:00:00"), // Time for digest emails
+    unsubscribedAt: timestamp("unsubscribed_at"),
+    unsubscribeToken: varchar("unsubscribe_token", { length: 255 }).unique(),
+    transactionThreshold: varchar("transaction_threshold", { length: 50 }).default("1000.00"), // USD threshold for large transactions
+
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
 }, (t) => ({
