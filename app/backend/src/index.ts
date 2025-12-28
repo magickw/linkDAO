@@ -465,7 +465,7 @@ import messagingRoutes from './routes/messagingRoutes';
 import notificationPreferencesRoutes from './routes/notificationPreferencesRoutes';
 import enhancedFiatPaymentRoutes from './routes/enhancedFiatPaymentRoutes';
 import mobileRoutes from './routes/mobileRoutes';
-import securityRoutes from './routes/securityRoutes';
+import securityRoutes from './routes/security';
 import searchRoutes from './routes/searchRoutes';
 // Import reputation routes
 import reputationRoutes from './routes/reputationRoutes';

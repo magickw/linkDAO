@@ -517,5 +517,6 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                 {/* Create Post action removed per user request */}
               </div>
             </div>
+          </>
       </div>
 
