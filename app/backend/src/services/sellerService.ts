@@ -277,10 +277,18 @@ class SellerService {
         }
       }
 
+      // Prepare updates for database
+      const dbUpdates: any = { ...updates };
+
+      // Stringify socialLinks if it's an object (database expects JSON string)
+      if (dbUpdates.socialLinks && typeof dbUpdates.socialLinks === 'object') {
+        dbUpdates.socialLinks = JSON.stringify(dbUpdates.socialLinks);
+      }
+
       const result = await db
         .update(sellers)
         .set({
-          ...updates,
+          ...dbUpdates,
           updatedAt: new Date(),
         })
         .where(eq(sellers.walletAddress, walletAddress.toLowerCase()))
