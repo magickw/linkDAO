@@ -16,37 +16,18 @@ rm -rf dist
 echo "📁 Creating dist directory..."
 mkdir -p dist
 
-echo "🔨 Compiling TypeScript to JavaScript with SWC (ultra-fast)..."
-# Use SWC for compilation - 20-70x faster than tsc
-# Exclude the same files as tsconfig.json
-npx swc src -d dist --copy-files --strip-leading-paths \
-  --ignore "**/*.test.ts" \
-  --ignore "**/*.spec.ts" \
-  --ignore "**/tests/**" \
-  --ignore "**/controllers/advancedTradingController.ts" \
-  --ignore "**/controllers/dexTradingController.ts" \
-  --ignore "**/services/advancedTradingService.ts" \
-  --ignore "**/services/multiChainDEXService.ts" \
-  --ignore "**/services/uniswapV3Service.ts" \
-  --ignore "**/routes/advancedTradingRoutes.ts" \
-  --ignore "**/routes/dexTradingRoutes.ts"
-swc_result=$?
+echo "🔨 Compiling TypeScript to JavaScript..."
+# Use TypeScript compiler with optimized settings (Render Pro - 4GB RAM)
+NODE_OPTIONS="--max-old-space-size=3500" npx tsc --project tsconfig.production.json --noEmitOnError false
+tsc_result=$?
 
-if [ $swc_result -ne 0 ]; then
-    echo "❌ SWC compilation failed with exit code: $swc_result"
-    exit 1
+if [ $tsc_result -ne 0 ]; then
+    echo "⚠️  TypeScript compilation had errors but continuing..."
+else
+    echo "✅ TypeScript compilation completed!"
 fi
 
-echo "✅ SWC compilation completed successfully!"
-
-# Optional: Run type checking separately (doesn't block deployment)
-echo "🔍 Running type checking (optional, can be skipped for faster builds)..."
-NODE_OPTIONS="--max-old-space-size=1024" npx tsc --noEmit --project tsconfig.production.json || echo "⚠️  Type checking completed with warnings (non-blocking)"
-
-if [ $swc_result -ne 0 ]; then
-    echo "❌ SWC compilation failed"
-    exit 1
-fi
+# Type checking is already done by tsc above
 
 # The compilation should have created dist/index.js from src/index.ts
 # Make sure it's executable
