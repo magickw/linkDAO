@@ -518,5 +518,6 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
               </div>
             </div>
           </>
+        ) : null}
       </div>
 

@@ -1,6 +1,159 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { securityService } from '@/services/securityService';
+import type { Session, ActivityLogEntry, TrustedDevice, SecurityAlert, SecurityAlertsConfig, PrivacySettings } from '@/services/securityService';
+
+import type { Session, ActivityLogEntry, TrustedDevice, SecurityAlert, SecurityAlertsConfig, PrivacySettings } from '@/services/securityService';
 
 export function EnhancedSecuritySettings() {
+    // State management
+    const [loading, setLoading] = useState(true);
+    const [sessions, setSessions] = useState<Session[]>([]);
+    const [activityLog, setActivityLog] = useState<ActivityLogEntry[]>([]);
+    const [trustedDevices, setTrustedDevices] = useState<TrustedDevice[]>([]);
+    const [alerts, setAlerts] = useState<SecurityAlert[]>([]);
+    const [alertsConfig, setAlertsConfig] = useState<SecurityAlertsConfig | null>(null);
+    const [privacySettings, setPrivacySettings] = useState<PrivacySettings | null>(null);
+    const [show2FASetup, setShow2FASetup] = useState(false);
+    const [qrCode, setQrCode] = useState<string>('');
+    const [backupCodes, setBackupCodes] = useState<string[]>([]);
+    const [verificationCode, setVerificationCode] = useState('');
+
+    // Load all security data on mount
+    useEffect(() => {
+        loadSecurityData();
+    }, []);
+
+    const loadSecurityData = async () => {
+        try {
+            setLoading(true);
+            const [
+                sessionsData,
+                activityData,
+                devicesData,
+                alertsData,
+                configData,
+                privacyData
+            ] = await Promise.all([
+                securityService.getSessions().catch(() => []),
+                securityService.getActivityLog(10).catch(() => []),
+                securityService.getTrustedDevices().catch(() => []),
+                securityService.getAlerts(true).catch(() => []),
+                securityService.getAlertsConfig().catch(() => null),
+                securityService.getPrivacySettings().catch(() => null)
+            ]);
+
+            setSessions(sessionsData);
+            setActivityLog(activityData);
+            setTrustedDevices(devicesData);
+            setAlerts(alertsData);
+            setAlertsConfig(configData);
+            setPrivacySettings(privacyData);
+        } catch (error) {
+            console.error('Error loading security data:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // 2FA handlers
+    const handleSetup2FA = async () => {
+        try {
+            const result = await securityService.setupTOTP();
+            setQrCode(result.qrCode);
+            setBackupCodes(result.backupCodes);
+            setShow2FASetup(true);
+        } catch (error) {
+            console.error('Error setting up 2FA:', error);
+            alert('Failed to setup 2FA. Please try again.');
+        }
+    };
+
+    const handleVerify2FA = async () => {
+        try {
+            await securityService.verifyAndEnableTOTP(verificationCode);
+            setShow2FASetup(false);
+            setVerificationCode('');
+            alert('2FA enabled successfully!');
+            loadSecurityData();
+        } catch (error) {
+            console.error('Error verifying 2FA:', error);
+            alert('Invalid verification code. Please try again.');
+        }
+    };
+
+    // Session handlers
+    const handleTerminateSession = async (sessionId: string) => {
+        if (!confirm('Are you sure you want to terminate this session?')) return;
+
+        try {
+            await securityService.terminateSession(sessionId);
+            setSessions(sessions.filter(s => s.id !== sessionId));
+        } catch (error) {
+            console.error('Error terminating session:', error);
+            alert('Failed to terminate session.');
+        }
+    };
+
+    const handleTerminateAllSessions = async () => {
+        if (!confirm('This will log you out of all other devices. Continue?')) return;
+
+        try {
+            await securityService.terminateAllOtherSessions();
+            loadSecurityData();
+            alert('All other sessions terminated successfully!');
+        } catch (error) {
+            console.error('Error terminating sessions:', error);
+            alert('Failed to terminate sessions.');
+        }
+    };
+
+    // Alert config handlers
+    const handleToggleAlert = async (key: keyof SecurityAlertsConfig, value: boolean) => {
+        if (!alertsConfig) return;
+
+        try {
+            await securityService.updateAlertsConfig({ [key]: value });
+            setAlertsConfig({ ...alertsConfig, [key]: value });
+        } catch (error) {
+            console.error('Error updating alert config:', error);
+        }
+    };
+
+    // Privacy settings handlers
+    const handleTogglePrivacy = async (key: keyof PrivacySettings, value: boolean) => {
+        if (!privacySettings) return;
+
+        try {
+            await securityService.updatePrivacySettings({ [key]: value });
+            setPrivacySettings({ ...privacySettings, [key]: value });
+        } catch (error) {
+            console.error('Error updating privacy settings:', error);
+        }
+    };
+
+    // Trusted device handlers
+    const handleRemoveDevice = async (deviceId: string) => {
+        if (!confirm('Remove this trusted device?')) return;
+
+        try {
+            await securityService.removeTrustedDevice(deviceId);
+            setTrustedDevices(trustedDevices.filter(d => d.id !== deviceId));
+        } catch (error) {
+            console.error('Error removing device:', error);
+            alert('Failed to remove device.');
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="p-6">
+                <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                    <span className="ml-3 text-gray-600 dark:text-gray-400">Loading security settings...</span>
+                </div>
+            </div>
+        );
+    }
     return (
         <div className="p-6">
             <div className="flex items-center mb-6">
