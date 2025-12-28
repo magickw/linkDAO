@@ -13,8 +13,20 @@ import { eq, and, desc, gte } from 'drizzle-orm';
 import * as speakeasy from 'speakeasy';
 import * as QRCode from 'qrcode';
 import * as crypto from 'crypto';
+import { emailService } from './emailService';
 
 export class SecurityService {
+    // ============ Helper Methods ============
+
+    /**
+     * Get user email for notifications
+     */
+    private async getUserEmail(userId: string): Promise<string | null> {
+        const [user] = await db.select({ email: users.email }).from(users)
+            .where(eq(users.id, userId));
+        return user?.email || null;
+    }
+
     // ============ 2FA Methods ============
 
     /**
@@ -90,6 +102,15 @@ export class SecurityService {
         // Log activity
         await this.logActivity(userId, 'security_change', '2FA enabled', { method: 'totp' });
 
+        // Send email notification
+        const email = await this.getUserEmail(userId);
+        if (email) {
+            await emailService.send2FAChangeEmail(email, {
+                action: 'enabled',
+                timestamp: new Date()
+            }).catch(err => console.error('Failed to send 2FA email:', err));
+        }
+
         return { success: true };
     }
 
@@ -126,6 +147,15 @@ export class SecurityService {
             .where(eq(twoFactorAuth.userId, userId));
 
         await this.logActivity(userId, 'security_change', '2FA disabled', { method: 'totp' });
+
+        // Send email notification
+        const email = await this.getUserEmail(userId);
+        if (email) {
+            await emailService.send2FAChangeEmail(email, {
+                action: 'disabled',
+                timestamp: new Date()
+            }).catch(err => console.error('Failed to send 2FA email:', err));
+        }
     }
 
     // ============ Session Management ============
@@ -147,6 +177,19 @@ export class SecurityService {
         }).returning();
 
         await this.logActivity(userId, 'login', 'User logged in', { ipAddress, deviceInfo }, session.id);
+
+        // Send new device login email
+        const email = await this.getUserEmail(userId);
+        if (email) {
+            await emailService.sendNewDeviceLoginEmail(email, {
+                device: deviceInfo?.device || 'Unknown Device',
+                browser: deviceInfo?.browser,
+                os: deviceInfo?.os,
+                ipAddress,
+                timestamp: new Date(),
+                sessionId: session.id
+            }).catch(err => console.error('Failed to send new device email:', err));
+        }
 
         return session;
     }
@@ -195,6 +238,14 @@ export class SecurityService {
             .where(eq(userSessions.id, currentSessionId));
 
         await this.logActivity(userId, 'security_change', 'All other sessions terminated');
+
+        // Send email notification
+        const email = await this.getUserEmail(userId);
+        if (email) {
+            await emailService.sendSessionsTerminatedEmail(email, {
+                timestamp: new Date()
+            }).catch(err => console.error('Failed to send sessions terminated email:', err));
+        }
     }
 
     // ============ Activity Logging ============
