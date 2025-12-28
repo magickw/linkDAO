@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Mail, CheckCircle2, XCircle, Loader2, Settings, ArrowLeft } from 'lucide-react';
 
 export default function UnsubscribePage() {
-    const [searchParams] = useSearchParams();
-    const navigate = useNavigate();
+    const router = useRouter();
+    const searchParams = useSearchParams();
     const token = searchParams.get('token');
 
     const [loading, setLoading] = useState(false);
@@ -83,7 +83,7 @@ export default function UnsubscribePage() {
                         This unsubscribe link is invalid or has expired. Please check your email and try again.
                     </p>
                     <button
-                        onClick={() => navigate('/')}
+                        onClick={() => router.push('/')}
                         className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors"
                     >
                         Go to Home
@@ -202,10 +202,9 @@ export default function UnsubscribePage() {
                         {loading ? 'Processing...' : 'Confirm Unsubscribe'}
                     </button>
 
-                    <button
-                        onClick={() => navigate('/settings?tab=security')}
-                        className="w-full px-6 py-3 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                    >
+                                            <button
+                                                onClick={() => router.push('/settings?tab=security')}
+                                                className="w-full px-6 py-3 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"                    >
                         <Settings className="h-4 w-4" />
                         Manage Preferences Instead
                     </button>

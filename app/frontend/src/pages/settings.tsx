@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ProfileService } from '@/services/profileService';
 import { UserProfile } from '@/models/UserProfile';
 import { EnhancedSecuritySettings } from '@/components/Settings/EnhancedSecuritySettings';
+import EmailPreferences from '@/components/Settings/EmailPreferences';
 
 export default function Settings() {
   const { address, isConnected } = useAccount();
@@ -74,6 +75,7 @@ export default function Settings() {
     { id: 'wallet', name: 'Wallet', icon: '💰' },
     { id: 'preferences', name: 'Preferences', icon: '⚙️' },
     { id: 'security', name: 'Security', icon: '🔒' },
+    { id: 'email', name: 'Email Notifications', icon: '📧' },
   ];
 
   if (!isConnected) {
@@ -386,6 +388,12 @@ export default function Settings() {
 
               {activeTab === 'security' && (
                 <EnhancedSecuritySettings />
+              )}
+
+              {activeTab === 'email' && (
+                <div className="p-6">
+                  <EmailPreferences />
+                </div>
               )}
               <div className="p-6">
                 <div className="flex items-center mb-6">

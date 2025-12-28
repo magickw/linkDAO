@@ -54,6 +54,7 @@ import { MobilePushSetup } from './Notifications/MobilePushSetup';
 import { WorkflowAutomationDashboard } from './WorkflowAutomation/WorkflowAutomationDashboard';
 import { AdminOnboarding } from './Onboarding/AdminOnboarding';
 import { EnhancedAnalytics } from './EnhancedAnalytics';
+import EmailAnalytics from './EmailAnalytics';
 import { EnhancedAIModeration } from './EnhancedAIModeration';
 import { SecurityComplianceDashboard } from './SecurityComplianceDashboard';
 import { SystemHealthDashboard } from './SystemHealthDashboard';
@@ -318,6 +319,7 @@ export function EnhancedAdminDashboard() {
     { id: 'disputes', label: 'Disputes', icon: AlertTriangle, permission: 'disputes.view', category: 'business' },
     { id: 'users', label: 'User Management', icon: Users, permission: 'users.view', category: 'user' },
     { id: 'analytics', label: 'Analytics', icon: LineChart, permission: 'system.analytics', category: 'analytics' },
+    { id: 'email-analytics', label: 'Email Analytics', icon: Mail, permission: 'system.analytics', category: 'analytics' },
     { id: 'monitoring', label: 'User Monitoring', icon: Activity, permission: 'system.analytics', category: 'analytics' },
     { id: 'returns', label: 'Return Monitoring', icon: Package, permission: 'marketplace.seller_view', category: 'business' },
     { id: 'receipts', label: 'Receipts', icon: Receipt, permission: 'system.audit', category: 'finance' },
@@ -805,6 +807,10 @@ export function EnhancedAdminDashboard() {
 
             {activeTab === 'analytics' && hasPermission('system.analytics') && (
               <EnhancedAnalytics />
+            )}
+
+            {activeTab === 'email-analytics' && hasPermission('system.analytics') && (
+              <EmailAnalytics />
             )}
 
             {activeTab === 'monitoring' && hasPermission('system.analytics') && (
