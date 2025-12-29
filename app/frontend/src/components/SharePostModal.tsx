@@ -50,6 +50,7 @@ interface SharePostModalProps {
 
 interface SharePostModalWithToastProps extends SharePostModalProps {
   addToast?: (message: string, type: 'success' | 'error' | 'warning' | 'info', options?: any) => void;
+  initialSelectedOption?: string | null;
 }
 
 export default function SharePostModal({
@@ -58,7 +59,8 @@ export default function SharePostModal({
   post,
   postType,
   onShare,
-  addToast: providedAddToast
+  addToast: providedAddToast,
+  initialSelectedOption = null
 }: SharePostModalWithToastProps) {
   const { address, isConnected } = useWeb3();
 
@@ -68,12 +70,19 @@ export default function SharePostModal({
 
   const [shareMessage, setShareMessage] = useState('');
   const [isSharing, setIsSharing] = useState(false);
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [selectedOption, setSelectedOption] = useState<string | null>(initialSelectedOption);
+
+  // Reset selected option when modal opens with new initial option
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedOption(initialSelectedOption);
+    }
+  }, [isOpen, initialSelectedOption]);
 
   // Generate share URL
   const getPostUrl = () => {
     const baseUrl = window.location.origin;
-    
+
     // Check if post has shareId (new format)
     if ((post as any).shareId) {
       // Use short share URL
@@ -82,7 +91,7 @@ export default function SharePostModal({
       }
       return `${baseUrl}/p/${(post as any).shareId}`;
     }
-    
+
     // Fallback to old format for posts without shareId
     if (postType === 'community' && post.communityId) {
       return `${baseUrl}/communities/${post.communityId}/posts/${post.id}`;
@@ -100,7 +109,7 @@ export default function SharePostModal({
 
     // Use author's handle if available, otherwise fallback to wallet address
     const authorName = post.authorProfile?.handle || getDisplayName(post);
-    
+
     return `Check out this post by ${authorName}: "${truncatedContent}"`;
   };
 
@@ -306,10 +315,10 @@ export default function SharePostModal({
                   <div className="font-medium mb-1">{post.title}</div>
                 )}
                 <div className="line-clamp-3">
-                  {(post as any).content 
+                  {(post as any).content
                     ? ((post as any).content.length > 150
-                        ? (post as any).content.substring(0, 150) + '...'
-                        : (post as any).content)
+                      ? (post as any).content.substring(0, 150) + '...'
+                      : (post as any).content)
                     : 'No content preview available'}
                 </div>
               </div>

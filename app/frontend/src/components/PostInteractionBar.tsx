@@ -43,6 +43,7 @@ export default function PostInteractionBar({
   const { addToast } = useToast();
 
   const [showShareModal, setShowShareModal] = useState(false);
+  const [shareModalInitialOption, setShareModalInitialOption] = useState<string | null>(null);
   const [showTipInput, setShowTipInput] = useState(false);
   const [showAwardModal, setShowAwardModal] = useState(false);
   const [tipAmount, setTipAmount] = useState('');
@@ -67,6 +68,13 @@ export default function PostInteractionBar({
 
   // Handle share button click
   const handleShareClick = () => {
+    setShareModalInitialOption(null);
+    setShowShareModal(true);
+  };
+
+  // Handle repost button click
+  const handleRepostClick = () => {
+    setShareModalInitialOption('timeline');
     setShowShareModal(true);
   };
 
@@ -84,22 +92,22 @@ export default function PostInteractionBar({
   // Handle quick tip
   const handleQuickTip = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!isConnected || !address) {
       addToast('Please connect your wallet to tip', 'error');
       return;
     }
-    
+
     if (!tipAmount || parseFloat(tipAmount) <= 0) {
       addToast('Please enter a valid tip amount', 'error');
       return;
     }
-    
+
     if (address?.toLowerCase() === post.author.toLowerCase()) {
       addToast('You cannot tip yourself', 'error');
       return;
     }
-    
+
     try {
       // Use real blockchain tipping functionality
       const txHash = await communityWeb3Service.tipCommunityPost({
@@ -118,7 +126,7 @@ export default function PostInteractionBar({
         // Only show success message if there's no parent handler
         addToast(`Successfully tipped ${tipAmount} ${selectedToken}! Transaction: ${txHash.substring(0, 10)}...`, 'success');
       }
-      
+
       setTipAmount('');
       setShowTipInput(false);
     } catch (error: any) {
@@ -143,6 +151,18 @@ export default function PostInteractionBar({
             </svg>
             <span className="hidden sm:inline">{post.commentCount || 0} Comments</span>
             <span className="sm:hidden">{post.commentCount || 0}</span>
+          </button>
+
+          {/* Repost Button */}
+          <button
+            onClick={handleRepostClick}
+            className="flex items-center space-x-2 text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400 text-sm font-medium transition-colors duration-200 hover:scale-105"
+            aria-label="Repost to your timeline"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span className="hidden sm:inline">Repost</span>
           </button>
 
           {/* Share Button */}
@@ -199,7 +219,7 @@ export default function PostInteractionBar({
           </button>
         </div>
 
-        
+
       </div>
 
       {/* Quick Tip Input */}
@@ -239,16 +259,24 @@ export default function PostInteractionBar({
         </form>
       )}
 
-      
+
 
       {/* Share Modal */}
       <SharePostModal
         isOpen={showShareModal}
-        onClose={() => setShowShareModal(false)}
+        onClose={() => {
+          setShowShareModal(false);
+          // Reset internal state if needed
+        }}
         post={post}
         postType={postType}
         onShare={onShare}
         addToast={addToast}
+        // If clicking normal share button, this will be null (handled by state in more complex implementation, 
+        // but for now we'll assume the same modal instance handles both based on how it was triggered)
+        // Wait, I need a state to track *which* button opened the modal to set this prop dynamically?
+        // Actually, easier: add a new state `shareModalInitialOption` to PostInteractionBar.
+        initialSelectedOption={shareModalInitialOption}
       />
 
       {/* Award Selection Modal */}

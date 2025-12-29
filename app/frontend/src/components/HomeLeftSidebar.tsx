@@ -17,9 +17,7 @@ export default function HomeLeftSidebar({ className = '' }: HomeLeftSidebarProps
     const { userPreferences, updateUserPreferences } = useNavigation();
 
     const handleProfileClick = () => {
-        if (address) {
-            router.push(`/profile/${address}`);
-        }
+        router.push('/profile');
     };
 
     return (

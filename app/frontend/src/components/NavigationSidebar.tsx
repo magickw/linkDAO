@@ -260,7 +260,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                     user={enhancedUser}
                     address={address}
                     profile={enhancedUser}
-                    onClick={() => {/* Handle profile click */ }}
+                    onClick={() => router.push('/profile')}
                   />
                 ) : address ? (
                   /* Display connected wallet profile */

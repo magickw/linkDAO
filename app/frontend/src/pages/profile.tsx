@@ -947,8 +947,8 @@ export default function Profile() {
 
   return (
     <Layout title="Profile - LinkDAO" fullWidth={true}>
-      <div className="px-4 py-6 sm:px-0">
-        <div className="max-w-4xl mx-auto">
+      <div className="w-full">
+        <div className="px-4 sm:px-6 lg:px-8 py-6">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Your Profile</h1>
 
           {/* Loading Skeleton */}
@@ -1425,7 +1425,7 @@ export default function Profile() {
 
           {/* Tab Content */}
           {!isLoading && !hasError && (
-            <div>
+            <div className="max-w-7xl mx-auto">
               {activeTab === 'edit' && (
                 <div className={`bg-white dark:bg-gray-800 shadow rounded-lg p-6 ${currentUserAddress && targetUserAddress === currentUserAddress ? '' : 'hidden'}`}>
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6">Edit Profile</h3>
