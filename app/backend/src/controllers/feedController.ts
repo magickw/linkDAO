@@ -25,7 +25,7 @@ export class FeedController {
         finalUserAddress: userAddress
       });
 
-      const {
+      let {
         page = 1,
         limit = 20,
         sort = 'new', // Default to newest posts
@@ -60,6 +60,13 @@ export class FeedController {
         }
       }
 
+      // Fallback: If 'following' is requested but we have no user (e.g. auth failed or not provided),
+      // switch to 'all' instead of returning an empty list. This ensures the user sees content.
+      if (feedSource === 'following' && !userAddress) {
+        console.log('[FEED CONTROLLER] Request for "following" feed without user address - falling back to "all"');
+        feedSource = 'all';
+      }
+
       // If user is not authenticated and requests 'following' feed, return empty result
       if (!userAddress && feedSource === 'following') {
         res.json(apiResponse.success({
@@ -88,7 +95,7 @@ export class FeedController {
         // Fetch user preferences if authenticated
         let preferredCategories: string[] = [];
         let preferredTags: string[] = [];
-        
+
         if (userAddress) {
           try {
             const { onboardingService } = await import('../services/onboardingService');
@@ -106,7 +113,7 @@ export class FeedController {
         // Determine post type based on query parameter or default to 'all'
         // Handle both 'postType' and 'postTypeFilter' parameters for backward compatibility
         const postTypeFilter = (req.query.postTypeFilter as string) || (req.query.postType as string) || 'all';
-        
+
         const feedData = await feedService.getEnhancedFeed({
           userAddress: userAddress || null, // Pass null for anonymous users
           page: Number(page),
@@ -451,7 +458,7 @@ export class FeedController {
       res.status(201).json(apiResponse.success(comment, 'Comment added successfully'));
     } catch (error) {
       safeLogger.error('Error adding comment:', error);
-      
+
       // Handle specific error cases
       if (error instanceof Error) {
         if (error.message === 'User not found') {
@@ -463,7 +470,7 @@ export class FeedController {
           return;
         }
       }
-      
+
       res.status(500).json(apiResponse.error('Failed to add comment. Please try again later.'));
     }
   }

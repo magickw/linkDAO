@@ -101,7 +101,7 @@ CREATE TABLE "bids" (
 	"timestamp" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "blockchain_events" (
+CREATE TABLE IF NOT EXISTS "blockchain_events" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"order_id" varchar(64),
 	"escrow_id" varchar(64),
@@ -216,7 +216,7 @@ CREATE TABLE "cdn_access_logs" (
 	"response_time" integer
 );
 --> statement-breakpoint
-CREATE TABLE "chat_messages" (
+CREATE TABLE IF NOT EXISTS "chat_messages" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"conversation_id" uuid NOT NULL,
 	"sender_address" varchar(66) NOT NULL,
@@ -644,7 +644,7 @@ CREATE TABLE "conversation_participants" (
 	CONSTRAINT "unique_conversation_user" UNIQUE("conversation_id","user_id")
 );
 --> statement-breakpoint
-CREATE TABLE "conversations" (
+CREATE TABLE IF NOT EXISTS "conversations" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"title" varchar(255),
 	"participants" jsonb NOT NULL,
@@ -1113,7 +1113,7 @@ CREATE TABLE "link_safety_vendor_results" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "listings" (
+CREATE TABLE IF NOT EXISTS "listings" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"seller_id" uuid,
 	"product_id" uuid,
@@ -1552,7 +1552,7 @@ CREATE TABLE "offline_content_cache" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "order_events" (
+CREATE TABLE IF NOT EXISTS "order_events" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"order_id" integer,
 	"event_type" varchar(64) NOT NULL,
@@ -1561,7 +1561,7 @@ CREATE TABLE "order_events" (
 	"timestamp" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "order_payment_events" (
+CREATE TABLE IF NOT EXISTS "order_payment_events" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"order_id" integer NOT NULL,
 	"transaction_id" varchar(255),
@@ -1573,7 +1573,7 @@ CREATE TABLE "order_payment_events" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "orders" (
+CREATE TABLE IF NOT EXISTS "orders" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"listing_id" integer,
 	"buyer_id" uuid,
@@ -1603,7 +1603,7 @@ CREATE TABLE "orders" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "ownership_proofs" (
+CREATE TABLE IF NOT EXISTS "ownership_proofs" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"listing_id" varchar(64) NOT NULL,
 	"token_address" varchar(66) NOT NULL,
@@ -1617,7 +1617,7 @@ CREATE TABLE "ownership_proofs" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "payment_method_preference_overrides" (
+CREATE TABLE IF NOT EXISTS "payment_method_preference_overrides" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"override_type" varchar(50) NOT NULL,
@@ -1630,7 +1630,7 @@ CREATE TABLE "payment_method_preference_overrides" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "payment_method_preferences" (
+CREATE TABLE IF NOT EXISTS "payment_method_preferences" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"encrypted_preferences" text NOT NULL,
@@ -1649,7 +1649,7 @@ CREATE TABLE "payment_method_preferences" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "payment_method_usage_history" (
+CREATE TABLE IF NOT EXISTS "payment_method_usage_history" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"payment_method_type" varchar(50) NOT NULL,
@@ -1664,7 +1664,7 @@ CREATE TABLE "payment_method_usage_history" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "payment_receipts" (
+CREATE TABLE IF NOT EXISTS "payment_receipts" (
 	"id" varchar(255) PRIMARY KEY NOT NULL,
 	"transaction_id" varchar(255) NOT NULL,
 	"order_id" integer NOT NULL,
@@ -1680,7 +1680,7 @@ CREATE TABLE "payment_receipts" (
 	CONSTRAINT "payment_receipts_receipt_number_unique" UNIQUE("receipt_number")
 );
 --> statement-breakpoint
-CREATE TABLE "payment_transactions" (
+CREATE TABLE IF NOT EXISTS "payment_transactions" (
 	"id" varchar(255) PRIMARY KEY NOT NULL,
 	"order_id" integer NOT NULL,
 	"payment_method" varchar(20) NOT NULL,
@@ -1704,7 +1704,7 @@ CREATE TABLE "payment_transactions" (
 	"confirmed_at" timestamp
 );
 --> statement-breakpoint
-CREATE TABLE "payments" (
+CREATE TABLE IF NOT EXISTS "payments" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"from" uuid,
 	"to" uuid,
@@ -1777,7 +1777,7 @@ CREATE TABLE "post_tags" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "posts" (
+CREATE TABLE IF NOT EXISTS "posts" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"author_id" uuid,
 	"title" text,
@@ -1854,7 +1854,7 @@ CREATE TABLE "products" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "project_activities" (
+CREATE TABLE IF NOT EXISTS "project_activities" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"booking_id" uuid NOT NULL,
 	"milestone_id" uuid,
@@ -1865,7 +1865,7 @@ CREATE TABLE "project_activities" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "project_approvals" (
+CREATE TABLE IF NOT EXISTS "project_approvals" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"booking_id" uuid NOT NULL,
 	"milestone_id" uuid,
@@ -1880,7 +1880,7 @@ CREATE TABLE "project_approvals" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "project_deliverables" (
+CREATE TABLE IF NOT EXISTS "project_deliverables" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"booking_id" uuid NOT NULL,
 	"milestone_id" uuid,
@@ -1903,7 +1903,7 @@ CREATE TABLE "project_deliverables" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "project_files" (
+CREATE TABLE IF NOT EXISTS "project_files" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"booking_id" uuid NOT NULL,
 	"milestone_id" uuid,
@@ -1920,7 +1920,7 @@ CREATE TABLE "project_files" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "project_messages" (
+CREATE TABLE IF NOT EXISTS "project_messages" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"thread_id" uuid NOT NULL,
 	"booking_id" uuid NOT NULL,
@@ -1936,7 +1936,7 @@ CREATE TABLE "project_messages" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "project_threads" (
+CREATE TABLE IF NOT EXISTS "project_threads" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"booking_id" uuid NOT NULL,
 	"milestone_id" uuid,
@@ -1998,7 +1998,7 @@ CREATE TABLE "purchase_transactions" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "push_tokens" (
+CREATE TABLE IF NOT EXISTS "push_tokens" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"user_address" varchar(66) NOT NULL,
 	"token" varchar(255) NOT NULL,
@@ -2102,7 +2102,7 @@ CREATE TABLE "reputation_change_events" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "reputation_history" (
+CREATE TABLE IF NOT EXISTS "reputation_history" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"wallet_address" varchar(66) NOT NULL,
 	"event_type" varchar(50) NOT NULL,
@@ -2153,13 +2153,13 @@ CREATE TABLE "reputation_thresholds" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "reputations" (
+CREATE TABLE IF NOT EXISTS "reputations" (
 	"wallet_address" varchar(66) PRIMARY KEY NOT NULL,
 	"score" integer NOT NULL,
 	"dao_approved" boolean DEFAULT false
 );
 --> statement-breakpoint
-CREATE TABLE "review_helpfulness" (
+CREATE TABLE IF NOT EXISTS "review_helpfulness" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"review_id" uuid NOT NULL,
 	"user_id" uuid NOT NULL,
@@ -2167,7 +2167,7 @@ CREATE TABLE "review_helpfulness" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "review_reports" (
+CREATE TABLE IF NOT EXISTS "review_reports" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"review_id" uuid NOT NULL,
 	"reporter_id" uuid NOT NULL,
@@ -2177,7 +2177,7 @@ CREATE TABLE "review_reports" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "reviews" (
+CREATE TABLE IF NOT EXISTS "reviews" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"reviewer_id" uuid NOT NULL,
 	"reviewee_id" uuid NOT NULL,
@@ -2370,7 +2370,7 @@ CREATE TABLE "sellers" (
 	CONSTRAINT "sellers_wallet_address_unique" UNIQUE("wallet_address")
 );
 --> statement-breakpoint
-CREATE TABLE "service_availability" (
+CREATE TABLE IF NOT EXISTS "service_availability" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"service_id" uuid NOT NULL,
 	"day_of_week" integer NOT NULL,
@@ -2381,7 +2381,7 @@ CREATE TABLE "service_availability" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "service_bookings" (
+CREATE TABLE IF NOT EXISTS "service_bookings" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"service_id" uuid NOT NULL,
 	"client_id" uuid NOT NULL,
@@ -2404,7 +2404,7 @@ CREATE TABLE "service_bookings" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "service_categories" (
+CREATE TABLE IF NOT EXISTS "service_categories" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" varchar(100) NOT NULL,
 	"description" text,
@@ -2415,7 +2415,7 @@ CREATE TABLE "service_categories" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "service_messages" (
+CREATE TABLE IF NOT EXISTS "service_messages" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"booking_id" uuid NOT NULL,
 	"sender_id" uuid NOT NULL,
@@ -2427,7 +2427,7 @@ CREATE TABLE "service_messages" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "service_milestones" (
+CREATE TABLE IF NOT EXISTS "service_milestones" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"booking_id" uuid NOT NULL,
 	"milestone_number" integer NOT NULL,
@@ -2443,7 +2443,7 @@ CREATE TABLE "service_milestones" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "service_provider_profiles" (
+CREATE TABLE IF NOT EXISTS "service_provider_profiles" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"business_name" varchar(255),
@@ -2466,7 +2466,7 @@ CREATE TABLE "service_provider_profiles" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "service_reviews" (
+CREATE TABLE IF NOT EXISTS "service_reviews" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"booking_id" uuid NOT NULL,
 	"reviewer_id" uuid NOT NULL,
@@ -2484,7 +2484,7 @@ CREATE TABLE "service_reviews" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "services" (
+CREATE TABLE IF NOT EXISTS "services" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"provider_id" uuid NOT NULL,
 	"category_id" uuid NOT NULL,
@@ -2549,7 +2549,7 @@ CREATE TABLE "stolen_nfts" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "sync_status" (
+CREATE TABLE IF NOT EXISTS "sync_status" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"key" varchar(64) NOT NULL,
 	"value" text NOT NULL,
@@ -2580,7 +2580,7 @@ CREATE TABLE "threshold_configurations" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "time_tracking" (
+CREATE TABLE IF NOT EXISTS "time_tracking" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"booking_id" uuid NOT NULL,
 	"milestone_id" uuid,
@@ -2597,7 +2597,7 @@ CREATE TABLE "time_tracking" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "tips" (
+CREATE TABLE IF NOT EXISTS "tips" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"post_id" integer,
 	"from_user_id" uuid,
@@ -2609,7 +2609,7 @@ CREATE TABLE "tips" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "tracking_records" (
+CREATE TABLE IF NOT EXISTS "tracking_records" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"order_id" integer,
 	"tracking_number" varchar(128) NOT NULL,
@@ -2620,7 +2620,7 @@ CREATE TABLE "tracking_records" (
 	"last_updated" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "trending_content" (
+CREATE TABLE IF NOT EXISTS "trending_content" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"content_type" varchar(32) NOT NULL,
 	"content_id" varchar(66) NOT NULL,
@@ -2632,7 +2632,7 @@ CREATE TABLE "trending_content" (
 	CONSTRAINT "trending_content_content_type_content_id_timeframe_pk" PRIMARY KEY("content_type","content_id","timeframe")
 );
 --> statement-breakpoint
-CREATE TABLE "url_analysis_results" (
+CREATE TABLE IF NOT EXISTS "url_analysis_results" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"url" text NOT NULL,
 	"url_hash" varchar(64) NOT NULL,
@@ -2647,7 +2647,7 @@ CREATE TABLE "url_analysis_results" (
 	CONSTRAINT "url_analysis_results_url_hash_unique" UNIQUE("url_hash")
 );
 --> statement-breakpoint
-CREATE TABLE "user_interactions" (
+CREATE TABLE IF NOT EXISTS "user_interactions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"target_type" varchar(32) NOT NULL,
@@ -2658,7 +2658,7 @@ CREATE TABLE "user_interactions" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "user_purchase_limits" (
+CREATE TABLE IF NOT EXISTS "user_purchase_limits" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"daily_limit" numeric(20, 8) DEFAULT '1000' NOT NULL,
@@ -2673,7 +2673,7 @@ CREATE TABLE "user_purchase_limits" (
 	CONSTRAINT "user_purchase_limits_user_id_unique" UNIQUE("user_id")
 );
 --> statement-breakpoint
-CREATE TABLE "user_recommendations" (
+CREATE TABLE IF NOT EXISTS "user_recommendations" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"recommended_user_id" uuid NOT NULL,
@@ -2688,7 +2688,7 @@ CREATE TABLE "user_recommendations" (
 	CONSTRAINT "user_recommendations_user_id_recommended_user_id_pk" PRIMARY KEY("user_id","recommended_user_id")
 );
 --> statement-breakpoint
-CREATE TABLE "user_reputation" (
+CREATE TABLE IF NOT EXISTS "user_reputation" (
 	"wallet_address" varchar(66) PRIMARY KEY NOT NULL,
 	"reputation_score" numeric(5, 2) DEFAULT '0.00' NOT NULL,
 	"total_transactions" integer DEFAULT 0 NOT NULL,
@@ -2706,7 +2706,7 @@ CREATE TABLE "user_reputation" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "user_reputation_scores" (
+CREATE TABLE IF NOT EXISTS "user_reputation_scores" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"user_id" uuid NOT NULL,
 	"overall_score" numeric(10, 4) DEFAULT '1000' NOT NULL,
@@ -2726,7 +2726,7 @@ CREATE TABLE "user_reputation_scores" (
 	CONSTRAINT "user_reputation_scores_user_id_unique" UNIQUE("user_id")
 );
 --> statement-breakpoint
-CREATE TABLE "user_consents" (
+CREATE TABLE IF NOT EXISTS "user_consents" (
 	"id" varchar(64) PRIMARY KEY NOT NULL,
 	"user_id" uuid NOT NULL,
 	"consent_type" varchar(32) NOT NULL,
@@ -2744,7 +2744,7 @@ CREATE TABLE "user_consents" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "users" (
+CREATE TABLE IF NOT EXISTS "users" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"wallet_address" varchar(66) NOT NULL,
 	"handle" varchar(64),
@@ -2785,7 +2785,7 @@ CREATE TABLE "users" (
 	CONSTRAINT "users_email_unique" UNIQUE("email")
 );
 --> statement-breakpoint
-CREATE TABLE "vendor_configurations" (
+CREATE TABLE IF NOT EXISTS "vendor_configurations" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"vendor_name" varchar(48) NOT NULL,
 	"service_type" varchar(32) NOT NULL,
@@ -2805,7 +2805,7 @@ CREATE TABLE "vendor_configurations" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "views" (
+CREATE TABLE IF NOT EXISTS "views" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"post_id" integer NOT NULL,
 	"user_id" uuid,
@@ -2814,7 +2814,7 @@ CREATE TABLE "views" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "volume_discount_tiers" (
+CREATE TABLE IF NOT EXISTS "volume_discount_tiers" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"min_amount" numeric(20, 8) NOT NULL,
 	"max_amount" numeric(20, 8),
@@ -2824,7 +2824,7 @@ CREATE TABLE "volume_discount_tiers" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "votes" (
+CREATE TABLE IF NOT EXISTS "votes" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"proposal_id" integer NOT NULL,
 	"voter_id" uuid NOT NULL,
@@ -2837,7 +2837,7 @@ CREATE TABLE "votes" (
 	CONSTRAINT "votes_proposal_id_voter_id_pk" PRIMARY KEY("proposal_id","voter_id")
 );
 --> statement-breakpoint
-CREATE TABLE "voting_delegations" (
+CREATE TABLE IF NOT EXISTS "voting_delegations" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"delegator_id" uuid NOT NULL,
 	"delegate_id" uuid NOT NULL,
@@ -2849,7 +2849,7 @@ CREATE TABLE "voting_delegations" (
 	CONSTRAINT "voting_delegations_delegator_id_delegate_id_dao_id_pk" PRIMARY KEY("delegator_id","delegate_id","dao_id")
 );
 --> statement-breakpoint
-CREATE TABLE "voting_power_snapshots" (
+CREATE TABLE IF NOT EXISTS "voting_power_snapshots" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"dao_id" uuid,
@@ -2862,7 +2862,7 @@ CREATE TABLE "voting_power_snapshots" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "wallet_auth_attempts" (
+CREATE TABLE IF NOT EXISTS "wallet_auth_attempts" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"wallet_address" varchar(66) NOT NULL,
 	"attempt_type" varchar(32) NOT NULL,
@@ -2873,7 +2873,7 @@ CREATE TABLE "wallet_auth_attempts" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "wallet_nonces" (
+CREATE TABLE IF NOT EXISTS "wallet_nonces" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"wallet_address" varchar(66) NOT NULL,
 	"nonce" varchar(255) NOT NULL,
@@ -2884,7 +2884,7 @@ CREATE TABLE "wallet_nonces" (
 	CONSTRAINT "wallet_nonces_nonce_unique" UNIQUE("nonce")
 );
 --> statement-breakpoint
-CREATE TABLE "watermark_templates" (
+CREATE TABLE IF NOT EXISTS "watermark_templates" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"name" varchar(100) NOT NULL,

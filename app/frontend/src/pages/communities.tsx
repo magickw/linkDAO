@@ -148,6 +148,18 @@ const CommunitiesPage: React.FC = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
+  const [forceLoad, setForceLoad] = useState(false);
+
+  // Safety timeout to prevent indefinite loading state if auth hangs (e.g. for unverified users)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (isMounted.current && isAuthLoading) {
+        console.log('[CommunitiesPage] Auth loading timeout reached, forcing render');
+        setForceLoad(true);
+      }
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [isAuthLoading]);
   const [error, setError] = useState<string | null>(null);
 
   // Web3 mobile state
@@ -419,11 +431,14 @@ const CommunitiesPage: React.FC = () => {
   }, [isMounted, joinedCommunities, address, sortBy, timeFilter]);
 
   useEffect(() => {
-    if (isAuthLoading) return;
+    // Determine if we should wait for auth
+    const shouldWaitForAuth = isAuthLoading && !forceLoad;
 
-    console.log('[CommunitiesPage] useEffect triggered, fetching posts...');
+    if (shouldWaitForAuth) return;
+
+    console.log('[CommunitiesPage] useEffect triggered, fetching posts...', { isAuthLoading, forceLoad });
     fetchPosts(1, false);
-  }, [sortBy, timeFilter, address]);
+  }, [sortBy, timeFilter, address, isAuthLoading, forceLoad]);
 
   // Store fetchPosts in a ref
   const fetchPostsRef = useRef(fetchPosts);
@@ -676,7 +691,7 @@ const CommunitiesPage: React.FC = () => {
       }));
   }, [communities]);
 
-  if (isAuthLoading) {
+  if (isAuthLoading && !forceLoad) {
     return (
       <Layout title="Communities - LinkDAO" fullWidth={true}>
         <div className="flex items-center justify-center min-h-screen">
