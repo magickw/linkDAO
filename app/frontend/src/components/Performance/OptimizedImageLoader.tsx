@@ -47,15 +47,15 @@ class ImageCacheManager {
 
   async get(src: string): Promise<string | null> {
     const cached = this.cache[src];
-    
+
     if (!cached) return null;
-    
+
     // Check if expired
     if (Date.now() - cached.timestamp > this.maxAge) {
       this.delete(src);
       return null;
     }
-    
+
     return cached.objectURL;
   }
 
@@ -66,7 +66,7 @@ class ImageCacheManager {
     }
 
     const objectURL = URL.createObjectURL(blob);
-    
+
     this.cache[src] = {
       blob,
       objectURL,
@@ -87,7 +87,7 @@ class ImageCacheManager {
   private cleanup(): void {
     const entries = Object.entries(this.cache);
     const now = Date.now();
-    
+
     // Remove expired entries first
     entries.forEach(([src, cached]) => {
       if (now - cached.timestamp > this.maxAge) {
@@ -118,12 +118,12 @@ const isValidImageUrl = (src: string): boolean => {
   if (!src || typeof src !== 'string') return false;
   // Allow data URLs, blob URLs, absolute URLs, relative paths starting with /, and IPFS CIDs
   return src.startsWith('data:') ||
-         src.startsWith('blob:') ||
-         src.startsWith('http://') ||
-         src.startsWith('https://') ||
-         src.startsWith('/') ||
-         src.startsWith('Qm') || // IPFS CIDv0
-         src.startsWith('baf'); // IPFS CIDv1
+    src.startsWith('blob:') ||
+    src.startsWith('http://') ||
+    src.startsWith('https://') ||
+    src.startsWith('/') ||
+    src.startsWith('Qm') || // IPFS CIDv0
+    src.startsWith('baf'); // IPFS CIDv1
 };
 
 const DEFAULT_AVATAR = '/images/default-avatar.png';
@@ -142,6 +142,12 @@ const getOptimizedImageURL = (
     return useProductDefault ? DEFAULT_PRODUCT_IMAGE : DEFAULT_AVATAR;
   }
 
+  // Check for invalid "fallback-" IPFS URLs (these are placeholder/error URLs from failed uploads)
+  if (src.includes('fallback-') || src.includes('/ipfs/fallback-')) {
+    console.warn('Detected invalid fallback IPFS URL, using placeholder:', src);
+    return useProductDefault ? DEFAULT_PRODUCT_IMAGE : DEFAULT_AVATAR;
+  }
+
   // If it's already a data URL or blob URL, return as is
   if (src.startsWith('data:') || src.startsWith('blob:')) {
     return src;
@@ -151,13 +157,13 @@ const getOptimizedImageURL = (
   if (src.startsWith('Qm') || src.startsWith('baf')) {
     const ipfsGateway = 'https://gateway.pinata.cloud/ipfs/';
     const url = new URL(`${ipfsGateway}${src}`);
-    
+
     // Add optimization parameters
     if (width) url.searchParams.set('w', width.toString());
     if (height) url.searchParams.set('h', height.toString());
     url.searchParams.set('q', quality.toString());
     url.searchParams.set('f', 'webp');
-    
+
     return url.toString();
   }
 
@@ -167,13 +173,13 @@ const getOptimizedImageURL = (
     if (src.includes('//ipfs//') || src.includes('/ipfs//')) {
       const fixed = src.replace(/\/\/ipfs\/\//, '/ipfs/').replace(/\/ipfs\/\//, '/ipfs/');
       console.warn('Fixed malformed IPFS URL:', src, '→', fixed);
-      
+
       // If the fixed URL is still invalid (no CID after /ipfs/), use default
       if (fixed.endsWith('/ipfs/') || fixed.includes('/ipfs//')) {
         console.warn('Cannot fix malformed IPFS URL, using default');
         return useProductDefault ? DEFAULT_PRODUCT_IMAGE : DEFAULT_AVATAR;
       }
-      
+
       src = fixed;
     }
 
@@ -201,18 +207,18 @@ const generateBlurDataURL = (width: number = 10, height: number = 10): string =>
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
-  
+
   const ctx = canvas.getContext('2d');
   if (!ctx) return '';
-  
+
   // Create a simple gradient
   const gradient = ctx.createLinearGradient(0, 0, width, height);
   gradient.addColorStop(0, '#f3f4f6');
   gradient.addColorStop(1, '#e5e7eb');
-  
+
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, width, height);
-  
+
   return canvas.toDataURL('image/jpeg', 0.1);
 };
 
@@ -241,7 +247,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
 
   const [currentSrc, setCurrentSrc] = useState<string>('');
   const [isInView, setIsInView] = useState(!lazy);
-  
+
   const imgRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const intersectionObserverRef = useRef<IntersectionObserver>();
@@ -302,7 +308,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
     try {
       // Check cache first
       const cachedURL = await imageCache.get(optimizedSrc);
-      
+
       if (cachedURL) {
         setCurrentSrc(cachedURL);
         setLoadState({
@@ -316,23 +322,23 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
 
       // Fetch and cache the image
       const response = await fetch(optimizedSrc);
-      
+
       if (!response.ok) {
         throw new Error(`Failed to load image: ${response.status}`);
       }
 
       const blob = await response.blob();
       const objectURL = await imageCache.set(optimizedSrc, blob);
-      
+
       setCurrentSrc(objectURL);
       setLoadState({
         isLoading: false,
         isLoaded: true,
         hasError: false
       });
-      
+
       onLoad?.();
-      
+
     } catch (error) {
       const err = error as Error;
       setLoadState({
@@ -341,9 +347,9 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
         hasError: true,
         error: err
       });
-      
+
       onError?.(err);
-      
+
       // Fallback to original src
       setCurrentSrc(optimizedSrc);
     }
@@ -453,9 +459,8 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
           width={width}
           height={height}
           sizes={sizes}
-          className={`w-full h-full object-cover transition-opacity duration-300 ${
-            loadState.isLoaded ? 'opacity-100' : 'opacity-0'
-          }`}
+          className={`w-full h-full object-cover transition-opacity duration-300 ${loadState.isLoaded ? 'opacity-100' : 'opacity-0'
+            }`}
           onLoad={handleImageLoad}
           onError={handleImageError}
           loading={priority === 'high' ? 'eager' : 'lazy'}
@@ -483,18 +488,18 @@ export const useImagePreloader = () => {
     maxConcurrent?: number;
   }) => {
     const { priority = 'low', maxConcurrent = 3 } = options || {};
-    
+
     const preloadPromises: Promise<void>[] = [];
-    
+
     for (let i = 0; i < urls.length; i += maxConcurrent) {
       const batch = urls.slice(i, i + maxConcurrent);
-      
+
       const batchPromises = batch.map(async (url) => {
         try {
           // Check if already cached
           const cached = await imageCache.get(url);
           if (cached) return;
-          
+
           // Preload the image
           const response = await fetch(url);
           if (response.ok) {
@@ -505,15 +510,15 @@ export const useImagePreloader = () => {
           console.debug('Failed to preload image:', url, error);
         }
       });
-      
+
       preloadPromises.push(...batchPromises);
-      
+
       // Wait for current batch before starting next (for low priority)
       if (priority === 'low') {
         await Promise.allSettled(batchPromises);
       }
     }
-    
+
     return Promise.allSettled(preloadPromises);
   }, []);
 
@@ -550,7 +555,7 @@ export const ProgressiveImage: React.FC<OptimizedImageProps & {
           lazy={false}
         />
       )}
-      
+
       {/* High quality image */}
       <OptimizedImage
         {...props}

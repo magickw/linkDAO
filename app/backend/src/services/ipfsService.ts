@@ -183,28 +183,6 @@ export class IPFSService {
     content: Buffer | string | Readable,
     options?: IPFSUploadOptions
   ): Promise<IPFSFileMetadata> {
-    // Check if IPFS is available at all
-    if (!ipfsAvailable) {
-      // Generate a fallback hash for development/testing
-      const fallbackHash = `fallback-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-      safeLogger.warn('IPFS not available, using fallback hash:', fallbackHash);
-
-      const size = Buffer.isBuffer(content) ? content.length :
-        (typeof content === 'string' ? content.length : 0);
-
-      return {
-        id: fallbackHash,
-        name: options?.metadata?.name || 'fallback-file',
-        size: size,
-        mimeType: options?.metadata?.mimeType,
-        createdAt: new Date(),
-        ipfsHash: fallbackHash,
-        gatewayUrl: `${this.gatewayUrl}/${fallbackHash}`,
-        tags: options?.metadata?.tags,
-        description: options?.metadata?.description
-      };
-    }
-
     // If Pinata credentials are available, use Pinata API directly
     const hasPinataCredentials = (process.env.PINATA_API_KEY && process.env.PINATA_API_KEY_SECRET) || process.env.PINATA_JWT;
 
@@ -236,30 +214,25 @@ export class IPFSService {
       return result;
     }
 
-    // Since we don't use IPFS client, always use fallback CID generation
-    safeLogger.warn('IPFS client not used, generating fallback CID');
-    const crypto = require('crypto');
-    const contentBuffer = Buffer.isBuffer(content) ? content :
-      (typeof content === 'string' ? Buffer.from(content) : Buffer.from(''));
-    const hash = crypto.createHash('sha256').update(contentBuffer).digest('hex');
-    const fallbackCid = `bafy${hash.substring(0, 42)}`; // Use modern CIDv1 format
+    // Fallback: Generate a local hash if no IPFS service is available
+    // This should only happen in development/testing without Pinata credentials
+    safeLogger.warn('No IPFS service available (Pinata credentials missing), generating fallback hash');
+    const fallbackHash = `fallback-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
     const size = Buffer.isBuffer(content) ? content.length :
       (typeof content === 'string' ? content.length : 0);
 
-    const metadata: IPFSFileMetadata = {
-      id: fallbackCid,
+    return {
+      id: fallbackHash,
       name: options?.metadata?.name || 'fallback-file',
       size: size,
       mimeType: options?.metadata?.mimeType,
       createdAt: new Date(),
-      ipfsHash: fallbackCid,
-      gatewayUrl: `${this.gatewayUrl}/${fallbackCid}`,
+      ipfsHash: fallbackHash,
+      gatewayUrl: `${this.gatewayUrl}/${fallbackHash}`,
       tags: options?.metadata?.tags,
       description: options?.metadata?.description
     };
-
-    return metadata;
   }
 
   /**
