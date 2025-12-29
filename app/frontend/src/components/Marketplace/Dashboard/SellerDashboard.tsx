@@ -486,9 +486,9 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
             <div className="flex items-center mb-4 md:mb-0">
-              {profile?.coverImageCdn ? (
+              {profile?.profileImageCdn || profile?.profileImageUrl ? (
                 <img
-                  src={profile.coverImageCdn}
+                  src={profile.profileImageCdn || profile.profileImageUrl}
                   alt={profile.storeName || 'Seller'}
                   className="w-16 h-16 rounded-full object-cover border-2 border-purple-500 mr-4"
                 />

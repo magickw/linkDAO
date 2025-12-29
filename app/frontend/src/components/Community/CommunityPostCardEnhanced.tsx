@@ -491,6 +491,25 @@ function CommunityPostCardEnhanced({
     return null;
   };
 
+  // Handle delete post
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await CommunityPostService.deletePost(community.id, post.id);
+      addToast('Post deleted successfully', 'success');
+      // Reload page to reflect changes
+      if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      addToast('Failed to delete post', 'error');
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -590,8 +609,27 @@ function CommunityPostCardEnhanced({
 
             {/* Post Actions Menu */}
             <div className="flex items-center space-x-2">
+              {/* Delete Button for Author */}
+              {address && (post.author === address || post.walletAddress === address) && (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleDelete();
+                  }}
+                  className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                  title="Delete Post"
+                  aria-label="Delete Post"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              )}
+
               {/* Only show locked status for community posts */}
               {isCommunityPostType && communityPost && communityPost.isLocked && (
+
                 <span className="text-yellow-500" title="Comments are locked" aria-label="Comments are locked">
                   🔒
                 </span>
@@ -800,17 +838,26 @@ function CommunityPostCardEnhanced({
           )}
 
           {/* Comment prompt when no comments and section is collapsed */}
-          {!showComments && comments.length === 0 && (
+          {!showComments && (
             <div className="mt-4 text-center py-3 px-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                No comments yet.
+              {comments.length === 0 ? (
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  No comments yet.
+                  <button
+                    onClick={toggleComments}
+                    className="ml-1 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium"
+                  >
+                    Be the first to comment!
+                  </button>
+                </p>
+              ) : (
                 <button
                   onClick={toggleComments}
-                  className="ml-1 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium"
+                  className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium"
                 >
-                  Be the first to comment!
+                  View {comments.length} comment{comments.length === 1 ? '' : 's'}
                 </button>
-              </p>
+              )}
             </div>
           )}
 

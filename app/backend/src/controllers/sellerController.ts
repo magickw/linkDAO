@@ -3,6 +3,7 @@ import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/
 import { safeLogger } from '../utils/safeLogger';
 import { databaseService } from "../services/databaseService";
 import { sellerService } from "../services/sellerService";
+import { sellerListingService } from "../services/sellerListingService";
 import { eq, and, or, ilike, desc, lt, gte, lte, sql } from 'drizzle-orm';
 import * as schema from '../db/schema';
 import { marketplaceUsers, sellerVerifications } from "../db/marketplaceSchema";
@@ -666,7 +667,9 @@ export class SellerController {
       const updates = req.body;
       const db = databaseService.getDatabase();
 
-      // Verify ownership
+      // Verify ownership using a simple check first (or let service handle it, but service checks wallet address match)
+      // The service expects walletAddress to verify ownership indirectly via seller ID lookup
+      // But we should probably check if the listing belongs to the user here for security 403
       const [listing] = await db.select()
         .from(products)
         .leftJoin(users, eq(products.sellerId, users.id))
@@ -676,37 +679,58 @@ export class SellerController {
         return res.status(404).json({ success: false, error: "Listing not found or access denied" });
       }
 
-      // Update the listing
-      const updateData: any = { updatedAt: new Date() };
-      if (updates.title) updateData.title = updates.title;
-      if (updates.description) updateData.description = updates.description;
-      if (updates.category) updateData.mainCategory = updates.category;
-      if (updates.priceCrypto) updateData.priceAmount = updates.priceCrypto.toString();
-      if (updates.currency) updateData.priceCurrency = updates.currency;
-      if (updates.isPhysical !== undefined) updateData.isPhysical = updates.isPhysical;
-      if (updates.stock !== undefined) updateData.inventory = updates.stock;
-      if (updates.status) updateData.status = updates.status;
-      if (updates.metadataUri) updateData.metadata = JSON.stringify({ uri: updates.metadataUri });
+      // Prepare update data for validator
+      console.log(`Updating listing ${id} with rich data`);
 
-      const [updatedListing] = await db.update(products)
-        .set(updateData)
-        .where(eq(products.id, id))
-        .returning();
+      const updateData: any = {
+        title: updates.title,
+        description: updates.description,
+        price: updates.price || updates.priceCrypto,
+        currency: updates.currency,
+        categoryId: updates.category, // frontend sends 'category' as ID/Slug
+        inventory: updates.stock !== undefined ? updates.stock : updates.quantity,
+        status: updates.status,
+        images: updates.images,
+        tags: updates.tags,
+        // Map new fields
+        condition: updates.condition,
+        escrowEnabled: updates.escrowEnabled,
+        shipping: updates.shipping,
+        variants: updates.variants,
+        itemType: updates.itemType,
+        seoTitle: updates.seoTitle,
+        seoDescription: updates.seoDescription,
+        metadata: { ...updates.metadata }
+      };
+
+      if (updates.metadataUri) {
+        updateData.metadata.uri = updates.metadataUri;
+      }
+
+      // Map specifications to flat fields where possible
+      if (updates.specifications) {
+        if (updates.specifications.weight && typeof updates.specifications.weight.value === 'number') {
+          updateData.weight = updates.specifications.weight.value;
+        }
+        if (updates.specifications.dimensions) {
+          updateData.dimensions = updates.specifications.dimensions;
+        }
+        // Store full specifications in metadata as well to preserve units etc
+        updateData.metadata.specifications = updates.specifications;
+      }
+
+      if (updates.isPhysical !== undefined) {
+        updateData.isPhysical = updates.isPhysical;
+      } else if (updates.itemType === 'PHYSICAL') {
+        updateData.isPhysical = true;
+      }
+
+      // Use the service to handle the update
+      const updatedListing = await sellerListingService.updateListing(id, updateData);
 
       res.json({
         success: true,
-        data: {
-          id: updatedListing.id,
-          title: updatedListing.title,
-          description: updatedListing.description,
-          category: updatedListing.mainCategory,
-          priceCrypto: parseFloat(updatedListing.priceAmount),
-          currency: updatedListing.priceCurrency,
-          isPhysical: updatedListing.isPhysical,
-          stock: updatedListing.inventory,
-          status: updatedListing.status,
-          updatedAt: updatedListing.updatedAt
-        }
+        data: updatedListing
       });
     } catch (error) {
       safeLogger.error("Error updating listing:", error);

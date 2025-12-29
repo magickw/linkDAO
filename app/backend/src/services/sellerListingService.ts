@@ -87,6 +87,15 @@ interface UpdateListingData {
   metadata?: any;
   shipping?: ShippingConfiguration;
   nft?: any;
+  condition?: string;
+  weight?: number;
+  dimensions?: any;
+  seoTitle?: string;
+  seoDescription?: string;
+  variants?: any[];
+  escrowEnabled?: boolean;
+  itemType?: string;
+  isPhysical?: boolean;
 }
 
 /**
@@ -138,7 +147,7 @@ class SellerListingService {
       } else if (!normalizedAddress.startsWith('0x') && normalizedAddress.length === 40) {
         normalizedAddress = '0x' + normalizedAddress;
       }
-      
+
       safeLogger.info('Fetching seller listings', { originalWalletAddress: walletAddress, normalizedAddress, options });
 
       const {
@@ -159,7 +168,7 @@ class SellerListingService {
         const fallbackAddress = normalizedAddress.startsWith('0x') ? normalizedAddress.substring(2) : normalizedAddress;
         const fallbackUserResult = await db.select().from(users).where(eq(users.walletAddress, fallbackAddress));
         user = fallbackUserResult[0];
-        
+
         if (!user) {
           safeLogger.info('User not found for seller, returning empty listings', { walletAddress: normalizedAddress, fallbackAddress });
           return {
@@ -175,106 +184,106 @@ class SellerListingService {
       const sellerResult = await db.select().from(sellers).where(eq(sellers.walletAddress, normalizedAddress));
       const seller = sellerResult[0];
 
-    safeLogger.info('Querying products for seller', { 
-      userId: user.id, 
-      walletAddress: normalizedAddress,
-      statusFilter: status || 'none',
-      limit,
-      offset
-    });
+      safeLogger.info('Querying products for seller', {
+        userId: user.id,
+        walletAddress: normalizedAddress,
+        statusFilter: status || 'none',
+        limit,
+        offset
+      });
 
-    // Build query conditions
-    const conditions = [eq(products.sellerId, user.id)];
+      // Build query conditions
+      const conditions = [eq(products.sellerId, user.id)];
 
-    if (status) {
-      conditions.push(eq(products.status, status));
-    }
+      if (status) {
+        conditions.push(eq(products.status, status));
+      }
 
-    // Build where clause
-    const whereClause = conditions.length === 1 ? conditions[0] : and(...conditions);
+      // Build where clause
+      const whereClause = conditions.length === 1 ? conditions[0] : and(...conditions);
 
-    // Get total count
-    const productsList = await db.select().from(products).where(whereClause);
+      // Get total count
+      const productsList = await db.select().from(products).where(whereClause);
 
-    safeLogger.info('Products query result', {
-      userId: user.id,
-      totalFound: productsList.length,
-      statusFilter: status || 'none',
-      sampleProduct: productsList[0] ? {
-        id: productsList[0].id,
-        title: productsList[0].title,
-        status: productsList[0].status,
-        sellerId: productsList[0].sellerId
-      } : null
-    });
+      safeLogger.info('Products query result', {
+        userId: user.id,
+        totalFound: productsList.length,
+        statusFilter: status || 'none',
+        sampleProduct: productsList[0] ? {
+          id: productsList[0].id,
+          title: productsList[0].title,
+          status: productsList[0].status,
+          sellerId: productsList[0].sellerId
+        } : null
+      });
 
-    const total = productsList.length;
+      const total = productsList.length;
 
-    // Build order by
-    const orderByColumn = sortBy === 'price' ? products.priceAmount : products.createdAt;
-    const orderByDirection = sortOrder === 'asc' ? asc(orderByColumn) : desc(orderByColumn);
+      // Build order by
+      const orderByColumn = sortBy === 'price' ? products.priceAmount : products.createdAt;
+      const orderByDirection = sortOrder === 'asc' ? asc(orderByColumn) : desc(orderByColumn);
 
-    // Get listings
-    const listings = await db.select().from(products).where(whereClause).orderBy(orderByDirection).limit(limit).offset(offset);
+      // Get listings
+      const listings = await db.select().from(products).where(whereClause).orderBy(orderByDirection).limit(limit).offset(offset);
 
-    return {
-      listings: listings.map(listing => {
-        try {
-          return {
-            id: listing.id,
-            sellerId: listing.sellerId,
-            sellerAddress: user?.walletAddress || normalizedAddress,
-            title: listing.title,
-            description: listing.description,
-            price: listing.priceAmount?.toString() || '0',
-            currency: listing.priceCurrency,
-            categoryId: listing.categoryId,
-            images: typeof listing.images === 'string' ? JSON.parse(listing.images) : (listing.images || []),
-            metadata: typeof listing.metadata === 'string' ? JSON.parse(listing.metadata) : (listing.metadata || {}),
-            inventory: listing.inventory,
-            status: listing.status || 'draft',
-            tags: listing.tags ? (typeof listing.tags === 'string' ? JSON.parse(listing.tags) : listing.tags) : [],
-            shipping: listing.shipping ? (typeof listing.shipping === 'string' ? JSON.parse(listing.shipping) : listing.shipping) : null,
-            nft: listing.nft ? (typeof listing.nft === 'string' ? JSON.parse(listing.nft) : listing.nft) : null,
-            views: listing.views || 0,
-            favorites: listing.favorites || 0,
-            listingStatus: listing.listingStatus || 'draft',
-            publishedAt: listing.publishedAt || undefined,
-            createdAt: listing.createdAt || new Date(),
-            updatedAt: listing.updatedAt || new Date(),
-          };
-        } catch (parseError) {
-          safeLogger.error('Error parsing listing data:', { listingId: listing.id, error: parseError });
-          // Return listing with safe defaults if JSON parsing fails
-          return {
-            id: listing.id,
-            sellerId: listing.sellerId,
-            sellerAddress: user?.walletAddress || normalizedAddress,
-            title: listing.title,
-            description: listing.description,
-            price: listing.priceAmount?.toString() || '0',
-            currency: listing.priceCurrency,
-            categoryId: listing.categoryId,
-            images: [],
-            metadata: {},
-            inventory: listing.inventory,
-            status: listing.status || 'draft',
-            tags: [],
-            shipping: null,
-            nft: null,
-            views: listing.views || 0,
-            favorites: listing.favorites || 0,
-            listingStatus: listing.listingStatus || 'draft',
-            publishedAt: listing.publishedAt || undefined,
-            createdAt: listing.createdAt || new Date(),
-            updatedAt: listing.updatedAt || new Date(),
-          };
-        }
-      }),
-      total,
-      page: Math.floor(offset / limit) + 1,
-      pageSize: limit,
-    };
+      return {
+        listings: listings.map(listing => {
+          try {
+            return {
+              id: listing.id,
+              sellerId: listing.sellerId,
+              sellerAddress: user?.walletAddress || normalizedAddress,
+              title: listing.title,
+              description: listing.description,
+              price: listing.priceAmount?.toString() || '0',
+              currency: listing.priceCurrency,
+              categoryId: listing.categoryId,
+              images: typeof listing.images === 'string' ? JSON.parse(listing.images) : (listing.images || []),
+              metadata: typeof listing.metadata === 'string' ? JSON.parse(listing.metadata) : (listing.metadata || {}),
+              inventory: listing.inventory,
+              status: listing.status || 'draft',
+              tags: listing.tags ? (typeof listing.tags === 'string' ? JSON.parse(listing.tags) : listing.tags) : [],
+              shipping: listing.shipping ? (typeof listing.shipping === 'string' ? JSON.parse(listing.shipping) : listing.shipping) : null,
+              nft: listing.nft ? (typeof listing.nft === 'string' ? JSON.parse(listing.nft) : listing.nft) : null,
+              views: listing.views || 0,
+              favorites: listing.favorites || 0,
+              listingStatus: listing.listingStatus || 'draft',
+              publishedAt: listing.publishedAt || undefined,
+              createdAt: listing.createdAt || new Date(),
+              updatedAt: listing.updatedAt || new Date(),
+            };
+          } catch (parseError) {
+            safeLogger.error('Error parsing listing data:', { listingId: listing.id, error: parseError });
+            // Return listing with safe defaults if JSON parsing fails
+            return {
+              id: listing.id,
+              sellerId: listing.sellerId,
+              sellerAddress: user?.walletAddress || normalizedAddress,
+              title: listing.title,
+              description: listing.description,
+              price: listing.priceAmount?.toString() || '0',
+              currency: listing.priceCurrency,
+              categoryId: listing.categoryId,
+              images: [],
+              metadata: {},
+              inventory: listing.inventory,
+              status: listing.status || 'draft',
+              tags: [],
+              shipping: null,
+              nft: null,
+              views: listing.views || 0,
+              favorites: listing.favorites || 0,
+              listingStatus: listing.listingStatus || 'draft',
+              publishedAt: listing.publishedAt || undefined,
+              createdAt: listing.createdAt || new Date(),
+              updatedAt: listing.updatedAt || new Date(),
+            };
+          }
+        }),
+        total,
+        page: Math.floor(offset / limit) + 1,
+        pageSize: limit,
+      };
     } catch (error) {
       safeLogger.error('Error in getSellerListings:', {
         walletAddress,
@@ -282,7 +291,7 @@ class SellerListingService {
         error: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined
       });
-      
+
       // Return empty result instead of throwing to prevent 500 errors
       const { limit = 50, offset = 0 } = options;
       return {
@@ -407,8 +416,8 @@ class SellerListingService {
 
     const { length, width, height } = shipping.packageDetails.dimensions;
     if (typeof length !== 'number' || length <= 0 || length > 108 ||
-        typeof width !== 'number' || width <= 0 || width > 108 ||
-        typeof height !== 'number' || height <= 0 || height > 108) {
+      typeof width !== 'number' || width <= 0 || width > 108 ||
+      typeof height !== 'number' || height <= 0 || height > 108) {
       throw new Error('Package dimensions must be between 0 and 108 inches');
     }
   }
@@ -566,9 +575,35 @@ class SellerListingService {
     if (data.status !== undefined) updateData.status = data.status;
     if (data.images !== undefined) updateData.images = JSON.stringify(data.images);
     if (data.tags !== undefined) updateData.tags = JSON.stringify(data.tags);
-    if (data.metadata !== undefined) updateData.metadata = JSON.stringify(data.metadata);
+
+    // Direct column mappings
+    if (data.condition !== undefined) updateData.condition = data.condition;
+    if (data.weight !== undefined) updateData.weight = data.weight.toString();
+    if (data.dimensions !== undefined) updateData.dimensions = data.dimensions;
+    if (data.seoTitle !== undefined) updateData.seoTitle = data.seoTitle;
+    if (data.seoDescription !== undefined) updateData.seoDescription = data.seoDescription;
     if (data.shipping !== undefined) updateData.shipping = JSON.stringify(data.shipping);
     if (data.nft !== undefined) updateData.nft = JSON.stringify(data.nft);
+    if (data.isPhysical !== undefined) updateData.isPhysical = data.isPhysical;
+
+    // Handle metadata merging for extra fields
+    let currentMetadata = {};
+    if (existing.metadata) {
+      try {
+        currentMetadata = JSON.parse(existing.metadata);
+      } catch (e) {
+        // ignore error
+      }
+    }
+
+    const newMetadata = { ...currentMetadata, ...(data.metadata || {}) };
+
+    // Store fields that don't have dedicated columns in metadata
+    if (data.variants !== undefined) newMetadata.variants = data.variants;
+    if (data.escrowEnabled !== undefined) newMetadata.escrowEnabled = data.escrowEnabled;
+    if (data.itemType !== undefined) newMetadata.itemType = data.itemType;
+
+    updateData.metadata = JSON.stringify(newMetadata);
 
     // If changing status to active, set publishedAt
     if (data.status === 'active' && !existing.publishedAt) {
@@ -660,7 +695,7 @@ class SellerListingService {
         updatedMetadata = {};
       }
     }
-    
+
     // Add rejection reason to metadata if provided
     if (reason) {
       (updatedMetadata as any).rejectionReason = reason;

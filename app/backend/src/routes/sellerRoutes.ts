@@ -10,7 +10,7 @@ const router = Router();
 router.use(authMiddleware); // All seller routes require authentication
 
 // POST /api/sellers/listings - Create new product listing
-router.post('/listings', csrfProtection,  
+router.post('/listings', csrfProtection,
   validateRequest({
     body: {
       title: { type: 'string', required: true, minLength: 3, maxLength: 500 },
@@ -27,7 +27,7 @@ router.post('/listings', csrfProtection,
 );
 
 // PUT /api/sellers/listings/:id - Update existing listing
-router.put('/listings/:id', csrfProtection, 
+router.put('/listings/:id', csrfProtection,
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -36,19 +36,32 @@ router.put('/listings/:id', csrfProtection,
       title: { type: 'string', optional: true, minLength: 3, maxLength: 500 },
       description: { type: 'string', optional: true, minLength: 10 },
       category: { type: 'string', optional: true, maxLength: 100 },
+      price: { type: 'number', optional: true, min: 0 },
       priceCrypto: { type: 'number', optional: true, min: 0 },
-      currency: { type: 'string', optional: true, enum: ['USDC', 'ETH', 'MATIC'] },
+      currency: { type: 'string', optional: true, enum: ['USDC', 'ETH', 'MATIC', 'USD', 'USDT'] },
       isPhysical: { type: 'boolean', optional: true },
       stock: { type: 'number', optional: true, min: 0 },
+      quantity: { type: 'number', optional: true, min: 0 },
       status: { type: 'string', optional: true, enum: ['active', 'inactive', 'draft', 'sold_out'] },
-      metadataUri: { type: 'string', optional: true }
+      metadataUri: { type: 'string', optional: true },
+      // Enhanced fields
+      images: { type: 'array', optional: true },
+      tags: { type: 'array', optional: true },
+      condition: { type: 'string', optional: true },
+      escrowEnabled: { type: 'boolean', optional: true },
+      shipping: { type: 'object', optional: true },
+      specifications: { type: 'object', optional: true },
+      variants: { type: 'array', optional: true },
+      itemType: { type: 'string', optional: true },
+      seoTitle: { type: 'string', optional: true },
+      seoDescription: { type: 'string', optional: true }
     }
   }),
   sellerController.updateListing.bind(sellerController)
 );
 
 // DELETE /api/sellers/listings/:id - Delete listing
-router.delete('/listings/:id', csrfProtection, 
+router.delete('/listings/:id', csrfProtection,
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -70,7 +83,7 @@ router.get('/dashboard',
 );
 
 // PUT /api/sellers/profile - Update seller store information
-router.put('/profile', csrfProtection, 
+router.put('/profile', csrfProtection,
   validateRequest({
     body: {
       displayName: { type: 'string', optional: true, minLength: 2, maxLength: 100 },
@@ -169,7 +182,7 @@ router.get('/tier/criteria', sellerController.getTierCriteria.bind(sellerControl
 router.get('/tier/history', sellerController.getTierEvaluationHistory.bind(sellerController));
 
 // POST /api/sellers/verify - Request seller verification
-router.post('/verify', csrfProtection, 
+router.post('/verify', csrfProtection,
   validateRequest({
     body: {
       verificationType: { type: 'string', required: true, enum: ['email', 'phone', 'kyc'] },
@@ -183,7 +196,7 @@ router.post('/verify', csrfProtection,
 // Seller Applications Routes
 router.get('/applications', sellerController.getSellerApplications.bind(sellerController));
 router.get('/applications/:applicationId', sellerController.getSellerApplication.bind(sellerController));
-router.post('/applications/:applicationId/review', csrfProtection,  sellerController.reviewSellerApplication.bind(sellerController));
+router.post('/applications/:applicationId/review', csrfProtection, sellerController.reviewSellerApplication.bind(sellerController));
 router.get('/applications/:applicationId/risk-assessment', sellerController.getSellerRiskAssessment.bind(sellerController));
 
 // Seller Performance Routes

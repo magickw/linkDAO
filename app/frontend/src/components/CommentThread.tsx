@@ -167,17 +167,17 @@ export default function CommentThread({
         {/* Comment Content */}
         <div className="flex-1 min-w-0">
           {/* Header */}
-                    <div className="flex items-center space-x-2">
-                      <Link
-                        href={`/u/${comment.walletAddress || (typeof comment.author === 'string' ? comment.author : comment.author?.walletAddress)}`}
-                        className="font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-                      >
-                        {comment.handle || comment.displayName ? `u/${comment.handle || comment.displayName}` :
-                         comment.walletAddress ? `${comment.walletAddress.slice(0, 6)}...${comment.walletAddress.slice(-4)}` :
-                         typeof comment.author === 'string' ? `${comment.author.slice(0, 6)}...${comment.author.slice(-4)}` :
-                         comment.author?.walletAddress ? `${comment.author.walletAddress.slice(0, 6)}...${comment.author.walletAddress.slice(-4)}` :
-                         'Anonymous'}
-                      </Link>            <span className="text-xs text-gray-500 dark:text-gray-400">
+          <div className="flex items-center space-x-2">
+            <Link
+              href={`/u/${typeof comment.author === 'string' ? comment.author : (comment.author as any)?.walletAddress || comment.walletAddress}`}
+              className="font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+            >
+              {comment.handle || comment.displayName ? `u/${comment.handle || comment.displayName}` :
+                (typeof comment.author === 'string' ? comment.author : (comment.author as any)?.walletAddress || comment.walletAddress) ?
+                  `${(typeof comment.author === 'string' ? comment.author : (comment.author as any)?.walletAddress || comment.walletAddress).slice(0, 6)}...${(typeof comment.author === 'string' ? comment.author : (comment.author as any)?.walletAddress || comment.walletAddress).slice(-4)}` :
+                  'Anonymous'}
+            </Link>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
               {formatTimestamp(comment.createdAt)}
             </span>
             {comment.isEdited && (
@@ -227,14 +227,23 @@ export default function CommentThread({
             </button>
 
             {/* Delete button - only show for comment author */}
-            {address && comment.author && (
-              address.toLowerCase() === (typeof comment.author === 'string' ? comment.author : comment.walletAddress)?.toLowerCase()
+            {address && (
+              // Robust check for author address matching current wallet
+              address.toLowerCase() === (
+                typeof comment.author === 'string'
+                  ? comment.author
+                  : (comment.author as any)?.walletAddress || comment.walletAddress
+              )?.toLowerCase()
             ) && !comment.isDeleted && (
                 <button
                   onClick={async () => {
                     if (confirm('Are you sure you want to delete this comment? This action cannot be undone.')) {
                       try {
-                        await CommunityPostService.deleteComment(comment.id, address);
+                        const authorAddress = typeof comment.author === 'string'
+                          ? comment.author
+                          : (comment.author as any)?.walletAddress || comment.walletAddress;
+
+                        await CommunityPostService.deleteComment(comment.id, authorAddress);
                         addToast('Comment deleted successfully', 'success');
                         // Refresh the page to show updated comments
                         window.location.reload();
