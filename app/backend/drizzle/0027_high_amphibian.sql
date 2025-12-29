@@ -4675,9 +4675,37 @@ BEGIN
         RAISE NOTICE 'Column wallet_address does not exist in reputation_history table, skipping index creation';
     END IF;
 END$$;--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "idx_reputation_history_event_type" ON "reputation_history" USING btree ("event_type");--> statement-breakpoint
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = 'reputation_history'
+        AND column_name = 'event_type'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS "idx_reputation_history_event_type"
+        ON "reputation_history" USING btree ("event_type");
+        RAISE NOTICE 'Created index idx_reputation_history_event_type';
+    ELSE
+        RAISE NOTICE 'Column event_type does not exist in reputation_history table, skipping index creation';
+    END IF;
+END$$;--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_reputation_history_created_at" ON "reputation_history" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "idx_reputation_history_transaction_id" ON "reputation_history" USING btree ("transaction_id");--> statement-breakpoint
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = 'reputation_history'
+        AND column_name = 'transaction_id'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS "idx_reputation_history_transaction_id"
+        ON "reputation_history" USING btree ("transaction_id");
+        RAISE NOTICE 'Created index idx_reputation_history_transaction_id';
+    ELSE
+        RAISE NOTICE 'Column transaction_id does not exist in reputation_history table, skipping index creation';
+    END IF;
+END$$;--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_seller_growth_projections_wallet" ON "seller_growth_projections" USING btree ("seller_wallet_address");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_seller_growth_projections_type" ON "seller_growth_projections" USING btree ("projection_type");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_seller_performance_alerts_wallet" ON "seller_performance_alerts" USING btree ("seller_wallet_address");--> statement-breakpoint

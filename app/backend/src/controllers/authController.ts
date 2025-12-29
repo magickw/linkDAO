@@ -194,18 +194,26 @@ class AuthController {
       }
 
       // Check if user has 2FA enabled
+      // Note: This is wrapped in try-catch because the two_factor_auth table may not exist yet
       let userHas2FA = false;
       try {
-        const [authRecord] = await db
-          .select()
-          .from(twoFactorAuth)
-          .where(eq(twoFactorAuth.userId, userData.id))
-          .limit(1);
+        // Only check 2FA if the table exists (graceful degradation)
+        if (twoFactorAuth) {
+          const [authRecord] = await db
+            .select()
+            .from(twoFactorAuth)
+            .where(eq(twoFactorAuth.userId, userData.id))
+            .limit(1);
 
-        userHas2FA = authRecord?.isEnabled || false;
-        safeLogger.info('2FA status checked', { userId: userData.id, has2FA: userHas2FA });
-      } catch (twoFactorError) {
-        safeLogger.info('2FA check failed, skipping', { error: twoFactorError });
+          userHas2FA = authRecord?.isEnabled || false;
+          safeLogger.info('2FA status checked', { userId: userData.id, has2FA: userHas2FA });
+        }
+      } catch (twoFactorError: any) {
+        // Silently skip 2FA check if table doesn't exist or other DB error
+        safeLogger.info('2FA check skipped', {
+          reason: twoFactorError?.message || 'Unknown error',
+          code: twoFactorError?.code
+        });
         // Continue without 2FA check if there's an error
       }
 
