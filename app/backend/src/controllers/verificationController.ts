@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { VerificationService } from '../services/VerificationService';
+import { VerificationService } from '../services/verificationService';
 import { safeLogger } from '../utils/safeLogger';
 
 export class VerificationController {

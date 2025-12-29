@@ -3,7 +3,7 @@
 
 -- Core moderation cases table
 DROP TABLE IF EXISTS moderation_cases CASCADE;
-CREATE TABLE moderation_cases (
+CREATE TABLE IF NOT EXISTS moderation_cases (
     id SERIAL PRIMARY KEY,
     content_id VARCHAR(64) NOT NULL,
     content_type VARCHAR(24) NOT NULL CHECK (content_type IN ('post', 'comment', 'listing', 'dm', 'username', 'image', 'video')),
@@ -21,7 +21,7 @@ CREATE TABLE moderation_cases (
 
 -- User enforcement actions table
 DROP TABLE IF EXISTS moderation_actions CASCADE;
-CREATE TABLE moderation_actions (
+CREATE TABLE IF NOT EXISTS moderation_actions (
     id SERIAL PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(id),
     content_id VARCHAR(64) NOT NULL,
@@ -34,7 +34,7 @@ CREATE TABLE moderation_actions (
 
 -- Community reports table
 DROP TABLE IF EXISTS content_reports CASCADE;
-CREATE TABLE content_reports (
+CREATE TABLE IF NOT EXISTS content_reports (
     id SERIAL PRIMARY KEY,
     content_id VARCHAR(64) NOT NULL,
     reporter_id UUID NOT NULL REFERENCES users(id),
@@ -47,7 +47,7 @@ CREATE TABLE content_reports (
 
 -- Appeals system table
 DROP TABLE IF EXISTS moderation_appeals CASCADE;
-CREATE TABLE moderation_appeals (
+CREATE TABLE IF NOT EXISTS moderation_appeals (
     id SERIAL PRIMARY KEY,
     case_id INTEGER NOT NULL REFERENCES moderation_cases(id),
     appellant_id UUID NOT NULL REFERENCES users(id),
@@ -60,7 +60,7 @@ CREATE TABLE moderation_appeals (
 
 -- Jury selection and voting for appeals
 DROP TABLE IF EXISTS appeal_jurors CASCADE;
-CREATE TABLE appeal_jurors (
+CREATE TABLE IF NOT EXISTS appeal_jurors (
     id SERIAL PRIMARY KEY,
     appeal_id INTEGER NOT NULL REFERENCES moderation_appeals(id),
     juror_id UUID NOT NULL REFERENCES users(id),
@@ -77,7 +77,7 @@ CREATE TABLE appeal_jurors (
 
 -- Policy rules configuration
 DROP TABLE IF EXISTS moderation_policies CASCADE;
-CREATE TABLE moderation_policies (
+CREATE TABLE IF NOT EXISTS moderation_policies (
     id SERIAL PRIMARY KEY,
     category VARCHAR(48) NOT NULL,
     severity VARCHAR(24) NOT NULL CHECK (severity IN ('low', 'medium', 'high', 'critical')),
@@ -92,7 +92,7 @@ CREATE TABLE moderation_policies (
 
 -- Vendor API configurations and status
 DROP TABLE IF EXISTS moderation_vendors CASCADE;
-CREATE TABLE moderation_vendors (
+CREATE TABLE IF NOT EXISTS moderation_vendors (
     id SERIAL PRIMARY KEY,
     vendor_name VARCHAR(32) NOT NULL UNIQUE,
     vendor_type VARCHAR(24) NOT NULL CHECK (vendor_type IN ('text', 'image', 'video', 'link', 'custom')),
@@ -104,13 +104,14 @@ CREATE TABLE moderation_vendors (
     success_rate DECIMAL(5,4) DEFAULT 1,
     last_health_check TIMESTAMP,
     configuration JSONB DEFAULT '{}',
+    description TEXT,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
 -- Audit log for all moderation decisions
 DROP TABLE IF EXISTS moderation_audit_log CASCADE;
-CREATE TABLE moderation_audit_log (
+CREATE TABLE IF NOT EXISTS moderation_audit_log (
     id SERIAL PRIMARY KEY,
     case_id INTEGER REFERENCES moderation_cases(id),
     action_type VARCHAR(32) NOT NULL,
@@ -126,7 +127,7 @@ CREATE TABLE moderation_audit_log (
 
 -- Performance metrics and monitoring
 DROP TABLE IF EXISTS moderation_metrics CASCADE;
-CREATE TABLE moderation_metrics (
+CREATE TABLE IF NOT EXISTS moderation_metrics (
     id SERIAL PRIMARY KEY,
     metric_type VARCHAR(32) NOT NULL,
     metric_name VARCHAR(64) NOT NULL,
@@ -137,7 +138,7 @@ CREATE TABLE moderation_metrics (
 
 -- Content hashes for duplicate detection
 DROP TABLE IF EXISTS content_hashes CASCADE;
-CREATE TABLE content_hashes (
+CREATE TABLE IF NOT EXISTS content_hashes (
     id SERIAL PRIMARY KEY,
     content_id VARCHAR(64) NOT NULL,
     content_type VARCHAR(24) NOT NULL,
@@ -149,7 +150,7 @@ CREATE TABLE content_hashes (
 
 -- Reputation impact tracking
 DROP TABLE IF EXISTS reputation_impacts CASCADE;
-CREATE TABLE reputation_impacts (
+CREATE TABLE IF NOT EXISTS reputation_impacts (
     id SERIAL PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(id),
     case_id INTEGER REFERENCES moderation_cases(id),
@@ -162,47 +163,47 @@ CREATE TABLE reputation_impacts (
 );
 
 -- Performance optimization indices
-CREATE INDEX idx_moderation_cases_content_id ON moderation_cases(content_id);
-CREATE INDEX idx_moderation_cases_user_id ON moderation_cases(user_id);
-CREATE INDEX idx_moderation_cases_status ON moderation_cases(status);
-CREATE INDEX idx_moderation_cases_created_at ON moderation_cases(created_at);
-CREATE INDEX idx_moderation_cases_risk_score ON moderation_cases(risk_score);
+CREATE INDEX IF NOT EXISTS idx_moderation_cases_content_id ON moderation_cases(content_id);
+CREATE INDEX IF NOT EXISTS idx_moderation_cases_user_id ON moderation_cases(user_id);
+CREATE INDEX IF NOT EXISTS idx_moderation_cases_status ON moderation_cases(status);
+CREATE INDEX IF NOT EXISTS idx_moderation_cases_created_at ON moderation_cases(created_at);
+CREATE INDEX IF NOT EXISTS idx_moderation_cases_risk_score ON moderation_cases(risk_score);
 
-CREATE INDEX idx_moderation_actions_user_id ON moderation_actions(user_id);
-CREATE INDEX idx_moderation_actions_content_id ON moderation_actions(content_id);
-CREATE INDEX idx_moderation_actions_created_at ON moderation_actions(created_at);
+CREATE INDEX IF NOT EXISTS idx_moderation_actions_user_id ON moderation_actions(user_id);
+CREATE INDEX IF NOT EXISTS idx_moderation_actions_content_id ON moderation_actions(content_id);
+CREATE INDEX IF NOT EXISTS idx_moderation_actions_created_at ON moderation_actions(created_at);
 
-CREATE INDEX idx_content_reports_content_id ON content_reports(content_id);
-CREATE INDEX idx_content_reports_reporter_id ON content_reports(reporter_id);
-CREATE INDEX idx_content_reports_status ON content_reports(status);
-CREATE INDEX idx_content_reports_created_at ON content_reports(created_at);
+CREATE INDEX IF NOT EXISTS idx_content_reports_content_id ON content_reports(content_id);
+CREATE INDEX IF NOT EXISTS idx_content_reports_reporter_id ON content_reports(reporter_id);
+CREATE INDEX IF NOT EXISTS idx_content_reports_status ON content_reports(status);
+CREATE INDEX IF NOT EXISTS idx_content_reports_created_at ON content_reports(created_at);
 
-CREATE INDEX idx_moderation_appeals_case_id ON moderation_appeals(case_id);
-CREATE INDEX idx_moderation_appeals_appellant_id ON moderation_appeals(appellant_id);
-CREATE INDEX idx_moderation_appeals_status ON moderation_appeals(status);
+CREATE INDEX IF NOT EXISTS idx_moderation_appeals_case_id ON moderation_appeals(case_id);
+CREATE INDEX IF NOT EXISTS idx_moderation_appeals_appellant_id ON moderation_appeals(appellant_id);
+CREATE INDEX IF NOT EXISTS idx_moderation_appeals_status ON moderation_appeals(status);
 
-CREATE INDEX idx_appeal_jurors_appeal_id ON appeal_jurors(appeal_id);
-CREATE INDEX idx_appeal_jurors_juror_id ON appeal_jurors(juror_id);
+CREATE INDEX IF NOT EXISTS idx_appeal_jurors_appeal_id ON appeal_jurors(appeal_id);
+CREATE INDEX IF NOT EXISTS idx_appeal_jurors_juror_id ON appeal_jurors(juror_id);
 
-CREATE INDEX idx_moderation_audit_log_case_id ON moderation_audit_log(case_id);
-CREATE INDEX idx_moderation_audit_log_created_at ON moderation_audit_log(created_at);
-CREATE INDEX idx_moderation_audit_log_actor_id ON moderation_audit_log(actor_id);
+CREATE INDEX IF NOT EXISTS idx_moderation_audit_log_case_id ON moderation_audit_log(case_id);
+CREATE INDEX IF NOT EXISTS idx_moderation_audit_log_created_at ON moderation_audit_log(created_at);
+CREATE INDEX IF NOT EXISTS idx_moderation_audit_log_actor_id ON moderation_audit_log(actor_id);
 
-CREATE INDEX idx_content_hashes_content_id ON content_hashes(content_id);
-CREATE INDEX idx_content_hashes_hash_value ON content_hashes(hash_value);
-CREATE INDEX idx_content_hashes_hash_type ON content_hashes(hash_type);
+CREATE INDEX IF NOT EXISTS idx_content_hashes_content_id ON content_hashes(content_id);
+CREATE INDEX IF NOT EXISTS idx_content_hashes_hash_value ON content_hashes(hash_value);
+CREATE INDEX IF NOT EXISTS idx_content_hashes_hash_type ON content_hashes(hash_type);
 
-CREATE INDEX idx_reputation_impacts_user_id ON reputation_impacts(user_id);
-CREATE INDEX idx_reputation_impacts_case_id ON reputation_impacts(case_id);
-CREATE INDEX idx_reputation_impacts_created_at ON reputation_impacts(created_at);
+CREATE INDEX IF NOT EXISTS idx_reputation_impacts_user_id ON reputation_impacts(user_id);
+CREATE INDEX IF NOT EXISTS idx_reputation_impacts_case_id ON reputation_impacts(case_id);
+CREATE INDEX IF NOT EXISTS idx_reputation_impacts_created_at ON reputation_impacts(created_at);
 
-CREATE INDEX idx_moderation_metrics_metric_type ON moderation_metrics(metric_type);
-CREATE INDEX idx_moderation_metrics_recorded_at ON moderation_metrics(recorded_at);
+CREATE INDEX IF NOT EXISTS idx_moderation_metrics_metric_type ON moderation_metrics(metric_type);
+CREATE INDEX IF NOT EXISTS idx_moderation_metrics_recorded_at ON moderation_metrics(recorded_at);
 
 -- Composite indices for common queries
-CREATE INDEX idx_moderation_cases_user_status ON moderation_cases(user_id, status);
-CREATE INDEX idx_content_reports_content_status ON content_reports(content_id, status);
-CREATE INDEX idx_moderation_actions_user_created ON moderation_actions(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_moderation_cases_user_status ON moderation_cases(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_content_reports_content_status ON content_reports(content_id, status);
+CREATE INDEX IF NOT EXISTS idx_moderation_actions_user_created ON moderation_actions(user_id, created_at);
 
 -- Add triggers for automatic audit logging
 CREATE OR REPLACE FUNCTION log_moderation_audit()
@@ -281,6 +282,9 @@ INSERT INTO moderation_policies (category, severity, confidence_threshold, actio
 ('seed_phrase', 'critical', 0.99, 'block', -0.3, 'Seed phrase or private key exposure');
 
 -- Insert default vendor configurations
+-- Ensure description column exists (safe for existing tables)
+ALTER TABLE moderation_vendors ADD COLUMN IF NOT EXISTS description TEXT;
+
 INSERT INTO moderation_vendors (vendor_name, vendor_type, is_enabled, weight, description) VALUES
 ('openai_moderation', 'text', true, 0.4, 'OpenAI Moderation API for text content'),
 ('perspective_api', 'text', true, 0.3, 'Google Perspective API for toxicity detection'),

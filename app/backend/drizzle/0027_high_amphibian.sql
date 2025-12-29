@@ -61,7 +61,7 @@ CREATE TABLE "alert_configurations" (
 --> statement-breakpoint
 DROP TABLE IF EXISTS "appeal_jurors" CASCADE;
 --> statement-breakpoint
-CREATE TABLE "appeal_jurors" (
+CREATE TABLE IF NOT EXISTS "appeal_jurors" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"appeal_id" integer NOT NULL,
 	"juror_id" uuid NOT NULL,
@@ -595,7 +595,7 @@ CREATE TABLE "content_links" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "content_reports" (
+CREATE TABLE IF NOT EXISTS "content_reports" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"content_id" varchar(64) NOT NULL,
 	"reporter_id" uuid NOT NULL,
@@ -1370,7 +1370,7 @@ CREATE TABLE "mobile_governance_sessions" (
 	"actions_performed" integer DEFAULT 0
 );
 --> statement-breakpoint
-CREATE TABLE "moderation_actions" (
+CREATE TABLE IF NOT EXISTS "moderation_actions" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"user_id" uuid NOT NULL,
 	"content_id" varchar(64) NOT NULL,
@@ -1381,7 +1381,7 @@ CREATE TABLE "moderation_actions" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "moderation_appeals" (
+CREATE TABLE IF NOT EXISTS "moderation_appeals" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"case_id" integer NOT NULL,
 	"appellant_id" uuid NOT NULL,
@@ -1393,7 +1393,7 @@ CREATE TABLE "moderation_appeals" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "moderation_audit_log" (
+CREATE TABLE IF NOT EXISTS "moderation_audit_log" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"action_type" varchar(64) NOT NULL,
 	"actor_id" varchar(64) NOT NULL,
@@ -1408,7 +1408,7 @@ CREATE TABLE "moderation_audit_log" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "moderation_cases" (
+CREATE TABLE IF NOT EXISTS "moderation_cases" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"content_id" varchar(64) NOT NULL,
 	"content_type" varchar(24) NOT NULL,
@@ -1424,7 +1424,7 @@ CREATE TABLE "moderation_cases" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "nft_auctions" (
+CREATE TABLE IF NOT EXISTS "nft_auctions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"nft_id" uuid NOT NULL,
 	"seller_id" uuid NOT NULL,
@@ -1439,7 +1439,7 @@ CREATE TABLE "nft_auctions" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "nft_collections" (
+CREATE TABLE IF NOT EXISTS "nft_collections" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"creator_id" uuid NOT NULL,
 	"contract_address" varchar(66) NOT NULL,
@@ -1456,7 +1456,7 @@ CREATE TABLE "nft_collections" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "nft_listings" (
+CREATE TABLE IF NOT EXISTS "nft_listings" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"nft_id" uuid NOT NULL,
 	"seller_id" uuid NOT NULL,
@@ -1470,7 +1470,7 @@ CREATE TABLE "nft_listings" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "nft_offers" (
+CREATE TABLE IF NOT EXISTS "nft_offers" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"nft_id" uuid NOT NULL,
 	"buyer_id" uuid NOT NULL,
@@ -1481,7 +1481,7 @@ CREATE TABLE "nft_offers" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "nfts" (
+CREATE TABLE IF NOT EXISTS "nfts" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"token_id" varchar(128) NOT NULL,
 	"contract_address" varchar(66) NOT NULL,
@@ -1499,7 +1499,7 @@ CREATE TABLE "nfts" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "notification_preferences" (
+CREATE TABLE IF NOT EXISTS "notification_preferences" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"user_address" varchar(66) NOT NULL,
 	"preferences" text NOT NULL,
@@ -1508,7 +1508,7 @@ CREATE TABLE "notification_preferences" (
 	CONSTRAINT "notification_preferences_user_address_unique" UNIQUE("user_address")
 );
 --> statement-breakpoint
-CREATE TABLE "notifications" (
+CREATE TABLE IF NOT EXISTS "notifications" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"order_id" varchar(64),
 	"user_address" varchar(66) NOT NULL,
@@ -1519,7 +1519,7 @@ CREATE TABLE "notifications" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "offers" (
+CREATE TABLE IF NOT EXISTS "offers" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"listing_id" integer,
 	"buyer_id" uuid,
