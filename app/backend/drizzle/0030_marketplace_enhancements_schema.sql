@@ -220,7 +220,17 @@ CREATE INDEX IF NOT EXISTS idx_ens_verifications_is_active ON ens_verifications(
 CREATE INDEX IF NOT EXISTS idx_ens_verifications_expires_at ON ens_verifications(expires_at) WHERE expires_at IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_products_listing_status ON products(listing_status);
-CREATE INDEX IF NOT EXISTS idx_products_published_at ON products(published_at) WHERE published_at IS NOT NULL;
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'products' AND column_name = 'published_at'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS idx_products_published_at ON products(published_at) WHERE published_at IS NOT NULL;
+    END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_products_search_optimization ON products(title, description) WHERE listing_status = 'published';
 
 CREATE INDEX IF NOT EXISTS idx_orders_checkout_session_id ON orders(checkout_session_id) WHERE checkout_session_id IS NOT NULL;

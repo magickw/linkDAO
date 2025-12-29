@@ -9,7 +9,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { eq } from 'drizzle-orm';
 import { users, authSessions } from '../db/schema';
-// Note: twoFactorAuth table may not exist yet - handle gracefully in code
+import { twoFactorAuth } from '../db/schema/securitySchema';
 import { successResponse, errorResponse, validationErrorResponse } from '../utils/apiResponse';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
 import { referralService } from '../services/referralService';
@@ -196,7 +196,6 @@ class AuthController {
       // Check if user has 2FA enabled
       let userHas2FA = false;
       try {
-        const { twoFactorAuth } = await import('../db/schema');
         const [authRecord] = await db
           .select()
           .from(twoFactorAuth)
@@ -431,7 +430,6 @@ class AuthController {
       const speakeasy = require('speakeasy');
 
       // Get user's 2FA record
-      const { twoFactorAuth } = await import('../db/schema');
       const [authRecord] = await db
         .select()
         .from(twoFactorAuth)

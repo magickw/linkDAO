@@ -4613,7 +4613,21 @@ BEGIN
         RAISE NOTICE 'Column listing_status does not exist in products table, skipping index creation';
     END IF;
 END$$;--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "idx_products_published_at" ON "products" USING btree ("published_at");--> statement-breakpoint
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = 'products'
+        AND column_name = 'published_at'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS "idx_products_published_at"
+        ON "products" USING btree ("published_at");
+        RAISE NOTICE 'Created index idx_products_published_at';
+    ELSE
+        RAISE NOTICE 'Column published_at does not exist in products table, skipping index creation';
+    END IF;
+END$$;--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "project_activities_booking_id_idx" ON "project_activities" USING btree ("booking_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "project_activities_created_at_idx" ON "project_activities" USING btree ("created_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "project_approvals_booking_id_idx" ON "project_approvals" USING btree ("booking_id");--> statement-breakpoint
@@ -4646,7 +4660,21 @@ CREATE INDEX IF NOT EXISTS "idx_referral_activities_referee_id" ON "referral_act
 CREATE INDEX IF NOT EXISTS "idx_referral_activities_created_at" ON "referral_activities" USING btree ("created_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_reputation_rules_event_type" ON "reputation_calculation_rules" USING btree ("event_type");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_reputation_rules_active" ON "reputation_calculation_rules" USING btree ("is_active");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "idx_reputation_history_wallet_address" ON "reputation_history" USING btree ("wallet_address");--> statement-breakpoint
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = 'reputation_history'
+        AND column_name = 'wallet_address'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS "idx_reputation_history_wallet_address"
+        ON "reputation_history" USING btree ("wallet_address");
+        RAISE NOTICE 'Created index idx_reputation_history_wallet_address';
+    ELSE
+        RAISE NOTICE 'Column wallet_address does not exist in reputation_history table, skipping index creation';
+    END IF;
+END$$;--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_reputation_history_event_type" ON "reputation_history" USING btree ("event_type");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_reputation_history_created_at" ON "reputation_history" USING btree ("created_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_reputation_history_transaction_id" ON "reputation_history" USING btree ("transaction_id");--> statement-breakpoint
