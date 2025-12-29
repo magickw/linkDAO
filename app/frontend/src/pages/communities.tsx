@@ -794,28 +794,6 @@ const CommunitiesPage: React.FC = () => {
                     ))}
                   </div>
                 </div>
-
-                {/* Sidebar Footer - Reddit Style */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-xs text-gray-500 dark:text-gray-400">
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span>Help</span>
-                      <span>LDAO Tokens</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>LinkDAO Premium</span>
-                      <span>About</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Careers</span>
-                      <span>Advertise</span>
-                    </div>
-                  </div>
-                  <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 text-center">
-                    <p>Content Policy • Privacy Policy</p>
-                    <p className="mt-1">© 2025 LinkDAO</p>
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -846,8 +824,8 @@ const CommunitiesPage: React.FC = () => {
                         key={tab}
                         onClick={() => setSortBy(tab)}
                         className={`flex items-center space-x-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${sortBy === tab
-                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                            : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
+                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                          : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
                           }`}
                         aria-label={`Sort by ${tab}`}
                       >

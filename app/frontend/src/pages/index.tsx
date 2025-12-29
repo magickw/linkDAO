@@ -23,8 +23,7 @@ import PostModal from '@/components/PostModal';
 const SmartRightSidebar = lazy(() => import('@/components/SmartRightSidebar/SmartRightSidebar').catch(() => ({ default: () => <div>Failed to load sidebar</div> })));
 // Import CommunityView directly to avoid router issues
 import CommunityView from '@/components/CommunityView';
-// Import NavigationSidebar directly to avoid router issues
-import NavigationSidebar from '@/components/NavigationSidebar';
+import HomeLeftSidebar from '@/components/HomeLeftSidebar';
 const FacebookStylePostComposer = lazy(() => import('@/components/FacebookStylePostComposer'));
 const PostCreationModal = lazy(() => import('@/components/PostCreationModal').catch(() => ({ default: () => <div>Failed to load post modal</div> })));
 const BottomSheet = lazy(() => import('@/components/BottomSheet'));
@@ -153,15 +152,15 @@ export default function Home() {
       console.log('[HomePage] Setting content ready');
       setIsContentReady(true);
       setIsConnectionStabilized(true);
-      
+
       // Prevent multiple simultaneous updates
       if (isUpdating.current) {
         console.log('[HomePage] Update already in progress, skipping');
         return;
       }
-      
+
       isUpdating.current = true;
-      
+
       // Then defer WebSocket connection establishment separately with requestIdleCallback
       if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
         window.requestIdleCallback(() => {
@@ -171,14 +170,14 @@ export default function Home() {
             isUpdating.current = false;
             return;
           }
-          
+
           if (isConnected && webSocket && !webSocket.isConnected) {
             if (webSocket.connectionState && webSocket.connectionState.status === 'connecting') {
               console.log('[HomePage] WebSocket already connecting, skipping');
               isUpdating.current = false;
               return;
             }
-            
+
             console.log('[HomePage] Attempting WebSocket connection during idle time...');
             // Connect WebSocket only after wallet is connected and page has stabilized
             webSocket.connect().then(() => {
@@ -201,14 +200,14 @@ export default function Home() {
             isUpdating.current = false;
             return;
           }
-          
+
           if (isConnected && webSocket && !webSocket.isConnected) {
             if (webSocket.connectionState && webSocket.connectionState.status === 'connecting') {
               console.log('[HomePage] WebSocket already connecting, skipping');
               isUpdating.current = false;
               return;
             }
-            
+
             console.log('[HomePage] Attempting WebSocket connection with timeout...');
             // Connect WebSocket only after wallet is connected and page has stabilized
             webSocket.connect().then(() => {
@@ -1162,7 +1161,7 @@ export default function Home() {
           {/* Left Sidebar - Navigation - hidden on mobile for home page since we have the burger menu */}
           <div className="hidden lg:block lg:col-span-3">
             <div className="sticky top-24">
-              <NavigationSidebar className="h-full" />
+              <HomeLeftSidebar className="h-full" />
             </div>
           </div>
 
