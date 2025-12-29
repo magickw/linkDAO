@@ -74,8 +74,9 @@ function CommunityPostCardEnhanced({
 
   // State
   const [showComments, setShowComments] = useState(false);
-  // Initialize comments based on the type of post (CommunityPost has structured comments, EnhancedPost has a count)
-  const [comments, setComments] = useState<Comment[]>(isCommunityPostType && Array.isArray((post as any).comments) ? (post as any).comments : []);
+  // Always initialize comments as empty and load from API for consistency
+  // This ensures comments are synced across all views (feed, community page, post detail)
+  const [comments, setComments] = useState<Comment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [commentSubmitting, setCommentSubmitting] = useState(false);
@@ -125,7 +126,7 @@ function CommunityPostCardEnhanced({
   }
 
   const [isExpanded, setIsExpanded] = useState(false);
-  
+
   // Format timestamp
   const formatTimestamp = (date: Date) => {
     const now = new Date();
@@ -209,7 +210,7 @@ function CommunityPostCardEnhanced({
           emoji: getReactionEmoji(reaction.type),
           label: getReactionLabel(reaction.type),
           totalStaked: reaction.totalAmount || 0,
-          userStaked: reaction.users?.reduce((sum: number, user: any) => 
+          userStaked: reaction.users?.reduce((sum: number, user: any) =>
             user.address === address ? sum + (user.amount || 0) : sum, 0) || 0,
           contributors: reaction.users?.map((user: any) => user.address) || [],
           rewardsEarned: 0 // Calculate rewards if needed
@@ -325,7 +326,7 @@ function CommunityPostCardEnhanced({
       // If authentication failed, provide specific error message
       const errorMessage = authResult.error || 'Please authenticate to comment';
       addToast(errorMessage, 'error');
-      
+
       // If it's a wallet connection issue, suggest reconnecting
       if (errorMessage.includes('connect') || errorMessage.includes('wallet')) {
         addToast('Try disconnecting and reconnecting your wallet', 'info');
@@ -383,14 +384,14 @@ function CommunityPostCardEnhanced({
     }
 
     const price = getReactionPrice(reactionType);
-    
+
     try {
       // Simple token transfer to treasury
       const result = await ldaoTokenService.transferTokens(
         '0x074E3874CA62F8cB9be6DDCD23235d0Bb5a8A0b5', // Treasury address
         price.toString()
       );
-      
+
       if (!result.success) {
         addToast(result.error || 'Failed to purchase reaction', 'error');
         return;
@@ -558,8 +559,8 @@ function CommunityPostCardEnhanced({
                 href={`/u/${post.author || post.walletAddress || ''}`}
                 className="font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
               >
-                u/{post.author || post.walletAddress ? 
-                  `${(post.author || post.walletAddress)?.slice(0, 6)}...${(post.author || post.walletAddress)?.slice(-4)}` : 
+                u/{post.author || post.walletAddress ?
+                  `${(post.author || post.walletAddress)?.slice(0, 6)}...${(post.author || post.walletAddress)?.slice(-4)}` :
                   'Unknown'
                 }
               </Link>
@@ -634,7 +635,7 @@ function CommunityPostCardEnhanced({
 
               {processContent(getTruncatedContent(post.content, 10000, isExpanded), 'html')}
             </div>
-            
+
             {shouldTruncateContent(post.content, 10000, isExpanded) && (
               <button
                 onClick={() => setIsExpanded(true)}
@@ -642,7 +643,7 @@ function CommunityPostCardEnhanced({
               >
                 <span>Show more</span>
               </button>
-            )}            
+            )}
             {isExpanded && shouldTruncateContent(post.content, 10000, false) && (
               <button
                 onClick={() => setIsExpanded(false)}
@@ -746,7 +747,7 @@ function CommunityPostCardEnhanced({
               </div>
             )}
 
-            
+
           </div>
 
           {/* Analytics Toggle for Non-Members */}
@@ -775,8 +776,8 @@ function CommunityPostCardEnhanced({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>
                   <span>
-                    {comments.length === 0 
-                      ? 'Add a comment' 
+                    {comments.length === 0
+                      ? 'Add a comment'
                       : `${comments.length} comment${comments.length === 1 ? '' : 's'}`
                     }
                   </span>
@@ -793,10 +794,6 @@ function CommunityPostCardEnhanced({
                   <span>Analytics</span>
                 </button>
               </div>
-
-              <div className="text-xs font-medium">
-                {reactions.reduce((sum, r) => sum + r.totalStaked, 0)} $LDAO staked
-              </div>
             </div>
           )}
 
@@ -804,7 +801,7 @@ function CommunityPostCardEnhanced({
           {!showComments && comments.length === 0 && (
             <div className="mt-4 text-center py-3 px-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                No comments yet. 
+                No comments yet.
                 <button
                   onClick={toggleComments}
                   className="ml-1 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium"

@@ -307,7 +307,7 @@ const CommunitiesPage: React.FC = () => {
             adminRoles[community.id] = 'admin';
           }
         });
-        
+
         if (!isMounted.current) return;
         setUserAdminRoles(adminRoles);
       } catch (error) {
@@ -329,7 +329,7 @@ const CommunitiesPage: React.FC = () => {
   // Load posts from backend API with pagination
   const fetchPosts = useCallback(async (pageNum: number = 1, append: boolean = false) => {
     if (!isMounted.current) return;
-    
+
     try {
       if (pageNum === 1) setLoading(true);
       else setLoadingMore(true);
@@ -337,7 +337,7 @@ const CommunitiesPage: React.FC = () => {
       console.log('[CommunitiesPage] fetchPosts called:', { pageNum, append, sortBy, timeFilter, address, joinedCommunities });
 
       const { FeedService } = await import('../services/feedService');
-      
+
       const filter = {
         feedSource: 'all',
         sortBy: sortBy as any,
@@ -346,9 +346,9 @@ const CommunitiesPage: React.FC = () => {
         postTypes: ['posts'],
         communities: joinedCommunities.length > 0 ? joinedCommunities : undefined
       };
-      
+
       console.log('[CommunitiesPage] Calling FeedService.getEnhancedFeed with filter:', filter);
-      
+
       const result = await FeedService.getEnhancedFeed(filter, pageNum, DEFAULT_FEED_PAGE_SIZE);
 
       if (!isMounted.current) return;
@@ -357,11 +357,20 @@ const CommunitiesPage: React.FC = () => {
         id: post.id,
         title: post.title,
         content: post.content,
-        authorName: post.authorName,
+        author: post.authorName || post.author || 'Unknown',
+        authorName: post.authorName || post.author || 'Unknown',
+        authorId: post.authorId || post.authorName,
+        handle: post.authorName || post.author || 'Unknown',
+        authorProfile: {
+          handle: post.authorName || post.author || 'Unknown',
+          verified: false,
+        },
         communityId: post.communityId,
         upvotes: post.upvotes,
         downvotes: post.downvotes,
         commentCount: post.commentCount,
+        viewCount: post.viewCount || post.views || 0,
+        // Don't include comments array - let CommunityPostCardEnhanced load from API for consistency
         createdAt: post.createdAt,
         tags: post.tags,
         isQuickPost: post.isQuickPost,
@@ -563,10 +572,10 @@ const CommunitiesPage: React.FC = () => {
   const handleVote = async (postId: string, type: 'up' | 'down', amount: number) => {
     try {
       const { FeedService } = await import('../services/feedService');
-      const response = type === 'up' 
+      const response = type === 'up'
         ? await FeedService.upvotePost(postId)
         : await FeedService.downvotePost(postId);
-      
+
       setPosts(prev => prev.map(post => {
         if (post.id === postId) {
           return {
@@ -584,19 +593,19 @@ const CommunitiesPage: React.FC = () => {
   };
 
   const handleUpvote = (postId: string) => handleVote(postId, 'up', 1);
-  
+
   const handleSave = (postId: string) => {
     if (isMobile) triggerHapticFeedback('light');
   };
-  
+
   const handleTip = async (postId: string, amount?: number) => {
     if (isMobile) triggerHapticFeedback('success');
   };
-  
+
   const handleStake = (postId: string) => {
     if (isMobile) triggerHapticFeedback('heavy');
   };
-  
+
   const handleComment = (postId: string) => {
     const post = posts.find(p => p.id === postId);
     if (post) {
@@ -605,11 +614,11 @@ const CommunitiesPage: React.FC = () => {
       setTimeout(() => router.push(`/communities/${communitySegment}/posts/${postId}`), 0);
     }
   };
-  
+
   const handleShare = (postId: string) => {
     if (isMobile) triggerHapticFeedback('light');
   };
-  
+
   const handleViewPost = (postId: string) => {
     const post = posts.find(p => p.id === postId);
     if (post) {
@@ -647,12 +656,12 @@ const CommunitiesPage: React.FC = () => {
   const filteredPosts = useMemo(() => {
     console.log('[CommunitiesPage] posts array length:', posts.length);
     console.log('[CommunitiesPage] posts:', posts);
-    
+
     const communityPosts = posts.filter(post => {
       if (!post || typeof post !== 'object') return false;
       return post.isQuickPost === false;
     });
-    
+
     console.log('[CommunitiesPage] community posts count:', communityPosts.length);
     return communityPosts;
   }, [posts]);
@@ -681,14 +690,14 @@ const CommunitiesPage: React.FC = () => {
   }
 
   return (
-    <ErrorBoundary 
+    <ErrorBoundary
       fallback={
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center p-8 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Something went wrong</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-4">Please refresh the page to try again</p>
-            <button 
-              onClick={() => window.location.reload()} 
+            <button
+              onClick={() => window.location.reload()}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               Refresh Page
@@ -822,7 +831,7 @@ const CommunitiesPage: React.FC = () => {
               {/* Announcement Manager (Admin Only) */}
               {joinedCommunities.length > 0 && userAdminRoles[joinedCommunities[0]] === 'admin' && (
                 <div className="mb-4">
-                  <Suspense fallback={<div className="h-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />}>  
+                  <Suspense fallback={<div className="h-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />}>
                     <AnnouncementManager communityId={joinedCommunities[0]} />
                   </Suspense>
                 </div>
@@ -836,11 +845,10 @@ const CommunitiesPage: React.FC = () => {
                       <button
                         key={tab}
                         onClick={() => setSortBy(tab)}
-                        className={`flex items-center space-x-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                          sortBy === tab
+                        className={`flex items-center space-x-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${sortBy === tab
                             ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
                             : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
-                        }`}
+                          }`}
                         aria-label={`Sort by ${tab}`}
                       >
                         {tab === 'hot' && <Flame className="w-3.5 h-3.5" />}
@@ -855,9 +863,8 @@ const CommunitiesPage: React.FC = () => {
                     value={timeFilter}
                     onChange={(e) => setTimeFilter(e.target.value as any)}
                     aria-label="Select time filter for top posts"
-                    className={`text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 dark:text-white ${
-                      sortBy !== 'top' ? 'hidden' : ''
-                    }`}
+                    className={`text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 dark:text-white ${sortBy !== 'top' ? 'hidden' : ''
+                      }`}
                   >
                     <option value="hour">Past Hour</option>
                     <option value="day">Past Day</option>
@@ -1144,7 +1151,7 @@ const CommunitiesPage: React.FC = () => {
           </Suspense>
         </Layout>
       </VisualPolishIntegration>
-      
+
       {/* Community Onboarding Modal */}
       <Suspense fallback={null}>
         <CommunityOnboarding />
