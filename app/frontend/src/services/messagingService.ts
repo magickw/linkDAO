@@ -398,10 +398,22 @@ class MessagingService {
       throw new Error('Wallet not available for signing');
     }
 
+    // Get the current chainId from the provider
+    let chainId = 1; // Default to mainnet
+    try {
+      const provider = this.wallet.provider;
+      if (provider) {
+        const network = await provider.getNetwork();
+        chainId = Number(network.chainId);
+      }
+    } catch (error) {
+      console.warn('Failed to get chainId from provider, using default:', error);
+    }
+
     const domain = {
       name: 'LinkDAO Messaging',
       version: '1',
-      chainId: message.chainId || 1,
+      chainId: chainId,
       verifyingContract: '0x0000000000000000000000000000000000000000'
     };
 
@@ -468,6 +480,17 @@ class MessagingService {
       const now = new Date();
       const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+      // Get the current chainId from the provider
+      let chainId = 1; // Default to mainnet
+      try {
+        if (this.wallet?.provider) {
+          const network = await this.wallet.provider.getNetwork();
+          chainId = Number(network.chainId);
+        }
+      } catch (error) {
+        console.warn('Failed to get chainId from provider, using default:', error);
+      }
+
       // Create message object
       const message: ChatMessage = {
         id: messageId,
@@ -480,7 +503,7 @@ class MessagingService {
         isRead: false,
         isDelivered: false,
         metadata,
-        chainId: 1 // Default to mainnet, could be dynamic
+        chainId: chainId
       };
 
       // Check if we're in a browser environment and if offline, queue the message

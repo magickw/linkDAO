@@ -31,22 +31,33 @@ interface Conversation {
   isOnline: boolean;
 }
 
-function getAvatarUrl(profileCid: string | undefined): string | undefined {
-  if (!profileCid) return undefined;
+function getAvatarUrl(profileCid: string | undefined, walletAddress?: string): string {
+  // If no profile data provided, generate a fallback avatar
+  if (!profileCid || profileCid.trim() === '') {
+    return walletAddress
+      ? `https://api.dicebear.com/7.x/identicon/svg?seed=${walletAddress}&backgroundColor=b6e3f4`
+      : '/images/default-avatar.png';
+  }
 
-  // Check if it's a valid IPFS CID
+  // Check if it's a valid IPFS CID (starts with Qm or bafy)
   if (profileCid.startsWith('Qm') || profileCid.startsWith('bafy')) {
     return `https://ipfs.io/ipfs/${profileCid}`;
   }
 
-  // Check if it's already a full URL
-  try {
-    new URL(profileCid);
+  // Check if it's already a full URL (http:// or https://)
+  if (profileCid.startsWith('http://') || profileCid.startsWith('https://')) {
     return profileCid;
-  } catch {
-    // Not a valid URL, return undefined
-    return undefined;
   }
+
+  // If it starts with /ipfs/, construct the full IPFS URL
+  if (profileCid.startsWith('/ipfs/')) {
+    return `https://ipfs.io${profileCid}`;
+  }
+
+  // If none of the above, assume it's a relative path or invalid, return fallback
+  return walletAddress
+    ? `https://api.dicebear.com/7.x/identicon/svg?seed=${walletAddress}&backgroundColor=b6e3f4`
+    : '/images/default-avatar.png';
 }
 
 const MessagesPage: React.FC = () => {
@@ -137,7 +148,9 @@ const MessagesPage: React.FC = () => {
 
             // Get user details if available
             let participantName = otherParticipant || 'Unknown User';
-            let participantAvatar = '/images/default-avatar.png';
+            let participantAvatar = otherParticipant
+              ? `https://api.dicebear.com/7.x/identicon/svg?seed=${otherParticipant}&backgroundColor=b6e3f4`
+              : '/images/default-avatar.png';
 
             if (otherParticipant) {
               try {
@@ -157,7 +170,7 @@ const MessagesPage: React.FC = () => {
                     userData.data?.avatarUrl ||
                     userData.data?.avatarCid ||
                     userData.data?.profileImageUrl;
-                  participantAvatar = getAvatarUrl(rawAvatarUrl) || '/images/default-avatar.png';
+                  participantAvatar = getAvatarUrl(rawAvatarUrl, otherParticipant);
                   console.log('Raw avatar URL for ' + otherParticipant + ':', rawAvatarUrl);
                   console.log('Resolved avatar for ' + otherParticipant + ':', participantAvatar);
                 } else {
@@ -200,7 +213,7 @@ const MessagesPage: React.FC = () => {
               id: conversationId,
               participants: [account!, to as string],
               participantName: formatAddress(to as string),
-              participantAvatar: '/images/default-avatar.png',
+              participantAvatar: `https://api.dicebear.com/7.x/identicon/svg?seed=${to as string}&backgroundColor=b6e3f4`,
               lastMessage: undefined,
               lastActivity: new Date(),
               unreadCount: 0,
@@ -384,6 +397,13 @@ const MessagesPage: React.FC = () => {
                             src={conversation.participantAvatar}
                             alt={conversation.participantName}
                             className="w-12 h-12 rounded-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              const otherParticipant = conversation.participants.find(p => p !== account);
+                              target.src = otherParticipant
+                                ? `https://api.dicebear.com/7.x/identicon/svg?seed=${otherParticipant}&backgroundColor=b6e3f4`
+                                : '/images/default-avatar.png';
+                            }}
                           />
                           {conversation.isOnline && (
                             <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-gray-900"></div>
@@ -425,6 +445,13 @@ const MessagesPage: React.FC = () => {
                               src={activeConversation.participantAvatar}
                               alt={activeConversation.participantName}
                               className="w-10 h-10 rounded-full"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                const otherParticipant = activeConversation.participants.find(p => p !== account);
+                                target.src = otherParticipant
+                                  ? `https://api.dicebear.com/7.x/identicon/svg?seed=${otherParticipant}&backgroundColor=b6e3f4`
+                                  : '/images/default-avatar.png';
+                              }}
                             />
                             {activeConversation.isOnline && (
                               <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-gray-900"></div>
