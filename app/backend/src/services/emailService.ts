@@ -1133,6 +1133,76 @@ export class EmailService {
   /**
    * Send 2FA status change notification
    */
+  /**
+   * Send 2FA verification code email
+   */
+  async send2FAVerificationEmail(
+    email: string,
+    data: {
+      code: string;
+      expiresIn: number; // minutes
+    }
+  ): Promise<boolean> {
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+          .code-box { background: white; border: 2px dashed #667eea; padding: 20px; margin: 20px 0; text-align: center; border-radius: 8px; }
+          .code { font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #667eea; font-family: 'Courier New', monospace; }
+          .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }
+          .footer { text-align: center; margin-top: 30px; color: #666; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🔐 Two-Factor Authentication</h1>
+          </div>
+          <div class="content">
+            <h2>Your Verification Code</h2>
+            <p>Use this code to complete your two-factor authentication setup or login:</p>
+            
+            <div class="code-box">
+              <div class="code">${data.code}</div>
+              <p style="margin-top: 10px; color: #666;">This code expires in ${data.expiresIn} minutes</p>
+            </div>
+
+            <div class="warning">
+              <strong>⚠️ Security Notice:</strong>
+              <ul style="margin: 10px 0; padding-left: 20px;">
+                <li>Never share this code with anyone</li>
+                <li>LinkDAO staff will never ask for this code</li>
+                <li>If you didn't request this code, please ignore this email</li>
+              </ul>
+            </div>
+
+            <p>If you're having trouble, please contact our support team.</p>
+          </div>
+          <div class="footer">
+            <p>© ${new Date().getFullYear()} LinkDAO. All rights reserved.</p>
+            <p>This is an automated security email. Please do not reply.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject: `Your LinkDAO Verification Code: ${data.code}`,
+      html,
+      text: `Your LinkDAO verification code is: ${data.code}. This code expires in ${data.expiresIn} minutes. Never share this code with anyone.`
+    });
+  }
+
+  /**
+   * Send 2FA change notification email
+   */
   async send2FAChangeEmail(
     email: string,
     data: {

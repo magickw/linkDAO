@@ -4428,11 +4428,39 @@ CREATE INDEX IF NOT EXISTS "idx_content_links_url_analysis" ON "content_links" U
 CREATE INDEX IF NOT EXISTS "content_reports_content_idx" ON "content_reports" USING btree ("content_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "content_reports_reporter_idx" ON "content_reports" USING btree ("reporter_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_conversation_analytics_conversation_id" ON "conversation_analytics" USING btree ("conversation_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "idx_conversation_analytics_last_message_at" ON "conversation_analytics" USING btree ("last_message_at");--> statement-breakpoint
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = 'conversation_analytics'
+        AND column_name = 'last_message_at'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS "idx_conversation_analytics_last_message_at"
+        ON "conversation_analytics" USING btree ("last_message_at");
+        RAISE NOTICE 'Created index idx_conversation_analytics_last_message_at';
+    ELSE
+        RAISE NOTICE 'Column last_message_at does not exist in conversation_analytics table, skipping index creation';
+    END IF;
+END$$;--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_conversation_analytics_updated_at" ON "conversation_analytics" USING btree ("updated_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_conversation_participants_conversation_id" ON "conversation_participants" USING btree ("conversation_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_conversation_participants_user_id" ON "conversation_participants" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "idx_conversation_participants_wallet_address" ON "conversation_participants" USING btree ("wallet_address");--> statement-breakpoint
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = 'conversation_participants'
+        AND column_name = 'wallet_address'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS "idx_conversation_participants_wallet_address"
+        ON "conversation_participants" USING btree ("wallet_address");
+        RAISE NOTICE 'Created index idx_conversation_participants_wallet_address';
+    ELSE
+        RAISE NOTICE 'Column wallet_address does not exist in conversation_participants table, skipping index creation';
+    END IF;
+END$$;--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_conversation_participants_role" ON "conversation_participants" USING btree ("role");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_conversation_participants_joined_at" ON "conversation_participants" USING btree ("joined_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_conversations_last_activity" ON "conversations" USING btree ("last_activity");--> statement-breakpoint
@@ -4570,7 +4598,21 @@ CREATE INDEX IF NOT EXISTS "product_status_idx" ON "products" USING btree ("stat
 CREATE INDEX IF NOT EXISTS "product_category_idx" ON "products" USING btree ("category_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "product_seller_idx" ON "products" USING btree ("seller_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "product_price_idx" ON "products" USING btree ("price_amount");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "idx_products_listing_status" ON "products" USING btree ("listing_status");--> statement-breakpoint
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = 'products'
+        AND column_name = 'listing_status'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS "idx_products_listing_status"
+        ON "products" USING btree ("listing_status");
+        RAISE NOTICE 'Created index idx_products_listing_status';
+    ELSE
+        RAISE NOTICE 'Column listing_status does not exist in products table, skipping index creation';
+    END IF;
+END$$;--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_products_published_at" ON "products" USING btree ("published_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "project_activities_booking_id_idx" ON "project_activities" USING btree ("booking_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "project_activities_created_at_idx" ON "project_activities" USING btree ("created_at");--> statement-breakpoint

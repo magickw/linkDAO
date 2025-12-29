@@ -300,6 +300,221 @@ export class SecurityService {
         }
     }
 
+    // ============ Email-based 2FA Methods ============
+
+    /**
+     * Setup Email-based 2FA
+     */
+    async setupEmailTOTP(userId: string) {
+        const email = await this.getUserEmail(userId);
+        if (!email) {
+            throw new Error('User email not found. Please add an email to your account first.');
+        }
+
+        // Generate backup codes
+        const backupCodes = this.generateBackupCodes();
+
+        // Store in database (not enabled yet)
+        await db.insert(twoFactorAuth).values({
+            userId,
+            method: 'email',
+            secret: null, // Email-based doesn't need a secret
+            backupCodes: backupCodes.map(code => this.encrypt(code)),
+            isEnabled: false
+        }).onConflictDoUpdate({
+            target: twoFactorAuth.userId,
+            set: {
+                method: 'email',
+                secret: null,
+                backupCodes: backupCodes.map(code => this.encrypt(code)),
+                updatedAt: new Date()
+            }
+        });
+
+        // Send test verification code
+        const verificationCode = this.generateEmailVerificationCode();
+        await this.storeEmailVerificationCode(userId, verificationCode);
+
+        // Send email with code
+        if (await this.shouldSendEmail(userId, '2fa_setup')) {
+            await emailService.send2FAVerificationEmail(email, {
+                code: verificationCode,
+                expiresIn: 10 // minutes
+            }).catch(err => console.error('Failed to send 2FA setup email:', err));
+        }
+
+        return {
+            email: this.maskEmail(email),
+            backupCodes,
+            message: 'Verification code sent to your email'
+        };
+    }
+
+    /**
+     * Verify email code and enable Email 2FA
+     */
+    async verifyAndEnableEmailTOTP(userId: string, code: string) {
+        // Verify the code
+        const isValid = await this.verifyEmailVerificationCode(userId, code);
+        if (!isValid) {
+            throw new Error('Invalid or expired verification code');
+        }
+
+        // Get the 2FA record
+        const [auth] = await db.select().from(twoFactorAuth)
+            .where(and(
+                eq(twoFactorAuth.userId, userId),
+                eq(twoFactorAuth.method, 'email')
+            ));
+
+        if (!auth) {
+            throw new Error('Email 2FA not set up');
+        }
+
+        // Enable 2FA
+        await db.update(twoFactorAuth)
+            .set({ isEnabled: true, verifiedAt: new Date() })
+            .where(eq(twoFactorAuth.id, auth.id));
+
+        // Clear verification code
+        await this.clearEmailVerificationCode(userId);
+
+        // Log activity
+        await this.logActivity(userId, 'security_change', '2FA enabled', { method: 'email' });
+
+        // Send confirmation email
+        const email = await this.getUserEmail(userId);
+        if (email && await this.shouldSendEmail(userId, '2fa_enabled')) {
+            const trackingId = await this.trackEmailSent(userId, '2fa_enabled', 'Email Two-Factor Authentication Enabled');
+            await emailService.send2FAChangeEmail(email, {
+                action: 'enabled',
+                timestamp: new Date()
+            }).catch(err => console.error('Failed to send 2FA email:', err));
+        }
+
+        return { success: true };
+    }
+
+    /**
+     * Send email verification code for login
+     */
+    async sendEmailVerificationCode(userId: string): Promise<void> {
+        const email = await this.getUserEmail(userId);
+        if (!email) {
+            throw new Error('User email not found');
+        }
+
+        const verificationCode = this.generateEmailVerificationCode();
+        await this.storeEmailVerificationCode(userId, verificationCode);
+
+        // Send email with code
+        await emailService.send2FAVerificationEmail(email, {
+            code: verificationCode,
+            expiresIn: 10 // minutes
+        });
+    }
+
+    /**
+     * Verify email code for authentication
+     */
+    async verifyEmailTOTP(userId: string, code: string): Promise<boolean> {
+        const [auth] = await db.select().from(twoFactorAuth)
+            .where(and(
+                eq(twoFactorAuth.userId, userId),
+                eq(twoFactorAuth.method, 'email'),
+                eq(twoFactorAuth.isEnabled, true)
+            ));
+
+        if (!auth) {
+            return false;
+        }
+
+        return await this.verifyEmailVerificationCode(userId, code);
+    }
+
+    // ============ Email Verification Code Helpers ============
+
+    /**
+     * Generate a 6-digit verification code
+     */
+    private generateEmailVerificationCode(): string {
+        return Math.floor(100000 + Math.random() * 900000).toString();
+    }
+
+    /**
+     * Store verification code in cache/database (expires in 10 minutes)
+     */
+    private async storeEmailVerificationCode(userId: string, code: string): Promise<void> {
+        // Store in user_activity_log as a temporary solution
+        // TODO: Use Redis or a dedicated verification_codes table for better performance
+        const encryptedCode = this.encrypt(code);
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+        await db.insert(userActivityLog).values({
+            userId,
+            activityType: 'email_verification_code',
+            description: 'Email verification code generated',
+            metadata: {
+                code: encryptedCode,
+                expiresAt: expiresAt.toISOString()
+            },
+            severity: 'info'
+        });
+    }
+
+    /**
+     * Verify email verification code
+     */
+    private async verifyEmailVerificationCode(userId: string, code: string): Promise<boolean> {
+        // Get the most recent verification code
+        const [record] = await db.select().from(userActivityLog)
+            .where(and(
+                eq(userActivityLog.userId, userId),
+                eq(userActivityLog.activityType, 'email_verification_code')
+            ))
+            .orderBy(desc(userActivityLog.createdAt))
+            .limit(1);
+
+        if (!record || !record.metadata) {
+            return false;
+        }
+
+        const metadata = record.metadata as any;
+        const expiresAt = new Date(metadata.expiresAt);
+
+        // Check if expired
+        if (expiresAt < new Date()) {
+            return false;
+        }
+
+        // Decrypt and compare
+        const storedCode = this.decrypt(metadata.code);
+        return storedCode === code;
+    }
+
+    /**
+     * Clear email verification code
+     */
+    private async clearEmailVerificationCode(userId: string): Promise<void> {
+        // Delete all verification codes for this user
+        await db.delete(userActivityLog)
+            .where(and(
+                eq(userActivityLog.userId, userId),
+                eq(userActivityLog.activityType, 'email_verification_code')
+            ));
+    }
+
+    /**
+     * Mask email for privacy (show first 2 chars and domain)
+     */
+    private maskEmail(email: string): string {
+        const [local, domain] = email.split('@');
+        if (local.length <= 2) {
+            return `${local[0]}***@${domain}`;
+        }
+        return `${local.substring(0, 2)}***@${domain}`;
+    }
+
     // ============ Session Management ============
 
     /**

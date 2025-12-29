@@ -72,6 +72,69 @@ router.delete('/2fa', async (req: Request, res: Response) => {
     }
 });
 
+/**
+ * Setup Email-based 2FA
+ * POST /api/security/2fa/email/setup
+ */
+router.post('/2fa/email/setup', async (req: Request, res: Response) => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const result = await securityService.setupEmailTOTP(userId);
+        res.json(result);
+    } catch (error: any) {
+        console.error('Error setting up email 2FA:', error);
+        res.status(400).json({ error: error.message || 'Failed to setup email 2FA' });
+    }
+});
+
+/**
+ * Verify and enable Email 2FA
+ * POST /api/security/2fa/email/verify
+ */
+router.post('/2fa/email/verify', async (req: Request, res: Response) => {
+    try {
+        const userId = req.user?.id;
+        const { code } = req.body;
+
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        if (!code) {
+            return res.status(400).json({ error: 'Verification code is required' });
+        }
+
+        const result = await securityService.verifyAndEnableEmailTOTP(userId, code);
+        res.json(result);
+    } catch (error: any) {
+        console.error('Error verifying email 2FA:', error);
+        res.status(400).json({ error: error.message || 'Invalid verification code' });
+    }
+});
+
+/**
+ * Resend email verification code
+ * POST /api/security/2fa/email/resend
+ */
+router.post('/2fa/email/resend', async (req: Request, res: Response) => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        await securityService.sendEmailVerificationCode(userId);
+        res.json({ success: true, message: 'Verification code sent' });
+    } catch (error: any) {
+        console.error('Error resending verification code:', error);
+        res.status(500).json({ error: error.message || 'Failed to send verification code' });
+    }
+});
+
 // ============ Session Management Routes ============
 
 /**
