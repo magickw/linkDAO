@@ -14,20 +14,20 @@ import Link from 'next/link';
 import { useToast } from '@/context/ToastContext';
 
 interface CommunityPost {
-  id: string;
-  shareId: string;
-  title?: string;
-  content: string;
-  contentCid: string;
-  mediaCids?: string[];
-  tags?: string[];
-  communityId: string;
-  communityName: string;
-  communitySlug: string;
-  authorId: string;
-  authorHandle: string;
-  authorName: string;
-  createdAt: string;
+    id: string;
+    shareId: string;
+    title?: string;
+    content: string;
+    contentCid: string;
+    mediaCids?: string[];
+    tags?: string[];
+    communityId: string;
+    communityName: string;
+    communitySlug: string;
+    authorId: string;
+    authorHandle: string;
+    authorName: string;
+    createdAt: string;
 }
 
 export default function CommunityPostPage() {
@@ -49,8 +49,8 @@ export default function CommunityPostPage() {
                 setError(null);
 
                 // Fetch post by share ID - using relative path to automatically use current domain
-                const response = await fetch(`/cp/${shareId}`);
-                
+                const response = await fetch(`/api/cp/${shareId}`);
+
                 if (!response.ok) {
                     if (response.status === 404) {
                         setError('Community post not found');
@@ -70,21 +70,21 @@ export default function CommunityPostPage() {
                     hasPost: data.data && 'post' in data.data,
                     hasCanonicalUrl: data.data && 'canonicalUrl' in data.data
                 });
-                
+
                 if (data.success && data.data) {
                     const postData = data.data.post as CommunityPost;
-                    
+
                     console.log('[CommunityPostPage] Post data extracted:', postData);
                     console.log('[CommunityPostPage] Community slug from post:', postData.communitySlug);
                     console.log('[CommunityPostPage] Community slug from URL:', community);
-                    
+
                     // Verify the community slug matches the post's community
                     if (community && postData.communitySlug !== community) {
                         // Redirect to correct canonical URL (ensure encoded segment)
                         router.replace(`/communities/${encodeURIComponent(postData.communitySlug)}/posts/${shareId}`);
                         return;
                     }
-                    
+
                     setPost(postData);
                     setShareUrl(`/cp/${shareId}`);
                 } else {
@@ -112,7 +112,7 @@ export default function CommunityPostPage() {
     const getMetaTags = () => {
         if (!post) return null;
 
-        const title = post.title 
+        const title = post.title
             ? `${post.title} | ${post.communityName} | LinkDAO`
             : `Post in ${post.communityName} | LinkDAO`;
         const description = post.content?.substring(0, 200) || `Check out this post in ${post.communityName} on LinkDAO`;
@@ -220,7 +220,7 @@ export default function CommunityPostPage() {
                                 <span>{post.communityName}</span>
                             </Link>
                         </div>
-                        
+
                         <button
                             onClick={handleCopyShareLink}
                             className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"

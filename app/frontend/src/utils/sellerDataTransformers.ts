@@ -63,17 +63,17 @@ export function transformDisplayListingToUnified(
       availability: displayListing.isActive === false ? 'out_of_stock' : 'available',
 
       // Media and presentation
-      images: displayListing.images && Array.isArray(displayListing.images) 
-        ? displayListing.images.filter(img => 
-            typeof img === 'string' && 
-            img.length > 0 && 
-            (img.startsWith('http') || img.startsWith('https') || img.startsWith('ipfs') || img.startsWith('Qm') || img.startsWith('baf'))
-          )
-        : [displayListing.image].filter(Boolean).filter(img => 
-            typeof img === 'string' && 
-            img.length > 0 && 
-            (img.startsWith('http') || img.startsWith('https') || img.startsWith('ipfs') || img.startsWith('Qm') || img.startsWith('baf'))
-          ),
+      images: displayListing.images && Array.isArray(displayListing.images)
+        ? displayListing.images.filter(img =>
+          typeof img === 'string' &&
+          img.length > 0 &&
+          (img.startsWith('http') || img.startsWith('https') || img.startsWith('ipfs') || img.startsWith('Qm') || img.startsWith('baf'))
+        )
+        : [displayListing.image].filter(Boolean).filter(img =>
+          typeof img === 'string' &&
+          img.length > 0 &&
+          (img.startsWith('http') || img.startsWith('https') || img.startsWith('ipfs') || img.startsWith('Qm') || img.startsWith('baf'))
+        ),
       thumbnailUrl: displayListing.image || displayListing.images?.[0] || '',
       featuredImage: displayListing.featuredImage || displayListing.images?.[0],
 
@@ -227,12 +227,12 @@ export function transformSellerListingToUnified(
         images = [];
       }
     }
-    
+
     // Ensure images is an array and filter out any items that look like wallet addresses
     if (Array.isArray(images)) {
-      images = images.filter(img => 
-        typeof img === 'string' && 
-        img.length > 0 && 
+      images = images.filter(img =>
+        typeof img === 'string' &&
+        img.length > 0 &&
         (img.startsWith('http') || img.startsWith('https') || img.startsWith('ipfs') || img.startsWith('Qm') || img.startsWith('baf'))
       );
     } else {
@@ -338,9 +338,9 @@ export function transformMarketplaceListingToUnified(
     let images: string[] = [];
     if (Array.isArray(marketplaceListing.images)) {
       // Filter out any items that look like wallet addresses (0x... format) but keep valid URLs
-      images = marketplaceListing.images.filter(img => 
-        typeof img === 'string' && 
-        img.length > 0 && 
+      images = marketplaceListing.images.filter(img =>
+        typeof img === 'string' &&
+        img.length > 0 &&
         (img.startsWith('http') || img.startsWith('https') || img.startsWith('ipfs') || img.startsWith('Qm') || img.startsWith('baf'))
       );
     } else if (typeof marketplaceListing.images === 'string') {
@@ -348,9 +348,9 @@ export function transformMarketplaceListingToUnified(
       try {
         const parsedImages = JSON.parse(marketplaceListing.images);
         if (Array.isArray(parsedImages)) {
-          images = parsedImages.filter(img => 
-            typeof img === 'string' && 
-            img.length > 0 && 
+          images = parsedImages.filter(img =>
+            typeof img === 'string' &&
+            img.length > 0 &&
             (img.startsWith('http') || img.startsWith('https') || img.startsWith('ipfs') || img.startsWith('Qm') || img.startsWith('baf'))
           );
         }
@@ -507,6 +507,22 @@ export function transformSellerProfileToUnified(
           thumbnail: sellerProfile.logo,
         } : undefined,
       },
+
+      // Flat fields for backward compatibility with SellerDashboard
+      profileImageCdn: sellerProfile.profileImageCdn,
+      profileImageIpfs: sellerProfile.profileImageIpfs,
+      coverImageCdn: sellerProfile.coverImageCdn,
+      coverImageIpfs: sellerProfile.coverImageIpfs,
+      storeDescription: sellerProfile.storeDescription,
+
+      // Business Information fields
+      legalBusinessName: sellerProfile.legalBusinessName,
+      businessType: sellerProfile.businessType,
+      registeredAddressStreet: sellerProfile.registeredAddressStreet,
+      registeredAddressCity: sellerProfile.registeredAddressCity,
+      registeredAddressState: sellerProfile.registeredAddressState,
+      registeredAddressPostalCode: sellerProfile.registeredAddressPostalCode,
+      registeredAddressCountry: sellerProfile.registeredAddressCountry,
 
       // ENS and identity
       ensHandle: sellerProfile.ensHandle,
@@ -1180,9 +1196,9 @@ export function transformBackendListingToUnified(
     // Ensure images is always an array and filter appropriately
     if (Array.isArray(images)) {
       // Filter out any items that look like wallet addresses (0x... format) but keep valid URLs
-      images = images.filter(img => 
-        typeof img === 'string' && 
-        img.length > 0 && 
+      images = images.filter(img =>
+        typeof img === 'string' &&
+        img.length > 0 &&
         (img.startsWith('http') || img.startsWith('https') || img.startsWith('ipfs') || img.startsWith('Qm') || img.startsWith('baf'))
       );
     } else {

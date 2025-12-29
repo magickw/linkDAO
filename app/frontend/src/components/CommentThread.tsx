@@ -59,6 +59,13 @@ export default function CommentThread({
     }
   }, [comment.id, repliesLoaded, loadingReplies, addToast]);
 
+  // Automatically load replies when component mounts if comment has replies
+  useEffect(() => {
+    if (comment.replyCount > 0 && !repliesLoaded && !loadingReplies) {
+      handleLoadReplies();
+    }
+  }, [comment.replyCount, repliesLoaded, loadingReplies, handleLoadReplies]);
+
   // Calculate vote score
   const voteScore = comment.upvotes - comment.downvotes;
 
@@ -321,15 +328,11 @@ export default function CommentThread({
             </div>
           )}
 
-          {/* Load Replies Button */}
-          {comment.replyCount > 0 && !repliesLoaded && (
-            <button
-              onClick={handleLoadReplies}
-              disabled={loadingReplies}
-              className="mt-2 text-xs text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 transition-colors duration-200 disabled:opacity-50"
-            >
-              {loadingReplies ? 'Loading...' : `Load ${comment.replyCount} ${comment.replyCount === 1 ? 'reply' : 'replies'}`}
-            </button>
+          {/* Show loading indicator if replies are being loaded */}
+          {loadingReplies && (
+            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              Loading replies...
+            </div>
           )}
         </div>
       </div>

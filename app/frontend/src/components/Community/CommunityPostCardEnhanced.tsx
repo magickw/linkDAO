@@ -607,7 +607,7 @@ function CommunityPostCardEnhanced({
                   e.preventDefault();
                   e.stopPropagation();
                   const communitySlug = encodeURIComponent(community.slug ?? community.id ?? community.name ?? 'unknown');
-                  const postPath = `/communities/${communitySlug}/posts/${post.id}`;
+                  const postPath = `/communities/${communitySlug}/posts/${post.shareId || post.id}`;
                   setTimeout(() => router.push(postPath), 0);
                 }}
               >
@@ -622,7 +622,7 @@ function CommunityPostCardEnhanced({
                     e.preventDefault();
                     e.stopPropagation();
                     const communitySlug = encodeURIComponent(community.slug ?? community.id ?? community.name ?? 'unknown');
-                    const postPath = `/communities/${communitySlug}/posts/${post.id}`;
+                    const postPath = `/communities/${communitySlug}/posts/${post.shareId || post.id}`;
                     setTimeout(() => router.push(postPath), 0);
                   }}
                 >
