@@ -22,7 +22,7 @@ ALTER TABLE sellers ADD COLUMN IF NOT EXISTS is_online BOOLEAN DEFAULT false;
 ALTER TABLE sellers ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP;
 
 -- Create seller_activities table for activity timeline
-CREATE TABLE seller_activities (
+CREATE TABLE IF NOT EXISTS seller_activities (
     id SERIAL PRIMARY KEY,
     seller_wallet_address VARCHAR(42) NOT NULL,
     activity_type VARCHAR(50) NOT NULL, -- 'sale', 'listing', 'review', 'dao_action', 'achievement'
@@ -34,7 +34,7 @@ CREATE TABLE seller_activities (
 );
 
 -- Create seller_badges table for performance badges
-CREATE TABLE seller_badges (
+CREATE TABLE IF NOT EXISTS seller_badges (
     id SERIAL PRIMARY KEY,
     seller_wallet_address VARCHAR(42) NOT NULL,
     badge_type VARCHAR(50) NOT NULL, -- 'performance', 'achievement', 'verification'
@@ -48,7 +48,7 @@ CREATE TABLE seller_badges (
 );
 
 -- Create seller_dao_endorsements table
-CREATE TABLE seller_dao_endorsements (
+CREATE TABLE IF NOT EXISTS seller_dao_endorsements (
     id SERIAL PRIMARY KEY,
     seller_wallet_address VARCHAR(42) NOT NULL,
     endorser_address VARCHAR(42) NOT NULL,
@@ -61,7 +61,7 @@ CREATE TABLE seller_dao_endorsements (
 );
 
 -- Create seller_transactions table for transaction history
-CREATE TABLE seller_transactions (
+CREATE TABLE IF NOT EXISTS seller_transactions (
     id SERIAL PRIMARY KEY,
     seller_wallet_address VARCHAR(42) NOT NULL,
     transaction_type VARCHAR(20) NOT NULL, -- 'sale', 'purchase'
@@ -74,12 +74,12 @@ CREATE TABLE seller_transactions (
 );
 
 -- Add indexes for better performance
-CREATE INDEX idx_seller_activities_wallet ON seller_activities(seller_wallet_address);
-CREATE INDEX idx_seller_activities_type ON seller_activities(activity_type);
-CREATE INDEX idx_seller_badges_wallet ON seller_badges(seller_wallet_address);
-CREATE INDEX idx_seller_dao_endorsements_wallet ON seller_dao_endorsements(seller_wallet_address);
-CREATE INDEX idx_seller_transactions_wallet ON seller_transactions(seller_wallet_address);
-CREATE INDEX idx_seller_transactions_type ON seller_transactions(transaction_type);
+CREATE INDEX IF NOT EXISTS idx_seller_activities_wallet ON seller_activities(seller_wallet_address);
+CREATE INDEX IF NOT EXISTS idx_seller_activities_type ON seller_activities(activity_type);
+CREATE INDEX IF NOT EXISTS idx_seller_badges_wallet ON seller_badges(seller_wallet_address);
+CREATE INDEX IF NOT EXISTS idx_seller_dao_endorsements_wallet ON seller_dao_endorsements(seller_wallet_address);
+CREATE INDEX IF NOT EXISTS idx_seller_transactions_wallet ON seller_transactions(seller_wallet_address);
+CREATE INDEX IF NOT EXISTS idx_seller_transactions_type ON seller_transactions(transaction_type);
 
 -- Update existing sellers with default values
 UPDATE sellers SET 

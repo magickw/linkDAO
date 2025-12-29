@@ -508,7 +508,8 @@ console.log('Finished registering share routes');
 
 
 // Post Management routes (Must be before generic post routes)
-app.use('/api/posts', postManagementRoutes);
+// DISABLED: Conflicts with postRoutes repost endpoint - causing 405 errors
+// app.use('/api/posts', postManagementRoutes);
 
 app.use('/api/posts', postRoutes);
 app.use('/api/quick-posts', quickPostRoutes);

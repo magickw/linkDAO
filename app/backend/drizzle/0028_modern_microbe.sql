@@ -1,4 +1,4 @@
-CREATE TABLE "admin_audit_log" (
+CREATE TABLE IF NOT EXISTS "admin_audit_log" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"admin_id" uuid NOT NULL,
 	"action" varchar(100) NOT NULL,
@@ -10,7 +10,7 @@ CREATE TABLE "admin_audit_log" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "admin_sessions" (
+CREATE TABLE IF NOT EXISTS "admin_sessions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"token_hash" varchar(255) NOT NULL,

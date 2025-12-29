@@ -571,10 +571,41 @@ class SellerListingService {
           eq(categories.slug, data.categoryId),
           eq(categories.name, data.categoryId)
         ));
-        const category = categoryResult[0];
-        if (category) {
-          resolvedCategoryId = category.id;
+        let category = categoryResult[0];
+
+        // If category doesn't exist, create it dynamically (same as createListing)
+        if (!category) {
+          const categoryNames: Record<string, string> = {
+            'art': 'Art & Collectibles',
+            'music': 'Music & Audio',
+            'gaming': 'Gaming & Virtual Worlds',
+            'photography': 'Photography',
+            'domain': 'Domain Names',
+            'utility': 'Utility & Access',
+            'sports': 'Sports & Recreation',
+            'memes': 'Memes & Fun',
+            'fashion': 'Fashion & Wearables',
+            'electronics': 'Electronics',
+            'books': 'Books & Media',
+            'services': 'Services',
+            'other': 'Other',
+          };
+
+          const categoryName = categoryNames[data.categoryId] || data.categoryId.charAt(0).toUpperCase() + data.categoryId.slice(1);
+
+          const [newCategory] = await db.insert(categories).values({
+            name: categoryName,
+            slug: data.categoryId,
+            description: `${categoryName} marketplace category`,
+            path: JSON.stringify([categoryName]),
+            isActive: true,
+            sortOrder: 0,
+          }).returning();
+
+          category = newCategory;
         }
+
+        resolvedCategoryId = category.id;
       }
     }
 
