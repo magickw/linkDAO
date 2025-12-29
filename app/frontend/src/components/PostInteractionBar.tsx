@@ -3,6 +3,7 @@ import { useWeb3 } from '@/context/Web3Context';
 import { useToast } from '@/context/ToastContext';
 import TokenReactionSystem from './TokenReactionSystem/TokenReactionSystem';
 import SharePostModal from './SharePostModal';
+import RepostModal from './RepostModal';
 import CommunityTipButton from './CommunityTipButton';
 import AwardSelectionModal from './TokenReactionSystem/AwardSelectionModal';
 import { communityWeb3Service } from '@/services/communityWeb3Service';
@@ -43,7 +44,7 @@ export default function PostInteractionBar({
   const { addToast } = useToast();
 
   const [showShareModal, setShowShareModal] = useState(false);
-  const [shareModalInitialOption, setShareModalInitialOption] = useState<string | null>(null);
+  const [showRepostModal, setShowRepostModal] = useState(false);
   const [showTipInput, setShowTipInput] = useState(false);
   const [showAwardModal, setShowAwardModal] = useState(false);
   const [tipAmount, setTipAmount] = useState('');
@@ -68,14 +69,12 @@ export default function PostInteractionBar({
 
   // Handle share button click
   const handleShareClick = () => {
-    setShareModalInitialOption(null);
     setShowShareModal(true);
   };
 
   // Handle repost button click
   const handleRepostClick = () => {
-    setShareModalInitialOption('timeline');
-    setShowShareModal(true);
+    setShowRepostModal(true);
   };
 
   // Handle save post
@@ -153,17 +152,19 @@ export default function PostInteractionBar({
             <span className="sm:hidden">{post.commentCount || 0}</span>
           </button>
 
-          {/* Repost Button */}
-          <button
-            onClick={handleRepostClick}
-            className="flex items-center space-x-2 text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400 text-sm font-medium transition-colors duration-200 hover:scale-105"
-            aria-label="Repost to your timeline"
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            <span className="hidden sm:inline">Repost</span>
-          </button>
+          {/* Repost Button - Only show for non-community posts */}
+          {postType !== 'community' && (
+            <button
+              onClick={handleRepostClick}
+              className="flex items-center space-x-2 text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400 text-sm font-medium transition-colors duration-200 hover:scale-105"
+              aria-label="Repost to your timeline"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span className="hidden sm:inline">Repost</span>
+            </button>
+          )}
 
           {/* Share Button */}
           <button
@@ -266,17 +267,23 @@ export default function PostInteractionBar({
         isOpen={showShareModal}
         onClose={() => {
           setShowShareModal(false);
-          // Reset internal state if needed
         }}
         post={post}
         postType={postType}
         onShare={onShare}
         addToast={addToast}
-        // If clicking normal share button, this will be null (handled by state in more complex implementation, 
-        // but for now we'll assume the same modal instance handles both based on how it was triggered)
-        // Wait, I need a state to track *which* button opened the modal to set this prop dynamically?
-        // Actually, easier: add a new state `shareModalInitialOption` to PostInteractionBar.
-        initialSelectedOption={shareModalInitialOption}
+      />
+
+      {/* Repost Modal */}
+      <RepostModal
+        isOpen={showRepostModal}
+        onClose={() => setShowRepostModal(false)}
+        post={post}
+        onRepost={async (postId, message) => {
+          if (onShare) {
+            await onShare(postId, 'timeline', message);
+          }
+        }}
       />
 
       {/* Award Selection Modal */}

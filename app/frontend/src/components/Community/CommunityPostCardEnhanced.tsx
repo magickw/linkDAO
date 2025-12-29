@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, memo } from 'react';
+import React, { useState, useRef, useCallback, useEffect, memo } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { CommunityPost, Comment, CreateCommentInput } from '@/models/CommunityPost';
@@ -18,6 +19,7 @@ import WalletSnapshotEmbed from '../WalletSnapshotEmbed';
 import CommunityGovernance from '../CommunityGovernance';
 import PostInteractionBar from '../PostInteractionBar';
 import OptimizedImage from '../OptimizedImage';
+import { EmojiPicker } from '../Messaging/EmojiPicker';
 import { motion } from 'framer-motion';
 import { ldaoTokenService } from '@/services/web3/ldaoTokenService';
 import { processContent, shouldTruncateContent, getTruncatedContent } from '@/utils/contentParser';
@@ -83,6 +85,10 @@ function CommunityPostCardEnhanced({
   const [newComment, setNewComment] = useState('');
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [userVote, setUserVote] = useState<'upvote' | 'downvote' | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [commentImages, setCommentImages] = useState<string[]>([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const commentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [reactions, setReactions] = useState<Reaction[]>([]);
@@ -358,6 +364,7 @@ function CommunityPostCardEnhanced({
         return [newCommentObj, ...currentComments];
       });
       setNewComment('');
+      setCommentImages([]);
 
       addToast('Comment posted!', 'success');
     } catch (err) {
@@ -367,6 +374,78 @@ function CommunityPostCardEnhanced({
       setCommentSubmitting(false);
     }
   };
+
+  // Handle emoji selection
+  const handleEmojiSelect = useCallback((emoji: string) => {
+    const textarea = commentTextareaRef.current;
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const newCommentText = newComment.slice(0, start) + emoji + newComment.slice(end);
+      
+      setNewComment(newCommentText);
+      
+      // Set cursor position after emoji
+      setTimeout(() => {
+        textarea.selectionStart = textarea.selectionEnd = start + emoji.length;
+        textarea.focus();
+      }, 0);
+    }
+    
+    setShowEmojiPicker(false);
+  }, [newComment]);
+
+  // Handle image upload
+  const handleImageUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      addToast('Please select an image file', 'error');
+      return;
+    }
+
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      addToast('Image size must be less than 5MB', 'error');
+      return;
+    }
+
+    setUploadingImage(true);
+    
+    try {
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      // Upload file to server
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setCommentImages(prev => [...prev, data.url]);
+        addToast('Image uploaded successfully', 'success');
+      } else {
+        addToast('Failed to upload image', 'error');
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      addToast('Failed to upload image', 'error');
+    } finally {
+      setUploadingImage(false);
+      // Reset file input
+      e.target.value = '';
+    }
+  }, [addToast]);
+
+  // Handle removing uploaded image
+  const handleRemoveImage = useCallback((index: number) => {
+    setCommentImages(prev => prev.filter((_, i) => i !== index));
+  }, []);
 
   // Handle reaction purchase (simplified from staking)
   const handleReactionPurchase = async (reactionType: string) => {
@@ -879,19 +958,92 @@ function CommunityPostCardEnhanced({
                             </span>
                           </div>
                           <div className="flex-1">
-                            <textarea
-                              value={newComment}
-                              onChange={(e) => setNewComment(e.target.value)}
-                              placeholder="Add a comment..."
-                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white resize-none"
-                              rows={3}
-                              disabled={commentSubmitting}
-                              aria-label="Write a comment"
-                            />
+                            {/* Image Preview */}
+                            {commentImages.length > 0 && (
+                              <div className="mb-2 flex flex-wrap gap-2">
+                                {commentImages.map((imageUrl, index) => (
+                                  <div key={index} className="relative inline-block">
+                                    <img
+                                      src={imageUrl}
+                                      alt={`Uploaded image ${index + 1}`}
+                                      className="h-20 w-20 object-cover rounded-lg border border-gray-200 dark:border-gray-600"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveImage(index)}
+                                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                                      aria-label="Remove image"
+                                    >
+                                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                      </svg>
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            
+                            {/* Comment Input */}
+                            <div className="relative">
+                              <textarea
+                                ref={commentTextareaRef}
+                                value={newComment}
+                                onChange={(e) => setNewComment(e.target.value)}
+                                placeholder="Add a comment..."
+                                className="w-full px-3 py-2 pr-20 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white resize-none"
+                                rows={3}
+                                disabled={commentSubmitting}
+                                aria-label="Write a comment"
+                              />
+                              
+                              {/* Emoji and Image Buttons */}
+                              <div className="absolute right-2 bottom-2 flex space-x-1">
+                                <button
+                                  type="button"
+                                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                                  disabled={commentSubmitting}
+                                  className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
+                                  title="Add emoji"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                </button>
+                                <label className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors cursor-pointer disabled:opacity-50">
+                                  <input
+                                    type="file"
+                                    onChange={handleImageUpload}
+                                    accept="image/*"
+                                    className="hidden"
+                                    disabled={commentSubmitting || uploadingImage}
+                                  />
+                                  {uploadingImage ? (
+                                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                  ) : (
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                  )}
+                                </label>
+                              </div>
+                              
+                              {/* Emoji Picker */}
+                              {showEmojiPicker && (
+                                <div className="absolute bottom-full right-0 mb-2 z-10">
+                                  <EmojiPicker
+                                    onEmojiSelect={handleEmojiSelect}
+                                    onClose={() => setShowEmojiPicker(false)}
+                                  />
+                                </div>
+                              )}
+                            </div>
                             <div className="flex justify-end mt-2">
                               <button
                                 type="submit"
-                                disabled={!newComment.trim() || commentSubmitting}
+                                disabled={!newComment.trim() && commentImages.length === 0 || commentSubmitting}
                                 className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
                                 aria-label={commentSubmitting ? "Posting comment..." : "Post comment"}
                               >

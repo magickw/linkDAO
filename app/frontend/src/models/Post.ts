@@ -9,7 +9,7 @@ export interface Post extends EnhancedPost {
 // Helper function to validate IPFS CID and construct proper URL
 function getAvatarUrl(profileCid: string | undefined): string | undefined {
   if (!profileCid) return undefined;
-  
+
   // Check if it's already a valid URL
   try {
     new URL(profileCid);
@@ -49,7 +49,7 @@ export function convertBackendPostToPost(backendPost: any): Post {
       content = JSON.stringify(backendPost.content);
     }
   }
-  
+
   // Helper function to safely convert to Date
   const toDate = (value: any): Date => {
     if (!value) return new Date();
@@ -94,7 +94,8 @@ export function convertBackendPostToPost(backendPost: any): Post {
     trendingStatus: backendPost.trendingScore > 0 ? 'trending' : null,
     trendingScore: backendPost.trendingScore || 0,
     isBookmarked: false,
-    communityId: backendPost.communityId || '',
+    communityId: backendPost.communityId || backendPost.community_id || '',
+    communityName: backendPost.communityName || backendPost.community_name || '',
     contentType: detectContentType(backendPost),
 
     // Add author profile information including avatar
@@ -118,19 +119,19 @@ function detectContentType(post: any): 'text' | 'media' | 'link' | 'poll' | 'pro
   if (post.mediaCids && JSON.parse(post.mediaCids || '[]').length > 0) {
     return 'media';
   }
-  
+
   if (post.contentCid && post.contentCid.includes('http')) {
     return 'link';
   }
-  
+
   if (post.tags && JSON.parse(post.tags || '[]').includes('poll')) {
     return 'poll';
   }
-  
+
   if (post.tags && JSON.parse(post.tags || '[]').includes('proposal')) {
     return 'proposal';
   }
-  
+
   return 'text';
 }
 

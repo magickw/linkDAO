@@ -50,7 +50,7 @@ interface SharePostModalProps {
 
 interface SharePostModalWithToastProps extends SharePostModalProps {
   addToast?: (message: string, type: 'success' | 'error' | 'warning' | 'info', options?: any) => void;
-  initialSelectedOption?: string | null;
+  addToast?: (message: string, type: 'success' | 'error' | 'warning' | 'info', options?: any) => void;
 }
 
 export default function SharePostModal({
@@ -60,7 +60,6 @@ export default function SharePostModal({
   postType,
   onShare,
   addToast: providedAddToast,
-  initialSelectedOption = null
 }: SharePostModalWithToastProps) {
   const { address, isConnected } = useWeb3();
 
@@ -70,14 +69,7 @@ export default function SharePostModal({
 
   const [shareMessage, setShareMessage] = useState('');
   const [isSharing, setIsSharing] = useState(false);
-  const [selectedOption, setSelectedOption] = useState<string | null>(initialSelectedOption);
-
-  // Reset selected option when modal opens with new initial option
-  useEffect(() => {
-    if (isOpen) {
-      setSelectedOption(initialSelectedOption);
-    }
-  }, [isOpen, initialSelectedOption]);
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
 
   // Generate share URL
   const getPostUrl = () => {

@@ -561,6 +561,23 @@ class SellerListingService {
       throw new Error('Listing not found');
     }
 
+    // Resolve categoryId if provided (similar to createListing logic)
+    let resolvedCategoryId = data.categoryId;
+    if (data.categoryId !== undefined) {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(data.categoryId)) {
+        // Not a UUID, try to look up by slug or name
+        const categoryResult = await db.select().from(categories).where(or(
+          eq(categories.slug, data.categoryId),
+          eq(categories.name, data.categoryId)
+        ));
+        const category = categoryResult[0];
+        if (category) {
+          resolvedCategoryId = category.id;
+        }
+      }
+    }
+
     // Build update object
     const updateData: any = {
       updatedAt: new Date(),
@@ -570,7 +587,7 @@ class SellerListingService {
     if (data.description !== undefined) updateData.description = data.description;
     if (data.price !== undefined) updateData.priceAmount = data.price.toString();
     if (data.currency !== undefined) updateData.priceCurrency = data.currency;
-    if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
+    if (data.categoryId !== undefined && resolvedCategoryId !== undefined) updateData.categoryId = resolvedCategoryId;
     if (data.inventory !== undefined) updateData.inventory = data.inventory;
     if (data.status !== undefined) updateData.status = data.status;
     if (data.images !== undefined) updateData.images = JSON.stringify(data.images);
