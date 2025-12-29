@@ -66,6 +66,9 @@ export const users = pgTable("users", {
   // LDAO Token
   ldaoBalance: numeric("ldao_balance", { precision: 20, scale: 8 }).default('0'),
 
+  // Verification status (explicit)
+  isVerified: boolean("is_verified").default(false),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow()
 });
@@ -1408,6 +1411,10 @@ export const communities = pgTable("communities", {
   treasuryAddress: varchar("treasury_address", { length: 66 }),
   governanceToken: varchar("governance_token", { length: 66 }),
   settings: text("settings"), // JSON CommunitySettings object
+
+  // Verification status (explicit)
+  isVerified: boolean("is_verified").default(false),
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (t) => ({
@@ -6143,4 +6150,8 @@ export const sellerTierHistory = pgTable("seller_tier_history", {
   sellerWalletAddressIdx: index("idx_seller_tier_history_seller").on(t.sellerWalletAddress),
   createdAtIdx: index("idx_seller_tier_history_created_at").on(t.createdAt),
 }));
+
+
+// Verification Schema
+export * from "./verificationSchema";
 

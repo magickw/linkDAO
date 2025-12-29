@@ -40,6 +40,7 @@ export interface UserProfile {
   shippingCountry?: string;
   shippingPhone?: string;
   shippingSameAsBilling?: boolean;
+  isVerified?: boolean; // New: Explicit verification status
   createdAt: Date;
   updatedAt: Date;
 }

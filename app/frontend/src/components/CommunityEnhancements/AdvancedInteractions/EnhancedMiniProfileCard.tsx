@@ -8,6 +8,8 @@ import { MiniProfileCardProps, UserProfile } from '../../../types/communityEnhan
 import { ResolvedName } from '../../../services/ensService';
 import { useAnimation } from '../SharedComponents/AnimationProvider';
 import { useENSIntegration } from '../../../hooks/useENSIntegration';
+import { ProfileService } from '../../../services/profileService';
+import { UserProfile as DbUserProfile } from '../../../models/UserProfile';
 
 export interface EnhancedMiniProfileCardProps extends MiniProfileCardProps {
   resolvedName?: ResolvedName;
@@ -29,21 +31,21 @@ const EnhancedMiniProfileCard: React.FC<EnhancedMiniProfileCardProps> = ({
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const triggerRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout>();
-  
+
   const { triggerAnimation } = useAnimation();
   const { resolveName, isENSName, isSNSName, isValidAddress } = useENSIntegration();
 
   // Load user profile data with ENS integration
   const loadUserProfile = async () => {
     if (userProfile || isLoading) return;
-    
+
     setIsLoading(true);
     setError(null);
-    
+
     try {
       // Resolve ENS/SNS if not already provided
       let nameResolution = resolvedName;
@@ -52,36 +54,55 @@ const EnhancedMiniProfileCard: React.FC<EnhancedMiniProfileCardProps> = ({
       }
 
       // Mock API call - replace with actual service
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Enhanced mock user data with ENS integration
-      const mockProfile: UserProfile = {
+      // await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Fetch real profile from backend
+      let dbProfile: DbUserProfile | null = null;
+      try {
+        if (userId.startsWith('0x')) {
+          dbProfile = await ProfileService.getProfileByAddress(userId);
+        } else {
+          dbProfile = await ProfileService.getProfileById(userId);
+        }
+      } catch (e) {
+        console.error('Failed to fetch real profile', e);
+      }
+
+      // Enhanced user data with ENS integration
+      const displayProfile: UserProfile = {
         id: userId,
-        username: nameResolution?.type === 'ens' || nameResolution?.type === 'sns' 
-          ? nameResolution.original 
-          : `user_${userId}`,
-        ensName: nameResolution?.type === 'ens' ? nameResolution.original : undefined,
-        avatar: nameResolution?.profile?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`,
-        reputation: Math.floor(Math.random() * 1000) + 100,
+        // Use DB profile data if available, otherwise fallback to ENS or default
+        username: dbProfile?.displayName || dbProfile?.handle || (nameResolution?.type === 'ens' || nameResolution?.type === 'sns'
+          ? nameResolution.original
+          : `user_${userId.slice(0, 6)}`),
+        ensName: dbProfile?.ens || (nameResolution?.type === 'ens' ? nameResolution.original : undefined),
+        avatar: dbProfile?.avatarCid ? `https://ipfs.io/ipfs/${dbProfile.avatarCid}` : (nameResolution?.profile?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`),
+        reputation: 0, // TODO: Fetch real reputation
         badges: [
-          { id: '1', name: 'Early Adopter', icon: '🚀', description: 'Joined in the first month', rarity: 'rare' },
-          { id: '2', name: 'Active Contributor', icon: '⭐', description: 'Made 100+ posts', rarity: 'common' },
+          ...(dbProfile && (dbProfile as any).isVerified ? [{
+            id: 'verified',
+            name: 'Verified',
+            icon: '✓',
+            description: 'Verified User',
+            rarity: 'legendary' as const
+          }] : []),
+          // Keep ENS badges if needed, or remove to avoid confusion
           ...(nameResolution?.isValid ? [
-            { 
-              id: 'ens-verified', 
-              name: nameResolution.type === 'ens' ? 'ENS Verified' : 'SNS Verified', 
-              icon: nameResolution.type === 'ens' ? '⟠' : '◎', 
-              description: `Verified ${nameResolution.type.toUpperCase()} name`, 
-              rarity: 'epic' as const 
+            {
+              id: 'ens-verified',
+              name: nameResolution.type === 'ens' ? 'ENS Verified' : 'SNS Verified',
+              icon: nameResolution.type === 'ens' ? '⟠' : '◎',
+              description: `Verified ${nameResolution.type.toUpperCase()} name`,
+              rarity: 'epic' as const
             }
           ] : []),
         ],
-        walletAddress: nameResolution?.resolved || `0x${Math.random().toString(16).substr(2, 40)}`,
-        mutualConnections: Math.floor(Math.random() * 50),
-        isFollowing: Math.random() > 0.5,
+        walletAddress: dbProfile?.walletAddress || nameResolution?.resolved || userId,
+        mutualConnections: 0,
+        isFollowing: false, // TODO: Check following status
       };
-      
-      setUserProfile(mockProfile);
+
+      setUserProfile(displayProfile);
     } catch (err) {
       setError('Failed to load profile');
       console.error('Error loading user profile:', err);
@@ -95,7 +116,7 @@ const EnhancedMiniProfileCard: React.FC<EnhancedMiniProfileCardProps> = ({
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
-    
+
     timeoutRef.current = setTimeout(() => {
       setIsVisible(true);
       loadUserProfile();
@@ -107,7 +128,7 @@ const EnhancedMiniProfileCard: React.FC<EnhancedMiniProfileCardProps> = ({
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
-    
+
     timeoutRef.current = setTimeout(() => {
       setIsVisible(false);
     }, 150);
@@ -116,19 +137,19 @@ const EnhancedMiniProfileCard: React.FC<EnhancedMiniProfileCardProps> = ({
   // Handle follow/unfollow
   const handleFollowToggle = async () => {
     if (!userProfile) return;
-    
+
     try {
       // Optimistic update
       setUserProfile(prev => prev ? { ...prev, isFollowing: !prev.isFollowing } : null);
-      
+
       // Trigger celebration animation
       if (cardRef.current) {
         triggerAnimation(cardRef.current, 'celebrate');
       }
-      
+
       // Mock API call
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       console.log(`${userProfile.isFollowing ? 'Unfollowed' : 'Followed'} user ${userId}`);
     } catch (err) {
       // Revert on error
@@ -185,16 +206,16 @@ const EnhancedMiniProfileCard: React.FC<EnhancedMiniProfileCardProps> = ({
   const validationInfo = getValidationInfo();
 
   return (
-    <div 
+    <div
       className="ce-enhanced-mini-profile-trigger"
       ref={triggerRef}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
       {trigger}
-      
+
       {isVisible && (
-        <div 
+        <div
           className="ce-enhanced-mini-profile-card"
           ref={cardRef}
           style={getCardPosition()}
@@ -214,11 +235,11 @@ const EnhancedMiniProfileCard: React.FC<EnhancedMiniProfileCardProps> = ({
               </div>
             </div>
           )}
-          
+
           {error && (
             <div className="ce-profile-error">
               <p>Failed to load profile</p>
-              <button 
+              <button
                 className="ce-button ce-button-secondary ce-button-sm"
                 onClick={loadUserProfile}
               >
@@ -226,19 +247,19 @@ const EnhancedMiniProfileCard: React.FC<EnhancedMiniProfileCardProps> = ({
               </button>
             </div>
           )}
-          
+
           {userProfile && !isLoading && (
             <div className="ce-profile-content">
               {/* Header with validation status */}
               <div className="ce-profile-header">
                 <div className="ce-profile-avatar-container">
-                  <img 
-                    src={userProfile.avatar} 
+                  <img
+                    src={userProfile.avatar}
                     alt={userProfile.username}
                     className="ce-profile-avatar"
                   />
                   {validationInfo && (
-                    <div 
+                    <div
                       className="ce-validation-badge"
                       style={{ backgroundColor: validationInfo.color }}
                       title={validationInfo.label}
@@ -257,12 +278,12 @@ const EnhancedMiniProfileCard: React.FC<EnhancedMiniProfileCardProps> = ({
                   )}
                 </div>
               </div>
-              
+
               {/* ENS Profile Links */}
               {showENSInfo && resolvedName?.profile && (
                 <div className="ce-ens-links">
                   {resolvedName.profile.twitter && (
-                    <a 
+                    <a
                       href={`https://twitter.com/${resolvedName.profile.twitter}`}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -273,7 +294,7 @@ const EnhancedMiniProfileCard: React.FC<EnhancedMiniProfileCardProps> = ({
                     </a>
                   )}
                   {resolvedName.profile.github && (
-                    <a 
+                    <a
                       href={`https://github.com/${resolvedName.profile.github}`}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -284,7 +305,7 @@ const EnhancedMiniProfileCard: React.FC<EnhancedMiniProfileCardProps> = ({
                     </a>
                   )}
                   {resolvedName.profile.website && (
-                    <a 
+                    <a
                       href={resolvedName.profile.website}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -296,7 +317,7 @@ const EnhancedMiniProfileCard: React.FC<EnhancedMiniProfileCardProps> = ({
                   )}
                 </div>
               )}
-              
+
               {/* Stats */}
               <div className="ce-profile-stats">
                 <div className="ce-stat">
@@ -310,14 +331,14 @@ const EnhancedMiniProfileCard: React.FC<EnhancedMiniProfileCardProps> = ({
                   </div>
                 )}
               </div>
-              
+
               {/* Badges */}
               {userProfile.badges.length > 0 && (
                 <div className="ce-profile-badges">
                   {userProfile.badges.slice(0, 3).map(badge => (
-                    <div 
-                      key={badge.id} 
-                      className={`ce-badge ce-badge-${badge.rarity}`} 
+                    <div
+                      key={badge.id}
+                      className={`ce-badge ce-badge-${badge.rarity}`}
                       title={badge.description}
                     >
                       <span className="ce-badge-icon">{badge.icon}</span>
@@ -326,7 +347,7 @@ const EnhancedMiniProfileCard: React.FC<EnhancedMiniProfileCardProps> = ({
                   ))}
                 </div>
               )}
-              
+
               {/* Wallet Info */}
               {showWalletInfo && (
                 <div className="ce-profile-wallet">
@@ -339,10 +360,10 @@ const EnhancedMiniProfileCard: React.FC<EnhancedMiniProfileCardProps> = ({
                   )}
                 </div>
               )}
-              
+
               {/* Actions */}
               <div className="ce-profile-actions">
-                <button 
+                <button
                   className={`ce-button ${userProfile.isFollowing ? 'ce-button-secondary' : 'ce-button-primary'}`}
                   onClick={handleFollowToggle}
                 >
@@ -356,7 +377,7 @@ const EnhancedMiniProfileCard: React.FC<EnhancedMiniProfileCardProps> = ({
           )}
         </div>
       )}
-      
+
       <style jsx>{`
         .ce-enhanced-mini-profile-trigger {
           position: relative;

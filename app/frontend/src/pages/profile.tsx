@@ -25,6 +25,8 @@ import { unifiedImageService } from '@/services/unifiedImageService';
 import Link from 'next/link';
 import { ProfileService } from '@/services/profileService';
 import { getTokenLogoWithFallback } from '@/utils/tokenLogoUtils';
+import { VerificationModal } from '@/components/Verification/VerificationModal';
+import { useVerification } from '@/hooks/useVerification';
 
 // Helper function to validate IPFS CID and construct proper URL
 function getAvatarUrl(profileCid: string | undefined): string | undefined {
@@ -39,7 +41,7 @@ function getAvatarUrl(profileCid: string | undefined): string | undefined {
     if (profileCid.startsWith('Qm') || profileCid.startsWith('bafy')) {
       return `https://ipfs.io/ipfs/${profileCid}`;
     }
-    
+
     // If it's neither a valid URL nor an IPFS CID, return undefined
     return undefined;
   }
@@ -67,7 +69,7 @@ export default function Profile() {
             console.log('✅ Session recovered successfully');
             return;
           }
-          
+
           // If recovery fails, try to authenticate
           const account = getAccount(config);
           if (account.connector) {
@@ -96,6 +98,8 @@ export default function Profile() {
   // Backend profile loading with error handling
   const { profile: backendProfile, isLoading: isBackendProfileLoading, error: backendProfileError, refetch, updateProfile: updateBackendProfile } = useProfile(targetUserAddress);
   const { data: followCount, isLoading: isFollowCountLoading } = useFollowCount(targetUserAddress);
+  const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
+  const { requests } = useVerification();
 
   // Wallet data
   const { portfolio, tokens: rawTokens, isLoading: isWalletLoading } = useWalletDataReal({ address: targetUserAddress });
@@ -1115,7 +1119,7 @@ export default function Profile() {
                           {reputation.totalScore} Reputation
                         </span>
                       )}
-                      {backendProfile && (
+                      {backendProfile?.isVerified && (
                         <span className="inline-flex items-center px-4 py-2 rounded-full text-base font-bold bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg transform hover:scale-105 transition-transform">
                           <svg className="mr-2 h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -1192,23 +1196,40 @@ export default function Profile() {
                 <div className="mt-6 lg:mt-0 flex flex-col sm:flex-row lg:flex-col gap-3">
                   {/* Show Edit Profile button only for current user's profile */}
                   {currentUserAddress && targetUserAddress === currentUserAddress && (
-                    <button
-                      onClick={() => {
-                        if (activeTab === 'edit') {
-                          setActiveTab('posts');
-                          setIsEditing(false);
-                        } else {
-                          setActiveTab('edit');
-                          setIsEditing(true);
-                        }
-                      }}
-                      className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-xl shadow-lg text-white bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800 transition-all transform hover:scale-105"
-                    >
-                      <svg className="mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                      {activeTab === 'edit' ? 'Cancel Editing' : 'Edit Profile'}
-                    </button>
+                    <>
+                      {(!backendProfile?.isVerified) && (
+                        <button
+                          onClick={() => setIsVerificationModalOpen(true)}
+                          disabled={requests.some(r => r.status === 'pending')}
+                          className={`w-full inline-flex justify-center items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white ${requests.some(r => r.status === 'pending')
+                            ? 'bg-yellow-500 cursor-not-allowed'
+                            : 'bg-indigo-600 hover:bg-indigo-700'
+                            } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 mb-3`}
+                        >
+                          <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          {requests.some(r => r.status === 'pending') ? 'Verification Pending' : 'Get Verified'}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          if (activeTab === 'edit') {
+                            setActiveTab('posts');
+                            setIsEditing(false);
+                          } else {
+                            setActiveTab('edit');
+                            setIsEditing(true);
+                          }
+                        }}
+                        className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-xl shadow-lg text-white bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800 transition-all transform hover:scale-105"
+                      >
+                        <svg className="mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        {activeTab === 'edit' ? 'Cancel Editing' : 'Edit Profile'}
+                      </button>
+                    </>
                   )}
 
                   {/* Show Follow/Unfollow button when viewing another user's profile */}
@@ -1874,7 +1895,7 @@ export default function Profile() {
                                 <>
                                   <span>
                                     in{' '}
-                                    <Link 
+                                    <Link
                                       href={`/communities/${encodeURIComponent(post.communityId ?? '')}`}
                                       className="text-blue-600 dark:text-blue-400 hover:underline"
                                       onClick={(e) => e.stopPropagation()}
@@ -1988,9 +2009,9 @@ export default function Profile() {
                               <div key={index} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                                 <div className="flex items-center">
                                   {logoUrl ? (
-                                    <img 
-                                      src={logoUrl} 
-                                      alt={token.symbol} 
+                                    <img
+                                      src={logoUrl}
+                                      alt={token.symbol}
                                       className="h-8 w-8 rounded-full object-contain mr-3"
                                       onError={(e) => {
                                         const target = e.target as HTMLImageElement;
@@ -2470,6 +2491,7 @@ export default function Profile() {
           )}
         </div>
       </div>
+      <VerificationModal isOpen={isVerificationModalOpen} onClose={() => setIsVerificationModalOpen(false)} />
     </Layout>
   );
 }

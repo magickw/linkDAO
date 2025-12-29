@@ -16,8 +16,12 @@ router.get('/health', (req, res) => {
 });
 
 // Routes
-router.post('/', postController.createPost.bind(postController));
+// Routes
+// CRITICAL: specific routes must come before parameterized routes
+console.log('Registering /api/posts/repost route');
 router.post('/repost', authMiddleware, postController.repostPost.bind(postController));
+
+router.post('/', postController.createPost.bind(postController));
 router.get('/', postController.getAllPosts.bind(postController));
 router.get('/feed', postController.getFeed.bind(postController));
 router.get('/author/:author', postController.getPostsByAuthor.bind(postController));
