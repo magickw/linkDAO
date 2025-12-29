@@ -1,6 +1,6 @@
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
 import { base, baseSepolia, mainnet, polygon, arbitrum, sepolia } from 'wagmi/chains';
-import { http } from 'wagmi';
+import { http, createStorage } from 'wagmi';
 
 // Get the WalletConnect project ID from environment variables
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'd051afaee33392cccc42e141b9f7697b';
@@ -53,8 +53,10 @@ export const config = (() => {
     appDescription: 'Decentralized Web3 Marketplace and DAO Platform',
     appUrl: typeof window !== 'undefined' ? window.location.origin : 'https://linkdao.io',
     appIcon: 'https://linkdao.io/icon.png',
-    // Disable remote config fetching to prevent network errors
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    // Properly wrap storage using createStorage for Wagmi v2
+    storage: createStorage({
+      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    }),
     // Disable analytics and other network requests
     appInfo: {
       projectName: 'LinkDAO Marketplace',
