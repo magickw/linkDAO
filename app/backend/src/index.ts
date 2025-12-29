@@ -507,6 +507,9 @@ app.use('/api/cp', communityPostShareRoutes); // Short share URLs for community 
 console.log('Finished registering share routes');
 
 
+// Post Management routes (Must be before generic post routes)
+app.use('/api/posts', postManagementRoutes);
+
 app.use('/api/posts', postRoutes);
 app.use('/api/quick-posts', quickPostRoutes);
 app.use('/api/feed', feedRoutes);
@@ -906,7 +909,7 @@ app.use('/api/ldao', ldaoBenefitsRoutes);
 // Leaderboard and treasury routes
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/treasury', treasuryRoutes);
-app.use('/api/posts', postManagementRoutes);
+
 app.use('/api', announcementRoutes);
 app.use('/api', monthlyUpdateRoutes);
 process.stdout.write('✅ Leaderboard, Treasury, Post Management, Announcement, and Monthly Update routes enabled\n');
