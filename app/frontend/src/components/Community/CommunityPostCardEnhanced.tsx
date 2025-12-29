@@ -26,7 +26,9 @@ import { createPropsComparatorIgnoring } from '@/utils/performanceUtils';
 // Helper function to check if post is a community post
 const isCommunityPost = (post: EnhancedPost): boolean => {
   // Check if it has community-specific fields
-  return 'flair' in post && 'isPinned' in post && 'isLocked' in post;
+  // Relaxed check: if it has communityId, it's likely a community post in this context
+  // or checks for specific fields if communityId is somehow missing on the type but present on the object
+  return 'communityId' in post || ('flair' in post && 'isPinned' in post && 'isLocked' in post);
 };
 
 interface Reaction {
@@ -812,41 +814,71 @@ function CommunityPostCardEnhanced({
             </div>
           )}
 
+
+
           {/* Comments Section */}
           {showComments && (
             <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
               {/* Comment Form (only for community posts) */}
-              {isCommunityPostType && userMembership && communityPost && !communityPost.isLocked && (
-                <form onSubmit={handleCommentSubmit} className="mb-4">
-                  <div className="flex space-x-3">
-                    <div className="bg-gradient-to-br from-primary-400 to-secondary-500 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0">
-                      <span className="text-white font-bold text-xs">
-                        {address ? address.slice(2, 4).toUpperCase() : 'U'}
-                      </span>
-                    </div>
-                    <div className="flex-1">
-                      <textarea
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        placeholder="Add a comment..."
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white resize-none"
-                        rows={3}
-                        disabled={commentSubmitting}
-                        aria-label="Write a comment"
-                      />
-                      <div className="flex justify-end mt-2">
-                        <button
-                          type="submit"
-                          disabled={!newComment.trim() || commentSubmitting}
-                          className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-                          aria-label={commentSubmitting ? "Posting comment..." : "Post comment"}
-                        >
-                          {commentSubmitting ? 'Posting...' : 'Comment'}
-                        </button>
+              {isCommunityPostType && (
+                <>
+                  {(userMembership || community.isPublic) ? (
+                    !communityPost?.isLocked ? (
+                      <form onSubmit={handleCommentSubmit} className="mb-4">
+                        <div className="flex space-x-3">
+                          <div className="bg-gradient-to-br from-primary-400 to-secondary-500 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0">
+                            <span className="text-white font-bold text-xs">
+                              {address ? address.slice(2, 4).toUpperCase() : 'U'}
+                            </span>
+                          </div>
+                          <div className="flex-1">
+                            <textarea
+                              value={newComment}
+                              onChange={(e) => setNewComment(e.target.value)}
+                              placeholder="Add a comment..."
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white resize-none"
+                              rows={3}
+                              disabled={commentSubmitting}
+                              aria-label="Write a comment"
+                            />
+                            <div className="flex justify-end mt-2">
+                              <button
+                                type="submit"
+                                disabled={!newComment.trim() || commentSubmitting}
+                                className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                                aria-label={commentSubmitting ? "Posting comment..." : "Post comment"}
+                              >
+                                {commentSubmitting ? 'Posting...' : 'Comment'}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </form>
+                    ) : (
+                      <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg flex items-center justify-center text-yellow-700 dark:text-yellow-400">
+                        <span className="mr-2">🔒</span>
+                        <span>Comments are locked for this post.</span>
                       </div>
+                    )
+                  ) : (
+                    <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-center border border-gray-200 dark:border-gray-600">
+                      <p className="text-gray-600 dark:text-gray-300 mb-2">
+                        This is a private community. You must be a member of <span className="font-semibold">{community.displayName || community.name}</span> to comment.
+                      </p>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          // Redirect to community page to join
+                          const communitySlug = encodeURIComponent(community.slug ?? community.id ?? community.name ?? 'unknown');
+                          router.push(`/communities/${communitySlug}`);
+                        }}
+                        className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors font-medium"
+                      >
+                        Join Community
+                      </button>
                     </div>
-                  </div>
-                </form>
+                  )}
+                </>
               )}
 
               {/* Comments List */}

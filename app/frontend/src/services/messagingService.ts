@@ -550,8 +550,9 @@ class MessagingService {
       // Encrypt content
       message.encryptedContent = await this.encryptMessage(content, toAddress);
 
-      // Sign message
-      message.signature = await this.signMessage(message);
+      // Sign message - DISABLED to prevent repeated prompts
+      // The WebSocket connection is already authenticated
+      // message.signature = await this.signMessage(message);
 
       // Send via WebSocket
       webSocketServiceInstance.send('send_message', message);

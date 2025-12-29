@@ -170,6 +170,7 @@ export class CommentService {
           moderationStatus: comments.moderationStatus,
           createdAt: comments.createdAt,
           updatedAt: comments.updatedAt,
+          replyCount: sql<number>`(SELECT count(*) FROM comments c2 WHERE c2.parent_comment_id = ${comments.id})`.mapWith(Number),
           author: {
             id: users.id,
             walletAddress: users.walletAddress,
@@ -215,6 +216,7 @@ export class CommentService {
           moderationStatus: comments.moderationStatus,
           createdAt: comments.createdAt,
           updatedAt: comments.updatedAt,
+          replyCount: sql<number>`(SELECT count(*) FROM comments c2 WHERE c2.parent_comment_id = ${comments.id})`.mapWith(Number),
           author: {
             id: users.id,
             walletAddress: users.walletAddress,

@@ -141,8 +141,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // At this point, either:
     // 1. We have a new address (wallet connected/changed)
     // 2. Address changed from previous session
-    enhancedAuthService.handleWalletChange(address);
-  }, [address]);
+    const handleWalletChangeAsync = async () => {
+      await enhancedAuthService.handleWalletChange(address);
+      // Sync auth state to ensure UI reflects the changes (e.g. logout)
+      // and triggers re-authentication if needed
+      await syncAuthState();
+    };
+
+    handleWalletChangeAsync();
+  }, [address, syncAuthState]);
 
   const connectWallet = useCallback(async () => {
     setIsLoading(true);
