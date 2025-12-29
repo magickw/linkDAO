@@ -1,4 +1,3 @@
-import React, { useState, useCallback, useEffect, memo } from 'react';
 import React, { useState, useRef, useCallback, useEffect, memo } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
@@ -382,16 +381,16 @@ function CommunityPostCardEnhanced({
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
       const newCommentText = newComment.slice(0, start) + emoji + newComment.slice(end);
-      
+
       setNewComment(newCommentText);
-      
+
       // Set cursor position after emoji
       setTimeout(() => {
         textarea.selectionStart = textarea.selectionEnd = start + emoji.length;
         textarea.focus();
       }, 0);
     }
-    
+
     setShowEmojiPicker(false);
   }, [newComment]);
 
@@ -413,18 +412,18 @@ function CommunityPostCardEnhanced({
     }
 
     setUploadingImage(true);
-    
+
     try {
       // Create FormData for file upload
       const formData = new FormData();
       formData.append('file', file);
-      
+
       // Upload file to server
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setCommentImages(prev => [...prev, data.url]);
@@ -982,7 +981,7 @@ function CommunityPostCardEnhanced({
                                 ))}
                               </div>
                             )}
-                            
+
                             {/* Comment Input */}
                             <div className="relative">
                               <textarea
@@ -995,7 +994,7 @@ function CommunityPostCardEnhanced({
                                 disabled={commentSubmitting}
                                 aria-label="Write a comment"
                               />
-                              
+
                               {/* Emoji and Image Buttons */}
                               <div className="absolute right-2 bottom-2 flex space-x-1">
                                 <button
@@ -1029,7 +1028,7 @@ function CommunityPostCardEnhanced({
                                   )}
                                 </label>
                               </div>
-                              
+
                               {/* Emoji Picker */}
                               {showEmojiPicker && (
                                 <div className="absolute bottom-full right-0 mb-2 z-10">
