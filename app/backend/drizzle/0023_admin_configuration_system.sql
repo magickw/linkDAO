@@ -2,6 +2,7 @@
 -- This migration creates tables for policy configuration, threshold management, and admin interfaces
 
 -- Policy configuration table for managing moderation rules
+DROP TABLE IF EXISTS "policy_configurations" CASCADE;
 CREATE TABLE IF NOT EXISTS "policy_configurations" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" varchar(64) NOT NULL,
@@ -18,6 +19,7 @@ CREATE TABLE IF NOT EXISTS "policy_configurations" (
 );
 
 -- Threshold configurations for different content types and user reputation levels
+DROP TABLE IF EXISTS "threshold_configurations" CASCADE;
 CREATE TABLE IF NOT EXISTS "threshold_configurations" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"content_type" varchar(24) NOT NULL,
@@ -33,6 +35,7 @@ CREATE TABLE IF NOT EXISTS "threshold_configurations" (
 );
 
 -- Vendor configuration for AI service management
+DROP TABLE IF EXISTS "vendor_configurations" CASCADE;
 CREATE TABLE IF NOT EXISTS "vendor_configurations" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"vendor_name" varchar(48) NOT NULL,
@@ -54,6 +57,7 @@ CREATE TABLE IF NOT EXISTS "vendor_configurations" (
 );
 
 -- System metrics for real-time monitoring
+DROP TABLE IF EXISTS "system_metrics" CASCADE;
 CREATE TABLE IF NOT EXISTS "system_metrics" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"metric_name" varchar(64) NOT NULL,
@@ -64,6 +68,7 @@ CREATE TABLE IF NOT EXISTS "system_metrics" (
 );
 
 -- Admin audit logs for configuration changes
+DROP TABLE IF EXISTS "admin_audit_logs" CASCADE;
 CREATE TABLE IF NOT EXISTS "admin_audit_logs" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"admin_id" varchar(64) NOT NULL,
@@ -78,6 +83,7 @@ CREATE TABLE IF NOT EXISTS "admin_audit_logs" (
 );
 
 -- System alerts configuration
+DROP TABLE IF EXISTS "alert_configurations" CASCADE;
 CREATE TABLE IF NOT EXISTS "alert_configurations" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"alert_name" varchar(64) NOT NULL,

@@ -2,13 +2,14 @@
 -- This migration adds tables and configurations for custom scam detection models
 
 -- Scam detection patterns configuration
+DROP TABLE IF EXISTS "scam_detection_patterns" CASCADE;
 CREATE TABLE scam_detection_patterns (
     id SERIAL PRIMARY KEY,
     pattern_type VARCHAR(32) NOT NULL CHECK (pattern_type IN ('seed_phrase', 'crypto_scam', 'impersonation', 'market_manipulation', 'phishing')),
     pattern_name VARCHAR(64) NOT NULL,
     pattern_regex TEXT,
     pattern_keywords TEXT[], -- Array of keywords for pattern matching
-    confidence_weight DECIMAL(5,4) DEFAULT 0.5 CHECK (confidence_weight >= 0 AND confidence_weight <= 1),
+    confidence_weight DECIMAL(10,4) DEFAULT 0.5 CHECK (confidence_weight >= 0 AND confidence_weight <= 1),
     is_active BOOLEAN DEFAULT true,
     description TEXT,
     created_at TIMESTAMP DEFAULT NOW(),
@@ -17,24 +18,26 @@ CREATE TABLE scam_detection_patterns (
 );
 
 -- Scam detection results cache
+DROP TABLE IF EXISTS "scam_detection_cache" CASCADE;
 CREATE TABLE scam_detection_cache (
     id SERIAL PRIMARY KEY,
     content_hash VARCHAR(64) NOT NULL UNIQUE, -- SHA256 hash of content
     detection_result JSONB NOT NULL, -- Cached ScamDetectionResult
     patterns_detected TEXT[], -- Array of detected pattern names
-    confidence DECIMAL(5,4) NOT NULL,
+    confidence DECIMAL(10,4) NOT NULL,
     is_scam BOOLEAN NOT NULL,
     created_at TIMESTAMP DEFAULT NOW(),
     expires_at TIMESTAMP DEFAULT (NOW() + INTERVAL '24 hours') -- Cache for 24 hours
 );
 
 -- Known scam addresses and entities
+DROP TABLE IF EXISTS "scam_entities" CASCADE;
 CREATE TABLE scam_entities (
     id SERIAL PRIMARY KEY,
     entity_type VARCHAR(24) NOT NULL CHECK (entity_type IN ('wallet_address', 'domain', 'handle', 'email', 'phone')),
     entity_value VARCHAR(255) NOT NULL,
     scam_category VARCHAR(32) NOT NULL,
-    confidence DECIMAL(5,4) DEFAULT 1.0,
+    confidence DECIMAL(10,4) DEFAULT 1.0,
     source VARCHAR(64), -- Where this was reported from
     verified_by VARCHAR(64), -- Who verified this as scam
     description TEXT,
@@ -45,6 +48,7 @@ CREATE TABLE scam_entities (
 );
 
 -- BIP39 word list for seed phrase detection
+DROP TABLE IF EXISTS "bip39_words" CASCADE;
 CREATE TABLE bip39_words (
     id SERIAL PRIMARY KEY,
     word VARCHAR(16) NOT NULL UNIQUE,
@@ -54,6 +58,7 @@ CREATE TABLE bip39_words (
 );
 
 -- Impersonation targets (known figures and brands to protect)
+DROP TABLE IF EXISTS "impersonation_targets" CASCADE;
 CREATE TABLE impersonation_targets (
     id SERIAL PRIMARY KEY,
     target_type VARCHAR(24) NOT NULL CHECK (target_type IN ('person', 'brand', 'organization')),
@@ -68,13 +73,14 @@ CREATE TABLE impersonation_targets (
 );
 
 -- Market manipulation detection rules
+DROP TABLE IF EXISTS "market_manipulation_rules" CASCADE;
 CREATE TABLE market_manipulation_rules (
     id SERIAL PRIMARY KEY,
     rule_name VARCHAR(64) NOT NULL UNIQUE,
     rule_type VARCHAR(32) NOT NULL CHECK (rule_type IN ('pump_dump', 'coordinated_trading', 'insider_trading', 'fake_signals')),
     detection_patterns TEXT[] NOT NULL,
-    confidence_threshold DECIMAL(5,4) DEFAULT 0.7,
-    action_threshold DECIMAL(5,4) DEFAULT 0.8, -- Threshold for taking action
+    confidence_threshold DECIMAL(10,4) DEFAULT 0.7,
+    action_threshold DECIMAL(10,4) DEFAULT 0.8, -- Threshold for taking action
     is_active BOOLEAN DEFAULT true,
     description TEXT,
     created_at TIMESTAMP DEFAULT NOW(),
@@ -82,6 +88,7 @@ CREATE TABLE market_manipulation_rules (
 );
 
 -- Phishing domain patterns and blacklists
+DROP TABLE IF EXISTS "phishing_domains" CASCADE;
 CREATE TABLE phishing_domains (
     id SERIAL PRIMARY KEY,
     domain_pattern VARCHAR(255) NOT NULL,
@@ -96,39 +103,39 @@ CREATE TABLE phishing_domains (
 );
 
 -- Performance indices
-CREATE INDEX idx_scam_detection_patterns_type ON scam_detection_patterns(pattern_type);
-CREATE INDEX idx_scam_detection_patterns_active ON scam_detection_patterns(is_active);
+CREATE INDEX IF NOT EXISTS idx_scam_detection_patterns_type ON scam_detection_patterns(pattern_type);
+CREATE INDEX IF NOT EXISTS idx_scam_detection_patterns_active ON scam_detection_patterns(is_active);
 
-CREATE INDEX idx_scam_detection_cache_hash ON scam_detection_cache(content_hash);
-CREATE INDEX idx_scam_detection_cache_expires ON scam_detection_cache(expires_at);
-CREATE INDEX idx_scam_detection_cache_scam ON scam_detection_cache(is_scam);
+CREATE INDEX IF NOT EXISTS idx_scam_detection_cache_hash ON scam_detection_cache(content_hash);
+CREATE INDEX IF NOT EXISTS idx_scam_detection_cache_expires ON scam_detection_cache(expires_at);
+CREATE INDEX IF NOT EXISTS idx_scam_detection_cache_scam ON scam_detection_cache(is_scam);
 
-CREATE INDEX idx_scam_entities_type ON scam_entities(entity_type);
-CREATE INDEX idx_scam_entities_value ON scam_entities(entity_value);
-CREATE INDEX idx_scam_entities_category ON scam_entities(scam_category);
-CREATE INDEX idx_scam_entities_active ON scam_entities(is_active);
+CREATE INDEX IF NOT EXISTS idx_scam_entities_type ON scam_entities(entity_type);
+CREATE INDEX IF NOT EXISTS idx_scam_entities_value ON scam_entities(entity_value);
+CREATE INDEX IF NOT EXISTS idx_scam_entities_category ON scam_entities(scam_category);
+CREATE INDEX IF NOT EXISTS idx_scam_entities_active ON scam_entities(is_active);
 
-CREATE INDEX idx_bip39_words_word ON bip39_words(word);
-CREATE INDEX idx_bip39_words_index ON bip39_words(word_index);
+CREATE INDEX IF NOT EXISTS idx_bip39_words_word ON bip39_words(word);
+CREATE INDEX IF NOT EXISTS idx_bip39_words_index ON bip39_words(word_index);
 
-CREATE INDEX idx_impersonation_targets_type ON impersonation_targets(target_type);
-CREATE INDEX idx_impersonation_targets_name ON impersonation_targets(target_name);
-CREATE INDEX idx_impersonation_targets_active ON impersonation_targets(is_active);
+CREATE INDEX IF NOT EXISTS idx_impersonation_targets_type ON impersonation_targets(target_type);
+CREATE INDEX IF NOT EXISTS idx_impersonation_targets_name ON impersonation_targets(target_name);
+CREATE INDEX IF NOT EXISTS idx_impersonation_targets_active ON impersonation_targets(is_active);
 
-CREATE INDEX idx_market_manipulation_rules_type ON market_manipulation_rules(rule_type);
-CREATE INDEX idx_market_manipulation_rules_active ON market_manipulation_rules(is_active);
+CREATE INDEX IF NOT EXISTS idx_market_manipulation_rules_type ON market_manipulation_rules(rule_type);
+CREATE INDEX IF NOT EXISTS idx_market_manipulation_rules_active ON market_manipulation_rules(is_active);
 
-CREATE INDEX idx_phishing_domains_pattern ON phishing_domains(domain_pattern);
-CREATE INDEX idx_phishing_domains_brand ON phishing_domains(target_brand);
-CREATE INDEX idx_phishing_domains_active ON phishing_domains(is_active);
+CREATE INDEX IF NOT EXISTS idx_phishing_domains_pattern ON phishing_domains(domain_pattern);
+CREATE INDEX IF NOT EXISTS idx_phishing_domains_brand ON phishing_domains(target_brand);
+CREATE INDEX IF NOT EXISTS idx_phishing_domains_active ON phishing_domains(is_active);
 
 -- Composite indices for common queries
-CREATE INDEX idx_scam_entities_type_active ON scam_entities(entity_type, is_active);
-CREATE INDEX idx_scam_detection_patterns_type_active ON scam_detection_patterns(pattern_type, is_active);
+CREATE INDEX IF NOT EXISTS idx_scam_entities_type_active ON scam_entities(entity_type, is_active);
+CREATE INDEX IF NOT EXISTS idx_scam_detection_patterns_type_active ON scam_detection_patterns(pattern_type, is_active);
 
 -- Function to clean expired cache entries
 CREATE OR REPLACE FUNCTION clean_scam_detection_cache()
-RETURNS INTEGER AS $
+RETURNS INTEGER AS $$
 DECLARE
     deleted_count INTEGER;
 BEGIN
@@ -136,34 +143,39 @@ BEGIN
     GET DIAGNOSTICS deleted_count = ROW_COUNT;
     RETURN deleted_count;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- Function to update timestamps
 CREATE OR REPLACE FUNCTION update_scam_detection_timestamp()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = NOW();
     RETURN NEW;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- Create triggers for timestamp updates
+DROP TRIGGER IF EXISTS trigger_scam_detection_patterns_timestamp ON scam_detection_patterns;
 CREATE TRIGGER trigger_scam_detection_patterns_timestamp
     BEFORE UPDATE ON scam_detection_patterns
     FOR EACH ROW EXECUTE FUNCTION update_scam_detection_timestamp();
 
+DROP TRIGGER IF EXISTS trigger_scam_entities_timestamp ON scam_entities;
 CREATE TRIGGER trigger_scam_entities_timestamp
     BEFORE UPDATE ON scam_entities
     FOR EACH ROW EXECUTE FUNCTION update_scam_detection_timestamp();
 
+DROP TRIGGER IF EXISTS trigger_impersonation_targets_timestamp ON impersonation_targets;
 CREATE TRIGGER trigger_impersonation_targets_timestamp
     BEFORE UPDATE ON impersonation_targets
     FOR EACH ROW EXECUTE FUNCTION update_scam_detection_timestamp();
 
+DROP TRIGGER IF EXISTS trigger_market_manipulation_rules_timestamp ON market_manipulation_rules;
 CREATE TRIGGER trigger_market_manipulation_rules_timestamp
     BEFORE UPDATE ON market_manipulation_rules
     FOR EACH ROW EXECUTE FUNCTION update_scam_detection_timestamp();
 
+DROP TRIGGER IF EXISTS trigger_phishing_domains_timestamp ON phishing_domains;
 CREATE TRIGGER trigger_phishing_domains_timestamp
     BEFORE UPDATE ON phishing_domains
     FOR EACH ROW EXECUTE FUNCTION update_scam_detection_timestamp();

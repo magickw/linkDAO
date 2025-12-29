@@ -1,4 +1,5 @@
 -- NFT Collections table
+DROP TABLE IF EXISTS "nft_collections" CASCADE;
 CREATE TABLE IF NOT EXISTS "nft_collections" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"creator_id" uuid NOT NULL,
@@ -21,6 +22,7 @@ CREATE TABLE IF NOT EXISTS "nft_collections" (
 );
 
 -- NFTs table
+DROP TABLE IF EXISTS "nfts" CASCADE;
 CREATE TABLE IF NOT EXISTS "nfts" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"creator_id" uuid NOT NULL,
@@ -49,6 +51,7 @@ CREATE TABLE IF NOT EXISTS "nfts" (
 );
 
 -- NFT Listings table
+DROP TABLE IF EXISTS "nft_listings" CASCADE;
 CREATE TABLE IF NOT EXISTS "nft_listings" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"nft_id" uuid NOT NULL,
@@ -64,6 +67,7 @@ CREATE TABLE IF NOT EXISTS "nft_listings" (
 );
 
 -- NFT Auctions table
+DROP TABLE IF EXISTS "nft_auctions" CASCADE;
 CREATE TABLE IF NOT EXISTS "nft_auctions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"nft_id" uuid NOT NULL,
@@ -83,6 +87,7 @@ CREATE TABLE IF NOT EXISTS "nft_auctions" (
 );
 
 -- NFT Bids table
+DROP TABLE IF EXISTS "nft_bids" CASCADE;
 CREATE TABLE IF NOT EXISTS "nft_bids" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"auction_id" uuid NOT NULL,
@@ -95,6 +100,7 @@ CREATE TABLE IF NOT EXISTS "nft_bids" (
 );
 
 -- NFT Offers table
+DROP TABLE IF EXISTS "nft_offers" CASCADE;
 CREATE TABLE IF NOT EXISTS "nft_offers" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"nft_id" uuid NOT NULL,
@@ -109,6 +115,7 @@ CREATE TABLE IF NOT EXISTS "nft_offers" (
 );
 
 -- NFT Transfers table (for provenance tracking)
+DROP TABLE IF EXISTS "nft_transfers" CASCADE;
 CREATE TABLE IF NOT EXISTS "nft_transfers" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"nft_id" uuid NOT NULL,

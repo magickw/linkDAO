@@ -2,6 +2,7 @@
 -- Extends NFT functionality with DRM, licensing, and copyright protection
 
 -- Digital Assets table for managing downloadable/streamable content
+DROP TABLE IF EXISTS "digital_assets" CASCADE;
 CREATE TABLE digital_assets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     nft_id UUID REFERENCES nfts(id) ON DELETE CASCADE,
@@ -29,6 +30,7 @@ CREATE TABLE digital_assets (
 );
 
 -- Digital Asset Licenses table for managing different license types
+DROP TABLE IF EXISTS "digital_asset_licenses" CASCADE;
 CREATE TABLE digital_asset_licenses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     asset_id UUID NOT NULL REFERENCES digital_assets(id) ON DELETE CASCADE,
@@ -46,6 +48,7 @@ CREATE TABLE digital_asset_licenses (
 );
 
 -- Digital Asset Purchases table for tracking license purchases
+DROP TABLE IF EXISTS "digital_asset_purchases" CASCADE;
 CREATE TABLE digital_asset_purchases (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     asset_id UUID NOT NULL REFERENCES digital_assets(id),
@@ -63,6 +66,7 @@ CREATE TABLE digital_asset_purchases (
 );
 
 -- Digital Asset Access Logs for tracking usage and analytics
+DROP TABLE IF EXISTS "digital_asset_access_logs" CASCADE;
 CREATE TABLE digital_asset_access_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     purchase_id UUID NOT NULL REFERENCES digital_asset_purchases(id),
@@ -79,6 +83,7 @@ CREATE TABLE digital_asset_access_logs (
 );
 
 -- DMCA Takedown Requests table for copyright protection
+DROP TABLE IF EXISTS "dmca_takedown_requests" CASCADE;
 CREATE TABLE dmca_takedown_requests (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     asset_id UUID NOT NULL REFERENCES digital_assets(id),
@@ -101,6 +106,7 @@ CREATE TABLE dmca_takedown_requests (
 );
 
 -- Digital Asset Reports table for community reporting
+DROP TABLE IF EXISTS "digital_asset_reports" CASCADE;
 CREATE TABLE digital_asset_reports (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     asset_id UUID NOT NULL REFERENCES digital_assets(id),
@@ -116,6 +122,7 @@ CREATE TABLE digital_asset_reports (
 );
 
 -- Digital Asset Analytics table for aggregated statistics
+DROP TABLE IF EXISTS "digital_asset_analytics" CASCADE;
 CREATE TABLE digital_asset_analytics (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     asset_id UUID NOT NULL REFERENCES digital_assets(id),
@@ -132,6 +139,7 @@ CREATE TABLE digital_asset_analytics (
 );
 
 -- Content Delivery Network (CDN) Logs for performance tracking
+DROP TABLE IF EXISTS "cdn_access_logs" CASCADE;
 CREATE TABLE cdn_access_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     asset_id UUID NOT NULL REFERENCES digital_assets(id),
@@ -147,6 +155,7 @@ CREATE TABLE cdn_access_logs (
 );
 
 -- Digital Rights Management (DRM) Keys table
+DROP TABLE IF EXISTS "drm_keys" CASCADE;
 CREATE TABLE drm_keys (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     asset_id UUID NOT NULL REFERENCES digital_assets(id),
@@ -159,6 +168,7 @@ CREATE TABLE drm_keys (
 );
 
 -- Watermark Templates table for content protection
+DROP TABLE IF EXISTS "watermark_templates" CASCADE;
 CREATE TABLE watermark_templates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     creator_id UUID NOT NULL REFERENCES users(id),
@@ -170,6 +180,7 @@ CREATE TABLE watermark_templates (
 );
 
 -- Content Verification table for authenticity checks
+DROP TABLE IF EXISTS "content_verification" CASCADE;
 CREATE TABLE content_verification (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     asset_id UUID NOT NULL REFERENCES digital_assets(id),
@@ -181,13 +192,13 @@ CREATE TABLE content_verification (
 );
 
 -- Indexes for performance
-CREATE INDEX idx_digital_assets_creator_id ON digital_assets(creator_id);
-CREATE INDEX idx_digital_assets_asset_type ON digital_assets(asset_type);
-CREATE INDEX idx_digital_assets_created_at ON digital_assets(created_at);
-CREATE INDEX idx_digital_asset_purchases_buyer_id ON digital_asset_purchases(buyer_id);
-CREATE INDEX idx_digital_asset_purchases_asset_id ON digital_asset_purchases(asset_id);
-CREATE INDEX idx_digital_asset_access_logs_user_id ON digital_asset_access_logs(user_id);
-CREATE INDEX idx_digital_asset_access_logs_accessed_at ON digital_asset_access_logs(accessed_at);
-CREATE INDEX idx_dmca_takedown_requests_status ON dmca_takedown_requests(status);
-CREATE INDEX idx_digital_asset_analytics_date ON digital_asset_analytics(date);
-CREATE INDEX idx_cdn_access_logs_created_at ON cdn_access_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_digital_assets_creator_id ON digital_assets(creator_id);
+CREATE INDEX IF NOT EXISTS idx_digital_assets_asset_type ON digital_assets(asset_type);
+CREATE INDEX IF NOT EXISTS idx_digital_assets_created_at ON digital_assets(created_at);
+CREATE INDEX IF NOT EXISTS idx_digital_asset_purchases_buyer_id ON digital_asset_purchases(buyer_id);
+CREATE INDEX IF NOT EXISTS idx_digital_asset_purchases_asset_id ON digital_asset_purchases(asset_id);
+CREATE INDEX IF NOT EXISTS idx_digital_asset_access_logs_user_id ON digital_asset_access_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_digital_asset_access_logs_accessed_at ON digital_asset_access_logs(accessed_at);
+CREATE INDEX IF NOT EXISTS idx_dmca_takedown_requests_status ON dmca_takedown_requests(status);
+CREATE INDEX IF NOT EXISTS idx_digital_asset_analytics_date ON digital_asset_analytics(date);
+CREATE INDEX IF NOT EXISTS idx_cdn_access_logs_created_at ON cdn_access_logs(created_at);

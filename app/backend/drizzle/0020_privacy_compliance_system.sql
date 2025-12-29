@@ -2,6 +2,7 @@
 -- Task 14: Implement privacy and compliance features
 
 -- User consent management table
+DROP TABLE IF EXISTS "user_consents" CASCADE;
 CREATE TABLE IF NOT EXISTS "user_consents" (
 	"id" varchar(64) PRIMARY KEY NOT NULL,
 	"user_id" uuid NOT NULL,
@@ -21,6 +22,7 @@ CREATE TABLE IF NOT EXISTS "user_consents" (
 );
 
 -- Data retention policies table
+DROP TABLE IF EXISTS "data_retention_policies" CASCADE;
 CREATE TABLE IF NOT EXISTS "data_retention_policies" (
 	"id" varchar(64) PRIMARY KEY NOT NULL,
 	"name" varchar(128) NOT NULL,
@@ -38,6 +40,7 @@ CREATE TABLE IF NOT EXISTS "data_retention_policies" (
 );
 
 -- Data retention audit logs table
+DROP TABLE IF EXISTS "data_retention_logs" CASCADE;
 CREATE TABLE IF NOT EXISTS "data_retention_logs" (
 	"id" varchar(64) PRIMARY KEY NOT NULL,
 	"policy_id" varchar(64) NOT NULL,
@@ -52,6 +55,7 @@ CREATE TABLE IF NOT EXISTS "data_retention_logs" (
 );
 
 -- Privacy evidence storage table
+DROP TABLE IF EXISTS "privacy_evidence" CASCADE;
 CREATE TABLE IF NOT EXISTS "privacy_evidence" (
 	"id" varchar(64) PRIMARY KEY NOT NULL,
 	"case_id" integer NOT NULL,
@@ -75,6 +79,7 @@ CREATE TABLE IF NOT EXISTS "privacy_evidence" (
 );
 
 -- Evidence access logs table
+DROP TABLE IF EXISTS "evidence_access_logs" CASCADE;
 CREATE TABLE IF NOT EXISTS "evidence_access_logs" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"evidence_id" varchar(64) NOT NULL,
@@ -87,6 +92,7 @@ CREATE TABLE IF NOT EXISTS "evidence_access_logs" (
 );
 
 -- Geofencing rules table
+DROP TABLE IF EXISTS "geofencing_rules" CASCADE;
 CREATE TABLE IF NOT EXISTS "geofencing_rules" (
 	"id" varchar(64) PRIMARY KEY NOT NULL,
 	"name" varchar(128) NOT NULL,
@@ -101,6 +107,7 @@ CREATE TABLE IF NOT EXISTS "geofencing_rules" (
 );
 
 -- PII detection results table (for audit and improvement)
+DROP TABLE IF EXISTS "pii_detection_results" CASCADE;
 CREATE TABLE IF NOT EXISTS "pii_detection_results" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"content_hash" varchar(64) NOT NULL,
@@ -113,6 +120,7 @@ CREATE TABLE IF NOT EXISTS "pii_detection_results" (
 );
 
 -- Regional compliance configurations table
+DROP TABLE IF EXISTS "regional_compliance" CASCADE;
 CREATE TABLE IF NOT EXISTS "regional_compliance" (
 	"region" varchar(16) PRIMARY KEY NOT NULL,
 	"country" varchar(8) NOT NULL,

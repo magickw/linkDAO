@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS "blockchain_events" (
 --> statement-breakpoint
 DROP TABLE IF EXISTS "cdn_access_logs" CASCADE;
 --> statement-breakpoint
-CREATE TABLE "cdn_access_logs" (
+CREATE TABLE IF NOT EXISTS "cdn_access_logs" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"asset_id" uuid NOT NULL,
 	"user_id" uuid,
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS "content_reports" (
 --> statement-breakpoint
 DROP TABLE IF EXISTS "content_verification" CASCADE;
 --> statement-breakpoint
-CREATE TABLE "content_verification" (
+CREATE TABLE IF NOT EXISTS "content_verification" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"asset_id" uuid NOT NULL,
 	"verification_hash" text NOT NULL,
@@ -77,7 +77,7 @@ CREATE TABLE "content_verification" (
 --> statement-breakpoint
 DROP TABLE IF EXISTS "digital_asset_access_logs" CASCADE;
 --> statement-breakpoint
-CREATE TABLE "digital_asset_access_logs" (
+CREATE TABLE IF NOT EXISTS "digital_asset_access_logs" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"asset_id" uuid NOT NULL,
 	"user_id" uuid,
@@ -91,7 +91,7 @@ CREATE TABLE "digital_asset_access_logs" (
 --> statement-breakpoint
 DROP TABLE IF EXISTS "digital_asset_analytics" CASCADE;
 --> statement-breakpoint
-CREATE TABLE "digital_asset_analytics" (
+CREATE TABLE IF NOT EXISTS "digital_asset_analytics" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"asset_id" uuid NOT NULL,
 	"date" timestamp NOT NULL,
@@ -103,7 +103,7 @@ CREATE TABLE "digital_asset_analytics" (
 --> statement-breakpoint
 DROP TABLE IF EXISTS "digital_asset_licenses" CASCADE;
 --> statement-breakpoint
-CREATE TABLE "digital_asset_licenses" (
+CREATE TABLE IF NOT EXISTS "digital_asset_licenses" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"asset_id" uuid NOT NULL,
 	"licensee_id" uuid NOT NULL,
@@ -118,7 +118,7 @@ CREATE TABLE "digital_asset_licenses" (
 --> statement-breakpoint
 DROP TABLE IF EXISTS "digital_asset_purchases" CASCADE;
 --> statement-breakpoint
-CREATE TABLE "digital_asset_purchases" (
+CREATE TABLE IF NOT EXISTS "digital_asset_purchases" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"asset_id" uuid NOT NULL,
 	"buyer_id" uuid NOT NULL,
@@ -129,72 +129,84 @@ CREATE TABLE "digital_asset_purchases" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
--- CREATE TABLE "digital_asset_reports" (
--- 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
--- 	"asset_id" uuid NOT NULL,
--- 	"reporter_id" uuid NOT NULL,
--- 	"reason" varchar(100) NOT NULL,
--- 	"description" text,
--- 	"status" varchar(20) DEFAULT 'pending',
--- 	"created_at" timestamp DEFAULT now()
--- );
+DROP TABLE IF EXISTS "digital_asset_reports" CASCADE;
 --> statement-breakpoint
--- CREATE TABLE "digital_assets" (
--- 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
--- 	"owner_id" uuid NOT NULL,
--- 	"title" varchar(255) NOT NULL,
--- 	"description" text,
--- 	"file_type" varchar(50) NOT NULL,
--- 	"file_size" integer NOT NULL,
--- 	"encrypted_content_hash" text NOT NULL,
--- 	"preview_hash" text,
--- 	"metadata_hash" text NOT NULL,
--- 	"price" numeric(20, 8),
--- 	"currency" varchar(10) DEFAULT 'USD',
--- 	"license_type" varchar(50) NOT NULL,
--- 	"is_public" boolean DEFAULT false,
--- 	"download_count" integer DEFAULT 0,
--- 	"created_at" timestamp DEFAULT now(),
--- 	"updated_at" timestamp DEFAULT now()
--- );
+CREATE TABLE IF NOT EXISTS "digital_asset_reports" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"asset_id" uuid NOT NULL,
+	"reporter_id" uuid NOT NULL,
+	"reason" varchar(100) NOT NULL,
+	"description" text,
+	"status" varchar(20) DEFAULT 'pending',
+	"created_at" timestamp DEFAULT now()
+);
 --> statement-breakpoint
--- CREATE TABLE "dmca_takedown_requests" (
--- 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
--- 	"asset_id" uuid NOT NULL,
--- 	"requester_id" uuid NOT NULL,
--- 	"reason" text NOT NULL,
--- 	"evidence" text,
--- 	"status" varchar(20) DEFAULT 'pending',
--- 	"reviewed_by" uuid,
--- 	"reviewed_at" timestamp,
--- 	"created_at" timestamp DEFAULT now()
--- );
+DROP TABLE IF EXISTS "digital_assets" CASCADE;
 --> statement-breakpoint
--- CREATE TABLE "drm_keys" (
--- 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
--- 	"asset_id" uuid NOT NULL,
--- 	"user_id" uuid NOT NULL,
--- 	"encrypted_key" text NOT NULL,
--- 	"expires_at" timestamp,
--- 	"created_at" timestamp DEFAULT now()
--- );
+CREATE TABLE IF NOT EXISTS "digital_assets" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"owner_id" uuid NOT NULL,
+	"title" varchar(255) NOT NULL,
+	"description" text,
+	"file_type" varchar(50) NOT NULL,
+	"file_size" integer NOT NULL,
+	"encrypted_content_hash" text NOT NULL,
+	"preview_hash" text,
+	"metadata_hash" text NOT NULL,
+	"price" numeric(20, 8),
+	"currency" varchar(10) DEFAULT 'USD',
+	"license_type" varchar(50) NOT NULL,
+	"is_public" boolean DEFAULT false,
+	"download_count" integer DEFAULT 0,
+	"created_at" timestamp DEFAULT now(),
+	"updated_at" timestamp DEFAULT now()
+);
 --> statement-breakpoint
--- CREATE TABLE "milestone_payments" (
--- 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
--- 	"milestone_id" uuid NOT NULL,
--- 	"booking_id" uuid NOT NULL,
--- 	"amount" numeric(20, 8) NOT NULL,
--- 	"currency" varchar(10) NOT NULL,
--- 	"payment_method" varchar(20) NOT NULL,
--- 	"escrow_contract" varchar(66),
--- 	"payment_processor_id" varchar(100),
--- 	"transaction_hash" varchar(66),
--- 	"status" varchar(20) DEFAULT 'pending',
--- 	"held_until" timestamp,
--- 	"release_conditions" text,
--- 	"created_at" timestamp DEFAULT now(),
--- 	"updated_at" timestamp DEFAULT now()
--- );
+DROP TABLE IF EXISTS "dmca_takedown_requests" CASCADE;
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "dmca_takedown_requests" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"asset_id" uuid NOT NULL,
+	"requester_id" uuid NOT NULL,
+	"reason" text NOT NULL,
+	"evidence" text,
+	"status" varchar(20) DEFAULT 'pending',
+	"reviewed_by" uuid,
+	"reviewed_at" timestamp,
+	"created_at" timestamp DEFAULT now()
+);
+--> statement-breakpoint
+DROP TABLE IF EXISTS "drm_keys" CASCADE;
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "drm_keys" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"asset_id" uuid NOT NULL,
+	"user_id" uuid NOT NULL,
+	"encrypted_key" text NOT NULL,
+	"expires_at" timestamp,
+	"created_at" timestamp DEFAULT now()
+);
+--> statement-breakpoint
+DROP TABLE IF EXISTS "milestone_payments" CASCADE;
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "milestone_payments" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"milestone_id" uuid NOT NULL,
+	"booking_id" uuid NOT NULL,
+	"amount" numeric(20, 8) NOT NULL,
+	"currency" varchar(10) NOT NULL,
+	"payment_method" varchar(20) NOT NULL,
+	"escrow_contract" varchar(66),
+	"payment_processor_id" varchar(100),
+	"transaction_hash" varchar(66),
+	"status" varchar(20) DEFAULT 'pending',
+	"held_until" timestamp,
+	"release_conditions" text,
+	"created_at" timestamp DEFAULT now(),
+	"updated_at" timestamp DEFAULT now()
+);
+--> statement-breakpoint
+DROP TABLE IF EXISTS "moderation_actions" CASCADE;
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "moderation_actions" (
 	"id" serial PRIMARY KEY NOT NULL,
@@ -207,6 +219,8 @@ CREATE TABLE IF NOT EXISTS "moderation_actions" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
+DROP TABLE IF EXISTS "moderation_appeals" CASCADE;
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "moderation_appeals" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"case_id" integer NOT NULL,
@@ -217,6 +231,8 @@ CREATE TABLE IF NOT EXISTS "moderation_appeals" (
 	"decision_cid" text,
 	"created_at" timestamp DEFAULT now()
 );
+--> statement-breakpoint
+DROP TABLE IF EXISTS "moderation_audit_log" CASCADE;
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "moderation_audit_log" (
 	"id" serial PRIMARY KEY NOT NULL,
@@ -231,6 +247,8 @@ CREATE TABLE IF NOT EXISTS "moderation_audit_log" (
 	"user_agent" text,
 	"created_at" timestamp DEFAULT now()
 );
+--> statement-breakpoint
+DROP TABLE IF EXISTS "moderation_cases" CASCADE;
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "moderation_cases" (
 	"id" serial PRIMARY KEY NOT NULL,
@@ -248,6 +266,8 @@ CREATE TABLE IF NOT EXISTS "moderation_cases" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
+DROP TABLE IF EXISTS "moderation_metrics" CASCADE;
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "moderation_metrics" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"metric_type" varchar(32) NOT NULL,
@@ -256,6 +276,8 @@ CREATE TABLE IF NOT EXISTS "moderation_metrics" (
 	"dimensions" text,
 	"recorded_at" timestamp DEFAULT now()
 );
+--> statement-breakpoint
+DROP TABLE IF EXISTS "moderation_policies" CASCADE;
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "moderation_policies" (
 	"id" serial PRIMARY KEY NOT NULL,
@@ -269,6 +291,8 @@ CREATE TABLE IF NOT EXISTS "moderation_policies" (
 	"created_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now()
 );
+--> statement-breakpoint
+DROP TABLE IF EXISTS "moderation_vendors" CASCADE;
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "moderation_vendors" (
 	"id" serial PRIMARY KEY NOT NULL,
@@ -287,6 +311,8 @@ CREATE TABLE IF NOT EXISTS "moderation_vendors" (
 	CONSTRAINT "moderation_vendors_vendor_name_unique" UNIQUE("vendor_name")
 );
 --> statement-breakpoint
+DROP TABLE IF EXISTS "nft_auctions" CASCADE;
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "nft_auctions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"nft_id" uuid NOT NULL,
@@ -301,6 +327,8 @@ CREATE TABLE IF NOT EXISTS "nft_auctions" (
 	"created_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now()
 );
+--> statement-breakpoint
+DROP TABLE IF EXISTS "nft_collections" CASCADE;
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "nft_collections" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -319,6 +347,8 @@ CREATE TABLE IF NOT EXISTS "nft_collections" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
+DROP TABLE IF EXISTS "nft_listings" CASCADE;
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "nft_listings" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"nft_id" uuid NOT NULL,
@@ -333,6 +363,8 @@ CREATE TABLE IF NOT EXISTS "nft_listings" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
+DROP TABLE IF EXISTS "nft_offers" CASCADE;
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "nft_offers" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"nft_id" uuid NOT NULL,
@@ -343,6 +375,8 @@ CREATE TABLE IF NOT EXISTS "nft_offers" (
 	"status" varchar(20) DEFAULT 'pending',
 	"created_at" timestamp DEFAULT now()
 );
+--> statement-breakpoint
+DROP TABLE IF EXISTS "nfts" CASCADE;
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "nfts" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -362,6 +396,8 @@ CREATE TABLE IF NOT EXISTS "nfts" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
+DROP TABLE IF EXISTS "notification_preferences" CASCADE;
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "notification_preferences" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"user_address" varchar(66) NOT NULL,
@@ -370,6 +406,8 @@ CREATE TABLE IF NOT EXISTS "notification_preferences" (
 	"updated_at" timestamp DEFAULT now(),
 	CONSTRAINT "notification_preferences_user_address_unique" UNIQUE("user_address")
 );
+--> statement-breakpoint
+DROP TABLE IF EXISTS "notifications" CASCADE;
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "notifications" (
 	"id" serial PRIMARY KEY NOT NULL,
@@ -382,14 +420,18 @@ CREATE TABLE IF NOT EXISTS "notifications" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
+DROP TABLE IF EXISTS "order_events" CASCADE;
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "order_events" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"order_id" integer,
+	"order_id" uuid,
 	"event_type" varchar(64) NOT NULL,
 	"description" text,
 	"metadata" text,
 	"timestamp" timestamp DEFAULT now()
 );
+--> statement-breakpoint
+DROP TABLE IF EXISTS "project_activities" CASCADE;
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "project_activities" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -401,6 +443,8 @@ CREATE TABLE IF NOT EXISTS "project_activities" (
 	"metadata" text,
 	"created_at" timestamp DEFAULT now()
 );
+--> statement-breakpoint
+DROP TABLE IF EXISTS "project_approvals" CASCADE;
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "project_approvals" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -416,6 +460,8 @@ CREATE TABLE IF NOT EXISTS "project_approvals" (
 	"created_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now()
 );
+--> statement-breakpoint
+DROP TABLE IF EXISTS "project_deliverables" CASCADE;
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "project_deliverables" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -440,6 +486,8 @@ CREATE TABLE IF NOT EXISTS "project_deliverables" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
+DROP TABLE IF EXISTS "project_files" CASCADE;
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "project_files" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"booking_id" uuid NOT NULL,
@@ -457,6 +505,8 @@ CREATE TABLE IF NOT EXISTS "project_files" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
+DROP TABLE IF EXISTS "project_messages" CASCADE;
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "project_messages" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"thread_id" uuid NOT NULL,
@@ -473,6 +523,8 @@ CREATE TABLE IF NOT EXISTS "project_messages" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
+DROP TABLE IF EXISTS "project_threads" CASCADE;
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "project_threads" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"booking_id" uuid NOT NULL,
@@ -485,6 +537,8 @@ CREATE TABLE IF NOT EXISTS "project_threads" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
+DROP TABLE IF EXISTS "push_tokens" CASCADE;
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "push_tokens" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"user_address" varchar(66) NOT NULL,
@@ -492,6 +546,8 @@ CREATE TABLE IF NOT EXISTS "push_tokens" (
 	"platform" varchar(32) NOT NULL,
 	"created_at" timestamp DEFAULT now()
 );
+--> statement-breakpoint
+DROP TABLE IF EXISTS "reputation_history" CASCADE;
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "reputation_history" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -506,6 +562,8 @@ CREATE TABLE IF NOT EXISTS "reputation_history" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
+DROP TABLE IF EXISTS "reputation_impacts" CASCADE;
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "reputation_impacts" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"user_id" uuid NOT NULL,
@@ -518,6 +576,8 @@ CREATE TABLE IF NOT EXISTS "reputation_impacts" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
+DROP TABLE IF EXISTS "review_helpfulness" CASCADE;
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "review_helpfulness" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"review_id" uuid NOT NULL,
@@ -525,6 +585,8 @@ CREATE TABLE IF NOT EXISTS "review_helpfulness" (
 	"is_helpful" boolean NOT NULL,
 	"created_at" timestamp DEFAULT now()
 );
+--> statement-breakpoint
+DROP TABLE IF EXISTS "review_reports" CASCADE;
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "review_reports" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -536,11 +598,13 @@ CREATE TABLE IF NOT EXISTS "review_reports" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
+DROP TABLE IF EXISTS "reviews" CASCADE;
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "reviews" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"reviewer_id" uuid NOT NULL,
 	"reviewee_id" uuid NOT NULL,
-	"order_id" integer NOT NULL,
+	"order_id" uuid NOT NULL,
 	"rating" integer NOT NULL,
 	"title" varchar(255),
 	"comment" text,
@@ -552,6 +616,8 @@ CREATE TABLE IF NOT EXISTS "reviews" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
+DROP TABLE IF EXISTS "service_availability" CASCADE;
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "service_availability" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"service_id" uuid NOT NULL,
@@ -562,6 +628,8 @@ CREATE TABLE IF NOT EXISTS "service_availability" (
 	"is_available" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now()
 );
+--> statement-breakpoint
+DROP TABLE IF EXISTS "service_bookings" CASCADE;
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "service_bookings" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -586,6 +654,8 @@ CREATE TABLE IF NOT EXISTS "service_bookings" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
+DROP TABLE IF EXISTS "service_categories" CASCADE;
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "service_categories" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" varchar(100) NOT NULL,
@@ -596,6 +666,8 @@ CREATE TABLE IF NOT EXISTS "service_categories" (
 	"created_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now()
 );
+--> statement-breakpoint
+DROP TABLE IF EXISTS "service_messages" CASCADE;
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "service_messages" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -608,6 +680,8 @@ CREATE TABLE IF NOT EXISTS "service_messages" (
 	"is_read" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now()
 );
+--> statement-breakpoint
+DROP TABLE IF EXISTS "service_milestones" CASCADE;
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "service_milestones" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -624,6 +698,8 @@ CREATE TABLE IF NOT EXISTS "service_milestones" (
 	"approved_at" timestamp,
 	"created_at" timestamp DEFAULT now()
 );
+--> statement-breakpoint
+DROP TABLE IF EXISTS "service_provider_profiles" CASCADE;
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "service_provider_profiles" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -648,6 +724,8 @@ CREATE TABLE IF NOT EXISTS "service_provider_profiles" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
+DROP TABLE IF EXISTS "service_reviews" CASCADE;
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "service_reviews" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"booking_id" uuid NOT NULL,
@@ -665,6 +743,8 @@ CREATE TABLE IF NOT EXISTS "service_reviews" (
 	"blockchain_tx_hash" varchar(66),
 	"created_at" timestamp DEFAULT now()
 );
+--> statement-breakpoint
+DROP TABLE IF EXISTS "services" CASCADE;
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "services" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -690,6 +770,8 @@ CREATE TABLE IF NOT EXISTS "services" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
+DROP TABLE IF EXISTS "sync_status" CASCADE;
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "sync_status" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"key" varchar(64) NOT NULL,
@@ -698,7 +780,9 @@ CREATE TABLE IF NOT EXISTS "sync_status" (
 	CONSTRAINT "sync_status_key_unique" UNIQUE("key")
 );
 --> statement-breakpoint
-CREATE TABLE "time_tracking" (
+DROP TABLE IF EXISTS "time_tracking" CASCADE;
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "time_tracking" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"booking_id" uuid NOT NULL,
 	"milestone_id" uuid,
@@ -715,9 +799,11 @@ CREATE TABLE "time_tracking" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
+DROP TABLE IF EXISTS "tracking_records" CASCADE;
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "tracking_records" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"order_id" integer,
+	"order_id" uuid,
 	"tracking_number" varchar(128) NOT NULL,
 	"carrier" varchar(32) NOT NULL,
 	"status" varchar(64),
@@ -726,7 +812,9 @@ CREATE TABLE IF NOT EXISTS "tracking_records" (
 	"last_updated" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "watermark_templates" (
+DROP TABLE IF EXISTS "watermark_templates" CASCADE;
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "watermark_templates" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"name" varchar(100) NOT NULL,
@@ -736,151 +824,596 @@ CREATE TABLE "watermark_templates" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-ALTER TABLE "appeal_jurors" ADD CONSTRAINT "appeal_jurors_appeal_id_moderation_appeals_id_fk" FOREIGN KEY ("appeal_id") REFERENCES "public"."moderation_appeals"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "appeal_jurors" ADD CONSTRAINT "appeal_jurors_juror_id_users_id_fk" FOREIGN KEY ("juror_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "cdn_access_logs" ADD CONSTRAINT "cdn_access_logs_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "cdn_access_logs" ADD CONSTRAINT "cdn_access_logs_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "content_reports" ADD CONSTRAINT "content_reports_reporter_id_users_id_fk" FOREIGN KEY ("reporter_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "content_verification" ADD CONSTRAINT "content_verification_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "digital_asset_access_logs" ADD CONSTRAINT "digital_asset_access_logs_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "digital_asset_access_logs" ADD CONSTRAINT "digital_asset_access_logs_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "digital_asset_analytics" ADD CONSTRAINT "digital_asset_analytics_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "digital_asset_licenses" ADD CONSTRAINT "digital_asset_licenses_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "digital_asset_licenses" ADD CONSTRAINT "digital_asset_licenses_licensee_id_users_id_fk" FOREIGN KEY ("licensee_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "digital_asset_purchases" ADD CONSTRAINT "digital_asset_purchases_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "digital_asset_purchases" ADD CONSTRAINT "digital_asset_purchases_buyer_id_users_id_fk" FOREIGN KEY ("buyer_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "digital_asset_reports" ADD CONSTRAINT "digital_asset_reports_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "digital_asset_reports" ADD CONSTRAINT "digital_asset_reports_reporter_id_users_id_fk" FOREIGN KEY ("reporter_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "digital_assets" ADD CONSTRAINT "digital_assets_owner_id_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "dmca_takedown_requests" ADD CONSTRAINT "dmca_takedown_requests_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "dmca_takedown_requests" ADD CONSTRAINT "dmca_takedown_requests_requester_id_users_id_fk" FOREIGN KEY ("requester_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "dmca_takedown_requests" ADD CONSTRAINT "dmca_takedown_requests_reviewed_by_users_id_fk" FOREIGN KEY ("reviewed_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "drm_keys" ADD CONSTRAINT "drm_keys_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "drm_keys" ADD CONSTRAINT "drm_keys_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "milestone_payments" ADD CONSTRAINT "milestone_payments_milestone_id_service_milestones_id_fk" FOREIGN KEY ("milestone_id") REFERENCES "public"."service_milestones"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "milestone_payments" ADD CONSTRAINT "milestone_payments_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "moderation_actions" ADD CONSTRAINT "moderation_actions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "moderation_appeals" ADD CONSTRAINT "moderation_appeals_case_id_moderation_cases_id_fk" FOREIGN KEY ("case_id") REFERENCES "public"."moderation_cases"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "moderation_appeals" ADD CONSTRAINT "moderation_appeals_appellant_id_users_id_fk" FOREIGN KEY ("appellant_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "moderation_audit_log" ADD CONSTRAINT "moderation_audit_log_case_id_moderation_cases_id_fk" FOREIGN KEY ("case_id") REFERENCES "public"."moderation_cases"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "moderation_cases" ADD CONSTRAINT "moderation_cases_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "nft_auctions" ADD CONSTRAINT "nft_auctions_nft_id_nfts_id_fk" FOREIGN KEY ("nft_id") REFERENCES "public"."nfts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "nft_auctions" ADD CONSTRAINT "nft_auctions_seller_id_users_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "nft_auctions" ADD CONSTRAINT "nft_auctions_highest_bidder_id_users_id_fk" FOREIGN KEY ("highest_bidder_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "nft_collections" ADD CONSTRAINT "nft_collections_creator_id_users_id_fk" FOREIGN KEY ("creator_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "nft_listings" ADD CONSTRAINT "nft_listings_nft_id_nfts_id_fk" FOREIGN KEY ("nft_id") REFERENCES "public"."nfts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "nft_listings" ADD CONSTRAINT "nft_listings_seller_id_users_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "nft_offers" ADD CONSTRAINT "nft_offers_nft_id_nfts_id_fk" FOREIGN KEY ("nft_id") REFERENCES "public"."nfts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "nft_offers" ADD CONSTRAINT "nft_offers_buyer_id_users_id_fk" FOREIGN KEY ("buyer_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "nfts" ADD CONSTRAINT "nfts_owner_id_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "nfts" ADD CONSTRAINT "nfts_creator_id_users_id_fk" FOREIGN KEY ("creator_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "order_events" ADD CONSTRAINT "order_events_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_activities" ADD CONSTRAINT "project_activities_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_activities" ADD CONSTRAINT "project_activities_milestone_id_service_milestones_id_fk" FOREIGN KEY ("milestone_id") REFERENCES "public"."service_milestones"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_activities" ADD CONSTRAINT "project_activities_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_approvals" ADD CONSTRAINT "project_approvals_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_approvals" ADD CONSTRAINT "project_approvals_milestone_id_service_milestones_id_fk" FOREIGN KEY ("milestone_id") REFERENCES "public"."service_milestones"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_approvals" ADD CONSTRAINT "project_approvals_deliverable_id_project_deliverables_id_fk" FOREIGN KEY ("deliverable_id") REFERENCES "public"."project_deliverables"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_approvals" ADD CONSTRAINT "project_approvals_approver_id_users_id_fk" FOREIGN KEY ("approver_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_deliverables" ADD CONSTRAINT "project_deliverables_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_deliverables" ADD CONSTRAINT "project_deliverables_milestone_id_service_milestones_id_fk" FOREIGN KEY ("milestone_id") REFERENCES "public"."service_milestones"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_files" ADD CONSTRAINT "project_files_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_files" ADD CONSTRAINT "project_files_milestone_id_service_milestones_id_fk" FOREIGN KEY ("milestone_id") REFERENCES "public"."service_milestones"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_files" ADD CONSTRAINT "project_files_deliverable_id_project_deliverables_id_fk" FOREIGN KEY ("deliverable_id") REFERENCES "public"."project_deliverables"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_files" ADD CONSTRAINT "project_files_uploader_id_users_id_fk" FOREIGN KEY ("uploader_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_messages" ADD CONSTRAINT "project_messages_thread_id_project_threads_id_fk" FOREIGN KEY ("thread_id") REFERENCES "public"."project_threads"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_messages" ADD CONSTRAINT "project_messages_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_messages" ADD CONSTRAINT "project_messages_sender_id_users_id_fk" FOREIGN KEY ("sender_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_threads" ADD CONSTRAINT "project_threads_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_threads" ADD CONSTRAINT "project_threads_milestone_id_service_milestones_id_fk" FOREIGN KEY ("milestone_id") REFERENCES "public"."service_milestones"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_threads" ADD CONSTRAINT "project_threads_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "reputation_history" ADD CONSTRAINT "reputation_history_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "reputation_impacts" ADD CONSTRAINT "reputation_impacts_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "reputation_impacts" ADD CONSTRAINT "reputation_impacts_case_id_moderation_cases_id_fk" FOREIGN KEY ("case_id") REFERENCES "public"."moderation_cases"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "review_helpfulness" ADD CONSTRAINT "review_helpfulness_review_id_reviews_id_fk" FOREIGN KEY ("review_id") REFERENCES "public"."reviews"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "review_helpfulness" ADD CONSTRAINT "review_helpfulness_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "review_reports" ADD CONSTRAINT "review_reports_review_id_reviews_id_fk" FOREIGN KEY ("review_id") REFERENCES "public"."reviews"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "review_reports" ADD CONSTRAINT "review_reports_reporter_id_users_id_fk" FOREIGN KEY ("reporter_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "reviews" ADD CONSTRAINT "reviews_reviewer_id_users_id_fk" FOREIGN KEY ("reviewer_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "reviews" ADD CONSTRAINT "reviews_reviewee_id_users_id_fk" FOREIGN KEY ("reviewee_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "reviews" ADD CONSTRAINT "reviews_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "service_availability" ADD CONSTRAINT "service_availability_service_id_services_id_fk" FOREIGN KEY ("service_id") REFERENCES "public"."services"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "service_bookings" ADD CONSTRAINT "service_bookings_service_id_services_id_fk" FOREIGN KEY ("service_id") REFERENCES "public"."services"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "service_bookings" ADD CONSTRAINT "service_bookings_client_id_users_id_fk" FOREIGN KEY ("client_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "service_bookings" ADD CONSTRAINT "service_bookings_provider_id_users_id_fk" FOREIGN KEY ("provider_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "service_categories" ADD CONSTRAINT "service_categories_parent_id_service_categories_id_fk" FOREIGN KEY ("parent_id") REFERENCES "public"."service_categories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "service_messages" ADD CONSTRAINT "service_messages_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "service_messages" ADD CONSTRAINT "service_messages_sender_id_users_id_fk" FOREIGN KEY ("sender_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "service_messages" ADD CONSTRAINT "service_messages_recipient_id_users_id_fk" FOREIGN KEY ("recipient_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "service_milestones" ADD CONSTRAINT "service_milestones_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "service_provider_profiles" ADD CONSTRAINT "service_provider_profiles_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "service_reviews" ADD CONSTRAINT "service_reviews_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "service_reviews" ADD CONSTRAINT "service_reviews_reviewer_id_users_id_fk" FOREIGN KEY ("reviewer_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "service_reviews" ADD CONSTRAINT "service_reviews_reviewee_id_users_id_fk" FOREIGN KEY ("reviewee_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "service_reviews" ADD CONSTRAINT "service_reviews_service_id_services_id_fk" FOREIGN KEY ("service_id") REFERENCES "public"."services"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "services" ADD CONSTRAINT "services_provider_id_users_id_fk" FOREIGN KEY ("provider_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "services" ADD CONSTRAINT "services_category_id_service_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."service_categories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "time_tracking" ADD CONSTRAINT "time_tracking_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "time_tracking" ADD CONSTRAINT "time_tracking_milestone_id_service_milestones_id_fk" FOREIGN KEY ("milestone_id") REFERENCES "public"."service_milestones"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "time_tracking" ADD CONSTRAINT "time_tracking_provider_id_users_id_fk" FOREIGN KEY ("provider_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "tracking_records" ADD CONSTRAINT "tracking_records_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "watermark_templates" ADD CONSTRAINT "watermark_templates_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "idx_appeal_jurors_appeal_id" ON "appeal_jurors" USING btree ("appeal_id");--> statement-breakpoint
-CREATE INDEX "idx_appeal_jurors_juror_id" ON "appeal_jurors" USING btree ("juror_id");--> statement-breakpoint
-CREATE INDEX "idx_content_hashes_content_id" ON "content_hashes" USING btree ("content_id");--> statement-breakpoint
-CREATE INDEX "idx_content_hashes_hash_value" ON "content_hashes" USING btree ("hash_value");--> statement-breakpoint
-CREATE INDEX "idx_content_hashes_hash_type" ON "content_hashes" USING btree ("hash_type");--> statement-breakpoint
-CREATE INDEX "idx_content_reports_content_id" ON "content_reports" USING btree ("content_id");--> statement-breakpoint
-CREATE INDEX "idx_content_reports_reporter_id" ON "content_reports" USING btree ("reporter_id");--> statement-breakpoint
-CREATE INDEX "idx_content_reports_status" ON "content_reports" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "idx_content_reports_created_at" ON "content_reports" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "idx_content_reports_content_status" ON "content_reports" USING btree ("content_id","status");--> statement-breakpoint
-CREATE INDEX "milestone_payments_milestone_id_idx" ON "milestone_payments" USING btree ("milestone_id");--> statement-breakpoint
-CREATE INDEX "milestone_payments_status_idx" ON "milestone_payments" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "idx_moderation_actions_user_id" ON "moderation_actions" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "idx_moderation_actions_content_id" ON "moderation_actions" USING btree ("content_id");--> statement-breakpoint
-CREATE INDEX "idx_moderation_actions_created_at" ON "moderation_actions" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "idx_moderation_actions_user_created" ON "moderation_actions" USING btree ("user_id","created_at");--> statement-breakpoint
-CREATE INDEX "idx_moderation_appeals_case_id" ON "moderation_appeals" USING btree ("case_id");--> statement-breakpoint
-CREATE INDEX "idx_moderation_appeals_appellant_id" ON "moderation_appeals" USING btree ("appellant_id");--> statement-breakpoint
-CREATE INDEX "idx_moderation_appeals_status" ON "moderation_appeals" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "idx_moderation_audit_log_case_id" ON "moderation_audit_log" USING btree ("case_id");--> statement-breakpoint
-CREATE INDEX "idx_moderation_audit_log_created_at" ON "moderation_audit_log" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "idx_moderation_audit_log_actor_id" ON "moderation_audit_log" USING btree ("actor_id");--> statement-breakpoint
-CREATE INDEX "idx_moderation_cases_content_id" ON "moderation_cases" USING btree ("content_id");--> statement-breakpoint
-CREATE INDEX "idx_moderation_cases_user_id" ON "moderation_cases" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "idx_moderation_cases_status" ON "moderation_cases" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "idx_moderation_cases_created_at" ON "moderation_cases" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "idx_moderation_cases_risk_score" ON "moderation_cases" USING btree ("risk_score");--> statement-breakpoint
-CREATE INDEX "idx_moderation_cases_user_status" ON "moderation_cases" USING btree ("user_id","status");--> statement-breakpoint
-CREATE INDEX "idx_moderation_metrics_metric_type" ON "moderation_metrics" USING btree ("metric_type");--> statement-breakpoint
-CREATE INDEX "idx_moderation_metrics_recorded_at" ON "moderation_metrics" USING btree ("recorded_at");--> statement-breakpoint
-CREATE INDEX "project_activities_booking_id_idx" ON "project_activities" USING btree ("booking_id");--> statement-breakpoint
-CREATE INDEX "project_activities_created_at_idx" ON "project_activities" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "project_approvals_booking_id_idx" ON "project_approvals" USING btree ("booking_id");--> statement-breakpoint
-CREATE INDEX "project_approvals_status_idx" ON "project_approvals" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "project_deliverables_booking_id_idx" ON "project_deliverables" USING btree ("booking_id");--> statement-breakpoint
-CREATE INDEX "project_deliverables_milestone_id_idx" ON "project_deliverables" USING btree ("milestone_id");--> statement-breakpoint
-CREATE INDEX "project_deliverables_status_idx" ON "project_deliverables" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "project_files_booking_id_idx" ON "project_files" USING btree ("booking_id");--> statement-breakpoint
-CREATE INDEX "project_files_file_hash_idx" ON "project_files" USING btree ("file_hash");--> statement-breakpoint
-CREATE INDEX "project_messages_thread_id_idx" ON "project_messages" USING btree ("thread_id");--> statement-breakpoint
-CREATE INDEX "project_messages_booking_id_idx" ON "project_messages" USING btree ("booking_id");--> statement-breakpoint
-CREATE INDEX "project_threads_booking_id_idx" ON "project_threads" USING btree ("booking_id");--> statement-breakpoint
-CREATE INDEX "idx_reputation_impacts_user_id" ON "reputation_impacts" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "idx_reputation_impacts_case_id" ON "reputation_impacts" USING btree ("case_id");--> statement-breakpoint
-CREATE INDEX "idx_reputation_impacts_created_at" ON "reputation_impacts" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "service_availability_service_id_idx" ON "service_availability" USING btree ("service_id");--> statement-breakpoint
-CREATE INDEX "service_bookings_client_id_idx" ON "service_bookings" USING btree ("client_id");--> statement-breakpoint
-CREATE INDEX "service_bookings_provider_id_idx" ON "service_bookings" USING btree ("provider_id");--> statement-breakpoint
-CREATE INDEX "service_bookings_status_idx" ON "service_bookings" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "service_messages_booking_id_idx" ON "service_messages" USING btree ("booking_id");--> statement-breakpoint
-CREATE INDEX "service_milestones_booking_id_idx" ON "service_milestones" USING btree ("booking_id");--> statement-breakpoint
-CREATE INDEX "service_provider_profiles_user_id_unique" ON "service_provider_profiles" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "service_reviews_service_id_idx" ON "service_reviews" USING btree ("service_id");--> statement-breakpoint
-CREATE INDEX "services_provider_id_idx" ON "services" USING btree ("provider_id");--> statement-breakpoint
-CREATE INDEX "services_category_id_idx" ON "services" USING btree ("category_id");--> statement-breakpoint
-CREATE INDEX "services_status_idx" ON "services" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "time_tracking_booking_id_idx" ON "time_tracking" USING btree ("booking_id");--> statement-breakpoint
-CREATE INDEX "time_tracking_provider_id_idx" ON "time_tracking" USING btree ("provider_id");--> statement-breakpoint
-CREATE INDEX "time_tracking_start_time_idx" ON "time_tracking" USING btree ("start_time");
+DO $$ BEGIN
+	ALTER TABLE "appeal_jurors" ADD CONSTRAINT "appeal_jurors_appeal_id_moderation_appeals_id_fk" FOREIGN KEY ("appeal_id") REFERENCES "public"."moderation_appeals"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "appeal_jurors" ADD CONSTRAINT "appeal_jurors_juror_id_users_id_fk" FOREIGN KEY ("juror_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "cdn_access_logs" ADD CONSTRAINT "cdn_access_logs_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "cdn_access_logs" ADD CONSTRAINT "cdn_access_logs_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "content_reports" ADD CONSTRAINT "content_reports_reporter_id_users_id_fk" FOREIGN KEY ("reporter_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "content_verification" ADD CONSTRAINT "content_verification_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "digital_asset_access_logs" ADD CONSTRAINT "digital_asset_access_logs_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "digital_asset_access_logs" ADD CONSTRAINT "digital_asset_access_logs_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "digital_asset_analytics" ADD CONSTRAINT "digital_asset_analytics_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "digital_asset_licenses" ADD CONSTRAINT "digital_asset_licenses_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "digital_asset_licenses" ADD CONSTRAINT "digital_asset_licenses_licensee_id_users_id_fk" FOREIGN KEY ("licensee_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "digital_asset_purchases" ADD CONSTRAINT "digital_asset_purchases_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "digital_asset_purchases" ADD CONSTRAINT "digital_asset_purchases_buyer_id_users_id_fk" FOREIGN KEY ("buyer_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "digital_asset_reports" ADD CONSTRAINT "digital_asset_reports_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "digital_asset_reports" ADD CONSTRAINT "digital_asset_reports_reporter_id_users_id_fk" FOREIGN KEY ("reporter_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "digital_assets" ADD CONSTRAINT "digital_assets_owner_id_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "dmca_takedown_requests" ADD CONSTRAINT "dmca_takedown_requests_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "dmca_takedown_requests" ADD CONSTRAINT "dmca_takedown_requests_requester_id_users_id_fk" FOREIGN KEY ("requester_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "dmca_takedown_requests" ADD CONSTRAINT "dmca_takedown_requests_reviewed_by_users_id_fk" FOREIGN KEY ("reviewed_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "drm_keys" ADD CONSTRAINT "drm_keys_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "drm_keys" ADD CONSTRAINT "drm_keys_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "milestone_payments" ADD CONSTRAINT "milestone_payments_milestone_id_service_milestones_id_fk" FOREIGN KEY ("milestone_id") REFERENCES "public"."service_milestones"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "milestone_payments" ADD CONSTRAINT "milestone_payments_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "moderation_actions" ADD CONSTRAINT "moderation_actions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "moderation_appeals" ADD CONSTRAINT "moderation_appeals_case_id_moderation_cases_id_fk" FOREIGN KEY ("case_id") REFERENCES "public"."moderation_cases"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "moderation_appeals" ADD CONSTRAINT "moderation_appeals_appellant_id_users_id_fk" FOREIGN KEY ("appellant_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "moderation_audit_log" ADD CONSTRAINT "moderation_audit_log_case_id_moderation_cases_id_fk" FOREIGN KEY ("case_id") REFERENCES "public"."moderation_cases"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "moderation_cases" ADD CONSTRAINT "moderation_cases_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "nft_auctions" ADD CONSTRAINT "nft_auctions_nft_id_nfts_id_fk" FOREIGN KEY ("nft_id") REFERENCES "public"."nfts"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "nft_auctions" ADD CONSTRAINT "nft_auctions_seller_id_users_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "nft_auctions" ADD CONSTRAINT "nft_auctions_highest_bidder_id_users_id_fk" FOREIGN KEY ("highest_bidder_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "nft_collections" ADD CONSTRAINT "nft_collections_creator_id_users_id_fk" FOREIGN KEY ("creator_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "nft_listings" ADD CONSTRAINT "nft_listings_nft_id_nfts_id_fk" FOREIGN KEY ("nft_id") REFERENCES "public"."nfts"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "nft_listings" ADD CONSTRAINT "nft_listings_seller_id_users_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "nft_offers" ADD CONSTRAINT "nft_offers_nft_id_nfts_id_fk" FOREIGN KEY ("nft_id") REFERENCES "public"."nfts"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "nft_offers" ADD CONSTRAINT "nft_offers_buyer_id_users_id_fk" FOREIGN KEY ("buyer_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "nfts" ADD CONSTRAINT "nfts_owner_id_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "nfts" ADD CONSTRAINT "nfts_creator_id_users_id_fk" FOREIGN KEY ("creator_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "order_events" ADD CONSTRAINT "order_events_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "project_activities" ADD CONSTRAINT "project_activities_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "project_activities" ADD CONSTRAINT "project_activities_milestone_id_service_milestones_id_fk" FOREIGN KEY ("milestone_id") REFERENCES "public"."service_milestones"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "project_activities" ADD CONSTRAINT "project_activities_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "project_approvals" ADD CONSTRAINT "project_approvals_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "project_approvals" ADD CONSTRAINT "project_approvals_milestone_id_service_milestones_id_fk" FOREIGN KEY ("milestone_id") REFERENCES "public"."service_milestones"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "project_approvals" ADD CONSTRAINT "project_approvals_deliverable_id_project_deliverables_id_fk" FOREIGN KEY ("deliverable_id") REFERENCES "public"."project_deliverables"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "project_approvals" ADD CONSTRAINT "project_approvals_approver_id_users_id_fk" FOREIGN KEY ("approver_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "project_deliverables" ADD CONSTRAINT "project_deliverables_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "project_deliverables" ADD CONSTRAINT "project_deliverables_milestone_id_service_milestones_id_fk" FOREIGN KEY ("milestone_id") REFERENCES "public"."service_milestones"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "project_files" ADD CONSTRAINT "project_files_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "project_files" ADD CONSTRAINT "project_files_milestone_id_service_milestones_id_fk" FOREIGN KEY ("milestone_id") REFERENCES "public"."service_milestones"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "project_files" ADD CONSTRAINT "project_files_deliverable_id_project_deliverables_id_fk" FOREIGN KEY ("deliverable_id") REFERENCES "public"."project_deliverables"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "project_files" ADD CONSTRAINT "project_files_uploader_id_users_id_fk" FOREIGN KEY ("uploader_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "project_messages" ADD CONSTRAINT "project_messages_thread_id_project_threads_id_fk" FOREIGN KEY ("thread_id") REFERENCES "public"."project_threads"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "project_messages" ADD CONSTRAINT "project_messages_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "project_messages" ADD CONSTRAINT "project_messages_sender_id_users_id_fk" FOREIGN KEY ("sender_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "project_threads" ADD CONSTRAINT "project_threads_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "project_threads" ADD CONSTRAINT "project_threads_milestone_id_service_milestones_id_fk" FOREIGN KEY ("milestone_id") REFERENCES "public"."service_milestones"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "project_threads" ADD CONSTRAINT "project_threads_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "reputation_history" ADD CONSTRAINT "reputation_history_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "reputation_impacts" ADD CONSTRAINT "reputation_impacts_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "reputation_impacts" ADD CONSTRAINT "reputation_impacts_case_id_moderation_cases_id_fk" FOREIGN KEY ("case_id") REFERENCES "public"."moderation_cases"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "review_helpfulness" ADD CONSTRAINT "review_helpfulness_review_id_reviews_id_fk" FOREIGN KEY ("review_id") REFERENCES "public"."reviews"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "review_helpfulness" ADD CONSTRAINT "review_helpfulness_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "review_reports" ADD CONSTRAINT "review_reports_review_id_reviews_id_fk" FOREIGN KEY ("review_id") REFERENCES "public"."reviews"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "review_reports" ADD CONSTRAINT "review_reports_reporter_id_users_id_fk" FOREIGN KEY ("reporter_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "reviews" ADD CONSTRAINT "reviews_reviewer_id_users_id_fk" FOREIGN KEY ("reviewer_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "reviews" ADD CONSTRAINT "reviews_reviewee_id_users_id_fk" FOREIGN KEY ("reviewee_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "reviews" ADD CONSTRAINT "reviews_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "service_availability" ADD CONSTRAINT "service_availability_service_id_services_id_fk" FOREIGN KEY ("service_id") REFERENCES "public"."services"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "service_bookings" ADD CONSTRAINT "service_bookings_service_id_services_id_fk" FOREIGN KEY ("service_id") REFERENCES "public"."services"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "service_bookings" ADD CONSTRAINT "service_bookings_client_id_users_id_fk" FOREIGN KEY ("client_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "service_bookings" ADD CONSTRAINT "service_bookings_provider_id_users_id_fk" FOREIGN KEY ("provider_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "service_categories" ADD CONSTRAINT "service_categories_parent_id_service_categories_id_fk" FOREIGN KEY ("parent_id") REFERENCES "public"."service_categories"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "service_messages" ADD CONSTRAINT "service_messages_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "service_messages" ADD CONSTRAINT "service_messages_sender_id_users_id_fk" FOREIGN KEY ("sender_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "service_messages" ADD CONSTRAINT "service_messages_recipient_id_users_id_fk" FOREIGN KEY ("recipient_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "service_milestones" ADD CONSTRAINT "service_milestones_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "service_provider_profiles" ADD CONSTRAINT "service_provider_profiles_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "service_reviews" ADD CONSTRAINT "service_reviews_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "service_reviews" ADD CONSTRAINT "service_reviews_reviewer_id_users_id_fk" FOREIGN KEY ("reviewer_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "service_reviews" ADD CONSTRAINT "service_reviews_reviewee_id_users_id_fk" FOREIGN KEY ("reviewee_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "service_reviews" ADD CONSTRAINT "service_reviews_service_id_services_id_fk" FOREIGN KEY ("service_id") REFERENCES "public"."services"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "services" ADD CONSTRAINT "services_provider_id_users_id_fk" FOREIGN KEY ("provider_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "services" ADD CONSTRAINT "services_category_id_service_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."service_categories"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "time_tracking" ADD CONSTRAINT "time_tracking_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "time_tracking" ADD CONSTRAINT "time_tracking_milestone_id_service_milestones_id_fk" FOREIGN KEY ("milestone_id") REFERENCES "public"."service_milestones"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "time_tracking" ADD CONSTRAINT "time_tracking_provider_id_users_id_fk" FOREIGN KEY ("provider_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "tracking_records" ADD CONSTRAINT "tracking_records_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+	ALTER TABLE "watermark_templates" ADD CONSTRAINT "watermark_templates_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_appeal_jurors_appeal_id" ON "appeal_jurors" USING btree ("appeal_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_appeal_jurors_juror_id" ON "appeal_jurors" USING btree ("juror_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_content_hashes_content_id" ON "content_hashes" USING btree ("content_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_content_hashes_hash_value" ON "content_hashes" USING btree ("hash_value");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_content_hashes_hash_type" ON "content_hashes" USING btree ("hash_type");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_content_reports_content_id" ON "content_reports" USING btree ("content_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_content_reports_reporter_id" ON "content_reports" USING btree ("reporter_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_content_reports_status" ON "content_reports" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_content_reports_created_at" ON "content_reports" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_content_reports_content_status" ON "content_reports" USING btree ("content_id","status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "milestone_payments_milestone_id_idx" ON "milestone_payments" USING btree ("milestone_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "milestone_payments_status_idx" ON "milestone_payments" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_moderation_actions_user_id" ON "moderation_actions" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_moderation_actions_content_id" ON "moderation_actions" USING btree ("content_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_moderation_actions_created_at" ON "moderation_actions" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_moderation_actions_user_created" ON "moderation_actions" USING btree ("user_id","created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_moderation_appeals_case_id" ON "moderation_appeals" USING btree ("case_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_moderation_appeals_appellant_id" ON "moderation_appeals" USING btree ("appellant_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_moderation_appeals_status" ON "moderation_appeals" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_moderation_audit_log_case_id" ON "moderation_audit_log" USING btree ("case_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_moderation_audit_log_created_at" ON "moderation_audit_log" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_moderation_audit_log_actor_id" ON "moderation_audit_log" USING btree ("actor_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_moderation_cases_content_id" ON "moderation_cases" USING btree ("content_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_moderation_cases_user_id" ON "moderation_cases" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_moderation_cases_status" ON "moderation_cases" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_moderation_cases_created_at" ON "moderation_cases" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_moderation_cases_risk_score" ON "moderation_cases" USING btree ("risk_score");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_moderation_cases_user_status" ON "moderation_cases" USING btree ("user_id","status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_moderation_metrics_metric_type" ON "moderation_metrics" USING btree ("metric_type");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_moderation_metrics_recorded_at" ON "moderation_metrics" USING btree ("recorded_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "project_activities_booking_id_idx" ON "project_activities" USING btree ("booking_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "project_activities_created_at_idx" ON "project_activities" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "project_approvals_booking_id_idx" ON "project_approvals" USING btree ("booking_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "project_approvals_status_idx" ON "project_approvals" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "project_deliverables_booking_id_idx" ON "project_deliverables" USING btree ("booking_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "project_deliverables_milestone_id_idx" ON "project_deliverables" USING btree ("milestone_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "project_deliverables_status_idx" ON "project_deliverables" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "project_files_booking_id_idx" ON "project_files" USING btree ("booking_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "project_files_file_hash_idx" ON "project_files" USING btree ("file_hash");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "project_messages_thread_id_idx" ON "project_messages" USING btree ("thread_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "project_messages_booking_id_idx" ON "project_messages" USING btree ("booking_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "project_threads_booking_id_idx" ON "project_threads" USING btree ("booking_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_reputation_impacts_user_id" ON "reputation_impacts" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_reputation_impacts_case_id" ON "reputation_impacts" USING btree ("case_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_reputation_impacts_created_at" ON "reputation_impacts" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "service_availability_service_id_idx" ON "service_availability" USING btree ("service_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "service_bookings_client_id_idx" ON "service_bookings" USING btree ("client_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "service_bookings_provider_id_idx" ON "service_bookings" USING btree ("provider_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "service_bookings_status_idx" ON "service_bookings" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "service_messages_booking_id_idx" ON "service_messages" USING btree ("booking_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "service_milestones_booking_id_idx" ON "service_milestones" USING btree ("booking_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "service_provider_profiles_user_id_unique" ON "service_provider_profiles" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "service_reviews_service_id_idx" ON "service_reviews" USING btree ("service_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "services_provider_id_idx" ON "services" USING btree ("provider_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "services_category_id_idx" ON "services" USING btree ("category_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "services_status_idx" ON "services" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "time_tracking_booking_id_idx" ON "time_tracking" USING btree ("booking_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "time_tracking_provider_id_idx" ON "time_tracking" USING btree ("provider_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "time_tracking_start_time_idx" ON "time_tracking" USING btree ("start_time");

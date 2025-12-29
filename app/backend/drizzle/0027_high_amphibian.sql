@@ -1,4 +1,4 @@
-CREATE TABLE "admin_audit_logs" (
+CREATE TABLE IF NOT EXISTS "admin_audit_logs" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"admin_id" varchar(64) NOT NULL,
 	"action" varchar(48) NOT NULL,
@@ -11,7 +11,7 @@ CREATE TABLE "admin_audit_logs" (
 	"timestamp" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "admin_notification_preferences" (
+CREATE TABLE IF NOT EXISTS "admin_notification_preferences" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"admin_id" varchar(66) NOT NULL,
 	"preferences" text NOT NULL,
@@ -20,7 +20,7 @@ CREATE TABLE "admin_notification_preferences" (
 	CONSTRAINT "admin_notification_preferences_admin_id_unique" UNIQUE("admin_id")
 );
 --> statement-breakpoint
-CREATE TABLE "admin_notifications" (
+CREATE TABLE IF NOT EXISTS "admin_notifications" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"admin_id" varchar(66) NOT NULL,
 	"type" varchar(64) NOT NULL,
@@ -34,17 +34,17 @@ CREATE TABLE "admin_notifications" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "ai_moderation" (
+CREATE TABLE IF NOT EXISTS "ai_moderation" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"object_type" varchar(32) NOT NULL,
-	"object_id" integer NOT NULL,
+	"object_id" uuid NOT NULL,
 	"status" varchar(32) DEFAULT 'pending',
 	"ai_analysis" text,
 	"created_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "alert_configurations" (
+CREATE TABLE IF NOT EXISTS "alert_configurations" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"alert_name" varchar(64) NOT NULL,
 	"metric_name" varchar(64) NOT NULL,
@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS "appeal_jurors" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "auth_sessions" (
+CREATE TABLE IF NOT EXISTS "auth_sessions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"wallet_address" varchar(66) NOT NULL,
 	"session_token" varchar(255) NOT NULL,
@@ -93,9 +93,9 @@ CREATE TABLE "auth_sessions" (
 	CONSTRAINT "auth_sessions_refresh_token_unique" UNIQUE("refresh_token")
 );
 --> statement-breakpoint
-CREATE TABLE "bids" (
+CREATE TABLE IF NOT EXISTS "bids" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"listing_id" integer,
+	"listing_id" uuid,
 	"bidder_id" uuid,
 	"amount" numeric NOT NULL,
 	"timestamp" timestamp DEFAULT now()
@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS "blockchain_events" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "blocked_users" (
+CREATE TABLE IF NOT EXISTS "blocked_users" (
 	"blocker_address" varchar(66) NOT NULL,
 	"blocked_address" varchar(66) NOT NULL,
 	"reason" text,
@@ -121,14 +121,14 @@ CREATE TABLE "blocked_users" (
 	CONSTRAINT "blocked_users_blocker_address_blocked_address_pk" PRIMARY KEY("blocker_address","blocked_address")
 );
 --> statement-breakpoint
-CREATE TABLE "bookmarks" (
+CREATE TABLE IF NOT EXISTS "bookmarks" (
 	"user_id" uuid NOT NULL,
 	"post_id" integer NOT NULL,
 	"created_at" timestamp DEFAULT now(),
 	CONSTRAINT "bookmarks_user_id_post_id_pk" PRIMARY KEY("user_id","post_id")
 );
 --> statement-breakpoint
-CREATE TABLE "bots" (
+CREATE TABLE IF NOT EXISTS "bots" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" varchar(128),
 	"persona" text,
@@ -137,7 +137,7 @@ CREATE TABLE "bots" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "brand_keywords" (
+CREATE TABLE IF NOT EXISTS "brand_keywords" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"brand_name" varchar(100) NOT NULL,
 	"keywords" text,
@@ -148,7 +148,7 @@ CREATE TABLE "brand_keywords" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "bridge_transactions" (
+CREATE TABLE IF NOT EXISTS "bridge_transactions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"from_chain" varchar(50) NOT NULL,
@@ -168,7 +168,7 @@ CREATE TABLE "bridge_transactions" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "cart_items" (
+CREATE TABLE IF NOT EXISTS "cart_items" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"cart_id" uuid NOT NULL,
 	"product_id" uuid NOT NULL,
@@ -180,7 +180,7 @@ CREATE TABLE "cart_items" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "carts" (
+CREATE TABLE IF NOT EXISTS "carts" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"session_id" varchar(255),
@@ -190,7 +190,7 @@ CREATE TABLE "carts" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "categories" (
+CREATE TABLE IF NOT EXISTS "categories" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" varchar(255) NOT NULL,
 	"slug" varchar(255) NOT NULL,
@@ -205,7 +205,7 @@ CREATE TABLE "categories" (
 	CONSTRAINT "categories_slug_unique" UNIQUE("slug")
 );
 --> statement-breakpoint
-CREATE TABLE "cdn_access_logs" (
+CREATE TABLE IF NOT EXISTS "cdn_access_logs" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"asset_id" uuid NOT NULL,
 	"user_id" uuid,
@@ -230,7 +230,7 @@ CREATE TABLE IF NOT EXISTS "chat_messages" (
 	"deleted_at" timestamp
 );
 --> statement-breakpoint
-CREATE TABLE "communities" (
+CREATE TABLE IF NOT EXISTS "communities" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" varchar(64) NOT NULL,
 	"display_name" varchar(255) NOT NULL,
@@ -252,7 +252,7 @@ CREATE TABLE "communities" (
 	CONSTRAINT "communities_name_unique" UNIQUE("name")
 );
 --> statement-breakpoint
-CREATE TABLE "community_automated_executions" (
+CREATE TABLE IF NOT EXISTS "community_automated_executions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"proposal_id" uuid NOT NULL,
 	"execution_type" varchar(50) NOT NULL,
@@ -266,7 +266,7 @@ CREATE TABLE "community_automated_executions" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "community_categories" (
+CREATE TABLE IF NOT EXISTS "community_categories" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" varchar(100) NOT NULL,
 	"slug" varchar(100) NOT NULL,
@@ -280,7 +280,7 @@ CREATE TABLE "community_categories" (
 	CONSTRAINT "community_categories_slug_unique" UNIQUE("slug")
 );
 --> statement-breakpoint
-CREATE TABLE "community_creator_rewards" (
+CREATE TABLE IF NOT EXISTS "community_creator_rewards" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"community_id" uuid NOT NULL,
 	"post_id" integer,
@@ -296,8 +296,8 @@ CREATE TABLE "community_creator_rewards" (
 	"distributed_at" timestamp
 );
 --> statement-breakpoint
-CREATE TABLE "community_delegations" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+CREATE TABLE IF NOT EXISTS "community_delegations" (
+	"id" uuid DEFAULT gen_random_uuid() NOT NULL,
 	"community_id" uuid NOT NULL,
 	"delegator_address" varchar(66) NOT NULL,
 	"delegate_address" varchar(66) NOT NULL,
@@ -310,7 +310,7 @@ CREATE TABLE "community_delegations" (
 	CONSTRAINT "community_delegations_community_id_delegator_address_pk" PRIMARY KEY("community_id","delegator_address")
 );
 --> statement-breakpoint
-CREATE TABLE "community_events" (
+CREATE TABLE IF NOT EXISTS "community_events" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"community_id" uuid NOT NULL,
 	"title" varchar(255) NOT NULL,
@@ -329,7 +329,7 @@ CREATE TABLE "community_events" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "community_governance_proposals" (
+CREATE TABLE IF NOT EXISTS "community_governance_proposals" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"community_id" uuid NOT NULL,
 	"proposer_address" varchar(66) NOT NULL,
@@ -361,8 +361,8 @@ CREATE TABLE "community_governance_proposals" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "community_governance_votes" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+CREATE TABLE IF NOT EXISTS "community_governance_votes" (
+	"id" uuid DEFAULT gen_random_uuid() NOT NULL,
 	"proposal_id" uuid NOT NULL,
 	"voter_address" varchar(66) NOT NULL,
 	"vote_choice" varchar(10) NOT NULL,
@@ -372,8 +372,8 @@ CREATE TABLE "community_governance_votes" (
 	CONSTRAINT "community_governance_votes_proposal_id_voter_address_pk" PRIMARY KEY("proposal_id","voter_address")
 );
 --> statement-breakpoint
-CREATE TABLE "community_members" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+CREATE TABLE IF NOT EXISTS "community_members" (
+	"id" uuid DEFAULT gen_random_uuid() NOT NULL,
 	"community_id" uuid NOT NULL,
 	"user_address" varchar(66) NOT NULL,
 	"role" varchar(32) DEFAULT 'member' NOT NULL,
@@ -385,7 +385,7 @@ CREATE TABLE "community_members" (
 	CONSTRAINT "community_members_community_id_user_address_pk" PRIMARY KEY("community_id","user_address")
 );
 --> statement-breakpoint
-CREATE TABLE "community_moderation_actions" (
+CREATE TABLE IF NOT EXISTS "community_moderation_actions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"community_id" uuid NOT NULL,
 	"moderator_address" varchar(66) NOT NULL,
@@ -397,8 +397,8 @@ CREATE TABLE "community_moderation_actions" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "community_multi_sig_approvals" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+CREATE TABLE IF NOT EXISTS "community_multi_sig_approvals" (
+	"id" uuid DEFAULT gen_random_uuid() NOT NULL,
 	"proposal_id" uuid NOT NULL,
 	"approver_address" varchar(66) NOT NULL,
 	"signature" text,
@@ -407,8 +407,8 @@ CREATE TABLE "community_multi_sig_approvals" (
 	CONSTRAINT "community_multi_sig_approvals_proposal_id_approver_address_pk" PRIMARY KEY("proposal_id","approver_address")
 );
 --> statement-breakpoint
-CREATE TABLE "community_proxy_votes" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+CREATE TABLE IF NOT EXISTS "community_proxy_votes" (
+	"id" uuid DEFAULT gen_random_uuid() NOT NULL,
 	"proposal_id" uuid NOT NULL,
 	"proxy_address" varchar(66) NOT NULL,
 	"voter_address" varchar(66) NOT NULL,
@@ -419,8 +419,8 @@ CREATE TABLE "community_proxy_votes" (
 	CONSTRAINT "community_proxy_votes_proposal_id_voter_address_pk" PRIMARY KEY("proposal_id","voter_address")
 );
 --> statement-breakpoint
-CREATE TABLE "community_recommendations" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+CREATE TABLE IF NOT EXISTS "community_recommendations" (
+	"id" uuid DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"community_id" uuid NOT NULL,
 	"score" numeric(10, 4) NOT NULL,
@@ -432,7 +432,7 @@ CREATE TABLE "community_recommendations" (
 	CONSTRAINT "community_recommendations_user_id_community_id_pk" PRIMARY KEY("user_id","community_id")
 );
 --> statement-breakpoint
-CREATE TABLE "community_referral_programs" (
+CREATE TABLE IF NOT EXISTS "community_referral_programs" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"community_id" uuid NOT NULL,
 	"name" varchar(100) NOT NULL,
@@ -449,7 +449,7 @@ CREATE TABLE "community_referral_programs" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "community_staking" (
+CREATE TABLE IF NOT EXISTS "community_staking" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"community_id" uuid NOT NULL,
 	"user_address" varchar(66) NOT NULL,
@@ -465,7 +465,7 @@ CREATE TABLE "community_staking" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "community_staking_rewards" (
+CREATE TABLE IF NOT EXISTS "community_staking_rewards" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"staking_id" uuid NOT NULL,
 	"user_address" varchar(66) NOT NULL,
@@ -480,7 +480,7 @@ CREATE TABLE "community_staking_rewards" (
 	"distributed_at" timestamp
 );
 --> statement-breakpoint
-CREATE TABLE "community_stats" (
+CREATE TABLE IF NOT EXISTS "community_stats" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"community_id" uuid NOT NULL,
 	"active_members_7d" integer DEFAULT 0 NOT NULL,
@@ -497,7 +497,7 @@ CREATE TABLE "community_stats" (
 	CONSTRAINT "community_stats_community_id_unique" UNIQUE("community_id")
 );
 --> statement-breakpoint
-CREATE TABLE "community_subscription_tiers" (
+CREATE TABLE IF NOT EXISTS "community_subscription_tiers" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"community_id" uuid NOT NULL,
 	"name" varchar(100) NOT NULL,
@@ -513,7 +513,7 @@ CREATE TABLE "community_subscription_tiers" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "community_token_gated_content" (
+CREATE TABLE IF NOT EXISTS "community_token_gated_content" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"community_id" uuid NOT NULL,
 	"post_id" integer,
@@ -528,7 +528,7 @@ CREATE TABLE "community_token_gated_content" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "community_treasury_pools" (
+CREATE TABLE IF NOT EXISTS "community_treasury_pools" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"community_id" uuid NOT NULL,
 	"token_address" varchar(66) NOT NULL,
@@ -541,8 +541,8 @@ CREATE TABLE "community_treasury_pools" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "community_user_content_access" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+CREATE TABLE IF NOT EXISTS "community_user_content_access" (
+	"id" uuid DEFAULT gen_random_uuid() NOT NULL,
 	"content_id" uuid NOT NULL,
 	"user_address" varchar(66) NOT NULL,
 	"access_level" varchar(50) NOT NULL,
@@ -554,7 +554,7 @@ CREATE TABLE "community_user_content_access" (
 	CONSTRAINT "community_user_content_access_content_id_user_address_pk" PRIMARY KEY("content_id","user_address")
 );
 --> statement-breakpoint
-CREATE TABLE "community_user_referrals" (
+CREATE TABLE IF NOT EXISTS "community_user_referrals" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"program_id" uuid NOT NULL,
 	"referrer_address" varchar(66) NOT NULL,
@@ -569,7 +569,7 @@ CREATE TABLE "community_user_referrals" (
 	"rewarded_at" timestamp
 );
 --> statement-breakpoint
-CREATE TABLE "community_user_subscriptions" (
+CREATE TABLE IF NOT EXISTS "community_user_subscriptions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"community_id" uuid NOT NULL,
@@ -583,7 +583,7 @@ CREATE TABLE "community_user_subscriptions" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "content_links" (
+CREATE TABLE IF NOT EXISTS "content_links" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"content_id" varchar(64) NOT NULL,
 	"content_type" varchar(24) NOT NULL,
@@ -606,7 +606,7 @@ CREATE TABLE IF NOT EXISTS "content_reports" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "content_verification" (
+CREATE TABLE IF NOT EXISTS "content_verification" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"asset_id" uuid NOT NULL,
 	"verification_hash" text NOT NULL,
@@ -614,7 +614,7 @@ CREATE TABLE "content_verification" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "conversation_analytics" (
+CREATE TABLE IF NOT EXISTS "conversation_analytics" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"conversation_id" uuid NOT NULL,
 	"total_messages" integer DEFAULT 0,
@@ -627,7 +627,7 @@ CREATE TABLE "conversation_analytics" (
 	CONSTRAINT "conversation_analytics_conversation_id_unique" UNIQUE("conversation_id")
 );
 --> statement-breakpoint
-CREATE TABLE "conversation_participants" (
+CREATE TABLE IF NOT EXISTS "conversation_participants" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"conversation_id" uuid NOT NULL,
 	"user_id" uuid,
@@ -656,7 +656,7 @@ CREATE TABLE IF NOT EXISTS "conversations" (
 	"conversation_type" varchar(32) DEFAULT 'general',
 	"order_id" integer,
 	"product_id" uuid,
-	"listing_id" integer,
+	"listing_id" uuid,
 	"context_metadata" jsonb DEFAULT '{}',
 	"is_automated" boolean DEFAULT false,
 	"status" varchar(32) DEFAULT 'active',
@@ -664,7 +664,7 @@ CREATE TABLE IF NOT EXISTS "conversations" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "counterfeit_detections" (
+CREATE TABLE IF NOT EXISTS "counterfeit_detections" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"listing_id" varchar(64) NOT NULL,
 	"brand_keywords" text,
@@ -676,7 +676,7 @@ CREATE TABLE "counterfeit_detections" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "custom_blacklist" (
+CREATE TABLE IF NOT EXISTS "custom_blacklist" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"entry_type" varchar(16) NOT NULL,
 	"entry_value" text NOT NULL,
@@ -690,7 +690,7 @@ CREATE TABLE "custom_blacklist" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "data_retention_logs" (
+CREATE TABLE IF NOT EXISTS "data_retention_logs" (
 	"id" varchar(64) PRIMARY KEY NOT NULL,
 	"policy_id" varchar(64) NOT NULL,
 	"action" varchar(16) NOT NULL,
@@ -703,7 +703,7 @@ CREATE TABLE "data_retention_logs" (
 	"execution_time_ms" integer DEFAULT 0 NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "data_retention_policies" (
+CREATE TABLE IF NOT EXISTS "data_retention_policies" (
 	"id" varchar(64) PRIMARY KEY NOT NULL,
 	"name" varchar(128) NOT NULL,
 	"data_type" varchar(64) NOT NULL,
@@ -719,7 +719,7 @@ CREATE TABLE "data_retention_policies" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "dex_swap_transactions" (
+CREATE TABLE IF NOT EXISTS "dex_swap_transactions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"dex_provider" varchar(50) NOT NULL,
@@ -739,7 +739,7 @@ CREATE TABLE "dex_swap_transactions" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "digital_asset_access_logs" (
+CREATE TABLE IF NOT EXISTS "digital_asset_access_logs" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"asset_id" uuid NOT NULL,
 	"user_id" uuid,
@@ -751,7 +751,7 @@ CREATE TABLE "digital_asset_access_logs" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "digital_asset_analytics" (
+CREATE TABLE IF NOT EXISTS "digital_asset_analytics" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"asset_id" uuid NOT NULL,
 	"date" timestamp NOT NULL,
@@ -761,7 +761,7 @@ CREATE TABLE "digital_asset_analytics" (
 	"unique_users" integer DEFAULT 0
 );
 --> statement-breakpoint
-CREATE TABLE "digital_asset_licenses" (
+CREATE TABLE IF NOT EXISTS "digital_asset_licenses" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"asset_id" uuid NOT NULL,
 	"licensee_id" uuid NOT NULL,
@@ -774,7 +774,7 @@ CREATE TABLE "digital_asset_licenses" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "digital_asset_purchases" (
+CREATE TABLE IF NOT EXISTS "digital_asset_purchases" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"asset_id" uuid NOT NULL,
 	"buyer_id" uuid NOT NULL,
@@ -785,7 +785,7 @@ CREATE TABLE "digital_asset_purchases" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
--- CREATE TABLE "digital_asset_reports" (
+-- CREATE TABLE IF NOT EXISTS "digital_asset_reports" (
 -- 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 -- 	"asset_id" uuid NOT NULL,
 -- 	"reporter_id" uuid NOT NULL,
@@ -795,7 +795,7 @@ CREATE TABLE "digital_asset_purchases" (
 -- 	"created_at" timestamp DEFAULT now()
 -- );
 --> statement-breakpoint
--- CREATE TABLE "digital_assets" (
+-- CREATE TABLE IF NOT EXISTS "digital_assets" (
 -- 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 -- 	"owner_id" uuid NOT NULL,
 -- 	"title" varchar(255) NOT NULL,
@@ -814,7 +814,7 @@ CREATE TABLE "digital_asset_purchases" (
 -- 	"updated_at" timestamp DEFAULT now()
 -- );
 --> statement-breakpoint
-CREATE TABLE "dispute_judges" (
+CREATE TABLE IF NOT EXISTS "dispute_judges" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"dispute_id" uuid NOT NULL,
 	"judge_id" uuid NOT NULL,
@@ -824,7 +824,7 @@ CREATE TABLE "dispute_judges" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "disputes" (
+CREATE TABLE IF NOT EXISTS "disputes" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"escrow_id" integer,
 	"reporter_id" uuid,
@@ -836,7 +836,7 @@ CREATE TABLE "disputes" (
 	"evidence" text
 );
 --> statement-breakpoint
--- CREATE TABLE "dmca_takedown_requests" (
+-- CREATE TABLE IF NOT EXISTS "dmca_takedown_requests" (
 -- 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 -- 	"asset_id" uuid NOT NULL,
 -- 	"requester_id" uuid NOT NULL,
@@ -848,7 +848,7 @@ CREATE TABLE "disputes" (
 -- 	"created_at" timestamp DEFAULT now()
 -- );
 --> statement-breakpoint
-CREATE TABLE "domain_reputation" (
+CREATE TABLE IF NOT EXISTS "domain_reputation" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"domain" varchar(255) NOT NULL,
 	"reputation_score" numeric(5, 2) DEFAULT '50.00',
@@ -863,7 +863,7 @@ CREATE TABLE "domain_reputation" (
 	CONSTRAINT "domain_reputation_domain_unique" UNIQUE("domain")
 );
 --> statement-breakpoint
--- CREATE TABLE "drm_keys" (
+-- CREATE TABLE IF NOT EXISTS "drm_keys" (
 -- 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 -- 	"asset_id" uuid NOT NULL,
 -- 	"user_id" uuid NOT NULL,
@@ -872,7 +872,7 @@ CREATE TABLE "domain_reputation" (
 -- 	"created_at" timestamp DEFAULT now()
 -- );
 --> statement-breakpoint
-CREATE TABLE "earning_activities" (
+CREATE TABLE IF NOT EXISTS "earning_activities" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"activity_type" varchar(50) NOT NULL,
@@ -884,7 +884,7 @@ CREATE TABLE "earning_activities" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "embeddings" (
+CREATE TABLE IF NOT EXISTS "embeddings" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"object_type" varchar(32),
 	"object_id" integer,
@@ -892,7 +892,7 @@ CREATE TABLE "embeddings" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "ens_verifications" (
+CREATE TABLE IF NOT EXISTS "ens_verifications" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"wallet_address" varchar(66) NOT NULL,
 	"ens_handle" varchar(255) NOT NULL,
@@ -906,9 +906,9 @@ CREATE TABLE "ens_verifications" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "escrows" (
+CREATE TABLE IF NOT EXISTS "escrows" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"listing_id" integer,
+	"listing_id" uuid,
 	"buyer_id" uuid,
 	"seller_id" uuid,
 	"amount" numeric NOT NULL,
@@ -922,7 +922,7 @@ CREATE TABLE "escrows" (
 	"delivery_confirmed" boolean DEFAULT false
 );
 --> statement-breakpoint
-CREATE TABLE "event_rsvps" (
+CREATE TABLE IF NOT EXISTS "event_rsvps" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"event_id" uuid NOT NULL,
 	"user_id" uuid NOT NULL,
@@ -934,7 +934,7 @@ CREATE TABLE "event_rsvps" (
 	CONSTRAINT "event_rsvps_event_id_user_id_pk" PRIMARY KEY("event_id","user_id")
 );
 --> statement-breakpoint
-CREATE TABLE "evidence_access_logs" (
+CREATE TABLE IF NOT EXISTS "evidence_access_logs" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"evidence_id" varchar(64) NOT NULL,
 	"accessed_by" varchar(64) NOT NULL,
@@ -945,7 +945,7 @@ CREATE TABLE "evidence_access_logs" (
 	"access_granted" boolean DEFAULT true NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "fiat_payment_records" (
+CREATE TABLE IF NOT EXISTS "fiat_payment_records" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"purchase_transaction_id" uuid NOT NULL,
 	"payment_processor" varchar(50) NOT NULL,
@@ -962,14 +962,14 @@ CREATE TABLE "fiat_payment_records" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "follows" (
+CREATE TABLE IF NOT EXISTS "follows" (
 	"follower_id" uuid NOT NULL,
 	"following_id" uuid NOT NULL,
 	"created_at" timestamp DEFAULT now(),
 	CONSTRAINT "follows_follower_id_following_id_pk" PRIMARY KEY("follower_id","following_id")
 );
 --> statement-breakpoint
-CREATE TABLE "geofencing_rules" (
+CREATE TABLE IF NOT EXISTS "geofencing_rules" (
 	"id" varchar(64) PRIMARY KEY NOT NULL,
 	"name" varchar(128) NOT NULL,
 	"regions" text,
@@ -982,7 +982,7 @@ CREATE TABLE "geofencing_rules" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "governance_settings" (
+CREATE TABLE IF NOT EXISTS "governance_settings" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"dao_id" uuid,
 	"voting_token_address" varchar(66),
@@ -1000,7 +1000,7 @@ CREATE TABLE "governance_settings" (
 	CONSTRAINT "governance_settings_dao_id_unique" UNIQUE("dao_id")
 );
 --> statement-breakpoint
-CREATE TABLE "image_storage" (
+CREATE TABLE IF NOT EXISTS "image_storage" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"ipfs_hash" varchar(255) NOT NULL,
 	"cdn_url" varchar(500),
@@ -1021,7 +1021,7 @@ CREATE TABLE "image_storage" (
 	CONSTRAINT "image_storage_ipfs_hash_unique" UNIQUE("ipfs_hash")
 );
 --> statement-breakpoint
-CREATE TABLE "images" (
+CREATE TABLE IF NOT EXISTS "images" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"ipfs_hash" varchar(66) NOT NULL,
 	"cid" varchar(66) NOT NULL,
@@ -1029,7 +1029,7 @@ CREATE TABLE "images" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "juror_eligibility" (
+CREATE TABLE IF NOT EXISTS "juror_eligibility" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"user_id" uuid NOT NULL,
 	"reputation_score" numeric DEFAULT '1.0',
@@ -1046,7 +1046,7 @@ CREATE TABLE "juror_eligibility" (
 	CONSTRAINT "juror_eligibility_user_id_unique" UNIQUE("user_id")
 );
 --> statement-breakpoint
-CREATE TABLE "juror_performance" (
+CREATE TABLE IF NOT EXISTS "juror_performance" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"juror_id" uuid NOT NULL,
 	"appeal_id" integer NOT NULL,
@@ -1061,7 +1061,7 @@ CREATE TABLE "juror_performance" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "jury_voting_sessions" (
+CREATE TABLE IF NOT EXISTS "jury_voting_sessions" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"appeal_id" integer NOT NULL,
 	"session_round" integer NOT NULL,
@@ -1079,7 +1079,7 @@ CREATE TABLE "jury_voting_sessions" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "ldao_price_history" (
+CREATE TABLE IF NOT EXISTS "ldao_price_history" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"price_usd" numeric(20, 8) NOT NULL,
 	"price_eth" numeric(20, 8),
@@ -1089,7 +1089,7 @@ CREATE TABLE "ldao_price_history" (
 	"timestamp" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "link_monitoring_alerts" (
+CREATE TABLE IF NOT EXISTS "link_monitoring_alerts" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"url_analysis_id" integer,
 	"alert_type" varchar(32) NOT NULL,
@@ -1101,7 +1101,7 @@ CREATE TABLE "link_monitoring_alerts" (
 	"resolved_at" timestamp
 );
 --> statement-breakpoint
-CREATE TABLE "link_safety_vendor_results" (
+CREATE TABLE IF NOT EXISTS "link_safety_vendor_results" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"url_analysis_id" integer,
 	"vendor_name" varchar(32) NOT NULL,
@@ -1114,7 +1114,7 @@ CREATE TABLE "link_safety_vendor_results" (
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "listings" (
-	"id" serial PRIMARY KEY NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"seller_id" uuid,
 	"product_id" uuid,
 	"token_address" varchar(66) NOT NULL,
@@ -1138,7 +1138,7 @@ CREATE TABLE IF NOT EXISTS "listings" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "marketplace_analytics" (
+CREATE TABLE IF NOT EXISTS "marketplace_analytics" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid,
 	"product_id" uuid,
@@ -1147,7 +1147,7 @@ CREATE TABLE "marketplace_analytics" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "marketplace_appeals" (
+CREATE TABLE IF NOT EXISTS "marketplace_appeals" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"listing_id" varchar(64) NOT NULL,
 	"decision_id" integer,
@@ -1161,7 +1161,7 @@ CREATE TABLE "marketplace_appeals" (
 	"resolved_at" timestamp
 );
 --> statement-breakpoint
-CREATE TABLE "marketplace_config" (
+CREATE TABLE IF NOT EXISTS "marketplace_config" (
 	"id" varchar(50) PRIMARY KEY NOT NULL,
 	"config_key" varchar(100) NOT NULL,
 	"config_value" text NOT NULL,
@@ -1173,7 +1173,7 @@ CREATE TABLE "marketplace_config" (
 	CONSTRAINT "marketplace_config_config_key_unique" UNIQUE("config_key")
 );
 --> statement-breakpoint
-CREATE TABLE "marketplace_disputes" (
+CREATE TABLE IF NOT EXISTS "marketplace_disputes" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"order_id" uuid NOT NULL,
 	"raised_by" uuid,
@@ -1183,7 +1183,7 @@ CREATE TABLE "marketplace_disputes" (
 	"resolved_at" timestamp
 );
 --> statement-breakpoint
-CREATE TABLE "marketplace_health_metrics" (
+CREATE TABLE IF NOT EXISTS "marketplace_health_metrics" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"metric_name" varchar(100) NOT NULL,
 	"metric_value" numeric(15, 4) NOT NULL,
@@ -1195,7 +1195,7 @@ CREATE TABLE "marketplace_health_metrics" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "marketplace_listings" (
+CREATE TABLE IF NOT EXISTS "marketplace_listings" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"seller_address" varchar(42) NOT NULL,
 	"title" varchar(255) NOT NULL,
@@ -1209,7 +1209,7 @@ CREATE TABLE "marketplace_listings" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "marketplace_moderation_decisions" (
+CREATE TABLE IF NOT EXISTS "marketplace_moderation_decisions" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"listing_id" varchar(64) NOT NULL,
 	"decision" varchar(24) NOT NULL,
@@ -1222,7 +1222,7 @@ CREATE TABLE "marketplace_moderation_decisions" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "marketplace_moderation_rules" (
+CREATE TABLE IF NOT EXISTS "marketplace_moderation_rules" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"rule_name" varchar(100) NOT NULL,
 	"rule_type" varchar(32) NOT NULL,
@@ -1235,7 +1235,7 @@ CREATE TABLE "marketplace_moderation_rules" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "marketplace_orders" (
+CREATE TABLE IF NOT EXISTS "marketplace_orders" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"buyer_id" uuid NOT NULL,
 	"seller_id" uuid NOT NULL,
@@ -1248,7 +1248,7 @@ CREATE TABLE "marketplace_orders" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "marketplace_products" (
+CREATE TABLE IF NOT EXISTS "marketplace_products" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"seller_id" uuid NOT NULL,
 	"title" varchar(500) NOT NULL,
@@ -1265,7 +1265,7 @@ CREATE TABLE "marketplace_products" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "marketplace_reviews" (
+CREATE TABLE IF NOT EXISTS "marketplace_reviews" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"reviewer_id" uuid NOT NULL,
 	"reviewee_id" uuid NOT NULL,
@@ -1281,7 +1281,7 @@ CREATE TABLE "marketplace_reviews" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "marketplace_users" (
+CREATE TABLE IF NOT EXISTS "marketplace_users" (
 	"user_id" uuid PRIMARY KEY NOT NULL,
 	"role" varchar(10) NOT NULL,
 	"email" varchar(255),
@@ -1296,7 +1296,7 @@ CREATE TABLE "marketplace_users" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "marketplace_verifications" (
+CREATE TABLE IF NOT EXISTS "marketplace_verifications" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"verification_level" varchar(20) DEFAULT 'basic' NOT NULL,
@@ -1310,14 +1310,14 @@ CREATE TABLE "marketplace_verifications" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "message_read_status" (
+CREATE TABLE IF NOT EXISTS "message_read_status" (
 	"message_id" uuid NOT NULL,
 	"user_address" varchar(66) NOT NULL,
 	"read_at" timestamp DEFAULT now(),
 	CONSTRAINT "message_read_status_message_id_user_address_pk" PRIMARY KEY("message_id","user_address")
 );
 --> statement-breakpoint
-CREATE TABLE "message_templates" (
+CREATE TABLE IF NOT EXISTS "message_templates" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid,
 	"wallet_address" varchar(66) NOT NULL,
@@ -1331,7 +1331,7 @@ CREATE TABLE "message_templates" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "milestone_payments" (
+CREATE TABLE IF NOT EXISTS "milestone_payments" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"milestone_id" uuid NOT NULL,
 	"booking_id" uuid NOT NULL,
@@ -1348,7 +1348,7 @@ CREATE TABLE "milestone_payments" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "mobile_device_tokens" (
+CREATE TABLE IF NOT EXISTS "mobile_device_tokens" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"user_address" varchar(66) NOT NULL,
 	"token" varchar(255) NOT NULL,
@@ -1358,7 +1358,7 @@ CREATE TABLE "mobile_device_tokens" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "mobile_governance_sessions" (
+CREATE TABLE IF NOT EXISTS "mobile_governance_sessions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_address" varchar(66) NOT NULL,
 	"session_id" varchar(64) NOT NULL,
@@ -1521,14 +1521,14 @@ CREATE TABLE IF NOT EXISTS "notifications" (
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "offers" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"listing_id" integer,
+	"listing_id" uuid,
 	"buyer_id" uuid,
 	"amount" numeric NOT NULL,
 	"created_at" timestamp DEFAULT now(),
 	"accepted" boolean DEFAULT false
 );
 --> statement-breakpoint
-CREATE TABLE "offline_action_queue" (
+CREATE TABLE IF NOT EXISTS "offline_action_queue" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_address" varchar(66) NOT NULL,
 	"action_type" varchar(50) NOT NULL,
@@ -1540,7 +1540,7 @@ CREATE TABLE "offline_action_queue" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "offline_content_cache" (
+CREATE TABLE IF NOT EXISTS "offline_content_cache" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_address" varchar(66) NOT NULL,
 	"content_type" varchar(50) NOT NULL,
@@ -1575,7 +1575,7 @@ CREATE TABLE IF NOT EXISTS "order_payment_events" (
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "orders" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"listing_id" integer,
+	"listing_id" uuid,
 	"buyer_id" uuid,
 	"seller_id" uuid,
 	"escrow_id" integer,
@@ -1715,7 +1715,7 @@ CREATE TABLE IF NOT EXISTS "payments" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "pii_detection_results" (
+CREATE TABLE IF NOT EXISTS "pii_detection_results" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"content_hash" varchar(64) NOT NULL,
 	"detected_types" text,
@@ -1726,7 +1726,7 @@ CREATE TABLE "pii_detection_results" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "policy_configurations" (
+CREATE TABLE IF NOT EXISTS "policy_configurations" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" varchar(64) NOT NULL,
 	"category" varchar(48) NOT NULL,
@@ -1741,7 +1741,7 @@ CREATE TABLE "policy_configurations" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "poll_options" (
+CREATE TABLE IF NOT EXISTS "poll_options" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"poll_id" uuid NOT NULL,
 	"text" text NOT NULL,
@@ -1749,7 +1749,7 @@ CREATE TABLE "poll_options" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "poll_votes" (
+CREATE TABLE IF NOT EXISTS "poll_votes" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"poll_id" uuid NOT NULL,
 	"option_id" uuid NOT NULL,
@@ -1758,7 +1758,7 @@ CREATE TABLE "poll_votes" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "polls" (
+CREATE TABLE IF NOT EXISTS "polls" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"post_id" integer NOT NULL,
 	"question" text NOT NULL,
@@ -1770,7 +1770,7 @@ CREATE TABLE "polls" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "post_tags" (
+CREATE TABLE IF NOT EXISTS "post_tags" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"post_id" integer,
 	"tag" varchar(64) NOT NULL,
@@ -1795,7 +1795,7 @@ CREATE TABLE IF NOT EXISTS "posts" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "privacy_evidence" (
+CREATE TABLE IF NOT EXISTS "privacy_evidence" (
 	"id" varchar(64) PRIMARY KEY NOT NULL,
 	"case_id" integer NOT NULL,
 	"content_hash" varchar(64) NOT NULL,
@@ -1817,14 +1817,14 @@ CREATE TABLE "privacy_evidence" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "product_tags" (
+CREATE TABLE IF NOT EXISTS "product_tags" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"product_id" uuid NOT NULL,
 	"tag" varchar(100) NOT NULL,
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "products" (
+CREATE TABLE IF NOT EXISTS "products" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"seller_id" uuid NOT NULL,
 	"title" varchar(500) NOT NULL,
@@ -1948,7 +1948,7 @@ CREATE TABLE IF NOT EXISTS "project_threads" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "proposals" (
+CREATE TABLE IF NOT EXISTS "proposals" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"dao_id" uuid,
 	"title_cid" text,
@@ -1979,7 +1979,7 @@ CREATE TABLE "proposals" (
 	"required_majority" integer DEFAULT 50
 );
 --> statement-breakpoint
-CREATE TABLE "purchase_transactions" (
+CREATE TABLE IF NOT EXISTS "purchase_transactions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"amount" numeric(20, 8) NOT NULL,
@@ -2006,7 +2006,7 @@ CREATE TABLE IF NOT EXISTS "push_tokens" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "quick_replies" (
+CREATE TABLE IF NOT EXISTS "quick_replies" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid,
 	"wallet_address" varchar(66) NOT NULL,
@@ -2020,7 +2020,7 @@ CREATE TABLE "quick_replies" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "reactions" (
+CREATE TABLE IF NOT EXISTS "reactions" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"post_id" integer,
 	"user_id" uuid,
@@ -2030,7 +2030,7 @@ CREATE TABLE "reactions" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "referral_activities" (
+CREATE TABLE IF NOT EXISTS "referral_activities" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"referrer_id" uuid NOT NULL,
 	"referee_id" uuid NOT NULL,
@@ -2042,7 +2042,7 @@ CREATE TABLE "referral_activities" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "regional_compliance" (
+CREATE TABLE IF NOT EXISTS "regional_compliance" (
 	"region" varchar(16) PRIMARY KEY NOT NULL,
 	"country" varchar(8) NOT NULL,
 	"gdpr_applicable" boolean DEFAULT false NOT NULL,
@@ -2059,7 +2059,7 @@ CREATE TABLE "regional_compliance" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "reporter_performance" (
+CREATE TABLE IF NOT EXISTS "reporter_performance" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"reporter_id" uuid NOT NULL,
 	"report_id" integer NOT NULL,
@@ -2071,7 +2071,7 @@ CREATE TABLE "reporter_performance" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "reputation_calculation_rules" (
+CREATE TABLE IF NOT EXISTS "reputation_calculation_rules" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"rule_name" varchar(100) NOT NULL,
 	"event_type" varchar(50) NOT NULL,
@@ -2086,7 +2086,7 @@ CREATE TABLE "reputation_calculation_rules" (
 	CONSTRAINT "reputation_calculation_rules_rule_name_unique" UNIQUE("rule_name")
 );
 --> statement-breakpoint
-CREATE TABLE "reputation_change_events" (
+CREATE TABLE IF NOT EXISTS "reputation_change_events" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"user_id" uuid NOT NULL,
 	"event_type" varchar(32) NOT NULL,
@@ -2116,7 +2116,7 @@ CREATE TABLE IF NOT EXISTS "reputation_history" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "reputation_penalties" (
+CREATE TABLE IF NOT EXISTS "reputation_penalties" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"user_id" uuid NOT NULL,
 	"penalty_type" varchar(32) NOT NULL,
@@ -2130,7 +2130,7 @@ CREATE TABLE "reputation_penalties" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "reputation_rewards" (
+CREATE TABLE IF NOT EXISTS "reputation_rewards" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"reward_type" varchar(32) NOT NULL,
 	"base_reward" numeric(10, 4) NOT NULL,
@@ -2142,7 +2142,7 @@ CREATE TABLE "reputation_rewards" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "reputation_thresholds" (
+CREATE TABLE IF NOT EXISTS "reputation_thresholds" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"threshold_type" varchar(32) NOT NULL,
 	"min_score" numeric(10, 4) NOT NULL,
@@ -2193,7 +2193,7 @@ CREATE TABLE IF NOT EXISTS "reviews" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "scam_patterns" (
+CREATE TABLE IF NOT EXISTS "scam_patterns" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"listing_id" varchar(64) NOT NULL,
 	"pattern_type" varchar(32) NOT NULL,
@@ -2203,7 +2203,7 @@ CREATE TABLE "scam_patterns" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "seller_activities" (
+CREATE TABLE IF NOT EXISTS "seller_activities" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"seller_wallet_address" varchar(66) NOT NULL,
 	"activity_type" varchar(50) NOT NULL,
@@ -2213,7 +2213,7 @@ CREATE TABLE "seller_activities" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "seller_badges" (
+CREATE TABLE IF NOT EXISTS "seller_badges" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"seller_wallet_address" varchar(66) NOT NULL,
 	"badge_type" varchar(50) NOT NULL,
@@ -2225,7 +2225,7 @@ CREATE TABLE "seller_badges" (
 	"is_active" boolean DEFAULT true
 );
 --> statement-breakpoint
-CREATE TABLE "seller_dao_endorsements" (
+CREATE TABLE IF NOT EXISTS "seller_dao_endorsements" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"seller_wallet_address" varchar(66) NOT NULL,
 	"endorser_address" varchar(66) NOT NULL,
@@ -2236,7 +2236,7 @@ CREATE TABLE "seller_dao_endorsements" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "seller_growth_projections" (
+CREATE TABLE IF NOT EXISTS "seller_growth_projections" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"seller_wallet_address" varchar(66) NOT NULL,
 	"projection_type" varchar(50) NOT NULL,
@@ -2250,7 +2250,7 @@ CREATE TABLE "seller_growth_projections" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "seller_performance_alerts" (
+CREATE TABLE IF NOT EXISTS "seller_performance_alerts" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"seller_wallet_address" varchar(66) NOT NULL,
 	"alert_type" varchar(50) NOT NULL,
@@ -2266,7 +2266,7 @@ CREATE TABLE "seller_performance_alerts" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "seller_performance_history" (
+CREATE TABLE IF NOT EXISTS "seller_performance_history" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"seller_wallet_address" varchar(66) NOT NULL,
 	"metric_type" varchar(50) NOT NULL,
@@ -2277,7 +2277,7 @@ CREATE TABLE "seller_performance_history" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "seller_risk_assessments" (
+CREATE TABLE IF NOT EXISTS "seller_risk_assessments" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"seller_wallet_address" varchar(66) NOT NULL,
 	"overall_risk_score" numeric(5, 2) DEFAULT '0.00' NOT NULL,
@@ -2293,7 +2293,7 @@ CREATE TABLE "seller_risk_assessments" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "seller_scorecards" (
+CREATE TABLE IF NOT EXISTS "seller_scorecards" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"seller_wallet_address" varchar(66) NOT NULL,
 	"overall_score" numeric(5, 2) DEFAULT '0.00' NOT NULL,
@@ -2308,7 +2308,7 @@ CREATE TABLE "seller_scorecards" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "seller_transactions" (
+CREATE TABLE IF NOT EXISTS "seller_transactions" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"seller_wallet_address" varchar(66) NOT NULL,
 	"transaction_type" varchar(20) NOT NULL,
@@ -2319,7 +2319,7 @@ CREATE TABLE "seller_transactions" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "seller_verifications" (
+CREATE TABLE IF NOT EXISTS "seller_verifications" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"current_tier" varchar(20) DEFAULT 'unverified' NOT NULL,
@@ -2334,7 +2334,7 @@ CREATE TABLE "seller_verifications" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "sellers" (
+CREATE TABLE IF NOT EXISTS "sellers" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"wallet_address" varchar(66) NOT NULL,
 	"display_name" varchar(255),
@@ -2508,7 +2508,7 @@ CREATE TABLE IF NOT EXISTS "services" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "shares" (
+CREATE TABLE IF NOT EXISTS "shares" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"post_id" integer NOT NULL,
 	"user_id" uuid NOT NULL,
@@ -2518,7 +2518,7 @@ CREATE TABLE "shares" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "staking_positions" (
+CREATE TABLE IF NOT EXISTS "staking_positions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"amount" numeric(20, 8) NOT NULL,
@@ -2535,7 +2535,7 @@ CREATE TABLE "staking_positions" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "stolen_nfts" (
+CREATE TABLE IF NOT EXISTS "stolen_nfts" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"token_address" varchar(66) NOT NULL,
 	"token_id" varchar(128) NOT NULL,
@@ -2557,7 +2557,7 @@ CREATE TABLE IF NOT EXISTS "sync_status" (
 	CONSTRAINT "sync_status_key_unique" UNIQUE("key")
 );
 --> statement-breakpoint
-CREATE TABLE "system_metrics" (
+CREATE TABLE IF NOT EXISTS "system_metrics" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"metric_name" varchar(64) NOT NULL,
 	"metric_value" numeric NOT NULL,
@@ -2566,7 +2566,7 @@ CREATE TABLE "system_metrics" (
 	"timestamp" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "threshold_configurations" (
+CREATE TABLE IF NOT EXISTS "threshold_configurations" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"content_type" varchar(24) NOT NULL,
 	"reputation_tier" varchar(24) NOT NULL,
@@ -2894,607 +2894,1791 @@ CREATE TABLE IF NOT EXISTS "watermark_templates" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-ALTER TABLE "appeal_jurors" ADD CONSTRAINT "appeal_jurors_appeal_id_moderation_appeals_id_fk" FOREIGN KEY ("appeal_id") REFERENCES "public"."moderation_appeals"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "appeal_jurors" ADD CONSTRAINT "appeal_jurors_juror_id_users_id_fk" FOREIGN KEY ("juror_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "bids" ADD CONSTRAINT "bids_listing_id_listings_id_fk" FOREIGN KEY ("listing_id") REFERENCES "public"."listings"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "bids" ADD CONSTRAINT "bids_bidder_id_users_id_fk" FOREIGN KEY ("bidder_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "bookmarks" ADD CONSTRAINT "bookmarks_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "bookmarks" ADD CONSTRAINT "bookmarks_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "bridge_transactions" ADD CONSTRAINT "bridge_transactions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "cart_items" ADD CONSTRAINT "cart_items_cart_id_carts_id_fk" FOREIGN KEY ("cart_id") REFERENCES "public"."carts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "cart_items" ADD CONSTRAINT "cart_items_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "carts" ADD CONSTRAINT "carts_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "categories" ADD CONSTRAINT "categories_parent_id_categories_id_fk" FOREIGN KEY ("parent_id") REFERENCES "public"."categories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "cdn_access_logs" ADD CONSTRAINT "cdn_access_logs_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "cdn_access_logs" ADD CONSTRAINT "cdn_access_logs_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "chat_messages" ADD CONSTRAINT "chat_messages_conversation_id_conversations_id_fk" FOREIGN KEY ("conversation_id") REFERENCES "public"."conversations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "chat_messages" ADD CONSTRAINT "chat_messages_reply_to_id_chat_messages_id_fk" FOREIGN KEY ("reply_to_id") REFERENCES "public"."chat_messages"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "community_automated_executions" ADD CONSTRAINT "community_automated_executions_proposal_id_community_governance_proposals_id_fk" FOREIGN KEY ("proposal_id") REFERENCES "public"."community_governance_proposals"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "community_creator_rewards" ADD CONSTRAINT "community_creator_rewards_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "community_creator_rewards" ADD CONSTRAINT "community_creator_rewards_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "community_delegations" ADD CONSTRAINT "community_delegations_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "community_events" ADD CONSTRAINT "community_events_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "community_governance_proposals" ADD CONSTRAINT "community_governance_proposals_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "community_governance_votes" ADD CONSTRAINT "community_governance_votes_proposal_id_community_governance_proposals_id_fk" FOREIGN KEY ("proposal_id") REFERENCES "public"."community_governance_proposals"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "community_members" ADD CONSTRAINT "community_members_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "community_moderation_actions" ADD CONSTRAINT "community_moderation_actions_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "community_multi_sig_approvals" ADD CONSTRAINT "community_multi_sig_approvals_proposal_id_community_governance_proposals_id_fk" FOREIGN KEY ("proposal_id") REFERENCES "public"."community_governance_proposals"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "community_proxy_votes" ADD CONSTRAINT "community_proxy_votes_proposal_id_community_governance_proposals_id_fk" FOREIGN KEY ("proposal_id") REFERENCES "public"."community_governance_proposals"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "community_recommendations" ADD CONSTRAINT "community_recommendations_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "community_recommendations" ADD CONSTRAINT "community_recommendations_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "community_referral_programs" ADD CONSTRAINT "community_referral_programs_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "community_staking" ADD CONSTRAINT "community_staking_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "community_staking_rewards" ADD CONSTRAINT "community_staking_rewards_staking_id_community_staking_id_fk" FOREIGN KEY ("staking_id") REFERENCES "public"."community_staking"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "community_stats" ADD CONSTRAINT "community_stats_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "community_subscription_tiers" ADD CONSTRAINT "community_subscription_tiers_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "community_token_gated_content" ADD CONSTRAINT "community_token_gated_content_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "community_token_gated_content" ADD CONSTRAINT "community_token_gated_content_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "community_treasury_pools" ADD CONSTRAINT "community_treasury_pools_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "community_user_content_access" ADD CONSTRAINT "community_user_content_access_content_id_community_token_gated_content_id_fk" FOREIGN KEY ("content_id") REFERENCES "public"."community_token_gated_content"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "community_user_referrals" ADD CONSTRAINT "community_user_referrals_program_id_community_referral_programs_id_fk" FOREIGN KEY ("program_id") REFERENCES "public"."community_referral_programs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "community_user_subscriptions" ADD CONSTRAINT "community_user_subscriptions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "community_user_subscriptions" ADD CONSTRAINT "community_user_subscriptions_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "community_user_subscriptions" ADD CONSTRAINT "community_user_subscriptions_tier_id_community_subscription_tiers_id_fk" FOREIGN KEY ("tier_id") REFERENCES "public"."community_subscription_tiers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "content_links" ADD CONSTRAINT "content_links_url_analysis_id_url_analysis_results_id_fk" FOREIGN KEY ("url_analysis_id") REFERENCES "public"."url_analysis_results"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "content_reports" ADD CONSTRAINT "content_reports_reporter_id_users_id_fk" FOREIGN KEY ("reporter_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "content_verification" ADD CONSTRAINT "content_verification_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "conversation_analytics" ADD CONSTRAINT "conversation_analytics_conversation_id_conversations_id_fk" FOREIGN KEY ("conversation_id") REFERENCES "public"."conversations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "conversation_participants" ADD CONSTRAINT "conversation_participants_conversation_id_conversations_id_fk" FOREIGN KEY ("conversation_id") REFERENCES "public"."conversations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "conversation_participants" ADD CONSTRAINT "conversation_participants_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "custom_blacklist" ADD CONSTRAINT "custom_blacklist_added_by_users_id_fk" FOREIGN KEY ("added_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "dex_swap_transactions" ADD CONSTRAINT "dex_swap_transactions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "digital_asset_access_logs" ADD CONSTRAINT "digital_asset_access_logs_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "digital_asset_access_logs" ADD CONSTRAINT "digital_asset_access_logs_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "digital_asset_analytics" ADD CONSTRAINT "digital_asset_analytics_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "digital_asset_licenses" ADD CONSTRAINT "digital_asset_licenses_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "digital_asset_licenses" ADD CONSTRAINT "digital_asset_licenses_licensee_id_users_id_fk" FOREIGN KEY ("licensee_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "digital_asset_purchases" ADD CONSTRAINT "digital_asset_purchases_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "digital_asset_purchases" ADD CONSTRAINT "digital_asset_purchases_buyer_id_users_id_fk" FOREIGN KEY ("buyer_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "digital_asset_reports" ADD CONSTRAINT "digital_asset_reports_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "digital_asset_reports" ADD CONSTRAINT "digital_asset_reports_reporter_id_users_id_fk" FOREIGN KEY ("reporter_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "digital_assets" ADD CONSTRAINT "digital_assets_owner_id_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "dispute_judges" ADD CONSTRAINT "dispute_judges_dispute_id_marketplace_disputes_id_fk" FOREIGN KEY ("dispute_id") REFERENCES "public"."marketplace_disputes"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "dispute_judges" ADD CONSTRAINT "dispute_judges_judge_id_users_id_fk" FOREIGN KEY ("judge_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "disputes" ADD CONSTRAINT "disputes_escrow_id_escrows_id_fk" FOREIGN KEY ("escrow_id") REFERENCES "public"."escrows"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "disputes" ADD CONSTRAINT "disputes_reporter_id_users_id_fk" FOREIGN KEY ("reporter_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "dmca_takedown_requests" ADD CONSTRAINT "dmca_takedown_requests_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "dmca_takedown_requests" ADD CONSTRAINT "dmca_takedown_requests_requester_id_users_id_fk" FOREIGN KEY ("requester_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "dmca_takedown_requests" ADD CONSTRAINT "dmca_takedown_requests_reviewed_by_users_id_fk" FOREIGN KEY ("reviewed_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "drm_keys" ADD CONSTRAINT "drm_keys_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "drm_keys" ADD CONSTRAINT "drm_keys_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "earning_activities" ADD CONSTRAINT "earning_activities_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "escrows" ADD CONSTRAINT "escrows_listing_id_listings_id_fk" FOREIGN KEY ("listing_id") REFERENCES "public"."listings"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "escrows" ADD CONSTRAINT "escrows_buyer_id_users_id_fk" FOREIGN KEY ("buyer_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "escrows" ADD CONSTRAINT "escrows_seller_id_users_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "event_rsvps" ADD CONSTRAINT "event_rsvps_event_id_community_events_id_fk" FOREIGN KEY ("event_id") REFERENCES "public"."community_events"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "event_rsvps" ADD CONSTRAINT "event_rsvps_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "fiat_payment_records" ADD CONSTRAINT "fiat_payment_records_purchase_transaction_id_purchase_transactions_id_fk" FOREIGN KEY ("purchase_transaction_id") REFERENCES "public"."purchase_transactions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "follows" ADD CONSTRAINT "follows_follower_id_users_id_fk" FOREIGN KEY ("follower_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "follows" ADD CONSTRAINT "follows_following_id_users_id_fk" FOREIGN KEY ("following_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "image_storage" ADD CONSTRAINT "image_storage_owner_id_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "juror_eligibility" ADD CONSTRAINT "juror_eligibility_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "juror_performance" ADD CONSTRAINT "juror_performance_juror_id_users_id_fk" FOREIGN KEY ("juror_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "jury_voting_sessions" ADD CONSTRAINT "jury_voting_sessions_appeal_id_moderation_appeals_id_fk" FOREIGN KEY ("appeal_id") REFERENCES "public"."moderation_appeals"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "link_monitoring_alerts" ADD CONSTRAINT "link_monitoring_alerts_url_analysis_id_url_analysis_results_id_fk" FOREIGN KEY ("url_analysis_id") REFERENCES "public"."url_analysis_results"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "link_safety_vendor_results" ADD CONSTRAINT "link_safety_vendor_results_url_analysis_id_url_analysis_results_id_fk" FOREIGN KEY ("url_analysis_id") REFERENCES "public"."url_analysis_results"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "listings" ADD CONSTRAINT "listings_seller_id_users_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "listings" ADD CONSTRAINT "listings_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "marketplace_analytics" ADD CONSTRAINT "marketplace_analytics_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "marketplace_analytics" ADD CONSTRAINT "marketplace_analytics_product_id_marketplace_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."marketplace_products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "marketplace_appeals" ADD CONSTRAINT "marketplace_appeals_decision_id_marketplace_moderation_decisions_id_fk" FOREIGN KEY ("decision_id") REFERENCES "public"."marketplace_moderation_decisions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "marketplace_disputes" ADD CONSTRAINT "marketplace_disputes_order_id_marketplace_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."marketplace_orders"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "marketplace_disputes" ADD CONSTRAINT "marketplace_disputes_raised_by_users_id_fk" FOREIGN KEY ("raised_by") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "marketplace_listings" ADD CONSTRAINT "marketplace_listings_seller_address_sellers_wallet_address_fk" FOREIGN KEY ("seller_address") REFERENCES "public"."sellers"("wallet_address") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "marketplace_orders" ADD CONSTRAINT "marketplace_orders_buyer_id_users_id_fk" FOREIGN KEY ("buyer_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "marketplace_orders" ADD CONSTRAINT "marketplace_orders_seller_id_users_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "marketplace_orders" ADD CONSTRAINT "marketplace_orders_product_id_marketplace_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."marketplace_products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "marketplace_products" ADD CONSTRAINT "marketplace_products_seller_id_users_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "marketplace_reviews" ADD CONSTRAINT "marketplace_reviews_reviewer_id_users_id_fk" FOREIGN KEY ("reviewer_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "marketplace_reviews" ADD CONSTRAINT "marketplace_reviews_reviewee_id_users_id_fk" FOREIGN KEY ("reviewee_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "marketplace_reviews" ADD CONSTRAINT "marketplace_reviews_order_id_marketplace_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."marketplace_orders"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "marketplace_users" ADD CONSTRAINT "marketplace_users_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "marketplace_verifications" ADD CONSTRAINT "marketplace_verifications_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "message_read_status" ADD CONSTRAINT "message_read_status_message_id_chat_messages_id_fk" FOREIGN KEY ("message_id") REFERENCES "public"."chat_messages"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "message_templates" ADD CONSTRAINT "message_templates_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "milestone_payments" ADD CONSTRAINT "milestone_payments_milestone_id_service_milestones_id_fk" FOREIGN KEY ("milestone_id") REFERENCES "public"."service_milestones"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "milestone_payments" ADD CONSTRAINT "milestone_payments_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "mobile_governance_sessions" ADD CONSTRAINT "mobile_governance_sessions_proposal_id_proposals_id_fk" FOREIGN KEY ("proposal_id") REFERENCES "public"."proposals"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "moderation_actions" ADD CONSTRAINT "moderation_actions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "moderation_appeals" ADD CONSTRAINT "moderation_appeals_case_id_moderation_cases_id_fk" FOREIGN KEY ("case_id") REFERENCES "public"."moderation_cases"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "moderation_appeals" ADD CONSTRAINT "moderation_appeals_appellant_id_users_id_fk" FOREIGN KEY ("appellant_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "moderation_cases" ADD CONSTRAINT "moderation_cases_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "nft_auctions" ADD CONSTRAINT "nft_auctions_nft_id_nfts_id_fk" FOREIGN KEY ("nft_id") REFERENCES "public"."nfts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "nft_auctions" ADD CONSTRAINT "nft_auctions_seller_id_users_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "nft_auctions" ADD CONSTRAINT "nft_auctions_highest_bidder_id_users_id_fk" FOREIGN KEY ("highest_bidder_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "nft_collections" ADD CONSTRAINT "nft_collections_creator_id_users_id_fk" FOREIGN KEY ("creator_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "nft_listings" ADD CONSTRAINT "nft_listings_nft_id_nfts_id_fk" FOREIGN KEY ("nft_id") REFERENCES "public"."nfts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "nft_listings" ADD CONSTRAINT "nft_listings_seller_id_users_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "nft_offers" ADD CONSTRAINT "nft_offers_nft_id_nfts_id_fk" FOREIGN KEY ("nft_id") REFERENCES "public"."nfts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "nft_offers" ADD CONSTRAINT "nft_offers_buyer_id_users_id_fk" FOREIGN KEY ("buyer_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "nfts" ADD CONSTRAINT "nfts_owner_id_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "nfts" ADD CONSTRAINT "nfts_creator_id_users_id_fk" FOREIGN KEY ("creator_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "offers" ADD CONSTRAINT "offers_listing_id_listings_id_fk" FOREIGN KEY ("listing_id") REFERENCES "public"."listings"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "offers" ADD CONSTRAINT "offers_buyer_id_users_id_fk" FOREIGN KEY ("buyer_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "order_events" ADD CONSTRAINT "order_events_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "order_payment_events" ADD CONSTRAINT "order_payment_events_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "order_payment_events" ADD CONSTRAINT "order_payment_events_transaction_id_payment_transactions_id_fk" FOREIGN KEY ("transaction_id") REFERENCES "public"."payment_transactions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "orders" ADD CONSTRAINT "orders_listing_id_listings_id_fk" FOREIGN KEY ("listing_id") REFERENCES "public"."listings"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "orders" ADD CONSTRAINT "orders_buyer_id_users_id_fk" FOREIGN KEY ("buyer_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "orders" ADD CONSTRAINT "orders_seller_id_users_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "orders" ADD CONSTRAINT "orders_escrow_id_escrows_id_fk" FOREIGN KEY ("escrow_id") REFERENCES "public"."escrows"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "payment_method_preference_overrides" ADD CONSTRAINT "payment_method_preference_overrides_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "payment_method_preferences" ADD CONSTRAINT "payment_method_preferences_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "payment_method_usage_history" ADD CONSTRAINT "payment_method_usage_history_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "payment_receipts" ADD CONSTRAINT "payment_receipts_transaction_id_payment_transactions_id_fk" FOREIGN KEY ("transaction_id") REFERENCES "public"."payment_transactions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "payment_receipts" ADD CONSTRAINT "payment_receipts_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "payment_transactions" ADD CONSTRAINT "payment_transactions_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "payments" ADD CONSTRAINT "payments_from_users_id_fk" FOREIGN KEY ("from") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "payments" ADD CONSTRAINT "payments_to_users_id_fk" FOREIGN KEY ("to") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "poll_options" ADD CONSTRAINT "poll_options_poll_id_polls_id_fk" FOREIGN KEY ("poll_id") REFERENCES "public"."polls"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "poll_votes" ADD CONSTRAINT "poll_votes_poll_id_polls_id_fk" FOREIGN KEY ("poll_id") REFERENCES "public"."polls"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "poll_votes" ADD CONSTRAINT "poll_votes_option_id_poll_options_id_fk" FOREIGN KEY ("option_id") REFERENCES "public"."poll_options"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "poll_votes" ADD CONSTRAINT "poll_votes_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "polls" ADD CONSTRAINT "polls_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "post_tags" ADD CONSTRAINT "post_tags_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "posts" ADD CONSTRAINT "posts_author_id_users_id_fk" FOREIGN KEY ("author_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "posts" ADD CONSTRAINT "posts_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "public"."communities"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "product_tags" ADD CONSTRAINT "product_tags_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "products" ADD CONSTRAINT "products_seller_id_users_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "products" ADD CONSTRAINT "products_category_id_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."categories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_activities" ADD CONSTRAINT "project_activities_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_activities" ADD CONSTRAINT "project_activities_milestone_id_service_milestones_id_fk" FOREIGN KEY ("milestone_id") REFERENCES "public"."service_milestones"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_activities" ADD CONSTRAINT "project_activities_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_approvals" ADD CONSTRAINT "project_approvals_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_approvals" ADD CONSTRAINT "project_approvals_milestone_id_service_milestones_id_fk" FOREIGN KEY ("milestone_id") REFERENCES "public"."service_milestones"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_approvals" ADD CONSTRAINT "project_approvals_deliverable_id_project_deliverables_id_fk" FOREIGN KEY ("deliverable_id") REFERENCES "public"."project_deliverables"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_approvals" ADD CONSTRAINT "project_approvals_approver_id_users_id_fk" FOREIGN KEY ("approver_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_deliverables" ADD CONSTRAINT "project_deliverables_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_deliverables" ADD CONSTRAINT "project_deliverables_milestone_id_service_milestones_id_fk" FOREIGN KEY ("milestone_id") REFERENCES "public"."service_milestones"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_files" ADD CONSTRAINT "project_files_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_files" ADD CONSTRAINT "project_files_milestone_id_service_milestones_id_fk" FOREIGN KEY ("milestone_id") REFERENCES "public"."service_milestones"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_files" ADD CONSTRAINT "project_files_deliverable_id_project_deliverables_id_fk" FOREIGN KEY ("deliverable_id") REFERENCES "public"."project_deliverables"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_files" ADD CONSTRAINT "project_files_uploader_id_users_id_fk" FOREIGN KEY ("uploader_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_messages" ADD CONSTRAINT "project_messages_thread_id_project_threads_id_fk" FOREIGN KEY ("thread_id") REFERENCES "public"."project_threads"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_messages" ADD CONSTRAINT "project_messages_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_messages" ADD CONSTRAINT "project_messages_sender_id_users_id_fk" FOREIGN KEY ("sender_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_threads" ADD CONSTRAINT "project_threads_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_threads" ADD CONSTRAINT "project_threads_milestone_id_service_milestones_id_fk" FOREIGN KEY ("milestone_id") REFERENCES "public"."service_milestones"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_threads" ADD CONSTRAINT "project_threads_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "proposals" ADD CONSTRAINT "proposals_proposer_id_users_id_fk" FOREIGN KEY ("proposer_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "purchase_transactions" ADD CONSTRAINT "purchase_transactions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "quick_replies" ADD CONSTRAINT "quick_replies_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "reactions" ADD CONSTRAINT "reactions_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "reactions" ADD CONSTRAINT "reactions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "referral_activities" ADD CONSTRAINT "referral_activities_referrer_id_users_id_fk" FOREIGN KEY ("referrer_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "referral_activities" ADD CONSTRAINT "referral_activities_referee_id_users_id_fk" FOREIGN KEY ("referee_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "reporter_performance" ADD CONSTRAINT "reporter_performance_reporter_id_users_id_fk" FOREIGN KEY ("reporter_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "reputation_change_events" ADD CONSTRAINT "reputation_change_events_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "reputation_history" ADD CONSTRAINT "reputation_history_wallet_address_user_reputation_wallet_address_fk" FOREIGN KEY ("wallet_address") REFERENCES "public"."user_reputation"("wallet_address") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "reputation_penalties" ADD CONSTRAINT "reputation_penalties_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "review_helpfulness" ADD CONSTRAINT "review_helpfulness_review_id_marketplace_reviews_id_fk" FOREIGN KEY ("review_id") REFERENCES "public"."marketplace_reviews"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "review_helpfulness" ADD CONSTRAINT "review_helpfulness_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "review_reports" ADD CONSTRAINT "review_reports_review_id_marketplace_reviews_id_fk" FOREIGN KEY ("review_id") REFERENCES "public"."marketplace_reviews"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "review_reports" ADD CONSTRAINT "review_reports_reporter_id_users_id_fk" FOREIGN KEY ("reporter_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "reviews" ADD CONSTRAINT "reviews_reviewer_id_users_id_fk" FOREIGN KEY ("reviewer_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "reviews" ADD CONSTRAINT "reviews_reviewee_id_users_id_fk" FOREIGN KEY ("reviewee_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "reviews" ADD CONSTRAINT "reviews_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "seller_activities" ADD CONSTRAINT "seller_activities_seller_wallet_address_sellers_wallet_address_fk" FOREIGN KEY ("seller_wallet_address") REFERENCES "public"."sellers"("wallet_address") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "seller_badges" ADD CONSTRAINT "seller_badges_seller_wallet_address_sellers_wallet_address_fk" FOREIGN KEY ("seller_wallet_address") REFERENCES "public"."sellers"("wallet_address") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "seller_dao_endorsements" ADD CONSTRAINT "seller_dao_endorsements_seller_wallet_address_sellers_wallet_address_fk" FOREIGN KEY ("seller_wallet_address") REFERENCES "public"."sellers"("wallet_address") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "seller_growth_projections" ADD CONSTRAINT "seller_growth_projections_seller_wallet_address_sellers_wallet_address_fk" FOREIGN KEY ("seller_wallet_address") REFERENCES "public"."sellers"("wallet_address") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "seller_performance_alerts" ADD CONSTRAINT "seller_performance_alerts_seller_wallet_address_sellers_wallet_address_fk" FOREIGN KEY ("seller_wallet_address") REFERENCES "public"."sellers"("wallet_address") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "seller_performance_history" ADD CONSTRAINT "seller_performance_history_seller_wallet_address_sellers_wallet_address_fk" FOREIGN KEY ("seller_wallet_address") REFERENCES "public"."sellers"("wallet_address") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "seller_risk_assessments" ADD CONSTRAINT "seller_risk_assessments_seller_wallet_address_sellers_wallet_address_fk" FOREIGN KEY ("seller_wallet_address") REFERENCES "public"."sellers"("wallet_address") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "seller_scorecards" ADD CONSTRAINT "seller_scorecards_seller_wallet_address_sellers_wallet_address_fk" FOREIGN KEY ("seller_wallet_address") REFERENCES "public"."sellers"("wallet_address") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "seller_transactions" ADD CONSTRAINT "seller_transactions_seller_wallet_address_sellers_wallet_address_fk" FOREIGN KEY ("seller_wallet_address") REFERENCES "public"."sellers"("wallet_address") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "seller_verifications" ADD CONSTRAINT "seller_verifications_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "service_availability" ADD CONSTRAINT "service_availability_service_id_services_id_fk" FOREIGN KEY ("service_id") REFERENCES "public"."services"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "service_bookings" ADD CONSTRAINT "service_bookings_service_id_services_id_fk" FOREIGN KEY ("service_id") REFERENCES "public"."services"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "service_bookings" ADD CONSTRAINT "service_bookings_client_id_users_id_fk" FOREIGN KEY ("client_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "service_bookings" ADD CONSTRAINT "service_bookings_provider_id_users_id_fk" FOREIGN KEY ("provider_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "service_categories" ADD CONSTRAINT "service_categories_parent_id_service_categories_id_fk" FOREIGN KEY ("parent_id") REFERENCES "public"."service_categories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "service_messages" ADD CONSTRAINT "service_messages_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "service_messages" ADD CONSTRAINT "service_messages_sender_id_users_id_fk" FOREIGN KEY ("sender_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "service_messages" ADD CONSTRAINT "service_messages_recipient_id_users_id_fk" FOREIGN KEY ("recipient_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "service_milestones" ADD CONSTRAINT "service_milestones_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "service_provider_profiles" ADD CONSTRAINT "service_provider_profiles_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "service_reviews" ADD CONSTRAINT "service_reviews_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "service_reviews" ADD CONSTRAINT "service_reviews_reviewer_id_users_id_fk" FOREIGN KEY ("reviewer_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "service_reviews" ADD CONSTRAINT "service_reviews_reviewee_id_users_id_fk" FOREIGN KEY ("reviewee_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "service_reviews" ADD CONSTRAINT "service_reviews_service_id_services_id_fk" FOREIGN KEY ("service_id") REFERENCES "public"."services"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "services" ADD CONSTRAINT "services_provider_id_users_id_fk" FOREIGN KEY ("provider_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "services" ADD CONSTRAINT "services_category_id_service_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."service_categories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "shares" ADD CONSTRAINT "shares_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "shares" ADD CONSTRAINT "shares_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "staking_positions" ADD CONSTRAINT "staking_positions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "time_tracking" ADD CONSTRAINT "time_tracking_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "time_tracking" ADD CONSTRAINT "time_tracking_milestone_id_service_milestones_id_fk" FOREIGN KEY ("milestone_id") REFERENCES "public"."service_milestones"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "time_tracking" ADD CONSTRAINT "time_tracking_provider_id_users_id_fk" FOREIGN KEY ("provider_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "tips" ADD CONSTRAINT "tips_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "tips" ADD CONSTRAINT "tips_from_user_id_users_id_fk" FOREIGN KEY ("from_user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "tips" ADD CONSTRAINT "tips_to_user_id_users_id_fk" FOREIGN KEY ("to_user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "tracking_records" ADD CONSTRAINT "tracking_records_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_interactions" ADD CONSTRAINT "user_interactions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_purchase_limits" ADD CONSTRAINT "user_purchase_limits_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_recommendations" ADD CONSTRAINT "user_recommendations_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_recommendations" ADD CONSTRAINT "user_recommendations_recommended_user_id_users_id_fk" FOREIGN KEY ("recommended_user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_reputation_scores" ADD CONSTRAINT "user_reputation_scores_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "views" ADD CONSTRAINT "views_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "views" ADD CONSTRAINT "views_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "votes" ADD CONSTRAINT "votes_proposal_id_proposals_id_fk" FOREIGN KEY ("proposal_id") REFERENCES "public"."proposals"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "votes" ADD CONSTRAINT "votes_voter_id_users_id_fk" FOREIGN KEY ("voter_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "voting_delegations" ADD CONSTRAINT "voting_delegations_delegator_id_users_id_fk" FOREIGN KEY ("delegator_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "voting_delegations" ADD CONSTRAINT "voting_delegations_delegate_id_users_id_fk" FOREIGN KEY ("delegate_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "voting_power_snapshots" ADD CONSTRAINT "voting_power_snapshots_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "voting_power_snapshots" ADD CONSTRAINT "voting_power_snapshots_proposal_id_proposals_id_fk" FOREIGN KEY ("proposal_id") REFERENCES "public"."proposals"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "watermark_templates" ADD CONSTRAINT "watermark_templates_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "appeal_jurors_appeal_idx" ON "appeal_jurors" USING btree ("appeal_id");--> statement-breakpoint
-CREATE INDEX "appeal_jurors_juror_idx" ON "appeal_jurors" USING btree ("juror_id");--> statement-breakpoint
-CREATE INDEX "appeal_jurors_status_idx" ON "appeal_jurors" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "idx_auth_sessions_wallet_address" ON "auth_sessions" USING btree ("wallet_address");--> statement-breakpoint
-CREATE INDEX "idx_auth_sessions_session_token" ON "auth_sessions" USING btree ("session_token");--> statement-breakpoint
-CREATE INDEX "idx_auth_sessions_refresh_token" ON "auth_sessions" USING btree ("refresh_token");--> statement-breakpoint
-CREATE INDEX "idx_auth_sessions_expires_at" ON "auth_sessions" USING btree ("expires_at");--> statement-breakpoint
-CREATE INDEX "idx_auth_sessions_is_active" ON "auth_sessions" USING btree ("is_active");--> statement-breakpoint
-CREATE INDEX "idx_blocked_users_blocker" ON "blocked_users" USING btree ("blocker_address");--> statement-breakpoint
-CREATE INDEX "idx_blocked_users_blocked" ON "blocked_users" USING btree ("blocked_address");--> statement-breakpoint
-CREATE INDEX "bookmark_user_idx" ON "bookmarks" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "bookmark_post_idx" ON "bookmarks" USING btree ("post_id");--> statement-breakpoint
-CREATE INDEX "idx_bridge_transactions_user_id" ON "bridge_transactions" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "idx_bridge_transactions_status" ON "bridge_transactions" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "idx_bridge_transactions_created_at" ON "bridge_transactions" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "idx_cart_items_cart_id" ON "cart_items" USING btree ("cart_id");--> statement-breakpoint
-CREATE INDEX "idx_cart_items_product_id" ON "cart_items" USING btree ("product_id");--> statement-breakpoint
-CREATE INDEX "idx_cart_items_unique_cart_product" ON "cart_items" USING btree ("cart_id","product_id");--> statement-breakpoint
-CREATE INDEX "idx_carts_user_id" ON "carts" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "idx_carts_session_id" ON "carts" USING btree ("session_id");--> statement-breakpoint
-CREATE INDEX "idx_carts_status" ON "carts" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "idx_chat_messages_conversation_id_timestamp" ON "chat_messages" USING btree ("conversation_id","timestamp");--> statement-breakpoint
-CREATE INDEX "idx_chat_messages_reply_to" ON "chat_messages" USING btree ("reply_to_id");--> statement-breakpoint
-CREATE INDEX "idx_communities_name" ON "communities" USING btree ("name");--> statement-breakpoint
-CREATE INDEX "idx_communities_category" ON "communities" USING btree ("category");--> statement-breakpoint
-CREATE INDEX "idx_communities_is_public" ON "communities" USING btree ("is_public");--> statement-breakpoint
-CREATE INDEX "idx_communities_member_count" ON "communities" USING btree ("member_count");--> statement-breakpoint
-CREATE INDEX "idx_communities_created_at" ON "communities" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "idx_community_automated_executions_proposal_id" ON "community_automated_executions" USING btree ("proposal_id");--> statement-breakpoint
-CREATE INDEX "idx_community_automated_executions_type" ON "community_automated_executions" USING btree ("execution_type");--> statement-breakpoint
-CREATE INDEX "idx_community_automated_executions_time" ON "community_automated_executions" USING btree ("execution_time");--> statement-breakpoint
-CREATE INDEX "idx_community_automated_executions_status" ON "community_automated_executions" USING btree ("execution_status");--> statement-breakpoint
-CREATE INDEX "idx_community_automated_executions_dependency" ON "community_automated_executions" USING btree ("dependency_proposal_id");--> statement-breakpoint
-CREATE INDEX "idx_community_categories_slug" ON "community_categories" USING btree ("slug");--> statement-breakpoint
-CREATE INDEX "idx_community_categories_is_active" ON "community_categories" USING btree ("is_active");--> statement-breakpoint
-CREATE INDEX "idx_community_categories_sort_order" ON "community_categories" USING btree ("sort_order");--> statement-breakpoint
-CREATE INDEX "idx_community_creator_rewards_community_id" ON "community_creator_rewards" USING btree ("community_id");--> statement-breakpoint
-CREATE INDEX "idx_community_creator_rewards_creator_address" ON "community_creator_rewards" USING btree ("creator_address");--> statement-breakpoint
-CREATE INDEX "idx_community_creator_rewards_post_id" ON "community_creator_rewards" USING btree ("post_id");--> statement-breakpoint
-CREATE INDEX "idx_community_creator_rewards_status" ON "community_creator_rewards" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "idx_community_creator_rewards_created_at" ON "community_creator_rewards" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "idx_community_delegations_community_id" ON "community_delegations" USING btree ("community_id");--> statement-breakpoint
-CREATE INDEX "idx_community_delegations_delegator" ON "community_delegations" USING btree ("delegator_address");--> statement-breakpoint
-CREATE INDEX "idx_community_delegations_delegate" ON "community_delegations" USING btree ("delegate_address");--> statement-breakpoint
-CREATE INDEX "idx_community_delegations_expiry" ON "community_delegations" USING btree ("expiry_date");--> statement-breakpoint
-CREATE INDEX "idx_community_events_community_id" ON "community_events" USING btree ("community_id");--> statement-breakpoint
-CREATE INDEX "idx_community_events_start_time" ON "community_events" USING btree ("start_time");--> statement-breakpoint
-CREATE INDEX "idx_community_events_event_type" ON "community_events" USING btree ("event_type");--> statement-breakpoint
-CREATE INDEX "idx_community_events_is_recurring" ON "community_events" USING btree ("is_recurring");--> statement-breakpoint
-CREATE INDEX "idx_community_governance_proposals_community_id" ON "community_governance_proposals" USING btree ("community_id");--> statement-breakpoint
-CREATE INDEX "idx_community_governance_proposals_proposer" ON "community_governance_proposals" USING btree ("proposer_address");--> statement-breakpoint
-CREATE INDEX "idx_community_governance_proposals_status" ON "community_governance_proposals" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "idx_community_governance_proposals_voting_end_time" ON "community_governance_proposals" USING btree ("voting_end_time");--> statement-breakpoint
-CREATE INDEX "idx_community_governance_votes_proposal_id" ON "community_governance_votes" USING btree ("proposal_id");--> statement-breakpoint
-CREATE INDEX "idx_community_governance_votes_voter_address" ON "community_governance_votes" USING btree ("voter_address");--> statement-breakpoint
-CREATE INDEX "idx_community_governance_votes_choice" ON "community_governance_votes" USING btree ("vote_choice");--> statement-breakpoint
-CREATE INDEX "idx_community_members_community_id" ON "community_members" USING btree ("community_id");--> statement-breakpoint
-CREATE INDEX "idx_community_members_user_address" ON "community_members" USING btree ("user_address");--> statement-breakpoint
-CREATE INDEX "idx_community_members_role" ON "community_members" USING btree ("role");--> statement-breakpoint
-CREATE INDEX "idx_community_members_is_active" ON "community_members" USING btree ("is_active");--> statement-breakpoint
-CREATE INDEX "idx_community_members_joined_at" ON "community_members" USING btree ("joined_at");--> statement-breakpoint
-CREATE INDEX "idx_community_moderation_actions_community_id" ON "community_moderation_actions" USING btree ("community_id");--> statement-breakpoint
-CREATE INDEX "idx_community_moderation_actions_moderator" ON "community_moderation_actions" USING btree ("moderator_address");--> statement-breakpoint
-CREATE INDEX "idx_community_moderation_actions_action" ON "community_moderation_actions" USING btree ("action");--> statement-breakpoint
-CREATE INDEX "idx_community_moderation_actions_target_type" ON "community_moderation_actions" USING btree ("target_type");--> statement-breakpoint
-CREATE INDEX "idx_community_moderation_actions_created_at" ON "community_moderation_actions" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "idx_community_multi_sig_approvals_proposal_id" ON "community_multi_sig_approvals" USING btree ("proposal_id");--> statement-breakpoint
-CREATE INDEX "idx_community_multi_sig_approvals_approver" ON "community_multi_sig_approvals" USING btree ("approver_address");--> statement-breakpoint
-CREATE INDEX "idx_community_multi_sig_approvals_approved_at" ON "community_multi_sig_approvals" USING btree ("approved_at");--> statement-breakpoint
-CREATE INDEX "idx_community_proxy_votes_proposal_id" ON "community_proxy_votes" USING btree ("proposal_id");--> statement-breakpoint
-CREATE INDEX "idx_community_proxy_votes_proxy" ON "community_proxy_votes" USING btree ("proxy_address");--> statement-breakpoint
-CREATE INDEX "idx_community_proxy_votes_voter" ON "community_proxy_votes" USING btree ("voter_address");--> statement-breakpoint
-CREATE INDEX "idx_community_recommendations_user_id" ON "community_recommendations" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "idx_community_recommendations_community_id" ON "community_recommendations" USING btree ("community_id");--> statement-breakpoint
-CREATE INDEX "idx_community_recommendations_score" ON "community_recommendations" USING btree ("score");--> statement-breakpoint
-CREATE INDEX "idx_community_recommendations_expires_at" ON "community_recommendations" USING btree ("expires_at");--> statement-breakpoint
-CREATE INDEX "idx_community_referral_programs_community_id" ON "community_referral_programs" USING btree ("community_id");--> statement-breakpoint
-CREATE INDEX "idx_community_referral_programs_is_active" ON "community_referral_programs" USING btree ("is_active");--> statement-breakpoint
-CREATE INDEX "idx_community_referral_programs_start_date" ON "community_referral_programs" USING btree ("start_date");--> statement-breakpoint
-CREATE INDEX "idx_community_staking_community_id" ON "community_staking" USING btree ("community_id");--> statement-breakpoint
-CREATE INDEX "idx_community_staking_user_address" ON "community_staking" USING btree ("user_address");--> statement-breakpoint
-CREATE INDEX "idx_community_staking_is_active" ON "community_staking" USING btree ("is_active");--> statement-breakpoint
-CREATE INDEX "idx_community_staking_staked_at" ON "community_staking" USING btree ("staked_at");--> statement-breakpoint
-CREATE INDEX "idx_community_staking_rewards_staking_id" ON "community_staking_rewards" USING btree ("staking_id");--> statement-breakpoint
-CREATE INDEX "idx_community_staking_rewards_user_address" ON "community_staking_rewards" USING btree ("user_address");--> statement-breakpoint
-CREATE INDEX "idx_community_staking_rewards_status" ON "community_staking_rewards" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "idx_community_staking_rewards_type" ON "community_staking_rewards" USING btree ("reward_type");--> statement-breakpoint
-CREATE INDEX "idx_community_stats_trending_score" ON "community_stats" USING btree ("trending_score");--> statement-breakpoint
-CREATE INDEX "idx_community_stats_growth_rate_7d" ON "community_stats" USING btree ("growth_rate_7d");--> statement-breakpoint
-CREATE INDEX "idx_community_stats_last_calculated_at" ON "community_stats" USING btree ("last_calculated_at");--> statement-breakpoint
-CREATE INDEX "idx_community_subscription_tiers_community_id" ON "community_subscription_tiers" USING btree ("community_id");--> statement-breakpoint
-CREATE INDEX "idx_community_subscription_tiers_is_active" ON "community_subscription_tiers" USING btree ("is_active");--> statement-breakpoint
-CREATE INDEX "idx_community_token_gated_content_community_id" ON "community_token_gated_content" USING btree ("community_id");--> statement-breakpoint
-CREATE INDEX "idx_community_token_gated_content_post_id" ON "community_token_gated_content" USING btree ("post_id");--> statement-breakpoint
-CREATE INDEX "idx_community_token_gated_content_gating_type" ON "community_token_gated_content" USING btree ("gating_type");--> statement-breakpoint
-CREATE INDEX "idx_community_token_gated_content_token_address" ON "community_token_gated_content" USING btree ("token_address");--> statement-breakpoint
-CREATE INDEX "idx_community_treasury_pools_community_id" ON "community_treasury_pools" USING btree ("community_id");--> statement-breakpoint
-CREATE INDEX "idx_community_treasury_pools_token_address" ON "community_treasury_pools" USING btree ("token_address");--> statement-breakpoint
-CREATE INDEX "idx_community_treasury_pools_is_active" ON "community_treasury_pools" USING btree ("is_active");--> statement-breakpoint
-CREATE INDEX "idx_community_user_content_access_content_id" ON "community_user_content_access" USING btree ("content_id");--> statement-breakpoint
-CREATE INDEX "idx_community_user_content_access_user_address" ON "community_user_content_access" USING btree ("user_address");--> statement-breakpoint
-CREATE INDEX "idx_community_user_content_access_level" ON "community_user_content_access" USING btree ("access_level");--> statement-breakpoint
-CREATE INDEX "idx_community_user_referrals_program_id" ON "community_user_referrals" USING btree ("program_id");--> statement-breakpoint
-CREATE INDEX "idx_community_user_referrals_referrer_address" ON "community_user_referrals" USING btree ("referrer_address");--> statement-breakpoint
-CREATE INDEX "idx_community_user_referrals_referred_address" ON "community_user_referrals" USING btree ("referred_address");--> statement-breakpoint
-CREATE INDEX "idx_community_user_referrals_reward_status" ON "community_user_referrals" USING btree ("reward_status");--> statement-breakpoint
-CREATE INDEX "idx_community_user_referrals_unique" ON "community_user_referrals" USING btree ("program_id","referrer_address","referred_address");--> statement-breakpoint
-CREATE INDEX "idx_community_user_subscriptions_user_id" ON "community_user_subscriptions" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "idx_community_user_subscriptions_community_id" ON "community_user_subscriptions" USING btree ("community_id");--> statement-breakpoint
-CREATE INDEX "idx_community_user_subscriptions_tier_id" ON "community_user_subscriptions" USING btree ("tier_id");--> statement-breakpoint
-CREATE INDEX "idx_community_user_subscriptions_status" ON "community_user_subscriptions" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "idx_content_links_content" ON "content_links" USING btree ("content_id","content_type");--> statement-breakpoint
-CREATE INDEX "idx_content_links_url_analysis" ON "content_links" USING btree ("url_analysis_id");--> statement-breakpoint
-CREATE INDEX "content_reports_content_idx" ON "content_reports" USING btree ("content_id");--> statement-breakpoint
-CREATE INDEX "content_reports_reporter_idx" ON "content_reports" USING btree ("reporter_id");--> statement-breakpoint
-CREATE INDEX "idx_conversation_analytics_conversation_id" ON "conversation_analytics" USING btree ("conversation_id");--> statement-breakpoint
-CREATE INDEX "idx_conversation_analytics_last_message_at" ON "conversation_analytics" USING btree ("last_message_at");--> statement-breakpoint
-CREATE INDEX "idx_conversation_analytics_updated_at" ON "conversation_analytics" USING btree ("updated_at");--> statement-breakpoint
-CREATE INDEX "idx_conversation_participants_conversation_id" ON "conversation_participants" USING btree ("conversation_id");--> statement-breakpoint
-CREATE INDEX "idx_conversation_participants_user_id" ON "conversation_participants" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "idx_conversation_participants_wallet_address" ON "conversation_participants" USING btree ("wallet_address");--> statement-breakpoint
-CREATE INDEX "idx_conversation_participants_role" ON "conversation_participants" USING btree ("role");--> statement-breakpoint
-CREATE INDEX "idx_conversation_participants_joined_at" ON "conversation_participants" USING btree ("joined_at");--> statement-breakpoint
-CREATE INDEX "idx_conversations_last_activity" ON "conversations" USING btree ("last_activity");--> statement-breakpoint
-CREATE INDEX "idx_conversations_order_id" ON "conversations" USING btree ("order_id");--> statement-breakpoint
-CREATE INDEX "idx_conversations_product_id" ON "conversations" USING btree ("product_id");--> statement-breakpoint
-CREATE INDEX "idx_conversations_listing_id" ON "conversations" USING btree ("listing_id");--> statement-breakpoint
-CREATE INDEX "idx_conversations_type" ON "conversations" USING btree ("conversation_type");--> statement-breakpoint
-CREATE INDEX "idx_conversations_status" ON "conversations" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "idx_conversations_is_automated" ON "conversations" USING btree ("is_automated");--> statement-breakpoint
-CREATE INDEX "idx_custom_blacklist_type_value" ON "custom_blacklist" USING btree ("entry_type","entry_value");--> statement-breakpoint
-CREATE INDEX "idx_custom_blacklist_category" ON "custom_blacklist" USING btree ("category");--> statement-breakpoint
-CREATE INDEX "idx_custom_blacklist_active" ON "custom_blacklist" USING btree ("is_active");--> statement-breakpoint
-CREATE INDEX "idx_dex_swap_transactions_user_id" ON "dex_swap_transactions" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "idx_dex_swap_transactions_status" ON "dex_swap_transactions" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "idx_dex_swap_transactions_created_at" ON "dex_swap_transactions" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "idx_domain_reputation_domain" ON "domain_reputation" USING btree ("domain");--> statement-breakpoint
-CREATE INDEX "idx_domain_reputation_score" ON "domain_reputation" USING btree ("reputation_score");--> statement-breakpoint
-CREATE INDEX "idx_domain_reputation_blacklisted" ON "domain_reputation" USING btree ("is_blacklisted");--> statement-breakpoint
-CREATE INDEX "idx_earning_activities_user_id" ON "earning_activities" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "idx_earning_activities_activity_type" ON "earning_activities" USING btree ("activity_type");--> statement-breakpoint
-CREATE INDEX "idx_earning_activities_created_at" ON "earning_activities" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "idx_ens_verifications_wallet_address" ON "ens_verifications" USING btree ("wallet_address");--> statement-breakpoint
-CREATE INDEX "idx_ens_verifications_ens_handle" ON "ens_verifications" USING btree ("ens_handle");--> statement-breakpoint
-CREATE INDEX "idx_ens_verifications_is_active" ON "ens_verifications" USING btree ("is_active");--> statement-breakpoint
-CREATE INDEX "idx_ens_verifications_expires_at" ON "ens_verifications" USING btree ("expires_at");--> statement-breakpoint
-CREATE INDEX "idx_ens_verifications_unique_active" ON "ens_verifications" USING btree ("wallet_address","ens_handle");--> statement-breakpoint
-CREATE INDEX "idx_event_rsvps_event_id" ON "event_rsvps" USING btree ("event_id");--> statement-breakpoint
-CREATE INDEX "idx_event_rsvps_user_id" ON "event_rsvps" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "idx_event_rsvps_status" ON "event_rsvps" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "idx_fiat_payment_records_purchase_transaction_id" ON "fiat_payment_records" USING btree ("purchase_transaction_id");--> statement-breakpoint
-CREATE INDEX "idx_fiat_payment_records_status" ON "fiat_payment_records" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "idx_fiat_payment_records_processor_payment_id" ON "fiat_payment_records" USING btree ("processor_payment_id");--> statement-breakpoint
-CREATE INDEX "follow_idx" ON "follows" USING btree ("follower_id","following_id");--> statement-breakpoint
-CREATE INDEX "idx_governance_settings_dao" ON "governance_settings" USING btree ("dao_id");--> statement-breakpoint
-CREATE INDEX "idx_image_storage_ipfs_hash" ON "image_storage" USING btree ("ipfs_hash");--> statement-breakpoint
-CREATE INDEX "idx_image_storage_owner_id" ON "image_storage" USING btree ("owner_id");--> statement-breakpoint
-CREATE INDEX "idx_image_storage_usage_type" ON "image_storage" USING btree ("usage_type");--> statement-breakpoint
-CREATE INDEX "idx_image_storage_usage_reference" ON "image_storage" USING btree ("usage_reference_id");--> statement-breakpoint
-CREATE INDEX "idx_image_storage_created_at" ON "image_storage" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "juror_eligibility_user_idx" ON "juror_eligibility" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "juror_eligibility_eligible_idx" ON "juror_eligibility" USING btree ("is_eligible");--> statement-breakpoint
-CREATE INDEX "jury_voting_sessions_appeal_idx" ON "jury_voting_sessions" USING btree ("appeal_id");--> statement-breakpoint
-CREATE INDEX "jury_voting_sessions_status_idx" ON "jury_voting_sessions" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "idx_ldao_price_history_timestamp" ON "ldao_price_history" USING btree ("timestamp");--> statement-breakpoint
-CREATE INDEX "idx_ldao_price_history_source" ON "ldao_price_history" USING btree ("source");--> statement-breakpoint
-CREATE INDEX "idx_link_monitoring_alerts_type" ON "link_monitoring_alerts" USING btree ("alert_type");--> statement-breakpoint
-CREATE INDEX "idx_link_monitoring_alerts_resolved" ON "link_monitoring_alerts" USING btree ("is_resolved");--> statement-breakpoint
-CREATE INDEX "idx_link_safety_vendor_url_analysis" ON "link_safety_vendor_results" USING btree ("url_analysis_id");--> statement-breakpoint
-CREATE INDEX "idx_link_safety_vendor_name" ON "link_safety_vendor_results" USING btree ("vendor_name");--> statement-breakpoint
-CREATE INDEX "idx_marketplace_health_metrics_category" ON "marketplace_health_metrics" USING btree ("category");--> statement-breakpoint
-CREATE INDEX "idx_marketplace_health_metrics_period" ON "marketplace_health_metrics" USING btree ("period_start","period_end");--> statement-breakpoint
-CREATE INDEX "idx_marketplace_listings_seller_address" ON "marketplace_listings" USING btree ("seller_address");--> statement-breakpoint
-CREATE INDEX "idx_marketplace_listings_created_at" ON "marketplace_listings" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "idx_marketplace_listings_price" ON "marketplace_listings" USING btree ("price");--> statement-breakpoint
-CREATE INDEX "idx_marketplace_listings_category" ON "marketplace_listings" USING btree ("category");--> statement-breakpoint
-CREATE INDEX "idx_marketplace_listings_is_active" ON "marketplace_listings" USING btree ("is_active");--> statement-breakpoint
-CREATE INDEX "idx_marketplace_listings_title" ON "marketplace_listings" USING btree ("title");--> statement-breakpoint
-CREATE INDEX "idx_marketplace_listings_active_created" ON "marketplace_listings" USING btree ("is_active","created_at");--> statement-breakpoint
-CREATE INDEX "idx_marketplace_listings_seller_active" ON "marketplace_listings" USING btree ("seller_address","is_active");--> statement-breakpoint
-CREATE INDEX "idx_marketplace_listings_category_active" ON "marketplace_listings" USING btree ("category","is_active","created_at");--> statement-breakpoint
-CREATE INDEX "idx_message_read_status_message" ON "message_read_status" USING btree ("message_id");--> statement-breakpoint
-CREATE INDEX "idx_message_read_status_user" ON "message_read_status" USING btree ("user_address");--> statement-breakpoint
-CREATE INDEX "idx_message_templates_user_id" ON "message_templates" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "idx_message_templates_wallet_address" ON "message_templates" USING btree ("wallet_address");--> statement-breakpoint
-CREATE INDEX "idx_message_templates_category" ON "message_templates" USING btree ("category");--> statement-breakpoint
-CREATE INDEX "idx_message_templates_is_active" ON "message_templates" USING btree ("is_active");--> statement-breakpoint
-CREATE INDEX "idx_message_templates_created_at" ON "message_templates" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "idx_message_templates_usage_count" ON "message_templates" USING btree ("usage_count");--> statement-breakpoint
-CREATE INDEX "milestone_payments_milestone_id_idx" ON "milestone_payments" USING btree ("milestone_id");--> statement-breakpoint
-CREATE INDEX "milestone_payments_status_idx" ON "milestone_payments" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "idx_mobile_device_tokens_user_token" ON "mobile_device_tokens" USING btree ("user_address","token");--> statement-breakpoint
-CREATE INDEX "idx_mobile_device_tokens_platform" ON "mobile_device_tokens" USING btree ("platform");--> statement-breakpoint
-CREATE INDEX "idx_mobile_governance_sessions_user_session" ON "mobile_governance_sessions" USING btree ("user_address","session_id");--> statement-breakpoint
-CREATE INDEX "idx_mobile_governance_sessions_proposal" ON "mobile_governance_sessions" USING btree ("proposal_id");--> statement-breakpoint
-CREATE INDEX "idx_mobile_governance_sessions_start" ON "mobile_governance_sessions" USING btree ("session_start");--> statement-breakpoint
-CREATE INDEX "moderation_appeals_case_idx" ON "moderation_appeals" USING btree ("case_id");--> statement-breakpoint
-CREATE INDEX "moderation_appeals_appellant_idx" ON "moderation_appeals" USING btree ("appellant_id");--> statement-breakpoint
-CREATE INDEX "moderation_appeals_status_idx" ON "moderation_appeals" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "moderation_cases_content_idx" ON "moderation_cases" USING btree ("content_id");--> statement-breakpoint
-CREATE INDEX "moderation_cases_user_idx" ON "moderation_cases" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "moderation_cases_status_idx" ON "moderation_cases" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "idx_offline_action_queue_user_action" ON "offline_action_queue" USING btree ("user_address","action_type");--> statement-breakpoint
-CREATE INDEX "idx_offline_action_queue_status" ON "offline_action_queue" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "idx_offline_action_queue_created_at" ON "offline_action_queue" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "idx_offline_content_cache_user_content" ON "offline_content_cache" USING btree ("user_address","content_type","content_id");--> statement-breakpoint
-CREATE INDEX "idx_offline_content_cache_expires_at" ON "offline_content_cache" USING btree ("expires_at");--> statement-breakpoint
-CREATE INDEX "idx_offline_content_cache_priority" ON "offline_content_cache" USING btree ("priority");--> statement-breakpoint
-CREATE INDEX "idx_order_payment_events_order_id" ON "order_payment_events" USING btree ("order_id");--> statement-breakpoint
-CREATE INDEX "idx_order_payment_events_transaction_id" ON "order_payment_events" USING btree ("transaction_id");--> statement-breakpoint
-CREATE INDEX "idx_order_payment_events_event_type" ON "order_payment_events" USING btree ("event_type");--> statement-breakpoint
-CREATE INDEX "idx_order_payment_events_payment_status" ON "order_payment_events" USING btree ("payment_status");--> statement-breakpoint
-CREATE INDEX "idx_order_payment_events_created_at" ON "order_payment_events" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "idx_orders_checkout_session_id" ON "orders" USING btree ("checkout_session_id");--> statement-breakpoint
-CREATE INDEX "idx_orders_payment_method" ON "orders" USING btree ("payment_method");--> statement-breakpoint
-CREATE INDEX "idx_orders_tracking_number" ON "orders" USING btree ("tracking_number");--> statement-breakpoint
-CREATE INDEX "idx_orders_estimated_delivery" ON "orders" USING btree ("estimated_delivery");--> statement-breakpoint
-CREATE INDEX "idx_orders_payment_confirmation_hash" ON "orders" USING btree ("payment_confirmation_hash");--> statement-breakpoint
-CREATE INDEX "idx_payment_preference_overrides_user_id" ON "payment_method_preference_overrides" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "idx_payment_preference_overrides_expires_at" ON "payment_method_preference_overrides" USING btree ("expires_at");--> statement-breakpoint
-CREATE INDEX "idx_payment_preference_overrides_method_type" ON "payment_method_preference_overrides" USING btree ("payment_method_type");--> statement-breakpoint
-CREATE INDEX "idx_payment_preferences_user_id" ON "payment_method_preferences" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "idx_payment_preferences_updated_at" ON "payment_method_preferences" USING btree ("updated_at");--> statement-breakpoint
-CREATE INDEX "idx_payment_preferences_learning_enabled" ON "payment_method_preferences" USING btree ("learning_enabled");--> statement-breakpoint
-CREATE INDEX "idx_payment_usage_history_user_id" ON "payment_method_usage_history" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "idx_payment_usage_history_method_type" ON "payment_method_usage_history" USING btree ("payment_method_type");--> statement-breakpoint
-CREATE INDEX "idx_payment_usage_history_created_at" ON "payment_method_usage_history" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "idx_payment_usage_history_user_method" ON "payment_method_usage_history" USING btree ("user_id","payment_method_type");--> statement-breakpoint
-CREATE INDEX "idx_payment_receipts_transaction_id" ON "payment_receipts" USING btree ("transaction_id");--> statement-breakpoint
-CREATE INDEX "idx_payment_receipts_order_id" ON "payment_receipts" USING btree ("order_id");--> statement-breakpoint
-CREATE INDEX "idx_payment_receipts_receipt_number" ON "payment_receipts" USING btree ("receipt_number");--> statement-breakpoint
-CREATE INDEX "idx_payment_receipts_payment_method" ON "payment_receipts" USING btree ("payment_method");--> statement-breakpoint
-CREATE INDEX "idx_payment_receipts_created_at" ON "payment_receipts" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "idx_payment_transactions_order_id" ON "payment_transactions" USING btree ("order_id");--> statement-breakpoint
-CREATE INDEX "idx_payment_transactions_payment_method" ON "payment_transactions" USING btree ("payment_method");--> statement-breakpoint
-CREATE INDEX "idx_payment_transactions_status" ON "payment_transactions" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "idx_payment_transactions_transaction_hash" ON "payment_transactions" USING btree ("transaction_hash");--> statement-breakpoint
-CREATE INDEX "idx_payment_transactions_payment_intent_id" ON "payment_transactions" USING btree ("payment_intent_id");--> statement-breakpoint
-CREATE INDEX "idx_payment_transactions_escrow_id" ON "payment_transactions" USING btree ("escrow_id");--> statement-breakpoint
-CREATE INDEX "idx_payment_transactions_created_at" ON "payment_transactions" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "idx_payment_transactions_confirmed_at" ON "payment_transactions" USING btree ("confirmed_at");--> statement-breakpoint
-CREATE INDEX "idx_poll_options_poll_id" ON "poll_options" USING btree ("poll_id");--> statement-breakpoint
-CREATE INDEX "idx_poll_votes_poll_id" ON "poll_votes" USING btree ("poll_id");--> statement-breakpoint
-CREATE INDEX "idx_poll_votes_user_id" ON "poll_votes" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "idx_poll_votes_option_id" ON "poll_votes" USING btree ("option_id");--> statement-breakpoint
-CREATE INDEX "idx_poll_votes_unique" ON "poll_votes" USING btree ("poll_id","user_id","option_id");--> statement-breakpoint
-CREATE INDEX "idx_polls_post_id" ON "polls" USING btree ("post_id");--> statement-breakpoint
-CREATE INDEX "idx_polls_expires_at" ON "polls" USING btree ("expires_at");--> statement-breakpoint
-CREATE INDEX "post_tag_idx" ON "post_tags" USING btree ("post_id","tag");--> statement-breakpoint
-CREATE INDEX "idx_posts_community_id" ON "posts" USING btree ("community_id");--> statement-breakpoint
-CREATE INDEX "idx_posts_token_gated" ON "posts" USING btree ("is_token_gated");--> statement-breakpoint
-CREATE INDEX "product_tag_idx" ON "product_tags" USING btree ("product_id","tag");--> statement-breakpoint
-CREATE INDEX "tag_idx" ON "product_tags" USING btree ("tag");--> statement-breakpoint
-CREATE INDEX "product_title_idx" ON "products" USING btree ("title");--> statement-breakpoint
-CREATE INDEX "product_status_idx" ON "products" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "product_category_idx" ON "products" USING btree ("category_id");--> statement-breakpoint
-CREATE INDEX "product_seller_idx" ON "products" USING btree ("seller_id");--> statement-breakpoint
-CREATE INDEX "product_price_idx" ON "products" USING btree ("price_amount");--> statement-breakpoint
-CREATE INDEX "idx_products_listing_status" ON "products" USING btree ("listing_status");--> statement-breakpoint
-CREATE INDEX "idx_products_published_at" ON "products" USING btree ("published_at");--> statement-breakpoint
-CREATE INDEX "project_activities_booking_id_idx" ON "project_activities" USING btree ("booking_id");--> statement-breakpoint
-CREATE INDEX "project_activities_created_at_idx" ON "project_activities" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "project_approvals_booking_id_idx" ON "project_approvals" USING btree ("booking_id");--> statement-breakpoint
-CREATE INDEX "project_approvals_status_idx" ON "project_approvals" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "project_deliverables_booking_id_idx" ON "project_deliverables" USING btree ("booking_id");--> statement-breakpoint
-CREATE INDEX "project_deliverables_milestone_id_idx" ON "project_deliverables" USING btree ("milestone_id");--> statement-breakpoint
-CREATE INDEX "project_deliverables_status_idx" ON "project_deliverables" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "project_files_booking_id_idx" ON "project_files" USING btree ("booking_id");--> statement-breakpoint
-CREATE INDEX "project_files_file_hash_idx" ON "project_files" USING btree ("file_hash");--> statement-breakpoint
-CREATE INDEX "project_messages_thread_id_idx" ON "project_messages" USING btree ("thread_id");--> statement-breakpoint
-CREATE INDEX "project_messages_booking_id_idx" ON "project_messages" USING btree ("booking_id");--> statement-breakpoint
-CREATE INDEX "project_threads_booking_id_idx" ON "project_threads" USING btree ("booking_id");--> statement-breakpoint
-CREATE INDEX "idx_proposals_dao_id" ON "proposals" USING btree ("dao_id");--> statement-breakpoint
-CREATE INDEX "idx_proposals_status" ON "proposals" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "idx_proposals_proposer" ON "proposals" USING btree ("proposer_id");--> statement-breakpoint
-CREATE INDEX "idx_proposals_category" ON "proposals" USING btree ("category");--> statement-breakpoint
-CREATE INDEX "idx_purchase_transactions_user_id" ON "purchase_transactions" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "idx_purchase_transactions_status" ON "purchase_transactions" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "idx_purchase_transactions_created_at" ON "purchase_transactions" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "idx_purchase_transactions_payment_method" ON "purchase_transactions" USING btree ("payment_method");--> statement-breakpoint
-CREATE INDEX "idx_quick_replies_user_id" ON "quick_replies" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "idx_quick_replies_wallet_address" ON "quick_replies" USING btree ("wallet_address");--> statement-breakpoint
-CREATE INDEX "idx_quick_replies_category" ON "quick_replies" USING btree ("category");--> statement-breakpoint
-CREATE INDEX "idx_quick_replies_is_active" ON "quick_replies" USING btree ("is_active");--> statement-breakpoint
-CREATE INDEX "idx_quick_replies_priority" ON "quick_replies" USING btree ("priority");--> statement-breakpoint
-CREATE INDEX "idx_quick_replies_usage_count" ON "quick_replies" USING btree ("usage_count");--> statement-breakpoint
-CREATE INDEX "reaction_post_user_idx" ON "reactions" USING btree ("post_id","user_id");--> statement-breakpoint
-CREATE INDEX "idx_referral_activities_referrer_id" ON "referral_activities" USING btree ("referrer_id");--> statement-breakpoint
-CREATE INDEX "idx_referral_activities_referee_id" ON "referral_activities" USING btree ("referee_id");--> statement-breakpoint
-CREATE INDEX "idx_referral_activities_created_at" ON "referral_activities" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "idx_reputation_rules_event_type" ON "reputation_calculation_rules" USING btree ("event_type");--> statement-breakpoint
-CREATE INDEX "idx_reputation_rules_active" ON "reputation_calculation_rules" USING btree ("is_active");--> statement-breakpoint
-CREATE INDEX "idx_reputation_history_wallet_address" ON "reputation_history" USING btree ("wallet_address");--> statement-breakpoint
-CREATE INDEX "idx_reputation_history_event_type" ON "reputation_history" USING btree ("event_type");--> statement-breakpoint
-CREATE INDEX "idx_reputation_history_created_at" ON "reputation_history" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "idx_reputation_history_transaction_id" ON "reputation_history" USING btree ("transaction_id");--> statement-breakpoint
-CREATE INDEX "idx_seller_growth_projections_wallet" ON "seller_growth_projections" USING btree ("seller_wallet_address");--> statement-breakpoint
-CREATE INDEX "idx_seller_growth_projections_type" ON "seller_growth_projections" USING btree ("projection_type");--> statement-breakpoint
-CREATE INDEX "idx_seller_performance_alerts_wallet" ON "seller_performance_alerts" USING btree ("seller_wallet_address");--> statement-breakpoint
-CREATE INDEX "idx_seller_performance_alerts_type" ON "seller_performance_alerts" USING btree ("alert_type");--> statement-breakpoint
-CREATE INDEX "idx_seller_performance_history_wallet_type" ON "seller_performance_history" USING btree ("seller_wallet_address","metric_type");--> statement-breakpoint
-CREATE INDEX "idx_seller_performance_history_period" ON "seller_performance_history" USING btree ("period_start","period_end");--> statement-breakpoint
-CREATE INDEX "idx_seller_risk_assessments_wallet" ON "seller_risk_assessments" USING btree ("seller_wallet_address");--> statement-breakpoint
-CREATE INDEX "idx_seller_risk_assessments_level" ON "seller_risk_assessments" USING btree ("risk_level");--> statement-breakpoint
-CREATE INDEX "idx_seller_scorecards_wallet" ON "seller_scorecards" USING btree ("seller_wallet_address");--> statement-breakpoint
-CREATE INDEX "idx_seller_scorecards_tier" ON "seller_scorecards" USING btree ("performance_tier");--> statement-breakpoint
-CREATE INDEX "service_availability_service_id_idx" ON "service_availability" USING btree ("service_id");--> statement-breakpoint
-CREATE INDEX "service_bookings_client_id_idx" ON "service_bookings" USING btree ("client_id");--> statement-breakpoint
-CREATE INDEX "service_bookings_provider_id_idx" ON "service_bookings" USING btree ("provider_id");--> statement-breakpoint
-CREATE INDEX "service_bookings_status_idx" ON "service_bookings" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "service_messages_booking_id_idx" ON "service_messages" USING btree ("booking_id");--> statement-breakpoint
-CREATE INDEX "service_milestones_booking_id_idx" ON "service_milestones" USING btree ("booking_id");--> statement-breakpoint
-CREATE INDEX "service_provider_profiles_user_id_unique" ON "service_provider_profiles" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "service_reviews_service_id_idx" ON "service_reviews" USING btree ("service_id");--> statement-breakpoint
-CREATE INDEX "services_provider_id_idx" ON "services" USING btree ("provider_id");--> statement-breakpoint
-CREATE INDEX "services_category_id_idx" ON "services" USING btree ("category_id");--> statement-breakpoint
-CREATE INDEX "services_status_idx" ON "services" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "share_post_user_idx" ON "shares" USING btree ("post_id","user_id");--> statement-breakpoint
-CREATE INDEX "share_post_created_idx" ON "shares" USING btree ("post_id","created_at");--> statement-breakpoint
-CREATE INDEX "idx_staking_positions_user_id" ON "staking_positions" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "idx_staking_positions_status" ON "staking_positions" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "idx_staking_positions_end_date" ON "staking_positions" USING btree ("end_date");--> statement-breakpoint
-CREATE INDEX "time_tracking_booking_id_idx" ON "time_tracking" USING btree ("booking_id");--> statement-breakpoint
-CREATE INDEX "time_tracking_provider_id_idx" ON "time_tracking" USING btree ("provider_id");--> statement-breakpoint
-CREATE INDEX "time_tracking_start_time_idx" ON "time_tracking" USING btree ("start_time");--> statement-breakpoint
-CREATE INDEX "tip_post_idx" ON "tips" USING btree ("post_id");--> statement-breakpoint
-CREATE INDEX "idx_trending_content_content_type" ON "trending_content" USING btree ("content_type");--> statement-breakpoint
-CREATE INDEX "idx_trending_content_content_id" ON "trending_content" USING btree ("content_id");--> statement-breakpoint
-CREATE INDEX "idx_trending_content_timeframe" ON "trending_content" USING btree ("timeframe");--> statement-breakpoint
-CREATE INDEX "idx_trending_content_score" ON "trending_content" USING btree ("score");--> statement-breakpoint
-CREATE INDEX "idx_trending_content_rank" ON "trending_content" USING btree ("rank");--> statement-breakpoint
-CREATE INDEX "idx_trending_content_calculated_at" ON "trending_content" USING btree ("calculated_at");--> statement-breakpoint
-CREATE INDEX "idx_url_analysis_url_hash" ON "url_analysis_results" USING btree ("url_hash");--> statement-breakpoint
-CREATE INDEX "idx_url_analysis_domain" ON "url_analysis_results" USING btree ("domain");--> statement-breakpoint
-CREATE INDEX "idx_url_analysis_status" ON "url_analysis_results" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "idx_url_analysis_last_analyzed" ON "url_analysis_results" USING btree ("last_analyzed");--> statement-breakpoint
-CREATE INDEX "idx_user_interactions_user_id" ON "user_interactions" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "idx_user_interactions_target_type" ON "user_interactions" USING btree ("target_type");--> statement-breakpoint
-CREATE INDEX "idx_user_interactions_target_id" ON "user_interactions" USING btree ("target_id");--> statement-breakpoint
-CREATE INDEX "idx_user_interactions_interaction_type" ON "user_interactions" USING btree ("interaction_type");--> statement-breakpoint
-CREATE INDEX "idx_user_interactions_created_at" ON "user_interactions" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "idx_user_recommendations_user_id" ON "user_recommendations" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "idx_user_recommendations_recommended_user_id" ON "user_recommendations" USING btree ("recommended_user_id");--> statement-breakpoint
-CREATE INDEX "idx_user_recommendations_score" ON "user_recommendations" USING btree ("score");--> statement-breakpoint
-CREATE INDEX "idx_user_recommendations_expires_at" ON "user_recommendations" USING btree ("expires_at");--> statement-breakpoint
-CREATE INDEX "idx_user_reputation_score" ON "user_reputation" USING btree ("reputation_score");--> statement-breakpoint
-CREATE INDEX "idx_user_reputation_total_transactions" ON "user_reputation" USING btree ("total_transactions");--> statement-breakpoint
-CREATE INDEX "idx_user_reputation_updated_at" ON "user_reputation" USING btree ("updated_at");--> statement-breakpoint
-CREATE INDEX "view_post_user_idx" ON "views" USING btree ("post_id","user_id");--> statement-breakpoint
-CREATE INDEX "view_post_created_idx" ON "views" USING btree ("post_id","created_at");--> statement-breakpoint
-CREATE INDEX "idx_volume_discount_tiers_min_amount" ON "volume_discount_tiers" USING btree ("min_amount");--> statement-breakpoint
-CREATE INDEX "idx_volume_discount_tiers_is_active" ON "volume_discount_tiers" USING btree ("is_active");--> statement-breakpoint
-CREATE INDEX "idx_votes_proposal_id" ON "votes" USING btree ("proposal_id");--> statement-breakpoint
-CREATE INDEX "idx_votes_voter_id" ON "votes" USING btree ("voter_id");--> statement-breakpoint
-CREATE INDEX "idx_votes_created_at" ON "votes" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "idx_voting_delegations_delegator" ON "voting_delegations" USING btree ("delegator_id");--> statement-breakpoint
-CREATE INDEX "idx_voting_delegations_delegate" ON "voting_delegations" USING btree ("delegate_id");--> statement-breakpoint
-CREATE INDEX "idx_voting_delegations_dao" ON "voting_delegations" USING btree ("dao_id");--> statement-breakpoint
-CREATE INDEX "idx_voting_delegations_active" ON "voting_delegations" USING btree ("active");--> statement-breakpoint
-CREATE INDEX "idx_voting_power_snapshots_user" ON "voting_power_snapshots" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "idx_voting_power_snapshots_dao" ON "voting_power_snapshots" USING btree ("dao_id");--> statement-breakpoint
-CREATE INDEX "idx_voting_power_snapshots_proposal" ON "voting_power_snapshots" USING btree ("proposal_id");--> statement-breakpoint
-CREATE INDEX "idx_voting_power_snapshots_block" ON "voting_power_snapshots" USING btree ("snapshot_block");--> statement-breakpoint
-CREATE INDEX "idx_wallet_auth_attempts_wallet_address" ON "wallet_auth_attempts" USING btree ("wallet_address");--> statement-breakpoint
-CREATE INDEX "idx_wallet_auth_attempts_created_at" ON "wallet_auth_attempts" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "idx_wallet_auth_attempts_success" ON "wallet_auth_attempts" USING btree ("success");--> statement-breakpoint
-CREATE INDEX "idx_wallet_nonces_wallet_address" ON "wallet_nonces" USING btree ("wallet_address");--> statement-breakpoint
-CREATE INDEX "idx_wallet_nonces_nonce" ON "wallet_nonces" USING btree ("nonce");--> statement-breakpoint
-CREATE INDEX "idx_wallet_nonces_expires_at" ON "wallet_nonces" USING btree ("expires_at");--> statement-breakpoint
-CREATE INDEX "idx_wallet_nonces_used" ON "wallet_nonces" USING btree ("used");
+DO $$ BEGIN
+    ALTER TABLE "appeal_jurors" ADD CONSTRAINT "appeal_jurors_appeal_id_moderation_appeals_id_fk" FOREIGN KEY ("appeal_id") REFERENCES "public"."moderation_appeals"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "appeal_jurors" ADD CONSTRAINT "appeal_jurors_juror_id_users_id_fk" FOREIGN KEY ("juror_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "bids" ADD CONSTRAINT "bids_listing_id_listings_id_fk" FOREIGN KEY ("listing_id") REFERENCES "public"."listings"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "bids" ADD CONSTRAINT "bids_bidder_id_users_id_fk" FOREIGN KEY ("bidder_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "bookmarks" ADD CONSTRAINT "bookmarks_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "bookmarks" ADD CONSTRAINT "bookmarks_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "bridge_transactions" ADD CONSTRAINT "bridge_transactions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "cart_items" ADD CONSTRAINT "cart_items_cart_id_carts_id_fk" FOREIGN KEY ("cart_id") REFERENCES "public"."carts"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "cart_items" ADD CONSTRAINT "cart_items_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "carts" ADD CONSTRAINT "carts_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "categories" ADD CONSTRAINT "categories_parent_id_categories_id_fk" FOREIGN KEY ("parent_id") REFERENCES "public"."categories"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "cdn_access_logs" ADD CONSTRAINT "cdn_access_logs_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "cdn_access_logs" ADD CONSTRAINT "cdn_access_logs_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "chat_messages" ADD CONSTRAINT "chat_messages_conversation_id_conversations_id_fk" FOREIGN KEY ("conversation_id") REFERENCES "public"."conversations"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "chat_messages" ADD CONSTRAINT "chat_messages_reply_to_id_chat_messages_id_fk" FOREIGN KEY ("reply_to_id") REFERENCES "public"."chat_messages"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "community_automated_executions" ADD CONSTRAINT "community_automated_executions_proposal_id_community_governance_proposals_id_fk" FOREIGN KEY ("proposal_id") REFERENCES "public"."community_governance_proposals"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "community_creator_rewards" ADD CONSTRAINT "community_creator_rewards_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "community_creator_rewards" ADD CONSTRAINT "community_creator_rewards_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "community_delegations" ADD CONSTRAINT "community_delegations_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "community_events" ADD CONSTRAINT "community_events_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "community_governance_proposals" ADD CONSTRAINT "community_governance_proposals_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "community_governance_votes" ADD CONSTRAINT "community_governance_votes_proposal_id_community_governance_proposals_id_fk" FOREIGN KEY ("proposal_id") REFERENCES "public"."community_governance_proposals"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "community_members" ADD CONSTRAINT "community_members_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "community_moderation_actions" ADD CONSTRAINT "community_moderation_actions_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "community_multi_sig_approvals" ADD CONSTRAINT "community_multi_sig_approvals_proposal_id_community_governance_proposals_id_fk" FOREIGN KEY ("proposal_id") REFERENCES "public"."community_governance_proposals"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "community_proxy_votes" ADD CONSTRAINT "community_proxy_votes_proposal_id_community_governance_proposals_id_fk" FOREIGN KEY ("proposal_id") REFERENCES "public"."community_governance_proposals"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "community_recommendations" ADD CONSTRAINT "community_recommendations_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "community_recommendations" ADD CONSTRAINT "community_recommendations_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "community_referral_programs" ADD CONSTRAINT "community_referral_programs_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "community_staking" ADD CONSTRAINT "community_staking_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "community_staking_rewards" ADD CONSTRAINT "community_staking_rewards_staking_id_community_staking_id_fk" FOREIGN KEY ("staking_id") REFERENCES "public"."community_staking"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "community_stats" ADD CONSTRAINT "community_stats_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "community_subscription_tiers" ADD CONSTRAINT "community_subscription_tiers_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "community_token_gated_content" ADD CONSTRAINT "community_token_gated_content_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "community_token_gated_content" ADD CONSTRAINT "community_token_gated_content_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "community_treasury_pools" ADD CONSTRAINT "community_treasury_pools_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "community_user_content_access" ADD CONSTRAINT "community_user_content_access_content_id_community_token_gated_content_id_fk" FOREIGN KEY ("content_id") REFERENCES "public"."community_token_gated_content"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "community_user_referrals" ADD CONSTRAINT "community_user_referrals_program_id_community_referral_programs_id_fk" FOREIGN KEY ("program_id") REFERENCES "public"."community_referral_programs"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "community_user_subscriptions" ADD CONSTRAINT "community_user_subscriptions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "community_user_subscriptions" ADD CONSTRAINT "community_user_subscriptions_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "community_user_subscriptions" ADD CONSTRAINT "community_user_subscriptions_tier_id_community_subscription_tiers_id_fk" FOREIGN KEY ("tier_id") REFERENCES "public"."community_subscription_tiers"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "content_links" ADD CONSTRAINT "content_links_url_analysis_id_url_analysis_results_id_fk" FOREIGN KEY ("url_analysis_id") REFERENCES "public"."url_analysis_results"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "content_reports" ADD CONSTRAINT "content_reports_reporter_id_users_id_fk" FOREIGN KEY ("reporter_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "content_verification" ADD CONSTRAINT "content_verification_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "conversation_analytics" ADD CONSTRAINT "conversation_analytics_conversation_id_conversations_id_fk" FOREIGN KEY ("conversation_id") REFERENCES "public"."conversations"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "conversation_participants" ADD CONSTRAINT "conversation_participants_conversation_id_conversations_id_fk" FOREIGN KEY ("conversation_id") REFERENCES "public"."conversations"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "conversation_participants" ADD CONSTRAINT "conversation_participants_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "custom_blacklist" ADD CONSTRAINT "custom_blacklist_added_by_users_id_fk" FOREIGN KEY ("added_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "dex_swap_transactions" ADD CONSTRAINT "dex_swap_transactions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "digital_asset_access_logs" ADD CONSTRAINT "digital_asset_access_logs_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "digital_asset_access_logs" ADD CONSTRAINT "digital_asset_access_logs_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "digital_asset_analytics" ADD CONSTRAINT "digital_asset_analytics_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "digital_asset_licenses" ADD CONSTRAINT "digital_asset_licenses_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "digital_asset_licenses" ADD CONSTRAINT "digital_asset_licenses_licensee_id_users_id_fk" FOREIGN KEY ("licensee_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "digital_asset_purchases" ADD CONSTRAINT "digital_asset_purchases_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "digital_asset_purchases" ADD CONSTRAINT "digital_asset_purchases_buyer_id_users_id_fk" FOREIGN KEY ("buyer_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "digital_asset_reports" ADD CONSTRAINT "digital_asset_reports_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "digital_asset_reports" ADD CONSTRAINT "digital_asset_reports_reporter_id_users_id_fk" FOREIGN KEY ("reporter_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "digital_assets" ADD CONSTRAINT "digital_assets_owner_id_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "dispute_judges" ADD CONSTRAINT "dispute_judges_dispute_id_marketplace_disputes_id_fk" FOREIGN KEY ("dispute_id") REFERENCES "public"."marketplace_disputes"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "dispute_judges" ADD CONSTRAINT "dispute_judges_judge_id_users_id_fk" FOREIGN KEY ("judge_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "disputes" ADD CONSTRAINT "disputes_escrow_id_escrows_id_fk" FOREIGN KEY ("escrow_id") REFERENCES "public"."escrows"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "disputes" ADD CONSTRAINT "disputes_reporter_id_users_id_fk" FOREIGN KEY ("reporter_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "dmca_takedown_requests" ADD CONSTRAINT "dmca_takedown_requests_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "dmca_takedown_requests" ADD CONSTRAINT "dmca_takedown_requests_requester_id_users_id_fk" FOREIGN KEY ("requester_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "dmca_takedown_requests" ADD CONSTRAINT "dmca_takedown_requests_reviewed_by_users_id_fk" FOREIGN KEY ("reviewed_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "drm_keys" ADD CONSTRAINT "drm_keys_asset_id_digital_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."digital_assets"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "drm_keys" ADD CONSTRAINT "drm_keys_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "earning_activities" ADD CONSTRAINT "earning_activities_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "escrows" ADD CONSTRAINT "escrows_listing_id_listings_id_fk" FOREIGN KEY ("listing_id") REFERENCES "public"."listings"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "escrows" ADD CONSTRAINT "escrows_buyer_id_users_id_fk" FOREIGN KEY ("buyer_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "escrows" ADD CONSTRAINT "escrows_seller_id_users_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "event_rsvps" ADD CONSTRAINT "event_rsvps_event_id_community_events_id_fk" FOREIGN KEY ("event_id") REFERENCES "public"."community_events"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "event_rsvps" ADD CONSTRAINT "event_rsvps_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "fiat_payment_records" ADD CONSTRAINT "fiat_payment_records_purchase_transaction_id_purchase_transactions_id_fk" FOREIGN KEY ("purchase_transaction_id") REFERENCES "public"."purchase_transactions"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "follows" ADD CONSTRAINT "follows_follower_id_users_id_fk" FOREIGN KEY ("follower_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "follows" ADD CONSTRAINT "follows_following_id_users_id_fk" FOREIGN KEY ("following_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "image_storage" ADD CONSTRAINT "image_storage_owner_id_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "juror_eligibility" ADD CONSTRAINT "juror_eligibility_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "juror_performance" ADD CONSTRAINT "juror_performance_juror_id_users_id_fk" FOREIGN KEY ("juror_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "jury_voting_sessions" ADD CONSTRAINT "jury_voting_sessions_appeal_id_moderation_appeals_id_fk" FOREIGN KEY ("appeal_id") REFERENCES "public"."moderation_appeals"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "link_monitoring_alerts" ADD CONSTRAINT "link_monitoring_alerts_url_analysis_id_url_analysis_results_id_fk" FOREIGN KEY ("url_analysis_id") REFERENCES "public"."url_analysis_results"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "link_safety_vendor_results" ADD CONSTRAINT "link_safety_vendor_results_url_analysis_id_url_analysis_results_id_fk" FOREIGN KEY ("url_analysis_id") REFERENCES "public"."url_analysis_results"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "listings" ADD CONSTRAINT "listings_seller_id_users_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "listings" ADD CONSTRAINT "listings_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "marketplace_analytics" ADD CONSTRAINT "marketplace_analytics_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "marketplace_analytics" ADD CONSTRAINT "marketplace_analytics_product_id_marketplace_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."marketplace_products"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "marketplace_appeals" ADD CONSTRAINT "marketplace_appeals_decision_id_marketplace_moderation_decisions_id_fk" FOREIGN KEY ("decision_id") REFERENCES "public"."marketplace_moderation_decisions"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "marketplace_disputes" ADD CONSTRAINT "marketplace_disputes_order_id_marketplace_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."marketplace_orders"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "marketplace_disputes" ADD CONSTRAINT "marketplace_disputes_raised_by_users_id_fk" FOREIGN KEY ("raised_by") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "marketplace_listings" ADD CONSTRAINT "marketplace_listings_seller_address_sellers_wallet_address_fk" FOREIGN KEY ("seller_address") REFERENCES "public"."sellers"("wallet_address") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "marketplace_orders" ADD CONSTRAINT "marketplace_orders_buyer_id_users_id_fk" FOREIGN KEY ("buyer_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "marketplace_orders" ADD CONSTRAINT "marketplace_orders_seller_id_users_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "marketplace_orders" ADD CONSTRAINT "marketplace_orders_product_id_marketplace_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."marketplace_products"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "marketplace_products" ADD CONSTRAINT "marketplace_products_seller_id_users_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "marketplace_reviews" ADD CONSTRAINT "marketplace_reviews_reviewer_id_users_id_fk" FOREIGN KEY ("reviewer_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "marketplace_reviews" ADD CONSTRAINT "marketplace_reviews_reviewee_id_users_id_fk" FOREIGN KEY ("reviewee_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "marketplace_reviews" ADD CONSTRAINT "marketplace_reviews_order_id_marketplace_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."marketplace_orders"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "marketplace_users" ADD CONSTRAINT "marketplace_users_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "marketplace_verifications" ADD CONSTRAINT "marketplace_verifications_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "message_read_status" ADD CONSTRAINT "message_read_status_message_id_chat_messages_id_fk" FOREIGN KEY ("message_id") REFERENCES "public"."chat_messages"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "message_templates" ADD CONSTRAINT "message_templates_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "milestone_payments" ADD CONSTRAINT "milestone_payments_milestone_id_service_milestones_id_fk" FOREIGN KEY ("milestone_id") REFERENCES "public"."service_milestones"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "milestone_payments" ADD CONSTRAINT "milestone_payments_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "mobile_governance_sessions" ADD CONSTRAINT "mobile_governance_sessions_proposal_id_proposals_id_fk" FOREIGN KEY ("proposal_id") REFERENCES "public"."proposals"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "moderation_actions" ADD CONSTRAINT "moderation_actions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "moderation_appeals" ADD CONSTRAINT "moderation_appeals_case_id_moderation_cases_id_fk" FOREIGN KEY ("case_id") REFERENCES "public"."moderation_cases"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "moderation_appeals" ADD CONSTRAINT "moderation_appeals_appellant_id_users_id_fk" FOREIGN KEY ("appellant_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "moderation_cases" ADD CONSTRAINT "moderation_cases_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "nft_auctions" ADD CONSTRAINT "nft_auctions_nft_id_nfts_id_fk" FOREIGN KEY ("nft_id") REFERENCES "public"."nfts"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "nft_auctions" ADD CONSTRAINT "nft_auctions_seller_id_users_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "nft_auctions" ADD CONSTRAINT "nft_auctions_highest_bidder_id_users_id_fk" FOREIGN KEY ("highest_bidder_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "nft_collections" ADD CONSTRAINT "nft_collections_creator_id_users_id_fk" FOREIGN KEY ("creator_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "nft_listings" ADD CONSTRAINT "nft_listings_nft_id_nfts_id_fk" FOREIGN KEY ("nft_id") REFERENCES "public"."nfts"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "nft_listings" ADD CONSTRAINT "nft_listings_seller_id_users_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "nft_offers" ADD CONSTRAINT "nft_offers_nft_id_nfts_id_fk" FOREIGN KEY ("nft_id") REFERENCES "public"."nfts"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "nft_offers" ADD CONSTRAINT "nft_offers_buyer_id_users_id_fk" FOREIGN KEY ("buyer_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "nfts" ADD CONSTRAINT "nfts_owner_id_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "nfts" ADD CONSTRAINT "nfts_creator_id_users_id_fk" FOREIGN KEY ("creator_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "offers" ADD CONSTRAINT "offers_listing_id_listings_id_fk" FOREIGN KEY ("listing_id") REFERENCES "public"."listings"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "offers" ADD CONSTRAINT "offers_buyer_id_users_id_fk" FOREIGN KEY ("buyer_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "order_events" ADD CONSTRAINT "order_events_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "order_payment_events" ADD CONSTRAINT "order_payment_events_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "order_payment_events" ADD CONSTRAINT "order_payment_events_transaction_id_payment_transactions_id_fk" FOREIGN KEY ("transaction_id") REFERENCES "public"."payment_transactions"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "orders" ADD CONSTRAINT "orders_listing_id_listings_id_fk" FOREIGN KEY ("listing_id") REFERENCES "public"."listings"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "orders" ADD CONSTRAINT "orders_buyer_id_users_id_fk" FOREIGN KEY ("buyer_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "orders" ADD CONSTRAINT "orders_seller_id_users_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "orders" ADD CONSTRAINT "orders_escrow_id_escrows_id_fk" FOREIGN KEY ("escrow_id") REFERENCES "public"."escrows"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "payment_method_preference_overrides" ADD CONSTRAINT "payment_method_preference_overrides_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "payment_method_preferences" ADD CONSTRAINT "payment_method_preferences_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "payment_method_usage_history" ADD CONSTRAINT "payment_method_usage_history_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "payment_receipts" ADD CONSTRAINT "payment_receipts_transaction_id_payment_transactions_id_fk" FOREIGN KEY ("transaction_id") REFERENCES "public"."payment_transactions"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "payment_receipts" ADD CONSTRAINT "payment_receipts_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "payment_transactions" ADD CONSTRAINT "payment_transactions_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "payments" ADD CONSTRAINT "payments_from_users_id_fk" FOREIGN KEY ("from") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "payments" ADD CONSTRAINT "payments_to_users_id_fk" FOREIGN KEY ("to") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "poll_options" ADD CONSTRAINT "poll_options_poll_id_polls_id_fk" FOREIGN KEY ("poll_id") REFERENCES "public"."polls"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "poll_votes" ADD CONSTRAINT "poll_votes_poll_id_polls_id_fk" FOREIGN KEY ("poll_id") REFERENCES "public"."polls"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "poll_votes" ADD CONSTRAINT "poll_votes_option_id_poll_options_id_fk" FOREIGN KEY ("option_id") REFERENCES "public"."poll_options"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "poll_votes" ADD CONSTRAINT "poll_votes_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "polls" ADD CONSTRAINT "polls_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "post_tags" ADD CONSTRAINT "post_tags_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "posts" ADD CONSTRAINT "posts_author_id_users_id_fk" FOREIGN KEY ("author_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "posts" ADD CONSTRAINT "posts_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "public"."communities"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "product_tags" ADD CONSTRAINT "product_tags_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "products" ADD CONSTRAINT "products_seller_id_users_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "products" ADD CONSTRAINT "products_category_id_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."categories"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "project_activities" ADD CONSTRAINT "project_activities_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "project_activities" ADD CONSTRAINT "project_activities_milestone_id_service_milestones_id_fk" FOREIGN KEY ("milestone_id") REFERENCES "public"."service_milestones"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "project_activities" ADD CONSTRAINT "project_activities_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "project_approvals" ADD CONSTRAINT "project_approvals_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "project_approvals" ADD CONSTRAINT "project_approvals_milestone_id_service_milestones_id_fk" FOREIGN KEY ("milestone_id") REFERENCES "public"."service_milestones"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "project_approvals" ADD CONSTRAINT "project_approvals_deliverable_id_project_deliverables_id_fk" FOREIGN KEY ("deliverable_id") REFERENCES "public"."project_deliverables"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "project_approvals" ADD CONSTRAINT "project_approvals_approver_id_users_id_fk" FOREIGN KEY ("approver_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "project_deliverables" ADD CONSTRAINT "project_deliverables_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "project_deliverables" ADD CONSTRAINT "project_deliverables_milestone_id_service_milestones_id_fk" FOREIGN KEY ("milestone_id") REFERENCES "public"."service_milestones"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "project_files" ADD CONSTRAINT "project_files_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "project_files" ADD CONSTRAINT "project_files_milestone_id_service_milestones_id_fk" FOREIGN KEY ("milestone_id") REFERENCES "public"."service_milestones"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "project_files" ADD CONSTRAINT "project_files_deliverable_id_project_deliverables_id_fk" FOREIGN KEY ("deliverable_id") REFERENCES "public"."project_deliverables"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "project_files" ADD CONSTRAINT "project_files_uploader_id_users_id_fk" FOREIGN KEY ("uploader_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "project_messages" ADD CONSTRAINT "project_messages_thread_id_project_threads_id_fk" FOREIGN KEY ("thread_id") REFERENCES "public"."project_threads"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "project_messages" ADD CONSTRAINT "project_messages_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "project_messages" ADD CONSTRAINT "project_messages_sender_id_users_id_fk" FOREIGN KEY ("sender_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "project_threads" ADD CONSTRAINT "project_threads_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "project_threads" ADD CONSTRAINT "project_threads_milestone_id_service_milestones_id_fk" FOREIGN KEY ("milestone_id") REFERENCES "public"."service_milestones"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "project_threads" ADD CONSTRAINT "project_threads_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "proposals" ADD CONSTRAINT "proposals_proposer_id_users_id_fk" FOREIGN KEY ("proposer_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "purchase_transactions" ADD CONSTRAINT "purchase_transactions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "quick_replies" ADD CONSTRAINT "quick_replies_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "reactions" ADD CONSTRAINT "reactions_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "reactions" ADD CONSTRAINT "reactions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "referral_activities" ADD CONSTRAINT "referral_activities_referrer_id_users_id_fk" FOREIGN KEY ("referrer_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "referral_activities" ADD CONSTRAINT "referral_activities_referee_id_users_id_fk" FOREIGN KEY ("referee_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "reporter_performance" ADD CONSTRAINT "reporter_performance_reporter_id_users_id_fk" FOREIGN KEY ("reporter_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "reputation_change_events" ADD CONSTRAINT "reputation_change_events_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "reputation_history" ADD CONSTRAINT "reputation_history_wallet_address_user_reputation_wallet_address_fk" FOREIGN KEY ("wallet_address") REFERENCES "public"."user_reputation"("wallet_address") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "reputation_penalties" ADD CONSTRAINT "reputation_penalties_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "review_helpfulness" ADD CONSTRAINT "review_helpfulness_review_id_marketplace_reviews_id_fk" FOREIGN KEY ("review_id") REFERENCES "public"."marketplace_reviews"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "review_helpfulness" ADD CONSTRAINT "review_helpfulness_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "review_reports" ADD CONSTRAINT "review_reports_review_id_marketplace_reviews_id_fk" FOREIGN KEY ("review_id") REFERENCES "public"."marketplace_reviews"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "review_reports" ADD CONSTRAINT "review_reports_reporter_id_users_id_fk" FOREIGN KEY ("reporter_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "reviews" ADD CONSTRAINT "reviews_reviewer_id_users_id_fk" FOREIGN KEY ("reviewer_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "reviews" ADD CONSTRAINT "reviews_reviewee_id_users_id_fk" FOREIGN KEY ("reviewee_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "reviews" ADD CONSTRAINT "reviews_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "seller_activities" ADD CONSTRAINT "seller_activities_seller_wallet_address_sellers_wallet_address_fk" FOREIGN KEY ("seller_wallet_address") REFERENCES "public"."sellers"("wallet_address") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "seller_badges" ADD CONSTRAINT "seller_badges_seller_wallet_address_sellers_wallet_address_fk" FOREIGN KEY ("seller_wallet_address") REFERENCES "public"."sellers"("wallet_address") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "seller_dao_endorsements" ADD CONSTRAINT "seller_dao_endorsements_seller_wallet_address_sellers_wallet_address_fk" FOREIGN KEY ("seller_wallet_address") REFERENCES "public"."sellers"("wallet_address") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "seller_growth_projections" ADD CONSTRAINT "seller_growth_projections_seller_wallet_address_sellers_wallet_address_fk" FOREIGN KEY ("seller_wallet_address") REFERENCES "public"."sellers"("wallet_address") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "seller_performance_alerts" ADD CONSTRAINT "seller_performance_alerts_seller_wallet_address_sellers_wallet_address_fk" FOREIGN KEY ("seller_wallet_address") REFERENCES "public"."sellers"("wallet_address") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "seller_performance_history" ADD CONSTRAINT "seller_performance_history_seller_wallet_address_sellers_wallet_address_fk" FOREIGN KEY ("seller_wallet_address") REFERENCES "public"."sellers"("wallet_address") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "seller_risk_assessments" ADD CONSTRAINT "seller_risk_assessments_seller_wallet_address_sellers_wallet_address_fk" FOREIGN KEY ("seller_wallet_address") REFERENCES "public"."sellers"("wallet_address") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "seller_scorecards" ADD CONSTRAINT "seller_scorecards_seller_wallet_address_sellers_wallet_address_fk" FOREIGN KEY ("seller_wallet_address") REFERENCES "public"."sellers"("wallet_address") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "seller_transactions" ADD CONSTRAINT "seller_transactions_seller_wallet_address_sellers_wallet_address_fk" FOREIGN KEY ("seller_wallet_address") REFERENCES "public"."sellers"("wallet_address") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "seller_verifications" ADD CONSTRAINT "seller_verifications_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "service_availability" ADD CONSTRAINT "service_availability_service_id_services_id_fk" FOREIGN KEY ("service_id") REFERENCES "public"."services"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "service_bookings" ADD CONSTRAINT "service_bookings_service_id_services_id_fk" FOREIGN KEY ("service_id") REFERENCES "public"."services"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "service_bookings" ADD CONSTRAINT "service_bookings_client_id_users_id_fk" FOREIGN KEY ("client_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "service_bookings" ADD CONSTRAINT "service_bookings_provider_id_users_id_fk" FOREIGN KEY ("provider_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "service_categories" ADD CONSTRAINT "service_categories_parent_id_service_categories_id_fk" FOREIGN KEY ("parent_id") REFERENCES "public"."service_categories"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "service_messages" ADD CONSTRAINT "service_messages_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "service_messages" ADD CONSTRAINT "service_messages_sender_id_users_id_fk" FOREIGN KEY ("sender_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "service_messages" ADD CONSTRAINT "service_messages_recipient_id_users_id_fk" FOREIGN KEY ("recipient_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "service_milestones" ADD CONSTRAINT "service_milestones_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "service_provider_profiles" ADD CONSTRAINT "service_provider_profiles_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "service_reviews" ADD CONSTRAINT "service_reviews_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "service_reviews" ADD CONSTRAINT "service_reviews_reviewer_id_users_id_fk" FOREIGN KEY ("reviewer_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "service_reviews" ADD CONSTRAINT "service_reviews_reviewee_id_users_id_fk" FOREIGN KEY ("reviewee_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "service_reviews" ADD CONSTRAINT "service_reviews_service_id_services_id_fk" FOREIGN KEY ("service_id") REFERENCES "public"."services"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "services" ADD CONSTRAINT "services_provider_id_users_id_fk" FOREIGN KEY ("provider_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "services" ADD CONSTRAINT "services_category_id_service_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."service_categories"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "shares" ADD CONSTRAINT "shares_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "shares" ADD CONSTRAINT "shares_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "staking_positions" ADD CONSTRAINT "staking_positions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "time_tracking" ADD CONSTRAINT "time_tracking_booking_id_service_bookings_id_fk" FOREIGN KEY ("booking_id") REFERENCES "public"."service_bookings"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "time_tracking" ADD CONSTRAINT "time_tracking_milestone_id_service_milestones_id_fk" FOREIGN KEY ("milestone_id") REFERENCES "public"."service_milestones"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "time_tracking" ADD CONSTRAINT "time_tracking_provider_id_users_id_fk" FOREIGN KEY ("provider_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "tips" ADD CONSTRAINT "tips_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "tips" ADD CONSTRAINT "tips_from_user_id_users_id_fk" FOREIGN KEY ("from_user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "tips" ADD CONSTRAINT "tips_to_user_id_users_id_fk" FOREIGN KEY ("to_user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "tracking_records" ADD CONSTRAINT "tracking_records_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "user_interactions" ADD CONSTRAINT "user_interactions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "user_purchase_limits" ADD CONSTRAINT "user_purchase_limits_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "user_recommendations" ADD CONSTRAINT "user_recommendations_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "user_recommendations" ADD CONSTRAINT "user_recommendations_recommended_user_id_users_id_fk" FOREIGN KEY ("recommended_user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "user_reputation_scores" ADD CONSTRAINT "user_reputation_scores_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "views" ADD CONSTRAINT "views_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "views" ADD CONSTRAINT "views_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "votes" ADD CONSTRAINT "votes_proposal_id_proposals_id_fk" FOREIGN KEY ("proposal_id") REFERENCES "public"."proposals"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "votes" ADD CONSTRAINT "votes_voter_id_users_id_fk" FOREIGN KEY ("voter_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "voting_delegations" ADD CONSTRAINT "voting_delegations_delegator_id_users_id_fk" FOREIGN KEY ("delegator_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "voting_delegations" ADD CONSTRAINT "voting_delegations_delegate_id_users_id_fk" FOREIGN KEY ("delegate_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "voting_power_snapshots" ADD CONSTRAINT "voting_power_snapshots_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "voting_power_snapshots" ADD CONSTRAINT "voting_power_snapshots_proposal_id_proposals_id_fk" FOREIGN KEY ("proposal_id") REFERENCES "public"."proposals"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "watermark_templates" ADD CONSTRAINT "watermark_templates_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "appeal_jurors_appeal_idx" ON "appeal_jurors" USING btree ("appeal_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "appeal_jurors_juror_idx" ON "appeal_jurors" USING btree ("juror_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "appeal_jurors_status_idx" ON "appeal_jurors" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_auth_sessions_wallet_address" ON "auth_sessions" USING btree ("wallet_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_auth_sessions_session_token" ON "auth_sessions" USING btree ("session_token");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_auth_sessions_refresh_token" ON "auth_sessions" USING btree ("refresh_token");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_auth_sessions_expires_at" ON "auth_sessions" USING btree ("expires_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_auth_sessions_is_active" ON "auth_sessions" USING btree ("is_active");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_blocked_users_blocker" ON "blocked_users" USING btree ("blocker_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_blocked_users_blocked" ON "blocked_users" USING btree ("blocked_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "bookmark_user_idx" ON "bookmarks" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "bookmark_post_idx" ON "bookmarks" USING btree ("post_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_bridge_transactions_user_id" ON "bridge_transactions" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_bridge_transactions_status" ON "bridge_transactions" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_bridge_transactions_created_at" ON "bridge_transactions" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_cart_items_cart_id" ON "cart_items" USING btree ("cart_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_cart_items_product_id" ON "cart_items" USING btree ("product_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_cart_items_unique_cart_product" ON "cart_items" USING btree ("cart_id","product_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_carts_user_id" ON "carts" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_carts_session_id" ON "carts" USING btree ("session_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_carts_status" ON "carts" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_chat_messages_conversation_id_timestamp" ON "chat_messages" USING btree ("conversation_id","timestamp");--> statement-breakpoint
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = 'chat_messages'
+        AND column_name = 'reply_to_id'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS "idx_chat_messages_reply_to"
+        ON "chat_messages" USING btree ("reply_to_id");
+        RAISE NOTICE 'Created index idx_chat_messages_reply_to';
+    ELSE
+        RAISE NOTICE 'Column reply_to_id does not exist in chat_messages table, skipping index creation';
+    END IF;
+END$$;--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_communities_name" ON "communities" USING btree ("name");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_communities_category" ON "communities" USING btree ("category");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_communities_is_public" ON "communities" USING btree ("is_public");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_communities_member_count" ON "communities" USING btree ("member_count");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_communities_created_at" ON "communities" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_automated_executions_proposal_id" ON "community_automated_executions" USING btree ("proposal_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_automated_executions_type" ON "community_automated_executions" USING btree ("execution_type");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_automated_executions_time" ON "community_automated_executions" USING btree ("execution_time");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_automated_executions_status" ON "community_automated_executions" USING btree ("execution_status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_automated_executions_dependency" ON "community_automated_executions" USING btree ("dependency_proposal_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_categories_slug" ON "community_categories" USING btree ("slug");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_categories_is_active" ON "community_categories" USING btree ("is_active");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_categories_sort_order" ON "community_categories" USING btree ("sort_order");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_creator_rewards_community_id" ON "community_creator_rewards" USING btree ("community_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_creator_rewards_creator_address" ON "community_creator_rewards" USING btree ("creator_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_creator_rewards_post_id" ON "community_creator_rewards" USING btree ("post_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_creator_rewards_status" ON "community_creator_rewards" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_creator_rewards_created_at" ON "community_creator_rewards" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_delegations_community_id" ON "community_delegations" USING btree ("community_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_delegations_delegator" ON "community_delegations" USING btree ("delegator_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_delegations_delegate" ON "community_delegations" USING btree ("delegate_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_delegations_expiry" ON "community_delegations" USING btree ("expiry_date");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_events_community_id" ON "community_events" USING btree ("community_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_events_start_time" ON "community_events" USING btree ("start_time");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_events_event_type" ON "community_events" USING btree ("event_type");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_events_is_recurring" ON "community_events" USING btree ("is_recurring");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_governance_proposals_community_id" ON "community_governance_proposals" USING btree ("community_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_governance_proposals_proposer" ON "community_governance_proposals" USING btree ("proposer_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_governance_proposals_status" ON "community_governance_proposals" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_governance_proposals_voting_end_time" ON "community_governance_proposals" USING btree ("voting_end_time");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_governance_votes_proposal_id" ON "community_governance_votes" USING btree ("proposal_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_governance_votes_voter_address" ON "community_governance_votes" USING btree ("voter_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_governance_votes_choice" ON "community_governance_votes" USING btree ("vote_choice");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_members_community_id" ON "community_members" USING btree ("community_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_members_user_address" ON "community_members" USING btree ("user_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_members_role" ON "community_members" USING btree ("role");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_members_is_active" ON "community_members" USING btree ("is_active");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_members_joined_at" ON "community_members" USING btree ("joined_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_moderation_actions_community_id" ON "community_moderation_actions" USING btree ("community_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_moderation_actions_moderator" ON "community_moderation_actions" USING btree ("moderator_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_moderation_actions_action" ON "community_moderation_actions" USING btree ("action");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_moderation_actions_target_type" ON "community_moderation_actions" USING btree ("target_type");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_moderation_actions_created_at" ON "community_moderation_actions" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_multi_sig_approvals_proposal_id" ON "community_multi_sig_approvals" USING btree ("proposal_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_multi_sig_approvals_approver" ON "community_multi_sig_approvals" USING btree ("approver_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_multi_sig_approvals_approved_at" ON "community_multi_sig_approvals" USING btree ("approved_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_proxy_votes_proposal_id" ON "community_proxy_votes" USING btree ("proposal_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_proxy_votes_proxy" ON "community_proxy_votes" USING btree ("proxy_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_proxy_votes_voter" ON "community_proxy_votes" USING btree ("voter_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_recommendations_user_id" ON "community_recommendations" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_recommendations_community_id" ON "community_recommendations" USING btree ("community_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_recommendations_score" ON "community_recommendations" USING btree ("score");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_recommendations_expires_at" ON "community_recommendations" USING btree ("expires_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_referral_programs_community_id" ON "community_referral_programs" USING btree ("community_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_referral_programs_is_active" ON "community_referral_programs" USING btree ("is_active");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_referral_programs_start_date" ON "community_referral_programs" USING btree ("start_date");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_staking_community_id" ON "community_staking" USING btree ("community_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_staking_user_address" ON "community_staking" USING btree ("user_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_staking_is_active" ON "community_staking" USING btree ("is_active");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_staking_staked_at" ON "community_staking" USING btree ("staked_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_staking_rewards_staking_id" ON "community_staking_rewards" USING btree ("staking_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_staking_rewards_user_address" ON "community_staking_rewards" USING btree ("user_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_staking_rewards_status" ON "community_staking_rewards" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_staking_rewards_type" ON "community_staking_rewards" USING btree ("reward_type");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_stats_trending_score" ON "community_stats" USING btree ("trending_score");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_stats_growth_rate_7d" ON "community_stats" USING btree ("growth_rate_7d");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_stats_last_calculated_at" ON "community_stats" USING btree ("last_calculated_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_subscription_tiers_community_id" ON "community_subscription_tiers" USING btree ("community_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_subscription_tiers_is_active" ON "community_subscription_tiers" USING btree ("is_active");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_token_gated_content_community_id" ON "community_token_gated_content" USING btree ("community_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_token_gated_content_post_id" ON "community_token_gated_content" USING btree ("post_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_token_gated_content_gating_type" ON "community_token_gated_content" USING btree ("gating_type");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_token_gated_content_token_address" ON "community_token_gated_content" USING btree ("token_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_treasury_pools_community_id" ON "community_treasury_pools" USING btree ("community_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_treasury_pools_token_address" ON "community_treasury_pools" USING btree ("token_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_treasury_pools_is_active" ON "community_treasury_pools" USING btree ("is_active");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_user_content_access_content_id" ON "community_user_content_access" USING btree ("content_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_user_content_access_user_address" ON "community_user_content_access" USING btree ("user_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_user_content_access_level" ON "community_user_content_access" USING btree ("access_level");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_user_referrals_program_id" ON "community_user_referrals" USING btree ("program_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_user_referrals_referrer_address" ON "community_user_referrals" USING btree ("referrer_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_user_referrals_referred_address" ON "community_user_referrals" USING btree ("referred_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_user_referrals_reward_status" ON "community_user_referrals" USING btree ("reward_status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_user_referrals_unique" ON "community_user_referrals" USING btree ("program_id","referrer_address","referred_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_user_subscriptions_user_id" ON "community_user_subscriptions" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_user_subscriptions_community_id" ON "community_user_subscriptions" USING btree ("community_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_user_subscriptions_tier_id" ON "community_user_subscriptions" USING btree ("tier_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_community_user_subscriptions_status" ON "community_user_subscriptions" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_content_links_content" ON "content_links" USING btree ("content_id","content_type");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_content_links_url_analysis" ON "content_links" USING btree ("url_analysis_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "content_reports_content_idx" ON "content_reports" USING btree ("content_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "content_reports_reporter_idx" ON "content_reports" USING btree ("reporter_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_conversation_analytics_conversation_id" ON "conversation_analytics" USING btree ("conversation_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_conversation_analytics_last_message_at" ON "conversation_analytics" USING btree ("last_message_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_conversation_analytics_updated_at" ON "conversation_analytics" USING btree ("updated_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_conversation_participants_conversation_id" ON "conversation_participants" USING btree ("conversation_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_conversation_participants_user_id" ON "conversation_participants" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_conversation_participants_wallet_address" ON "conversation_participants" USING btree ("wallet_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_conversation_participants_role" ON "conversation_participants" USING btree ("role");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_conversation_participants_joined_at" ON "conversation_participants" USING btree ("joined_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_conversations_last_activity" ON "conversations" USING btree ("last_activity");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_conversations_order_id" ON "conversations" USING btree ("order_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_conversations_product_id" ON "conversations" USING btree ("product_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_conversations_listing_id" ON "conversations" USING btree ("listing_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_conversations_type" ON "conversations" USING btree ("conversation_type");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_conversations_status" ON "conversations" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_conversations_is_automated" ON "conversations" USING btree ("is_automated");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_custom_blacklist_type_value" ON "custom_blacklist" USING btree ("entry_type","entry_value");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_custom_blacklist_category" ON "custom_blacklist" USING btree ("category");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_custom_blacklist_active" ON "custom_blacklist" USING btree ("is_active");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_dex_swap_transactions_user_id" ON "dex_swap_transactions" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_dex_swap_transactions_status" ON "dex_swap_transactions" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_dex_swap_transactions_created_at" ON "dex_swap_transactions" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_domain_reputation_domain" ON "domain_reputation" USING btree ("domain");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_domain_reputation_score" ON "domain_reputation" USING btree ("reputation_score");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_domain_reputation_blacklisted" ON "domain_reputation" USING btree ("is_blacklisted");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_earning_activities_user_id" ON "earning_activities" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_earning_activities_activity_type" ON "earning_activities" USING btree ("activity_type");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_earning_activities_created_at" ON "earning_activities" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_ens_verifications_wallet_address" ON "ens_verifications" USING btree ("wallet_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_ens_verifications_ens_handle" ON "ens_verifications" USING btree ("ens_handle");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_ens_verifications_is_active" ON "ens_verifications" USING btree ("is_active");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_ens_verifications_expires_at" ON "ens_verifications" USING btree ("expires_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_ens_verifications_unique_active" ON "ens_verifications" USING btree ("wallet_address","ens_handle");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_event_rsvps_event_id" ON "event_rsvps" USING btree ("event_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_event_rsvps_user_id" ON "event_rsvps" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_event_rsvps_status" ON "event_rsvps" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_fiat_payment_records_purchase_transaction_id" ON "fiat_payment_records" USING btree ("purchase_transaction_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_fiat_payment_records_status" ON "fiat_payment_records" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_fiat_payment_records_processor_payment_id" ON "fiat_payment_records" USING btree ("processor_payment_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "follow_idx" ON "follows" USING btree ("follower_id","following_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_governance_settings_dao" ON "governance_settings" USING btree ("dao_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_image_storage_ipfs_hash" ON "image_storage" USING btree ("ipfs_hash");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_image_storage_owner_id" ON "image_storage" USING btree ("owner_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_image_storage_usage_type" ON "image_storage" USING btree ("usage_type");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_image_storage_usage_reference" ON "image_storage" USING btree ("usage_reference_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_image_storage_created_at" ON "image_storage" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "juror_eligibility_user_idx" ON "juror_eligibility" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "juror_eligibility_eligible_idx" ON "juror_eligibility" USING btree ("is_eligible");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "jury_voting_sessions_appeal_idx" ON "jury_voting_sessions" USING btree ("appeal_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "jury_voting_sessions_status_idx" ON "jury_voting_sessions" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_ldao_price_history_timestamp" ON "ldao_price_history" USING btree ("timestamp");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_ldao_price_history_source" ON "ldao_price_history" USING btree ("source");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_link_monitoring_alerts_type" ON "link_monitoring_alerts" USING btree ("alert_type");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_link_monitoring_alerts_resolved" ON "link_monitoring_alerts" USING btree ("is_resolved");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_link_safety_vendor_url_analysis" ON "link_safety_vendor_results" USING btree ("url_analysis_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_link_safety_vendor_name" ON "link_safety_vendor_results" USING btree ("vendor_name");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_marketplace_health_metrics_category" ON "marketplace_health_metrics" USING btree ("category");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_marketplace_health_metrics_period" ON "marketplace_health_metrics" USING btree ("period_start","period_end");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_marketplace_listings_seller_address" ON "marketplace_listings" USING btree ("seller_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_marketplace_listings_created_at" ON "marketplace_listings" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_marketplace_listings_price" ON "marketplace_listings" USING btree ("price");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_marketplace_listings_category" ON "marketplace_listings" USING btree ("category");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_marketplace_listings_is_active" ON "marketplace_listings" USING btree ("is_active");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_marketplace_listings_title" ON "marketplace_listings" USING btree ("title");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_marketplace_listings_active_created" ON "marketplace_listings" USING btree ("is_active","created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_marketplace_listings_seller_active" ON "marketplace_listings" USING btree ("seller_address","is_active");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_marketplace_listings_category_active" ON "marketplace_listings" USING btree ("category","is_active","created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_message_read_status_message" ON "message_read_status" USING btree ("message_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_message_read_status_user" ON "message_read_status" USING btree ("user_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_message_templates_user_id" ON "message_templates" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_message_templates_wallet_address" ON "message_templates" USING btree ("wallet_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_message_templates_category" ON "message_templates" USING btree ("category");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_message_templates_is_active" ON "message_templates" USING btree ("is_active");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_message_templates_created_at" ON "message_templates" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_message_templates_usage_count" ON "message_templates" USING btree ("usage_count");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "milestone_payments_milestone_id_idx" ON "milestone_payments" USING btree ("milestone_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "milestone_payments_status_idx" ON "milestone_payments" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_mobile_device_tokens_user_token" ON "mobile_device_tokens" USING btree ("user_address","token");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_mobile_device_tokens_platform" ON "mobile_device_tokens" USING btree ("platform");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_mobile_governance_sessions_user_session" ON "mobile_governance_sessions" USING btree ("user_address","session_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_mobile_governance_sessions_proposal" ON "mobile_governance_sessions" USING btree ("proposal_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_mobile_governance_sessions_start" ON "mobile_governance_sessions" USING btree ("session_start");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "moderation_appeals_case_idx" ON "moderation_appeals" USING btree ("case_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "moderation_appeals_appellant_idx" ON "moderation_appeals" USING btree ("appellant_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "moderation_appeals_status_idx" ON "moderation_appeals" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "moderation_cases_content_idx" ON "moderation_cases" USING btree ("content_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "moderation_cases_user_idx" ON "moderation_cases" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "moderation_cases_status_idx" ON "moderation_cases" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_offline_action_queue_user_action" ON "offline_action_queue" USING btree ("user_address","action_type");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_offline_action_queue_status" ON "offline_action_queue" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_offline_action_queue_created_at" ON "offline_action_queue" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_offline_content_cache_user_content" ON "offline_content_cache" USING btree ("user_address","content_type","content_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_offline_content_cache_expires_at" ON "offline_content_cache" USING btree ("expires_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_offline_content_cache_priority" ON "offline_content_cache" USING btree ("priority");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_order_payment_events_order_id" ON "order_payment_events" USING btree ("order_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_order_payment_events_transaction_id" ON "order_payment_events" USING btree ("transaction_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_order_payment_events_event_type" ON "order_payment_events" USING btree ("event_type");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_order_payment_events_payment_status" ON "order_payment_events" USING btree ("payment_status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_order_payment_events_created_at" ON "order_payment_events" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_orders_checkout_session_id" ON "orders" USING btree ("checkout_session_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_orders_payment_method" ON "orders" USING btree ("payment_method");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_orders_tracking_number" ON "orders" USING btree ("tracking_number");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_orders_estimated_delivery" ON "orders" USING btree ("estimated_delivery");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_orders_payment_confirmation_hash" ON "orders" USING btree ("payment_confirmation_hash");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_payment_preference_overrides_user_id" ON "payment_method_preference_overrides" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_payment_preference_overrides_expires_at" ON "payment_method_preference_overrides" USING btree ("expires_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_payment_preference_overrides_method_type" ON "payment_method_preference_overrides" USING btree ("payment_method_type");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_payment_preferences_user_id" ON "payment_method_preferences" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_payment_preferences_updated_at" ON "payment_method_preferences" USING btree ("updated_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_payment_preferences_learning_enabled" ON "payment_method_preferences" USING btree ("learning_enabled");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_payment_usage_history_user_id" ON "payment_method_usage_history" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_payment_usage_history_method_type" ON "payment_method_usage_history" USING btree ("payment_method_type");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_payment_usage_history_created_at" ON "payment_method_usage_history" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_payment_usage_history_user_method" ON "payment_method_usage_history" USING btree ("user_id","payment_method_type");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_payment_receipts_transaction_id" ON "payment_receipts" USING btree ("transaction_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_payment_receipts_order_id" ON "payment_receipts" USING btree ("order_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_payment_receipts_receipt_number" ON "payment_receipts" USING btree ("receipt_number");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_payment_receipts_payment_method" ON "payment_receipts" USING btree ("payment_method");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_payment_receipts_created_at" ON "payment_receipts" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_payment_transactions_order_id" ON "payment_transactions" USING btree ("order_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_payment_transactions_payment_method" ON "payment_transactions" USING btree ("payment_method");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_payment_transactions_status" ON "payment_transactions" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_payment_transactions_transaction_hash" ON "payment_transactions" USING btree ("transaction_hash");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_payment_transactions_payment_intent_id" ON "payment_transactions" USING btree ("payment_intent_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_payment_transactions_escrow_id" ON "payment_transactions" USING btree ("escrow_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_payment_transactions_created_at" ON "payment_transactions" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_payment_transactions_confirmed_at" ON "payment_transactions" USING btree ("confirmed_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_poll_options_poll_id" ON "poll_options" USING btree ("poll_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_poll_votes_poll_id" ON "poll_votes" USING btree ("poll_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_poll_votes_user_id" ON "poll_votes" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_poll_votes_option_id" ON "poll_votes" USING btree ("option_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_poll_votes_unique" ON "poll_votes" USING btree ("poll_id","user_id","option_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_polls_post_id" ON "polls" USING btree ("post_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_polls_expires_at" ON "polls" USING btree ("expires_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "post_tag_idx" ON "post_tags" USING btree ("post_id","tag");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_posts_community_id" ON "posts" USING btree ("community_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_posts_token_gated" ON "posts" USING btree ("is_token_gated");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "product_tag_idx" ON "product_tags" USING btree ("product_id","tag");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "tag_idx" ON "product_tags" USING btree ("tag");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "product_title_idx" ON "products" USING btree ("title");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "product_status_idx" ON "products" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "product_category_idx" ON "products" USING btree ("category_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "product_seller_idx" ON "products" USING btree ("seller_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "product_price_idx" ON "products" USING btree ("price_amount");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_products_listing_status" ON "products" USING btree ("listing_status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_products_published_at" ON "products" USING btree ("published_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "project_activities_booking_id_idx" ON "project_activities" USING btree ("booking_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "project_activities_created_at_idx" ON "project_activities" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "project_approvals_booking_id_idx" ON "project_approvals" USING btree ("booking_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "project_approvals_status_idx" ON "project_approvals" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "project_deliverables_booking_id_idx" ON "project_deliverables" USING btree ("booking_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "project_deliverables_milestone_id_idx" ON "project_deliverables" USING btree ("milestone_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "project_deliverables_status_idx" ON "project_deliverables" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "project_files_booking_id_idx" ON "project_files" USING btree ("booking_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "project_files_file_hash_idx" ON "project_files" USING btree ("file_hash");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "project_messages_thread_id_idx" ON "project_messages" USING btree ("thread_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "project_messages_booking_id_idx" ON "project_messages" USING btree ("booking_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "project_threads_booking_id_idx" ON "project_threads" USING btree ("booking_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_proposals_dao_id" ON "proposals" USING btree ("dao_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_proposals_status" ON "proposals" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_proposals_proposer" ON "proposals" USING btree ("proposer_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_proposals_category" ON "proposals" USING btree ("category");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_purchase_transactions_user_id" ON "purchase_transactions" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_purchase_transactions_status" ON "purchase_transactions" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_purchase_transactions_created_at" ON "purchase_transactions" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_purchase_transactions_payment_method" ON "purchase_transactions" USING btree ("payment_method");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_quick_replies_user_id" ON "quick_replies" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_quick_replies_wallet_address" ON "quick_replies" USING btree ("wallet_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_quick_replies_category" ON "quick_replies" USING btree ("category");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_quick_replies_is_active" ON "quick_replies" USING btree ("is_active");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_quick_replies_priority" ON "quick_replies" USING btree ("priority");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_quick_replies_usage_count" ON "quick_replies" USING btree ("usage_count");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "reaction_post_user_idx" ON "reactions" USING btree ("post_id","user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_referral_activities_referrer_id" ON "referral_activities" USING btree ("referrer_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_referral_activities_referee_id" ON "referral_activities" USING btree ("referee_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_referral_activities_created_at" ON "referral_activities" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_reputation_rules_event_type" ON "reputation_calculation_rules" USING btree ("event_type");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_reputation_rules_active" ON "reputation_calculation_rules" USING btree ("is_active");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_reputation_history_wallet_address" ON "reputation_history" USING btree ("wallet_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_reputation_history_event_type" ON "reputation_history" USING btree ("event_type");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_reputation_history_created_at" ON "reputation_history" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_reputation_history_transaction_id" ON "reputation_history" USING btree ("transaction_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_seller_growth_projections_wallet" ON "seller_growth_projections" USING btree ("seller_wallet_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_seller_growth_projections_type" ON "seller_growth_projections" USING btree ("projection_type");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_seller_performance_alerts_wallet" ON "seller_performance_alerts" USING btree ("seller_wallet_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_seller_performance_alerts_type" ON "seller_performance_alerts" USING btree ("alert_type");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_seller_performance_history_wallet_type" ON "seller_performance_history" USING btree ("seller_wallet_address","metric_type");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_seller_performance_history_period" ON "seller_performance_history" USING btree ("period_start","period_end");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_seller_risk_assessments_wallet" ON "seller_risk_assessments" USING btree ("seller_wallet_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_seller_risk_assessments_level" ON "seller_risk_assessments" USING btree ("risk_level");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_seller_scorecards_wallet" ON "seller_scorecards" USING btree ("seller_wallet_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_seller_scorecards_tier" ON "seller_scorecards" USING btree ("performance_tier");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "service_availability_service_id_idx" ON "service_availability" USING btree ("service_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "service_bookings_client_id_idx" ON "service_bookings" USING btree ("client_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "service_bookings_provider_id_idx" ON "service_bookings" USING btree ("provider_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "service_bookings_status_idx" ON "service_bookings" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "service_messages_booking_id_idx" ON "service_messages" USING btree ("booking_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "service_milestones_booking_id_idx" ON "service_milestones" USING btree ("booking_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "service_provider_profiles_user_id_unique" ON "service_provider_profiles" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "service_reviews_service_id_idx" ON "service_reviews" USING btree ("service_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "services_provider_id_idx" ON "services" USING btree ("provider_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "services_category_id_idx" ON "services" USING btree ("category_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "services_status_idx" ON "services" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "share_post_user_idx" ON "shares" USING btree ("post_id","user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "share_post_created_idx" ON "shares" USING btree ("post_id","created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_staking_positions_user_id" ON "staking_positions" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_staking_positions_status" ON "staking_positions" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_staking_positions_end_date" ON "staking_positions" USING btree ("end_date");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "time_tracking_booking_id_idx" ON "time_tracking" USING btree ("booking_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "time_tracking_provider_id_idx" ON "time_tracking" USING btree ("provider_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "time_tracking_start_time_idx" ON "time_tracking" USING btree ("start_time");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "tip_post_idx" ON "tips" USING btree ("post_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_trending_content_content_type" ON "trending_content" USING btree ("content_type");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_trending_content_content_id" ON "trending_content" USING btree ("content_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_trending_content_timeframe" ON "trending_content" USING btree ("timeframe");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_trending_content_score" ON "trending_content" USING btree ("score");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_trending_content_rank" ON "trending_content" USING btree ("rank");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_trending_content_calculated_at" ON "trending_content" USING btree ("calculated_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_url_analysis_url_hash" ON "url_analysis_results" USING btree ("url_hash");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_url_analysis_domain" ON "url_analysis_results" USING btree ("domain");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_url_analysis_status" ON "url_analysis_results" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_url_analysis_last_analyzed" ON "url_analysis_results" USING btree ("last_analyzed");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_user_interactions_user_id" ON "user_interactions" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_user_interactions_target_type" ON "user_interactions" USING btree ("target_type");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_user_interactions_target_id" ON "user_interactions" USING btree ("target_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_user_interactions_interaction_type" ON "user_interactions" USING btree ("interaction_type");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_user_interactions_created_at" ON "user_interactions" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_user_recommendations_user_id" ON "user_recommendations" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_user_recommendations_recommended_user_id" ON "user_recommendations" USING btree ("recommended_user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_user_recommendations_score" ON "user_recommendations" USING btree ("score");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_user_recommendations_expires_at" ON "user_recommendations" USING btree ("expires_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_user_reputation_score" ON "user_reputation" USING btree ("reputation_score");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_user_reputation_total_transactions" ON "user_reputation" USING btree ("total_transactions");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_user_reputation_updated_at" ON "user_reputation" USING btree ("updated_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "view_post_user_idx" ON "views" USING btree ("post_id","user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "view_post_created_idx" ON "views" USING btree ("post_id","created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_volume_discount_tiers_min_amount" ON "volume_discount_tiers" USING btree ("min_amount");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_volume_discount_tiers_is_active" ON "volume_discount_tiers" USING btree ("is_active");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_votes_proposal_id" ON "votes" USING btree ("proposal_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_votes_voter_id" ON "votes" USING btree ("voter_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_votes_created_at" ON "votes" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_voting_delegations_delegator" ON "voting_delegations" USING btree ("delegator_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_voting_delegations_delegate" ON "voting_delegations" USING btree ("delegate_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_voting_delegations_dao" ON "voting_delegations" USING btree ("dao_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_voting_delegations_active" ON "voting_delegations" USING btree ("active");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_voting_power_snapshots_user" ON "voting_power_snapshots" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_voting_power_snapshots_dao" ON "voting_power_snapshots" USING btree ("dao_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_voting_power_snapshots_proposal" ON "voting_power_snapshots" USING btree ("proposal_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_voting_power_snapshots_block" ON "voting_power_snapshots" USING btree ("snapshot_block");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_wallet_auth_attempts_wallet_address" ON "wallet_auth_attempts" USING btree ("wallet_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_wallet_auth_attempts_created_at" ON "wallet_auth_attempts" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_wallet_auth_attempts_success" ON "wallet_auth_attempts" USING btree ("success");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_wallet_nonces_wallet_address" ON "wallet_nonces" USING btree ("wallet_address");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_wallet_nonces_nonce" ON "wallet_nonces" USING btree ("nonce");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_wallet_nonces_expires_at" ON "wallet_nonces" USING btree ("expires_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_wallet_nonces_used" ON "wallet_nonces" USING btree ("used");

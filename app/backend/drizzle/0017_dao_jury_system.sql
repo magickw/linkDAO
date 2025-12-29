@@ -2,6 +2,7 @@
 -- Migration: 0017_dao_jury_system.sql
 
 -- Core moderation cases table
+DROP TABLE IF EXISTS "moderation_cases" CASCADE;
 CREATE TABLE IF NOT EXISTS "moderation_cases" (
   "id" serial PRIMARY KEY NOT NULL,
   "content_id" varchar(64) NOT NULL,
@@ -19,6 +20,7 @@ CREATE TABLE IF NOT EXISTS "moderation_cases" (
 );
 
 -- Moderation actions/enforcement
+DROP TABLE IF EXISTS "moderation_actions" CASCADE;
 CREATE TABLE IF NOT EXISTS "moderation_actions" (
   "id" serial PRIMARY KEY NOT NULL,
   "user_id" uuid NOT NULL,
@@ -31,6 +33,7 @@ CREATE TABLE IF NOT EXISTS "moderation_actions" (
 );
 
 -- Community reports
+DROP TABLE IF EXISTS "content_reports" CASCADE;
 CREATE TABLE IF NOT EXISTS "content_reports" (
   "id" serial PRIMARY KEY NOT NULL,
   "content_id" varchar(64) NOT NULL,
@@ -43,6 +46,7 @@ CREATE TABLE IF NOT EXISTS "content_reports" (
 );
 
 -- Appeals system
+DROP TABLE IF EXISTS "moderation_appeals" CASCADE;
 CREATE TABLE IF NOT EXISTS "moderation_appeals" (
   "id" serial PRIMARY KEY NOT NULL,
   "case_id" integer NOT NULL,
@@ -56,6 +60,7 @@ CREATE TABLE IF NOT EXISTS "moderation_appeals" (
 );
 
 -- DAO Jury system tables
+DROP TABLE IF EXISTS "appeal_jurors" CASCADE;
 CREATE TABLE IF NOT EXISTS "appeal_jurors" (
   "id" serial PRIMARY KEY NOT NULL,
   "appeal_id" integer NOT NULL,
@@ -72,6 +77,7 @@ CREATE TABLE IF NOT EXISTS "appeal_jurors" (
 );
 
 -- Jury voting sessions
+DROP TABLE IF EXISTS "jury_voting_sessions" CASCADE;
 CREATE TABLE IF NOT EXISTS "jury_voting_sessions" (
   "id" serial PRIMARY KEY NOT NULL,
   "appeal_id" integer NOT NULL,
@@ -91,6 +97,7 @@ CREATE TABLE IF NOT EXISTS "jury_voting_sessions" (
 );
 
 -- Juror eligibility and reputation tracking
+DROP TABLE IF EXISTS "juror_eligibility" CASCADE;
 CREATE TABLE IF NOT EXISTS "juror_eligibility" (
   "id" serial PRIMARY KEY NOT NULL,
   "user_id" uuid NOT NULL UNIQUE,
@@ -108,6 +115,7 @@ CREATE TABLE IF NOT EXISTS "juror_eligibility" (
 );
 
 -- Audit logging for moderation decisions
+DROP TABLE IF EXISTS "moderation_audit_log" CASCADE;
 CREATE TABLE IF NOT EXISTS "moderation_audit_log" (
   "id" serial PRIMARY KEY NOT NULL,
   "action_type" varchar(64) NOT NULL,
@@ -124,6 +132,7 @@ CREATE TABLE IF NOT EXISTS "moderation_audit_log" (
 );
 
 -- Reputation history tracking
+DROP TABLE IF EXISTS "reputation_history" CASCADE;
 CREATE TABLE IF NOT EXISTS "reputation_history" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "user_id" uuid NOT NULL,

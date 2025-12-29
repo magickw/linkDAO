@@ -5490,6 +5490,21 @@ export const returnAdminAuditLog = pgTable("return_admin_audit_log", {
   sessionId: varchar("session_id", { length: 100 }),
 
   // Security
+
+  // Two-Factor Authentication
+  export const twoFactorAuth = pgTable("two_factor_auth", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    method: varchar("method", { length: 20 }).notNull(), // 'totp' | 'email'
+    secret: text("secret"), // Encrypted TOTP secret
+    backupCodes: jsonb("backup_codes"), // Array of encrypted backup codes
+    isEnabled: boolean("is_enabled").default(false),
+    verifiedAt: timestamp("verified_at"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow()
+  }, (t) => ({
+    userIdIdx: index("idx_2fa_user_id").on(t.userId),
+  }));
   requiresApproval: boolean("requires_approval").default(false),
   approvedBy: uuid("approved_by"),
   approvedAt: timestamp("approved_at"),

@@ -2,6 +2,7 @@
 -- This migration adds enhanced project management features for service bookings
 
 -- Time tracking table for hourly services
+DROP TABLE IF EXISTS "time_tracking" CASCADE;
 CREATE TABLE time_tracking (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     booking_id UUID NOT NULL REFERENCES service_bookings(id),
@@ -20,6 +21,7 @@ CREATE TABLE time_tracking (
 );
 
 -- Project timeline and deliverables tracking
+DROP TABLE IF EXISTS "project_deliverables" CASCADE;
 CREATE TABLE project_deliverables (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     booking_id UUID NOT NULL REFERENCES service_bookings(id),
@@ -44,6 +46,7 @@ CREATE TABLE project_deliverables (
 );
 
 -- Enhanced milestone payments with escrow integration
+DROP TABLE IF EXISTS "milestone_payments" CASCADE;
 CREATE TABLE milestone_payments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     milestone_id UUID NOT NULL REFERENCES service_milestones(id),
@@ -62,6 +65,7 @@ CREATE TABLE milestone_payments (
 );
 
 -- Project communication threads (enhanced messaging)
+DROP TABLE IF EXISTS "project_threads" CASCADE;
 CREATE TABLE project_threads (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     booking_id UUID NOT NULL REFERENCES service_bookings(id),
@@ -75,6 +79,7 @@ CREATE TABLE project_threads (
 );
 
 -- Enhanced messages with thread support and file sharing
+DROP TABLE IF EXISTS "project_messages" CASCADE;
 CREATE TABLE project_messages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     thread_id UUID NOT NULL REFERENCES project_threads(id),
@@ -92,6 +97,7 @@ CREATE TABLE project_messages (
 );
 
 -- Project approval workflow
+DROP TABLE IF EXISTS "project_approvals" CASCADE;
 CREATE TABLE project_approvals (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     booking_id UUID NOT NULL REFERENCES service_bookings(id),
@@ -108,6 +114,7 @@ CREATE TABLE project_approvals (
 );
 
 -- Project activity log for timeline tracking
+DROP TABLE IF EXISTS "project_activities" CASCADE;
 CREATE TABLE project_activities (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     booking_id UUID NOT NULL REFERENCES service_bookings(id),
@@ -120,6 +127,7 @@ CREATE TABLE project_activities (
 );
 
 -- File sharing and version control
+DROP TABLE IF EXISTS "project_files" CASCADE;
 CREATE TABLE project_files (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     booking_id UUID NOT NULL REFERENCES service_bookings(id),
@@ -138,23 +146,23 @@ CREATE TABLE project_files (
 );
 
 -- Indexes for performance
-CREATE INDEX idx_time_tracking_booking_id ON time_tracking(booking_id);
-CREATE INDEX idx_time_tracking_provider_id ON time_tracking(provider_id);
-CREATE INDEX idx_time_tracking_start_time ON time_tracking(start_time);
-CREATE INDEX idx_project_deliverables_booking_id ON project_deliverables(booking_id);
-CREATE INDEX idx_project_deliverables_milestone_id ON project_deliverables(milestone_id);
-CREATE INDEX idx_project_deliverables_status ON project_deliverables(status);
-CREATE INDEX idx_milestone_payments_milestone_id ON milestone_payments(milestone_id);
-CREATE INDEX idx_milestone_payments_status ON milestone_payments(status);
-CREATE INDEX idx_project_threads_booking_id ON project_threads(booking_id);
-CREATE INDEX idx_project_messages_thread_id ON project_messages(thread_id);
-CREATE INDEX idx_project_messages_booking_id ON project_messages(booking_id);
-CREATE INDEX idx_project_approvals_booking_id ON project_approvals(booking_id);
-CREATE INDEX idx_project_approvals_status ON project_approvals(status);
-CREATE INDEX idx_project_activities_booking_id ON project_activities(booking_id);
-CREATE INDEX idx_project_activities_created_at ON project_activities(created_at);
-CREATE INDEX idx_project_files_booking_id ON project_files(booking_id);
-CREATE INDEX idx_project_files_file_hash ON project_files(file_hash);
+CREATE INDEX IF NOT EXISTS idx_time_tracking_booking_id ON time_tracking(booking_id);
+CREATE INDEX IF NOT EXISTS idx_time_tracking_provider_id ON time_tracking(provider_id);
+CREATE INDEX IF NOT EXISTS idx_time_tracking_start_time ON time_tracking(start_time);
+CREATE INDEX IF NOT EXISTS idx_project_deliverables_booking_id ON project_deliverables(booking_id);
+CREATE INDEX IF NOT EXISTS idx_project_deliverables_milestone_id ON project_deliverables(milestone_id);
+CREATE INDEX IF NOT EXISTS idx_project_deliverables_status ON project_deliverables(status);
+CREATE INDEX IF NOT EXISTS idx_milestone_payments_milestone_id ON milestone_payments(milestone_id);
+CREATE INDEX IF NOT EXISTS idx_milestone_payments_status ON milestone_payments(status);
+CREATE INDEX IF NOT EXISTS idx_project_threads_booking_id ON project_threads(booking_id);
+CREATE INDEX IF NOT EXISTS idx_project_messages_thread_id ON project_messages(thread_id);
+CREATE INDEX IF NOT EXISTS idx_project_messages_booking_id ON project_messages(booking_id);
+CREATE INDEX IF NOT EXISTS idx_project_approvals_booking_id ON project_approvals(booking_id);
+CREATE INDEX IF NOT EXISTS idx_project_approvals_status ON project_approvals(status);
+CREATE INDEX IF NOT EXISTS idx_project_activities_booking_id ON project_activities(booking_id);
+CREATE INDEX IF NOT EXISTS idx_project_activities_created_at ON project_activities(created_at);
+CREATE INDEX IF NOT EXISTS idx_project_files_booking_id ON project_files(booking_id);
+CREATE INDEX IF NOT EXISTS idx_project_files_file_hash ON project_files(file_hash);
 
 -- Add triggers for automatic activity logging
 CREATE OR REPLACE FUNCTION log_project_activity()
@@ -186,18 +194,22 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create triggers for activity logging
+DROP TRIGGER IF EXISTS trigger_log_milestone_activity ON service_milestones;
 CREATE TRIGGER trigger_log_milestone_activity
     AFTER INSERT OR UPDATE ON service_milestones
     FOR EACH ROW EXECUTE FUNCTION log_project_activity();
 
+DROP TRIGGER IF EXISTS trigger_log_deliverable_activity ON project_deliverables;
 CREATE TRIGGER trigger_log_deliverable_activity
     AFTER INSERT OR UPDATE ON project_deliverables
     FOR EACH ROW EXECUTE FUNCTION log_project_activity();
 
+DROP TRIGGER IF EXISTS trigger_log_payment_activity ON milestone_payments;
 CREATE TRIGGER trigger_log_payment_activity
     AFTER INSERT OR UPDATE ON milestone_payments
     FOR EACH ROW EXECUTE FUNCTION log_project_activity();
 
+DROP TRIGGER IF EXISTS trigger_log_approval_activity ON project_approvals;
 CREATE TRIGGER trigger_log_approval_activity
     AFTER INSERT OR UPDATE ON project_approvals
     FOR EACH ROW EXECUTE FUNCTION log_project_activity();

@@ -1,25 +1,92 @@
 -- Enhanced disputes table with comprehensive dispute resolution features
-ALTER TABLE "disputes" ADD COLUMN "dispute_type" varchar(64) DEFAULT 'other';
-ALTER TABLE "disputes" ADD COLUMN "resolution_method" varchar(32) DEFAULT 'community_arbitrator';
-ALTER TABLE "disputes" ADD COLUMN "evidence_deadline" timestamp;
-ALTER TABLE "disputes" ADD COLUMN "voting_deadline" timestamp;
-ALTER TABLE "disputes" ADD COLUMN "verdict" varchar(32);
-ALTER TABLE "disputes" ADD COLUMN "refund_amount" numeric;
-ALTER TABLE "disputes" ADD COLUMN "resolver_id" uuid;
-ALTER TABLE "disputes" ADD COLUMN "escalated_to_dao" boolean DEFAULT false;
+DO $$ BEGIN
+
+DROP TABLE IF EXISTS "disputes" CASCADE;
+CREATE TABLE "disputes" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"escrow_id" uuid,
+	"reporter_id" uuid,
+	"reason" text,
+	"status" varchar(32) DEFAULT 'created',
+	"created_at" timestamp DEFAULT now(),
+	"resolved_at" timestamp,
+	"resolution" text,
+	"evidence" text,
+	"dispute_type" varchar(64) DEFAULT 'other',
+	"resolution_method" varchar(32) DEFAULT 'community_arbitrator',
+	"evidence_deadline" timestamp,
+	"voting_deadline" timestamp,
+	"verdict" varchar(32),
+	"refund_amount" numeric,
+	"resolver_id" uuid,
+	"escalated_to_dao" boolean DEFAULT false
+);
+
+-- 	ALTER TABLE "disputes" ADD COLUMN "dispute_type" varchar(64) DEFAULT 'other';
+EXCEPTION
+	WHEN duplicate_column THEN null;
+END $$;
+DO $$ BEGIN
+-- 	ALTER TABLE "disputes" ADD COLUMN "resolution_method" varchar(32) DEFAULT 'community_arbitrator';
+EXCEPTION
+	WHEN duplicate_column THEN null;
+END $$;
+DO $$ BEGIN
+-- 	ALTER TABLE "disputes" ADD COLUMN "evidence_deadline" timestamp;
+EXCEPTION
+	WHEN duplicate_column THEN null;
+END $$;
+DO $$ BEGIN
+-- 	ALTER TABLE "disputes" ADD COLUMN "voting_deadline" timestamp;
+EXCEPTION
+	WHEN duplicate_column THEN null;
+END $$;
+DO $$ BEGIN
+-- 	ALTER TABLE "disputes" ADD COLUMN "verdict" varchar(32);
+EXCEPTION
+	WHEN duplicate_column THEN null;
+END $$;
+DO $$ BEGIN
+-- 	ALTER TABLE "disputes" ADD COLUMN "refund_amount" numeric;
+EXCEPTION
+	WHEN duplicate_column THEN null;
+END $$;
+DO $$ BEGIN
+-- 	ALTER TABLE "disputes" ADD COLUMN "resolver_id" uuid;
+EXCEPTION
+	WHEN duplicate_column THEN null;
+END $$;
+DO $$ BEGIN
+-- 	ALTER TABLE "disputes" ADD COLUMN "escalated_to_dao" boolean DEFAULT false;
+EXCEPTION
+	WHEN duplicate_column THEN null;
+END $$;
 
 -- Update existing disputes status to new format
-UPDATE "disputes" SET "status" = 'created' WHERE "status" = 'open';
+-- UPDATE "disputes" SET "status" = 'created' WHERE "status" = 'open';
 
 -- Add foreign key constraints for disputes
-ALTER TABLE "disputes" ADD CONSTRAINT "disputes_escrow_id_escrows_id_fk" FOREIGN KEY ("escrow_id") REFERENCES "escrows"("id") ON DELETE no action ON UPDATE no action;
-ALTER TABLE "disputes" ADD CONSTRAINT "disputes_reporter_id_users_id_fk" FOREIGN KEY ("reporter_id") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action;
-ALTER TABLE "disputes" ADD CONSTRAINT "disputes_resolver_id_users_id_fk" FOREIGN KEY ("resolver_id") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action;
+DO $$ BEGIN
+	ALTER TABLE "disputes" ADD CONSTRAINT "disputes_escrow_id_escrows_id_fk" FOREIGN KEY ("escrow_id") REFERENCES "escrows"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+DO $$ BEGIN
+	ALTER TABLE "disputes" ADD CONSTRAINT "disputes_reporter_id_users_id_fk" FOREIGN KEY ("reporter_id") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+DO $$ BEGIN
+	ALTER TABLE "disputes" ADD CONSTRAINT "disputes_resolver_id_users_id_fk" FOREIGN KEY ("resolver_id") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
 
 -- Create dispute evidence table
+DROP TABLE IF EXISTS "dispute_evidence" CASCADE;
 CREATE TABLE IF NOT EXISTS "dispute_evidence" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"dispute_id" integer,
+	"dispute_id" uuid,
 	"submitter_id" uuid,
 	"evidence_type" varchar(32) NOT NULL,
 	"ipfs_hash" varchar(128) NOT NULL,
@@ -28,13 +95,22 @@ CREATE TABLE IF NOT EXISTS "dispute_evidence" (
 	"verified" boolean DEFAULT false
 );
 
-ALTER TABLE "dispute_evidence" ADD CONSTRAINT "dispute_evidence_dispute_id_disputes_id_fk" FOREIGN KEY ("dispute_id") REFERENCES "disputes"("id") ON DELETE no action ON UPDATE no action;
-ALTER TABLE "dispute_evidence" ADD CONSTRAINT "dispute_evidence_submitter_id_users_id_fk" FOREIGN KEY ("submitter_id") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action;
+DO $$ BEGIN
+	ALTER TABLE "dispute_evidence" ADD CONSTRAINT "dispute_evidence_dispute_id_disputes_id_fk" FOREIGN KEY ("dispute_id") REFERENCES "disputes"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+DO $$ BEGIN
+	ALTER TABLE "dispute_evidence" ADD CONSTRAINT "dispute_evidence_submitter_id_users_id_fk" FOREIGN KEY ("submitter_id") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
 
 -- Create dispute votes table
+DROP TABLE IF EXISTS "dispute_votes" CASCADE;
 CREATE TABLE IF NOT EXISTS "dispute_votes" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"dispute_id" integer,
+	"dispute_id" uuid,
 	"voter_id" uuid,
 	"verdict" varchar(32) NOT NULL,
 	"voting_power" integer NOT NULL,
@@ -42,11 +118,24 @@ CREATE TABLE IF NOT EXISTS "dispute_votes" (
 	"timestamp" timestamp DEFAULT now()
 );
 
-ALTER TABLE "dispute_votes" ADD CONSTRAINT "dispute_votes_dispute_id_disputes_id_fk" FOREIGN KEY ("dispute_id") REFERENCES "disputes"("id") ON DELETE no action ON UPDATE no action;
-ALTER TABLE "dispute_votes" ADD CONSTRAINT "dispute_votes_voter_id_users_id_fk" FOREIGN KEY ("voter_id") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action;
-ALTER TABLE "dispute_votes" ADD CONSTRAINT "dispute_votes_dispute_id_voter_id_unique" UNIQUE("dispute_id","voter_id");
+DO $$ BEGIN
+	ALTER TABLE "dispute_votes" ADD CONSTRAINT "dispute_votes_dispute_id_disputes_id_fk" FOREIGN KEY ("dispute_id") REFERENCES "disputes"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+DO $$ BEGIN
+	ALTER TABLE "dispute_votes" ADD CONSTRAINT "dispute_votes_voter_id_users_id_fk" FOREIGN KEY ("voter_id") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+DO $$ BEGIN
+	ALTER TABLE "dispute_votes" ADD CONSTRAINT "dispute_votes_dispute_id_voter_id_unique" UNIQUE("dispute_id","voter_id");
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
 
 -- Create arbitrator applications table
+DROP TABLE IF EXISTS "arbitrator_applications" CASCADE;
 CREATE TABLE IF NOT EXISTS "arbitrator_applications" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"applicant_id" uuid,
@@ -60,13 +149,22 @@ CREATE TABLE IF NOT EXISTS "arbitrator_applications" (
 	"approved_at" timestamp
 );
 
-ALTER TABLE "arbitrator_applications" ADD CONSTRAINT "arbitrator_applications_applicant_id_users_id_fk" FOREIGN KEY ("applicant_id") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action;
-ALTER TABLE "arbitrator_applications" ADD CONSTRAINT "arbitrator_applications_applicant_id_unique" UNIQUE("applicant_id");
+DO $$ BEGIN
+	ALTER TABLE "arbitrator_applications" ADD CONSTRAINT "arbitrator_applications_applicant_id_users_id_fk" FOREIGN KEY ("applicant_id") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+DO $$ BEGIN
+	ALTER TABLE "arbitrator_applications" ADD CONSTRAINT "arbitrator_applications_applicant_id_unique" UNIQUE("applicant_id");
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
 
 -- Create dispute events table for audit trail
+DROP TABLE IF EXISTS "dispute_events" CASCADE;
 CREATE TABLE IF NOT EXISTS "dispute_events" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"dispute_id" integer,
+	"dispute_id" uuid,
 	"event_type" varchar(64) NOT NULL,
 	"actor_id" uuid,
 	"description" text,
@@ -74,8 +172,16 @@ CREATE TABLE IF NOT EXISTS "dispute_events" (
 	"timestamp" timestamp DEFAULT now()
 );
 
-ALTER TABLE "dispute_events" ADD CONSTRAINT "dispute_events_dispute_id_disputes_id_fk" FOREIGN KEY ("dispute_id") REFERENCES "disputes"("id") ON DELETE no action ON UPDATE no action;
-ALTER TABLE "dispute_events" ADD CONSTRAINT "dispute_events_actor_id_users_id_fk" FOREIGN KEY ("actor_id") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action;
+DO $$ BEGIN
+	ALTER TABLE "dispute_events" ADD CONSTRAINT "dispute_events_dispute_id_disputes_id_fk" FOREIGN KEY ("dispute_id") REFERENCES "disputes"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
+DO $$ BEGIN
+	ALTER TABLE "dispute_events" ADD CONSTRAINT "dispute_events_actor_id_users_id_fk" FOREIGN KEY ("actor_id") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS "idx_disputes_status" ON "disputes"("status");

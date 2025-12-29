@@ -2,6 +2,7 @@
 -- This migration adds tables for service listings, bookings, and scheduling
 
 -- Service categories table
+DROP TABLE IF EXISTS "service_categories" CASCADE;
 CREATE TABLE service_categories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) NOT NULL,
@@ -14,6 +15,7 @@ CREATE TABLE service_categories (
 );
 
 -- Services table
+DROP TABLE IF EXISTS "services" CASCADE;
 CREATE TABLE services (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     provider_id UUID NOT NULL REFERENCES users(id),
@@ -39,6 +41,7 @@ CREATE TABLE services (
 );
 
 -- Service availability table
+DROP TABLE IF EXISTS "service_availability" CASCADE;
 CREATE TABLE service_availability (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     service_id UUID NOT NULL REFERENCES services(id),
@@ -51,6 +54,7 @@ CREATE TABLE service_availability (
 );
 
 -- Service bookings table
+DROP TABLE IF EXISTS "service_bookings" CASCADE;
 CREATE TABLE service_bookings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     service_id UUID NOT NULL REFERENCES services(id),
@@ -75,6 +79,7 @@ CREATE TABLE service_bookings (
 );
 
 -- Service milestones table (for milestone-based pricing)
+DROP TABLE IF EXISTS "service_milestones" CASCADE;
 CREATE TABLE service_milestones (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     booking_id UUID NOT NULL REFERENCES service_bookings(id),
@@ -92,6 +97,7 @@ CREATE TABLE service_milestones (
 );
 
 -- Service reviews table (extends the existing reviews system)
+DROP TABLE IF EXISTS "service_reviews" CASCADE;
 CREATE TABLE service_reviews (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     booking_id UUID NOT NULL REFERENCES service_bookings(id),
@@ -111,6 +117,7 @@ CREATE TABLE service_reviews (
 );
 
 -- Service provider profiles table
+DROP TABLE IF EXISTS "service_provider_profiles" CASCADE;
 CREATE TABLE service_provider_profiles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) UNIQUE,
@@ -135,6 +142,7 @@ CREATE TABLE service_provider_profiles (
 );
 
 -- Service messages table (for client-provider communication)
+DROP TABLE IF EXISTS "service_messages" CASCADE;
 CREATE TABLE service_messages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     booking_id UUID NOT NULL REFERENCES service_bookings(id),
@@ -148,16 +156,16 @@ CREATE TABLE service_messages (
 );
 
 -- Indexes for performance
-CREATE INDEX idx_services_provider_id ON services(provider_id);
-CREATE INDEX idx_services_category_id ON services(category_id);
-CREATE INDEX idx_services_status ON services(status);
-CREATE INDEX idx_service_bookings_client_id ON service_bookings(client_id);
-CREATE INDEX idx_service_bookings_provider_id ON service_bookings(provider_id);
-CREATE INDEX idx_service_bookings_status ON service_bookings(status);
-CREATE INDEX idx_service_availability_service_id ON service_availability(service_id);
-CREATE INDEX idx_service_milestones_booking_id ON service_milestones(booking_id);
-CREATE INDEX idx_service_reviews_service_id ON service_reviews(service_id);
-CREATE INDEX idx_service_messages_booking_id ON service_messages(booking_id);
+CREATE INDEX IF NOT EXISTS idx_services_provider_id ON services(provider_id);
+CREATE INDEX IF NOT EXISTS idx_services_category_id ON services(category_id);
+CREATE INDEX IF NOT EXISTS idx_services_status ON services(status);
+CREATE INDEX IF NOT EXISTS idx_service_bookings_client_id ON service_bookings(client_id);
+CREATE INDEX IF NOT EXISTS idx_service_bookings_provider_id ON service_bookings(provider_id);
+CREATE INDEX IF NOT EXISTS idx_service_bookings_status ON service_bookings(status);
+CREATE INDEX IF NOT EXISTS idx_service_availability_service_id ON service_availability(service_id);
+CREATE INDEX IF NOT EXISTS idx_service_milestones_booking_id ON service_milestones(booking_id);
+CREATE INDEX IF NOT EXISTS idx_service_reviews_service_id ON service_reviews(service_id);
+CREATE INDEX IF NOT EXISTS idx_service_messages_booking_id ON service_messages(booking_id);
 
 -- Insert default service categories
 INSERT INTO service_categories (name, description, icon) VALUES

@@ -9,10 +9,10 @@ CREATE TABLE IF NOT EXISTS moderation_cases (
     content_type VARCHAR(24) NOT NULL CHECK (content_type IN ('post', 'comment', 'listing', 'dm', 'username', 'image', 'video')),
     user_id UUID NOT NULL REFERENCES users(id),
     status VARCHAR(24) DEFAULT 'pending' CHECK (status IN ('pending', 'quarantined', 'blocked', 'allowed', 'appealed', 'under_review')),
-    risk_score DECIMAL(5,4) DEFAULT 0 CHECK (risk_score >= 0 AND risk_score <= 1),
+    risk_score DECIMAL(10,4) DEFAULT 0 CHECK (risk_score >= 0 AND risk_score <= 1),
     decision VARCHAR(24) CHECK (decision IN ('allow', 'limit', 'block', 'review')),
     reason_code VARCHAR(48),
-    confidence DECIMAL(5,4) DEFAULT 0 CHECK (confidence >= 0 AND confidence <= 1),
+    confidence DECIMAL(10,4) DEFAULT 0 CHECK (confidence >= 0 AND confidence <= 1),
     vendor_scores JSONB DEFAULT '{}',
     evidence_cid TEXT, -- IPFS evidence bundle hash
     created_at TIMESTAMP DEFAULT NOW(),
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS content_reports (
     reporter_id UUID NOT NULL REFERENCES users(id),
     reason VARCHAR(48) NOT NULL CHECK (reason IN ('spam', 'harassment', 'hate_speech', 'violence', 'nsfw', 'scam', 'fake_content', 'copyright', 'other')),
     details TEXT,
-    weight DECIMAL(5,4) DEFAULT 1 CHECK (weight >= 0 AND weight <= 10),
+    weight DECIMAL(10,4) DEFAULT 1 CHECK (weight >= 0 AND weight <= 10),
     status VARCHAR(24) DEFAULT 'open' CHECK (status IN ('open', 'under_review', 'resolved', 'dismissed')),
     created_at TIMESTAMP DEFAULT NOW()
 );
@@ -81,9 +81,9 @@ CREATE TABLE IF NOT EXISTS moderation_policies (
     id SERIAL PRIMARY KEY,
     category VARCHAR(48) NOT NULL,
     severity VARCHAR(24) NOT NULL CHECK (severity IN ('low', 'medium', 'high', 'critical')),
-    confidence_threshold DECIMAL(5,4) NOT NULL CHECK (confidence_threshold >= 0 AND confidence_threshold <= 1),
+    confidence_threshold DECIMAL(10,4) NOT NULL CHECK (confidence_threshold >= 0 AND confidence_threshold <= 1),
     action VARCHAR(24) NOT NULL CHECK (action IN ('allow', 'limit', 'block', 'review')),
-    reputation_modifier DECIMAL(5,4) DEFAULT 0, -- Adjustment based on user reputation
+    reputation_modifier DECIMAL(10,4) DEFAULT 0, -- Adjustment based on user reputation
     description TEXT NOT NULL,
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT NOW(),
@@ -98,10 +98,10 @@ CREATE TABLE IF NOT EXISTS moderation_vendors (
     vendor_type VARCHAR(24) NOT NULL CHECK (vendor_type IN ('text', 'image', 'video', 'link', 'custom')),
     api_endpoint VARCHAR(255),
     is_enabled BOOLEAN DEFAULT true,
-    weight DECIMAL(5,4) DEFAULT 1 CHECK (weight >= 0 AND weight <= 1),
+    weight DECIMAL(10,4) DEFAULT 1 CHECK (weight >= 0 AND weight <= 1),
     cost_per_request DECIMAL(10,6) DEFAULT 0,
     avg_latency_ms INTEGER DEFAULT 0,
-    success_rate DECIMAL(5,4) DEFAULT 1,
+    success_rate DECIMAL(10,4) DEFAULT 1,
     last_health_check TIMESTAMP,
     configuration JSONB DEFAULT '{}',
     description TEXT,

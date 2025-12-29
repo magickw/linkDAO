@@ -1,12 +1,13 @@
 -- Review and Reputation System Tables
 
 -- Reviews table for storing user reviews
+DROP TABLE IF EXISTS "reviews" CASCADE;
 CREATE TABLE IF NOT EXISTS "reviews" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"reviewer_id" uuid NOT NULL,
 	"reviewee_id" uuid NOT NULL,
-	"order_id" integer NOT NULL,
-	"listing_id" integer,
+	"order_id" uuid NOT NULL,
+	"listing_id" uuid,
 	"rating" integer NOT NULL,
 	"title" varchar(200),
 	"comment" text,
@@ -22,6 +23,7 @@ CREATE TABLE IF NOT EXISTS "reviews" (
 );
 
 -- Review helpfulness tracking
+DROP TABLE IF EXISTS "review_helpfulness" CASCADE;
 CREATE TABLE IF NOT EXISTS "review_helpfulness" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"review_id" integer NOT NULL,
@@ -31,6 +33,7 @@ CREATE TABLE IF NOT EXISTS "review_helpfulness" (
 );
 
 -- Review reports for moderation
+DROP TABLE IF EXISTS "review_reports" CASCADE;
 CREATE TABLE IF NOT EXISTS "review_reports" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"review_id" integer NOT NULL,
@@ -45,6 +48,7 @@ CREATE TABLE IF NOT EXISTS "review_reports" (
 );
 
 -- Reputation history tracking
+DROP TABLE IF EXISTS "reputation_history" CASCADE;
 CREATE TABLE IF NOT EXISTS "reputation_history" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"user_id" uuid NOT NULL,

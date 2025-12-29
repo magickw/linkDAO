@@ -5,6 +5,7 @@
 -- - product_tags: Tag system for efficient product searching
 
 -- Create Categories Table
+DROP TABLE IF EXISTS "categories" CASCADE;
 CREATE TABLE IF NOT EXISTS "categories" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" varchar(255) NOT NULL,
@@ -21,6 +22,7 @@ CREATE TABLE IF NOT EXISTS "categories" (
 );
 
 -- Create Products Table
+DROP TABLE IF EXISTS "products" CASCADE;
 CREATE TABLE IF NOT EXISTS "products" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"seller_id" uuid NOT NULL,
@@ -51,17 +53,33 @@ CREATE TABLE IF NOT EXISTS "product_tags" (
 );
 
 -- Add Foreign Key Constraints
-ALTER TABLE "categories" ADD CONSTRAINT "categories_parent_id_categories_id_fk" 
+DO $$ BEGIN
+	ALTER TABLE "categories" ADD CONSTRAINT "categories_parent_id_categories_id_fk" 
 	FOREIGN KEY ("parent_id") REFERENCES "public"."categories"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
 
-ALTER TABLE "products" ADD CONSTRAINT "products_seller_id_users_id_fk" 
+DO $$ BEGIN
+	ALTER TABLE "products" ADD CONSTRAINT "products_seller_id_users_id_fk" 
 	FOREIGN KEY ("seller_id") REFERENCES "public"."users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
 
-ALTER TABLE "products" ADD CONSTRAINT "products_category_id_categories_id_fk" 
+DO $$ BEGIN
+	ALTER TABLE "products" ADD CONSTRAINT "products_category_id_categories_id_fk" 
 	FOREIGN KEY ("category_id") REFERENCES "public"."categories"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
 
-ALTER TABLE "product_tags" ADD CONSTRAINT "product_tags_product_id_products_id_fk" 
+DO $$ BEGIN
+	ALTER TABLE "product_tags" ADD CONSTRAINT "product_tags_product_id_products_id_fk" 
 	FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
 
 -- Create Indexes for Performance
 CREATE INDEX IF NOT EXISTS "product_tag_idx" ON "product_tags" USING btree ("product_id","tag");
@@ -76,8 +94,12 @@ CREATE INDEX IF NOT EXISTS "product_inventory_idx" ON "products" USING btree ("i
 
 -- Add product_id column to existing listings table to link with products
 ALTER TABLE "listings" ADD COLUMN IF NOT EXISTS "product_id" uuid;
-ALTER TABLE "listings" ADD CONSTRAINT "listings_product_id_products_id_fk" 
+DO $$ BEGIN
+	ALTER TABLE "listings" ADD CONSTRAINT "listings_product_id_products_id_fk" 
 	FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+EXCEPTION
+	WHEN duplicate_object THEN null;
+END $$;
 
 -- Insert some default categories
 INSERT INTO "categories" ("name", "slug", "description", "path", "sort_order") VALUES

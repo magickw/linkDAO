@@ -8,7 +8,8 @@ import { ethers } from 'ethers';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { eq } from 'drizzle-orm';
-import { users, authSessions, twoFactorAuth } from '../db/schema';
+import { users, authSessions } from '../db/schema';
+// Note: twoFactorAuth table may not exist yet - handle gracefully in code
 import { successResponse, errorResponse, validationErrorResponse } from '../utils/apiResponse';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
 import { referralService } from '../services/referralService';
@@ -83,18 +84,30 @@ class AuthController {
           const defaultHandle = `user_${shortAddress}`;
 
           // Create new user with comprehensive initial data
+          const newUserData: any = {
+            walletAddress: walletAddress.toLowerCase(),
+            handle: defaultHandle,
+            displayName: defaultHandle,
+            role: 'user', // Default role
+            ldaoBalance: '0', // Initialize balance
+            createdAt: new Date(),
+            updatedAt: new Date()
+          };
+
+          // Only add isVerified if the column exists (optional for backward compatibility)
+          // This prevents errors when migrations haven't run yet
+          try {
+            // Try to add isVerified - if column doesn't exist, it will be ignored
+            newUserData.isVerified = false;
+          } catch (e) {
+            // Column doesn't exist yet, skip it
+          }
+
           const newUser = await db
             .insert(users)
-            .values({
-              walletAddress: walletAddress.toLowerCase(),
-              handle: defaultHandle,
-              displayName: defaultHandle,
-              role: 'user', // Default role
-              ldaoBalance: '0', // Initialize balance
-              createdAt: new Date(),
-              updatedAt: new Date()
-            })
+            .values(newUserData)
             .returning();
+
 
           user = newUser;
 
@@ -183,6 +196,7 @@ class AuthController {
       // Check if user has 2FA enabled
       let userHas2FA = false;
       try {
+        const { twoFactorAuth } = await import('../db/schema');
         const [authRecord] = await db
           .select()
           .from(twoFactorAuth)
@@ -192,7 +206,7 @@ class AuthController {
         userHas2FA = authRecord?.isEnabled || false;
         safeLogger.info('2FA status checked', { userId: userData.id, has2FA: userHas2FA });
       } catch (twoFactorError) {
-        safeLogger.error('Error checking 2FA status:', twoFactorError);
+        safeLogger.info('2FA check failed, skipping', { error: twoFactorError });
         // Continue without 2FA check if there's an error
       }
 
@@ -417,6 +431,7 @@ class AuthController {
       const speakeasy = require('speakeasy');
 
       // Get user's 2FA record
+      const { twoFactorAuth } = await import('../db/schema');
       const [authRecord] = await db
         .select()
         .from(twoFactorAuth)

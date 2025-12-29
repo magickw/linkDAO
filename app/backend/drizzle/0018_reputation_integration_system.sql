@@ -2,6 +2,7 @@
 -- This migration enhances the reputation system for AI content moderation
 
 -- Enhanced reputation tracking with detailed metrics
+DROP TABLE IF EXISTS "user_reputation_scores" CASCADE;
 CREATE TABLE user_reputation_scores (
     id SERIAL PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(id) UNIQUE,
@@ -14,7 +15,7 @@ CREATE TABLE user_reputation_scores (
     false_reports_count INTEGER DEFAULT 0,
     successful_appeals_count INTEGER DEFAULT 0,
     jury_decisions_count INTEGER DEFAULT 0,
-    jury_accuracy_rate DECIMAL(5,4) DEFAULT 0 CHECK (jury_accuracy_rate >= 0 AND jury_accuracy_rate <= 1),
+    jury_accuracy_rate DECIMAL(10,4) DEFAULT 0 CHECK (jury_accuracy_rate >= 0 AND jury_accuracy_rate <= 1),
     last_violation_at TIMESTAMP,
     reputation_tier VARCHAR(24) DEFAULT 'bronze' CHECK (reputation_tier IN ('bronze', 'silver', 'gold', 'platinum', 'diamond')),
     created_at TIMESTAMP DEFAULT NOW(),
@@ -22,6 +23,7 @@ CREATE TABLE user_reputation_scores (
 );
 
 -- Reputation change events with detailed tracking
+DROP TABLE IF EXISTS "reputation_change_events" CASCADE;
 CREATE TABLE reputation_change_events (
     id SERIAL PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(id),
@@ -33,7 +35,7 @@ CREATE TABLE reputation_change_events (
     score_change DECIMAL(10,4) NOT NULL, -- Can be negative for penalties
     previous_score DECIMAL(10,4) NOT NULL,
     new_score DECIMAL(10,4) NOT NULL,
-    severity_multiplier DECIMAL(5,4) DEFAULT 1,
+    severity_multiplier DECIMAL(10,4) DEFAULT 1,
     case_id INTEGER REFERENCES moderation_cases(id),
     appeal_id INTEGER REFERENCES moderation_appeals(id),
     report_id INTEGER REFERENCES content_reports(id),
@@ -43,6 +45,7 @@ CREATE TABLE reputation_change_events (
 );
 
 -- Progressive penalty system
+DROP TABLE IF EXISTS "reputation_penalties" CASCADE;
 CREATE TABLE reputation_penalties (
     id SERIAL PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(id),
@@ -60,6 +63,7 @@ CREATE TABLE reputation_penalties (
 );
 
 -- Reputation thresholds configuration
+DROP TABLE IF EXISTS "reputation_thresholds" CASCADE;
 CREATE TABLE reputation_thresholds (
     id SERIAL PRIMARY KEY,
     threshold_type VARCHAR(32) NOT NULL CHECK (threshold_type IN (
@@ -67,13 +71,14 @@ CREATE TABLE reputation_thresholds (
     )),
     min_score DECIMAL(10,4) NOT NULL,
     max_score DECIMAL(10,4),
-    multiplier DECIMAL(5,4) DEFAULT 1,
+    multiplier DECIMAL(10,4) DEFAULT 1,
     description TEXT NOT NULL,
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT NOW()
 );
 
 -- Juror performance tracking
+DROP TABLE IF EXISTS "juror_performance" CASCADE;
 CREATE TABLE juror_performance (
     id SERIAL PRIMARY KEY,
     juror_id UUID NOT NULL REFERENCES users(id),
@@ -85,11 +90,12 @@ CREATE TABLE juror_performance (
     reward_earned DECIMAL(20,8) DEFAULT 0,
     penalty_applied DECIMAL(20,8) DEFAULT 0,
     response_time_minutes INTEGER,
-    quality_score DECIMAL(5,4) CHECK (quality_score >= 0 AND quality_score <= 1),
+    quality_score DECIMAL(10,4) CHECK (quality_score >= 0 AND quality_score <= 1),
     created_at TIMESTAMP DEFAULT NOW()
 );
 
 -- Reporter performance tracking
+DROP TABLE IF EXISTS "reporter_performance" CASCADE;
 CREATE TABLE reporter_performance (
     id SERIAL PRIMARY KEY,
     reporter_id UUID NOT NULL REFERENCES users(id),
@@ -97,20 +103,21 @@ CREATE TABLE reporter_performance (
     report_accuracy VARCHAR(24) CHECK (report_accuracy IN ('accurate', 'inaccurate', 'pending')),
     moderator_agreement BOOLEAN,
     final_case_outcome VARCHAR(24),
-    weight_applied DECIMAL(5,4) NOT NULL,
+    weight_applied DECIMAL(10,4) NOT NULL,
     reputation_impact DECIMAL(10,4) DEFAULT 0,
     created_at TIMESTAMP DEFAULT NOW()
 );
 
 -- Reputation rewards configuration
+DROP TABLE IF EXISTS "reputation_rewards" CASCADE;
 CREATE TABLE reputation_rewards (
     id SERIAL PRIMARY KEY,
     reward_type VARCHAR(32) NOT NULL CHECK (reward_type IN (
         'helpful_report', 'accurate_jury_vote', 'content_quality', 'community_contribution'
     )),
     base_reward DECIMAL(10,4) NOT NULL,
-    multiplier_min DECIMAL(5,4) DEFAULT 1,
-    multiplier_max DECIMAL(5,4) DEFAULT 3,
+    multiplier_min DECIMAL(10,4) DEFAULT 1,
+    multiplier_max DECIMAL(10,4) DEFAULT 3,
     requirements JSONB DEFAULT '{}',
     description TEXT NOT NULL,
     is_active BOOLEAN DEFAULT true,
@@ -118,33 +125,33 @@ CREATE TABLE reputation_rewards (
 );
 
 -- Performance optimization indices
-CREATE INDEX idx_user_reputation_scores_user_id ON user_reputation_scores(user_id);
-CREATE INDEX idx_user_reputation_scores_overall_score ON user_reputation_scores(overall_score);
-CREATE INDEX idx_user_reputation_scores_tier ON user_reputation_scores(reputation_tier);
+CREATE INDEX IF NOT EXISTS idx_user_reputation_scores_user_id ON user_reputation_scores(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_reputation_scores_overall_score ON user_reputation_scores(overall_score);
+CREATE INDEX IF NOT EXISTS idx_user_reputation_scores_tier ON user_reputation_scores(reputation_tier);
 
-CREATE INDEX idx_reputation_change_events_user_id ON reputation_change_events(user_id);
-CREATE INDEX idx_reputation_change_events_event_type ON reputation_change_events(event_type);
-CREATE INDEX idx_reputation_change_events_created_at ON reputation_change_events(created_at);
-CREATE INDEX idx_reputation_change_events_case_id ON reputation_change_events(case_id);
+CREATE INDEX IF NOT EXISTS idx_reputation_change_events_user_id ON reputation_change_events(user_id);
+CREATE INDEX IF NOT EXISTS idx_reputation_change_events_event_type ON reputation_change_events(event_type);
+CREATE INDEX IF NOT EXISTS idx_reputation_change_events_created_at ON reputation_change_events(created_at);
+CREATE INDEX IF NOT EXISTS idx_reputation_change_events_case_id ON reputation_change_events(case_id);
 
-CREATE INDEX idx_reputation_penalties_user_id ON reputation_penalties(user_id);
-CREATE INDEX idx_reputation_penalties_active ON reputation_penalties(is_active);
-CREATE INDEX idx_reputation_penalties_penalty_end ON reputation_penalties(penalty_end);
+CREATE INDEX IF NOT EXISTS idx_reputation_penalties_user_id ON reputation_penalties(user_id);
+CREATE INDEX IF NOT EXISTS idx_reputation_penalties_active ON reputation_penalties(is_active);
+CREATE INDEX IF NOT EXISTS idx_reputation_penalties_penalty_end ON reputation_penalties(penalty_end);
 
-CREATE INDEX idx_juror_performance_juror_id ON juror_performance(juror_id);
-CREATE INDEX idx_juror_performance_appeal_id ON juror_performance(appeal_id);
-CREATE INDEX idx_juror_performance_was_correct ON juror_performance(was_correct);
+CREATE INDEX IF NOT EXISTS idx_juror_performance_juror_id ON juror_performance(juror_id);
+CREATE INDEX IF NOT EXISTS idx_juror_performance_appeal_id ON juror_performance(appeal_id);
+CREATE INDEX IF NOT EXISTS idx_juror_performance_was_correct ON juror_performance(was_correct);
 
-CREATE INDEX idx_reporter_performance_reporter_id ON reporter_performance(reporter_id);
-CREATE INDEX idx_reporter_performance_accuracy ON reporter_performance(report_accuracy);
+CREATE INDEX IF NOT EXISTS idx_reporter_performance_reporter_id ON reporter_performance(reporter_id);
+CREATE INDEX IF NOT EXISTS idx_reporter_performance_accuracy ON reporter_performance(report_accuracy);
 
 -- Composite indices for common queries
-CREATE INDEX idx_reputation_change_events_user_type ON reputation_change_events(user_id, event_type);
-CREATE INDEX idx_reputation_penalties_user_active ON reputation_penalties(user_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_reputation_change_events_user_type ON reputation_change_events(user_id, event_type);
+CREATE INDEX IF NOT EXISTS idx_reputation_penalties_user_active ON reputation_penalties(user_id, is_active);
 
 -- Function to calculate reputation tier based on score
 CREATE OR REPLACE FUNCTION calculate_reputation_tier(score DECIMAL)
-RETURNS VARCHAR AS $
+RETURNS VARCHAR AS $$
 BEGIN
     IF score >= 5000 THEN RETURN 'diamond';
     ELSIF score >= 3000 THEN RETURN 'platinum';
@@ -153,11 +160,11 @@ BEGIN
     ELSE RETURN 'bronze';
     END IF;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- Function to update reputation scores
 CREATE OR REPLACE FUNCTION update_reputation_score()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 BEGIN
     UPDATE user_reputation_scores 
     SET 
@@ -183,16 +190,17 @@ BEGIN
     
     RETURN NEW;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- Create trigger for automatic reputation updates
+DROP TRIGGER IF EXISTS trigger_update_reputation_score ON reputation_change_events;
 CREATE TRIGGER trigger_update_reputation_score
     AFTER INSERT ON reputation_change_events
     FOR EACH ROW EXECUTE FUNCTION update_reputation_score();
 
 -- Function to update reputation counters
 CREATE OR REPLACE FUNCTION update_reputation_counters()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 BEGIN
     IF NEW.event_type = 'policy_violation' THEN
         UPDATE user_reputation_scores 
@@ -216,9 +224,10 @@ BEGIN
     
     RETURN NEW;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- Create trigger for counter updates
+DROP TRIGGER IF EXISTS trigger_update_reputation_counters ON reputation_change_events;
 CREATE TRIGGER trigger_update_reputation_counters
     AFTER INSERT ON reputation_change_events
     FOR EACH ROW EXECUTE FUNCTION update_reputation_counters();
