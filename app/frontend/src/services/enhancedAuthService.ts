@@ -1020,14 +1020,6 @@ class EnhancedAuthService {
 
     if (this.token) {
       headers['Authorization'] = `Bearer ${this.token}`;
-      console.log('🔑 Auth headers prepared:', {
-        hasToken: !!this.token,
-        tokenLength: this.token.length,
-        tokenPreview: this.token.substring(0, 20) + '...',
-        headerPreview: headers['Authorization']?.substring(0, 40) + '...'
-      });
-    } else {
-      console.log('❌ No token available for auth headers');
     }
 
     return headers;

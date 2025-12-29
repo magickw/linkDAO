@@ -103,7 +103,7 @@ const CATEGORIES = [
   { value: 'digital-fashion', label: '👗 Digital Fashion' },
   { value: 'trading-cards', label: '🃏 Trading Cards' },
   { value: 'tickets', label: '🎫 Tickets & Events' },
-  
+
   // Physical Products
   { value: 'electronics', label: '📱 Electronics' },
   { value: 'fashion', label: '👕 Fashion & Wearables' },
@@ -124,7 +124,7 @@ const CATEGORIES = [
   { value: 'baby', label: '👶 Baby Products' },
   { value: 'outdoor', label: '🏕️ Outdoor & Camping' },
   { value: 'fitness', label: '💪 Fitness & Exercise' },
-  
+
   // Services & Experiences
   { value: 'services', label: '🛠️ Services' },
   { value: 'education', label: '🎓 Education & Courses' },
@@ -137,18 +137,18 @@ const CATEGORIES = [
   { value: 'wellness', label: '🧘 Wellness & Health' },
   { value: 'travel', label: '✈️ Travel & Experiences' },
   { value: 'subscription', label: '🔄 Subscriptions' },
-  
+
   // Real Estate & Property
   { value: 'real-estate', label: '🏡 Real Estate' },
   { value: 'rental', label: '🔑 Rentals' },
   { value: 'timeshare', label: '📅 Timeshares' },
-  
+
   // Business & Industrial
   { value: 'business', label: '🏢 Business & Industrial' },
   { value: 'equipment', label: '🏭 Equipment & Machinery' },
   { value: 'wholesale', label: '📦 Wholesale & Bulk' },
   { value: 'manufacturing', label: '🏭 Manufacturing' },
-  
+
   // Other
   { value: 'other', label: '📦 Other' }
 ];
@@ -158,26 +158,26 @@ const POPULAR_TAGS = [
   // General tags
   'rare', 'limited-edition', 'handmade', 'vintage', 'premium',
   'exclusive', 'collectible', 'new', 'trending', 'popular',
-  
+
   // Digital & NFT tags
   'digital-art', 'nft', 'gaming', 'music', 'photography', 'utility',
   'access-token', 'membership', 'metaverse', 'virtual-land', 'domain',
   'trading-cards', 'tickets', 'digital-fashion', 'memes',
-  
+
   // Physical product tags
   'electronics', 'fashion', 'home', 'books', 'sports', 'toys',
   'automotive', 'health', 'beauty', 'jewelry', 'collectibles', 'crafts',
   'pet-supplies', 'food', 'organic', 'eco-friendly', 'sustainable',
-  
+
   // Service tags
   'services', 'education', 'consulting', 'software', 'design',
   'writing', 'marketing', 'legal', 'wellness', 'travel', 'online',
   'professional', 'expert', 'certified',
-  
+
   // Business tags
   'business', 'wholesale', 'bulk', 'manufacturing', 'equipment',
   'real-estate', 'rental', 'investment', 'commercial',
-  
+
   // Other tags
   'free-shipping', 'fast-delivery', 'local', 'international',
   'customizable', 'personalized', 'gift', 'sale', 'discount'
@@ -196,6 +196,17 @@ const STEP_TITLES = {
 };
 
 const STEP_ORDER: FormStep[] = ['basic', 'details', 'pricing', 'shipping', 'images', 'review'];
+
+const resolveImageUrl = (url: string) => {
+  if (!url) return '/images/placeholders/product-placeholder.svg';
+  if (url.startsWith('ipfs://')) {
+    return `https://ipfs.io/ipfs/${url.replace('ipfs://', '')}`;
+  }
+  if (url.startsWith('Qm') || url.startsWith('bafy')) {
+    return `https://ipfs.io/ipfs/${url}`;
+  }
+  return url;
+};
 
 const EditListingPage: React.FC = () => {
   const { address, isConnected } = useAccount();
@@ -259,20 +270,20 @@ const EditListingPage: React.FC = () => {
   useEffect(() => {
     const loadListingData = async () => {
       if (!id || typeof id !== 'string') return;
-      
+
       try {
         setInitialLoading(true);
         // Fetch the listing data from the API
         console.log('Loading listing data for ID:', id);
-        
+
         // Import seller service dynamically to avoid circular dependencies
         const { sellerService } = await import('@/services/sellerService');
         const listing = await sellerService.getListingById(id);
-        
+
         if (!listing) {
           throw new Error('Listing not found');
         }
-        
+
         // Transform listing data to form data
         // Note: SellerListing doesn't have a metadata field, so we'll use an empty object
         const metadata: any = {};
@@ -341,7 +352,7 @@ const EditListingPage: React.FC = () => {
           } : undefined, // Load existing shipping configuration or provide defaults
           variants: [], // Initialize with empty variants array
           tokenAddress: '' // Default value since SellerListing doesn't have this field
-        };        
+        };
         setFormData(transformedData);
         setExistingImages(listing.images || []);
         // Set primary image index to 0 by default (first image)
@@ -534,7 +545,7 @@ const EditListingPage: React.FC = () => {
       // Validate dimensions based on unit
       const { length, width, height } = formData.shipping.packageDetails.dimensions;
       const unit = formData.shipping.packageDetails.dimensionUnit;
-      
+
       if (length <= 0 || width <= 0 || height <= 0) {
         errors.dimensions = 'All dimensions must be greater than 0';
       } else if (unit === 'cm') {
@@ -637,7 +648,7 @@ const EditListingPage: React.FC = () => {
     }
 
     setImages(prev => [...prev, ...filesToAdd]);
-    
+
     // Set primary image index to first new image if none is set and there are no existing images
     if (primaryImageIndex === -1 && existingImages.length === 0 && filesToAdd.length > 0) {
       setPrimaryImageIndex(existingImages.length + imagePreviews.length);
@@ -667,7 +678,7 @@ const EditListingPage: React.FC = () => {
       const newExistingImages = [...existingImages];
       newExistingImages.splice(index, 1);
       setExistingImages(newExistingImages);
-      
+
       // Adjust primary image index if needed
       if (primaryImageIndex > index) {
         setPrimaryImageIndex(primaryImageIndex - 1);
@@ -680,13 +691,13 @@ const EditListingPage: React.FC = () => {
       const adjustedIndex = index - existingImages.length;
       const newImages = [...images];
       const newPreviews = [...imagePreviews];
-      
+
       newImages.splice(adjustedIndex, 1);
       newPreviews.splice(adjustedIndex, 1);
-      
+
       setImages(newImages);
       setImagePreviews(newPreviews);
-      
+
       // Adjust primary image index if needed
       if (primaryImageIndex > index) {
         setPrimaryImageIndex(primaryImageIndex - 1);
@@ -705,11 +716,11 @@ const EditListingPage: React.FC = () => {
     // Combine existing and new images for manipulation
     const allImages = [...existingImages, ...imagePreviews];
     const allImageFiles = [...Array(existingImages.length).fill(null), ...images];
-    
+
     // Remove the moved item and insert it at the new position
     const [movedImage] = allImages.splice(fromIndex, 1);
     allImages.splice(toIndex, 0, movedImage);
-    
+
     const [movedImageFile] = allImageFiles.splice(fromIndex, 1);
     allImageFiles.splice(toIndex, 0, movedImageFile);
 
@@ -790,7 +801,7 @@ const EditListingPage: React.FC = () => {
 
       // Upload new images to IPFS first
       const uploadedImageUrls: string[] = [...existingImages];
-      
+
       for (let i = 0; i < images.length; i++) {
         try {
           const result = await ipfsUploadService.uploadFile(images[i]);
@@ -832,13 +843,13 @@ const EditListingPage: React.FC = () => {
         specifications: formData.specifications,
         variants: formData.variants, // Include size variants
         // Note: Some fields are not part of the SellerListing interface but may be used by the backend
-      };      console.log('[EDIT] About to call sellerService.updateListing');
+      }; console.log('[EDIT] About to call sellerService.updateListing');
       console.log('[EDIT] listingData:', listingData);
 
       // Import seller service dynamically to avoid circular dependencies
       const { sellerService } = await import('@/services/sellerService');
       // Call the real update listing API
-      await sellerService.updateListing(id, listingData);      
+      await sellerService.updateListing(id, listingData);
       addToast('🎉 Listing updated successfully!', 'success');
       router.push('/marketplace/seller/dashboard');
     } catch (error: any) {
@@ -863,12 +874,12 @@ const EditListingPage: React.FC = () => {
           <React.Fragment key={step}>
             <div
               className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-medium cursor-pointer transition-all ${isActive
-                  ? 'bg-indigo-500 text-white'
-                  : isCompleted
-                    ? 'bg-green-500 text-white'
-                    : isAccessible
-                      ? 'bg-white/20 text-white hover:bg-white/30'
-                      : 'bg-white/10 text-white/50 cursor-not-allowed'
+                ? 'bg-indigo-500 text-white'
+                : isCompleted
+                  ? 'bg-green-500 text-white'
+                  : isAccessible
+                    ? 'bg-white/20 text-white hover:bg-white/30'
+                    : 'bg-white/10 text-white/50 cursor-not-allowed'
                 }`}
               onClick={() => isAccessible && goToStep(step)}
             >
@@ -894,7 +905,7 @@ const EditListingPage: React.FC = () => {
         </p>
       );
     }
-    
+
     // For USD or other currencies, don't show conversion
     return null;
   };
@@ -917,8 +928,8 @@ const EditListingPage: React.FC = () => {
     return (
       <div
         className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${selected
-            ? 'border-indigo-400 bg-indigo-500/20'
-            : 'border-white/20 bg-white/5 hover:border-white/40'
+          ? 'border-indigo-400 bg-indigo-500/20'
+          : 'border-white/20 bg-white/5 hover:border-white/40'
           } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         onClick={!disabled ? onClick : undefined}
       >
@@ -981,7 +992,7 @@ const EditListingPage: React.FC = () => {
           {/* Progress indicator */}
           <GlassPanel className="mb-8">
             <StepIndicator />
-            
+
             <div className="text-center mb-6">
               <h2 className="text-xl font-semibold text-white">
                 {STEP_TITLES[currentStep]}
@@ -1002,9 +1013,8 @@ const EditListingPage: React.FC = () => {
                     type="text"
                     value={formData.title}
                     onChange={(e) => handleFormChange('title', e.target.value)}
-                    className={`w-full px-4 py-3 bg-white/10 border ${
-                      fieldErrors.title ? 'border-red-500' : 'border-white/20'
-                    } rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                    className={`w-full px-4 py-3 bg-white/10 border ${fieldErrors.title ? 'border-red-500' : 'border-white/20'
+                      } rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
                     placeholder="Enter a descriptive title for your product"
                   />
                   {fieldErrors.title && (
@@ -1023,9 +1033,8 @@ const EditListingPage: React.FC = () => {
                     value={formData.description}
                     onChange={(e) => handleFormChange('description', e.target.value)}
                     rows={6}
-                    className={`w-full px-4 py-3 bg-white/10 border ${
-                      fieldErrors.description ? 'border-red-500' : 'border-white/20'
-                    } rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                    className={`w-full px-4 py-3 bg-white/10 border ${fieldErrors.description ? 'border-red-500' : 'border-white/20'
+                      } rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
                     placeholder="Describe your product in detail..."
                   />
                   {fieldErrors.description && (
@@ -1048,9 +1057,8 @@ const EditListingPage: React.FC = () => {
                   <select
                     value={formData.category}
                     onChange={(e) => handleFormChange('category', e.target.value)}
-                    className={`w-full px-4 py-3 bg-white/10 border ${
-                      fieldErrors.category ? 'border-red-500' : 'border-white/20'
-                    } rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                    className={`w-full px-4 py-3 bg-white/10 border ${fieldErrors.category ? 'border-red-500' : 'border-white/20'
+                      } rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500`}
                   >
                     <option value="">Select a category</option>
                     {CATEGORIES.map((cat) => (
@@ -1157,11 +1165,10 @@ const EditListingPage: React.FC = () => {
                       <button
                         key={condition.value}
                         type="button"
-                        className={`py-3 px-4 rounded-lg border transition-all ${
-                          formData.condition === condition.value
-                            ? 'border-indigo-400 bg-indigo-500/20 text-white'
-                            : 'border-white/20 bg-white/5 text-white hover:border-white/40'
-                        }`}
+                        className={`py-3 px-4 rounded-lg border transition-all ${formData.condition === condition.value
+                          ? 'border-indigo-400 bg-indigo-500/20 text-white'
+                          : 'border-white/20 bg-white/5 text-white hover:border-white/40'
+                          }`}
                         onClick={() => handleFormChange('condition', condition.value)}
                       >
                         {condition.label}
@@ -1219,7 +1226,7 @@ const EditListingPage: React.FC = () => {
                   <label className="block text-sm font-medium text-white/90 mb-2">
                     Specifications (Optional)
                   </label>
-                  
+
                   {/* Weight Input */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
@@ -1258,7 +1265,7 @@ const EditListingPage: React.FC = () => {
                         </select>
                       </div>
                     </div>
-                    
+
                     {/* Dimension Inputs */}
                     <div>
                       <label className="block text-sm text-white/70 mb-1">Dimensions</label>
@@ -1328,7 +1335,7 @@ const EditListingPage: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Additional Specifications Textarea */}
                   <textarea
                     rows={4}
@@ -1338,14 +1345,14 @@ const EditListingPage: React.FC = () => {
                       // Convert specifications object to textarea format
                       const specs = formData.specifications || {};
                       const lines = [];
-                      
+
                       // Add other specifications (excluding weight and dimensions which have their own inputs)
                       Object.entries(specs).forEach(([key, value]) => {
                         if (key !== 'weight' && key !== 'dimensions' && value !== undefined) {
                           lines.push(`${key}: ${value}`);
                         }
                       });
-                      
+
                       return lines.join('\n');
                     })()}
                     onChange={(e) => {
@@ -1355,14 +1362,14 @@ const EditListingPage: React.FC = () => {
                         weight: formData.specifications?.weight,
                         dimensions: formData.specifications?.dimensions
                       };
-                      
+
                       lines.forEach(line => {
                         const [key, ...valueParts] = line.split(':');
                         if (key && valueParts.length > 0) {
                           newSpecs[key.trim()] = valueParts.join(':').trim();
                         }
                       });
-                      
+
                       handleFormChange('specifications', newSpecs);
                     }}
                   />
@@ -1423,9 +1430,8 @@ const EditListingPage: React.FC = () => {
                       onChange={(e) => handleFormChange('price', e.target.value)}
                       step="0.01"
                       min="0"
-                      className={`w-full pl-16 pr-4 py-3 bg-white/10 border ${
-                        fieldErrors.price ? 'border-red-500' : 'border-white/20'
-                      } rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                      className={`w-full pl-16 pr-4 py-3 bg-white/10 border ${fieldErrors.price ? 'border-red-500' : 'border-white/20'
+                        } rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
                       placeholder="0.00"
                     />
                   </div>
@@ -1450,11 +1456,9 @@ const EditListingPage: React.FC = () => {
                         }}
                         min="1"
                         disabled={formData.unlimitedQuantity}
-                        className={`w-full px-4 py-3 bg-white/10 border ${
-                          fieldErrors.quantity ? 'border-red-500' : 'border-white/20'
-                        } rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                          formData.unlimitedQuantity ? 'opacity-50' : ''
-                        }`}
+                        className={`w-full px-4 py-3 bg-white/10 border ${fieldErrors.quantity ? 'border-red-500' : 'border-white/20'
+                          } rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${formData.unlimitedQuantity ? 'opacity-50' : ''
+                          }`}
                         placeholder="Enter quantity"
                       />
                       {fieldErrors.quantity && (
@@ -1484,22 +1488,20 @@ const EditListingPage: React.FC = () => {
                     <div className="space-y-3">
                       <button
                         type="button"
-                        className={`w-full py-3 px-4 rounded-lg border transition-all ${
-                          formData.listingType === 'FIXED_PRICE'
-                            ? 'border-indigo-400 bg-indigo-500/20 text-white'
-                            : 'border-white/20 bg-white/5 text-white hover:border-white/40'
-                        }`}
+                        className={`w-full py-3 px-4 rounded-lg border transition-all ${formData.listingType === 'FIXED_PRICE'
+                          ? 'border-indigo-400 bg-indigo-500/20 text-white'
+                          : 'border-white/20 bg-white/5 text-white hover:border-white/40'
+                          }`}
                         onClick={() => handleFormChange('listingType', 'FIXED_PRICE')}
                       >
                         Fixed Price
                       </button>
                       <button
                         type="button"
-                        className={`w-full py-3 px-4 rounded-lg border transition-all ${
-                          formData.listingType === 'AUCTION'
-                            ? 'border-indigo-400 bg-indigo-500/20 text-white'
-                            : 'border-white/20 bg-white/5 text-white hover:border-white/40'
-                        }`}
+                        className={`w-full py-3 px-4 rounded-lg border transition-all ${formData.listingType === 'AUCTION'
+                          ? 'border-indigo-400 bg-indigo-500/20 text-white'
+                          : 'border-white/20 bg-white/5 text-white hover:border-white/40'
+                          }`}
                         onClick={() => handleFormChange('listingType', 'AUCTION')}
                       >
                         Auction
@@ -1584,11 +1586,10 @@ const EditListingPage: React.FC = () => {
             {currentStep === 'images' && (
               <div className="space-y-6">
                 <div
-                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                    dragActive
-                      ? 'border-indigo-500 bg-indigo-500/10'
-                      : 'border-white/20 hover:border-white/40'
-                  }`}
+                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive
+                    ? 'border-indigo-500 bg-indigo-500/10'
+                    : 'border-white/20 hover:border-white/40'
+                    }`}
                   onDragEnter={handleDrag}
                   onDragOver={handleDrag}
                   onDragLeave={handleDrag}
@@ -1625,23 +1626,23 @@ const EditListingPage: React.FC = () => {
                   <div>
                     <h3 className="text-lg font-medium text-white mb-4">Uploaded Images</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+
                       {/* Existing images */}
                       {existingImages.map((preview, index) => (
                         <div
                           key={`existing-${index}`}
-                          className={`relative group rounded-lg overflow-hidden border-2 ${
-                            primaryImageIndex === index
-                              ? 'border-indigo-500 ring-2 ring-indigo-500/50'
-                              : 'border-white/20'
-                          }`}
+                          className={`relative group rounded-lg overflow-hidden border-2 ${primaryImageIndex === index
+                            ? 'border-indigo-500 ring-2 ring-indigo-500/50'
+                            : 'border-white/20'
+                            }`}
                         >
                           <img
-                            src={preview}
+                            src={resolveImageUrl(preview)}
                             alt={`Product ${index + 1}`}
                             className="w-full h-32 object-cover"
                             onError={(e) => {
                               const target = e.target as HTMLImageElement;
-                              target.src = `https://placehold.co/300x300/4B2E83/FFFFFF?text=Image+${index + 1}`;
+                              target.src = '/images/placeholders/product-placeholder.svg';
                             }}
                           />
                           <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -1678,11 +1679,10 @@ const EditListingPage: React.FC = () => {
                         return (
                           <div
                             key={`new-${index}`}
-                            className={`relative group rounded-lg overflow-hidden border-2 ${
-                              primaryImageIndex === adjustedIndex
-                                ? 'border-indigo-500 ring-2 ring-indigo-500/50'
-                                : 'border-white/20'
-                            }`}
+                            className={`relative group rounded-lg overflow-hidden border-2 ${primaryImageIndex === adjustedIndex
+                              ? 'border-indigo-500 ring-2 ring-indigo-500/50'
+                              : 'border-white/20'
+                              }`}
                           >
                             <img
                               src={preview}
@@ -1690,7 +1690,7 @@ const EditListingPage: React.FC = () => {
                               className="w-full h-32 object-cover"
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement;
-                                target.src = `https://placehold.co/300x300/4B2E83/FFFFFF?text=New+Image+${index + 1}`;
+                                target.src = '/images/placeholders/product-placeholder.svg';
                               }}
                             />
                             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -1747,22 +1747,22 @@ const EditListingPage: React.FC = () => {
               <div className="space-y-6">
                 <div className="bg-white/5 rounded-lg p-6">
                   <h3 className="text-lg font-medium text-white mb-4">Product Preview</h3>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="md:col-span-1">
                       {/* Display primary image */}
                       {existingImages.length > 0 || imagePreviews.length > 0 ? (
                         <img
                           src={
-                            primaryImageIndex < existingImages.length
+                            resolveImageUrl(primaryImageIndex < existingImages.length
                               ? existingImages[primaryImageIndex]
-                              : imagePreviews[primaryImageIndex - existingImages.length]
+                              : imagePreviews[primaryImageIndex - existingImages.length])
                           }
                           alt={formData.title || 'Product Image'}
                           className="w-full h-48 object-cover rounded-lg"
                           onError={(e) => {
                             const target = e.target as HTMLImageElement;
-                            target.src = `https://placehold.co/600x400/4B2E83/FFFFFF?text=Main+Image`;
+                            target.src = '/images/placeholders/product-placeholder.svg';
                           }}
                         />
                       ) : (
@@ -1771,10 +1771,10 @@ const EditListingPage: React.FC = () => {
                         </div>
                       )}
                     </div>
-                    
+
                     <div className="md:col-span-2">
                       <h2 className="text-xl font-bold text-white">{formData.title || 'Product Title'}</h2>
-                      
+
                       <div className="flex items-center mt-2">
                         <div className="flex text-yellow-400">
                           {[...Array(5)].map((_, i) => (
@@ -1783,17 +1783,17 @@ const EditListingPage: React.FC = () => {
                         </div>
                         <span className="ml-2 text-sm text-white/70">(0 reviews)</span>
                       </div>
-                      
+
                       <div className="mt-4">
                         <span className="text-2xl font-bold text-white">
                           {formData.currency} {formData.price || '0.00'}
                         </span>
                       </div>
-                      
+
                       <p className="mt-4 text-white/80 line-clamp-3">
                         {formData.description || 'Product description will appear here...'}
                       </p>
-                      
+
                       <div className="mt-6 flex flex-wrap gap-2">
                         {formData.tags.map((tag) => (
                           <span
@@ -1807,10 +1807,10 @@ const EditListingPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="bg-white/5 rounded-lg p-6">
                   <h3 className="text-lg font-medium text-white mb-4">Listing Details</h3>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <h4 className="text-sm font-medium text-white/70">Category</h4>
@@ -1818,42 +1818,42 @@ const EditListingPage: React.FC = () => {
                         {CATEGORIES.find(c => c.value === formData.category)?.label || 'Not specified'}
                       </p>
                     </div>
-                    
+
                     <div>
                       <h4 className="text-sm font-medium text-white/70">Condition</h4>
                       <p className="text-white capitalize">{formData.condition || 'Not specified'}</p>
                     </div>
-                    
+
                     <div>
                       <h4 className="text-sm font-medium text-white/70">Item Type</h4>
                       <p className="text-white">{formData.itemType || 'Not specified'}</p>
                     </div>
-                    
+
                     <div>
                       <h4 className="text-sm font-medium text-white/70">Inventory</h4>
                       <p className="text-white">
                         {formData.unlimitedQuantity ? 'Unlimited' : formData.quantity}
                       </p>
                     </div>
-                    
+
                     <div>
                       <h4 className="text-sm font-medium text-white/70">Escrow Protection</h4>
                       <p className="text-white">
                         {formData.escrowEnabled ? 'Enabled' : 'Disabled'}
                       </p>
                     </div>
-                    
+
                     <div>
                       <h4 className="text-sm font-medium text-white/70">Royalty</h4>
                       <p className="text-white">{formData.royalty}%</p>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center p-4 bg-yellow-900/30 border border-yellow-500/30 rounded-lg">
                   <AlertCircle className="text-yellow-400 mr-3 flex-shrink-0" size={20} />
                   <p className="text-yellow-200 text-sm">
-                    By clicking "Save Changes", you confirm that all information is accurate and you agree to our 
+                    By clicking "Save Changes", you confirm that all information is accurate and you agree to our
                     seller terms and conditions.
                   </p>
                 </div>
@@ -1872,7 +1872,7 @@ const EditListingPage: React.FC = () => {
               <ChevronLeft className="mr-2" size={16} />
               Previous
             </Button>
-            
+
             {currentStep === 'review' ? (
               <Button
                 onClick={handleSubmit}

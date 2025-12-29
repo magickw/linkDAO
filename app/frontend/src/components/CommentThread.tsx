@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Comment, CreateCommentInput } from '@/models/CommunityPost';
 import { CommunityMembership } from '@/models/CommunityMembership';
 import { CommunityPostService } from '@/services/communityPostService';
