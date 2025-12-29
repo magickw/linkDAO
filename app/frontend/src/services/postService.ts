@@ -120,11 +120,11 @@ export class PostService {
       if (response.status === 404) {
         throw new Error('Post not found. It may have already been deleted or does not exist.');
       }
-      
+
       if (response.status === 401) {
         throw new Error('Authentication required. Please log in again.');
       }
-      
+
       if (response.status === 403) {
         throw new Error('You do not have permission to delete this post.');
       }
@@ -272,7 +272,7 @@ export class PostService {
       let headers: Record<string, string> = {
         'Content-Type': 'application/json'
       };
-      
+
       try {
         // Attempt to get auth headers, but don't fail if not authenticated
         const authHeaders = await enhancedAuthService.getAuthHeaders();
@@ -427,6 +427,44 @@ export class PostService {
       return this.handleResponse(response, 'Failed to fetch posts by community');
     } catch (error) {
       console.error('Error fetching posts by community:', error);
+      throw error;
+    }
+  }
+
+  static async repostPost(originalPostId: string, author: string, message?: string, media?: string[]): Promise<any> {
+    try {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/repost`, {
+        method: 'POST',
+        headers: await enhancedAuthService.getAuthHeaders(),
+        body: JSON.stringify({
+          originalPostId,
+          author,
+          message,
+          media: media || []
+        })
+      });
+
+      return this.handleResponse(response, 'Failed to repost');
+    } catch (error) {
+      console.error('Error reposting:', error);
+      throw error;
+    }
+  }
+
+  static async unrepostPost(originalPostId: string, author: string): Promise<any> {
+    try {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/unrepost`, {
+        method: 'POST',
+        headers: await enhancedAuthService.getAuthHeaders(),
+        body: JSON.stringify({
+          originalPostId,
+          author
+        })
+      });
+
+      return this.handleResponse(response, 'Failed to remove repost');
+    } catch (error) {
+      console.error('Error removing repost:', error);
       throw error;
     }
   }

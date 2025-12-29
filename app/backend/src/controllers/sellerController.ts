@@ -669,18 +669,29 @@ export class SellerController {
 
       // Verify ownership using a simple check first (or let service handle it, but service checks wallet address match)
       // The service expects walletAddress to verify ownership indirectly via seller ID lookup
-      // But we should probably check if the listing belongs to the user here for security 403
-      const [listing] = await db.select()
+      console.log(`[SellerController] Attempting to update listing ${id} for user ${user?.walletAddress}`);
+
+      const listingResults = await db.select()
         .from(products)
         .leftJoin(users, eq(products.sellerId, users.id))
         .where(eq(products.id, id));
 
-      if (!listing || listing.users?.walletAddress !== user.walletAddress) {
-        return res.status(404).json({ success: false, error: "Listing not found or access denied" });
+      const listing = listingResults[0];
+
+      if (!listing) {
+        console.log(`[SellerController] Listing not found in DB for ID: ${id}`);
+        return res.status(404).json({ success: false, error: "Listing not found" });
+      }
+
+      console.log(`[SellerController] Found listing. Seller wallet: ${listing.users?.walletAddress}, User wallet: ${user?.walletAddress}`);
+
+      if (listing.users?.walletAddress?.toLowerCase() !== user.walletAddress?.toLowerCase()) {
+        console.warn(`[SellerController] Ownership check failed for listing ${id}. Expected ${listing.users?.walletAddress}, got ${user.walletAddress}`);
+        return res.status(403).json({ success: false, error: "Access denied: You do not own this listing" });
       }
 
       // Prepare update data for validator
-      console.log(`Updating listing ${id} with rich data`);
+      console.log(`[SellerController] Ownership verified. Updating listing ${id} with rich data`);
 
       const updateData: any = {
         title: updates.title,
@@ -698,6 +709,7 @@ export class SellerController {
         shipping: updates.shipping,
         variants: updates.variants,
         itemType: updates.itemType,
+        isPhysical: updates.itemType === 'PHYSICAL', // Sync isPhysical flag
         seoTitle: updates.seoTitle,
         seoDescription: updates.seoDescription,
         metadata: { ...updates.metadata }

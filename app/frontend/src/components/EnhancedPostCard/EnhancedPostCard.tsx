@@ -51,6 +51,7 @@ interface EnhancedPostCardProps {
   onExpand?: () => void;
   onUpvote?: (postId: string) => Promise<void>;
   onDownvote?: (postId: string) => Promise<void>;
+  isNested?: boolean;
 }
 
 // Add proper comparison function for React.memo
@@ -79,7 +80,8 @@ const EnhancedPostCard = React.memo(({
   onTip,
   onExpand,
   onUpvote,
-  onDownvote
+  onDownvote,
+  isNested = false
 }: EnhancedPostCardProps) => {
   const { address, isConnected } = useWeb3();
   const { addToast } = useToast();
@@ -136,7 +138,7 @@ const EnhancedPostCard = React.memo(({
         // Regular post or community post
         if (post.communityId) {
           // Community post
-          await CommunityPostService.deletePost(post.communityId, post.id);
+          await CommunityPostService.deletePost(post.communityId, post.id, address!.toLowerCase());
         } else {
           // Regular post (not a community post)
           await PostService.deletePost(post.id);
@@ -175,6 +177,39 @@ const EnhancedPostCard = React.memo(({
       addToast('Failed to unpin post', 'error');
     }
   }, [post.id, addToast]);
+
+  const [isRepostedByMe, setIsRepostedByMe] = useState(post.isRepostedByMe);
+
+  const handleRepost = useCallback(async (postId: string, message?: string, media?: string[]) => {
+    try {
+      if (!address) {
+        addToast('Please connect your wallet to repost', 'error');
+        return;
+      }
+      await PostService.repostPost(postId, address, message, media);
+      setIsRepostedByMe(true);
+      addToast('Post reposted successfully!', 'success');
+      // In a real app, you might want to refresh the feed
+    } catch (error) {
+      console.error('Error reposting:', error);
+      addToast('Failed to repost', 'error');
+    }
+  }, [address, addToast]);
+
+  const handleUnrepost = useCallback(async (postId: string) => {
+    try {
+      if (!address) {
+        addToast('Please connect your wallet', 'error');
+        return;
+      }
+      await PostService.unrepostPost(postId, address);
+      setIsRepostedByMe(false);
+      addToast('Repost removed', 'success');
+    } catch (error) {
+      console.error('Error removing repost:', error);
+      addToast('Failed to remove repost', 'error');
+    }
+  }, [address, addToast]);
 
   const handleShare = useCallback(async () => {
     const url = `${window.location.origin}/post/${post.id}`;
@@ -590,6 +625,20 @@ const EnhancedPostCard = React.memo(({
                 </div>
               )}
 
+              {/* Recursive Quote Post Rendering */}
+              {!isNested && post.originalPost && (
+                <div className="mb-4 mt-2">
+                  <EnhancedPostCard
+                    post={post.originalPost as any}
+                    isNested={true}
+                    showPreviews={false}
+                    showSocialProof={false}
+                    showTrending={false}
+                    className="border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50/50 dark:bg-gray-900/50 scale-[0.98] origin-top"
+                  />
+                </div>
+              )}
+
               {/* Inline Previews */}
               {showPreviews && post.previews.length > 0 && (
                 <div className="mb-4">
@@ -680,72 +729,29 @@ const EnhancedPostCard = React.memo(({
                   id: post.id,
                   title: post.title,
                   contentCid: post.contentCid, // Use contentCid field instead of content
-                  content: post.content, 
+                  content: post.content,
                   author: post.author,
                   communityId: post.communityId,
                   communityName: post.communityName || 'general',
                   commentCount: post.comments,
-                  stakedValue: post.reactions.reduce((sum, r) => sum + r.totalAmount, 0),
-                  shareId: (post as any).shareId, // Pass shareId if available
-                  authorProfile: post.authorProfile 
+                  shareId: (post as any).shareId,
+                  isRepostedByMe: isRepostedByMe,
+                  authorProfile: post.authorProfile,
+                  media: post.media
                 }}
-                postType={post.communityId ? 'community' : 'feed'} // Use appropriate post type
+                postType={post.communityId ? 'community' : 'feed'}
                 onComment={() => {
-                  // Expand the post to show comments
                   setExpanded(true);
-                  // If there's an onExpand handler provided, also call it
                   if (onExpand) onExpand();
                 }}
                 onReaction={onReaction}
                 onTip={onTip}
-                onShare={async (postId, shareType, message) => {
+                onShare={async (postId, shareType, message, media) => {
                   if (shareType === 'timeline') {
-                    // Handle repost to timeline
-                    try {
-                      if (!isConnected || !address) {
-                        addToast('Please connect your wallet to share posts', 'error');
-                        return;
-                      }
-                      const response = await fetch('/api/posts/repost', {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                          originalPostId: postId,
-                          message: message,
-                          author: address.toLowerCase()
-                        })
-                      });
-                      if (!response.ok) {
-                        const error = await response.json();
-                        throw new Error(error.error || 'Failed to repost');
-                      }
-                      const result = await response.json();
-                      addToast('Post shared to your timeline!', 'success');
-                      // Track repost event
-                      analyticsService.trackUserEvent('post_repost', {
-                        postId,
-                        repostId: result.data.id,
-                        timestamp: new Date()
-                      });
-                    } catch (error) {
-                      console.error('Repost failed:', error);
-                      addToast(error instanceof Error ? error.message : 'Failed to share post', 'error');
-                    }
-                  } else {
-                    // External share (Twitter, etc.) - handled by SharePostModal
-                    console.log('Sharing post:', postId, shareType, message);
-                    addToast(`Post shared via ${shareType}!`, 'success');
-                    // Track share event
-                    analyticsService.trackUserEvent('post_share', {
-                      postId,
-                      shareType,
-                      message,
-                      timestamp: new Date()
-                    });
+                    await handleRepost(postId, message, media);
                   }
                 }}
+                onUnrepost={handleUnrepost}
               />
 
               {/* Upvote/Downvote Buttons */}

@@ -124,7 +124,8 @@ export const posts = pgTable("posts", {
   title: text("title"), // Making title nullable to handle existing data
   content: text("content"), // Actual post content (fallback when IPFS unavailable)
   contentCid: text("content_cid").notNull(),
-  parentId: integer("parent_id"),
+  parentId: uuid("parent_id"),
+  isRepost: boolean("is_repost").default(false),
   mediaCids: text("media_cids"), // JSON array of media IPFS CIDs
   mediaUrls: text("media_urls"), // JSON array of media URLs (HTTP/HTTPS)
   tags: text("tags"), // JSON array of tags
@@ -170,6 +171,7 @@ export const quickPosts = pgTable("quick_posts", {
   content: text("content"), // Actual post content (fallback when IPFS unavailable)
   contentCid: text("content_cid").notNull(),
   parentId: uuid("parent_id").references(() => quickPosts.id, { onDelete: "cascade" }), // For replies
+  isRepost: boolean("is_repost").default(false),
   mediaCids: text("media_cids"), // JSON array of media IPFS CIDs
   tags: text("tags"), // JSON array of tags
   stakedValue: numeric("staked_value").default('0'), // Total tokens staked on this post

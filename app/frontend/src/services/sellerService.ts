@@ -441,59 +441,80 @@ class SellerService {
     await unifiedSellerAPIClient.updateOrderStatus(orderId, status, data);
   }
 
-  async addTrackingNumber(orderId: string, trackingNumber: string, carrier: string): Promise<void> {
-    console.log(`Adding tracking number ${trackingNumber} to order: ${orderId}`);
-    await unifiedSellerAPIClient.addTrackingNumber(orderId, trackingNumber, carrier);
+  /**
+   * Transforms backend listing data to the SellerListing interface used by the frontend
+   */
+  private transformBackendListing(listing: any): SellerListing {
+    const enhanced = listing.enhancedData || {};
+
+    // Title & Description resolution
+    const title = enhanced.title || listing.title || listing.metadataURI || 'Untitled Listing';
+    const description = enhanced.description || listing.description || '';
+
+    // Category resolution (Backend uses categoryId or mainCategory)
+    const category = listing.category || listing.categoryId || listing.mainCategory || 'general';
+
+    // Price resolution (Backend uses priceAmount, priceCrypto or price)
+    let price = 0;
+    if (listing.priceAmount !== undefined) price = parseFloat(listing.priceAmount.toString());
+    else if (listing.priceCrypto !== undefined) price = parseFloat(listing.priceCrypto.toString());
+    else if (listing.price !== undefined) price = typeof listing.price === 'string' ? parseFloat(listing.price) : listing.price;
+
+    // Image & Tag resolution
+    const images = Array.isArray(listing.images) ? listing.images :
+      (typeof listing.images === 'string' ? JSON.parse(listing.images) : (enhanced.images || []));
+    const tags = Array.isArray(listing.tags) ? listing.tags :
+      (typeof listing.tags === 'string' ? JSON.parse(listing.tags) : (enhanced.tags || []));
+
+    // Shipping transformation (Backend uses 'shipping', Frontend expects 'shippingOptions')
+    const backendShipping = typeof listing.shipping === 'string' ? JSON.parse(listing.shipping) : listing.shipping;
+    const shippingOptions = {
+      free: backendShipping?.methods?.standard?.cost === 0,
+      cost: backendShipping?.methods?.standard?.cost || 0,
+      estimatedDays: backendShipping?.methods?.standard?.estimatedDays || '3-5 days',
+      international: !!backendShipping?.methods?.international?.enabled
+    };
+
+    // Quantity resolution
+    const quantity = listing.quantity !== undefined ? listing.quantity : (listing.inventory ?? (listing.stock ?? 1));
+
+    return {
+      id: listing.id,
+      title,
+      description,
+      category,
+      subcategory: listing.subcategory || listing.subCategory,
+      price,
+      currency: listing.currency || listing.priceCurrency || 'ETH',
+      quantity,
+      condition: enhanced.condition || listing.condition || 'new',
+      images,
+      specifications: listing.specifications || {},
+      tags,
+      status: listing.status === 'ACTIVE' ? 'active' : (listing.status?.toLowerCase() || 'active'),
+      saleType: listing.saleType || (listing.listingType === 'AUCTION' ? 'auction' : 'fixed'),
+      escrowEnabled: enhanced.escrowEnabled || listing.escrowEnabled || false,
+      shippingOptions,
+      // For the edit form to have raw shipping data if needed
+      shipping: backendShipping,
+      views: listing.views || enhanced.views || 0,
+      favorites: listing.favorites || enhanced.favorites || 0,
+      questions: listing.questions || 0,
+      createdAt: listing.createdAt || new Date().toISOString(),
+      updatedAt: listing.updatedAt || new Date().toISOString()
+    } as any; // Cast to any to allow extra fields like 'shipping'
   }
 
-  // Listings Management - Using Unified API Client
+  // Orders Management - Using Unified API Client
   async getListings(walletAddress: string, status?: string): Promise<SellerListing[]> {
     try {
       console.log(`[SellerService] Fetching listings for: ${walletAddress}`, status ? `with status: ${status}` : '');
       const backendListings = await unifiedSellerAPIClient.getListings(walletAddress, status);
 
       console.log(`[SellerService] Backend returned ${backendListings.length} listings`);
-      
-      // Transform backend data to match SellerListing interface
-      return backendListings.map((listing: any): SellerListing => {
-        // Extract enhanced data if available
-        const enhanced = listing.enhancedData || {};
-        const title = enhanced.title || listing.metadataURI || listing.title || 'Untitled Listing';
-        const description = enhanced.description || listing.description || '';
-        const images = enhanced.images || listing.images || [];
-        const tags = enhanced.tags || listing.tags || [];
-        const condition = enhanced.condition || listing.condition || 'new';
-        const category = enhanced.category || listing.category || 'general';
 
-        return {
-          id: listing.id,
-          title,
-          description,
-          category,
-          subcategory: listing.subcategory,
-          price: typeof listing.price === 'string' ? parseFloat(listing.price) : (listing.price || 0),
-          currency: listing.currency || 'ETH',
-          quantity: listing.quantity || 1,
-          condition,
-          images,
-          specifications: listing.specifications || {},
-          tags,
-          status: listing.status === 'ACTIVE' ? 'active' : (listing.status?.toLowerCase() || 'active'),
-          saleType: listing.saleType || (listing.listingType === 'AUCTION' ? 'auction' : 'fixed'),
-          escrowEnabled: enhanced.escrowEnabled || listing.escrowEnabled || false,
-          shippingOptions: {
-            free: false,
-            cost: 0,
-            estimatedDays: '3-5 days',
-            international: false
-          },
-          views: enhanced.views || listing.views || 0,
-          favorites: enhanced.favorites || listing.favorites || 0,
-          questions: listing.questions || 0,
-          createdAt: listing.createdAt || new Date().toISOString(),
-          updatedAt: listing.updatedAt || new Date().toISOString()
-        };
-      });
+      // Transform backend data to match SellerListing interface
+      return backendListings.map((listing: any) => this.transformBackendListing(listing));
     } catch (error) {
       console.error('[SellerService] Error fetching listings:', error);
       return [];
@@ -516,8 +537,9 @@ class SellerService {
   }
 
   async getListingById(listingId: string): Promise<SellerListing> {
-    console.log(`Fetching listing by ID: ${listingId}`);
-    return await unifiedSellerAPIClient.getListingById(listingId);
+    console.log(`[SellerService] Fetching listing by ID: ${listingId}`);
+    const data = await unifiedSellerAPIClient.getListingById(listingId);
+    return this.transformBackendListing(data);
   }
   // Analytics - Using Unified API Client
   async getAnalytics(walletAddress: string, period: string = '30d'): Promise<SellerAnalytics> {

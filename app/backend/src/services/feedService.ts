@@ -103,7 +103,7 @@ export class FeedService {
     // Build preference filter for categories and tags
     let preferenceFilter = sql`1=1`;
     if (preferredCategories.length > 0 || preferredTags.length > 0) {
-      const categoryConditions = preferredCategories.length > 0 
+      const categoryConditions = preferredCategories.length > 0
         ? sql`EXISTS (
             SELECT 1 FROM ${communities} 
             WHERE (${communities.id} = ${posts.communityId} OR ${communities.id} = ${posts.dao})
@@ -295,7 +295,7 @@ export class FeedService {
             preferenceFilter, // Add preference filter
             finalFollowingFilter,
             moderationFilter, // Add moderation filter
-            isNull(posts.parentId), // Only show top-level posts, not comments
+            or(isNull(posts.parentId), eq(posts.isRepost, true)), // Show top-level posts OR reposts
             // Always include all posts (both community and non-community) when no specific communities are filtered
             // When specific communities are filtered, only show posts from those communities
             filterCommunities.length > 0 ? sql`1=1` : sql`1=1`
@@ -351,7 +351,7 @@ export class FeedService {
             quickPostTimeFilter, // Use quickPostTimeFilter instead of timeFilter
             finalQuickPostFollowingFilter, // Use the correct filter for quick posts
             sql`${quickPosts.moderationStatus} IS NULL OR ${quickPosts.moderationStatus} != 'blocked'`, // Quick post moderation filter
-            isNull(quickPosts.parentId) // Only show top-level posts, not comments
+            or(isNull(quickPosts.parentId), eq(quickPosts.isRepost, true)) // Show top-level quick posts OR reposts
           ));
 
         console.log('📊 [BACKEND FEED] Quick posts query result:', {
@@ -366,9 +366,9 @@ export class FeedService {
       }
 
       // Combine posts based on postTypeFilter
-      let allPosts = postTypeFilter === 'quickPosts' ? quickPostsResults : 
-                      postTypeFilter === 'posts' ? regularPosts : 
-                      [...regularPosts, ...quickPostsResults];
+      let allPosts = postTypeFilter === 'quickPosts' ? quickPostsResults :
+        postTypeFilter === 'posts' ? regularPosts :
+          [...regularPosts, ...quickPostsResults];
 
       console.log('📊 [BACKEND FEED] Combined posts before sorting:', {
         totalPosts: allPosts.length,
@@ -415,7 +415,7 @@ export class FeedService {
         total: paginatedPosts.length
       });
 
-      // 2. Batch fetch all metrics with GROUP BY (10 queries total instead of 5*N)
+      // 2. Batch fetch all metrics with GROUP BY (11 queries total instead of 5*N)
       const [
         regularReactionsData,
         quickReactionsData,
@@ -426,7 +426,10 @@ export class FeedService {
         regularCommentsData,
         quickCommentsData,
         regularViewsData,
-        quickViewsData
+        quickViewsData,
+        userRepostsData,
+        originalPostsData,
+        originalQuickPostsData
       ] = await Promise.all([
         // Regular post reactions
         regularPostIds.length > 0
@@ -542,6 +545,67 @@ export class FeedService {
             .from(quickPostViews)
             .where(inArray(quickPostViews.quickPostId, quickPostIds))
             .groupBy(quickPostViews.quickPostId)
+          : Promise.resolve([]),
+
+        // User Reposts Check
+        userAddress && (regularPostIds.length > 0 || quickPostIds.length > 0)
+          ? db.select({
+            parentId: posts.parentId
+          })
+            .from(posts)
+            .where(and(
+              eq(posts.authorId, sql`(SELECT id FROM users WHERE LOWER(wallet_address) = LOWER(${userAddress}) LIMIT 1)`),
+              isNotNull(posts.parentId),
+              eq(posts.isRepost, true),
+              or(
+                inArray(posts.parentId, regularPostIds),
+                inArray(posts.parentId, quickPostIds)
+              )
+            ))
+          : Promise.resolve([]),
+
+        // 12. Fetch original regular posts
+        paginatedPosts.filter(p => p.parentId && p.isRepost).length > 0
+          ? db.select({
+            id: posts.id,
+            authorId: posts.authorId,
+            content: posts.content,
+            contentCid: posts.contentCid,
+            title: posts.title,
+            mediaCids: posts.mediaCids,
+            tags: posts.tags,
+            createdAt: posts.createdAt,
+            walletAddress: users.walletAddress,
+            handle: users.handle,
+            displayName: users.displayName,
+            profileCid: users.profileCid,
+            avatarCid: users.avatarCid
+          })
+            .from(posts)
+            .leftJoin(users, eq(posts.authorId, users.id))
+            .where(inArray(posts.id, paginatedPosts.filter(p => p.parentId && p.isRepost).map(p => p.parentId as string)))
+          : Promise.resolve([]),
+
+        // 13. Fetch original quick posts
+        paginatedPosts.filter(p => p.parentId && p.isRepost).length > 0
+          ? db.select({
+            id: quickPosts.id,
+            authorId: quickPosts.authorId,
+            content: quickPosts.content,
+            contentCid: quickPosts.contentCid,
+            mediaCids: quickPosts.mediaCids,
+            tags: quickPosts.tags,
+            createdAt: quickPosts.createdAt,
+            walletAddress: users.walletAddress,
+            handle: users.handle,
+            displayName: users.displayName,
+            profileCid: users.profileCid,
+            avatarCid: users.avatarCid,
+            isQuickPost: sql`true`
+          })
+            .from(quickPosts)
+            .leftJoin(users, eq(quickPosts.authorId, users.id))
+            .where(inArray(quickPosts.id, paginatedPosts.filter(p => p.parentId && p.isRepost).map(p => p.parentId as string)))
           : Promise.resolve([])
       ]);
 
@@ -551,6 +615,7 @@ export class FeedService {
       const tipTotalMap = new Map<number | string, number>();
       const commentMap = new Map<number | string, number>();
       const viewMap = new Map<number | string, number>();
+      const repostedSet = new Set<string>();
 
       // Populate maps with regular post data
       regularReactionsData.forEach(r => reactionMap.set(r.postId, Number(r.count)));
@@ -565,6 +630,16 @@ export class FeedService {
       quickTipsTotalData.forEach(t => tipTotalMap.set(t.postId, Number(t.total)));
       quickCommentsData.forEach(c => commentMap.set(c.postId, Number(c.count)));
       quickViewsData.forEach(v => viewMap.set(v.postId, Number(v.count)));
+
+      // Populate reposted set
+      (userRepostsData as any[]).forEach(r => {
+        if (r.parentId) repostedSet.add(r.parentId);
+      });
+
+      // Populate original posts map
+      const originalPostsMap = new Map<string, any>();
+      (originalPostsData as any[]).forEach(p => originalPostsMap.set(p.id, p));
+      (originalQuickPostsData as any[]).forEach(p => originalPostsMap.set(p.id, p));
 
       console.log('📊 [BACKEND FEED] Engagement metrics fetched:', {
         reactions: reactionMap.size,
@@ -581,6 +656,9 @@ export class FeedService {
         const commentCount = Number(commentMap.get(post.id) || 0);
         const viewCount = Number(viewMap.get(post.id) || 0);
 
+        const isRepostedByMe = repostedSet.has(post.id);
+        const originalPost = post.isRepost && post.parentId ? originalPostsMap.get(post.parentId) : null;
+
         const score = this.calculateEngagementScore(
           reactionCount,
           tipCount,
@@ -594,13 +672,15 @@ export class FeedService {
           totalTipAmount,
           commentCount,
           viewCount,
+          isRepostedByMe,
+          originalPost,
           engagementScore: score
         };
       });
 
       // Get total count for pagination based on postTypeFilter
       let totalCount = 0;
-      
+
       if (postTypeFilter === 'posts' || postTypeFilter === 'all') {
         const totalRegularCount = await db
           .select({ count: sql<number>`COUNT(*)` })
@@ -616,11 +696,11 @@ export class FeedService {
           ));
         totalCount += (totalRegularCount[0]?.count || 0);
       }
-      
+
       if (postTypeFilter === 'quickPosts' || postTypeFilter === 'all') {
         // Use the quick post following filter as-is since it already includes user's own quick posts
         const finalQuickPostFollowingFilter = quickPostFollowingFilter;
-        
+
         const totalQuickCount = await db
           .select({ count: sql<number>`COUNT(*)` })
           .from(quickPosts)
@@ -1011,7 +1091,7 @@ export class FeedService {
     const { postId, userAddress } = data;
 
     try {
-      
+
 
       // Get user ID - use case-insensitive matching
       const normalizedAddress = userAddress.toLowerCase();
@@ -1060,7 +1140,7 @@ export class FeedService {
       // Both tables now use UUID, so we need to check which table contains the post
       let postExists = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
       let isQuickPost = false;
-      
+
       if (postExists.length === 0) {
         // Check if it's a quick post
         const quickPostExists = await db.select().from(quickPosts).where(eq(quickPosts.id, postId)).limit(1);
@@ -1165,7 +1245,7 @@ export class FeedService {
     try {
       // FIXED: Use transaction to prevent connection leaks
       const normalizedAddress = fromAddress.toLowerCase();
-      
+
       const [fromUser, post] = await db.transaction(async (tx) => {
         const userResult = await tx.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
         if (userResult.length === 0) {
@@ -1208,10 +1288,10 @@ export class FeedService {
     try {
       // Check if postId is an integer (regular post) or UUID (quick post)
       const isIntegerId = /^\d+$/.test(postId);
-      
+
       if (isIntegerId) {
         // Regular post
-        
+
         const post = await db
           .select({
             id: posts.id,
@@ -1227,11 +1307,11 @@ export class FeedService {
           .from(posts)
           .where(eq(posts.id, postId))
           .limit(1);
-          
+
         if (post.length === 0) {
           return null;
         }
-        
+
         // Get author details
         const author = await db
           .select({
@@ -1241,7 +1321,7 @@ export class FeedService {
           .from(users)
           .where(eq(users.id, post[0].authorId))
           .limit(1);
-          
+
         return {
           ...post[0],
           author: author.length > 0 ? {
@@ -1264,11 +1344,11 @@ export class FeedService {
           .from(quickPosts)
           .where(eq(quickPosts.id, postId))
           .limit(1);
-          
+
         if (post.length === 0) {
           return null;
         }
-        
+
         // Get author details
         const author = await db
           .select({
@@ -1278,7 +1358,7 @@ export class FeedService {
           .from(users)
           .where(eq(users.id, post[0].authorId))
           .limit(1);
-          
+
         return {
           ...post[0],
           author: author.length > 0 ? {
@@ -1296,7 +1376,7 @@ export class FeedService {
   // Get engagement data for post
   async getEngagementData(postId: string) {
     try {
-      
+
 
       // Get post basic info
       const post = await db
@@ -1385,7 +1465,7 @@ export class FeedService {
     const { postId, userAddress, targetType, targetId, message } = data;
 
     try {
-      
+
 
       // Verify post exists
       const post = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
@@ -1562,7 +1642,7 @@ export class FeedService {
             postFound = true;
           }
         }
-        
+
         if (!postFound) {
           safeLogger.error('Post not found for UUID ID:', postId);
           throw new Error('Post not found');
@@ -1797,7 +1877,7 @@ export class FeedService {
   // Get liked by data for post
   async getLikedByData(postId: string) {
     try {
-      
+
 
       // Get reactions for the post
       const reactionsData = await db
@@ -1909,7 +1989,7 @@ export class FeedService {
   // Get content popularity metrics
   async getContentPopularityMetrics(postId: string) {
     try {
-      
+
 
       // Get comprehensive engagement data
       const [postData, reactionData, tipData, shareData] = await Promise.all([
@@ -2055,7 +2135,7 @@ export class FeedService {
   // Get post reactions
   async getPostReactions(postId: string) {
     try {
-      
+
 
       // Get all reactions for the post
       const reactionsData = await db
@@ -2124,7 +2204,7 @@ export class FeedService {
     const { postId, userAddress, platform, message } = data;
 
     try {
-      
+
 
       // Verify post exists
       const post = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
@@ -2178,7 +2258,7 @@ export class FeedService {
 
       if (isIntegerId) {
         // Regular post bookmark logic
-        
+
 
         // Check if bookmark already exists
         const existingBookmark = await db
@@ -2349,8 +2429,8 @@ export class FeedService {
           .where(eq(posts.id, postId))
           .returning();
 
-        return { 
-          success: true, 
+        return {
+          success: true,
           message: 'Post upvoted successfully',
           upvotes: updatedPost.upvotes,
           downvotes: updatedPost.downvotes
@@ -2369,8 +2449,8 @@ export class FeedService {
           .where(eq(quickPosts.id, postId))
           .returning();
 
-        return { 
-          success: true, 
+        return {
+          success: true,
           message: 'Quick post upvoted successfully',
           upvotes: updatedQuickPost.upvotes,
           downvotes: updatedQuickPost.downvotes
@@ -2404,8 +2484,8 @@ export class FeedService {
           .where(eq(posts.id, postId))
           .returning();
 
-        return { 
-          success: true, 
+        return {
+          success: true,
           message: 'Post downvoted successfully',
           upvotes: updatedPost.upvotes,
           downvotes: updatedPost.downvotes
@@ -2424,8 +2504,8 @@ export class FeedService {
           .where(eq(quickPosts.id, postId))
           .returning();
 
-        return { 
-          success: true, 
+        return {
+          success: true,
           message: 'Quick post downvoted successfully',
           upvotes: updatedQuickPost.upvotes,
           downvotes: updatedQuickPost.downvotes
@@ -2444,7 +2524,7 @@ export class FeedService {
       // Both tables now use UUID, so we need to check which table contains the post
       let postExists = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
       let isQuickPost = false;
-      
+
       if (postExists.length === 0) {
         // Check if it's a quick post
         const quickPostExists = await db.select().from(quickPosts).where(eq(quickPosts.id, postId)).limit(1);

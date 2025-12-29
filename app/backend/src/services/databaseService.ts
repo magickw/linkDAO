@@ -112,7 +112,7 @@ export class DatabaseService {
 
 
   // Post operations
-  async createPost(authorId: string, contentCid: string, parentId?: string, mediaCids?: string[], tags?: string[], onchainRef?: string, content?: string, title?: string) {
+  async createPost(authorId: string, contentCid: string, parentId?: string, mediaCids?: string[], tags?: string[], onchainRef?: string, content?: string, title?: string, isRepost: boolean = false) {
     try {
       const result = await this.db.insert(schema.posts).values({
         authorId,
@@ -120,6 +120,7 @@ export class DatabaseService {
         content: content || null, // Store content as fallback if provided
         title: title || null, // Store title if provided
         parentId: parentId || null,
+        isRepost,
         mediaCids: mediaCids ? JSON.stringify(mediaCids) : null,
         tags: tags ? JSON.stringify(tags) : null,
         onchainRef: onchainRef || null,

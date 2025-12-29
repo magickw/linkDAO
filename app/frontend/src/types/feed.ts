@@ -67,7 +67,7 @@ export interface EnhancedPost {
   shares: number;
   views: number;
   engagementScore: number;
-  
+
   // Voting data
   upvotes?: number;
   downvotes?: number;
@@ -81,6 +81,7 @@ export interface EnhancedPost {
   trendingScore?: number;
   isBookmarked?: boolean;
   communityId?: string; // Optional for quickPosts
+  communityName?: string; // Optional for quickPosts
   contentType?: 'text' | 'media' | 'link' | 'poll' | 'proposal';
 
   // Additional fields from backend
@@ -97,6 +98,11 @@ export interface EnhancedPost {
 
   // Flag to distinguish quickPosts from regular posts
   isQuickPost?: boolean;
+
+  // Repost features
+  isRepost?: boolean;
+  isRepostedByMe?: boolean;
+  originalPost?: EnhancedPost | null;
 }
 
 export interface Reaction {

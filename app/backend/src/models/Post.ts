@@ -14,6 +14,7 @@ export interface Post {
   moderationWarning?: string | null;
   riskScore?: number;
   moderationCategories?: string[];
+  isRepost?: boolean;
 }
 
 export interface CreatePostInput {
@@ -23,6 +24,8 @@ export interface CreatePostInput {
   media?: string[]; // Media files would be uploaded to IPFS and CIDs stored
   tags?: string[];
   onchainRef?: string;
+  communityId?: string;
+  isRepost?: boolean;
 }
 
 export interface UpdatePostInput {

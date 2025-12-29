@@ -303,38 +303,30 @@ const EditListingPage: React.FC = () => {
         }
 
         // Transform listing data to form data
-        // Note: SellerListing doesn't have a metadata field, so we'll use an empty object
-        const metadata: any = {};
+        // Note: We now use the transformed data from SellerService
         const transformedData: EnhancedFormData = {
           title: listing.title,
           description: listing.description,
           category: listing.category || '',
           tags: listing.tags || [],
-          seoTitle: '',
-          seoDescription: '',
-          itemType: 'DIGITAL', // Default since SellerListing doesn't have this field
+          seoTitle: (listing as any).seoTitle || '',
+          seoDescription: (listing as any).seoDescription || '',
+          itemType: (listing as any).shipping ? 'PHYSICAL' : 'DIGITAL',
           condition: listing.condition || 'new',
           price: listing.price.toString(),
           currency: (listing.currency as 'USDC' | 'USDT' | 'ETH' | 'USD') || 'USD',
-          listingType: 'FIXED_PRICE', // Default value since SellerListing doesn't have this field
-          duration: 86400, // Default value since SellerListing doesn't have this field
-          royalty: 0, // Default value since SellerListing doesn't have this field
+          listingType: (listing as any).saleType === 'auction' ? 'AUCTION' : 'FIXED_PRICE',
+          duration: 86400,
+          royalty: 0,
           quantity: listing.quantity || 1,
           unlimitedQuantity: (listing.quantity || 1) >= 999999,
           escrowEnabled: listing.escrowEnabled ?? true,
-          specifications: {
-            weight: {
-              value: 0,
-              unit: 'g' as 'g' | 'kg' | 'oz' | 'lbs'
-            },
-            dimensions: {
-              length: 0,
-              width: 0,
-              height: 0,
-              unit: 'cm' as 'mm' | 'cm' | 'm' | 'in' | 'ft'
-            }
+          specifications: listing.specifications || {
+            weight: { value: 0, unit: 'g' },
+            dimensions: { length: 0, width: 0, height: 0, unit: 'cm' }
           },
-          shipping: listing.shippingOptions ? {
+          tokenAddress: (listing as any).tokenAddress || '',
+          shipping: (listing as any).shipping || (listing.shippingOptions ? {
             methods: {
               standard: {
                 enabled: !listing.shippingOptions.free,
@@ -367,9 +359,8 @@ const EditListingPage: React.FC = () => {
               },
               dimensionUnit: 'cm'
             }
-          } : undefined, // Load existing shipping configuration or provide defaults
-          variants: [], // Initialize with empty variants array
-          tokenAddress: '' // Default value since SellerListing doesn't have this field
+          } : undefined),
+          variants: (listing as any).variants || []
         };
         setFormData(transformedData);
         setExistingImages(listing.images || []);
@@ -861,19 +852,36 @@ const EditListingPage: React.FC = () => {
         specifications: formData.specifications,
         variants: formData.variants, // Include size variants
         // Note: Some fields are not part of the SellerListing interface but may be used by the backend
-      }; console.log('[EDIT] About to call sellerService.updateListing');
-      console.log('[EDIT] listingData:', listingData);
+      };
+
+      console.log('[EDIT] Calling sellerService.updateListing with:', { id, listingData });
 
       // Import seller service dynamically to avoid circular dependencies
       const { sellerService } = await import('@/services/sellerService');
-      // Call the real update listing API
-      await sellerService.updateListing(id, listingData);
-      addToast('🎉 Listing updated successfully!', 'success');
-      router.push('/marketplace/seller/dashboard');
+
+      try {
+        // Call the real update listing API
+        const result = await sellerService.updateListing(id, listingData);
+        console.log('[EDIT] Update successful:', result);
+        addToast('🎉 Listing updated successfully!', 'success');
+
+        // Navigation timeout to ensure toast is visible
+        setTimeout(() => {
+          router.push('/marketplace/seller/dashboard');
+        }, 1500);
+      } catch (apiError: any) {
+        console.error('[EDIT] API call failed:', apiError);
+        console.error('[EDIT] API error details:', {
+          status: apiError.status,
+          type: apiError.type,
+          details: apiError.details
+        });
+        throw apiError; // Re-throw to be caught by the outer catch block
+      }
     } catch (error: any) {
-      console.error('[EDIT] Error caught:', error);
-      console.error('[EDIT] Error message:', error?.message);
-      addToast(error.message || 'Failed to update listing', 'error');
+      console.error('[EDIT] Error caught in handleSubmit:', error);
+      const errorMessage = error.details?.error || error.message || 'Failed to update listing';
+      addToast(errorMessage, 'error');
       console.error('Error updating listing:', error);
     } finally {
       setLoading(false);

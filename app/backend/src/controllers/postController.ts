@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
 import { PostService } from '../services/postService';
 import { CreatePostInput } from '../models/Post';
+import { db } from '../db';
+import { posts, users } from '../db/schema';
+import { eq, and, sql, isNotNull } from 'drizzle-orm';
 
 // Remove in-memory storage
 // let posts: any[] = [];
@@ -238,7 +241,7 @@ export class PostController {
     try {
       console.log('POST /api/posts/repost - Creating repost');
 
-      const { originalPostId, message, author } = req.body;
+      const { originalPostId, message, author, media } = req.body;
 
       if (!originalPostId) {
         return res.status(400).json({
@@ -271,11 +274,12 @@ export class PostController {
       // Create the repost as a new post with reference to original
       const postInput: CreatePostInput = {
         author,
-        content: repostContent, // This will be uploaded to IPFS by PostService
+        content: message || '', // User's custom message is the main content
         tags: originalPost.tags || [],
-        media: originalPost.mediaCids || [], // Will be uploaded to IPFS
+        media: media || [], // User's own added media
         parentId: originalPostId, // Link to original post
-        onchainRef: originalPost.onchainRef
+        onchainRef: originalPost.onchainRef,
+        isRepost: true
       };
 
       const repost = await this.postService.createPost(postInput);
@@ -319,6 +323,52 @@ export class PostController {
       return res.status(500).json({
         success: false,
         error: 'Failed to delete post'
+      });
+    }
+  }
+
+  async unrepostPost(req: Request, res: Response): Promise<Response> {
+    try {
+      const { originalPostId, author } = req.body;
+
+      if (!originalPostId || !author) {
+        return res.status(400).json({
+          success: false,
+          error: 'Original post ID and author are required'
+        });
+      }
+
+      // Find the user's repost for this original post
+      const user = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${author})`).limit(1);
+      if (user.length === 0) {
+        return res.status(404).json({ success: false, error: 'User not found' });
+      }
+
+      // Find and delete the repost (post with parentId = originalPostId and authorId = user.id)
+      const deleted = await db.delete(posts)
+        .where(and(
+          eq(posts.parentId, originalPostId),
+          eq(posts.authorId, user[0].id),
+          eq(posts.isRepost, true)
+        ))
+        .returning();
+
+      if (deleted.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Repost not found'
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Repost removed'
+      });
+    } catch (error: any) {
+      console.error('Error unreposting:', error);
+      return res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to remove repost'
       });
     }
   }

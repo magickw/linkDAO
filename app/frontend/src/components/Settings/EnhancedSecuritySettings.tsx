@@ -12,9 +12,12 @@ export function EnhancedSecuritySettings() {
     const [alertsConfig, setAlertsConfig] = useState<SecurityAlertsConfig | null>(null);
     const [privacySettings, setPrivacySettings] = useState<PrivacySettings | null>(null);
     const [show2FASetup, setShow2FASetup] = useState(false);
+    const [showEmail2FASetup, setShowEmail2FASetup] = useState(false);
     const [qrCode, setQrCode] = useState<string>('');
     const [backupCodes, setBackupCodes] = useState<string[]>([]);
     const [verificationCode, setVerificationCode] = useState('');
+    const [emailVerificationCode, setEmailVerificationCode] = useState('');
+    const [email2FAMessage, setEmail2FAMessage] = useState('');
 
     // Load all security data on mount
     useEffect(() => {
@@ -76,6 +79,41 @@ export function EnhancedSecuritySettings() {
         } catch (error) {
             console.error('Error verifying 2FA:', error);
             alert('Invalid verification code. Please try again.');
+        }
+    };
+
+    const handleSetupEmail2FA = async () => {
+        try {
+            const result = await securityService.setupEmail2FA();
+            setEmail2FAMessage(result.message || 'Verification code sent to your email');
+            setShowEmail2FASetup(true);
+        } catch (error) {
+            console.error('Error setting up email 2FA:', error);
+            alert('Failed to setup email 2FA. Please try again.');
+        }
+    };
+
+    const handleVerifyEmail2FA = async () => {
+        try {
+            await securityService.verifyAndEnableEmail2FA(emailVerificationCode);
+            setShowEmail2FASetup(false);
+            setEmailVerificationCode('');
+            setEmail2FAMessage('');
+            alert('Email 2FA enabled successfully!');
+            loadSecurityData();
+        } catch (error) {
+            console.error('Error verifying email 2FA:', error);
+            alert('Invalid verification code. Please try again.');
+        }
+    };
+
+    const handleResendEmailCode = async () => {
+        try {
+            const result = await securityService.resendEmailVerificationCode();
+            setEmail2FAMessage(result.message || 'New verification code sent to your email');
+        } catch (error) {
+            console.error('Error resending verification code:', error);
+            alert('Failed to resend verification code. Please try again.');
         }
     };
 
@@ -199,10 +237,10 @@ export function EnhancedSecuritySettings() {
                                 <div className="text-xs text-gray-600 dark:text-gray-400">Receive verification codes via email</div>
                             </div>
                             <button
-                                onClick={() => alert('Email verification setup coming soon! This will allow you to receive verification codes via email for additional security.')}
+                                onClick={handleSetupEmail2FA}
                                 className="px-4 py-2 text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 bg-primary-50 hover:bg-primary-100 dark:bg-primary-900/50 rounded-lg transition-colors"
                             >
-                                Configure
+                                Enable
                             </button>
                         </div>
                     </div>
@@ -517,6 +555,89 @@ export function EnhancedSecuritySettings() {
                                     onClick={() => {
                                         setShow2FASetup(false);
                                         setVerificationCode('');
+                                    }}
+                                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:w-auto sm:text-sm"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Email 2FA Setup Modal */}
+            {showEmail2FASetup && (
+                <div className="fixed inset-0 z-50 overflow-y-auto">
+                    <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => {
+                            setShowEmail2FASetup(false);
+                            setEmailVerificationCode('');
+                            setEmail2FAMessage('');
+                        }}></div>
+
+                        <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+                        <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                            <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                                <div className="sm:flex sm:items-start">
+                                    <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
+                                        <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4">
+                                            Set Up Email Verification
+                                        </h3>
+
+                                        <div className="mt-4 space-y-4">
+                                            {/* Message */}
+                                            {email2FAMessage && (
+                                                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                                                    <p className="text-sm text-blue-800 dark:text-blue-200">
+                                                        {email2FAMessage}
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            {/* Verification Code Input */}
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                    Enter verification code sent to your email
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={emailVerificationCode}
+                                                    onChange={(e) => setEmailVerificationCode(e.target.value)}
+                                                    placeholder="000000"
+                                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-center text-lg tracking-widest"
+                                                    maxLength={6}
+                                                />
+                                            </div>
+
+                                            {/* Resend Code Button */}
+                                            <button
+                                                type="button"
+                                                onClick={handleResendEmailCode}
+                                                className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 font-medium"
+                                            >
+                                                Resend verification code
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                                <button
+                                    type="button"
+                                    onClick={handleVerifyEmail2FA}
+                                    disabled={emailVerificationCode.length !== 6}
+                                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary-600 text-base font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    Verify and Enable
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowEmail2FASetup(false);
+                                        setEmailVerificationCode('');
+                                        setEmail2FAMessage('');
                                     }}
                                     className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:w-auto sm:text-sm"
                                 >

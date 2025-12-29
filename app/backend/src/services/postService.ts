@@ -158,11 +158,13 @@ export class PostService {
         dbPost = await databaseService.createPost(
           user.id,
           contentCid,
-          input.parentId || undefined,
-          mediaCids.length > 0 ? mediaCids : undefined,
-          input.tags && input.tags.length > 0 ? input.tags : undefined,
+          input.parentId,
+          mediaCids,
+          input.tags,
           input.onchainRef,
-          input.content  // Pass the actual content as fallback
+          input.content,
+          undefined, // title not in CreatePostInput for now
+          input.isRepost
         );
 
         // Update post with moderation metadata

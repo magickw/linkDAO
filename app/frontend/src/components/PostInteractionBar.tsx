@@ -13,18 +13,27 @@ interface PostInteractionBarProps {
     id: string;
     title?: string;
     contentCid: string;
+    content?: string;
+    media?: string[];
     author: string;
     communityId?: string;
     communityName?: string;
     commentCount?: number;
-    shareId?: string; // New field for share URLs
+    shareId?: string;
+    isRepostedByMe?: boolean;
+    authorProfile?: {
+      avatar?: string;
+      handle?: string;
+    };
+    stakedValue?: number;
   };
   postType: 'feed' | 'community' | 'enhanced';
   userMembership?: any;
   onComment?: () => void;
   onReaction?: (postId: string, reactionType: string, amount?: number) => Promise<void>;
   onTip?: (postId: string, amount: string, token: string) => Promise<void>;
-  onShare?: (postId: string, shareType: string, message?: string) => Promise<void>;
+  onShare?: (postId: string, shareType: string, message?: string, media?: string[]) => Promise<void>;
+  onUnrepost?: (postId: string) => Promise<void>;
   onAward?: (postId: string) => void;
   className?: string;
 }
@@ -37,6 +46,7 @@ export default function PostInteractionBar({
   onReaction,
   onTip,
   onShare,
+  onUnrepost,
   onAward,
   className = ''
 }: PostInteractionBarProps) {
@@ -73,8 +83,19 @@ export default function PostInteractionBar({
   };
 
   // Handle repost button click
-  const handleRepostClick = () => {
-    setShowRepostModal(true);
+  const handleRepostClick = async () => {
+    if (!isConnected) {
+      addToast('Please connect your wallet to repost', 'error');
+      return;
+    }
+
+    if (post.isRepostedByMe && onUnrepost) {
+      if (window.confirm('Remove this repost from your timeline?')) {
+        await onUnrepost(post.id);
+      }
+    } else {
+      setShowRepostModal(true);
+    }
   };
 
   // Handle save post
@@ -156,13 +177,16 @@ export default function PostInteractionBar({
           {postType !== 'community' && (
             <button
               onClick={handleRepostClick}
-              className="flex items-center space-x-2 text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400 text-sm font-medium transition-colors duration-200 hover:scale-105"
-              aria-label="Repost to your timeline"
+              className={`flex items-center space-x-2 text-sm font-medium transition-colors duration-200 hover:scale-105 ${post.isRepostedByMe
+                ? 'text-green-600 dark:text-green-400'
+                : 'text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400'
+                }`}
+              aria-label={post.isRepostedByMe ? "Undo repost" : "Repost to your timeline"}
             >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className={`h-5 w-5 ${post.isRepostedByMe ? 'fill-current' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              <span className="hidden sm:inline">Repost</span>
+              <span className="hidden sm:inline">{post.isRepostedByMe ? 'Reposted' : 'Repost'}</span>
             </button>
           )}
 
