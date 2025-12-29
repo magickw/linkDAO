@@ -199,12 +199,30 @@ const STEP_ORDER: FormStep[] = ['basic', 'details', 'pricing', 'shipping', 'imag
 
 const resolveImageUrl = (url: string) => {
   if (!url) return '/images/placeholders/product-placeholder.svg';
+
+  // Handle IPFS protocol URLs
   if (url.startsWith('ipfs://')) {
-    return `https://ipfs.io/ipfs/${url.replace('ipfs://', '')}`;
+    const hash = url.replace('ipfs://', '');
+    // Use Pinata gateway as primary, with fallback to ipfs.io
+    return `https://gateway.pinata.cloud/ipfs/${hash}`;
   }
+
+  // Handle raw IPFS hashes
   if (url.startsWith('Qm') || url.startsWith('bafy')) {
-    return `https://ipfs.io/ipfs/${url}`;
+    return `https://gateway.pinata.cloud/ipfs/${url}`;
   }
+
+  // Handle gateway.pinata.cloud URLs that might be broken
+  if (url.includes('gateway.pinata.cloud/ipfs/')) {
+    // Extract the hash and try with a different gateway if needed
+    const match = url.match(/\/ipfs\/(.+)$/);
+    if (match && match[1]) {
+      // Keep the original URL but we'll handle errors in the img onError
+      return url;
+    }
+  }
+
+  // Return URL as-is for other cases (http/https URLs)
   return url;
 };
 
@@ -1642,7 +1660,23 @@ const EditListingPage: React.FC = () => {
                             className="w-full h-32 object-cover"
                             onError={(e) => {
                               const target = e.target as HTMLImageElement;
-                              target.src = '/images/placeholders/product-placeholder.svg';
+                              const currentSrc = target.src;
+
+                              // Try fallback to ipfs.io gateway if using Pinata
+                              if (currentSrc.includes('gateway.pinata.cloud')) {
+                                const match = currentSrc.match(/\/ipfs\/(.+)$/);
+                                if (match && match[1] && !target.dataset.fallbackAttempted) {
+                                  target.dataset.fallbackAttempted = 'true';
+                                  target.src = `https://ipfs.io/ipfs/${match[1]}`;
+                                  return;
+                                }
+                              }
+
+                              // Final fallback to placeholder
+                              if (!target.dataset.placeholderSet) {
+                                target.dataset.placeholderSet = 'true';
+                                target.src = '/images/placeholders/product-placeholder.svg';
+                              }
                             }}
                           />
                           <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">

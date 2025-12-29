@@ -154,11 +154,24 @@ COMMENT ON COLUMN orders.stripe_transfer_group IS 'Stripe transfer group for esc
 COMMENT ON COLUMN orders.payment_decision_reason IS 'Reason for payment path selection';
 
 -- Insert default payment preferences for existing users (if any)
-INSERT INTO payment_method_preferences (user_address, preferred_method)
-SELECT DISTINCT buyer_wallet_address, 'auto'
-FROM orders 
-WHERE buyer_wallet_address IS NOT NULL
-ON CONFLICT (user_address) DO NOTHING;
+DO $$
+BEGIN
+    -- Check if buyer_wallet_address column exists in orders table
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = 'orders'
+        AND column_name = 'buyer_wallet_address'
+    ) THEN
+        INSERT INTO payment_method_preferences (user_address, preferred_method)
+        SELECT DISTINCT buyer_wallet_address, 'auto'
+        FROM orders
+        WHERE buyer_wallet_address IS NOT NULL
+        ON CONFLICT (user_address) DO NOTHING;
+    ELSE
+        RAISE NOTICE 'Column buyer_wallet_address does not exist in orders table, skipping INSERT';
+    END IF;
+END$$;
 
 -- Create function to automatically log payment events
 CREATE OR REPLACE FUNCTION log_payment_event()
