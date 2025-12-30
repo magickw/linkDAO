@@ -1110,7 +1110,7 @@ export class SellerController {
         try {
           const basicProfileData = {
             walletAddress,
-            storeName: `Store for ${walletAddress.substring(0, 6)}...${walletAddress.substring(walletAddress.length - 4)}`,
+            storeName: 'My Store',
             bio: "Welcome to my store!",
             description: "Seller profile created automatically",
             createdAt: new Date(),

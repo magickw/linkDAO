@@ -173,8 +173,8 @@ export default function PostInteractionBar({
             <span className="sm:hidden">{post.commentCount || 0}</span>
           </button>
 
-          {/* Repost Button - Only show for non-community posts */}
-          {postType !== 'community' && (
+          {/* Repost Button - Only show for non-community posts and ensure strict check */}
+          {postType !== 'community' && !post.communityId && (
             <button
               onClick={handleRepostClick}
               className={`flex items-center space-x-2 text-sm font-medium transition-colors duration-200 hover:scale-105 ${post.isRepostedByMe

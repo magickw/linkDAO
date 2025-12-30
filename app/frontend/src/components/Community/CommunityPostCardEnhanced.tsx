@@ -571,12 +571,17 @@ function CommunityPostCardEnhanced({
 
   // Handle delete post
   const handleDelete = async () => {
+    if (!address) {
+      addToast('Wallet not connected', 'error');
+      return;
+    }
+
     if (!confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
       return;
     }
 
     try {
-      await CommunityPostService.deletePost(community.id, post.id);
+      await CommunityPostService.deletePost(community.id, post.id, address);
       addToast('Post deleted successfully', 'success');
       // Reload page to reflect changes
       if (typeof window !== 'undefined') {
@@ -587,6 +592,11 @@ function CommunityPostCardEnhanced({
       addToast('Failed to delete post', 'error');
     }
   };
+
+  const isAuthor = address && (
+    (post.author && post.author.toLowerCase() === address.toLowerCase()) ||
+    (post.walletAddress && post.walletAddress.toLowerCase() === address.toLowerCase())
+  );
 
   return (
     <motion.div
@@ -688,7 +698,7 @@ function CommunityPostCardEnhanced({
             {/* Post Actions Menu */}
             <div className="flex items-center space-x-2">
               {/* Delete Button for Author */}
-              {address && (post.author === address || post.walletAddress === address) && (
+              {isAuthor && (
                 <button
                   onClick={(e) => {
                     e.preventDefault();
