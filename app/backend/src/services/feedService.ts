@@ -268,7 +268,7 @@ export class FeedService {
             authorId: posts.authorId,
             dao: posts.dao,
             title: posts.title,
-            content: posts.content, // Include content directly
+            content: sql<string>`COALESCE(${posts.content}, '')`, // Ensure content is always a string
             contentCid: posts.contentCid,
             shareId: posts.shareId, // Include shareId for share URLs
             mediaCids: posts.mediaCids,
@@ -327,7 +327,7 @@ export class FeedService {
             id: quickPosts.id,
             authorId: quickPosts.authorId,
             dao: sql<string>`NULL`, // Quick posts don't have DAO
-            content: quickPosts.content, // Include content directly
+            content: sql<string>`COALESCE(${quickPosts.content}, '')`, // Ensure content is always a string
             contentCid: quickPosts.contentCid,
             shareId: quickPosts.shareId, // Include shareId for share URLs
             mediaCids: quickPosts.mediaCids,

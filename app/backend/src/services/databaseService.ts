@@ -117,8 +117,8 @@ export class DatabaseService {
       const result = await this.db.insert(schema.posts).values({
         authorId,
         contentCid,
-        content: content || null, // Store content as fallback if provided
-        title: title || null, // Store title if provided
+        content: content ?? null, // Store content as provided (preserve empty strings)
+        title: title ?? null, // Store title as provided (preserve empty strings)
         parentId: parentId || null,
         isRepost,
         mediaCids: mediaCids ? JSON.stringify(mediaCids) : null,

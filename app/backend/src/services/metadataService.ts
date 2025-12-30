@@ -106,8 +106,17 @@ export class MetadataService {
             await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
           }
         }
-      } catch (error) {
-        safeLogger.error('Pinata API upload failed:', error);
+      } catch (error: any) {
+        // Safely extract error information to avoid circular structure issues
+        const errorMessage = error?.message || 'Unknown error';
+        const errorStack = error?.stack;
+        const errorData = error?.response?.data; // Extract only data if available
+
+        safeLogger.error('Pinata API upload failed:', {
+          message: errorMessage,
+          stack: errorStack,
+          data: errorData
+        });
       }
     }
 

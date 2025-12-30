@@ -93,7 +93,7 @@ const EnhancedPostCard = React.memo(({
   // Extract video URLs from content for embedding
   const videoEmbeds = useMemo(() => {
     if (!post.content) return [];
-    return extractVideoUrls(post.content);
+    return extractVideoUrls(post.content || '');
   }, [post.content]);
 
   // Get post action permissions
@@ -344,6 +344,7 @@ const EnhancedPostCard = React.memo(({
 
   // Truncate content for preview - memoized
   const truncateContent = useCallback((content: string, maxLength: number = 280) => {
+    if (!content) return '';
     if (content.length <= maxLength) return content;
     return content.substring(0, maxLength) + '...';
   }, []);
