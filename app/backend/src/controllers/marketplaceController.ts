@@ -48,6 +48,14 @@ export class MarketplaceController {
         });
       }
 
+      // Fetch actual seller profile data
+      let sellerProfile = null;
+      try {
+        sellerProfile = await sellerService.getSellerProfile(listing.sellerWalletAddress);
+      } catch (sellerError) {
+        // Continue without seller profile data
+      }
+
       // Map the marketplace listing to the expected product format
       const product = {
         id: listing.id,
@@ -87,17 +95,17 @@ export class MarketplaceController {
         seller: {
           id: listing.sellerWalletAddress,
           walletAddress: listing.sellerWalletAddress,
-          displayName: `Seller ${listing.sellerWalletAddress.substring(0, 6)}`, // Would come from profile service
-          storeName: `Store ${listing.sellerWalletAddress.substring(0, 6)}`, // Would come from profile service
-          rating: 4.5, // Would come from reputation service
-          reputation: 85, // Would come from reputation service
-          verified: true, // Would come from verification service
-          daoApproved: false, // Would come from reputation service
-          profileImageUrl: '/images/default-avatar.png',
-          isOnline: true // Would come from online status service
+          displayName: sellerProfile?.storeName || `Seller ${listing.sellerWalletAddress.substring(0, 6)}`,
+          storeName: sellerProfile?.storeName || `Store ${listing.sellerWalletAddress.substring(0, 6)}`,
+          avatar: sellerProfile?.profileImageCdn || sellerProfile?.profileImageIpfs || '',
+          rating: sellerProfile?.stats?.averageRating || 4.5,
+          reputation: sellerProfile?.daoReputation?.governanceParticipation || 85,
+          verified: sellerProfile?.isVerified || false,
+          daoApproved: sellerProfile?.daoApproved || false,
+          isOnline: true
         },
         trust: {
-          verified: true, // Would come from verification service
+          verified: sellerProfile?.isVerified || true,
           escrowProtected: listing.isEscrowed,
           onChainCertified: false, // Would come from blockchain verification
           safetyScore: 85 // Would come from reputation service
@@ -224,67 +232,77 @@ export class MarketplaceController {
       }
 
       // Map listings to the expected product format
-      const mappedListings = result.listings.map(listing => ({
-        id: listing.id,
-        sellerId: listing.sellerAddress,
-        title: listing.title,
-        description: listing.description || '',
-        priceAmount: Number(listing.price),
-        priceCurrency: listing.currency || 'USD',
-        category: listing.category ? {
-          id: listing.category,
-          name: listing.category,
-          slug: listing.category ? listing.category.toLowerCase() : ''
-        } : null,
-        images: listing.images || [],
-        inventory: 1,
-        status: listing.isActive ? 'active' : 'inactive',
-        tags: [],
-        shipping: listing.shipping ? {
-          freeShipping: listing.shipping.freeShipping || false,
-          estimatedDays: listing.shipping.estimatedDelivery || '3-5',
-          cost: listing.shipping.cost,
-          methods: listing.shipping.methods || ['standard'],
-          handlingTime: listing.shipping.handlingTime,
-          shipsFrom: listing.shipping.shipsFrom,
-          internationalShipping: listing.shipping.internationalShipping,
-          internationalCost: listing.shipping.internationalCost,
-          localPickup: listing.shipping.localPickup
-        } : {
-          freeShipping: true,
-          estimatedDays: '3-5',
-          methods: ['standard']
-        },
-        nft: null,
-        views: 0,
-        favorites: 0,
-        listingStatus: listing.isActive ? 'active' : 'inactive',
-        publishedAt: listing.createdAt,
-        createdAt: listing.createdAt,
-        updatedAt: listing.updatedAt,
-        seller: {
-          id: listing.sellerAddress,
-          walletAddress: listing.sellerAddress,
-          displayName: listing.sellerAddress ? `Seller ${listing.sellerAddress.substring(0, 6)}...` : 'Unknown',
-          storeName: listing.sellerAddress ? `Store ${listing.sellerAddress.substring(0, 6)}` : 'Unknown Store',
-          rating: 4.5,
-          reputation: 85,
-          verified: true,
-          daoApproved: false,
-          profileImageUrl: '/images/default-avatar.png',
-          isOnline: true
-        },
-        trust: {
-          verified: true,
-          escrowProtected: true,
-          onChainCertified: false,
-          safetyScore: 85
-        },
-        metadata: {
-          condition: 'new',
-          brand: 'Unknown'
-        },
-        specifications: {}
+      const mappedListings = await Promise.all(result.listings.map(async (listing) => {
+        // Fetch actual seller profile data
+        let sellerProfile = null;
+        try {
+          sellerProfile = await sellerService.getSellerProfile(listing.sellerAddress);
+        } catch (sellerError) {
+          // Continue without seller profile data
+        }
+
+        return {
+          id: listing.id,
+          sellerId: listing.sellerAddress,
+          title: listing.title,
+          description: listing.description || '',
+          priceAmount: Number(listing.price),
+          priceCurrency: listing.currency || 'USD',
+          category: listing.category ? {
+            id: listing.category,
+            name: listing.category,
+            slug: listing.category ? listing.category.toLowerCase() : ''
+          } : null,
+          images: listing.images || [],
+          inventory: 1,
+          status: listing.isActive ? 'active' : 'inactive',
+          tags: [],
+          shipping: listing.shipping ? {
+            freeShipping: listing.shipping.freeShipping || false,
+            estimatedDays: listing.shipping.estimatedDelivery || '3-5',
+            cost: listing.shipping.cost,
+            methods: listing.shipping.methods || ['standard'],
+            handlingTime: listing.shipping.handlingTime,
+            shipsFrom: listing.shipping.shipsFrom,
+            internationalShipping: listing.shipping.internationalShipping,
+            internationalCost: listing.shipping.internationalCost,
+            localPickup: listing.shipping.localPickup
+          } : {
+            freeShipping: true,
+            estimatedDays: '3-5',
+            methods: ['standard']
+          },
+          nft: null,
+          views: 0,
+          favorites: 0,
+          listingStatus: listing.isActive ? 'active' : 'inactive',
+          publishedAt: listing.createdAt,
+          createdAt: listing.createdAt,
+          updatedAt: listing.updatedAt,
+          seller: {
+            id: listing.sellerAddress,
+            walletAddress: listing.sellerAddress,
+            displayName: sellerProfile?.storeName || (listing.sellerAddress ? `Seller ${listing.sellerAddress.substring(0, 6)}...` : 'Unknown'),
+            storeName: sellerProfile?.storeName || (listing.sellerAddress ? `Store ${listing.sellerAddress.substring(0, 6)}` : 'Unknown Store'),
+            avatar: sellerProfile?.profileImageCdn || sellerProfile?.profileImageIpfs || '',
+            rating: sellerProfile?.stats?.averageRating || 4.5,
+            reputation: sellerProfile?.daoReputation?.governanceParticipation || 85,
+            verified: sellerProfile?.isVerified || false,
+            daoApproved: sellerProfile?.daoApproved || false,
+            isOnline: true
+          },
+          trust: {
+            verified: sellerProfile?.isVerified || true,
+            escrowProtected: true,
+            onChainCertified: false,
+            safetyScore: 85
+          },
+          metadata: {
+            condition: 'new',
+            brand: 'Unknown'
+          },
+          specifications: {}
+        };
       }));
 
       return res.json({

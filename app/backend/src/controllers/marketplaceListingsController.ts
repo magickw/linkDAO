@@ -69,58 +69,68 @@ export class MarketplaceListingsController {
       }
 
       // Map listings to the expected response format with enriched data
-      const mappedListings = result.listings.map(listing => ({
-        id: listing.id,
-        sellerId: listing.sellerAddress,
-        title: listing.title,
-        description: listing.description || '',
-        price: Number(listing.price),
-        currency: listing.currency || 'USD',
-        category: listing.category ? {
-          id: listing.category,
-          name: listing.category,
-          slug: listing.category.toLowerCase()
-        } : null,
-        images: listing.images || [],
-        inventory: 1,
-        status: listing.isActive ? 'active' : 'inactive',
-        tags: [],
-        shipping: {
-          weight: 0.5,
-          freeShipping: true
-        },
-        nft: null,
-        views: 0,
-        favorites: 0,
-        listingStatus: listing.isActive ? 'active' : 'inactive',
-        publishedAt: listing.createdAt,
-        createdAt: listing.createdAt,
-        updatedAt: listing.updatedAt,
-        seller: {
-          id: listing.sellerAddress,
-          walletAddress: listing.sellerAddress,
-          displayName: listing.sellerAddress ? `Seller ${listing.sellerAddress.substring(0, 6)}...` : 'Unknown',
-          storeName: listing.sellerAddress ? `Store ${listing.sellerAddress.substring(0, 6)}` : 'Unknown Store',
-          rating: 4.5,
-          reputation: 85,
-          verified: true,
-          daoApproved: false,
-          profileImageUrl: '/images/default-avatar.png',
-          isOnline: true
-        },
-        trust: {
-          verified: true,
-          escrowProtected: true,
-          onChainCertified: false,
-          safetyScore: 85
-        },
-        metadata: {
-          condition: 'new',
-          brand: 'Unknown'
-        },
-        specifications: {}
-      }));
-
+            const mappedListings = await Promise.all(result.listings.map(async (listing) => {
+              // Fetch actual seller profile data
+              let sellerProfile = null;
+              try {
+                const { sellerService } = await import('../services/sellerService');
+                sellerProfile = await sellerService.getSellerProfile(listing.sellerAddress);
+              } catch (sellerError) {
+                // Continue without seller profile data
+              }
+      
+              return {
+                id: listing.id,
+                sellerId: listing.sellerAddress,
+                title: listing.title,
+                description: listing.description || '',
+                price: Number(listing.price),
+                currency: listing.currency || 'USD',
+                category: listing.category ? {
+                  id: listing.category,
+                  name: listing.category,
+                  slug: listing.category.toLowerCase()
+                } : null,
+                images: listing.images || [],
+                inventory: 1,
+                status: listing.isActive ? 'active' : 'inactive',
+                tags: [],
+                shipping: {
+                  weight: 0.5,
+                  freeShipping: true
+                },
+                nft: null,
+                views: 0,
+                favorites: 0,
+                listingStatus: listing.isActive ? 'active' : 'inactive',
+                publishedAt: listing.createdAt,
+                createdAt: listing.createdAt,
+                updatedAt: listing.updatedAt,
+                seller: {
+                  id: listing.sellerAddress,
+                  walletAddress: listing.sellerAddress,
+                  displayName: sellerProfile?.storeName || (listing.sellerAddress ? `Seller ${listing.sellerAddress.substring(0, 6)}...` : 'Unknown'),
+                  storeName: sellerProfile?.storeName || (listing.sellerAddress ? `Store ${listing.sellerAddress.substring(0, 6)}` : 'Unknown Store'),
+                  avatar: sellerProfile?.profileImageCdn || sellerProfile?.profileImageIpfs || '',
+                  rating: sellerProfile?.stats?.averageRating || 4.5,
+                  reputation: sellerProfile?.daoReputation?.governanceParticipation || 85,
+                  verified: sellerProfile?.isVerified || false,
+                  daoApproved: sellerProfile?.daoApproved || false,
+                  isOnline: true
+                },
+                trust: {
+                  verified: sellerProfile?.isVerified || true,
+                  escrowProtected: true,
+                  onChainCertified: false,
+                  safetyScore: 85
+                },
+                metadata: {
+                  condition: 'new',
+                  brand: 'Unknown'
+                },
+                specifications: {}
+              };
+            }));
       // Return the response in the format expected by the frontend
       const response = {
         success: true,
@@ -175,6 +185,15 @@ export class MarketplaceListingsController {
         return;
       }
 
+      // Fetch actual seller profile data
+      let sellerProfile = null;
+      try {
+        const { sellerService } = await import('../services/sellerService');
+        sellerProfile = await sellerService.getSellerProfile(listing.sellerAddress);
+      } catch (sellerError) {
+        // Continue without seller profile data
+      }
+
       // Map the listing to the expected response format
       const responseListing = {
         id: listing.id,
@@ -206,17 +225,17 @@ export class MarketplaceListingsController {
         seller: {
           id: listing.sellerAddress,
           walletAddress: listing.sellerAddress,
-          displayName: listing.sellerAddress ? `Seller ${listing.sellerAddress.substring(0, 6)}...` : 'Unknown',
-          storeName: listing.sellerAddress ? `Store ${listing.sellerAddress.substring(0, 6)}` : 'Unknown Store',
-          rating: 4.5,
-          reputation: 85,
-          verified: true,
-          daoApproved: false,
-          profileImageUrl: '/images/default-avatar.png',
+          displayName: sellerProfile?.storeName || (listing.sellerAddress ? `Seller ${listing.sellerAddress.substring(0, 6)}...` : 'Unknown'),
+          storeName: sellerProfile?.storeName || (listing.sellerAddress ? `Store ${listing.sellerAddress.substring(0, 6)}` : 'Unknown Store'),
+          avatar: sellerProfile?.profileImageCdn || sellerProfile?.profileImageIpfs || '',
+          rating: sellerProfile?.stats?.averageRating || 4.5,
+          reputation: sellerProfile?.daoReputation?.governanceParticipation || 85,
+          verified: sellerProfile?.isVerified || false,
+          daoApproved: sellerProfile?.daoApproved || false,
           isOnline: true
         },
         trust: {
-          verified: true,
+          verified: sellerProfile?.isVerified || true,
           escrowProtected: true,
           onChainCertified: false,
           safetyScore: 85

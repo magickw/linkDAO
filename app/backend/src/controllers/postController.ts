@@ -366,7 +366,14 @@ export class PostController {
   async deletePost(req: Request, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
-      const deleted = await this.postService.deletePost(id);
+
+      // Try deleting from standard posts first
+      let deleted = await this.postService.deletePost(id);
+
+      // If not found in standard posts, try deleting from quick posts
+      if (!deleted) {
+        deleted = await this.quickPostService.deleteQuickPost(id);
+      }
 
       if (!deleted) {
         return res.status(404).json({
@@ -404,20 +411,6 @@ export class PostController {
         return res.status(404).json({ success: false, error: 'User not found' });
       }
 
-      // Try to delete from quick_posts first (new reposts)
-      const deletedQuickRepost = await this.quickPostService.deleteQuickPost(
-        // We need the ID of the repost, but here we only have parentId and author.
-        // QuickPostService.deleteQuickPost expects ID.
-        // So we need to find it first.
-        // But wait, the service doesn't expose "delete by parentId".
-        // Let's use direct DB query for efficiency here similar to previous implementation.
-        // Actually, let's keep it consistent.
-
-        // Find repost in quick_posts
-        // We can't easily use service for "find by parent and author" without adding method.
-        // So I'll use direct DB delete on quick_posts table here.
-        '' // Placeholder, see logic below
-      );
 
       // Direct DB deletion logic for both tables to be safe (handle legacy and new)
 

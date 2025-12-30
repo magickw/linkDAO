@@ -322,11 +322,25 @@ export class ProductService {
       .from(schema.products)
       .leftJoin(schema.categories, eq(schema.products.categoryId, schema.categories.id))
       .leftJoin(schema.users, eq(schema.products.sellerId, schema.users.id))
-      .leftJoin(schema.sellers, eq(schema.users.walletAddress, schema.sellers.walletAddress))
+      .leftJoin(schema.sellers, eq(sql`LOWER(${schema.users.walletAddress})`, sql`LOWER(${schema.sellers.walletAddress})`))
       .where(whereClause)
       .orderBy(orderBy)
       .limit(pagination.limit)
       .offset(offset);
+
+    safeLogger.info('📊 Product query result sample:', {
+      totalResults: result.length,
+      firstResult: result[0] ? {
+        productId: result[0].products?.id,
+        sellerId: result[0].products?.sellerId,
+        userWalletAddress: result[0].users?.walletAddress,
+        sellerWalletAddress: result[0].sellers?.walletAddress,
+        sellerStoreName: result[0].sellers?.storeName,
+        sellerAvatar: result[0].sellers?.profileImageCdn,
+        hasSeller: !!result[0].sellers,
+        hasUser: !!result[0].users
+      } : null
+    });
 
     const products = await Promise.all(result.map(async (row: any) => {
       const { products: product, categories: category, users: user, sellers: seller } = row;
@@ -666,6 +680,24 @@ export class ProductService {
   }
 
   private async mapProductFromDb(dbProduct: any, dbCategory?: any, dbUser?: any, dbSeller?: any): Promise<Product> {
+    safeLogger.info('🔍 mapProductFromDb input:', {
+      productId: dbProduct.id,
+      sellerId: dbProduct.sellerId,
+      dbUser: dbUser ? {
+        id: dbUser.id,
+        walletAddress: dbUser.walletAddress,
+        displayName: dbUser.displayName,
+        avatarCid: dbUser.avatarCid
+      } : null,
+      dbSeller: dbSeller ? {
+        walletAddress: dbSeller.walletAddress,
+        storeName: dbSeller.storeName,
+        profileImageCdn: dbSeller.profileImageCdn,
+        isVerified: dbSeller.isVerified,
+        daoApproved: dbSeller.daoApproved
+      } : null
+    });
+
     // Get seller review stats if we have a seller
     let sellerRating = 0;
     if (dbUser?.id) {
@@ -746,6 +778,17 @@ export class ProductService {
       if (dbSeller) {
         seller.verified = dbSeller.isVerified || false;
       }
+      
+      safeLogger.info('📦 Mapped seller for product:', {
+        productId: dbProduct.id,
+        seller: {
+          id: seller.id,
+          walletAddress: seller.walletAddress,
+          displayName: seller.displayName,
+          storeName: seller.storeName,
+          avatar: seller.avatar,
+        }
+      });
     }
 
     // Parse price metadata if it exists
