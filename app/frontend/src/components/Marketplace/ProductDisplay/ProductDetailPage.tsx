@@ -168,7 +168,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Product Images */}
           <div className="w-full lg:w-1/2">
-            <GlassPanel variant="secondary" className="p-4 mb-6">
+            <GlassPanel variant="secondary" className="pl-3 pr-6 py-3 mb-6">
               <OptimizedImage
                 src={selectedImage || product.media?.[0]?.url || ''}
                 alt={product.title || 'Product'}
@@ -186,7 +186,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                   <GlassPanel
                     key={index}
                     variant="secondary"
-                    className={`p-2 cursor-pointer border-2 ${selectedImage === media.url ? 'border-blue-500' : 'border-transparent'}`}
+                    className={`pl-1 pr-3 py-1 cursor-pointer border-2 ${selectedImage === media.url ? 'border-blue-500' : 'border-transparent'}`}
                     onClick={() => setSelectedImage(media.url)}
                   >
                     <OptimizedImage

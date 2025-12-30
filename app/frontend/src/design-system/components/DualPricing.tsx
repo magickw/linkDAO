@@ -33,6 +33,8 @@ interface DualPricingProps {
   showToggle?: boolean;
   /** Show price change indicator */
   showChange?: boolean;
+  /** Show refresh button */
+  showRefreshButton?: boolean;
   /** Show last updated timestamp */
   showLastUpdated?: boolean;
   /** Price update interval in milliseconds */
@@ -63,6 +65,7 @@ export const DualPricing: React.FC<DualPricingProps> = ({
   layout = 'horizontal',
   showToggle = false,
   showChange = true,
+  showRefreshButton = true,
   showLastUpdated = false,
   updateInterval = 120000, // 2 minutes
   trackHistory = false,
@@ -441,7 +444,7 @@ export const DualPricing: React.FC<DualPricingProps> = ({
         )}
 
         {/* Refresh button */}
-        {realTimeConversion && (
+        {realTimeConversion && showRefreshButton && (
           <motion.button
             onClick={handleRefresh}
             whileHover={{ scale: 1.05 }}

@@ -339,9 +339,10 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
             {/* Image */}
             <div className="w-24 h-24 rounded-lg overflow-hidden flex-shrink-0">
               <OptimizedImage
-                src={product.images[0]}
+                src={product.images && product.images.length > 0 ? product.images[0] : ''}
                 alt={product.title}
                 className="w-full h-full"
+                useProductDefault={true}
               />
             </div>
 
@@ -442,9 +443,10 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
         >
           <div className="relative h-48 w-full">
             <OptimizedImage
-              src={product.images[0]}
+              src={product.images && product.images.length > 0 ? product.images[0] : ''}
               alt={product.title}
               className="w-full h-full"
+              useProductDefault={true}
             />
             
             {/* Wishlist button overlay */}

@@ -166,15 +166,18 @@ export const EnhancedProductCard: React.FC<ProductCardProps> = ({
 
             {/* Product Image */}
             <img
-              src={product.images[0]}
+              src={product.images && product.images.length > 0 ? product.images[0] : '/images/placeholders/product-placeholder.svg'}
               alt={product.title}
               className={`w-full h-full object-cover transition-all duration-300 ${
                 isImageLoaded ? 'opacity-100' : 'opacity-0'
               } ${isHovered ? 'scale-105' : 'scale-100'}`}
               loading="lazy"
               onLoad={() => setIsImageLoaded(true)}
-              srcSet={`${product.images[0]}?w=400 400w, ${product.images[0]}?w=600 600w`}
+              srcSet={product.images && product.images.length > 0 ? `${product.images[0]}?w=400 400w, ${product.images[0]}?w=600 600w` : ''}
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              onError={(e) => {
+                e.currentTarget.src = '/images/placeholders/product-placeholder.svg';
+              }}
             />
 
             {/* Discount Badge */}

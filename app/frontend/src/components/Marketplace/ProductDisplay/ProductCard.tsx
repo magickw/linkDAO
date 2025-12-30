@@ -23,7 +23,19 @@ import useMarketplaceErrorHandler from '../../../hooks/useMarketplaceErrorHandle
 import { usePrice } from '../../../hooks/useMarketplaceData';
 import { formatPrice, formatDualPrice } from '../../../utils/priceFormatter';
 import { validateProductID, validateSellerID, normalizeID } from '../../../utils/idValidator';
+import { getFallbackImage } from '../../../utils/imageUtils';
+import { RefreshCw } from 'lucide-react';
+
 import AuctionTimer from '../AuctionTimer';
+
+// Helper to get safe product image
+const getProductImage = (product: Product): string => {
+  if (product.images && product.images.length > 0 && product.images[0]) {
+    return product.images[0];
+  }
+  return getFallbackImage('product');
+};
+import { hasValidImages, getImageDimensions } from './ImageFix';
 
 interface Product {
   id: string;
@@ -490,20 +502,21 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       >
         <GlassPanel
           variant="secondary"
-          className="p-4"
+          className="pl-3 pr-6 py-3"
           nftShadow={product.seller.daoApproved ? 'dao' : (product.isNFT ? 'standard' : undefined)}
         >
           <div className="flex gap-4">
             {/* Image */}
             <div className="w-24 h-24 rounded-lg overflow-hidden flex-shrink-0">
               <OptimizedImage
-                src={product.images[0]}
+                src={getProductImage(product)}
                 alt={product.title}
                 width={96}
                 height={96}
                 className="w-full h-full"
                 lazy={false}
                 quality={75}
+                useProductDefault={true}
               />
             </div>
 
@@ -683,24 +696,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         {/* Image */}
         <div className="relative h-48 w-full">
           <OptimizedImage
-            src={product.images[0]}
+            src={getProductImage(product)}
             alt={product.title}
             width={400}
-            height={300}
+            height={192}
             className="w-full h-full"
             priority={product.isFeatured ? "high" : "medium"}
             placeholder="skeleton"
             preload={product.isFeatured}
             useProductDefault={true}
-            onLoad={() => {
-              // Preload additional images for this product
-              if (product.images.length > 1) {
-                product.images.slice(1, 3).forEach(imageUrl => {
-                  const img = new Image();
-                  img.src = imageUrl;
-                });
-              }
-            }}
+            useProductDefault={true}
           />
 
           {/* Wishlist button overlay */}
@@ -773,7 +778,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         </div>
 
         {/* Content */}
-        <div className="p-4">
+        <div className="pl-3 pr-6 pb-3 pt-4">
           {/* Seller and Trust Indicators */}
           <div className="flex items-center justify-between mb-3">
             <SellerBadge
@@ -850,25 +855,22 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 layout="vertical"
               />
             ) : (
-              <DualPricing
-                cryptoPrice={priceDisplayData.crypto}
-                cryptoSymbol={priceDisplayData.cryptoSymbol}
-                fiatPrice={priceDisplayData.fiat}
-                fiatSymbol={priceDisplayData.fiatSymbol}
-                size="md"
-                layout="vertical"
-                realTimeConversion
-              />
+              <div className="flex flex-col">
+                <DualPricing
+                  cryptoPrice={priceDisplayData.crypto}
+                  cryptoSymbol={priceDisplayData.cryptoSymbol}
+                  fiatPrice={priceDisplayData.fiat}
+                  fiatSymbol={priceDisplayData.fiatSymbol}
+                  size="md"
+                  layout="vertical"
+                  realTimeConversion
+                  defaultPrimary="fiat"
+                  showRefreshButton={false}
+                />
+              </div>
             )}
           </div>
 
-          {/* Engagement metrics */}
-          <div className="mb-4">
-            <AnimatedEngagementMetrics
-              views={product.views || 0}
-              favorites={product.favorites || 0}
-            />
-          </div>
 
           {/* Auction Badge */}
           {isAuction && (
@@ -905,14 +907,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="flex gap-2">
+          {/* Main Action Buttons */}
+          <div className="flex gap-2 mb-3">
             {isAuction ? (
               <Button
                 variant="primary"
                 size="sm"
                 onClick={() => onBidClick && onBidClick(product.id)}
-                className="flex-1"
+                className="w-full"
               >
                 Place Bid
               </Button>
@@ -921,7 +923,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 <Button
                   variant="primary"
                   size="sm"
-                  onClick={handleProductClick}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (product.inventory === 0) return;
+                    handleProductClick();
+                  }}
                   className="flex-1"
                   disabled={product.inventory === 0}
                 >
@@ -938,6 +944,63 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 </Button>
               </>
             )}
+          </div>
+
+          {/* Compact Footer: tools, status, metrics */}
+          <div className="flex items-center justify-between pt-2 border-t border-white/10">
+            <div className="flex items-center gap-3">
+              {/* Refresh Button */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Trigger refresh if needed, for now just a visual interaction
+                  addToast('Refreshing price...', 'info');
+                }}
+                className="text-white/40 hover:text-white transition-colors"
+                title="Refresh Price"
+              >
+                <RefreshCw size={14} />
+              </button>
+
+              {/* Online Indicator */}
+              <div className="flex items-center gap-1.5" title={`Seller is ${product.seller.onlineStatus || 'offline'}`}>
+                <div className={`w-2 h-2 rounded-full ${product.seller.onlineStatus === 'online' ? 'bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]' :
+                  product.seller.onlineStatus === 'away' ? 'bg-yellow-400' : 'bg-gray-500'
+                  }`} />
+                <span className="text-xs text-white/60 font-medium">
+                  {product.seller.onlineStatus === 'online' ? 'Online' :
+                    product.seller.onlineStatus === 'away' ? 'Away' : 'Offline'}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {/* View Count */}
+              <div className="flex items-center gap-1 text-white/50" title={`${product.views || 0} views`}>
+                <span className="text-xs">{product.views || 0}</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </div>
+
+              {/* Favorite Button */}
+              <button
+                onClick={handleWishlistToggle}
+                className="text-white/40 hover:text-pink-400 transition-colors"
+                title={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+              >
+                {isWishlisted ? (
+                  <span className="text-pink-400">❤️</span>
+                ) : (
+                  <div className="hover:scale-110 transition-transform">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+                    </svg>
+                  </div>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </GlassPanel>

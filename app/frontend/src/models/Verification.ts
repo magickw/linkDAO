@@ -1,7 +1,7 @@
 export interface VerificationRequest {
     id: string;
     userId: string;
-    entityType: 'individual' | 'organization';
+    entityType: 'individual' | 'organization' | 'government';
     entityId?: string;
     status: 'pending' | 'approved' | 'rejected' | 'more_info_needed';
     category?: string;
@@ -23,7 +23,7 @@ export interface VerificationStatus {
 }
 
 export interface CreateVerificationRequestInput {
-    entityType: 'individual' | 'organization';
+    entityType: 'individual' | 'organization' | 'government';
     category?: string;
     description?: string;
     website?: string;

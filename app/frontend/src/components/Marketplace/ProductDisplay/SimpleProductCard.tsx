@@ -132,7 +132,7 @@ export const SimpleProductCard: React.FC<ProductCardProps> = ({
               </div>
             ) : (
               <img
-                src={product.images[0]}
+                src={product.images && product.images.length > 0 ? product.images[0] : '/images/placeholders/product-placeholder.svg'}
                 alt={product.title}
                 className={`absolute inset-0 w-full h-full object-cover transition-all duration-300 ${
                   isHovered ? 'scale-105' : 'scale-100'
@@ -141,7 +141,10 @@ export const SimpleProductCard: React.FC<ProductCardProps> = ({
                 }`}
                 loading="lazy"
                 onLoad={() => setIsImageLoaded(true)}
-                onError={() => setImageError(true)}
+                onError={() => {
+                  setImageError(true);
+                  e.currentTarget.src = '/images/placeholders/product-placeholder.svg';
+                }}
               />
             )}
 
@@ -285,7 +288,7 @@ export const SimpleProductCard: React.FC<ProductCardProps> = ({
             </div>
           ) : (
             <img
-              src={product.images[0]}
+              src={product.images && product.images.length > 0 ? product.images[0] : '/images/placeholders/product-placeholder.svg'}
               alt={product.title}
               className={`w-full h-full object-cover transition-all ${
                 isHovered ? 'scale-105' : 'scale-100'
@@ -294,7 +297,10 @@ export const SimpleProductCard: React.FC<ProductCardProps> = ({
               }`}
               loading="lazy"
               onLoad={() => setIsImageLoaded(true)}
-              onError={() => setImageError(true)}
+              onError={() => {
+                setImageError(true);
+                e.currentTarget.src = '/images/placeholders/product-placeholder.svg';
+              }}
             />
           )}
           
