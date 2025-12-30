@@ -406,7 +406,7 @@ export class MarketplaceVerificationService {
         tier,
         reputationScore,
         verificationStatus: sellerVerification?.status || 'none',
-        nextTierRequirements: tier === 'unverified' ? ['submit_verification'] : []
+        nextTierRequirements: tier === 'bronze' ? ['submit_verification'] : []
       };
     } catch (error) {
       safeLogger.error('Error getting seller verification tier:', error);

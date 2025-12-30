@@ -113,7 +113,7 @@ export default function SellerUpgradePage() {
                     <h3 className="text-xl font-bold text-white mb-2">{tier.name}</h3>
                     <p className="text-gray-300 mb-4">{tier.description}</p>
                     <div className="inline-block px-3 py-1 bg-purple-600 text-white text-sm rounded-full">
-                      {tier.id === 'verified' ? 'Free' : 'Contact Support'}
+                      {tier.id === 'gold' ? 'Free' : 'Contact Support'}
                     </div>
                   </div>
                   
@@ -149,16 +149,16 @@ export default function SellerUpgradePage() {
                     variant="primary"
                     className="w-full"
                     onClick={() => {
-                      if (tier.id === 'verified') {
-                        // For verified tier, we might want to redirect to a verification page
+                      if (tier.id === 'gold') {
+                        // For gold tier, we might want to redirect to a verification page
                         addToast('Verification process would start here. In a real implementation, this would redirect to an email/phone verification flow.', 'info');
                       } else {
-                        // For Pro tier, contact support
-                        addToast('To upgrade to Pro tier, please contact our support team.', 'info');
+                        // For Platinum and Diamond tiers, contact support
+                        addToast('To upgrade to ' + tier.name + ' tier, please contact our support team.', 'info');
                       }
                     }}
                   >
-                    {tier.id === 'verified' ? 'Start Verification' : 'Contact Support'}
+                    {tier.id === 'gold' ? 'Start Verification' : 'Contact Support'}
                   </Button>
                 </GlassPanel>
               ))}

@@ -37,6 +37,12 @@ export interface AuthorProfile {
   verified: boolean;
   reputationTier?: string;
   avatar?: string;
+  ensName?: string;
+  reputationScore?: number;
+  votingPower?: number;
+  xpBadges?: string[];
+  totalContributions?: number;
+  memberSince?: Date;
 }
 
 // Standardized post interface that matches backend schema
@@ -107,6 +113,7 @@ export interface EnhancedPost {
 
 export interface Reaction {
   type: string;
+  count?: number;
   users: ReactionUser[];
   totalAmount: number;
   tokenType: string;

@@ -351,7 +351,7 @@ const CommunitiesPage: React.FC = () => {
       const { FeedService } = await import('../services/feedService');
 
       const filter = {
-        feedSource: 'all',
+        feedSource: 'all' as 'all',
         sortBy: sortBy as any,
         timeRange: timeFilter,
         userAddress: address || undefined,

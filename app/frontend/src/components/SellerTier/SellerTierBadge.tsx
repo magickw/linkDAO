@@ -5,7 +5,7 @@
 
 import React from 'react';
 
-export type SellerTier = 'unverified' | 'standard' | 'verified' | 'premium';
+export type SellerTier = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
 
 interface SellerTierBadgeProps {
   tier: SellerTier;
@@ -15,37 +15,45 @@ interface SellerTierBadgeProps {
 }
 
 const TIER_CONFIG = {
-  unverified: {
-    icon: '🔒',
-    name: 'Unverified',
-    bgColor: 'bg-gradient-to-br from-gray-400 to-gray-600',
+  bronze: {
+    icon: '🥉',
+    name: 'Bronze',
+    bgColor: 'bg-gradient-to-br from-orange-400 via-orange-500 to-orange-600',
+    borderColor: 'border-orange-700',
+    textColor: 'text-white',
+    shadowColor: 'shadow-orange-500/30'
+  },
+  silver: {
+    icon: '🥈',
+    name: 'Silver',
+    bgColor: 'bg-gradient-to-br from-gray-300 via-gray-400 to-gray-500',
     borderColor: 'border-gray-600',
-    textColor: 'text-white',
-    shadowColor: 'shadow-gray-400/20'
+    textColor: 'text-gray-900',
+    shadowColor: 'shadow-gray-400/30'
   },
-  standard: {
-    icon: '⭐',
-    name: 'Standard',
-    bgColor: 'bg-gradient-to-br from-blue-400 to-blue-600',
-    borderColor: 'border-blue-600',
-    textColor: 'text-white',
-    shadowColor: 'shadow-blue-500/20'
+  gold: {
+    icon: '🥇',
+    name: 'Gold',
+    bgColor: 'bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600',
+    borderColor: 'border-yellow-700',
+    textColor: 'text-gray-900',
+    shadowColor: 'shadow-yellow-500/30'
   },
-  verified: {
-    icon: '✅',
-    name: 'Verified',
-    bgColor: 'bg-gradient-to-br from-green-400 to-green-600',
-    borderColor: 'border-green-600',
+  platinum: {
+    icon: '💎',
+    name: 'Platinum',
+    bgColor: 'bg-gradient-to-br from-slate-300 via-slate-400 to-slate-500',
+    borderColor: 'border-slate-600',
     textColor: 'text-white',
-    shadowColor: 'shadow-green-500/20'
+    shadowColor: 'shadow-slate-400/30'
   },
-  premium: {
+  diamond: {
     icon: '👑',
-    name: 'Premium',
-    bgColor: 'bg-gradient-to-br from-purple-500 to-purple-700',
-    borderColor: 'border-purple-700',
+    name: 'Diamond',
+    bgColor: 'bg-gradient-to-br from-cyan-300 via-blue-400 to-indigo-500',
+    borderColor: 'border-indigo-600',
     textColor: 'text-white',
-    shadowColor: 'shadow-purple-500/20'
+    shadowColor: 'shadow-cyan-400/40'
   }
 };
 

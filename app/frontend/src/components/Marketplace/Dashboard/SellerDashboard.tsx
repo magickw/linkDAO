@@ -502,10 +502,11 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
               <div>
                 <h1 className="text-2xl font-bold text-white">{profile?.storeName || 'Seller Store'}</h1>
                 <div className="flex items-center space-x-2 mt-1">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${currentTier?.id === 'pro' ? 'bg-purple-600 text-white' :
-                    currentTier?.id === 'verified' ? 'bg-blue-600 text-white' :
-                      currentTier?.id === 'basic' ? 'bg-green-600 text-white' :
-                        'bg-gray-600 text-white'
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${currentTier?.id === 'diamond' ? 'bg-gradient-to-r from-cyan-500 to-indigo-600 text-white' :
+                    currentTier?.id === 'platinum' ? 'bg-gradient-to-r from-slate-400 to-slate-600 text-white' :
+                      currentTier?.id === 'gold' ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-gray-900' :
+                        currentTier?.id === 'silver' ? 'bg-gradient-to-r from-gray-300 to-gray-500 text-gray-900' :
+                          'bg-gradient-to-r from-orange-400 to-orange-600 text-white'
                     }`}>
                     {currentTier?.name}
                   </span>

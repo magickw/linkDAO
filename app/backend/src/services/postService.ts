@@ -236,7 +236,12 @@ export class PostService {
 
     try {
       // Fetch the post from database using the new dedicated method
-      const dbPost = await databaseService.getPostById(postId);
+      let dbPost = await databaseService.getPostById(postId);
+
+      // Fallback to quick posts if not found in regular posts
+      if (!dbPost) {
+        dbPost = await (databaseService as any).getQuickPostById(postId);
+      }
 
       if (!dbPost) {
         safeLogger.info(`Post not found with ID: ${postId}`);
@@ -283,7 +288,12 @@ export class PostService {
   async getPostByShareId(shareId: string): Promise<Post | undefined> {
     try {
       // Fetch the post from database by share_id
-      const dbPost = await databaseService.getPostByShareId(shareId);
+      let dbPost = await databaseService.getPostByShareId(shareId);
+
+      // Fallback to quick posts if not found in regular posts
+      if (!dbPost) {
+        dbPost = await (databaseService as any).getQuickPostByShareId(shareId);
+      }
 
       if (!dbPost) {
         safeLogger.info(`Post not found with share ID: ${shareId}`);

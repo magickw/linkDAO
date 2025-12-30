@@ -158,4 +158,6 @@ export interface UpdatePostInput {
   communityId?: string;
   tags?: string[];
   media?: string[];
+  poll?: any;
+  proposal?: any;
 }

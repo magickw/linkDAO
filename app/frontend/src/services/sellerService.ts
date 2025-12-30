@@ -113,17 +113,9 @@ class SellerService {
   getSellerTiers(): SellerTier[] {
     return [
       {
-        id: 'anonymous',
-        name: 'Anonymous Browser',
-        description: 'Browse and view listings without registration',
-        requirements: [],
-        benefits: ['View all listings', 'Browse categories', 'Search products'],
-        limitations: ['Cannot purchase', 'Cannot sell', 'No saved favorites']
-      },
-      {
-        id: 'basic',
-        name: 'Basic Seller',
-        description: 'Wallet-only seller for digital goods and NFTs',
+        id: 'bronze',
+        name: 'Bronze Seller',
+        description: 'Entry-level seller for digital goods and NFTs',
         requirements: ['Connected wallet'],
         benefits: [
           'List digital goods & NFTs',
@@ -139,9 +131,9 @@ class SellerService {
         ]
       },
       {
-        id: 'verified',
-        name: 'Verified Seller',
-        description: 'Enhanced seller with email/phone verification',
+        id: 'silver',
+        name: 'Silver Seller',
+        description: 'Verified seller with enhanced features',
         requirements: ['Connected wallet', 'Email verification', 'Phone verification (optional)'],
         benefits: [
           'Sell physical goods',
@@ -156,8 +148,8 @@ class SellerService {
         ]
       },
       {
-        id: 'pro',
-        name: 'Pro Seller',
+        id: 'gold',
+        name: 'Gold Seller',
         description: 'Full-featured seller with KYC and fiat integration',
         requirements: ['Connected wallet', 'Email & phone verified', 'KYC completed'],
         benefits: [
@@ -171,6 +163,40 @@ class SellerService {
         limitations: [
           'Subject to tax reporting',
           'Enhanced compliance requirements'
+        ]
+      },
+      {
+        id: 'platinum',
+        name: 'Platinum Seller',
+        description: 'Premium seller with exclusive benefits',
+        requirements: ['$100,000+ total sales', '4.5+ star rating', 'Low dispute rate'],
+        benefits: [
+          'Reduced commission fees (3.5%)',
+          'Dedicated account manager',
+          'Early access to new features',
+          'Custom store branding',
+          'Advanced API access'
+        ],
+        limitations: [
+          'Subject to enhanced compliance',
+          'Quarterly performance reviews'
+        ]
+      },
+      {
+        id: 'diamond',
+        name: 'Diamond Seller',
+        description: 'VIP seller with maximum benefits',
+        requirements: ['$500,000+ total sales', '4.7+ star rating', 'Excellent reputation'],
+        benefits: [
+          'Lowest commission fees (3%)',
+          'White-glove support service',
+          'Revenue sharing opportunities',
+          'Exclusive seller events',
+          'Unlimited withdrawal limits'
+        ],
+        limitations: [
+          'Subject to enhanced compliance',
+          'Monthly performance reviews'
         ]
       }
     ];

@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS "marketplace_verifications" (
   "id" serial PRIMARY KEY NOT NULL,
   "listing_id" varchar(64) NOT NULL,
   "verification_level" varchar(24) NOT NULL DEFAULT 'basic',
-  "seller_tier" varchar(24) NOT NULL DEFAULT 'unverified',
+  "seller_tier" varchar(24) NOT NULL DEFAULT 'bronze',
   "risk_score" numeric(3,2) NOT NULL DEFAULT 0,
   "proof_of_ownership" jsonb,
   "brand_verification" jsonb,
@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS "scam_patterns" (
 CREATE TABLE IF NOT EXISTS "seller_verifications" (
   "id" serial PRIMARY KEY NOT NULL,
   "wallet_address" varchar(66) NOT NULL UNIQUE,
-  "current_tier" varchar(24) NOT NULL DEFAULT 'unverified',
+  "current_tier" varchar(24) NOT NULL DEFAULT 'bronze',
   "kyc_verified" boolean DEFAULT false,
   "kyc_verified_at" timestamp,
   "reputation_score" integer DEFAULT 0,
@@ -194,5 +194,5 @@ INSERT INTO "marketplace_moderation_rules" ("rule_name", "rule_type", "condition
 ('High Value NFT Verification', 'verification', '{"min_value": 1000, "requires_proof": true}', 'review', 0.7),
 ('Counterfeit Brand Detection', 'counterfeit', '{"suspicious_terms_threshold": 2, "price_deviation_threshold": 0.7}', 'block', 0.6),
 ('Phishing Pattern Detection', 'scam', '{"pattern_types": ["phishing"], "min_indicators": 2}', 'block', 0.8),
-('Unverified Seller High Value', 'verification', '{"seller_tier": "unverified", "min_value": 500}', 'review', 0.5),
+('Bronze Seller High Value', 'verification', '{"seller_tier": "bronze", "min_value": 500}', 'review', 0.5),
 ('Stolen NFT Check', 'scam', '{"check_stolen_db": true}', 'block', 0.5);

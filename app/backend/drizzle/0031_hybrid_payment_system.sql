@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS stripe_connect_accounts (
     account_status VARCHAR(20) DEFAULT 'pending',
     capabilities JSONB,
     requirements JSONB,
-    verification_status VARCHAR(20) DEFAULT 'unverified',
+    verification_status VARCHAR(20) DEFAULT 'pending',
     payouts_enabled BOOLEAN DEFAULT FALSE,
     charges_enabled BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS "marketplace_verifications" (
     "user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
     "seller_verification_id" uuid,
     "verification_level" varchar(20) DEFAULT 'basic' NOT NULL,
-    "seller_tier" varchar(20) DEFAULT 'unverified' NOT NULL,
+    "seller_tier" varchar(20) DEFAULT 'bronze' NOT NULL,
     "risk_score" numeric(3, 2) DEFAULT '0' NOT NULL,
     "proof_of_ownership" jsonb,
     "brand_verification" jsonb,

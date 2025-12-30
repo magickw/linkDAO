@@ -12,7 +12,7 @@ export class CommunityPostService {
     try {
       // Get base auth headers from enhancedAuthService
       const authHeaders = await enhancedAuthService.getAuthHeaders();
-      
+
       // Add CSRF headers for authenticated requests
       let headers = { ...authHeaders };
       try {
@@ -21,7 +21,7 @@ export class CommunityPostService {
       } catch (error) {
         console.warn('Failed to get CSRF headers:', error);
       }
-      
+
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts`, {
         method: 'POST',
         headers: {
@@ -54,7 +54,7 @@ export class CommunityPostService {
   static async updatePost(communityId: string, postId: string, data: UpdatePostInput): Promise<Post> {
     try {
       const authHeaders = await enhancedAuthService.getAuthHeaders();
-      
+
       // Add CSRF headers for authenticated requests
       let headers = { ...authHeaders };
       try {
@@ -96,7 +96,7 @@ export class CommunityPostService {
   static async deletePost(communityId: string, postId: string, authorAddress: string): Promise<void> {
     try {
       const authHeaders = await enhancedAuthService.getAuthHeaders();
-      
+
       // Add CSRF headers for authenticated requests
       let headers = { ...authHeaders };
       try {
@@ -308,12 +308,12 @@ export class CommunityPostService {
           try {
             console.log('Attempting to refresh authentication...');
             const refreshResult = await enhancedAuthService.refreshToken();
-            
+
             if (refreshResult.success) {
               console.log('Token refresh successful, retrying request...');
               // Get new auth headers after refresh
               const newAuthHeaders = await enhancedAuthService.getAuthHeaders();
-              
+
               // Add CSRF headers for authenticated requests
               let retryHeaders = { ...newAuthHeaders };
               try {
@@ -322,7 +322,7 @@ export class CommunityPostService {
               } catch (error) {
                 console.warn('Failed to get CSRF headers for retry:', error);
               }
-              
+
               // Retry the request with fresh token
               const retryResponse = await fetch(`${BACKEND_API_BASE_URL}/api/posts/${data.postId}/comments`, {
                 method: 'POST',
@@ -389,7 +389,7 @@ export class CommunityPostService {
   static async deleteComment(commentId: string, authorAddress: string): Promise<void> {
     try {
       const authHeaders = await enhancedAuthService.getAuthHeaders();
-      
+
       // Add CSRF headers for authenticated requests
       let headers = { ...authHeaders };
       try {
@@ -423,7 +423,7 @@ export class CommunityPostService {
   static async voteComment(commentId: string, voteType: 'upvote' | 'downvote'): Promise<void> {
     try {
       const authHeaders = await enhancedAuthService.getAuthHeaders();
-      
+
       // Add CSRF headers for authenticated requests
       let headers = { ...authHeaders };
       try {
@@ -457,11 +457,11 @@ export class CommunityPostService {
   static async updateComment(commentId: string, content: string): Promise<Comment> {
     try {
       const authHeaders = await enhancedAuthService.getAuthHeaders();
-      
+
       // Add CSRF headers for authenticated requests
       let headers = { ...authHeaders };
       try {
-        const csrfHeaders = await csrfService.getCSRF();
+        const csrfHeaders = await csrfService.getCSRFHeaders();
         Object.assign(headers, csrfHeaders);
       } catch (error) {
         console.warn('Failed to get CSRF headers:', error);
@@ -542,7 +542,7 @@ export class CommunityPostService {
   static async joinCommunity(communityId: string): Promise<any> {
     try {
       const authHeaders = await enhancedAuthService.getAuthHeaders();
-      
+
       // Add CSRF headers for authenticated requests
       let headers = { ...authHeaders };
       try {
@@ -576,7 +576,7 @@ export class CommunityPostService {
   static async leaveCommunity(communityId: string): Promise<any> {
     try {
       const authHeaders = await enhancedAuthService.getAuthHeaders();
-      
+
       // Add CSRF headers for authenticated requests
       let headers = { ...authHeaders };
       try {
@@ -610,7 +610,7 @@ export class CommunityPostService {
   static async getMembershipStatus(communityId: string): Promise<any> {
     try {
       const authHeaders = await enhancedAuthService.getAuthHeaders();
-      
+
       // Add CSRF headers for authenticated requests
       let headers = { ...authHeaders };
       try {
@@ -637,6 +637,50 @@ export class CommunityPostService {
       return result.data || result;
     } catch (error) {
       console.error('Error getting membership status:', error);
+      throw error;
+    }
+  }
+
+  static async pinPost(postId: string): Promise<void> {
+    try {
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
+
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/${postId}/pin`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders
+        }
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || `Failed to pin post: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Error pinning post:', error);
+      throw error;
+    }
+  }
+
+  static async unpinPost(postId: string): Promise<void> {
+    try {
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
+
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/${postId}/pin`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders
+        }
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || `Failed to unpin post: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Error unpinning post:', error);
       throw error;
     }
   }

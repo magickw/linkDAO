@@ -1300,7 +1300,7 @@ CREATE TABLE IF NOT EXISTS "marketplace_verifications" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"verification_level" varchar(20) DEFAULT 'basic' NOT NULL,
-	"seller_tier" varchar(20) DEFAULT 'unverified' NOT NULL,
+	"seller_tier" varchar(20) DEFAULT 'bronze' NOT NULL,
 	"risk_score" numeric(3, 2) DEFAULT '0' NOT NULL,
 	"proof_of_ownership" jsonb,
 	"brand_verification" jsonb,
@@ -2322,7 +2322,7 @@ CREATE TABLE IF NOT EXISTS "seller_transactions" (
 CREATE TABLE IF NOT EXISTS "seller_verifications" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
-	"current_tier" varchar(20) DEFAULT 'unverified' NOT NULL,
+	"current_tier" varchar(20) DEFAULT 'bronze' NOT NULL,
 	"kyc_verified" boolean DEFAULT false,
 	"kyc_verified_at" timestamp,
 	"reputation_score" integer DEFAULT 0,

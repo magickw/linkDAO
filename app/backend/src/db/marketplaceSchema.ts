@@ -108,7 +108,7 @@ export const marketplaceVerifications = pgTable("marketplace_verifications", {
   userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   sellerVerificationId: uuid("seller_verification_id").references(() => sellerVerifications.id, { onDelete: "set null" }),
   verificationLevel: varchar("verification_level", { length: 20 }).default("basic").notNull(), // 'basic' | 'verified' | 'premium'
-  sellerTier: varchar("seller_tier", { length: 20 }).default("unverified").notNull(), // 'unverified' | 'standard' | 'verified' | 'premium'
+  sellerTier: varchar("seller_tier", { length: 20 }).default("bronze").notNull(), // 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond'
   riskScore: numeric("risk_score", { precision: 3, scale: 2 }).default("0").notNull(),
   proofOfOwnership: jsonb("proof_of_ownership"),
   brandVerification: jsonb("brand_verification"),

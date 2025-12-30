@@ -206,6 +206,39 @@ export class DatabaseService {
     }
   }
 
+  async getQuickPostById(id: string) {
+    try {
+      const result = await this.db
+        .select({
+          id: schema.quickPosts.id,
+          shareId: schema.quickPosts.shareId,
+          authorId: schema.quickPosts.authorId,
+          content: schema.quickPosts.content,
+          contentCid: schema.quickPosts.contentCid,
+          parentId: schema.quickPosts.parentId,
+          mediaCids: schema.quickPosts.mediaCids,
+          tags: schema.quickPosts.tags,
+          stakedValue: schema.quickPosts.stakedValue,
+          reputationScore: schema.quickPosts.reputationScore,
+          isTokenGated: schema.quickPosts.isTokenGated,
+          gatedContentPreview: schema.quickPosts.gatedContentPreview,
+          moderationStatus: schema.quickPosts.moderationStatus,
+          moderationWarning: schema.quickPosts.moderationWarning,
+          riskScore: schema.quickPosts.riskScore,
+          upvotes: schema.quickPosts.upvotes,
+          downvotes: schema.quickPosts.downvotes,
+          createdAt: schema.quickPosts.createdAt,
+          updatedAt: schema.quickPosts.updatedAt,
+        })
+        .from(schema.quickPosts)
+        .where(eq(schema.quickPosts.id, id));
+      return result[0] || null;
+    } catch (error) {
+      safeLogger.error("Error getting quick post by ID:", error);
+      throw error;
+    }
+  }
+
   async getPostByShareId(shareId: string) {
     try {
       const result = await this.db
@@ -237,6 +270,39 @@ export class DatabaseService {
       return result[0] || null;
     } catch (error) {
       safeLogger.error("Error getting post by share ID:", error);
+      throw error;
+    }
+  }
+
+  async getQuickPostByShareId(shareId: string) {
+    try {
+      const result = await this.db
+        .select({
+          id: schema.quickPosts.id,
+          shareId: schema.quickPosts.shareId,
+          authorId: schema.quickPosts.authorId,
+          content: schema.quickPosts.content,
+          contentCid: schema.quickPosts.contentCid,
+          parentId: schema.quickPosts.parentId,
+          mediaCids: schema.quickPosts.mediaCids,
+          tags: schema.quickPosts.tags,
+          stakedValue: schema.quickPosts.stakedValue,
+          reputationScore: schema.quickPosts.reputationScore,
+          isTokenGated: schema.quickPosts.isTokenGated,
+          gatedContentPreview: schema.quickPosts.gatedContentPreview,
+          moderationStatus: schema.quickPosts.moderationStatus,
+          moderationWarning: schema.quickPosts.moderationWarning,
+          riskScore: schema.quickPosts.riskScore,
+          upvotes: schema.quickPosts.upvotes,
+          downvotes: schema.quickPosts.downvotes,
+          createdAt: schema.quickPosts.createdAt,
+          updatedAt: schema.quickPosts.updatedAt,
+        })
+        .from(schema.quickPosts)
+        .where(eq(schema.quickPosts.shareId, shareId));
+      return result[0] || null;
+    } catch (error) {
+      safeLogger.error("Error getting quick post by share ID:", error);
       throw error;
     }
   }
