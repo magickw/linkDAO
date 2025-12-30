@@ -28,14 +28,37 @@ import { RefreshCw } from 'lucide-react';
 
 import AuctionTimer from '../AuctionTimer';
 
-// Helper to get safe product image
-const getProductImage = (product: Product): string => {
-  if (product.images && product.images.length > 0 && product.images[0]) {
-    return product.images[0];
-  }
-  return getFallbackImage('product');
-};
 import { hasValidImages, getImageDimensions } from './ImageFix';
+
+// Helper to get safe product image with robust validation
+const getProductImage = (product: Product): string => {
+  let images: string[] = [];
+
+  if (product.images) {
+    if (Array.isArray(product.images)) {
+      images = product.images;
+    } else if (typeof product.images === 'string') {
+      try {
+        images = JSON.parse(product.images);
+      } catch {
+        images = [];
+      }
+    }
+  }
+
+  const validImages = images.filter((img: string) => {
+    if (!img || typeof img !== 'string') return false;
+    return img.startsWith('data:') ||
+           img.startsWith('blob:') ||
+           img.startsWith('http://') ||
+           img.startsWith('https://') ||
+           img.startsWith('/') ||
+           img.startsWith('Qm') ||
+           img.startsWith('baf');
+  });
+
+  return validImages.length > 0 ? validImages[0] : getFallbackImage('product');
+};
 
 interface Product {
   id: string;

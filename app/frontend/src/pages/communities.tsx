@@ -34,6 +34,7 @@ import { ErrorBoundary } from '@/components/ErrorHandling/ErrorBoundary';
 import VisualPolishIntegration from '@/components/VisualPolish/VisualPolishIntegration';
 import QuickFilterChips from '@/components/Community/QuickFilterChips';
 import EmptyStates from '@/components/Community/EmptyStates';
+import SEO from '@/components/SEO';
 
 const CreateCommunityModal = lazy(() => import('@/components/CommunityEnhancements/Modals/CreateCommunityModal'));
 const TokenPriceSparkline = lazy(() => import('@/components/Community/TokenPriceSparkline'));
@@ -725,20 +726,13 @@ const CommunitiesPage: React.FC = () => {
       }}
     >
       <VisualPolishIntegration>
+        <SEO
+          title="Communities - LinkDAO"
+          description="Discover and join decentralized communities on LinkDAO. Connect with like-minded individuals, share knowledge, and participate in governance."
+          keywords={['DAO communities', 'decentralized communities', 'Web3', 'blockchain', 'governance', 'LinkDAO']}
+          type="website"
+        />
         <Layout title="Communities - LinkDAO" fullWidth={true}>
-          <Head>
-            <title>Communities - LinkDAO</title>
-            <meta name="description" content="Discover and join decentralized communities on LinkDAO. Connect with like-minded individuals, share knowledge, and participate in governance." />
-            <meta property="og:title" content="Communities - LinkDAO" />
-            <meta property="og:description" content="Discover and join decentralized communities on LinkDAO. Connect with like-minded individuals, share knowledge, and participate in governance." />
-            <meta property="og:url" content="https://linkdao.io/communities" />
-            <meta property="og:type" content="website" />
-            <meta name="twitter:card" content="summary_large_image" />
-            <meta name="twitter:title" content="Communities - LinkDAO" />
-            <meta name="twitter:description" content="Discover and join decentralized communities on LinkDAO. Connect with like-minded individuals, share knowledge, and participate in governance." />
-            <link rel="canonical" href="https://linkdao.io/communities" />
-            <meta name="keywords" content="DAO communities, decentralized communities, Web3, blockchain, governance, LinkDAO" />
-          </Head>
 
           {/* Background gradient for visual polish */}
           <div className="fixed inset-0 bg-gradient-to-br from-blue-50/30 via-purple-50/20 to-pink-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-gray-900 pointer-events-none" />

@@ -35,6 +35,7 @@ import '../styles/mobile-optimizations.css';
 import '../styles/design-polish.css';
 import '../styles/tiptap.css';
 import '@rainbow-me/rainbowkit/styles.css';
+import GlobalLoading from '@/components/GlobalLoading';
 
 const queryClient = new QueryClient();
 
@@ -89,7 +90,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
         console.debug('ContractRegistry initialization already in progress, skipping...');
         return;
       }
-      
+
       // Prevent multiple initializations
       if (isContractRegistryInitialized) {
         console.debug('ContractRegistry already initialized, skipping...');
@@ -98,7 +99,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
 
       try {
         isContractRegistryInitializing = true;
-        
+
         // Use wagmi's public client for initialization
         if (typeof window !== 'undefined') {
           const { getPublicClient } = await import('@wagmi/core');
@@ -127,7 +128,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
         isContractRegistryInitializing = false;
       }
     };
-    
+
     // Only initialize contract registry in browser environment
     if (typeof window !== 'undefined') {
       // Delay initialization slightly to ensure wagmi is fully ready
@@ -163,13 +164,13 @@ function AppContent({ children }: { children: React.ReactNode }) {
               onSuccess: (registration) => {
                 console.log('Service worker registered successfully');
               },
-              onError: () => {}
+              onError: () => { }
             });
 
             await swUtilRef.current.register();
           } else {
             console.log('Service Worker disabled in development');
-            
+
             // Unregister any existing service workers in development to prevent conflicts
             if ('serviceWorker' in navigator) {
               const registrations = await navigator.serviceWorker.getRegistrations();
@@ -190,7 +191,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
         } catch (wsError) {
           console.warn('WebSocket initialization failed, continuing without it:', wsError);
         }
-        
+
         performanceMonitor.measure('app_init');
       } catch (error) {
         console.error('Failed to initialize services:', error);
@@ -263,13 +264,11 @@ export default function App({ Component, pageProps, router }: AppProps) {
 
   React.useEffect(() => setMounted(true), []);
 
+
+
   // Render a minimal placeholder during SSR to prevent CSS HMR issues
   if (!mounted) {
-    return (
-      <div style={{ display: 'none' }} suppressHydrationWarning>
-        Loading...
-      </div>
-    );
+    return <GlobalLoading />;
   }
 
   return (
@@ -302,7 +301,7 @@ export default function App({ Component, pageProps, router }: AppProps) {
                               <AppContent>
                                 <Component {...pageProps} />
                               </AppContent>
-                                <WalletLoginBridgeWithToast autoLogin={true} />
+                              <WalletLoginBridgeWithToast autoLogin={true} />
                             </EnhancedThemeProvider>
                           </ContactProvider>
                         </NavigationProvider>

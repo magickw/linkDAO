@@ -475,444 +475,452 @@ const MarketplaceContent: React.FC = () => {
       : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-3';
 
   return (
-    <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
-        {/* Service Unavailable Banner */}
-        {serviceUnavailable && (
-          <div className="bg-red-500/90 backdrop-blur-sm text-white p-4 text-center">
-            <div className="container mx-auto">
-              <p className="font-medium">Marketplace service is temporarily unavailable</p>
-              <p className="text-sm opacity-90 mt-1">
-                We're experiencing technical difficulties. Please try again in a few minutes.
-              </p>
+    <>
+      <SEO
+        title="Decentralized NFT & Asset Marketplace"
+        description="Buy, sell, and trade NFTs, digital assets, and physical goods with crypto. Secure escrow, verifed sellers, and community-driven commerce."
+        keywords={['nft marketplace', 'crypto trading', 'web3 ecommerce', 'buy nfts', 'linkdao marketplace']}
+        type="website"
+      />
+      <Layout>
+        <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+          {/* Service Unavailable Banner */}
+          {serviceUnavailable && (
+            <div className="bg-red-500/90 backdrop-blur-sm text-white p-4 text-center">
+              <div className="container mx-auto">
+                <p className="font-medium">Marketplace service is temporarily unavailable</p>
+                <p className="text-sm opacity-90 mt-1">
+                  We're experiencing technical difficulties. Please try again in a few minutes.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Breadcrumb Navigation */}
+          <div className="bg-white/10 backdrop-blur-sm border-b border-white/20">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+              <MarketplaceBreadcrumbs
+                items={breadcrumbItems}
+                className="text-white/80"
+                preserveFilters={true}
+              />
             </div>
           </div>
-        )}
 
-        {/* Breadcrumb Navigation */}
-        <div className="bg-white/10 backdrop-blur-sm border-b border-white/20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-            <MarketplaceBreadcrumbs
-              items={breadcrumbItems}
-              className="text-white/80"
-              preserveFilters={true}
-            />
-          </div>
-        </div>
+          <div ref={browseSectionRef} className="max-w-screen-2xl mx-auto px-2 sm:px-4 lg:px-6 py-8 space-y-6">
 
-        <div ref={browseSectionRef} className="max-w-screen-2xl mx-auto px-2 sm:px-4 lg:px-6 py-8 space-y-6">
+            {/* Token Acquisition Section */}
+            <TokenAcquisitionSection />
 
-          {/* Token Acquisition Section */}
-          <TokenAcquisitionSection />
+            <div className="bg-white/10 rounded-2xl p-6 space-y-6 text-white">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                <div className="space-y-2">
+                  <h1 className="text-3xl font-bold text-white tracking-tight">Web3 Marketplace</h1>
+                  <p className="text-white/70 text-base">
+                    Discover tokenized goods, on-chain verified services, and rare NFTs backed by escrow protection.
+                  </p>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1.5 text-emerald-700 dark:text-emerald-300 text-sm font-medium mt-2">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    Powered by x402 protocol for reduced transaction fees
+                  </div>
+                </div>
 
-          <div className="bg-white/10 rounded-2xl p-6 space-y-6 text-white">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-              <div className="space-y-2">
-                <h1 className="text-3xl font-bold text-white tracking-tight">Web3 Marketplace</h1>
-                <p className="text-white/70 text-base">
-                  Discover tokenized goods, on-chain verified services, and rare NFTs backed by escrow protection.
-                </p>
-                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1.5 text-emerald-700 dark:text-emerald-300 text-sm font-medium mt-2">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  Powered by x402 protocol for reduced transaction fees
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="relative" ref={actionsMenuRef}>
+                    <Button
+                      variant="outline"
+                      className="flex items-center gap-2 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600"
+                      onClick={() => setActionsMenuOpen((prev) => !prev)}
+                      aria-haspopup="true"
+                      aria-expanded={actionsMenuOpen}
+                    >
+                      Marketplace actions
+                      <ChevronDown size={16} />
+                    </Button>
+                    {actionsMenuOpen && (
+                      <div className="absolute right-0 mt-3 w-72 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl z-50">
+                        <ul className="py-2">
+                          {marketplaceActions.map((action, index) => (
+                            <li key={action.href || action.action || index}>
+                              <button
+                                type="button"
+                                className="w-full px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                                onClick={() => {
+                                  setActionsMenuOpen(false);
+                                  if (action.action === 'open-return-refund-modal') {
+                                    setShowReturnRefundModal(true);
+                                  } else if (action.href) {
+                                    router.push(action.href);
+                                  }
+                                }}
+                              >
+                                <p className="text-sm font-semibold text-gray-900 dark:text-white">{action.label}</p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">{action.description}</p>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                  <Button variant="primary" onClick={handleStartSelling}>
+                    {profile ? 'Seller dashboard' : 'Become a seller'}
+                  </Button>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="relative" ref={actionsMenuRef}>
-                  <Button
-                    variant="outline"
-                    className="flex items-center gap-2 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600"
-                    onClick={() => setActionsMenuOpen((prev) => !prev)}
-                    aria-haspopup="true"
-                    aria-expanded={actionsMenuOpen}
-                  >
-                    Marketplace actions
-                    <ChevronDown size={16} />
-                  </Button>
-                  {actionsMenuOpen && (
-                    <div className="absolute right-0 mt-3 w-72 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl z-50">
-                      <ul className="py-2">
-                        {marketplaceActions.map((action, index) => (
-                          <li key={action.href || action.action || index}>
-                            <button
-                              type="button"
-                              className="w-full px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              {/* Search Bar and Filters in Banner */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Search Bar */}
+                <div className="lg:col-span-8">
+                  <SearchBar
+                    value={searchTerm}
+                    onChange={setSearchTerm}
+                    resultCount={filteredAndSortedListings.length}
+                    placeholder="Search collections, sellers, tokens..."
+                  />
+                </div>
+
+                {/* Trust Labels */}
+                <div className="lg:col-span-4 flex items-center justify-end">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1.5 text-emerald-700 dark:text-emerald-300 text-sm font-medium">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                      Escrow-backed
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-200 dark:border-cyan-800 bg-cyan-50 dark:bg-cyan-900/30 px-3 py-1.5 text-cyan-700 dark:text-cyan-300 text-sm font-medium">
+                      <span className="h-2 w-2 rounded-full bg-cyan-500" />
+                      DAO reviewed
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="w-full md:w-auto">
+                  <FilterBar
+                    filters={filters}
+                    onFiltersChange={setFilters}
+                    className="space-y-3"
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <SortingControls
+                    currentSort={{ field: sortField, direction: sortDirection }}
+                    onSortChange={(field, direction) => {
+                      setSortField(field);
+                      setSortDirection(direction);
+                    }}
+                  />
+                  <ViewDensityToggle density={density} onDensityChange={setDensity} />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+
+              <section className="space-y-6 lg:col-span-12">
+                {/* Active Filter Chips */}
+                <ActiveFilterChips
+                  filters={filters}
+                  onRemoveFilter={handleRemoveFilter}
+                  onClearAll={handleClearAllFilters}
+                />
+
+                {/* Trust labels and sorting controls moved to banner area */}
+
+                {/* x402 Protocol Information */}
+                <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/30 rounded-xl p-4 mb-6">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 text-blue-400">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-white">Reduced Fees with x402 Protocol</h3>
+                      <p className="text-sm text-blue-200 mt-1">
+                        All purchases on LinkDAO Marketplace use Coinbase's x402 protocol to significantly reduce transaction fees.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {loading ? (
+                  <div className={`grid ${gridColumns} gap-6`}>
+                    {Array.from({ length: 12 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="h-96 rounded-lg animate-pulse bg-gray-200 dark:bg-gray-700"
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div>
+                    {filteredAndSortedListings.length === 0 ? (
+                      <div className="bg-white/10 rounded-2xl text-center py-12 px-6 text-white">
+                        <svg className="mx-auto h-12 w-12 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                        </svg>
+                        <h3 className="mt-4 text-lg font-medium text-white">No items found</h3>
+                        <p className="mt-2 text-white/70">
+                          {searchTerm || Object.keys(filters).length > 0
+                            ? 'No items match your search criteria. Try adjusting your filters.'
+                            : 'No listings available at the moment. Check back soon!'}
+                        </p>
+                        {isConnected && (
+                          <div className="mt-6">
+                            <Button
+                              variant="primary"
                               onClick={() => {
-                                setActionsMenuOpen(false);
-                                if (action.action === 'open-return-refund-modal') {
-                                  setShowReturnRefundModal(true);
-                                } else if (action.href) {
-                                  router.push(action.href);
+                                if (!profile) {
+                                  router.push('/marketplace/seller/onboarding');
+                                } else {
+                                  router.push('/marketplace/seller/listings/create');
                                 }
                               }}
                             >
-                              <p className="text-sm font-semibold text-gray-900 dark:text-white">{action.label}</p>
-                              <p className="text-xs text-gray-600 dark:text-gray-400">{action.description}</p>
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-                <Button variant="primary" onClick={handleStartSelling}>
-                  {profile ? 'Seller dashboard' : 'Become a seller'}
-                </Button>
-              </div>
-            </div>
-
-            {/* Search Bar and Filters in Banner */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* Search Bar */}
-              <div className="lg:col-span-8">
-                <SearchBar
-                  value={searchTerm}
-                  onChange={setSearchTerm}
-                  resultCount={filteredAndSortedListings.length}
-                  placeholder="Search collections, sellers, tokens..."
-                />
-              </div>
-
-              {/* Trust Labels */}
-              <div className="lg:col-span-4 flex items-center justify-end">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1.5 text-emerald-700 dark:text-emerald-300 text-sm font-medium">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                    Escrow-backed
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-200 dark:border-cyan-800 bg-cyan-50 dark:bg-cyan-900/30 px-3 py-1.5 text-cyan-700 dark:text-cyan-300 text-sm font-medium">
-                    <span className="h-2 w-2 rounded-full bg-cyan-500" />
-                    DAO reviewed
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div className="w-full md:w-auto">
-                <FilterBar
-                  filters={filters}
-                  onFiltersChange={setFilters}
-                  className="space-y-3"
-                />
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3">
-                <SortingControls
-                  currentSort={{ field: sortField, direction: sortDirection }}
-                  onSortChange={(field, direction) => {
-                    setSortField(field);
-                    setSortDirection(direction);
-                  }}
-                />
-                <ViewDensityToggle density={density} onDensityChange={setDensity} />
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-
-
-            <section className="space-y-6 lg:col-span-12">
-              {/* Active Filter Chips */}
-              <ActiveFilterChips
-                filters={filters}
-                onRemoveFilter={handleRemoveFilter}
-                onClearAll={handleClearAllFilters}
-              />
-
-              {/* Trust labels and sorting controls moved to banner area */}
-
-              {/* x402 Protocol Information */}
-              <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/30 rounded-xl p-4 mb-6">
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 text-blue-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <line x1="12" y1="16" x2="12" y2="12"></line>
-                      <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-white">Reduced Fees with x402 Protocol</h3>
-                    <p className="text-sm text-blue-200 mt-1">
-                      All purchases on LinkDAO Marketplace use Coinbase's x402 protocol to significantly reduce transaction fees.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {loading ? (
-                <div className={`grid ${gridColumns} gap-6`}>
-                  {Array.from({ length: 12 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="h-96 rounded-lg animate-pulse bg-gray-200 dark:bg-gray-700"
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div>
-                  {filteredAndSortedListings.length === 0 ? (
-                    <div className="bg-white/10 rounded-2xl text-center py-12 px-6 text-white">
-                      <svg className="mx-auto h-12 w-12 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                      </svg>
-                      <h3 className="mt-4 text-lg font-medium text-white">No items found</h3>
-                      <p className="mt-2 text-white/70">
-                        {searchTerm || Object.keys(filters).length > 0
-                          ? 'No items match your search criteria. Try adjusting your filters.'
-                          : 'No listings available at the moment. Check back soon!'}
-                      </p>
-                      {isConnected && (
-                        <div className="mt-6">
-                          <Button
-                            variant="primary"
-                            onClick={() => {
-                              if (!profile) {
-                                router.push('/marketplace/seller/onboarding');
-                              } else {
-                                router.push('/marketplace/seller/listings/create');
-                              }
-                            }}
-                          >
-                            {!profile ? 'Become a Seller' : 'Create First Listing'}
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <motion.div
-                      className={`grid ${gridColumns} gap-6`}
-                      initial="hidden"
-                      animate="visible"
-                      variants={{
-                        visible: {
-                          transition: {
-                            staggerChildren: 0.05,
+                              {!profile ? 'Become a Seller' : 'Create First Listing'}
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <motion.div
+                        className={`grid ${gridColumns} gap-6`}
+                        initial="hidden"
+                        animate="visible"
+                        variants={{
+                          visible: {
+                            transition: {
+                              staggerChildren: 0.05,
+                            },
                           },
-                        },
-                      }}
-                    >
-                      <AnimatePresence mode="popLayout">
-                        {filteredAndSortedListings.map((listing) => {
-                          // Use enhancedData from transformation (set in fetchListings)
-                          const enhanced = listing.enhancedData;
-
-                          // Transform listing to product format for ProductCard
-                          const product = {
-                            id: listing.id,
-                            title: enhanced?.title || listing.metadataURI || 'Unnamed Item',
-                            description: enhanced?.description || '',
-                            images: enhanced?.images && enhanced.images.length > 0
-                              ? enhanced.images
-                              : [getFallbackImage('product')],
-                            price: {
-                              amount: enhanced?.price?.fiat || listing.price || '0',
-                              currency: 'USD',
-                              usdEquivalent: enhanced?.price?.fiat || '0',
-                            },
-                            seller: {
-                              id: enhanced?.seller?.walletAddress || listing.sellerWalletAddress,
-                              name: enhanced?.seller?.name || formatAddress(listing.sellerWalletAddress),
-                              avatar: enhanced?.seller?.walletAddress || listing.sellerWalletAddress,
-                              verified: enhanced?.seller?.verified ?? true,
-                              reputation: enhanced?.seller?.rating ?? 4.8,
-                              daoApproved: enhanced?.seller?.daoApproved ?? false,
-                            },
-                            trust: {
-                              verified: enhanced?.trust?.verified ?? true,
-                              escrowProtected: enhanced?.trust?.escrowProtected ?? listing.isEscrowed ?? true,
-                              onChainCertified: enhanced?.trust?.onChainCertified ?? false,
-                            },
-                            category: enhanced?.category || listing.itemType?.toLowerCase() || 'general',
-                            inventory: listing.quantity ?? 1,
-                            condition: (enhanced?.condition as 'new' | 'used' | 'refurbished') || 'new',
-                            views: enhanced?.views ?? 0,
-                            favorites: enhanced?.favorites ?? 0,
-                          };
-
-                          return (
-                            <motion.div
-                              key={listing.id}
-                              layout
-                              initial={{ opacity: 0, scale: 0.9 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              exit={{ opacity: 0, scale: 0.9 }}
-                              transition={{ duration: 0.2 }}
-                            >
-                              <ProductCard
-                                product={product}
-                                variant="grid"
-                                onAddToCart={(id) => {
-                                  // Add to cart logic using enhanced data
-                                  const cartProduct = {
-                                    id: listing.id,
-                                    title: enhanced?.title || listing.metadataURI || 'Unnamed Item',
-                                    description: enhanced?.description || '',
-                                    image: enhanced?.images?.[0] || getFallbackImage('product'),
-                                    price: {
-                                      crypto: enhanced?.price?.crypto || '0',
-                                      cryptoSymbol: enhanced?.price?.cryptoSymbol || 'ETH',
-                                      fiat: enhanced?.price?.fiat || '0',
-                                      fiatSymbol: enhanced?.price?.fiatSymbol || 'USD',
-                                    },
-                                    seller: {
-                                      id: enhanced?.seller?.walletAddress || listing.sellerWalletAddress,
-                                      name: enhanced?.seller?.name || formatAddress(listing.sellerWalletAddress),
-                                      avatar: '',
-                                      verified: enhanced?.seller?.verified ?? true,
-                                      daoApproved: enhanced?.seller?.daoApproved ?? false,
-                                      escrowSupported: enhanced?.trust?.escrowProtected ?? true,
-                                    },
-                                    category: enhanced?.category || listing.itemType?.toLowerCase() || 'general',
-                                    isDigital: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT',
-                                    isNFT: listing.itemType === 'NFT',
-                                    inventory: listing.quantity ?? 1,
-                                    shipping: {
-                                      cost: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT' ? '0' : '0.001',
-                                      freeShipping: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT',
-                                      estimatedDays: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT' ? 'instant' : '3-5',
-                                      regions: ['US', 'CA', 'EU'],
-                                    },
-                                    trust: {
-                                      escrowProtected: enhanced?.trust?.escrowProtected ?? true,
-                                      onChainCertified: enhanced?.trust?.onChainCertified ?? false,
-                                      safetyScore: enhanced?.trust?.safetyScore ?? 85,
-                                    },
-                                  };
-                                  cart.actions.addItem(cartProduct);
-                                  addToast('Added to cart! 🛒', 'success');
-                                }}
-                                onBidClick={(id) => {
-                                  if (!isConnected) {
-                                    addToast('Please connect your wallet first', 'warning');
-                                    return;
-                                  }
-                                  setSelectedListing(listing);
-                                  setShowBidModal(true);
-                                }}
-                                // Add auction-specific data
-                                isAuction={listing.listingType === 'AUCTION'}
-                                highestBid={listing.highestBid}
-                                endTime={listing.endTime}
-                                reservePrice={listing.reservePrice}
-                              />
-                            </motion.div>
-                          );
-                        })}
-                      </AnimatePresence>
-                    </motion.div>
-                  )}
-
-                  {/* Infinite Scroll Sentinel */}
-                  {hasMore && (
-                    <div ref={sentinelRef} className="col-span-full py-8 flex justify-center">
-                      {loadingMore && (
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Loading more products...</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Load More Button (fallback) */}
-                  {hasMore && !loadingMore && filteredAndSortedListings.length >= ITEMS_PER_PAGE && (
-                    <div className="col-span-full py-8 flex justify-center">
-                      <button
-                        onClick={handleLoadMore}
-                        className="px-6 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
+                        }}
                       >
-                        Load more products
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </section>
+                        <AnimatePresence mode="popLayout">
+                          {filteredAndSortedListings.map((listing) => {
+                            // Use enhancedData from transformation (set in fetchListings)
+                            const enhanced = listing.enhancedData;
+
+                            // Transform listing to product format for ProductCard
+                            const product = {
+                              id: listing.id,
+                              title: enhanced?.title || listing.metadataURI || 'Unnamed Item',
+                              description: enhanced?.description || '',
+                              images: enhanced?.images && enhanced.images.length > 0
+                                ? enhanced.images
+                                : [getFallbackImage('product')],
+                              price: {
+                                amount: enhanced?.price?.fiat || (typeof listing.price === 'number' ? listing.price.toFixed(2) : listing.price) || '0',
+                                currency: 'USD',
+                                usdEquivalent: enhanced?.price?.fiat || (typeof listing.price === 'number' ? listing.price.toFixed(2) : listing.price) || '0',
+                              },
+                              seller: {
+                                id: enhanced?.seller?.id || enhanced?.seller?.walletAddress || listing.sellerWalletAddress,
+                                name: enhanced?.seller?.storeName || enhanced?.seller?.displayName || enhanced?.seller?.name || formatAddress(listing.sellerWalletAddress),
+                                avatar: enhanced?.seller?.avatar || '',
+                                verified: enhanced?.seller?.verified ?? true,
+                                reputation: enhanced?.seller?.rating ?? 4.8,
+                                daoApproved: enhanced?.seller?.daoApproved ?? false,
+                              },
+                              trust: {
+                                verified: enhanced?.trust?.verified ?? true,
+                                escrowProtected: enhanced?.trust?.escrowProtected ?? listing.isEscrowed ?? true,
+                                onChainCertified: enhanced?.trust?.onChainCertified ?? false,
+                              },
+                              category: enhanced?.category || listing.itemType?.toLowerCase() || 'general',
+                              inventory: listing.quantity ?? 1,
+                              condition: (enhanced?.condition as 'new' | 'used' | 'refurbished') || 'new',
+                              views: enhanced?.views ?? 0,
+                              favorites: enhanced?.favorites ?? 0,
+                            };
+
+                            return (
+                              <motion.div
+                                key={listing.id}
+                                layout
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.9 }}
+                                transition={{ duration: 0.2 }}
+                              >
+                                <ProductCard
+                                  product={product}
+                                  variant="grid"
+                                  onAddToCart={(id) => {
+                                    // Add to cart logic using enhanced data
+                                    const cartProduct = {
+                                      id: listing.id,
+                                      title: enhanced?.title || listing.metadataURI || 'Unnamed Item',
+                                      description: enhanced?.description || '',
+                                      image: enhanced?.images?.[0] || getFallbackImage('product'),
+                                      price: {
+                                        crypto: enhanced?.price?.crypto || '0',
+                                        cryptoSymbol: enhanced?.price?.cryptoSymbol || 'ETH',
+                                        fiat: enhanced?.price?.fiat || '0',
+                                        fiatSymbol: enhanced?.price?.fiatSymbol || 'USD',
+                                      },
+                                      seller: {
+                                        id: enhanced?.seller?.walletAddress || listing.sellerWalletAddress,
+                                        name: enhanced?.seller?.name || formatAddress(listing.sellerWalletAddress),
+                                        avatar: '',
+                                        verified: enhanced?.seller?.verified ?? true,
+                                        daoApproved: enhanced?.seller?.daoApproved ?? false,
+                                        escrowSupported: enhanced?.trust?.escrowProtected ?? true,
+                                      },
+                                      category: enhanced?.category || listing.itemType?.toLowerCase() || 'general',
+                                      isDigital: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT',
+                                      isNFT: listing.itemType === 'NFT',
+                                      inventory: listing.quantity ?? 1,
+                                      shipping: {
+                                        cost: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT' ? '0' : '0.001',
+                                        freeShipping: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT',
+                                        estimatedDays: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT' ? 'instant' : '3-5',
+                                        regions: ['US', 'CA', 'EU'],
+                                      },
+                                      trust: {
+                                        escrowProtected: enhanced?.trust?.escrowProtected ?? true,
+                                        onChainCertified: enhanced?.trust?.onChainCertified ?? false,
+                                        safetyScore: enhanced?.trust?.safetyScore ?? 85,
+                                      },
+                                    };
+                                    cart.actions.addItem(cartProduct);
+                                    addToast('Added to cart! 🛒', 'success');
+                                  }}
+                                  onBidClick={(id) => {
+                                    if (!isConnected) {
+                                      addToast('Please connect your wallet first', 'warning');
+                                      return;
+                                    }
+                                    setSelectedListing(listing);
+                                    setShowBidModal(true);
+                                  }}
+                                  // Add auction-specific data
+                                  isAuction={listing.listingType === 'AUCTION'}
+                                  highestBid={listing.highestBid}
+                                  endTime={listing.endTime}
+                                  reservePrice={listing.reservePrice}
+                                />
+                              </motion.div>
+                            );
+                          })}
+                        </AnimatePresence>
+                      </motion.div>
+                    )}
+
+                    {/* Infinite Scroll Sentinel */}
+                    {hasMore && (
+                      <div ref={sentinelRef} className="col-span-full py-8 flex justify-center">
+                        {loadingMore && (
+                          <div className="flex flex-col items-center gap-3">
+                            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Loading more products...</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Load More Button (fallback) */}
+                    {hasMore && !loadingMore && filteredAndSortedListings.length >= ITEMS_PER_PAGE && (
+                      <div className="col-span-full py-8 flex justify-center">
+                        <button
+                          onClick={handleLoadMore}
+                          className="px-6 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
+                        >
+                          Load more products
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </section>
+            </div>
           </div>
+
+          {/* Modals */}
+          {selectedListing && (
+            <>
+              <BidModal
+                listing={selectedListing}
+                isOpen={showBidModal}
+                onClose={() => {
+                  setShowBidModal(false);
+                  setSelectedListing(null);
+                }}
+                onSuccess={() => {
+                  fetchListings();
+                }}
+              />
+              <PurchaseModal
+                listing={selectedListing}
+                isOpen={showPurchaseModal}
+                onClose={() => {
+                  setShowPurchaseModal(false);
+                  setSelectedListing(null);
+                }}
+                onSuccess={() => {
+                  fetchListings();
+                }}
+              />
+              <MakeOfferModal
+                listing={selectedListing}
+                isOpen={showOfferModal}
+                onClose={() => {
+                  setShowOfferModal(false);
+                  setSelectedListing(null);
+                }}
+                onSuccess={() => {
+                  fetchListings();
+                }}
+              />
+              <ProductDetailModal
+                listing={selectedListing}
+                isOpen={showDetailModal}
+                onClose={() => {
+                  setShowDetailModal(false);
+                  setSelectedListing(null);
+                }}
+                onRefresh={() => {
+                  fetchListings();
+                }}
+              />
+            </>
+          )}
+
+          {/* Return & Refund Modal */}
+          <ReturnRefundModal
+            isOpen={showReturnRefundModal}
+            onClose={() => setShowReturnRefundModal(false)}
+            order={{
+              id: 'order_demo_001',
+              productId: 'prod_demo_001',
+              productTitle: 'Sample Product - Demo Order',
+              productImage: '/api/placeholder/400/400',
+              amount: 0.1,
+              currency: 'ETH',
+              orderDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+              canReturn: true,
+              canRefund: true,
+              returnDeadline: new Date(Date.now() + 23 * 24 * 60 * 60 * 1000).toISOString()
+            }}
+            onSubmit={async (request) => {
+              try {
+                await returnRefundService.submitReturnRequest(request);
+                addToast('Return request submitted successfully!', 'success');
+              } catch (error) {
+                addToast('Failed to submit return request', 'error');
+                throw error;
+              }
+            }}
+          />
         </div>
-
-        {/* Modals */}
-        {selectedListing && (
-          <>
-            <BidModal
-              listing={selectedListing}
-              isOpen={showBidModal}
-              onClose={() => {
-                setShowBidModal(false);
-                setSelectedListing(null);
-              }}
-              onSuccess={() => {
-                fetchListings();
-              }}
-            />
-            <PurchaseModal
-              listing={selectedListing}
-              isOpen={showPurchaseModal}
-              onClose={() => {
-                setShowPurchaseModal(false);
-                setSelectedListing(null);
-              }}
-              onSuccess={() => {
-                fetchListings();
-              }}
-            />
-            <MakeOfferModal
-              listing={selectedListing}
-              isOpen={showOfferModal}
-              onClose={() => {
-                setShowOfferModal(false);
-                setSelectedListing(null);
-              }}
-              onSuccess={() => {
-                fetchListings();
-              }}
-            />
-            <ProductDetailModal
-              listing={selectedListing}
-              isOpen={showDetailModal}
-              onClose={() => {
-                setShowDetailModal(false);
-                setSelectedListing(null);
-              }}
-              onRefresh={() => {
-                fetchListings();
-              }}
-            />
-          </>
-        )}
-
-        {/* Return & Refund Modal */}
-        <ReturnRefundModal
-          isOpen={showReturnRefundModal}
-          onClose={() => setShowReturnRefundModal(false)}
-          order={{
-            id: 'order_demo_001',
-            productId: 'prod_demo_001',
-            productTitle: 'Sample Product - Demo Order',
-            productImage: '/api/placeholder/400/400',
-            amount: 0.1,
-            currency: 'ETH',
-            orderDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-            canReturn: true,
-            canRefund: true,
-            returnDeadline: new Date(Date.now() + 23 * 24 * 60 * 60 * 1000).toISOString()
-          }}
-          onSubmit={async (request) => {
-            try {
-              await returnRefundService.submitReturnRequest(request);
-              addToast('Return request submitted successfully!', 'success');
-            } catch (error) {
-              addToast('Failed to submit return request', 'error');
-              throw error;
-            }
-          }}
-        />
-      </div>
-    </Layout>
+      </Layout>
+    </>
   );
 };
 
