@@ -1160,11 +1160,15 @@ export class SellerController {
 
         // Create a basic profile for the seller if it doesn't exist
         try {
+          // Generate a default avatar using the wallet address
+          const defaultAvatar = `https://api.dicebear.com/7.x/identicon/svg?seed=${walletAddress}`;
+          
           const basicProfileData = {
             walletAddress,
             storeName: 'My Store',
             bio: "Welcome to my store!",
             description: "Seller profile created automatically",
+            profileImageCdn: defaultAvatar,
             createdAt: new Date(),
             updatedAt: new Date(),
             // Set default tier to allow basic seller functionality

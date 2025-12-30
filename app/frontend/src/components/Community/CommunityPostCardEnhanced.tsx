@@ -581,15 +581,27 @@ function CommunityPostCardEnhanced({
     }
 
     try {
-      await CommunityPostService.deletePost(community.id, post.id, address);
+      if (post.isQuickPost) {
+        const { QuickPostService } = await import('@/services/quickPostService');
+        await QuickPostService.deleteQuickPost(post.id);
+      } else if (isCommunityPostType && community?.id && community.id !== 'unknown') {
+        await CommunityPostService.deletePost(community.id, post.id, address);
+      } else {
+        // Fallback to generic delete for other posts
+        const { PostService } = await import('@/services/postService');
+        await PostService.deletePost(post.id);
+      }
+
       addToast('Post deleted successfully', 'success');
       // Reload page to reflect changes
       if (typeof window !== 'undefined') {
         window.location.reload();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting post:', error);
-      addToast('Failed to delete post', 'error');
+      // improved error message
+      const msg = error?.message || 'Failed to delete post';
+      addToast(msg, 'error');
     }
   };
 

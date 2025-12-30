@@ -138,11 +138,15 @@ class SellerService {
         // Auto-create a basic seller profile for new wallets
         try {
           safeLogger.info('Auto-creating seller profile for address:', normalizedAddress);
+          // Generate a default avatar using the wallet address
+          const defaultAvatar = `https://api.dicebear.com/7.x/identicon/svg?seed=${normalizedAddress}`;
+          
           const basicProfileData = {
             walletAddress: normalizedAddress,
             storeName: 'My Store',
             bio: 'Welcome to my store!',
             description: 'Seller profile created automatically',
+            profileImageCdn: defaultAvatar,
             createdAt: new Date(),
             updatedAt: new Date(),
             tier: 'bronze'

@@ -693,6 +693,41 @@ export class ProductService {
     // Map seller data if available
     let seller = undefined;
     if (dbUser) {
+      // If seller profile doesn't exist, auto-create it
+      if (!dbSeller) {
+        try {
+          safeLogger.info('Auto-creating seller profile for wallet:', dbUser.walletAddress);
+          const { sellerService } = await import('./sellerService');
+          
+          // Check if seller profile already exists to avoid duplicates
+          const existingSeller = await sellerService.getSellerProfile(dbUser.walletAddress);
+          
+          if (existingSeller) {
+            dbSeller = existingSeller;
+            safeLogger.info('Found existing seller profile for wallet:', dbUser.walletAddress);
+          } else {
+            // Generate a default avatar using the wallet address
+            const defaultAvatar = `https://api.dicebear.com/7.x/identicon/svg?seed=${dbUser.walletAddress}`;
+            
+            const basicProfileData = {
+              walletAddress: dbUser.walletAddress,
+              storeName: 'My Store',
+              bio: 'Welcome to my store!',
+              description: 'Seller profile created automatically',
+              profileImageCdn: defaultAvatar,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              tier: 'bronze'
+            };
+            dbSeller = await sellerService.createSellerProfile(basicProfileData as any);
+            safeLogger.info('Auto-created seller profile for wallet:', dbUser.walletAddress);
+          }
+        } catch (autoCreateError) {
+          safeLogger.error('Failed to auto-create seller profile:', autoCreateError);
+          // Continue without seller profile
+        }
+      }
+
       seller = {
         id: dbUser.id,
         walletAddress: dbUser.walletAddress,
@@ -778,6 +813,30 @@ export class ProductService {
       price: priceData,
       category,
       images,
+
+      // Log seller data for debugging
+      ...(process.env.NODE_ENV === 'development' && {
+        _debug: {
+          sellerData: seller ? {
+            id: seller.id,
+            walletAddress: seller.walletAddress,
+            displayName: seller.displayName,
+            storeName: seller.storeName,
+            avatar: seller.avatar,
+          } : null,
+          dbSeller: dbSeller ? {
+            walletAddress: dbSeller.walletAddress,
+            storeName: dbSeller.storeName,
+            profileImageCdn: dbSeller.profileImageCdn,
+          } : null,
+          dbUser: dbUser ? {
+            id: dbUser.id,
+            walletAddress: dbUser.walletAddress,
+            displayName: dbUser.displayName,
+            avatarCid: dbUser.avatarCid,
+          } : null
+        }
+      }),
       metadata: JSON.parse(dbProduct.metadata || '{}'),
       inventory: dbProduct.inventory,
       status: dbProduct.status,

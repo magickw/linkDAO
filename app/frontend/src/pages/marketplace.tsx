@@ -200,6 +200,19 @@ const MarketplaceContent: React.FC = () => {
           const sellerAddress = listing.sellerId || listing.sellerWalletAddress || listing.seller?.walletAddress || '';
           const sellerInfo = listing.seller || {};
 
+          console.log('📦 Product seller data:', {
+            productId: listing.id,
+            sellerAddress,
+            sellerInfo: {
+              id: sellerInfo.id,
+              walletAddress: sellerInfo.walletAddress,
+              storeName: sellerInfo.storeName,
+              displayName: sellerInfo.displayName,
+              avatar: sellerInfo.avatar,
+              profileImageCdn: sellerInfo.profileImageCdn,
+            }
+          });
+
           return {
             id: listing.id.toString(),
             sellerWalletAddress: sellerAddress,

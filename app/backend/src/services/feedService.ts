@@ -285,7 +285,12 @@ export class FeedService {
             moderationStatus: posts.moderationStatus,
             moderationWarning: posts.moderationWarning,
             riskScore: posts.riskScore,
-            isQuickPost: sql`false` // Mark as regular post
+            moderationStatus: posts.moderationStatus,
+            moderationWarning: posts.moderationWarning,
+            riskScore: posts.riskScore,
+            isQuickPost: sql`false`, // Mark as regular post
+            isRepost: posts.isRepost,
+            parentId: posts.parentId
           })
           .from(posts)
           .leftJoin(users, eq(posts.authorId, users.id))
@@ -343,7 +348,12 @@ export class FeedService {
             moderationStatus: quickPosts.moderationStatus,
             moderationWarning: quickPosts.moderationWarning,
             riskScore: quickPosts.riskScore,
-            isQuickPost: sql`true` // Mark as quick post
+            moderationStatus: quickPosts.moderationStatus,
+            moderationWarning: quickPosts.moderationWarning,
+            riskScore: quickPosts.riskScore,
+            isQuickPost: sql`true`, // Mark as quick post
+            isRepost: quickPosts.isRepost,
+            parentId: quickPosts.parentId
           })
           .from(quickPosts)
           .leftJoin(users, eq(quickPosts.authorId, users.id))
@@ -690,7 +700,7 @@ export class FeedService {
             communityFilter,
             finalFollowingFilter,
             moderationFilter, // Include moderation filter in count
-            isNull(posts.parentId), // Only count top-level posts
+            or(isNull(posts.parentId), eq(posts.isRepost, true)), // Count top-level posts OR reposts
             // Always include all posts (both community and non-community) when no specific communities are filtered
             filterCommunities.length > 0 ? sql`1=1` : sql`1=1`
           ));
@@ -708,7 +718,7 @@ export class FeedService {
             quickPostTimeFilter,
             finalQuickPostFollowingFilter, // Use the correct filter for quick posts
             sql`${quickPosts.moderationStatus} IS NULL OR ${quickPosts.moderationStatus} != 'blocked'`, // Quick post moderation filter
-            isNull(quickPosts.parentId) // Only count top-level posts
+            or(isNull(quickPosts.parentId), eq(quickPosts.isRepost, true)) // Count top-level posts OR reposts
           ));
         totalCount += (totalQuickCount[0]?.count || 0);
       }
