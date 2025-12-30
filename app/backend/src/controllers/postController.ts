@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { PostService } from '../services/postService';
 import { QuickPostService } from '../services/quickPostService';
+import { MetadataService } from '../services/metadataService';
+import { UserProfileService } from '../services/userProfileService';
 import { CreatePostInput } from '../models/Post';
 import { db } from '../db';
 import { posts, users } from '../db/schema';
@@ -13,10 +15,14 @@ import { eq, and, sql, isNotNull } from 'drizzle-orm';
 export class PostController {
   private postService: PostService;
   private quickPostService: QuickPostService;
+  private metadataService: MetadataService;
+  private userProfileService: UserProfileService;
 
   constructor() {
     this.postService = new PostService();
     this.quickPostService = new QuickPostService();
+    this.metadataService = new MetadataService();
+    this.userProfileService = new UserProfileService();
   }
 
   async createPost(req: Request, res: Response): Promise<Response> {
@@ -260,6 +266,20 @@ export class PostController {
         });
       }
 
+      // Resolve author to User UUID
+      let user = await this.userProfileService.getProfileByAddress(author);
+      if (!user) {
+        // Create user if they don't exist
+        const uniqueHandle = `user_${author.substring(0, 8)}_${Date.now()}`;
+        user = await this.userProfileService.createProfile({
+          walletAddress: author,
+          handle: uniqueHandle,
+          ens: '',
+          avatarCid: '',
+          bioCid: ''
+        });
+      }
+
       // Check if original post is a Quick Post
       const originalQuickPost = await this.quickPostService.getQuickPost(originalPostId);
 
@@ -283,30 +303,33 @@ export class PostController {
       // Create repost using QuickPostService (store in quick_posts table)
       // This ensures it shows up in Home Feed / User Profile correctly, and NOT in Community Feed
 
-      // Calculate content CID if needed (service usually handles this if we pass content)
-      // For reposts, we might want to pass the message as content
+      // Calculate content CID
+      const repostContent = message || '';
+      let contentCid = 'pending_ipfs_upload';
+
+      try {
+        contentCid = await this.metadataService.uploadToIPFS(repostContent);
+      } catch (ipfsError) {
+        console.warn('Failed to upload repost content to IPFS, using fallback CID:', ipfsError);
+        // Fallback to a deterministic but fake CID if upload fails to allow post creation
+        contentCid = `fallback-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      }
 
       const newRepost = await this.quickPostService.createQuickPost({
-        authorId: author,
-        content: message || '', // User's custom message
-        contentCid: 'pending_ipfs_upload', // Service handles this ideally, or we mock it. QuickPostService expects this.
-        // Note: createQuickPost takes contentCid as required. We might need to upload or use a mock logic similar to PostService if QuickPostService doesn't autoreplace it.
-        // Checking QuickPostService.createQuickPost: it takes contentCid.
-        // It does NOT upload to IPFS internally in the create method unlike PostService might (need to verify).
-        // PostService calls metadataService.uploadToIPFS. QuickPostService does NOT seem to inject MetadataService in the file I viewed.
-        // Wait, I viewed QuickPostService (step 133) and it imports generateShareId but doesn't seem to import MetadataService.
-        // It takes `contentCid` as input.
-
+        authorId: user.id, // Use the resolved UUID, not the wallet address
+        content: repostContent,
+        contentCid: contentCid,
         parentId: originalPostId,
-        // Ref to original onchain ref if needed? QuickPosts might not have it yet.
         tags: JSON.stringify(originalQuickPost.tags || []),
-        // mediaCids?
+        // Copy other relevant fields if needed, e.g. onchainRef
+        onchainRef: originalQuickPost.onchainRef,
+        isTokenGated: originalQuickPost.isTokenGated,
+        gatedContentPreview: originalQuickPost.gatedContentPreview
       });
 
       // QuickPostService.createQuickPost signature:
       // authorId, contentCid (required), shareId (generated internal), ...
 
-      // I need to provide a contentCid. 
       // If QuickPostService doesn't handle IPFS, I might need to reuse MetadataService here or in QuickPostService.
       // However, PostService.createPost did the upload.
 

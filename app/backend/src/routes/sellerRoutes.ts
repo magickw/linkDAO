@@ -6,8 +6,12 @@ import { validateRequest } from '../middleware/validation';
 
 const router = Router();
 
+// Public seller profile endpoint (no authentication required)
+// GET /api/sellers/:walletAddress/profile - Get public seller profile by wallet address
+router.get('/:walletAddress/profile', sellerController.getPublicSellerProfile.bind(sellerController));
+
 // Seller Dashboard and Listing Management Routes (Protected)
-router.use(authMiddleware); // All seller routes require authentication
+router.use(authMiddleware); // All other seller routes require authentication
 
 // POST /api/sellers/listings - Create new product listing
 router.post('/listings', csrfProtection,

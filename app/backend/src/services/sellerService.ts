@@ -134,7 +134,33 @@ class SellerService {
 
       if (!seller || sellerData.length === 0) {
         safeLogger.info('Seller not found in database for address:', normalizedAddress);
-        return null; // Return null instead of throwing for "not found" case
+
+        // Auto-create a basic seller profile for new wallets
+        try {
+          safeLogger.info('Auto-creating seller profile for address:', normalizedAddress);
+          const basicProfileData = {
+            walletAddress: normalizedAddress,
+            storeName: 'My Store',
+            bio: 'Welcome to my store!',
+            description: 'Seller profile created automatically',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            tier: 'bronze'
+          };
+
+          const newProfile = await this.createSellerProfile(basicProfileData as any);
+          safeLogger.info('Auto-created seller profile for address:', normalizedAddress);
+
+          // Return the newly created profile
+          return {
+            ...newProfile,
+            reputation: undefined,
+            profileCompleteness: this.calculateProfileCompleteness(newProfile)
+          } as any;
+        } catch (autoCreateError) {
+          safeLogger.error('Failed to auto-create seller profile:', autoCreateError);
+          return null; // Return null if auto-creation fails
+        }
       }
 
       // Get reputation data using wallet address

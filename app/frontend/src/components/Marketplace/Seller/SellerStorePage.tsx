@@ -419,7 +419,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
           // We should create a minimal seller object with basic info
           const minimalSeller: SellerInfo = {
             id: sellerId,
-            name: `Store for ${sellerId.substring(0, 6)}...${sellerId.substring(sellerId.length - 4)}`,
+            name: 'My Store',
             avatar: '',
             coverImage: '',
             walletAddress: sellerId,
@@ -637,7 +637,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
           // We should create a minimal seller object with basic info
           const minimalSeller: SellerInfo = {
             id: sellerId,
-            name: `Store for ${sellerId.substring(0, 6)}...${sellerId.substring(sellerId.length - 4)}`,
+            name: 'My Store',
             avatar: '',
             coverImage: '',
             walletAddress: sellerId,

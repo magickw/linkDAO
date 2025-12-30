@@ -1079,6 +1079,58 @@ export class SellerController {
     }
   }
 
+  // Get public seller profile by wallet address (no authentication required)
+  async getPublicSellerProfile(req: Request, res: Response) {
+    try {
+      const { walletAddress } = req.params;
+
+      if (!walletAddress) {
+        return res.status(400).json({ success: false, error: "Wallet address is required" });
+      }
+
+      safeLogger.info("Fetching public seller profile for address:", walletAddress);
+
+      const { sellerService } = await import('../services/sellerService');
+
+      const profile = await sellerService.getSellerProfile(walletAddress);
+
+      if (!profile) {
+        safeLogger.info("Seller profile not found for address:", walletAddress);
+
+        // Auto-create a basic seller profile for new wallets
+        try {
+          const basicProfileData = {
+            walletAddress,
+            storeName: 'My Store',
+            bio: "Welcome to my store!",
+            description: "Seller profile created automatically",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            tier: 'bronze'
+          };
+
+          const newProfile = await sellerService.createSellerProfile(basicProfileData as any);
+          safeLogger.info("Auto-created seller profile for address:", walletAddress);
+
+          res.json({ success: true, data: newProfile });
+          return;
+        } catch (creationError) {
+          safeLogger.error("Error creating basic profile:", creationError);
+          return res.status(500).json({ success: false, error: "Failed to create basic seller profile" });
+        }
+      }
+
+      safeLogger.info("Successfully fetched public seller profile for address:", walletAddress);
+      res.json({ success: true, data: profile });
+    } catch (error) {
+      safeLogger.error("Error fetching public profile:", {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      res.status(500).json({ success: false, error: "Failed to fetch profile" });
+    }
+  }
+
   // Get seller profile (using seller service)
   async getProfile(req: Request, res: Response) {
     try {

@@ -158,7 +158,7 @@ export class UnifiedSellerAPIClient {
   // Standardized endpoint patterns
   private endpoints: SellerAPIEndpoints = {
     // Profile endpoints
-    getProfile: (walletAddress: string) => `${this.baseURL}/profile`, // Uses authenticated user
+    getProfile: (walletAddress: string) => `${this.baseURL}/${walletAddress}/profile`, // Public endpoint that accepts wallet address
     updateProfile: (walletAddress: string) => `${this.baseURL}/profile`, // Uses authenticated user
     createProfile: () => `${this.baseURL}/profile`,
     updateProfileEnhanced: (walletAddress: string) => `${this.baseURL}/profile/enhanced`, // Uses authenticated user
@@ -464,7 +464,7 @@ export class UnifiedSellerAPIClient {
   // Profile API methods
   async getProfile(walletAddress: string): Promise<SellerProfile | null> {
     try {
-      return await this.request<SellerProfile>(this.endpoints.getProfile(walletAddress), undefined, true);
+      return await this.request<SellerProfile>(this.endpoints.getProfile(walletAddress), undefined, false); // Public endpoint, no auth required
     } catch (error) {
       if (error instanceof SellerAPIError && error.status === 404) {
         return null;
