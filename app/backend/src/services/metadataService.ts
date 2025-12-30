@@ -71,7 +71,8 @@ export class MetadataService {
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
           try {
             const formData = new (require('form-data'))();
-            formData.append('file', Buffer.isBuffer(content) ? content : Buffer.from(content, 'utf8'));
+            const buffer = Buffer.isBuffer(content) ? content : Buffer.from(content, 'utf8');
+            formData.append('file', buffer, { filename: `content-${Date.now()}.txt` });
 
             const response = await axios.post('https://api.pinata.cloud/pinning/pinFileToIPFS', formData, {
               maxBodyLength: 1000000000, // 1GB
@@ -114,8 +115,8 @@ export class MetadataService {
 
         safeLogger.error('Pinata API upload failed:', {
           message: errorMessage,
-          stack: errorStack,
-          data: errorData
+          stack: errorStack
+          // Omit data to prevent circular reference errors
         });
       }
     }

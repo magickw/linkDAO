@@ -248,7 +248,7 @@ export class PostController {
 
   async repostPost(req: Request, res: Response): Promise<Response> {
     try {
-      console.log('POST /api/posts/repost - Creating repost');
+      console.log('POST /api/posts/repost - Creating repost - v2 fix (UUID resolution)');
 
       const { originalPostId, message, author, media } = req.body;
 
