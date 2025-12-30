@@ -235,6 +235,7 @@ const MarketplaceContent: React.FC = () => {
                 id: sellerInfo.id || sellerAddress,
                 name: sellerInfo.storeName || sellerInfo.displayName ||
                   (sellerAddress ? `Seller ${sellerAddress.substring(0, 8)}...` : 'Unknown Seller'),
+                avatar: sellerInfo.avatar || sellerInfo.profileImageCdn || '',
                 rating: sellerInfo.rating || 4.5,
                 verified: sellerInfo.verified ?? true,
                 daoApproved: sellerInfo.daoApproved ?? false,

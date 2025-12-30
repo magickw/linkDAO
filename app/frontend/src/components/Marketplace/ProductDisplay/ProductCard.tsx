@@ -213,7 +213,6 @@ const SellerBadge: React.FC<{ seller: Product['seller']; onClick?: () => void }>
       </div>
       <div className="flex items-center gap-1">
         <span className="text-sm font-medium text-white/90">{seller.name}</span>
-        {seller.verified && <span className="text-xs">✅</span>}
         {seller.daoApproved && (
           <AnimatedProductBadge variant="info" size="sm">
             DAO
@@ -552,9 +551,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 />
                 {showTrustIndicators && (
                   <div className="flex gap-1">
-                    {product.trust.verified && (
-                      <AnimatedTrustIndicator type="verified" label="Verified" />
-                    )}
                     {product.trust.escrowProtected && (
                       <AnimatedTrustIndicator type="escrow" label="Escrow" />
                     )}
@@ -810,9 +806,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             />
             {showTrustIndicators && (
               <div className="flex gap-1">
-                {product.trust.verified && (
-                  <AnimatedTrustIndicator type="verified" label="Verified" />
-                )}
                 {product.trust.escrowProtected && (
                   <AnimatedTrustIndicator type="escrow" label="Escrow" />
                 )}
@@ -879,17 +872,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               />
             ) : (
               <div className="flex flex-col">
-                <DualPricing
-                  cryptoPrice={priceDisplayData.crypto}
-                  cryptoSymbol={priceDisplayData.cryptoSymbol}
-                  fiatPrice={priceDisplayData.fiat}
-                  fiatSymbol={priceDisplayData.fiatSymbol}
-                  size="md"
-                  layout="vertical"
-                  realTimeConversion
-                  defaultPrimary="fiat"
-                  showRefreshButton={false}
-                />
+                <div style={{
+                  fontSize: designTokens?.typography?.fontSize?.xl || '1.25rem',
+                  fontWeight: designTokens?.typography?.fontWeight?.bold,
+                  color: '#ffffff',
+                  lineHeight: 1.2,
+                }}>
+                  ${priceDisplayData.fiat}
+                </div>
               </div>
             )}
           </div>
@@ -984,17 +974,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               >
                 <RefreshCw size={14} />
               </button>
-
-              {/* Online Indicator */}
-              <div className="flex items-center gap-1.5" title={`Seller is ${product.seller.onlineStatus || 'offline'}`}>
-                <div className={`w-2 h-2 rounded-full ${product.seller.onlineStatus === 'online' ? 'bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]' :
-                  product.seller.onlineStatus === 'away' ? 'bg-yellow-400' : 'bg-gray-500'
-                  }`} />
-                <span className="text-xs text-white/60 font-medium">
-                  {product.seller.onlineStatus === 'online' ? 'Online' :
-                    product.seller.onlineStatus === 'away' ? 'Away' : 'Offline'}
-                </span>
-              </div>
             </div>
 
             <div className="flex items-center gap-3">

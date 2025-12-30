@@ -697,8 +697,8 @@ export class ProductService {
         id: dbUser.id,
         walletAddress: dbUser.walletAddress,
         displayName: dbSeller?.storeName || dbUser.displayName || 'Unknown Seller',
-        storeName: dbSeller?.storeName,
-        avatar: dbSeller?.profileImageCdn || dbUser.avatarCid,
+        storeName: dbSeller?.storeName || dbUser.displayName || 'Unknown Seller',
+        avatar: dbSeller?.profileImageCdn || dbUser.avatarCid || '',
         verified: dbSeller?.isVerified || false,
         daoApproved: dbSeller?.daoApproved || false,
         rating: sellerRating, // Use the fetched rating
