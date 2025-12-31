@@ -324,7 +324,10 @@ export class PostController {
         // Copy other relevant fields if needed, e.g. onchainRef
         onchainRef: originalQuickPost.onchainRef,
         isTokenGated: originalQuickPost.isTokenGated,
-        gatedContentPreview: originalQuickPost.gatedContentPreview
+        onchainRef: originalQuickPost.onchainRef,
+        isTokenGated: originalQuickPost.isTokenGated,
+        gatedContentPreview: originalQuickPost.gatedContentPreview,
+        isRepost: true
       });
 
       // QuickPostService.createQuickPost signature:

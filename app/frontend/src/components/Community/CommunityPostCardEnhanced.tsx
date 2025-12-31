@@ -220,7 +220,12 @@ function CommunityPostCardEnhanced({
           userStaked: reaction.users?.reduce((sum: number, user: any) =>
             user.address === address ? sum + (user.amount || 0) : sum, 0) || 0,
           contributors: reaction.users?.map((user: any) => user.address) || [],
-          rewardsEarned: 0 // Calculate rewards if needed
+          contributors: reaction.users?.map((user: any) => user.address) || [],
+          rewardsEarned: 0, // Calculate rewards if needed
+          // Lint fixes: provide required properties
+          price: 0,
+          count: reaction.count || 0,
+          userOwned: reaction.users?.some((user: any) => user.address === address) || false
         }));
         setReactions(mappedReactions);
       } else {
@@ -246,7 +251,7 @@ function CommunityPostCardEnhanced({
       art: '🎨',
       'hot-take': '🔥',
       'diamond-hands': '💎',
-      bullish: '🚀',
+      // bullish: '🚀', // Removed duplicate
       bearish: '🐻',
       love: '❤️',
       laugh: '😂',
@@ -467,7 +472,7 @@ function CommunityPostCardEnhanced({
 
     try {
       // Simple token transfer to treasury
-      const result = await ldaoTokenService.transferTokens(
+      const result = await ldaoTokenService.transfer(
         '0x074E3874CA62F8cB9be6DDCD23235d0Bb5a8A0b5', // Treasury address
         price.toString()
       );
@@ -842,7 +847,7 @@ function CommunityPostCardEnhanced({
             ) : (
               <>
                 {/* Post Title */}
-                {(post.title && post.title.trim() !== '') ? (
+                {(post.title && post.title.trim() !== '') && (
                   <h3
                     className="text-lg font-semibold text-gray-900 dark:text-white mb-2 leading-tight cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 hover:underline"
                     onClick={(e) => {
@@ -855,23 +860,6 @@ function CommunityPostCardEnhanced({
                   >
                     {post.title}
                   </h3>
-                ) : (
-                  // Only show fallback if there's actual content
-                  post.content && post.content.trim() !== '' && (
-                    <h3
-                      className="text-lg font-semibold text-gray-900 dark:text-white mb-2 leading-tight cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 hover:underline"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const communitySlug = encodeURIComponent(community.slug ?? community.id ?? community.name ?? 'unknown');
-                        const postPath = `/communities/${communitySlug}/posts/${post.shareId || post.id}`;
-                        setTimeout(() => router.push(postPath), 0);
-                      }}
-                    >
-                      {post.content.split('\n')[0].substring(0, 100)}
-                      {post.content.split('\n')[0].length > 100 ? '...' : ''}
-                    </h3>
-                  )
                 )}
                 <div className="text-gray-900 dark:text-white leading-relaxed prose prose-sm dark:prose-invert max-w-none">
 

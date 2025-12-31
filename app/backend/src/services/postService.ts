@@ -434,7 +434,8 @@ export class PostService {
           moderationWarning: dbPost.moderationWarning,
           riskScore: dbPost.riskScore ? parseFloat(dbPost.riskScore.toString()) : undefined,
           // Add staking field if it exists
-          stakedValue: dbPost.stakedValue ? parseFloat(dbPost.stakedValue.toString()) : undefined
+          stakedValue: dbPost.stakedValue ? parseFloat(dbPost.stakedValue.toString()) : undefined,
+          title: dbPost.title || '' // Add missing title field
         };
       }));
 
