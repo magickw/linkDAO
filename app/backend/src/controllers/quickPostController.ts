@@ -23,6 +23,7 @@ export class QuickPostController {
       console.log('POST /api/quick-posts - Creating quick post');
 
       const { content, authorId, parentId, isRepost, media, tags, onchainRef, isTokenGated, gatedContentPreview } = req.body;
+      console.log('🔍 [DEBUG-CREATE] QuickPost body:', JSON.stringify({ content, parentId, isRepost }));
 
       if ((!content || content.trim() === '') && !isRepost) {
         return res.status(400).json(apiResponse.error('Content is required', 400));

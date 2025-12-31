@@ -116,6 +116,8 @@ export class QuickPostService {
         safeLogger.warn('GatedContentPreview field not available, skipping');
       }
 
+      console.log('🔍 [DEBUG-CREATE-SERVICE] Inserting quick post data:', JSON.stringify(insertData));
+
       const [newPost] = await db.insert(quickPosts).values(insertData).returning();
 
       // Update cache with error handling
