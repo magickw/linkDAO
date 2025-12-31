@@ -82,7 +82,6 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [hasNewPosts, setHasNewPosts] = useState(false);
   const [feedRefreshKey, setFeedRefreshKey] = useState(0);
-  const [wsSubscribed, setWsSubscribed] = useState(false);
   const [isSupportWidgetOpen, setIsSupportWidgetOpen] = useState(false);
   const [isWalletSheetOpen, setIsWalletSheetOpen] = useState(false);
   const mainContentRef = useRef<HTMLDivElement>(null);
@@ -139,6 +138,10 @@ export default function Home() {
 
   // Track WebSocket connection status to avoid multiple connections
   const wsConnectedRef = useRef(false);
+
+  // Track WebSocket subscription status using ref to prevent infinite loop
+  // Using ref instead of state because state changes trigger re-renders and effect re-runs
+  const wsSubscribedRef = useRef(false);
 
   // Simple flag to prevent multiple simultaneous updates
   const isUpdating = useRef(false);
@@ -304,12 +307,12 @@ export default function Home() {
   // Subscribe to feed updates when connected with proper cleanup
   useEffect(() => {
     // Only subscribe if connected and WebSocket should be active
-    if (webSocket.isConnected && address && !wsSubscribed) {
+    if (webSocket.isConnected && address && !wsSubscribedRef.current) {
       // Subscribe to global feed updates
       const subscriptionId = webSocket.subscribe('feed', 'all', {
         eventTypes: ['feed_update', 'new_post']
       });
-      setWsSubscribed(true);
+      wsSubscribedRef.current = true;
 
       // Listen for new posts with stable callback
       const handleFeedUpdate = (data: any) => {
@@ -336,10 +339,10 @@ export default function Home() {
             }
           }, 0);
         }
-        setWsSubscribed(false);
+        wsSubscribedRef.current = false;
       };
     }
-  }, [webSocket, address, wsSubscribed, addToast, debouncedRefresh, isMounted]);
+  }, [webSocket, address, addToast, debouncedRefresh, isMounted]);
 
   // Cleanup effect when leaving home page
   useEffect(() => {
