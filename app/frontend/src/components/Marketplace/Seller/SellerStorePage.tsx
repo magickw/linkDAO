@@ -355,64 +355,26 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
 
           // Fetch listings using the actual wallet address from the profile
           try {
-            const { sellerService } = await import('@/services/sellerService');
+            const { marketplaceService } = await import('@/services/marketplaceService');
             const actualWalletAddress = transformedSeller.walletAddress;
-            const sellerListings = await sellerService.getListings(actualWalletAddress);
+            console.log('Fetching seller listings from public marketplace endpoint during refresh:', actualWalletAddress);
+            const marketplaceListings = await marketplaceService.getListingsBySeller(actualWalletAddress);
 
-            if (sellerListings && sellerListings.length > 0) {
-              // Transform seller listings to unified format
-              const transformedListings: UnifiedSellerListing[] = sellerListings.map(listing => {
-                const transformResult = unifiedSellerService.transformExternalListing(listing, 'backend');
+            if (marketplaceListings && marketplaceListings.length > 0) {
+              // Transform marketplace listings to unified format
+              const transformedListings: UnifiedSellerListing[] = marketplaceListings.map(listing => {
+                const transformResult = unifiedSellerService.transformExternalListing(listing, 'marketplace');
                 return transformResult.data;
               });
               setListings(transformedListings);
+              console.log('Successfully loaded seller listings during refresh:', transformedListings.length);
             } else {
-              // If seller service failed to return listings, try marketplace service as fallback
-              console.log('Seller service returned no listings during refresh, trying marketplace service...');
-              try {
-                const { marketplaceService } = await import('@/services/marketplaceService');
-                const marketplaceListings = await marketplaceService.getListingsBySeller(actualWalletAddress);
-
-                if (marketplaceListings && marketplaceListings.length > 0) {
-                  // Transform marketplace listings to unified format
-                  const transformedListings: UnifiedSellerListing[] = marketplaceListings.map(listing => {
-                    const transformResult = unifiedSellerService.transformExternalListing(listing, 'marketplace');
-                    return transformResult.data;
-                  });
-                  setListings(transformedListings);
-                  console.log('Successfully loaded listings using marketplace service fallback during refresh');
-                } else {
-                  setListings([]);
-                }
-              } catch (fallbackError) {
-                console.warn('Marketplace service fallback also failed during refresh:', fallbackError);
-                setListings([]);
-              }
+              setListings([]);
+              console.log('No listings found for seller during refresh:', actualWalletAddress);
             }
           } catch (listingsError) {
             console.warn('Failed to fetch seller listings during refresh:', listingsError);
-
-            // Try marketplace service as fallback when seller service fails
-            try {
-              const { marketplaceService } = await import('@/services/marketplaceService');
-              const actualWalletAddress = transformedSeller.walletAddress;
-              const marketplaceListings = await marketplaceService.getListingsBySeller(actualWalletAddress);
-
-              if (marketplaceListings && marketplaceListings.length > 0) {
-                // Transform marketplace listings to unified format
-                const transformedListings: UnifiedSellerListing[] = marketplaceListings.map(listing => {
-                  const transformResult = unifiedSellerService.transformExternalListing(listing, 'marketplace');
-                  return transformResult.data;
-                });
-                setListings(transformedListings);
-                console.log('Successfully loaded listings using marketplace service fallback after seller service error during refresh');
-              } else {
-                setListings([]);
-              }
-            } catch (fallbackError) {
-              console.warn('Marketplace service fallback also failed during refresh:', fallbackError);
-              setListings([]);
-            }
+            setListings([]);
           }
         } else {
           // Seller profile doesn't exist, but this is not necessarily an error
@@ -723,68 +685,28 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
         setLoading(false);
       }
 
-      // Fetch seller listings with error handling and fallback
+      // Fetch seller listings using public marketplace endpoint (no authentication required)
       try {
-        const { sellerService } = await import('@/services/sellerService');
-        // Use the actual wallet address from the seller state instead of the sellerId parameter
-        // This ensures we're using the correct identifier for fetching listings
+        const { marketplaceService } = await import('@/services/marketplaceService');
         const actualWalletAddress = seller?.walletAddress || sellerId;
-        const sellerListings = await sellerService.getListings(actualWalletAddress);
+        console.log('Fetching seller listings from public marketplace endpoint:', actualWalletAddress);
+        const marketplaceListings = await marketplaceService.getListingsBySeller(actualWalletAddress);
 
-        if (sellerListings && sellerListings.length > 0) {
-          // Transform seller listings to unified format
-          const transformedListings: UnifiedSellerListing[] = sellerListings.map(listing => {
-            const transformResult = unifiedSellerService.transformExternalListing(listing, 'backend');
+        if (marketplaceListings && marketplaceListings.length > 0) {
+          // Transform marketplace listings to unified format
+          const transformedListings: UnifiedSellerListing[] = marketplaceListings.map(listing => {
+            const transformResult = unifiedSellerService.transformExternalListing(listing, 'marketplace');
             return transformResult.data;
           });
           setListings(transformedListings);
+          console.log('Successfully loaded seller listings:', transformedListings.length);
         } else {
-          // If seller service failed to return listings, try marketplace service as fallback
-          console.log('Seller service returned no listings, trying marketplace service...');
-          try {
-            const { marketplaceService } = await import('@/services/marketplaceService');
-            const marketplaceListings = await marketplaceService.getListingsBySeller(actualWalletAddress);
-
-            if (marketplaceListings && marketplaceListings.length > 0) {
-              // Transform marketplace listings to unified format
-              const transformedListings: UnifiedSellerListing[] = marketplaceListings.map(listing => {
-                const transformResult = unifiedSellerService.transformExternalListing(listing, 'marketplace');
-                return transformResult.data;
-              });
-              setListings(transformedListings);
-              console.log('Successfully loaded listings using marketplace service fallback');
-            } else {
-              setListings([]);
-            }
-          } catch (fallbackError) {
-            console.warn('Marketplace service fallback also failed:', fallbackError);
-            setListings([]);
-          }
+          setListings([]);
+          console.log('No listings found for seller:', actualWalletAddress);
         }
       } catch (listingsError) {
         console.warn('Failed to fetch seller listings:', listingsError);
-
-        // Try marketplace service as fallback when seller service fails
-        try {
-          const { marketplaceService } = await import('@/services/marketplaceService');
-          const actualWalletAddress = seller?.walletAddress || sellerId;
-          const marketplaceListings = await marketplaceService.getListingsBySeller(actualWalletAddress);
-
-          if (marketplaceListings && marketplaceListings.length > 0) {
-            // Transform marketplace listings to unified format
-            const transformedListings: UnifiedSellerListing[] = marketplaceListings.map(listing => {
-              const transformResult = unifiedSellerService.transformExternalListing(listing, 'marketplace');
-              return transformResult.data;
-            });
-            setListings(transformedListings);
-            console.log('Successfully loaded listings using marketplace service fallback after seller service error');
-          } else {
-            setListings([]);
-          }
-        } catch (fallbackError) {
-          console.warn('Marketplace service fallback also failed:', fallbackError);
-          setListings([]);
-        }
+        setListings([]);
       }
 
       // Initialize reviews as empty array instead of mock data

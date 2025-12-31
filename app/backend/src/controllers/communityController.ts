@@ -385,6 +385,72 @@ export class CommunityController {
     }
   }
 
+  // Delete community post (auth required)
+  async deletePost(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { id, postId } = req.params;
+
+      const result = await communityService.deletePost(id, postId, userAddress);
+
+      if (!result.success) {
+        // Handle specific error cases if needed, otherwise default to 400
+        const statusCode = result.message?.includes('not found') ? 404 : 403;
+        res.status(statusCode).json(createErrorResponse(statusCode === 404 ? 'NOT_FOUND' : 'FORBIDDEN', result.message || 'Failed to delete post', statusCode));
+        return;
+      }
+
+      res.json(createSuccessResponse(null, {}));
+    } catch (error) {
+      safeLogger.error('Error deleting community post:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to delete post'));
+    }
+  }
+
+  // Update community post (auth required)
+  async updateCommunityPost(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { id, postId } = req.params;
+      const { title, content, mediaUrls, tags } = req.body;
+
+      // Validate inputs
+      if (!content && !title && !mediaUrls && !tags) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', 'No update data provided', 400));
+        return;
+      }
+
+      const result = await communityService.updatePost(id, postId, userAddress, {
+        title,
+        content,
+        mediaUrls,
+        tags
+      });
+
+      if (!result.success) {
+        // Handle specific error cases
+        const statusCode = result.message?.includes('not found') ? 404 : 403;
+        res.status(statusCode).json(createErrorResponse(statusCode === 404 ? 'NOT_FOUND' : 'FORBIDDEN', result.message || 'Failed to update post', statusCode));
+        return;
+      }
+
+      res.json(createSuccessResponse(result.data, {}));
+    } catch (error) {
+      safeLogger.error('Error updating community post:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to update post'));
+    }
+  }
+
   // Create post in community
   async createCommunityPost(req: Request, res: Response): Promise<void> {
     try {
@@ -1504,7 +1570,7 @@ export class CommunityController {
     }
   }
 
-  
+
 
   // Update moderation feedback (auth required)
   async updateModerationFeedback(req: Request, res: Response): Promise<void> {
@@ -1841,7 +1907,7 @@ export class CommunityController {
         defaultReputation,
         sendWelcomeMessage,
         skipExisting
-      });      res.json(createSuccessResponse(result, {}));
+      }); res.json(createSuccessResponse(result, {}));
     } catch (error) {
       safeLogger.error('Error importing members:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to import members'));
@@ -2213,7 +2279,8 @@ export class CommunityController {
       // Map route timeRange values to service timeRange values
       const serviceTimeRange = timeRange === 'day' ? '7d' : timeRange === 'week' ? '30d' : timeRange === 'month' ? '90d' : '7d';
       const stats = await communityAIModerationService.getModerationStats(id, serviceTimeRange);
-      res.json(createSuccessResponse(stats, {}));    } catch (error) {
+      res.json(createSuccessResponse(stats, {}));
+    } catch (error) {
       safeLogger.error('Error getting moderation stats:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get moderation stats'));
     }
@@ -2237,7 +2304,7 @@ export class CommunityController {
         .from(userReputation)
         .where(eq(userReputation.walletAddress, userAddress))
         .limit(1);
-      
+
       return Number(reputation[0]?.reputationScore) || 0;
     } catch (error) {
       safeLogger.error('Error getting user reputation:', error);

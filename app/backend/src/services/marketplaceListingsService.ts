@@ -121,6 +121,7 @@ export class MarketplaceListingsService {
               status: products.status,
               shipping: products.shipping,
               views: products.views,
+              favorites: products.favorites,
               createdAt: products.createdAt,
               updatedAt: products.updatedAt,
             })
@@ -198,6 +199,7 @@ export class MarketplaceListingsService {
           isActive: listing.status === 'active',
           shipping: parsedShipping,
           views: listing.views || 0,
+          favorites: listing.favorites || 0,
           createdAt: listing.createdAt || new Date(),
           updatedAt: listing.updatedAt || new Date()
         };
@@ -247,6 +249,7 @@ export class MarketplaceListingsService {
               status: products.status,
               shipping: products.shipping,
               views: products.views,
+              favorites: products.favorites,
               createdAt: products.createdAt,
               updatedAt: products.updatedAt,
             })
@@ -312,6 +315,7 @@ export class MarketplaceListingsService {
         isActive: listing.status === 'active',
         shipping: parsedShipping,
         views: listing.views || 0,
+        favorites: listing.favorites || 0,
         createdAt: listing.createdAt || new Date(),
         updatedAt: listing.updatedAt || new Date()
       };
@@ -627,6 +631,8 @@ export class MarketplaceListingsService {
               categoryId: products.categoryId,
               images: products.images,
               status: products.status,
+              views: products.views,
+              favorites: products.favorites,
               createdAt: products.createdAt,
               updatedAt: products.updatedAt,
             })
@@ -694,6 +700,8 @@ export class MarketplaceListingsService {
           images: parsedImages,
           category: listing.categoryId || undefined,
           isActive: listing.status === 'active',
+          views: listing.views || 0,
+          favorites: listing.favorites || 0,
           createdAt: listing.createdAt || new Date(),
           updatedAt: listing.updatedAt || new Date()
         };

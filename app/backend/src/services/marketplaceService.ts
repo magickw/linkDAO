@@ -97,6 +97,10 @@ export class BlockchainMarketplaceService {
         minIncrement: dbListing.minIncrement?.toString(),
         reserveMet: dbListing.reserveMet || false,
         createdAt: dbListing.createdAt?.toISOString() || now,
+        reserveMet: dbListing.reserveMet || false,
+        views: dbListing.views || 0,
+        favorites: dbListing.favorites || 0,
+        createdAt: dbListing.createdAt?.toISOString() || now,
         updatedAt: dbListing.updatedAt?.toISOString() || now
       };
 
@@ -161,6 +165,10 @@ export class BlockchainMarketplaceService {
       minIncrement: undefined, // Not applicable for fixed price listings
       reserveMet: false, // Not applicable for fixed price listings
       createdAt: dbListing.createdAt?.toISOString() || now,
+      reserveMet: false, // Not applicable for fixed price listings
+      views: dbListing.views || 0,
+      favorites: dbListing.favorites || 0,
+      createdAt: dbListing.createdAt?.toISOString() || now,
       updatedAt: dbListing.updatedAt?.toISOString() || now
     };
 
@@ -209,6 +217,10 @@ export class BlockchainMarketplaceService {
           reservePrice: undefined, // Not applicable for fixed price listings
           minIncrement: undefined, // Not applicable for fixed price listings
           reserveMet: false, // Not applicable for fixed price listings
+          views: dbListing.views || 0,
+          reserveMet: false, // Not applicable for fixed price listings
+          views: dbListing.views || 0,
+          favorites: dbListing.favorites || 0,
           createdAt: dbListing.createdAt?.toISOString() || now,
           updatedAt: dbListing.updatedAt?.toISOString() || now
         };
@@ -266,6 +278,10 @@ export class BlockchainMarketplaceService {
           minIncrement: undefined, // Not applicable for fixed price listings
           reserveMet: false, // Not applicable for fixed price listings
           createdAt: dbListing.createdAt?.toISOString() || now,
+          reserveMet: false, // Not applicable for fixed price listings
+          views: dbListing.views || 0,
+          favorites: dbListing.favorites || 0,
+          createdAt: dbListing.createdAt?.toISOString() || now,
           updatedAt: dbListing.updatedAt?.toISOString() || now
         };
         listings.push(listing);
@@ -322,6 +338,10 @@ export class BlockchainMarketplaceService {
           minIncrement: undefined, // Not applicable for fixed price listings
           reserveMet: false, // Not applicable for fixed price listings
           createdAt: dbListing.createdAt?.toISOString() || now,
+          reserveMet: false, // Not applicable for fixed price listings
+          views: dbListing.views || 0,
+          favorites: dbListing.favorites || 0,
+          createdAt: dbListing.createdAt?.toISOString() || now,
           updatedAt: dbListing.updatedAt?.toISOString() || now
         };
         listings.push(listing);
@@ -369,6 +389,10 @@ export class BlockchainMarketplaceService {
         reservePrice: dbListing.reservePrice?.toString(),
         minIncrement: dbListing.minIncrement?.toString(),
         reserveMet: dbListing.reserveMet || false,
+        createdAt: dbListing.createdAt?.toISOString() || now,
+        reserveMet: dbListing.reserveMet || false,
+        views: dbListing.views || 0,
+        favorites: dbListing.favorites || 0,
         createdAt: dbListing.createdAt?.toISOString() || now,
         updatedAt: dbListing.updatedAt?.toISOString() || now
       };

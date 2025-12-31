@@ -605,6 +605,54 @@ function CommunityPostCardEnhanced({
     }
   };
 
+  // Edit functionality
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(post.title || '');
+  const [editContent, setEditContent] = useState(post.content || '');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleEditToggle = () => {
+    setIsEditing(!isEditing);
+    if (!isEditing) {
+      // Reset form when opening
+      setEditTitle(post.title || '');
+      setEditContent(post.content || '');
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editContent.trim()) {
+      addToast('Content cannot be empty', 'error');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+
+      if (isCommunityPostType && community?.id && community.id !== 'unknown') {
+        await CommunityPostService.updatePost(community.id, post.id, {
+          title: editTitle,
+          content: editContent
+        });
+
+        post.title = editTitle;
+        post.content = editContent;
+
+        setIsEditing(false);
+        addToast('Post updated successfully', 'success');
+      } else {
+        // Fallback for non-community posts if needed (or just show error)
+        addToast('Editing only supported for community posts currently', 'info');
+      }
+    } catch (error: any) {
+      console.error('Error updating post:', error);
+      addToast(error?.message || 'Failed to update post', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+
   const isAuthor = address && (
     (post.author && post.author.toLowerCase() === address.toLowerCase()) ||
     (post.walletAddress && post.walletAddress.toLowerCase() === address.toLowerCase())
@@ -709,22 +757,41 @@ function CommunityPostCardEnhanced({
 
             {/* Post Actions Menu */}
             <div className="flex items-center space-x-2">
-              {/* Delete Button for Author */}
+              {/* Actions for Author */}
               {isAuthor && (
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleDelete();
-                  }}
-                  className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-                  title="Delete Post"
-                  aria-label="Delete Post"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
+                <>
+                  {/* Edit Button */}
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleEditToggle();
+                    }}
+                    className={`p-1 transition-colors ${isEditing ? 'text-blue-600' : 'text-gray-400 hover:text-blue-600'}`}
+                    title="Edit Post"
+                    aria-label="Edit Post"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+
+                  {/* Delete Button */}
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleDelete();
+                    }}
+                    className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                    title="Delete Post"
+                    aria-label="Delete Post"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </>
               )}
 
               {/* Only show locked status for community posts */}
@@ -739,59 +806,97 @@ function CommunityPostCardEnhanced({
 
           {/* Post Content */}
           <div className="mb-4">
-            {/* Post Title */}
-            {(post.title && post.title.trim() !== '') ? (
-              <h3
-                className="text-lg font-semibold text-gray-900 dark:text-white mb-2 leading-tight cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 hover:underline"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  const communitySlug = encodeURIComponent(community.slug ?? community.id ?? community.name ?? 'unknown');
-                  const postPath = `/communities/${communitySlug}/posts/${post.shareId || post.id}`;
-                  setTimeout(() => router.push(postPath), 0);
-                }}
-              >
-                {post.title}
-              </h3>
+            {isEditing ? (
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  placeholder="Post Title"
+                  className="w-full px-3 py-2 text-lg font-semibold border rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
+                <textarea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  placeholder="Post Content"
+                  rows={4}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
+                <div className="flex justify-end space-x-2">
+                  <button
+                    onClick={handleEditToggle}
+                    className="px-3 py-1 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                    disabled={isSaving}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveEdit}
+                    disabled={isSaving}
+                    className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {isSaving ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
+              </div>
             ) : (
-              // Only show fallback if there's actual content
-              post.content && post.content.trim() !== '' && (
-                <h3
-                  className="text-lg font-semibold text-gray-900 dark:text-white mb-2 leading-tight cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 hover:underline"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const communitySlug = encodeURIComponent(community.slug ?? community.id ?? community.name ?? 'unknown');
-                    const postPath = `/communities/${communitySlug}/posts/${post.shareId || post.id}`;
-                    setTimeout(() => router.push(postPath), 0);
-                  }}
-                >
-                  {post.content.split('\n')[0].substring(0, 100)}
-                  {post.content.split('\n')[0].length > 100 ? '...' : ''}
-                </h3>
-              )
-            )}
-            <div className="text-gray-900 dark:text-white leading-relaxed prose prose-sm dark:prose-invert max-w-none">
+              <>
+                {/* Post Title */}
+                {(post.title && post.title.trim() !== '') ? (
+                  <h3
+                    className="text-lg font-semibold text-gray-900 dark:text-white mb-2 leading-tight cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 hover:underline"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const communitySlug = encodeURIComponent(community.slug ?? community.id ?? community.name ?? 'unknown');
+                      const postPath = `/communities/${communitySlug}/posts/${post.shareId || post.id}`;
+                      setTimeout(() => router.push(postPath), 0);
+                    }}
+                  >
+                    {post.title}
+                  </h3>
+                ) : (
+                  // Only show fallback if there's actual content
+                  post.content && post.content.trim() !== '' && (
+                    <h3
+                      className="text-lg font-semibold text-gray-900 dark:text-white mb-2 leading-tight cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 hover:underline"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const communitySlug = encodeURIComponent(community.slug ?? community.id ?? community.name ?? 'unknown');
+                        const postPath = `/communities/${communitySlug}/posts/${post.shareId || post.id}`;
+                        setTimeout(() => router.push(postPath), 0);
+                      }}
+                    >
+                      {post.content.split('\n')[0].substring(0, 100)}
+                      {post.content.split('\n')[0].length > 100 ? '...' : ''}
+                    </h3>
+                  )
+                )}
+                <div className="text-gray-900 dark:text-white leading-relaxed prose prose-sm dark:prose-invert max-w-none">
 
-              {processContent(getTruncatedContent(post.content, 10000, isExpanded), 'html')}
-            </div>
+                  {processContent(getTruncatedContent(post.content, 10000, isExpanded), 'html')}
+                </div>
 
-            {shouldTruncateContent(post.content, 10000, isExpanded) && (
-              <button
-                onClick={() => setIsExpanded(true)}
-                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium mt-2 flex items-center space-x-1"
-              >
-                <span>Show more</span>
-              </button>
+                {shouldTruncateContent(post.content, 10000, isExpanded) && (
+                  <button
+                    onClick={() => setIsExpanded(true)}
+                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium mt-2 flex items-center space-x-1"
+                  >
+                    <span>Show more</span>
+                  </button>
+                )}
+                {isExpanded && shouldTruncateContent(post.content, 10000, false) && (
+                  <button
+                    onClick={() => setIsExpanded(false)}
+                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium mt-2 flex items-center space-x-1"
+                  >
+                    <span>Show less</span>
+                  </button>
+                )}
+              </>
             )}
-            {isExpanded && shouldTruncateContent(post.content, 10000, false) && (
-              <button
-                onClick={() => setIsExpanded(false)}
-                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium mt-2 flex items-center space-x-1"
-              >
-                <span>Show less</span>
-              </button>
-            )}
+
             {/* Media */}
             {post.mediaCids && post.mediaCids.length > 0 && (
               <div className="mt-3 grid grid-cols-1 gap-2">

@@ -19,7 +19,7 @@ export class MarketplaceController {
   async getListingById(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      
+
       // Validate ID
       if (!id) {
         return res.status(400).json({
@@ -35,7 +35,7 @@ export class MarketplaceController {
 
       // Fetch the listing from the marketplace service
       const listing = await marketplaceService.getListingById(id);
-      
+
       // Handle case where listing is not found or service is unavailable
       if (!listing) {
         return res.status(200).json({
@@ -86,8 +86,8 @@ export class MarketplaceController {
           standard: listing.nftStandard,
           tokenId: listing.tokenId
         } : null,
-        views: 0, // Would come from analytics
-        favorites: 0, // Would come from favorites service
+        views: listing.views || 0,
+        favorites: listing.favorites || 0,
         listingStatus: listing.status.toLowerCase(),
         publishedAt: listing.createdAt,
         createdAt: listing.createdAt,
@@ -126,7 +126,7 @@ export class MarketplaceController {
       });
     } catch (error) {
       safeLogger.error('Error fetching product details:', error);
-      
+
       // Return graceful fallback instead of 500 error
       return res.status(200).json({
         success: true,
@@ -185,12 +185,12 @@ export class MarketplaceController {
       // Use the marketplace service to get listings from the database with timeout protection
       const listingsService = new MarketplaceListingsService();
       let result;
-      
+
       // Add timeout protection for the database query
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Database query timeout')), 15000)
       );
-      
+
       if (search) {
         const searchPromise = listingsService.searchListings(search as string, filters);
         result = await Promise.race([searchPromise, timeoutPromise]);
@@ -273,8 +273,8 @@ export class MarketplaceController {
             methods: ['standard']
           },
           nft: null,
-          views: 0,
-          favorites: 0,
+          views: listing.views || 0,
+          favorites: listing.favorites || 0,
           listingStatus: listing.isActive ? 'active' : 'inactive',
           publishedAt: listing.createdAt,
           createdAt: listing.createdAt,
@@ -333,7 +333,7 @@ export class MarketplaceController {
       });
     } catch (error) {
       safeLogger.error('Error fetching product listings:', error);
-      
+
       // Return graceful fallback instead of 500 error
       return res.status(200).json({
         success: true,
@@ -360,7 +360,7 @@ export class MarketplaceController {
   async getSellerById(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      
+
       // Validate ID
       if (!id) {
         return res.status(400).json({
@@ -374,7 +374,7 @@ export class MarketplaceController {
 
       // Fetch seller profile
       const sellerProfile = await sellerService.getSellerProfile(id);
-      
+
       if (!sellerProfile) {
         return res.status(404).json({
           success: false,
@@ -420,7 +420,7 @@ export class MarketplaceController {
       });
     } catch (error) {
       safeLogger.error('Error fetching seller profile:', error);
-      
+
       return res.status(500).json({
         success: false,
         error: {
@@ -502,8 +502,8 @@ export class MarketplaceController {
           standard: listing.nftStandard,
           tokenId: listing.tokenId
         } : null,
-        views: 0,
-        favorites: 0,
+        views: listing.views || 0,
+        favorites: listing.favorites || 0,
         listingStatus: listing.status.toLowerCase(),
         publishedAt: listing.createdAt,
         createdAt: listing.createdAt,
@@ -551,7 +551,7 @@ export class MarketplaceController {
       });
     } catch (error) {
       safeLogger.error('Error fetching seller listings:', error);
-      
+
       return res.status(500).json({
         success: false,
         error: {
@@ -582,7 +582,7 @@ export class MarketplaceController {
 
       const query = q as string;
       const searchType = type as string;
-      
+
       // Build pagination options
       const paginationOptions = {
         page: parseInt(page as string),
@@ -601,33 +601,33 @@ export class MarketplaceController {
 
       // Fetch all listings and filter based on search criteria
       const allListings = await marketplaceService.getActiveListings();
-      
+
       // Apply search filters
       let filteredListings = allListings;
-      
+
       // Filter by category if provided
       if (category) {
-        filteredListings = filteredListings.filter(listing => 
+        filteredListings = filteredListings.filter(listing =>
           listing.itemType.toLowerCase() === (category as string).toLowerCase()
         );
       }
-      
+
       // Filter by price range if provided
       if (minPrice) {
-        filteredListings = filteredListings.filter(listing => 
+        filteredListings = filteredListings.filter(listing =>
           Number(listing.price) >= Number(minPrice)
         );
       }
-      
+
       if (maxPrice) {
-        filteredListings = filteredListings.filter(listing => 
+        filteredListings = filteredListings.filter(listing =>
           Number(listing.price) <= Number(maxPrice)
         );
       }
-      
+
       // Apply search query to title/description if provided
       if (query) {
-        filteredListings = filteredListings.filter(listing => 
+        filteredListings = filteredListings.filter(listing =>
           listing.id.includes(query) // Simplified search, would need better implementation
         );
       }
@@ -669,8 +669,8 @@ export class MarketplaceController {
           standard: listing.nftStandard,
           tokenId: listing.tokenId
         } : null,
-        views: 0,
-        favorites: 0,
+        views: listing.views || 0,
+        favorites: listing.favorites || 0,
         listingStatus: listing.status.toLowerCase(),
         publishedAt: listing.createdAt,
         createdAt: listing.createdAt,
@@ -724,7 +724,7 @@ export class MarketplaceController {
       });
     } catch (error) {
       safeLogger.error('Error searching marketplace:', error);
-      
+
       return res.status(500).json({
         success: false,
         error: {
@@ -752,10 +752,10 @@ export class MarketplaceController {
 
       // Get active listings and filter by title/description containing the query
       const allListings = await marketplaceService.getActiveListings();
-      
+
       // Simple text matching for suggestions (in a real implementation, this would use a proper search service)
       const suggestions = allListings
-        .filter(listing => 
+        .filter(listing =>
           listing.id.toLowerCase().includes(q.toLowerCase()) ||
           listing.itemType.toLowerCase().includes(q.toLowerCase())
         )
@@ -774,7 +774,7 @@ export class MarketplaceController {
       });
     } catch (error) {
       safeLogger.error('Error getting search suggestions:', error);
-      
+
       return res.status(500).json({
         success: false,
         error: {
@@ -795,7 +795,7 @@ export class MarketplaceController {
 
       // Get active listings that could be auctions
       const allListings = await marketplaceService.getActiveListings();
-      
+
       // For now, return all active listings as auction-like items
       // In a real implementation, this would filter for actual auction listings
       const auctions = allListings
@@ -833,7 +833,7 @@ export class MarketplaceController {
       });
     } catch (error) {
       safeLogger.error('Error getting active auctions:', error);
-      
+
       return res.status(500).json({
         success: false,
         error: {

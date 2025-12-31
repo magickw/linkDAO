@@ -1582,8 +1582,8 @@ export class UnifiedMarketplaceService {
 
   async getListingsBySeller(sellerAddress: string): Promise<MarketplaceListing[]> {
     try {
-      const params = new URLSearchParams({ sellerWalletAddress: sellerAddress });
-      const response = await this.makeApiRequest(`/listings?${params}`);
+      const params = new URLSearchParams({ sellerAddress: sellerAddress });
+      const response = await this.makeApiRequest(`/api/marketplace/listings?${params}`);
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({ message: 'Failed to fetch seller listings' }));
@@ -1591,7 +1591,7 @@ export class UnifiedMarketplaceService {
       }
 
       const result = await response.json();
-      return result.listings || result.data || [];
+      return result.data?.listings || result.listings || result.data || [];
     } catch (error) {
       console.error('Error fetching seller listings:', error);
       throw error;

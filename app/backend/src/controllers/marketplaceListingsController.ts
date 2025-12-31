@@ -100,7 +100,7 @@ export class MarketplaceListingsController {
                   freeShipping: true
                 },
                 nft: null,
-                views: 0,
+                views: listing.views || 0,
                 favorites: 0,
                 listingStatus: listing.isActive ? 'active' : 'inactive',
                 publishedAt: listing.createdAt,
@@ -216,7 +216,7 @@ export class MarketplaceListingsController {
           freeShipping: true
         },
         nft: null,
-        views: 0,
+        views: listing.views || 0,
         favorites: 0,
         listingStatus: listing.isActive ? 'active' : 'inactive',
         publishedAt: listing.createdAt,

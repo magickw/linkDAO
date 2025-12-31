@@ -481,7 +481,7 @@ export class CommunityService {
       if (userAddress) {
         // Normalize address to lowercase for case-insensitive matching
         const normalizedUserAddress = userAddress.toLowerCase();
-        
+
         const membershipResult = await db
           .select({
             role: communityMembers.role,
@@ -621,7 +621,7 @@ export class CommunityService {
       if (userAddress) {
         // Normalize address to lowercase for case-insensitive matching
         const normalizedUserAddress = userAddress.toLowerCase();
-        
+
         const membershipResult = await db
           .select({
             role: communityMembers.role,
@@ -1221,6 +1221,158 @@ export class CommunityService {
     }
   }
 
+  // Delete community post
+  async deletePost(communityId: string, postId: string, userAddress: string): Promise<{ success: boolean; message?: string }> {
+    try {
+      const normalizedUserAddress = userAddress.toLowerCase();
+
+      // Check if post exists and belongs to community
+      const post = await db
+        .select({
+          id: posts.id,
+          authorId: posts.authorId,
+          communityId: posts.communityId
+        })
+        .from(posts)
+        .where(
+          and(
+            eq(posts.id, postId),
+            eq(posts.communityId, communityId)
+          )
+        )
+        .limit(1);
+
+      if (post.length === 0) {
+        return { success: false, message: 'Post not found in this community' };
+      }
+
+      if (!post[0].authorId) {
+        return { success: false, message: 'Invalid post data' };
+      }
+
+      // Check author ownership
+      const user = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.walletAddress, normalizedUserAddress))
+        .limit(1);
+
+      if (user.length === 0) {
+        return { success: false, message: 'User not found' };
+      }
+
+      const isAuthor = post[0].authorId === user[0].id;
+
+      // Check moderator permissions if not author
+      let isModerator = false;
+      if (!isAuthor) {
+        isModerator = await this.checkModeratorPermission(communityId, normalizedUserAddress);
+      }
+
+      if (!isAuthor && !isModerator) {
+        return { success: false, message: 'Not authorized to delete this post' };
+      }
+
+      // Delete the post
+      await db.delete(posts).where(eq(posts.id, postId));
+
+      // Update community post count
+      await db
+        .update(communities)
+        .set({
+          postCount: sql`${communities.postCount} - 1`,
+          updatedAt: new Date()
+        })
+        .where(eq(communities.id, communityId));
+
+      return { success: true };
+    } catch (error) {
+      safeLogger.error('Error in CommunityService.deletePost:', error);
+      throw error;
+    }
+  }
+
+  // Update community post
+  async updatePost(communityId: string, postId: string, userAddress: string, data: { title?: string, content?: string, mediaUrls?: string[], tags?: string[] }): Promise<{ success: boolean; data?: any; message?: string }> {
+    try {
+      const normalizedUserAddress = userAddress.toLowerCase();
+
+      // Check if post exists and belongs to community
+      const post = await db
+        .select({
+          id: posts.id,
+          authorId: posts.authorId,
+          communityId: posts.communityId
+        })
+        .from(posts)
+        .where(
+          and(
+            eq(posts.id, postId),
+            eq(posts.communityId, communityId)
+          )
+        )
+        .limit(1);
+
+      if (post.length === 0) {
+        return { success: false, message: 'Post not found in this community' };
+      }
+
+      if (!post[0].authorId) {
+        return { success: false, message: 'Invalid post data' };
+      }
+
+      // Check author ownership (only author can edit content)
+      const user = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.walletAddress, normalizedUserAddress))
+        .limit(1);
+
+      if (user.length === 0) {
+        return { success: false, message: 'User not found' };
+      }
+
+      const isAuthor = post[0].authorId === user[0].id;
+
+      if (!isAuthor) {
+        return { success: false, message: 'Only the author can edit this post' };
+      }
+
+      // Prepare update data
+      const updateValues: any = {
+        updatedAt: new Date()
+      };
+
+      if (data.title !== undefined) updateValues.title = data.title;
+      if (data.content !== undefined) updateValues.content = data.content;
+      if (data.mediaUrls !== undefined) updateValues.mediaUrls = JSON.stringify(data.mediaUrls);
+      if (data.tags !== undefined) updateValues.tags = JSON.stringify(data.tags);
+
+      // Perform update
+      const updatedPost = await db
+        .update(posts)
+        .set(updateValues)
+        .where(eq(posts.id, postId))
+        .returning();
+
+      if (updatedPost.length === 0) {
+        return { success: false, message: 'Failed to update post' };
+      }
+
+      // Format response
+      const result = {
+        ...updatedPost[0],
+        mediaUrls: this.safeJsonParse(updatedPost[0].mediaUrls, []),
+        tags: this.safeJsonParse(updatedPost[0].tags, [])
+      };
+
+      return { success: true, data: result };
+    } catch (error) {
+      safeLogger.error('Error in CommunityService.updatePost:', error);
+      throw error;
+    }
+  }
+
   // Get community posts with enhanced filtering
   async getCommunityPosts(options: {
     communityId: string;
@@ -1538,7 +1690,7 @@ export class CommunityService {
         ));
 
       const total = totalResult[0]?.count || 0;
-      
+
       // Debug logging
       console.log(`[COMMUNITY FEED DEBUG] Total posts available: ${total} for user ${userAddress}`);
 

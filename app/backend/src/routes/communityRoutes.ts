@@ -185,6 +185,36 @@ router.get('/:id/posts',
   communityController.getCommunityPosts
 );
 
+// Delete post in community (auth required)
+router.delete('/:id/posts/:postId', csrfProtection,
+  authRequired,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true },
+      postId: { type: 'string', required: true }
+    }
+  }),
+  communityController.deletePost
+);
+
+// Update post in community (auth required)
+router.put('/:id/posts/:postId', csrfProtection,
+  authRequired,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true },
+      postId: { type: 'string', required: true }
+    },
+    body: {
+      title: { type: 'string', optional: true, maxLength: 200 },
+      content: { type: 'string', optional: true, minLength: 1, maxLength: 5000 },
+      mediaUrls: { type: 'array', optional: true },
+      tags: { type: 'array', optional: true }
+    }
+  }),
+  communityController.updateCommunityPost
+);
+
 // Create post in community (auth required)
 router.post('/:id/posts', csrfProtection,
   authRequired,

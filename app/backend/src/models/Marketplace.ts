@@ -61,6 +61,8 @@ export interface MarketplaceListing {
   highestBidderWalletAddress?: string;
   metadataURI: string;
   isEscrowed: boolean;
+  views?: number;
+  favorites?: number;
   // NFT specific fields
   nftStandard?: 'ERC721' | 'ERC1155'; // Only for NFT items
   tokenId?: string; // Only for NFT items
