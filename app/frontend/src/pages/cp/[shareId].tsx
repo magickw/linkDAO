@@ -96,14 +96,16 @@ export default function CommunityPostSharePage() {
                     console.log('[CommunityPostSharePage] Post data found:', postData);
                     console.log('[CommunityPostSharePage] Canonical URL:', canonicalUrl);
 
-                    // 重定向到规范URL - 立即重定向，不等待状态更新
-                    if (canonicalUrl && canonicalUrl !== window.location.pathname) {
-                        console.log('[CommunityPostSharePage] Redirecting to canonical URL:', canonicalUrl);
+                    // Redirect to canonical URL
+                    // Redirect to canonical URL
+                    if (canonicalUrl) {
+                        console.log(`[CommunityPostSharePage] Redirecting to canonical URL: ${canonicalUrl}`);
                         router.replace(canonicalUrl);
-                        return; // 立即返回，不继续执行
+                        return;
                     }
 
-                    // 如果不需要重定向，则设置状态
+                    // Fallback: This should ideally not happen if canonicalUrl is returned
+                    console.warn('[CommunityPostSharePage] No canonical URL found, rendering content');
                     setPost(postData);
                     setCanonicalUrl(canonicalUrl);
                 } else {

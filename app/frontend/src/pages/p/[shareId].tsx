@@ -61,13 +61,11 @@ export default function SharePostPage() {
                     // history entry via the native History API keeps the user on this client-side route and
                     // lets the app-level modal logic (e.g. `usePostModalManager`) handle any required UI state
                     // without causing an extra route change event.
-                    if (canonicalUrl && canonicalUrl !== window.location.pathname) {
-                        try {
-                            window.history.replaceState({}, '', canonicalUrl);
-                        } catch (err) {
-                            // Fallback to Next router.replace if History API is unavailable
-                            router.replace(canonicalUrl);
-                        }
+                    if (canonicalUrl) {
+                        console.log(`[SharePostPage] Redirecting to canonical URL: ${canonicalUrl}`);
+                        // Force navigation to the canonical page to render the full context
+                        router.replace(canonicalUrl);
+                        return;
                     }
                 } else {
                     setError('Post not found');

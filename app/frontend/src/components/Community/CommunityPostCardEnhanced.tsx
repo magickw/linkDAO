@@ -864,7 +864,11 @@ function CommunityPostCardEnhanced({
                         return;
                       }
 
-                      const postPath = `/communities/${communitySlug}/posts/${post.shareId || post.id}`;
+                      // Construct path using shareId if available, otherwise UUID
+                      const targetId = post.shareId || post.id;
+                      const postPath = `/communities/${communitySlug}/posts/${targetId}`;
+
+                      console.log('[CommunityPostCard] Navigating to:', postPath);
                       setTimeout(() => router.push(postPath), 0);
                     }}
                   >

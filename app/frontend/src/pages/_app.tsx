@@ -27,7 +27,6 @@ import { performanceMonitor, memoryMonitor } from '@/utils/performanceMonitor';
 import { initializeExtensionErrorSuppression, debugExtensionErrors } from '@/utils/extensionErrorHandler';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { WalletLoginBridgeWithToast } from '@/components/Auth/WalletLoginBridgeWithToast';
-import { NavigationFixer } from '@/components/NavigationFixer';
 import Head from 'next/head';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/globals.css';
@@ -219,7 +218,6 @@ function AppContent({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <NavigationFixer />
       {children}
 
       {/* Offline Indicator */}

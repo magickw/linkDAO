@@ -102,7 +102,7 @@ export class UnifiedShareResolver {
         handle,
         name,
       },
-      canonicalUrl: `/${handle}/posts/${shareId}`,
+      canonicalUrl: `/${handle}/posts/${post.id}`,
       shareUrl: `/p/${shareId}`,
       data: post,
     };
@@ -161,8 +161,8 @@ export class UnifiedShareResolver {
         handle: communitySlug,
         name: post.communityName || communitySlug,
       },
-      canonicalUrl: `/communities/${encodeURIComponent(communitySlug)}/posts/${shareId}`,
-      shareUrl: `/p/${shareId}`, // Unified share prefix
+      canonicalUrl: `/communities/${encodeURIComponent(communitySlug)}/posts/${post.id}`,
+      shareUrl: `/cp/${shareId}`, // Community post specific share prefix
       data: {
         ...post,
         authorHandle,

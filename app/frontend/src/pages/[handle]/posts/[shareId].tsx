@@ -32,9 +32,15 @@ export default function UserPostPage() {
                 setIsLoading(true);
                 setError(null);
 
-                // Fetch post by share ID
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/quick-posts/share/${shareId}`);
-                
+                // Detect if using UUID or Share ID
+                const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(shareId);
+                const endpoint = isUuid
+                    ? `${process.env.NEXT_PUBLIC_API_URL}/api/quick-posts/${shareId}`
+                    : `${process.env.NEXT_PUBLIC_API_URL}/api/quick-posts/share/${shareId}`;
+
+                // Fetch post
+                const response = await fetch(endpoint);
+
                 if (!response.ok) {
                     if (response.status === 404) {
                         setError('Post not found');
@@ -45,10 +51,10 @@ export default function UserPostPage() {
                 }
 
                 const data = await response.json();
-                
+
                 if (data.success && data.data) {
                     const postData = data.data as QuickPost;
-                    
+
                     // Verify the handle matches the post author
                     const postHandle = postData.authorProfile?.handle || postData.author?.slice(0, 8);
                     if (handle && postHandle !== handle) {
@@ -56,7 +62,7 @@ export default function UserPostPage() {
                         router.replace(`/${postHandle}/posts/${shareId}`);
                         return;
                     }
-                    
+
                     setPost(postData);
                     setShareUrl(`/p/${shareId}`);
                 } else {
@@ -188,7 +194,7 @@ export default function UserPostPage() {
                                 View @{handle}'s Profile
                             </Link>
                         </div>
-                        
+
                         <button
                             onClick={handleCopyShareLink}
                             className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"

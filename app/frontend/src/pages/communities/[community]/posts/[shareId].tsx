@@ -48,8 +48,12 @@ export default function CommunityPostPage() {
                 setIsLoading(true);
                 setError(null);
 
-                // Fetch post by share ID - using relative path to automatically use current domain
-                const response = await fetch(`/api/cp/${shareId}`);
+                // Detect if using UUID or Share ID
+                const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(shareId);
+                const endpoint = isUuid ? `/api/posts/${shareId}` : `/api/cp/${shareId}`;
+
+                // Fetch post
+                const response = await fetch(endpoint);
 
                 if (!response.ok) {
                     if (response.status === 404) {
@@ -72,7 +76,8 @@ export default function CommunityPostPage() {
                 });
 
                 if (data.success && data.data) {
-                    const postData = data.data.post as CommunityPost;
+                    // Normalize data structure based on endpoint
+                    const postData = isUuid ? (data.data as CommunityPost) : (data.data.post as CommunityPost);
 
                     console.log('[CommunityPostPage] Post data extracted:', postData);
                     console.log('[CommunityPostPage] Community slug from post:', postData.communitySlug);
