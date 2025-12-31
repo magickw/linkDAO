@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAccount } from 'wagmi';
 import { useRouter } from 'next/router';
 import { useToast } from '@/context/ToastContext';
-import { marketplaceService, type MarketplaceListing } from '@/services/marketplaceService';
+import { marketplaceService, type MarketplaceListing, type CategoryInfo } from '@/services/marketplaceService';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { Button } from '@/design-system/components/Button';
 import Layout from '@/components/Layout';
@@ -87,8 +87,8 @@ interface EnhancedFormData {
   tokenAddress: string;
 }
 
-// Available categories
-const CATEGORIES = [
+// Available categories - to be fetched from API
+const DEFAULT_CATEGORIES = [
   // Digital & NFT Categories
   { value: 'art', label: '🎨 Art & Collectibles' },
   { value: 'music', label: '🎵 Music & Audio' },
@@ -283,14 +283,30 @@ const EditListingPage: React.FC = () => {
 
   // State for field-specific errors
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [categories, setCategories] = useState<CategoryInfo[]>([]);
 
-  // Load existing listing data
+  // Load existing listing data and categories
   useEffect(() => {
-    const loadListingData = async () => {
+    const loadInitialData = async () => {
       if (!id || typeof id !== 'string') return;
 
       try {
         setInitialLoading(true);
+        
+        // Load categories from API
+        try {
+          const categoriesData = await marketplaceService.getCategories();
+          setCategories(categoriesData);
+        } catch (error) {
+          console.error('Error loading categories:', error);
+          // Fallback to default categories
+          setCategories(DEFAULT_CATEGORIES.map(cat => ({
+            id: cat.value,
+            name: cat.label,
+            slug: cat.value
+          })));
+        }
+        
         // Fetch the listing data from the API
         console.log('Loading listing data for ID:', id);
 
@@ -375,9 +391,7 @@ const EditListingPage: React.FC = () => {
       }
     };
 
-    if (id) {
-      loadListingData();
-    }
+    loadInitialData();
   }, [id, addToast]);
   // Real-time validation
   const validateField = (field: keyof EnhancedFormData, value: any) => {
@@ -1088,9 +1102,9 @@ const EditListingPage: React.FC = () => {
                       } rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500`}
                   >
                     <option value="">Select a category</option>
-                    {CATEGORIES.map((cat) => (
-                      <option key={cat.value} value={cat.value} className="bg-gray-800">
-                        {cat.label}
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.slug} className="bg-gray-800">
+                        {cat.name}
                       </option>
                     ))}
                   </select>
@@ -1858,7 +1872,7 @@ const EditListingPage: React.FC = () => {
                     <div>
                       <h4 className="text-sm font-medium text-white/70">Category</h4>
                       <p className="text-white">
-                        {CATEGORIES.find(c => c.value === formData.category)?.label || 'Not specified'}
+                        {categories.find(c => c.slug === formData.category)?.name || 'Not specified'}
                       </p>
                     </div>
 

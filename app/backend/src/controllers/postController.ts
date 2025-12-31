@@ -5,7 +5,7 @@ import { MetadataService } from '../services/metadataService';
 import { UserProfileService } from '../services/userProfileService';
 import { CreatePostInput } from '../models/Post';
 import { db } from '../db';
-import { posts, users } from '../db/schema';
+import { posts, users, quickPosts } from '../db/schema';
 import { eq, and, sql, isNotNull } from 'drizzle-orm';
 
 // Remove in-memory storage
@@ -280,8 +280,36 @@ export class PostController {
         });
       }
 
+      // Log initial request
+      console.log('📝 [REPOST] Request:', { originalPostId, author });
+
       // Check if original post is a Quick Post
       const originalQuickPost = await this.quickPostService.getQuickPost(originalPostId);
+
+      // FLATTEN REPOSTS: If the target is itself a repost, find the original source
+      let targetPostId = originalPostId;
+      if (originalQuickPost && originalQuickPost.isRepost && originalQuickPost.parentId) {
+        console.log('🔄 [REPOST] Target is already a repost. Flattening chain to point to original:', originalQuickPost.parentId);
+        targetPostId = originalQuickPost.parentId;
+      }
+
+      // DUPLICATE CHECK: Check if user has already reposted this specific content
+      const existingRepost = await db.select()
+        .from(quickPosts) // We only care about quick_posts table for feed reposts
+        .where(and(
+          eq(quickPosts.authorId, user.id),
+          eq(quickPosts.parentId, targetPostId),
+          eq(quickPosts.isRepost, true)
+        ))
+        .limit(1);
+
+      if (existingRepost.length > 0) {
+        console.log('⚠️ [REPOST] Duplicate prevented. User has already reposted:', targetPostId);
+        return res.status(400).json({
+          success: false,
+          error: 'You have already reposted this.'
+        });
+      }
 
       if (!originalQuickPost) {
         // If not found in Quick Posts, check if it's a Community Post (to give specific error)
@@ -319,7 +347,7 @@ export class PostController {
         authorId: user.id, // Use the resolved UUID, not the wallet address
         content: repostContent,
         contentCid: contentCid,
-        parentId: originalPostId,
+        parentId: targetPostId, // Use the flattened target ID
         tags: JSON.stringify(originalQuickPost.tags || []),
         // Copy other relevant fields if needed, e.g. onchainRef
         onchainRef: originalQuickPost.onchainRef,
@@ -414,16 +442,22 @@ export class PostController {
         return res.status(404).json({ success: false, error: 'User not found' });
       }
 
+      // FLATTEN REPOSTS: Check if the target is itself a repost, find the original source
+      // This mirrors the logic in repostPost ensures we delete the correct row
+      let targetPostId = originalPostId;
+      const targetQuickPost = await this.quickPostService.getQuickPost(originalPostId);
+      if (targetQuickPost && targetQuickPost.isRepost && targetQuickPost.parentId) {
+        console.log('🔄 [UNREPOST] Target is a repost. Flattening chain to point to original:', targetQuickPost.parentId);
+        targetPostId = targetQuickPost.parentId;
+      }
 
       // Direct DB deletion logic for both tables to be safe (handle legacy and new)
 
-      const { quickPosts, posts } = await import('../db/schema');
-      const { and, eq } = await import('drizzle-orm');
 
       // 1. Try deleting from quick_posts
       const deletedQuick = await db.delete(quickPosts)
         .where(and(
-          eq(quickPosts.parentId, originalPostId),
+          eq(quickPosts.parentId, targetPostId),
           eq(quickPosts.authorId, user[0].id),
           eq(quickPosts.isRepost, true)
         ))
@@ -432,7 +466,7 @@ export class PostController {
       // 2. Try deleting from posts (legacy)
       const deletedRegular = await db.delete(posts)
         .where(and(
-          eq(posts.parentId, originalPostId),
+          eq(posts.parentId, targetPostId),
           eq(posts.authorId, user[0].id),
           eq(posts.isRepost, true)
         ))

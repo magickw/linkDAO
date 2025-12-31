@@ -851,29 +851,27 @@ function CommunityPostCardEnhanced({
               <>
                 {/* Post Title */}
                 {(post.title && post.title.trim() !== '') && (
-                  <h3
-                    className="text-lg font-semibold text-gray-900 dark:text-white mb-2 leading-tight cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 hover:underline"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      const communitySlug = encodeURIComponent(community.slug ?? community.id ?? community.name ?? 'unknown');
-
-                      // Use the onOpenPost prop if provided (for Modal behavior)
-                      if (onOpenPost) {
+                  onOpenPost ? (
+                    <h3
+                      className="text-lg font-semibold text-gray-900 dark:text-white mb-2 leading-tight cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 hover:underline"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        const communitySlug = encodeURIComponent(community.slug ?? community.id ?? community.name ?? 'unknown');
                         onOpenPost(post, communitySlug);
-                        return;
-                      }
-
-                      // Construct path using shareId if available, otherwise UUID
-                      const targetId = post.shareId || post.id;
-                      const postPath = `/communities/${communitySlug}/posts/${targetId}`;
-
-                      console.log('[CommunityPostCard] Navigating to:', postPath);
-                      setTimeout(() => router.push(postPath), 0);
-                    }}
-                  >
-                    {post.title}
-                  </h3>
+                      }}
+                    >
+                      {post.title}
+                    </h3>
+                  ) : (
+                    <Link
+                      href={`/communities/${encodeURIComponent(community.slug ?? community.id ?? community.name ?? 'unknown')}/posts/${post.shareId || post.id}`}
+                      className="block mb-2 group"
+                    >
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:underline">
+                        {post.title}
+                      </h3>
+                    </Link>
+                  )
                 )}
                 <div className="text-gray-900 dark:text-white leading-relaxed prose prose-sm dark:prose-invert max-w-none">
 

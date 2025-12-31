@@ -50,7 +50,6 @@ interface SharePostModalProps {
 
 interface SharePostModalWithToastProps extends SharePostModalProps {
   addToast?: (message: string, type: 'success' | 'error' | 'warning' | 'info', options?: any) => void;
-  addToast?: (message: string, type: 'success' | 'error' | 'warning' | 'info', options?: any) => void;
 }
 
 export default function SharePostModal({
@@ -76,17 +75,21 @@ export default function SharePostModal({
     const baseUrl = window.location.origin;
 
     // Check if post has shareId (new format)
-    if ((post as any).shareId) {
+    const hasShareId = (post as any).shareId && (post as any).shareId !== '';
+
+    if (hasShareId) {
       // Use short share URL
-      if (postType === 'community' && post.communityId) {
+      if (postType === 'community' || post.communityId) {
         return `${baseUrl}/cp/${(post as any).shareId}`;
       }
       return `${baseUrl}/p/${(post as any).shareId}`;
     }
 
     // Fallback to old format for posts without shareId
-    if (postType === 'community' && post.communityId) {
-      return `${baseUrl}/communities/${post.communityId}/posts/${post.id}`;
+    if ((postType === 'community' || post.communityId) && post.communityId) {
+      // Ensure we use the community slug if available, otherwise ID
+      const communitySlug = (post as any).communitySlug || post.communityId;
+      return `${baseUrl}/communities/${communitySlug}/posts/${post.id}`;
     }
     return `${baseUrl}/post/${post.id}`;
   };

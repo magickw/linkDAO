@@ -64,7 +64,18 @@ export default function CommunityPostPage() {
                     return;
                 }
 
-                const data = await response.json();
+                const contentType = response.headers.get('content-type');
+                let data;
+
+                if (contentType && contentType.includes('application/json')) {
+                    data = await response.json();
+                } else {
+                    const text = await response.text();
+                    console.error('[CommunityPostPage] Unexpected response type:', contentType);
+                    console.debug('[CommunityPostPage] Response body snippet:', text.substring(0, 200));
+                    throw new Error('Received invalid response from server (expected JSON)');
+                }
+
                 console.log('[CommunityPostPage] API response:', data);
                 console.log('[CommunityPostPage] Response structure:', {
                     hasSuccess: 'success' in data,

@@ -158,7 +158,8 @@ export class QuickPostService {
           createdAt: quickPosts.createdAt,
           updatedAt: quickPosts.updatedAt,
           walletAddress: users.walletAddress,
-          handle: users.handle
+          handle: users.handle,
+          isRepost: quickPosts.isRepost
         })
         .from(quickPosts)
         .leftJoin(users, eq(quickPosts.authorId, users.id))
@@ -193,7 +194,8 @@ export class QuickPostService {
           createdAt: quickPosts.createdAt,
           updatedAt: quickPosts.updatedAt,
           walletAddress: users.walletAddress,
-          handle: users.handle
+          handle: users.handle,
+          isRepost: quickPosts.isRepost
         })
         .from(quickPosts)
         .leftJoin(users, eq(quickPosts.authorId, users.id))
@@ -303,7 +305,8 @@ export class QuickPostService {
           moderationWarning: quickPosts.moderationWarning,
           riskScore: quickPosts.riskScore,
           createdAt: quickPosts.createdAt,
-          updatedAt: quickPosts.updatedAt
+          updatedAt: quickPosts.updatedAt,
+          isRepost: quickPosts.isRepost
         })
         .from(quickPosts)
         .where(and(
@@ -500,7 +503,8 @@ export class QuickPostService {
           createdAt: quickPosts.createdAt,
           updatedAt: quickPosts.updatedAt,
           walletAddress: users.walletAddress,
-          handle: users.handle
+          handle: users.handle,
+          isRepost: quickPosts.isRepost
         })
         .from(quickPosts)
         .leftJoin(users, eq(quickPosts.authorId, users.id))
@@ -566,7 +570,8 @@ export class QuickPostService {
           createdAt: quickPosts.createdAt,
           updatedAt: quickPosts.updatedAt,
           walletAddress: users.walletAddress,
-          handle: users.handle
+          handle: users.handle,
+          isRepost: quickPosts.isRepost
         })
         .from(quickPosts)
         .leftJoin(users, eq(quickPosts.authorId, users.id))
