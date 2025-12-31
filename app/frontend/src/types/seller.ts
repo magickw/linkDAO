@@ -1,5 +1,5 @@
 export interface SellerTier {
-    id: 'anonymous' | 'basic' | 'verified' | 'pro';
+    id: 'anonymous' | 'basic' | 'verified' | 'pro' | 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
     name: string;
     description: string;
     requirements: string[];
@@ -239,6 +239,7 @@ export interface SellerListing {
     price: number;
     currency: string;
     quantity: number;
+    inventory?: number;
     condition: 'new' | 'used' | 'refurbished';
     images: string[];
     specifications?: Record<string, string>;

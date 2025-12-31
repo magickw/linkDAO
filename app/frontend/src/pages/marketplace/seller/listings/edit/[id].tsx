@@ -844,6 +844,7 @@ const EditListingPage: React.FC = () => {
         category: formData.category,
         currency: formData.currency,
         quantity: formData.unlimitedQuantity ? 999999 : formData.quantity,
+        inventory: formData.unlimitedQuantity ? 999999 : formData.quantity,
         tags: formData.tags,
         images: uploadedImageUrls, // Include all image URLs
         condition: formData.condition as 'new' | 'used' | 'refurbished',
@@ -861,7 +862,7 @@ const EditListingPage: React.FC = () => {
 
       try {
         // Call the real update listing API
-        const result = await sellerService.updateListing(id, listingData);
+        const result = await sellerService.updateListing(id, listingData as any);
         console.log('[EDIT] Update successful:', result);
         addToast('🎉 Listing updated successfully!', 'success');
 
@@ -1027,7 +1028,7 @@ const EditListingPage: React.FC = () => {
           </GlassPanel>
 
           {/* Form content */}
-          <GlassPanel className="mb-8">
+          <GlassPanel className="mb-8" allowOverflow>
             {/* Basic Information Step */}
             {currentStep === 'basic' && (
               <div className="space-y-6">

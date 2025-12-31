@@ -477,8 +477,17 @@ class SellerService {
     const title = enhanced.title || listing.title || listing.metadataURI || 'Untitled Listing';
     const description = enhanced.description || listing.description || '';
 
-    // Category resolution (Backend uses categoryId or mainCategory)
-    const category = listing.category || listing.categoryId || listing.mainCategory || 'general';
+    // Category resolution (Backend uses categoryId or mainCategory, or category object)
+    let category = 'other';
+    if (typeof listing.category === 'object' && listing.category !== null) {
+      // If category is an object, use slug or name
+      category = listing.category.slug || listing.category.name || 'other';
+    } else {
+      // If string or fallback
+      category = listing.category || listing.categoryId || listing.mainCategory || 'other';
+    }
+    // Ensure category is lowercase to match select options
+    category = category.toString().toLowerCase();
 
     // Price resolution (Backend uses priceAmount, priceCrypto or price)
     let price = 0;

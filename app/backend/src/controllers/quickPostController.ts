@@ -24,7 +24,7 @@ export class QuickPostController {
 
       const { content, authorId, parentId, isRepost, media, tags, onchainRef, isTokenGated, gatedContentPreview } = req.body;
 
-      if (!content || content.trim() === '') {
+      if ((!content || content.trim() === '') && !isRepost) {
         return res.status(400).json(apiResponse.error('Content is required', 400));
       }
 

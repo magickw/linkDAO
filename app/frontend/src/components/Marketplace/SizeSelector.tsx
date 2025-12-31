@@ -126,18 +126,18 @@ const SizeSelector: React.FC<SizeSelectorProps> = ({
           <button
             type="button"
             onClick={() => setIsOpen(!isOpen)}
-            className="w-full px-4 py-2 text-left bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 flex items-center justify-between"
+            className="w-full px-4 py-2 text-left bg-white/10 border border-white/20 text-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 flex items-center justify-between"
           >
-            <span className="text-gray-700">
-              {selectedSizes.length === 0 
-                ? 'Select sizes...' 
+            <span className="text-white">
+              {selectedSizes.length === 0
+                ? 'Select sizes...'
                 : `${selectedSizes.length} size${selectedSizes.length > 1 ? 's' : ''} selected`}
             </span>
             <ChevronDownIcon className={`w-5 h-5 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
           </button>
 
           {isOpen && (
-            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
+            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-xl">
               {/* Category Tabs */}
               <div className="border-b border-gray-200">
                 <div className="flex overflow-x-auto">
@@ -146,11 +146,10 @@ const SizeSelector: React.FC<SizeSelectorProps> = ({
                       key={category.id}
                       type="button"
                       onClick={() => setSelectedCategory(category.id)}
-                      className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                        selectedCategory === category.id
+                      className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${selectedCategory === category.id
                           ? 'text-indigo-600 border-indigo-600'
                           : 'text-gray-500 border-transparent hover:text-gray-700'
-                      }`}
+                        }`}
                     >
                       {category.name}
                     </button>

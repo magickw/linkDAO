@@ -16,12 +16,8 @@ interface GlassPanelProps extends Omit<HTMLMotionProps<'div'>, 'style'> {
   hoverable?: boolean;
   /** Custom padding */
   padding?: string;
-  /** Custom margin */
-  margin?: string;
-  /** Additional CSS classes */
-  className?: string;
-  /** Children components */
-  children: React.ReactNode;
+  /** Allow content to overflow (useful for dropdowns) */
+  allowOverflow?: boolean;
 }
 
 export const GlassPanel: React.FC<GlassPanelProps> = ({
@@ -31,6 +27,7 @@ export const GlassPanel: React.FC<GlassPanelProps> = ({
   padding = designTokens?.spacing?.lg || '1.5rem',
   margin = '0',
   className = '',
+  allowOverflow = false,
   children,
   ...motionProps
 }) => {
@@ -48,18 +45,18 @@ export const GlassPanel: React.FC<GlassPanelProps> = ({
     padding,
     margin,
     position: 'relative' as const,
-    overflow: 'hidden' as const,
+    overflow: allowOverflow ? 'visible' as const : 'hidden' as const,
   };
 
   const hoverVariants = hoverable ? {
     hover: {
       y: -4,
-      boxShadow: nftShadowStyle 
+      boxShadow: nftShadowStyle
         ? `${nftShadowStyle.boxShadow.replace(/rgba\(([^)]+)\)/g, (match, rgba) => {
-            const values = rgba.split(',');
-            const alpha = parseFloat(values[3]) * 1.5;
-            return `rgba(${values[0]},${values[1]},${values[2]},${Math.min(alpha, 1)})`;
-          })}`
+          const values = rgba.split(',');
+          const alpha = parseFloat(values[3]) * 1.5;
+          return `rgba(${values[0]},${values[1]},${values[2]},${Math.min(alpha, 1)})`;
+        })}`
         : '0 12px 48px 0 rgba(31, 38, 135, 0.5)',
       transition: { duration: 0.3, ease: [0.4, 0, 0.2, 1] as const },
     },

@@ -364,7 +364,9 @@ export class FeedService {
             id: quickPostsResults[0].id,
             authorId: quickPostsResults[0].authorId,
             walletAddress: quickPostsResults[0].walletAddress,
-            contentCid: quickPostsResults[0].contentCid
+            contentCid: quickPostsResults[0].contentCid,
+            isRepost: quickPostsResults[0].isRepost,
+            parentId: quickPostsResults[0].parentId
           } : null
         });
       }
@@ -554,16 +556,16 @@ export class FeedService {
         // User Reposts Check
         userAddress && (regularPostIds.length > 0 || quickPostIds.length > 0)
           ? db.select({
-            parentId: posts.parentId
+            parentId: quickPosts.parentId
           })
-            .from(posts)
+            .from(quickPosts)
             .where(and(
-              eq(posts.authorId, sql`(SELECT id FROM users WHERE LOWER(wallet_address) = LOWER(${userAddress}) LIMIT 1)`),
-              isNotNull(posts.parentId),
-              eq(posts.isRepost, true),
+              eq(quickPosts.authorId, sql`(SELECT id FROM users WHERE LOWER(wallet_address) = LOWER(${userAddress}) LIMIT 1)`),
+              isNotNull(quickPosts.parentId),
+              eq(quickPosts.isRepost, true),
               or(
-                inArray(posts.parentId, regularPostIds),
-                inArray(posts.parentId, quickPostIds)
+                regularPostIds.length > 0 ? inArray(quickPosts.parentId, regularPostIds) : sql`1=0`,
+                quickPostIds.length > 0 ? inArray(quickPosts.parentId, quickPostIds) : sql`1=0`
               )
             ))
           : Promise.resolve([]),
