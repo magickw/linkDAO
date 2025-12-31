@@ -50,6 +50,8 @@ interface CommunityPostCardEnhancedProps {
   onVote: (postId: string, voteType: 'upvote' | 'downvote', stakeAmount?: string) => void;
   onReaction?: (postId: string, reactionType: string, amount?: number) => Promise<void>;
   onTip?: (postId: string, amount: string, token: string) => Promise<void>;
+  onComment?: (postId: string) => void;
+  onOpenPost?: (post: EnhancedPost, communitySlug: string) => void;
   className?: string;
   isLoading?: boolean;
 }
@@ -61,6 +63,7 @@ function CommunityPostCardEnhanced({
   onVote,
   onReaction,
   onTip,
+  onOpenPost,
   className = '',
   isLoading = false
 }: CommunityPostCardEnhancedProps) {
@@ -220,7 +223,7 @@ function CommunityPostCardEnhanced({
           userStaked: reaction.users?.reduce((sum: number, user: any) =>
             user.address === address ? sum + (user.amount || 0) : sum, 0) || 0,
           contributors: reaction.users?.map((user: any) => user.address) || [],
-          contributors: reaction.users?.map((user: any) => user.address) || [],
+
           rewardsEarned: 0, // Calculate rewards if needed
           // Lint fixes: provide required properties
           price: 0,
@@ -854,6 +857,13 @@ function CommunityPostCardEnhanced({
                       e.preventDefault();
                       e.stopPropagation();
                       const communitySlug = encodeURIComponent(community.slug ?? community.id ?? community.name ?? 'unknown');
+
+                      // Use the onOpenPost prop if provided (for Modal behavior)
+                      if (onOpenPost) {
+                        onOpenPost(post, communitySlug);
+                        return;
+                      }
+
                       const postPath = `/communities/${communitySlug}/posts/${post.shareId || post.id}`;
                       setTimeout(() => router.push(postPath), 0);
                     }}
@@ -863,10 +873,10 @@ function CommunityPostCardEnhanced({
                 )}
                 <div className="text-gray-900 dark:text-white leading-relaxed prose prose-sm dark:prose-invert max-w-none">
 
-                  {processContent(getTruncatedContent(post.content, 10000, isExpanded), 'html')}
+                  {processContent(getTruncatedContent(post.content, 500, isExpanded), 'markdown')}
                 </div>
 
-                {shouldTruncateContent(post.content, 10000, isExpanded) && (
+                {shouldTruncateContent(post.content, 500, isExpanded) && (
                   <button
                     onClick={() => setIsExpanded(true)}
                     className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium mt-2 flex items-center space-x-1"
@@ -874,7 +884,7 @@ function CommunityPostCardEnhanced({
                     <span>Show more</span>
                   </button>
                 )}
-                {isExpanded && shouldTruncateContent(post.content, 10000, false) && (
+                {isExpanded && shouldTruncateContent(post.content, 500, false) && (
                   <button
                     onClick={() => setIsExpanded(false)}
                     className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium mt-2 flex items-center space-x-1"

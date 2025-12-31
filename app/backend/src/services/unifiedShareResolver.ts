@@ -141,7 +141,7 @@ export class UnifiedShareResolver {
     }
 
     const post = communityPosts[0];
-    
+
     // Only resolve posts that belong to a community
     if (!post.communityId) {
       return null;
@@ -162,7 +162,7 @@ export class UnifiedShareResolver {
         name: post.communityName || communitySlug,
       },
       canonicalUrl: `/communities/${encodeURIComponent(communitySlug)}/posts/${shareId}`,
-      shareUrl: `/cp/${shareId}`, // Optional: community post share prefix
+      shareUrl: `/p/${shareId}`, // Unified share prefix
       data: {
         ...post,
         authorHandle,
@@ -194,7 +194,7 @@ export class UnifiedShareResolver {
    */
   async checkPermission(shareId: string, userId?: string): Promise<boolean> {
     const resolution = await this.resolve(shareId);
-    
+
     if (!resolution) {
       // Content doesn't exist
       return false;
@@ -205,20 +205,20 @@ export class UnifiedShareResolver {
       case 'quick_post':
         // Quick posts are public for now
         return true;
-      
+
       case 'community_post':
         // Community posts are public for now
         // TODO: Add proper community membership checks
         return true;
-      
+
       case 'proposal':
         // TODO: Check DAO membership
         return false;
-      
+
       case 'marketplace_item':
         // TODO: Check if item is public
         return false;
-      
+
       default:
         return false;
     }

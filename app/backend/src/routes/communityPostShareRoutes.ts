@@ -23,34 +23,34 @@ router.get('/:shareId', async (req: Request, res: Response) => {
     if (!isValidShareId(shareId)) {
       return res.status(404).json({
         success: false,
-        error: 'Not found'
+        error: 'Invalid Share ID format'
       });
     }
 
     try {
       // Resolve share ID using unified resolver
       const resolution = await unifiedShareResolver.resolve(shareId);
-      
+
       if (!resolution) {
         return res.status(404).json({
           success: false,
-          error: 'Not found'
+          error: 'Content not found'
         });
       }
 
       // Check permissions (temporarily allow all community posts for now)
       const hasPermission = await unifiedShareResolver.checkPermission(
-        shareId, 
+        shareId,
         (req as any).user?.id
       );
-      
+
       // TEMPORARY FIX: Allow community posts to be viewed
       const isCommunityPost = resolution.type === 'community_post';
-      
-      if (!hasPermission && !isCommunityPost) {
+
+      if (!hasPermission) {
         return res.status(404).json({
           success: false,
-          error: 'Not found'
+          error: 'Access denied'
         });
       }
 
@@ -72,11 +72,11 @@ router.get('/:shareId', async (req: Request, res: Response) => {
           owner: resolution.owner,
         }
       });
-    } catch (resolverError) {
+    } catch (resolverError: any) {
       console.error('[CommunityPostShareRoutes] Error in resolver logic:', resolverError);
       return res.status(500).json({
         success: false,
-        error: 'Internal server error'
+        error: `Server error: ${resolverError.message}`
       });
     }
 

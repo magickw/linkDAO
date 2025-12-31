@@ -18,6 +18,9 @@ export interface ShippingInfo {
     width?: number;
     height?: number;
   };
+  views?: number;
+  favorites?: number;
+  quantity?: number;
   internationalShipping?: boolean;
   internationalCost?: string;
   localPickup?: boolean;
@@ -36,6 +39,9 @@ export interface MarketplaceListing {
   shipping?: ShippingInfo | null;
   createdAt: Date;
   updatedAt: Date;
+  views?: number;
+  favorites?: number;
+  quantity?: number;
 }
 
 export interface CreateMarketplaceListingRequest {

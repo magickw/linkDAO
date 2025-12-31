@@ -11,6 +11,9 @@ import { isValidShareId } from '../utils/shareIdGenerator';
 const router = express.Router();
 
 /**
+ */
+
+/**
  * GET /p/:shareId
  * Short share URL that redirects to canonical post URL
  */
@@ -22,30 +25,30 @@ router.get('/:shareId', async (req: Request, res: Response) => {
     if (!isValidShareId(shareId)) {
       return res.status(404).json({
         success: false,
-        error: 'Not found'
+        error: 'Invalid Share ID format'
       });
     }
 
     // Resolve share ID using unified resolver
     const resolution = await unifiedShareResolver.resolve(shareId);
-    
+
     if (!resolution) {
       return res.status(404).json({
         success: false,
-        error: 'Not found'
+        error: 'Content not found'
       });
     }
 
     // Check permissions (always returns false for restricted content)
     const hasPermission = await unifiedShareResolver.checkPermission(
-      shareId, 
+      shareId,
       (req as any).user?.id
     );
-    
+
     if (!hasPermission) {
       return res.status(404).json({
         success: false,
-        error: 'Not found'
+        error: 'Access denied'
       });
     }
 
@@ -68,11 +71,11 @@ router.get('/:shareId', async (req: Request, res: Response) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('[PostShareRoutes] Error resolving share ID:', error);
-    return res.status(404).json({
+    return res.status(500).json({
       success: false,
-      error: 'Not found'
+      error: `Server error: ${error.message}`
     });
   }
 });

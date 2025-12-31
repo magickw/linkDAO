@@ -54,9 +54,12 @@ const FloatingActionButton = lazy(() => import('@/components/Community/FloatingA
 const PinnedPostsSection = lazy(() => import('@/components/Community/PinnedPostsSection'));
 const AnnouncementBanner = lazy(() => import('@/components/Community/AnnouncementBanner'));
 const AnnouncementManager = lazy(() => import('@/components/Community/AnnouncementManager'));
+
+// Note: CommunityPostCardEnhanced is imported lazily but we need it for the feed
 const CommunityPostCardEnhanced = lazy(() => import('@/components/Community/CommunityPostCardEnhanced'));
 
-// Non-lazy components (critical path)
+import PostModal from '@/components/PostModal'; // Import PostModal
+import { QuickPost } from '@/models/QuickPost'; // Import Post type
 import MyCommunitiesCard from '@/components/Community/MyCommunitiesCard';
 import CommunityCardEnhanced from '@/components/Community/CommunityCardEnhanced';
 import { postManagementService } from '@/services/postManagementService';
@@ -146,10 +149,62 @@ const CommunitiesPage: React.FC = () => {
   const [joinedCommunities, setJoinedCommunities] = useState<string[]>([]);
   const [userAdminRoles, setUserAdminRoles] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+  const [isPostModalOpen, setIsPostModalOpen] = useState(false);
+  const [modalPost, setModalPost] = useState<any>(null); // Store post data for modal
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
   const [forceLoad, setForceLoad] = useState(false);
+
+  // Handle URL query params for deep linking or shallow routing modal
+  useEffect(() => {
+    const { postId } = router.query;
+    if (postId && typeof postId === 'string' && postId !== selectedPostId) {
+      setSelectedPostId(postId);
+      setIsPostModalOpen(true);
+      // Fetch post details if not already available (handled by Modal usually, or we can fetch here)
+    } else if (!postId && isPostModalOpen) {
+      // Close modal if param removed (back button)
+      setIsPostModalOpen(false);
+      setSelectedPostId(null);
+    }
+  }, [router.query.postId]);
+
+  // Handler to open post in modal with shallow routing
+  const handleOpenPost = useCallback((post: any, communitySlug: string) => {
+    setModalPost(post);
+    setSelectedPostId(post.shareId || post.id);
+    setIsPostModalOpen(true);
+
+    // Update URL shallowly to Canonical URL
+    const shareId = post.shareId || post.id;
+    const canonicalUrl = `/communities/${communitySlug}/posts/${shareId}`;
+
+    // Construct simplified query to stay on same page
+    // We must keep existing query params (like view, sort) but add postId
+    const newQuery = { ...router.query, postId: shareId };
+
+    router.push(
+      { pathname: router.pathname, query: newQuery },
+      canonicalUrl,
+      { shallow: true }
+    );
+  }, [router]);
+
+  const handleClosePost = useCallback(() => {
+    setIsPostModalOpen(false);
+    setSelectedPostId(null);
+    setModalPost(null);
+
+    // Revert URL shallowly (remove postId)
+    const { postId, ...restQuery } = router.query;
+    router.push(
+      { pathname: router.pathname, query: restQuery },
+      undefined,
+      { shallow: true }
+    );
+  }, [router]);
 
   // Safety timeout to prevent indefinite loading state if auth hangs (e.g. for unverified users)
   useEffect(() => {
@@ -701,6 +756,11 @@ const CommunitiesPage: React.FC = () => {
             <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
           </div>
         </div>
+        <PostModal
+          post={modalPost}
+          isOpen={isPostModalOpen}
+          onClose={handleClosePost}
+        />
       </Layout>
     );
   }
@@ -1029,6 +1089,7 @@ const CommunitiesPage: React.FC = () => {
                               await handleTip(postId, parseFloat(amount));
                             }}
                             onComment={() => handleComment(postId)}
+                            onOpenPost={(post, communitySlug) => handleOpenPost(post, communitySlug)}
                           />
                         </Suspense>
                       </Web3SwipeGestureHandler>

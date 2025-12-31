@@ -41,7 +41,7 @@ export class LDAOTokenService {
       // For read-only operations, provider is sufficient
       // For write operations, signer is required
       let signerOrProvider = provider;
-      
+
       if (requireSigner) {
         const signer = await getSigner();
         if (!signer) {
@@ -164,6 +164,40 @@ export class LDAOTokenService {
   }
 
   /**
+   * Transfer LDAO tokens
+   */
+  async transfer(to: string, amount: string): Promise<{
+    success: boolean;
+    transactionHash?: string;
+    error?: string;
+  }> {
+    try {
+      const contract = await this.getContract(true);
+      if (!contract) {
+        throw new Error('Unable to connect to LDAO contract');
+      }
+
+      const amountWei = ethers.parseEther(amount);
+      const tx = await contract.transfer(to, amountWei);
+      const receipt = await tx.wait();
+
+      return {
+        success: true,
+        transactionHash: receipt?.hash
+      };
+    } catch (error) {
+      const errorResponse = web3ErrorHandler.handleError(error as Error, {
+        action: 'transfer',
+        component: 'LDAOTokenService'
+      });
+      return {
+        success: false,
+        error: errorResponse.message
+      };
+    }
+  }
+
+  /**
    * Stake LDAO tokens
    */
   async stakeTokens(amount: string, tierId: number): Promise<{
@@ -177,7 +211,7 @@ export class LDAOTokenService {
       const { getAccount } = await import('@wagmi/core');
       const { config } = await import('@/lib/wagmi');
       const account = getAccount(config);
-      
+
       if (!account || !account.address) {
         throw new Error('No wallet connected. Please connect your wallet to stake tokens.');
       }
@@ -190,12 +224,12 @@ export class LDAOTokenService {
         signer = await getSigner();
       } catch (signerError: any) {
         console.warn('Failed to get signer, trying alternative approach:', signerError);
-        
+
         // Check for specific error patterns
         if (signerError.message && signerError.message.includes('could not coalesce error')) {
           console.warn('Provider coalescing error detected, trying direct provider access');
         }
-        
+
         // Fallback: try to get signer directly from window.ethereum if available
         if (typeof window !== 'undefined' && window.ethereum) {
           try {
@@ -205,7 +239,7 @@ export class LDAOTokenService {
             signer = await provider.getSigner();
           } catch (fallbackError: any) {
             console.error('Fallback signer attempt failed:', fallbackError);
-            
+
             // If it's still the same error, provide a better user message
             if (fallbackError.message && fallbackError.message.includes('could not coalesce error')) {
               throw new Error('Wallet provider error. Please try refreshing the page or reconnecting your wallet.');
@@ -234,7 +268,7 @@ export class LDAOTokenService {
         contract = await this.getContract(true);
       } catch (contractError) {
         console.warn('Failed to get contract with signer, trying without signer first:', contractError);
-        
+
         // Fallback: get contract without signer, then attach signer
         const providerOnlyContract = await this.getContract(false);
         if (providerOnlyContract && signer) {
@@ -262,7 +296,7 @@ export class LDAOTokenService {
       console.log('Executing stake transaction:', { amount, tierId, amountWei: amountWei.toString() });
       const tx = await (contract as any).stake(amountWei, tierId);
       console.log('Transaction submitted:', tx.hash);
-      
+
       const receipt = await tx.wait();
       console.log('Transaction confirmed:', receipt.hash);
 

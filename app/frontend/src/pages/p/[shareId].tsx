@@ -32,28 +32,29 @@ export default function SharePostPage() {
                 setIsLoading(true);
                 setError(null);
 
-                // Fetch post by share ID - 使用相对路径以自动使用当前域名
+                // Fetch post by share ID using Unified Resolver (calls /api/cp which is now unified)
                 const response = await fetch(`/api/p/${shareId}`);
-                
+
                 if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
                     if (response.status === 404) {
-                        setError('Post not found');
+                        setError(errorData.error || 'Post not found');
                     } else {
-                        setError('Failed to load post');
+                        setError(errorData.error || 'Failed to load post');
                     }
+                    setIsLoading(false);
                     return;
                 }
-
                 const result = await response.json();
-                
+
                 if (result.success && result.data) {
                     // 后端返回的数据格式不同，需要从 result.data.post 获取实际帖子数据
                     const postData = result.data.post as QuickPost;
                     const canonicalUrl = result.data.canonicalUrl;
-                    
+
                     setPost(postData);
                     setCanonicalUrl(canonicalUrl);
-                    
+
                     // Update the URL to the canonical path WITHOUT triggering a Next.js full navigation
                     // We avoid `router.replace(..., { shallow: true })` here because shallow can still trigger
                     // Next.js internal behavior that causes page re-mounts in some edge cases. Replacing the
@@ -183,7 +184,7 @@ export default function SharePostPage() {
                             <ArrowLeft className="w-4 h-4" />
                             <span>Back to Timeline</span>
                         </button>
-                        
+
                         {canonicalUrl && (
                             <Link
                                 href={canonicalUrl}

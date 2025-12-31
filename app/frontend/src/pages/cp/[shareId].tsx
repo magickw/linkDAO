@@ -14,20 +14,20 @@ import Link from 'next/link';
 import { useToast } from '@/context/ToastContext';
 
 interface CommunityPost {
-  id: string;
-  shareId: string;
-  title?: string;
-  content: string;
-  contentCid: string;
-  mediaCids?: string[];
-  tags?: string[];
-  communityId: string;
-  communityName: string;
-  communitySlug: string;
-  authorId: string;
-  authorHandle: string;
-  authorName: string;
-  createdAt: string;
+    id: string;
+    shareId: string;
+    title?: string;
+    content: string;
+    contentCid: string;
+    mediaCids?: string[];
+    tags?: string[];
+    communityId: string;
+    communityName: string;
+    communitySlug: string;
+    authorId: string;
+    authorHandle: string;
+    authorName: string;
+    createdAt: string;
 }
 
 export default function CommunityPostSharePage() {
@@ -55,13 +55,15 @@ export default function CommunityPostSharePage() {
                 const response = await fetch(`/api/cp/${shareId}`);
                 console.log(`[CommunityPostSharePage] Response status: ${response.status}`);
                 console.log(`[CommunityPostSharePage] Response headers:`, Object.fromEntries(response.headers.entries()));
-                
+
                 if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
                     if (response.status === 404) {
-                        setError('Community post not found');
+                        setError(errorData.error || 'Community post not found');
                     } else {
-                        setError(`Failed to load post (${response.status})`);
+                        setError(errorData.error || `Failed to load post (${response.status})`);
                     }
+                    setIsLoading(false);
                     return;
                 }
 
@@ -82,25 +84,25 @@ export default function CommunityPostSharePage() {
                     hasPost: result.data && 'post' in result.data,
                     hasCanonicalUrl: result.data && 'canonicalUrl' in result.data
                 });
-                
+
                 if (result.success && result.data) {
                     // 后端返回的数据格式不同，需要从 result.data.post 获取实际帖子数据
                     const postData = result.data.post as CommunityPost;
                     const canonicalUrl = result.data.canonicalUrl;
-                    
+
                     console.log('[CommunityPostSharePage] Post data extracted:', postData);
                     console.log('[CommunityPostSharePage] Canonical URL extracted:', canonicalUrl);
-                    
+
                     console.log('[CommunityPostSharePage] Post data found:', postData);
                     console.log('[CommunityPostSharePage] Canonical URL:', canonicalUrl);
-                    
+
                     // 重定向到规范URL - 立即重定向，不等待状态更新
                     if (canonicalUrl && canonicalUrl !== window.location.pathname) {
                         console.log('[CommunityPostSharePage] Redirecting to canonical URL:', canonicalUrl);
                         router.replace(canonicalUrl);
                         return; // 立即返回，不继续执行
                     }
-                    
+
                     // 如果不需要重定向，则设置状态
                     setPost(postData);
                     setCanonicalUrl(canonicalUrl);
@@ -117,14 +119,14 @@ export default function CommunityPostSharePage() {
                     apiUrl: `/cp/${shareId}`,
                     attemptNumber
                 });
-                
+
                 // Retry logic for network errors
                 if (attemptNumber < 3 && err instanceof Error && err.message.includes('fetch')) {
                     console.log(`[CommunityPostSharePage] Retrying... Attempt ${attemptNumber + 1}`);
                     setTimeout(() => fetchPost(attemptNumber + 1), 1000 * attemptNumber);
                     return;
                 }
-                
+
                 // Fallback: try to redirect to a generic community post URL format
                 if (attemptNumber >= 3) {
                     console.log('[CommunityPostSharePage] All attempts failed, trying fallback redirect');
@@ -134,7 +136,7 @@ export default function CommunityPostSharePage() {
                     router.replace(fallbackUrl);
                     return;
                 }
-                
+
                 // Check if it's a network error
                 if (err instanceof Error && err.message.includes('fetch')) {
                     setError('Unable to connect to the server. The community post may not be available at the moment.');
@@ -154,7 +156,7 @@ export default function CommunityPostSharePage() {
     const getMetaTags = () => {
         if (!post) return null;
 
-        const title = post.title 
+        const title = post.title
             ? `${post.title} | ${post.communityName} | LinkDAO`
             : `Post in ${post.communityName} | LinkDAO`;
         const description = post.content?.substring(0, 200) || `Check out this post in ${post.communityName} on LinkDAO`;
@@ -265,7 +267,7 @@ export default function CommunityPostSharePage() {
                                 <ArrowLeft className="w-4 h-4" />
                                 <span>Back to Communities</span>
                             </button>
-                            
+
                             <Link
                                 href={`/communities/${encodeURIComponent(post.communitySlug)}`}
                                 className="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200"
@@ -274,7 +276,7 @@ export default function CommunityPostSharePage() {
                                 <span>{post.communityName}</span>
                             </Link>
                         </div>
-                        
+
                         {canonicalUrl && (
                             <Link
                                 href={canonicalUrl}
