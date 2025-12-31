@@ -393,9 +393,9 @@ export function transformMarketplaceListingToUnified(
       saleType: marketplaceListing.itemType?.toLowerCase() || 'physical',
 
       // Engagement metrics
-      views: 0,
-      favorites: 0,
-      likes: 0,
+      views: marketplaceListing.views || 0,
+      favorites: marketplaceListing.favorites || 0,
+      likes: marketplaceListing.favorites || 0,
       questions: 0,
 
       // Blockchain and escrow
@@ -946,6 +946,16 @@ function mapMarketplaceStatus(status: any, isActive?: boolean): UnifiedSellerLis
       'SOLD': 'sold',
       'CANCELLED': 'cancelled',
       'EXPIRED': 'expired',
+      'active': 'active',
+      'inactive': 'inactive',
+      'draft': 'draft',
+      'DRAFT': 'draft',
+      'paused': 'paused',
+      'PAUSED': 'paused',
+      'sold_out': 'sold',
+      'SOLD_OUT': 'sold',
+      'suspended': 'paused',
+      'SUSPENDED': 'paused',
     };
     return statusMap[status] || (isActive ? 'active' : 'draft');
   }

@@ -45,6 +45,7 @@ try {
   safeLogger.warn('Some community tables not available:', error.message);
 }
 import { feedService } from './feedService';
+import { generateShareId } from '../utils/shareIdGenerator';
 import { sanitizeInput, sanitizeObject, validateLength } from '../utils/sanitizer';
 import { communityCacheService, CommunityCacheService } from './communityCacheService';
 
@@ -1476,30 +1477,41 @@ export class CommunityService {
       const total = totalResult[0]?.count || 0;
 
       // Transform posts to expected format
-      const transformedPosts = postsResult.map(post => ({
-        id: post.id.toString(),
-        authorId: post.authorId,
-        authorAddress: post.authorAddress,
-        authorHandle: post.authorHandle,
-        title: post.title,
-        content: post.content,
-        contentCid: post.contentCid,
-        parentId: post.parentId,
-        mediaCids: post.mediaCids ? JSON.parse(post.mediaCids) : [],
-        tags: post.tags ? JSON.parse(post.tags) : [],
-        stakedValue: post.stakedValue ? Number(post.stakedValue) : 0,
-        reputationScore: post.reputationScore || 0,
-        dao: post.dao,
-        communityId: post.communityId,
-        createdAt: post.createdAt,
-        // Include community metadata for frontend display
-        community: communityResult[0] ? {
-          id: communityId,
-          name: communityResult[0].name,
-          displayName: communityResult[0].displayName || communityResult[0].name,
-          slug: communityResult[0].slug,
-          avatar: communityResult[0].avatar
-        } : null
+      const transformedPosts = await Promise.all(postsResult.map(async post => {
+        // Lazily generate shareId if missing
+        let shareId = post.shareId;
+        if (!shareId) {
+          shareId = generateShareId();
+          // Fire and forget update to persist shareId (or await it to be safe)
+          await db.update(posts).set({ shareId }).where(eq(posts.id, post.id));
+        }
+
+        return {
+          id: post.id.toString(),
+          shareId, // Include clean shareId
+          authorId: post.authorId,
+          authorAddress: post.authorAddress,
+          authorHandle: post.authorHandle,
+          title: post.title,
+          content: post.content,
+          contentCid: post.contentCid,
+          parentId: post.parentId,
+          mediaCids: post.mediaCids ? JSON.parse(post.mediaCids) : [],
+          tags: post.tags ? JSON.parse(post.tags) : [],
+          stakedValue: post.stakedValue ? Number(post.stakedValue) : 0,
+          reputationScore: post.reputationScore || 0,
+          dao: post.dao,
+          communityId: post.communityId,
+          createdAt: post.createdAt,
+          // Include community metadata for frontend display
+          community: communityResult[0] ? {
+            id: communityId,
+            name: communityResult[0].name,
+            displayName: communityResult[0].displayName || communityResult[0].name,
+            slug: communityResult[0].slug,
+            avatar: communityResult[0].avatar
+          } : null
+        };
       }));
 
       return {
@@ -1638,6 +1650,7 @@ export class CommunityService {
           createdAt: posts.createdAt,
           authorAddress: users.walletAddress,
           authorHandle: users.handle,
+          shareId: posts.shareId, // Include shareId
         })
         .from(posts)
         .leftJoin(users, eq(posts.authorId, users.id))
@@ -1654,29 +1667,39 @@ export class CommunityService {
       console.log(`[COMMUNITY FEED DEBUG] Query returned ${postsResult.length} posts for user ${userAddress}`);
 
       // Transform posts with community metadata
-      const transformedPosts = postsResult.map(post => ({
-        id: post.id.toString(),
-        authorId: post.authorId,
-        authorAddress: post.authorAddress,
-        authorHandle: post.authorHandle,
-        title: post.title,
-        contentCid: post.contentCid,
-        parentId: post.parentId,
-        mediaCids: post.mediaCids ? JSON.parse(post.mediaCids) : [],
-        tags: post.tags ? JSON.parse(post.tags) : [],
-        stakedValue: post.stakedValue ? Number(post.stakedValue) : 0,
-        reputationScore: post.reputationScore || 0,
-        dao: post.dao,
-        communityId: post.communityId,
-        createdAt: post.createdAt,
-        // Include community metadata for frontend display
-        community: post.communityId && communityMap.has(post.communityId) ? {
-          id: post.communityId,
-          name: communityMap.get(post.communityId)?.name || 'Unknown',
-          displayName: communityMap.get(post.communityId)?.displayName || communityMap.get(post.communityId)?.name || 'Unknown',
-          slug: communityMap.get(post.communityId)?.slug || '',
-          avatar: communityMap.get(post.communityId)?.avatar || null
-        } : null
+      const transformedPosts = await Promise.all(postsResult.map(async post => {
+        // Lazily generate shareId if missing
+        let shareId = post.shareId;
+        if (!shareId) {
+          shareId = generateShareId();
+          await db.update(posts).set({ shareId }).where(eq(posts.id, post.id));
+        }
+
+        return {
+          id: post.id.toString(),
+          shareId, // Include clean shareId
+          authorId: post.authorId,
+          authorAddress: post.authorAddress,
+          authorHandle: post.authorHandle,
+          title: post.title,
+          contentCid: post.contentCid,
+          parentId: post.parentId,
+          mediaCids: post.mediaCids ? JSON.parse(post.mediaCids) : [],
+          tags: post.tags ? JSON.parse(post.tags) : [],
+          stakedValue: post.stakedValue ? Number(post.stakedValue) : 0,
+          reputationScore: post.reputationScore || 0,
+          dao: post.dao,
+          communityId: post.communityId,
+          createdAt: post.createdAt,
+          // Include community metadata for frontend display
+          community: post.communityId && communityMap.has(post.communityId) ? {
+            id: post.communityId,
+            name: communityMap.get(post.communityId)?.name || 'Unknown',
+            displayName: communityMap.get(post.communityId)?.displayName || communityMap.get(post.communityId)?.name || 'Unknown',
+            slug: communityMap.get(post.communityId)?.slug || '',
+            avatar: communityMap.get(post.communityId)?.avatar || null
+          } : null
+        };
       }));
 
       // Get total count

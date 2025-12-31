@@ -5,6 +5,7 @@ import { eq, desc, and, or, inArray, sql, gt, isNull, isNotNull, asc } from 'dri
 import { trendingCacheService } from './trendingCacheService';
 import { getWebSocketService } from './webSocketService';
 import { MetadataService } from './metadataService';
+import { generateShareId } from '../utils/shareIdGenerator';
 
 interface FeedOptions {
   userAddress: string;
@@ -581,6 +582,8 @@ export class FeedService {
             mediaCids: posts.mediaCids,
             tags: posts.tags,
             createdAt: posts.createdAt,
+
+            shareId: posts.shareId, // Include shareId
             walletAddress: users.walletAddress,
             handle: users.handle,
             displayName: users.displayName,
@@ -602,6 +605,8 @@ export class FeedService {
             mediaCids: quickPosts.mediaCids,
             tags: quickPosts.tags,
             createdAt: quickPosts.createdAt,
+
+            shareId: quickPosts.shareId, // Include shareId
             walletAddress: users.walletAddress,
             handle: users.handle,
             displayName: users.displayName,
@@ -655,7 +660,16 @@ export class FeedService {
       });
 
       // 4. Attach metrics to posts using map lookups (O(1) per post)
-      const postsWithMetrics = paginatedPosts.map(post => {
+      const postsWithMetrics = await Promise.all(paginatedPosts.map(async post => {
+        // Lazily generate shareId if missing
+        let shareId = post.shareId;
+        if (!shareId) {
+          shareId = generateShareId();
+          // Determine table based on post type
+          const table = post.isQuickPost ? quickPosts : posts;
+          await db.update(table).set({ shareId }).where(eq(table.id, post.id));
+        }
+
         const reactionCount = Number(reactionMap.get(post.id) || 0);
         const tipCount = Number(tipCountMap.get(post.id) || 0);
         const totalTipAmount = Number(tipTotalMap.get(post.id) || 0);
@@ -663,7 +677,51 @@ export class FeedService {
         const viewCount = Number(viewMap.get(post.id) || 0);
 
         const isRepostedByMe = repostedSet.has(post.id);
-        const originalPost = post.isRepost && post.parentId ? originalPostsMap.get(post.parentId) : null;
+        const rawOriginalPost = post.isRepost && post.parentId ? originalPostsMap.get(post.parentId) : null;
+        let originalPost = null;
+
+        if (rawOriginalPost) {
+          // Transform raw DB result into expected frontend structure
+          originalPost = {
+            ...rawOriginalPost,
+            // Parse JSON fields
+            mediaCids: typeof rawOriginalPost.mediaCids === 'string' ? JSON.parse(rawOriginalPost.mediaCids || '[]') : (rawOriginalPost.mediaCids || []),
+            tags: typeof rawOriginalPost.tags === 'string' ? JSON.parse(rawOriginalPost.tags || '[]') : (rawOriginalPost.tags || []),
+            // Construct authorProfile
+            authorProfile: {
+              handle: rawOriginalPost.handle || 'anonymous',
+              avatar: rawOriginalPost.avatarCid ? `https://gateway.pinata.cloud/ipfs/${rawOriginalPost.avatarCid}` : undefined,
+              walletAddress: rawOriginalPost.walletAddress,
+              displayName: rawOriginalPost.displayName,
+              // Default reputation fields (could be fetched if needed)
+              reputationScore: 0,
+              reputationTier: 'Beginner',
+              votingPower: 0,
+              xpBadges: [],
+              totalContributions: 0,
+              memberSince: rawOriginalPost.createdAt
+            },
+            // Defaults for missing metrics on the original post (to avoid crashes)
+            reactions: [],
+            previews: [],
+            hashtags: [],
+            mentions: [],
+            comments: 0,
+            shares: 0,
+            views: 0,
+            upvotes: 0,
+            downvotes: 0
+          };
+
+          // Lazily generate shareId for original post if missing
+          if (!originalPost.shareId) {
+            const newShareId = generateShareId();
+            // Determine table based on rawOriginalPost flag, defaulting to posts if undefined
+            const table = rawOriginalPost.isQuickPost ? quickPosts : posts;
+            await db.update(table).set({ shareId: newShareId }).where(eq(table.id, rawOriginalPost.id));
+            originalPost.shareId = newShareId;
+          }
+        }
 
         const score = this.calculateEngagementScore(
           reactionCount,
@@ -673,6 +731,7 @@ export class FeedService {
 
         return {
           ...post,
+          shareId, // Ensure we return the generated one
           reactionCount,
           tipCount,
           totalTipAmount,
@@ -682,7 +741,7 @@ export class FeedService {
           originalPost,
           engagementScore: score
         };
-      });
+      }));
 
       // Get total count for pagination based on postTypeFilter
       let totalCount = 0;
