@@ -22,7 +22,7 @@ export class QuickPostController {
     try {
       console.log('POST /api/quick-posts - Creating quick post');
 
-      const { content, authorId, parentId, media, tags, onchainRef, isTokenGated, gatedContentPreview } = req.body;
+      const { content, authorId, parentId, isRepost, media, tags, onchainRef, isTokenGated, gatedContentPreview } = req.body;
 
       if (!content || content.trim() === '') {
         return res.status(400).json(apiResponse.error('Content is required', 400));
@@ -53,6 +53,7 @@ export class QuickPostController {
         contentCid,
         content,  // Store the actual content in the database
         parentId,
+        isRepost,
         mediaCids: media ? JSON.stringify(media) : undefined,
         tags: tags ? JSON.stringify(tags) : undefined,
         onchainRef,

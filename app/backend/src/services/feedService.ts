@@ -285,9 +285,6 @@ export class FeedService {
             moderationStatus: posts.moderationStatus,
             moderationWarning: posts.moderationWarning,
             riskScore: posts.riskScore,
-            moderationStatus: posts.moderationStatus,
-            moderationWarning: posts.moderationWarning,
-            riskScore: posts.riskScore,
             isQuickPost: sql`false`, // Mark as regular post
             isRepost: posts.isRepost,
             parentId: posts.parentId
@@ -345,9 +342,6 @@ export class FeedService {
             profileCid: users.profileCid,
             avatarCid: users.avatarCid,
             // Moderation fields
-            moderationStatus: quickPosts.moderationStatus,
-            moderationWarning: quickPosts.moderationWarning,
-            riskScore: quickPosts.riskScore,
             moderationStatus: quickPosts.moderationStatus,
             moderationWarning: quickPosts.moderationWarning,
             riskScore: quickPosts.riskScore,
@@ -1348,7 +1342,7 @@ export class FeedService {
             content: quickPosts.content,
             createdAt: quickPosts.createdAt,
             updatedAt: quickPosts.updatedAt,
-            mediaUrls: quickPosts.mediaUrls,
+            mediaCids: quickPosts.mediaCids,
             tags: quickPosts.tags
           })
           .from(quickPosts)

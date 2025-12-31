@@ -254,7 +254,7 @@ export class MarketplaceController {
             slug: listing.category ? listing.category.toLowerCase() : ''
           } : null,
           images: listing.images || [],
-          inventory: 1,
+          inventory: listing.quantity || 1,
           status: listing.isActive ? 'active' : 'inactive',
           tags: [],
           shipping: listing.shipping ? {

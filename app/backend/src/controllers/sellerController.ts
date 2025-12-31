@@ -808,7 +808,10 @@ export class SellerController {
         status: products.status,
         priceCrypto: products.priceAmount,
         currency: products.priceCurrency,
-        createdAt: products.createdAt
+        createdAt: products.createdAt,
+        images: products.images,
+        views: products.views,
+        favorites: products.favorites
       })
         .from(products)
         .leftJoin(users, eq(products.sellerId, users.id))
@@ -819,11 +822,23 @@ export class SellerController {
       const dashboardData: any = {
         profile: sellerProfile, // Include seller profile data
         stats,
-        recentListings: recentListings.map(listing => ({
-          ...listing,
-          price: parseFloat(listing.priceCrypto || '0'),
-          priceCrypto: parseFloat(listing.priceCrypto || '0')
-        }))
+        recentListings: recentListings.map(listing => {
+          let parsedImages = [];
+          try {
+            parsedImages = typeof listing.images === 'string' ? JSON.parse(listing.images) : listing.images;
+          } catch (e) {
+            parsedImages = [];
+          }
+
+          return {
+            ...listing,
+            images: parsedImages,
+            price: parseFloat(listing.priceCrypto || '0'),
+            priceCrypto: parseFloat(listing.priceCrypto || '0'),
+            views: listing.views || 0,
+            favorites: listing.favorites || 0
+          };
+        })
       };
 
       if (includeOrders === 'true') {
@@ -917,7 +932,10 @@ export class SellerController {
         status: products.status,
         createdAt: products.createdAt,
         updatedAt: products.updatedAt,
-        mainCategory: products.mainCategory // Using the new column added to products
+        mainCategory: products.mainCategory, // Using the new column added to products
+        images: products.images,
+        views: products.views,
+        favorites: products.favorites
       })
         .from(products)
         .where(eq(products.sellerId, userRecord[0].id));
@@ -950,11 +968,23 @@ export class SellerController {
       res.json({
         success: true,
         data: {
-          listings: listings.map(listing => ({
-            ...listing,
-            price: parseFloat(listing.priceCrypto || '0'),
-            priceCrypto: parseFloat(listing.priceCrypto || '0')
-          })),
+          listings: listings.map(listing => {
+            let parsedImages = [];
+            try {
+              parsedImages = typeof listing.images === 'string' ? JSON.parse(listing.images) : listing.images;
+            } catch (e) {
+              parsedImages = [];
+            }
+
+            return {
+              ...listing,
+              images: parsedImages,
+              price: parseFloat(listing.priceCrypto || '0'),
+              priceCrypto: parseFloat(listing.priceCrypto || '0'),
+              views: listing.views || 0,
+              favorites: listing.favorites || 0
+            };
+          }),
           pagination: {
             page: parseInt(page as string),
             limit: parseInt(limit as string),
@@ -1162,7 +1192,7 @@ export class SellerController {
         try {
           // Generate a default avatar using the wallet address
           const defaultAvatar = `https://api.dicebear.com/7.x/identicon/svg?seed=${walletAddress}`;
-          
+
           const basicProfileData = {
             walletAddress,
             storeName: 'My Store',

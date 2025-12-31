@@ -12,6 +12,7 @@ interface QuickPostInput {
   contentCid: string; // This is now the CID, not the actual content
   content?: string;   // Actual content as fallback
   parentId?: string;
+  isRepost?: boolean;
   mediaCids?: string;
   tags?: string;
   onchainRef?: string;
@@ -67,6 +68,14 @@ export class QuickPostService {
         }
       } catch (e) {
         safeLogger.warn('ParentId field not available, skipping');
+      }
+
+      try {
+        if (postData.isRepost !== undefined) {
+          insertData.isRepost = postData.isRepost;
+        }
+      } catch (e) {
+        safeLogger.warn('isRepost field not available, skipping');
       }
 
       try {
