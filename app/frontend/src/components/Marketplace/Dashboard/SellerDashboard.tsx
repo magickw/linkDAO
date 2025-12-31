@@ -717,18 +717,36 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                       <div className="space-y-3">
                         {(listings as UnifiedSellerListing[])?.slice(0, 3).map((listing: UnifiedSellerListing) => (
                           <div key={listing.id} className="bg-gray-800 rounded-lg p-4 flex items-center justify-between">
-                            <div className="flex-1">
-                              <h5 className="text-white font-medium">{listing.title}</h5>
-                              <div className="flex items-center gap-3 mt-1">
-                                <span className="text-green-400 text-sm">
-                                  {listing.price?.toFixed(4) || '0'} {listing.currency || 'ETH'}
-                                </span>
-                                <span className={`px-2 py-0.5 rounded text-xs ${listing.status === 'active' ? 'bg-green-600 text-white' :
-                                  listing.status === 'sold' ? 'bg-blue-600 text-white' :
-                                    'bg-gray-600 text-white'
-                                  }`}>
-                                  {listing.status?.toUpperCase()}
-                                </span>
+                            <div className="flex items-center gap-4 flex-1">
+                              <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                                {listing.images && listing.images.length > 0 ? (
+                                  <OptimizedImage
+                                    src={listing.images[0]}
+                                    alt={listing.title}
+                                    width={48}
+                                    height={48}
+                                    className="w-full h-full object-cover"
+                                    useProductDefault={true}
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-gray-700 flex items-center justify-center">
+                                    <span className="text-xl">📦</span>
+                                  </div>
+                                )}
+                              </div>
+                              <div>
+                                <h5 className="text-white font-medium">{listing.title}</h5>
+                                <div className="flex items-center gap-3 mt-1">
+                                  <span className="text-green-400 text-sm">
+                                    {listing.price?.toFixed(4) || '0'} {listing.currency || 'ETH'}
+                                  </span>
+                                  <span className={`px-2 py-0.5 rounded text-xs ${listing.status === 'active' ? 'bg-green-600 text-white' :
+                                    listing.status === 'sold' ? 'bg-blue-600 text-white' :
+                                      'bg-gray-600 text-white'
+                                    }`}>
+                                    {listing.status?.toUpperCase()}
+                                  </span>
+                                </div>
                               </div>
                             </div>
                             <div className="text-right text-sm text-gray-400">
