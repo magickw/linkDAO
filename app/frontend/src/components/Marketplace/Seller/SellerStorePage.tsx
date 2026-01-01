@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { useAccount } from 'wagmi';
-import { marketplaceService, MarketplaceListing as ServiceMarketplaceListing } from '@/services/marketplaceService';
+import { marketplaceService, MarketplaceListing as ServiceMarketplaceListing, CategoryInfo } from '@/services/marketplaceService';
 import { unifiedSellerService } from '@/services/unifiedSellerService';
 import { UnifiedSellerProfile, UnifiedSellerListing } from '@/types/unifiedSeller';
 import { useUnifiedSeller, useUnifiedSellerListings } from '@/hooks/useUnifiedSeller';
@@ -247,6 +247,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
   const [activeTab, setActiveTab] = useState<'listings' | 'reviews' | 'about' | 'activity' | 'transactions'>('listings');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [categories, setCategories] = useState<CategoryInfo[]>([]);
   const [isFollowing, setIsFollowing] = useState(false);
   const [showDAOModal, setShowDAOModal] = useState(false);
   const [reviewFilter, setReviewFilter] = useState<'recent' | 'highest' | 'verified'>('recent');
@@ -426,7 +427,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
               returnRate: 0,
               repeatCustomerRate: 0,
               responseTime: 'N/A',
-              trend: 'neutral',
+              trend: 'stable',
               trendValue: '0%'
             },
             tier: 'bronze',
@@ -581,7 +582,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
             following: 0, // Default
             daoMemberships: [],
             daoEndorsements: [],
-            topCategories: ['electronics', 'digital', 'collectibles'], // Default
+            topCategories: categories.map(cat => cat.slug), // Use dynamic categories
             totalListings: sellerProfile.stats?.activeListings || 0,
             activeListings: sellerProfile.stats?.activeListings || 0,
             featuredListings: [],
@@ -644,7 +645,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
               returnRate: 0,
               repeatCustomerRate: 0,
               responseTime: 'N/A',
-              trend: 'neutral',
+              trend: 'stable',
               trendValue: '0%'
             },
             tier: 'bronze',
@@ -720,6 +721,27 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
     }
   };
 
+  // Fetch categories on component mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const categoriesData = await marketplaceService.getCategories();
+        setCategories(categoriesData);
+      } catch (error) {
+        console.error('Failed to fetch categories:', error);
+        // Fallback to default categories
+        setCategories([
+          { id: 'electronics', name: 'Electronics', slug: 'electronics' },
+          { id: 'digital', name: 'Digital Assets', slug: 'digital' },
+          { id: 'collectibles', name: 'Collectibles', slug: 'collectibles' },
+          { id: 'fashion', name: 'Fashion', slug: 'fashion' },
+        ]);
+      }
+    };
+    
+    fetchCategories();
+  }, []);
+
   // Fetch seller data on component mount and sellerId change
   useEffect(() => {
     if (sellerId) {
@@ -772,7 +794,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
   };
 
   const filteredListings = listings.filter(listing => {
-    const matchesCategory = selectedCategory === 'all' || listing.category === selectedCategory;
+    const matchesCategory = selectedCategory === 'all' || listing.category === selectedCategory || categories.some(cat => cat.slug === selectedCategory && (cat.name.toLowerCase() === listing.category?.toLowerCase() || cat.slug.toLowerCase() === listing.category?.toLowerCase()));
     const matchesSearch = searchQuery === '' || listing.title.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
@@ -1347,9 +1369,9 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                       className="bg-white/10 text-white rounded-lg px-4 py-3 border border-white/20 focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all"
                     >
                       <option value="all">All Categories</option>
-                      {seller.topCategories.map((category) => (
-                        <option key={category} value={category}>
-                          {category.charAt(0).toUpperCase() + category.slice(1)}
+                      {categories.map((category) => (
+                        <option key={category.id} value={category.slug}>
+                          {category.name}
                         </option>
                       ))}
                     </select>

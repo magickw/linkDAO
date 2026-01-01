@@ -29,7 +29,7 @@ export interface UpdateQuickPostInput {
 // Helper function to validate IPFS CID and construct proper URL
 function getAvatarUrl(profileCid: string | undefined): string | undefined {
   if (!profileCid) return undefined;
-  
+
   // Check if it's already a valid URL
   try {
     new URL(profileCid);
@@ -68,7 +68,7 @@ export function convertBackendQuickPostToQuickPost(backendPost: any): QuickPost 
       content = JSON.stringify(backendPost.content);
     }
   }
-  
+
   return {
     id: backendPost.id?.toString() || '',
     author: backendPost.walletAddress || backendPost.authorId || '',
@@ -93,7 +93,7 @@ export function convertBackendQuickPostToQuickPost(backendPost: any): QuickPost 
     views: backendPost.viewCount || 0,
     engagementScore: backendPost.engagementScore || 0,
     reactionCount: backendPost.reactionCount || 0, // Include reaction count for display
-    
+
     // Enhanced features (will be populated by services)
     previews: [] as ContentPreview[],
     hashtags: [],  // Required field
@@ -104,7 +104,7 @@ export function convertBackendQuickPostToQuickPost(backendPost: any): QuickPost 
     isBookmarked: false,
     communityId: backendPost.communityId || '',
     contentType: detectContentType(backendPost),
-    
+
     // Add author profile information including avatar
     authorProfile: {
       handle: backendPost.displayName || backendPost.handle || backendPost.walletAddress?.slice(0, 8) || 'Unknown',
@@ -112,10 +112,18 @@ export function convertBackendQuickPostToQuickPost(backendPost: any): QuickPost 
       avatar: getAvatarUrl(backendPost.avatarCid) || getAvatarUrl(backendPost.profileCid),  // Prefer avatarCid, fallback to profileCid
       reputationTier: undefined
     },
-    
+
     // Add media property for frontend QuickPost interface
     media: backendPost.mediaCids ? JSON.parse(backendPost.mediaCids) : [],
-    
+
+    // CRITICAL: Preserve originalPost for reposts
+    // Recursively convert the original post if this is a repost
+    originalPost: backendPost.originalPost ? convertBackendQuickPostToQuickPost(backendPost.originalPost) : undefined,
+
+    // Repost flags
+    isRepost: backendPost.isRepost || false,
+    isRepostedByMe: backendPost.isRepostedByMe || false,
+
     // Flag to distinguish quickPosts from regular posts
     isQuickPost: true
   };
@@ -126,18 +134,18 @@ function detectContentType(post: any): 'text' | 'media' | 'link' | 'poll' | 'pro
   if (post.mediaCids && JSON.parse(post.mediaCids || '[]').length > 0) {
     return 'media';
   }
-  
+
   if (post.contentCid && post.contentCid.includes('http')) {
     return 'link';
   }
-  
+
   if (post.tags && JSON.parse(post.tags || '[]').includes('poll')) {
     return 'poll';
   }
-  
+
   if (post.tags && JSON.parse(post.tags || '[]').includes('proposal')) {
     return 'proposal';
   }
-  
+
   return 'text';
 }

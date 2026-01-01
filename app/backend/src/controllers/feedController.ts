@@ -127,6 +127,22 @@ export class FeedController {
           postTypeFilter: postTypeFilter as 'quickPosts' | 'posts' | 'all'
         });
 
+        // DEBUG: Log repost data before sending to frontend
+        const repostsInFeed = feedData.posts.filter((p: any) => p.isRepost);
+        if (repostsInFeed.length > 0) {
+          console.log('🔍 [FEED CONTROLLER] Reposts in feed response:', {
+            count: repostsInFeed.length,
+            sampleRepost: {
+              id: repostsInFeed[0].id,
+              isRepost: repostsInFeed[0].isRepost,
+              parentId: repostsInFeed[0].parentId,
+              hasOriginalPost: !!repostsInFeed[0].originalPost,
+              originalPostId: repostsInFeed[0].originalPost?.id,
+              originalPostContent: repostsInFeed[0].originalPost?.content?.substring(0, 50)
+            }
+          });
+        }
+
         res.json(apiResponse.success(feedData, 'Feed retrieved successfully'));
       } catch (serviceError) {
         console.error('[FEED CONTROLLER ERROR] Service error details:', serviceError);

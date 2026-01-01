@@ -645,6 +645,12 @@ const EnhancedPostCard = React.memo(({
                   <QuotedPost post={post.originalPost as any} />
                 </div>
               )}
+              {!isNested && post.isRepost && !post.originalPost && (
+                <div className="mb-4 mt-2 px-1 text-sm text-gray-500 italic">
+                  {console.log('⚠️ [FRONTEND] Repost missing originalPost:', { postId: post.id, isRepost: post.isRepost, parentId: (post as any).parentId })}
+                  Original post unavailable
+                </div>
+              )}
 
               {/* Inline Previews */}
               {showPreviews && post.previews.length > 0 && (
