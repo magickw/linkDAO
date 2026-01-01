@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { quickPosts, quickPostReactions, quickPostTips, users, quickPostTags } from '../db/schema';
-import { eq, and, sql, desc, asc, isNull } from 'drizzle-orm';
+import { eq, and, sql, desc, asc, isNull, aliasedTable, or } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 import { trendingCacheService } from './trendingCacheService';
 import { getWebSocketService } from './webSocketService';
@@ -483,7 +483,11 @@ export class QuickPostService {
           orderByClause = desc(quickPosts.createdAt);
       }
 
-      const posts = await db
+      // Aliases for original post/author (for reposts)
+      const originalPosts = aliasedTable(quickPosts, 'original_posts');
+      const originalAuthors = aliasedTable(users, 'original_authors');
+
+      const rawPosts = await db
         .select({
           id: quickPosts.id,
           shareId: quickPosts.shareId,
@@ -504,19 +508,69 @@ export class QuickPostService {
           updatedAt: quickPosts.updatedAt,
           walletAddress: users.walletAddress,
           handle: users.handle,
-          isRepost: quickPosts.isRepost
+          isRepost: quickPosts.isRepost,
+
+          // Original Post Fields (prefixed)
+          original_id: originalPosts.id,
+          original_shareId: originalPosts.shareId,
+          original_authorId: originalPosts.authorId,
+          original_content: originalPosts.content,
+          original_mediaCids: originalPosts.mediaCids,
+          original_createdAt: originalPosts.createdAt,
+          original_author_handle: originalAuthors.handle,
+          original_author_walletAddress: originalAuthors.walletAddress,
+          original_author_avatar: originalAuthors.avatarCid
         })
         .from(quickPosts)
         .leftJoin(users, eq(quickPosts.authorId, users.id))
+        // Join original post if it's a repost (parentId -> id)
+        .leftJoin(originalPosts, eq(quickPosts.parentId, originalPosts.id))
+        // Join original author
+        .leftJoin(originalAuthors, eq(originalPosts.authorId, originalAuthors.id))
         .where(and(
           timeFilter,
           authorFilter,
           sql`${quickPosts.moderationStatus} IS NULL OR ${quickPosts.moderationStatus} != 'blocked'`,
-          isNull(quickPosts.parentId) // Only show top-level posts, not replies
+          // Show if it's a root post OR a repost
+          or(isNull(quickPosts.parentId), eq(quickPosts.isRepost, true))
         ))
         .orderBy(orderByClause)
         .limit(limit)
         .offset(offset);
+
+      // Post-process to nest originalPost
+      const posts = rawPosts.map(post => {
+        const {
+          original_id, original_shareId, original_authorId, original_content,
+          original_mediaCids, original_createdAt, original_author_handle,
+          original_author_walletAddress, original_author_avatar,
+          ...regularFields
+        } = post;
+
+        let originalPost = null;
+        if (post.isRepost && original_id) {
+          originalPost = {
+            id: original_id,
+            shareId: original_shareId,
+            authorId: original_authorId,
+            content: original_content,
+            mediaCids: original_mediaCids,
+            createdAt: original_createdAt,
+            author: original_author_walletAddress,
+            // Construct minimal profile for UI
+            authorProfile: {
+              handle: original_author_handle,
+              avatar: original_author_avatar,
+              verified: false // You might want to join isVerified if available
+            }
+          };
+        }
+
+        return {
+          ...regularFields,
+          originalPost
+        };
+      });
 
       // Get total count for pagination
       const [{ count }] = await db
@@ -526,7 +580,7 @@ export class QuickPostService {
           timeFilter,
           authorFilter,
           sql`${quickPosts.moderationStatus} IS NULL OR ${quickPosts.moderationStatus} != 'blocked'`,
-          isNull(quickPosts.parentId)
+          or(isNull(quickPosts.parentId), eq(quickPosts.isRepost, true))
         ));
 
       return {

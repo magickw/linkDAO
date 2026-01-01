@@ -23,6 +23,7 @@ import OnChainIdentityBadge from '../Community/OnChainIdentityBadge';
 import VideoEmbed from '../VideoEmbed';
 import { extractVideoUrls, VideoInfo } from '@/utils/videoUtils';
 import ReactionPurchaseSystem from '../Community/ReactionPurchaseSystem';
+import QuotedPost from './QuotedPost';
 
 // Use the shared EnhancedPost type with extended properties for component-specific needs
 export interface EnhancedPost extends Omit<SharedEnhancedPost, 'trendingStatus' | 'socialProof'> {
@@ -458,6 +459,18 @@ const EnhancedPostCard = React.memo(({
           >
             {/* Header with improved visual hierarchy */}
             <div className="px-6 py-4 border-b border-gray-200/50 dark:border-gray-700/50">
+              {/* Repost Label */}
+              {post.isRepost && (
+                <div className="flex items-center space-x-2 mb-3 text-sm text-gray-500 dark:text-gray-400">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <span className="font-medium">
+                    {post.isRepostedByMe ? 'You reposted' : 'Reposted'}
+                  </span>
+                </div>
+              )}
+
               <div className="flex items-start justify-between">
                 <div className="flex items-center space-x-3 flex-1 min-w-0">
                   {/* Author Avatar */}
@@ -626,17 +639,10 @@ const EnhancedPostCard = React.memo(({
                 </div>
               )}
 
-              {/* Recursive Quote Post Rendering */}
+              {/* Quoted Post (Repost Content) */}
               {!isNested && post.originalPost && (
-                <div className="mb-4 mt-2">
-                  <EnhancedPostCard
-                    post={post.originalPost as any}
-                    isNested={true}
-                    showPreviews={false}
-                    showSocialProof={false}
-                    showTrending={false}
-                    className="border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50/50 dark:bg-gray-900/50 scale-[0.98] origin-top"
-                  />
+                <div className="mb-4 mt-2 px-1">
+                  <QuotedPost post={post.originalPost as any} />
                 </div>
               )}
 

@@ -111,19 +111,6 @@ export default function SharePostModal({
   // Share options
   const shareOptions: ShareOption[] = [
     {
-      id: 'timeline',
-      name: 'Share to Timeline',
-      icon: '📝',
-      color: 'bg-blue-500',
-      action: async () => {
-        if (!isConnected) {
-          addToast('Please connect your wallet to share to timeline', 'error');
-          return;
-        }
-        await handleInternalShare('timeline');
-      }
-    },
-    {
       id: 'twitter',
       name: 'Twitter',
       icon: '🐦',
