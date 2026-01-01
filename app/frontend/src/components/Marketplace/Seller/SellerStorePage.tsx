@@ -439,7 +439,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
             following: 0,
             daoMemberships: [],
             daoEndorsements: [],
-            topCategories: [],
+            topCategories: categories.map(cat => cat.slug), // Use dynamic categories
             totalListings: 0,
             activeListings: 0,
             featuredListings: [],
@@ -657,7 +657,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
             following: 0,
             daoMemberships: [],
             daoEndorsements: [],
-            topCategories: [],
+            topCategories: categories.map(cat => cat.slug), // Use dynamic categories
             totalListings: 0,
             activeListings: 0,
             featuredListings: [],

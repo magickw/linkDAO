@@ -69,6 +69,20 @@ export function convertBackendQuickPostToQuickPost(backendPost: any): QuickPost 
     }
   }
 
+  // Helper function to safely parse JSON fields that might already be parsed
+  const safeJsonParse = (field: any, fallback: any = []) => {
+    if (!field) return fallback;
+    if (typeof field === 'string') {
+      try {
+        return JSON.parse(field);
+      } catch {
+        return fallback;
+      }
+    }
+    // If it's already an array or object, return as is
+    return field;
+  };
+
   return {
     id: backendPost.id?.toString() || '',
     author: backendPost.walletAddress || backendPost.authorId || '',
@@ -77,8 +91,8 @@ export function convertBackendQuickPostToQuickPost(backendPost: any): QuickPost 
     content: content, // Use parsed content
     contentCid: backendPost.contentCid || '',
     shareId: backendPost.shareId || '', // Include shareId for share URLs
-    mediaCids: backendPost.mediaCids ? JSON.parse(backendPost.mediaCids) : [],
-    tags: backendPost.tags ? JSON.parse(backendPost.tags) : [],
+    mediaCids: safeJsonParse(backendPost.mediaCids, []),
+    tags: safeJsonParse(backendPost.tags, []),
     createdAt: new Date(backendPost.createdAt || Date.now()),
     updatedAt: new Date(backendPost.updatedAt || backendPost.createdAt || Date.now()),
     onchainRef: backendPost.onchainRef || '',
@@ -114,7 +128,7 @@ export function convertBackendQuickPostToQuickPost(backendPost: any): QuickPost 
     },
 
     // Add media property for frontend QuickPost interface
-    media: backendPost.mediaCids ? JSON.parse(backendPost.mediaCids) : [],
+    media: safeJsonParse(backendPost.mediaCids, []),
 
     // CRITICAL: Preserve originalPost for reposts
     // Recursively convert the original post if this is a repost
