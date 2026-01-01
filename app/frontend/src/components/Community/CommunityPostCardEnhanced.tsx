@@ -875,7 +875,7 @@ function CommunityPostCardEnhanced({
                 )}
                 <div className="text-gray-900 dark:text-white leading-relaxed prose prose-sm dark:prose-invert max-w-none">
 
-                  {processContent(getTruncatedContent(post.content, 500, isExpanded), 'markdown')}
+                  {processContent(getTruncatedContent(post.content, 500, isExpanded))}
                 </div>
 
                 {shouldTruncateContent(post.content, 500, isExpanded) && (

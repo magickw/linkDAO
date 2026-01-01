@@ -645,25 +645,6 @@ const MarketplaceContent: React.FC = () => {
 
                 {/* Trust labels and sorting controls moved to banner area */}
 
-                {/* x402 Protocol Information */}
-                <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/30 rounded-xl p-4 mb-6">
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5 text-blue-400">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <line x1="12" y1="16" x2="12" y2="12"></line>
-                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                      </svg>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-white">Reduced Fees with x402 Protocol</h3>
-                      <p className="text-sm text-blue-200 mt-1">
-                        All purchases on LinkDAO Marketplace use Coinbase's x402 protocol to significantly reduce transaction fees.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
                 {loading ? (
                   <div className={`grid ${gridColumns} gap-6`}>
                     {Array.from({ length: 12 }).map((_, i) => (

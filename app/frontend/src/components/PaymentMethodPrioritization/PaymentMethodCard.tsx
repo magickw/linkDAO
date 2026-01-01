@@ -11,7 +11,10 @@ interface PaymentMethodCardProps {
   isSelected?: boolean;
   isRecommended?: boolean;
   onSelect: (method: PrioritizedPaymentMethod) => void;
+  viewMode?: 'compact' | 'detailed';
   showCostBreakdown?: boolean;
+  showBenefits?: boolean;
+  showNetworkDetails?: boolean;
   className?: string;
 }
 
@@ -20,7 +23,10 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
   isSelected = false,
   isRecommended = false,
   onSelect,
+  viewMode = 'detailed',
   showCostBreakdown = true,
+  showBenefits = true,
+  showNetworkDetails = true,
   className = ''
 }) => {
   const { method, costEstimate, availabilityStatus, recommendationReason, priority, warnings, benefits } = paymentMethod;
@@ -115,6 +121,105 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
   const isDisabled = !isAvailable;
   const isFiat = method.type === PaymentMethodType.FIAT_STRIPE;
   const isX402 = method.type === PaymentMethodType.X402;
+  const isCompactView = viewMode === 'compact';
+
+  // Compact view layout - single row with essential info
+  if (isCompactView) {
+    return (
+      <div
+        className={`
+          relative p-3 border-2 rounded-lg transition-all duration-200 cursor-pointer
+          flex items-center gap-3
+          ${isSelected
+            ? 'border-blue-500 bg-blue-500/10 shadow-md'
+            : isAvailable
+              ? 'border-white/20 bg-white/5 hover:border-white/30 hover:shadow-sm'
+              : 'border-white/10 bg-white/5 opacity-50 cursor-not-allowed'
+          }
+          ${isRecommended ? 'ring-2 ring-green-400 ring-opacity-50' : ''}
+          ${className}
+        `}
+        onClick={() => isAvailable && onSelect(paymentMethod)}
+        role="button"
+        tabIndex={isAvailable ? 0 : -1}
+        aria-disabled={isDisabled}
+        onKeyDown={(e) => {
+          if ((e.key === 'Enter' || e.key === ' ') && isAvailable) {
+            e.preventDefault();
+            onSelect(paymentMethod);
+          }
+        }}
+      >
+        {/* Icon */}
+        <img
+          src={getMethodIcon(method.type)}
+          alt={method.name}
+          className="w-8 h-8 rounded-full flex-shrink-0"
+          onError={(e) => {
+            const img = e.target as HTMLImageElement;
+            if (!img.src.includes('payment-default.svg')) {
+              img.src = '/icons/payment-default.svg';
+            }
+          }}
+        />
+
+        {/* Name and Network */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <h3 className={`font-medium text-sm ${isDisabled ? 'text-white/50' : 'text-white'}`}>
+              {method.name}
+            </h3>
+            {/* Network Badge - only show if showNetworkDetails is true */}
+            {showNetworkDetails && method.chainId !== undefined && method.chainId !== 0 && (
+              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-white/10">
+                <div className={`w-1.5 h-1.5 rounded-full ${getNetworkColor(method.chainId)}`}></div>
+                <span className="text-xs text-white/80 font-medium">
+                  {getNetworkName(method.chainId)}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Total Cost */}
+        <div className="text-right flex-shrink-0">
+          <div className={`text-sm font-bold ${isDisabled ? 'text-white/50' : 'text-white'}`}>
+            {formatCurrency(costEstimate.totalCost, costEstimate.currency)}
+          </div>
+        </div>
+
+        {/* Status Indicator */}
+        <div className={`
+          px-2 py-1 text-xs font-medium rounded-full border flex-shrink-0
+          ${getStatusColor(availabilityStatus)}
+        `}>
+          {availabilityStatus === 'available' ? '✓' : '✗'}
+        </div>
+
+        {/* Selection Indicator */}
+        {isSelected && (
+          <div className="absolute inset-0 border-2 border-blue-500 rounded-lg pointer-events-none">
+            <div className="absolute top-1 right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            </div>
+          </div>
+        )}
+
+        {/* Recommended Badge */}
+        {isRecommended && (
+          <div className="absolute -top-1 -right-1">
+            <div className="px-1.5 py-0.5 text-xs font-semibold text-green-800 bg-green-100 border border-green-300 rounded-full">
+              ★
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Detailed view layout - original full layout
 
   return (
     <div
@@ -162,7 +267,7 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
               {method.name}
             </h3>
             {/* Network Badge */}
-            {method.chainId !== undefined && method.chainId !== 0 && (
+            {showNetworkDetails && method.chainId !== undefined && method.chainId !== 0 && (
               <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10">
                 <div className={`w-2 h-2 rounded-full ${getNetworkColor(method.chainId)}`}></div>
                 <span className="text-xs text-white/80 font-medium">
@@ -198,6 +303,47 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
           {availabilityStatus === 'available' ? 'Available' : 'Unavailable'}
         </div>
       </div>
+
+      {/* Cost Breakdown - Only in detailed view */}
+      {showCostBreakdown && (
+        <div className="mt-3 pt-3 border-t border-white/10">
+          <div className="grid grid-cols-2 gap-4 text-xs">
+            <div>
+              <span className="text-white/60">Base Cost:</span>
+              <span className="text-white ml-2">{formatCurrency(costEstimate.baseCost)}</span>
+            </div>
+            <div>
+              <span className="text-white/60">Gas Fee:</span>
+              <span className="text-white ml-2">{formatCurrency(costEstimate.gasFee)}</span>
+            </div>
+            <div>
+              <span className="text-white/60">Platform Fee:</span>
+              <span className="text-white ml-2">{formatCurrency(costEstimate.platformFee || 0)}</span>
+            </div>
+            <div>
+              <span className="text-white/60">Est. Time:</span>
+              <span className="text-white ml-2">{isFiat ? 'Instant' : formatTime(costEstimate.estimatedTime)}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Benefits - Only in detailed view */}
+      {showBenefits && benefits && benefits.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-white/10">
+          <div className="text-xs text-white/60 mb-2">Benefits:</div>
+          <div className="flex flex-wrap gap-1">
+            {benefits.slice(0, 3).map((benefit, index) => (
+              <span
+                key={index}
+                className="px-2 py-1 text-xs bg-green-500/20 text-green-300 rounded-full"
+              >
+                {benefit}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Recommended Badge */}
       {isRecommended && (

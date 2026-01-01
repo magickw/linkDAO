@@ -17,13 +17,31 @@ interface PaymentMethodSelectorProps {
   selectedMethodId?: string;
   onMethodSelect: (method: PrioritizedPaymentMethod) => void;
   onMethodChange?: (method: PrioritizedPaymentMethod) => void;
+  viewMode?: 'compact' | 'detailed' | 'auto';
   showCostBreakdown?: boolean;
   showRecommendations?: boolean;
   showWarnings?: boolean;
   maxDisplayMethods?: number;
   className?: string;
-  layout?: 'grid' | 'list';
+  layout?: 'grid' | 'list' | 'auto';
   responsive?: boolean;
+}
+
+interface ViewModeConfig {
+  compact: {
+    showCostBreakdown: false;
+    showBenefits: false;
+    showNetworkDetails: false;
+    showWarnings: true; // Only critical warnings
+    layout: 'list';
+  };
+  detailed: {
+    showCostBreakdown: true;
+    showBenefits: true;
+    showNetworkDetails: true;
+    showWarnings: true;
+    layout: 'grid';
+  };
 }
 
 const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
@@ -31,12 +49,13 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   selectedMethodId,
   onMethodSelect,
   onMethodChange,
+  viewMode: propViewMode = 'auto',
   showCostBreakdown = true,
   showRecommendations = true,
   showWarnings = true,
   maxDisplayMethods = 6,
   className = '',
-  layout = 'grid',
+  layout = 'auto',
   responsive = true
 }) => {
   const [selectedMethod, setSelectedMethod] = useState<PrioritizedPaymentMethod | null>(null);
@@ -44,18 +63,45 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   const [viewMode, setViewMode] = useState<'compact' | 'detailed'>('detailed');
   const [isMobile, setIsMobile] = useState(false);
 
+  // View mode configuration
+  const viewModeConfig: ViewModeConfig = {
+    compact: {
+      showCostBreakdown: false,
+      showBenefits: false,
+      showNetworkDetails: false,
+      showWarnings: true,
+      layout: 'list'
+    },
+    detailed: {
+      showCostBreakdown: true,
+      showBenefits: true,
+      showNetworkDetails: true,
+      showWarnings: true,
+      layout: 'grid'
+    }
+  };
+
   // Responsive detection
   useEffect(() => {
     if (!responsive) return;
 
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+      const isMobileDevice = window.innerWidth < 768;
+      setIsMobile(isMobileDevice);
+      
+      // Auto-set view mode based on device and prop
+      if (propViewMode === 'auto') {
+        setViewMode(isMobileDevice ? 'compact' : 'detailed');
+      } else {
+        // Mobile always uses compact regardless of prop
+        setViewMode(isMobileDevice ? 'compact' : propViewMode);
+      }
     };
 
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
-  }, [responsive]);
+  }, [responsive, propViewMode]);
 
   // Auto-select default method
   useEffect(() => {
@@ -132,8 +178,19 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   };
 
   const getLayoutClasses = (): string => {
-    // Always use vertical list layout - one method per row
-    return 'space-y-3';
+    const currentConfig = viewModeConfig[viewMode];
+    
+    if (layout === 'auto') {
+      // Use config-based layout
+      return currentConfig.layout === 'grid' && !isMobile 
+        ? 'grid grid-cols-1 md:grid-cols-2 gap-4'
+        : 'space-y-3';
+    }
+    
+    // Use explicit layout prop
+    return layout === 'grid' && !isMobile
+      ? 'grid grid-cols-1 md:grid-cols-2 gap-4'
+      : 'space-y-3';
   };
 
   const recommendedMethod = getRecommendedMethod();
@@ -152,7 +209,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
         </div>
 
         {/* View Mode Toggle (Desktop only) */}
-        {!isMobile && (
+        {!isMobile && propViewMode === 'auto' && (
           <div className="flex items-center space-x-2">
             <button
               onClick={() => setViewMode('compact')}
@@ -207,17 +264,23 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
             Available Methods
           </h3>
           <div className={getLayoutClasses()}>
-            {availableMethods.map((method) => (
-              <PaymentMethodCard
-                key={method.method.id}
-                paymentMethod={method}
-                isSelected={selectedMethod?.method.id === method.method.id}
-                isRecommended={recommendedMethod?.method.id === method.method.id}
-                onSelect={handleMethodSelect}
-                showCostBreakdown={showCostBreakdown && (viewMode === 'detailed' || isMobile)}
-                className="w-full"
-              />
-            ))}
+            {availableMethods.map((method) => {
+              const currentConfig = viewModeConfig[viewMode];
+              return (
+                <PaymentMethodCard
+                  key={method.method.id}
+                  paymentMethod={method}
+                  isSelected={selectedMethod?.method.id === method.method.id}
+                  isRecommended={recommendedMethod?.method.id === method.method.id}
+                  onSelect={handleMethodSelect}
+                  viewMode={viewMode}
+                  showCostBreakdown={showCostBreakdown && currentConfig.showCostBreakdown}
+                  showBenefits={currentConfig.showBenefits}
+                  showNetworkDetails={currentConfig.showNetworkDetails}
+                  className="w-full"
+                />
+              );
+            })}
           </div>
         </div>
       )}
@@ -252,21 +315,27 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
           </div>
 
           <div className={getLayoutClasses()}>
-            {unavailableMethods.map((method) => (
-              <PaymentMethodCard
-                key={method.method.id}
-                paymentMethod={method}
-                isSelected={false}
-                isRecommended={false}
-                onSelect={() => {}} // Disabled
-                showCostBreakdown={
-                  showCostBreakdown &&
-                  (viewMode === 'detailed' || isMobile) &&
-                  expandedMethods.has(method.method.id)
-                }
-                className="w-full"
-              />
-            ))}
+            {unavailableMethods.map((method) => {
+              const currentConfig = viewModeConfig[viewMode];
+              return (
+                <PaymentMethodCard
+                  key={method.method.id}
+                  paymentMethod={method}
+                  isSelected={false}
+                  isRecommended={false}
+                  onSelect={() => {}} // Disabled
+                  viewMode={viewMode}
+                  showCostBreakdown={
+                    showCostBreakdown &&
+                    currentConfig.showCostBreakdown &&
+                    expandedMethods.has(method.method.id)
+                  }
+                  showBenefits={currentConfig.showBenefits && expandedMethods.has(method.method.id)}
+                  showNetworkDetails={currentConfig.showNetworkDetails}
+                  className="w-full"
+                />
+              );
+            })}
           </div>
         </div>
       )}

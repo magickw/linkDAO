@@ -112,6 +112,58 @@ export const processContent = (content: string, contentType: string = 'text'): R
 };
 
 /**
+ * Truncate HTML content while preserving tag structure
+ * @param html - The HTML content to truncate
+ * @param maxLength - Maximum text length before truncation
+ * @returns Truncated HTML with preserved structure
+ */
+export const truncateHTML = (html: string, maxLength: number): string => {
+  if (!html || html.length <= maxLength) return html;
+
+  // Check if content contains HTML tags
+  if (!/<[^>]+>/.test(html)) {
+    // Plain text - simple truncation
+    return html.slice(0, maxLength) + '...';
+  }
+
+  // For browser environment
+  if (typeof document !== 'undefined') {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+
+    let textLength = 0;
+    const truncateNode = (node: Node): boolean => {
+      if (textLength >= maxLength) {
+        node.remove();
+        return true;
+      }
+
+      if (node.nodeType === Node.TEXT_NODE) {
+        const remaining = maxLength - textLength;
+        if (node.textContent!.length > remaining) {
+          node.textContent = node.textContent!.substring(0, remaining) + '...';
+          textLength = maxLength;
+          return true;
+        }
+        textLength += node.textContent!.length;
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        const childNodes = Array.from(node.childNodes);
+        for (const child of childNodes) {
+          if (truncateNode(child)) break;
+        }
+      }
+      return false;
+    };
+
+    truncateNode(div);
+    return div.innerHTML;
+  }
+
+  // Fallback for server-side rendering - simple truncation
+  return html.slice(0, maxLength) + '...';
+};
+
+/**
  * Check if content should be truncated
  * @param content - The content to check
  * @param maxLength - Maximum length before truncation
@@ -131,7 +183,7 @@ export const shouldTruncateContent = (content: string, maxLength: number = 280, 
  */
 export const getTruncatedContent = (content: string, maxLength: number = 280, isExpanded: boolean = false): string => {
   if (shouldTruncateContent(content, maxLength, isExpanded)) {
-    return content.slice(0, maxLength) + '...';
+    return truncateHTML(content, maxLength);
   }
   return content;
 };

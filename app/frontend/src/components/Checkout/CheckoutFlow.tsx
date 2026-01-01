@@ -52,6 +52,7 @@ import { PaymentError as PaymentErrorType } from '@/services/paymentErrorHandler
 import { PaymentErrorModal } from '@/components/Payment/PaymentErrorModal';
 import { WalletConnectionPrompt } from '@/components/Payment/WalletConnectionPrompt';
 import { StripeCheckout } from '@/components/Payment/StripeCheckout';
+import ProductThumbnail from './ProductThumbnail';
 import Link from 'next/link';
 
 interface CheckoutFlowProps {
@@ -504,17 +505,31 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       <div className="space-y-4">
         {cartState.items.map((item) => (
           <div key={item.id} className="flex items-center gap-4">
-            <img
-              src={item.image}
-              alt={item.title}
-              className="w-16 h-16 rounded-lg object-cover"
+            <ProductThumbnail
+              item={{
+                id: item.id,
+                title: item.title,
+                image: item.image,
+                category: item.category
+              }}
+              size="medium"
+              fallbackType="letter"
+              className="flex-shrink-0"
             />
-            <div className="flex-1">
-              <h4 className="font-medium text-white">{item.title}</h4>
+            <div className="flex-1 min-w-0">
+              <h4 className="font-medium text-white truncate">{item.title}</h4>
               <p className="text-white/70 text-sm">Qty: {item.quantity}</p>
+              {item.seller && (
+                <p className="text-white/60 text-xs">by {item.seller.name}</p>
+              )}
             </div>
-            <div className="text-right">
+            <div className="text-right flex-shrink-0">
               <p className="font-medium text-white">${item.price.fiat}</p>
+              {item.quantity > 1 && (
+                <p className="text-white/60 text-xs">
+                  ${(parseFloat(item.price.fiat) * item.quantity).toFixed(2)} total
+                </p>
+              )}
             </div>
           </div>
         ))}
@@ -523,7 +538,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
         <div className="space-y-2">
           <div className="flex justify-between text-white/70">
-            <span>Subtotal</span>
+            <span>Subtotal ({cartState.totals.itemCount} items)</span>
             <span>${cartState.totals.subtotal.fiat}</span>
           </div>
           {parseFloat(cartState.totals.shipping.fiat) > 0 && (
@@ -533,13 +548,26 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
             </div>
           )}
           <div className="flex justify-between text-white/70">
-            <span>Platform Fee</span>
+            <span>Platform Fee (2.5%)</span>
             <span>${(parseFloat(cartState.totals.total.fiat) * 0.025).toFixed(2)}</span>
           </div>
           <hr className="border-white/20" />
           <div className="flex justify-between text-white font-semibold text-lg">
             <span>Total</span>
-            <span>${cartState.totals.total.fiat}</span>
+            <div className="text-right">
+              <div>${cartState.totals.total.fiat}</div>
+              <div className="text-sm text-white/60 font-normal">
+                ≈ {cartState.totals.total.crypto} {cartState.totals.total.cryptoSymbol}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Trust indicators */}
+        <div className="mt-4 pt-4 border-t border-white/20">
+          <div className="flex items-center gap-2 text-xs text-white/60">
+            <Shield className="w-4 h-4 text-green-400" />
+            <span>Escrow protected • Secure payment</span>
           </div>
         </div>
       </div>
