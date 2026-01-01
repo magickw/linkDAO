@@ -145,7 +145,25 @@ export function convertBackendQuickPostToQuickPost(backendPost: any): QuickPost 
 
 // Helper function to detect content type
 function detectContentType(post: any): 'text' | 'media' | 'link' | 'poll' | 'proposal' {
-  if (post.mediaCids && JSON.parse(post.mediaCids || '[]').length > 0) {
+  // Safely parse mediaCids
+  const safeParseArray = (field: any): any[] => {
+    if (!field) return [];
+    if (Array.isArray(field)) return field;
+    if (typeof field === 'string') {
+      try {
+        const parsed = JSON.parse(field);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  };
+
+  const mediaCids = safeParseArray(post.mediaCids);
+  const tags = safeParseArray(post.tags);
+
+  if (mediaCids.length > 0) {
     return 'media';
   }
 
@@ -153,11 +171,11 @@ function detectContentType(post: any): 'text' | 'media' | 'link' | 'poll' | 'pro
     return 'link';
   }
 
-  if (post.tags && JSON.parse(post.tags || '[]').includes('poll')) {
+  if (tags.includes('poll')) {
     return 'poll';
   }
 
-  if (post.tags && JSON.parse(post.tags || '[]').includes('proposal')) {
+  if (tags.includes('proposal')) {
     return 'proposal';
   }
 
