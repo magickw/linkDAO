@@ -5,6 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import Link from 'next/link';
 import Layout from '@/components/Layout';
 import { cartService, CartState } from '@/services/cartService';
 import ProductThumbnail from '@/components/Checkout/ProductThumbnail';
@@ -36,7 +37,7 @@ const CartPage: React.FC = () => {
     },
     lastUpdated: new Date()
   });
-  
+
   const router = useRouter();
 
   useEffect(() => {
@@ -67,7 +68,7 @@ const CartPage: React.FC = () => {
       handleRemoveItem(itemId);
       return;
     }
-    
+
     cartService.updateQuantity(itemId, quantity);
   };
 
@@ -108,22 +109,28 @@ const CartPage: React.FC = () => {
                   <div className="divide-y divide-white/10">
                     {cartState.items.map((item) => (
                       <div key={item.id} className="p-6 flex flex-col sm:flex-row gap-4">
-                        <div className="flex-shrink-0">
-                          <ProductThumbnail
-                            item={{
-                              id: item.id,
-                              title: item.title,
-                              image: item.image,
-                              category: item.category
-                            }}
-                            size="large"
-                            fallbackType="letter"
-                          />
-                        </div>
-                        
+                        <Link href={`/marketplace/product/${item.id}`}>
+                          <a className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity">
+                            <ProductThumbnail
+                              item={{
+                                id: item.id,
+                                title: item.title,
+                                image: item.image,
+                                category: item.category
+                              }}
+                              size="large"
+                              fallbackType="letter"
+                            />
+                          </a>
+                        </Link>
+
                         <div className="flex-grow">
                           <div className="flex justify-between">
-                            <h3 className="font-semibold text-white">{item.title}</h3>
+                            <Link href={`/marketplace/product/${item.id}`}>
+                              <a className="hover:text-blue-400 transition-colors">
+                                <h3 className="font-semibold text-white">{item.title}</h3>
+                              </a>
+                            </Link>
                             <button
                               onClick={() => handleRemoveItem(item.id)}
                               className="text-white/50 hover:text-white"
@@ -131,9 +138,9 @@ const CartPage: React.FC = () => {
                               <X size={20} />
                             </button>
                           </div>
-                          
+
                           <p className="text-white/70 text-sm mb-2">{item.seller.name}</p>
-                          
+
                           <div className="flex flex-wrap items-center gap-4 mt-4">
                             <div className="flex items-center border border-white/20 rounded-lg bg-white/10">
                               <button
@@ -150,7 +157,7 @@ const CartPage: React.FC = () => {
                                 <Plus size={16} />
                               </button>
                             </div>
-                            
+
                             <div className="text-lg font-semibold text-white">
                               {item.price.fiatSymbol}{(parseFloat(item.price.fiat) * item.quantity).toFixed(2)}
                             </div>
@@ -161,11 +168,11 @@ const CartPage: React.FC = () => {
                   </div>
                 </div>
               </div>
-              
+
               <div className="lg:col-span-1">
                 <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 sticky top-8 border border-white/20">
                   <h2 className="text-xl font-semibold text-white mb-4">Order Summary</h2>
-                  
+
                   <div className="space-y-3 mb-6">
                     <div className="flex justify-between">
                       <span className="text-white/70">Subtotal</span>
@@ -186,14 +193,14 @@ const CartPage: React.FC = () => {
                       </span>
                     </div>
                   </div>
-                  
+
                   <button
                     onClick={handleCheckout}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg transition-colors font-medium mb-3"
                   >
                     Proceed to Checkout
                   </button>
-                  
+
                   <button
                     onClick={handleContinueShopping}
                     className="w-full bg-white/20 hover:bg-white/30 text-white py-3 rounded-lg transition-colors font-medium border border-white/30"

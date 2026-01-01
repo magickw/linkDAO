@@ -48,6 +48,19 @@ const ProductThumbnail: React.FC<ProductThumbnailProps> = ({
 
   const imageUrl = getImageUrl();
 
+  // Debug logging to help troubleshoot image display issues
+  useEffect(() => {
+    console.log('[ProductThumbnail] Debug:', {
+      itemId: item.id,
+      itemTitle: item.title,
+      thumbnail: item.thumbnail,
+      image: item.image,
+      images: item.images,
+      resolvedImageUrl: imageUrl,
+      willShowFallback: !imageUrl || imageError
+    });
+  }, [item.id, imageUrl, imageError]);
+
   // Reset error state when image URL changes
   useEffect(() => {
     setImageError(false);
@@ -91,9 +104,9 @@ const ProductThumbnail: React.FC<ProductThumbnailProps> = ({
       'bg-gradient-to-br from-red-500 to-red-600',
       'bg-gradient-to-br from-teal-500 to-teal-600'
     ];
-    
+
     const colorIndex = title.charCodeAt(0) % colors.length;
-    
+
     return (
       <div className={`
         ${sizeClasses[size]} 
@@ -178,7 +191,7 @@ const ProductThumbnail: React.FC<ProductThumbnailProps> = ({
         onError={handleImageError}
         onLoad={handleImageLoad}
       />
-      
+
       {/* Loading state */}
       {isLoading && (
         <div className={`

@@ -18,10 +18,9 @@ import {
   Info
 } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
-import { useAccount, useConnect, useChainId } from 'wagmi';
+import { useAccount, useConnect, useChainId, useSwitchChain } from 'wagmi';
 import { Button } from '@/design-system/components/Button';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
-import { NetworkSwitcher } from '@/components/Web3/NetworkSwitcher';
 import {
   UnifiedCheckoutService,
   CheckoutRecommendation,
@@ -79,6 +78,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const chainId = useChainId();
+  const { switchChain } = useSwitchChain();
   const { addToast } = useToast();
 
   // State management
@@ -339,10 +339,21 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
   const handlePaymentMethodSelect = async (method: PrioritizedPaymentMethod) => {
     setSelectedPaymentMethod(method);
-    // Don't auto-advance - let user confirm their choice with Continue button
 
-    // Track user preference for future prioritization
-    // Note: User preference tracking will be handled through order analytics
+    // Auto-switch network if needed for crypto payments
+    if (method.method.type !== PaymentMethodType.FIAT_STRIPE && isConnected) {
+      const requiredChainId = method.method.chainId;
+      if (chainId !== requiredChainId && switchChain) {
+        try {
+          addToast(`Switching to ${getNetworkName(requiredChainId)}...`, 'info');
+          await switchChain({ chainId: requiredChainId });
+          addToast(`Successfully switched to ${getNetworkName(requiredChainId)}`, 'success');
+        } catch (error) {
+          console.error('Network switch failed:', error);
+          addToast('Network switch cancelled or failed. Please switch manually.', 'warning');
+        }
+      }
+    }
 
     console.log('Payment method selected:', method.method.name);
   };
@@ -480,8 +491,8 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
         {steps.map((step, index) => (
           <React.Fragment key={step.key}>
             <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${step.completed || currentStep === step.key
-                ? 'bg-blue-500 border-blue-500 text-white'
-                : 'border-white/30 text-white/60'
+              ? 'bg-blue-500 border-blue-500 text-white'
+              : 'border-white/30 text-white/60'
               }`}>
               {step.completed ? (
                 <CheckCircle className="w-4 h-4" />
@@ -505,19 +516,28 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       <div className="space-y-4">
         {cartState.items.map((item) => (
           <div key={item.id} className="flex items-center gap-4">
-            <ProductThumbnail
-              item={{
-                id: item.id,
-                title: item.title,
-                image: item.image,
-                category: item.category
-              }}
-              size="medium"
-              fallbackType="letter"
-              className="flex-shrink-0"
-            />
+            <Link href={`/marketplace/product/${item.id}`}>
+              <a className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity">
+                <ProductThumbnail
+                  item={{
+                    id: item.id,
+                    title: item.title,
+                    image: item.image,
+                    images: item.images,
+                    category: item.category
+                  }}
+                  size="medium"
+                  fallbackType="letter"
+                  className="flex-shrink-0"
+                />
+              </a>
+            </Link>
             <div className="flex-1 min-w-0">
-              <h4 className="font-medium text-white truncate">{item.title}</h4>
+              <Link href={`/marketplace/product/${item.id}`}>
+                <a className="hover:text-blue-400 transition-colors">
+                  <h4 className="font-medium text-white truncate">{item.title}</h4>
+                </a>
+              </Link>
               <p className="text-white/70 text-sm">Qty: {item.quantity}</p>
               {item.seller && (
                 <p className="text-white/60 text-xs">by {item.seller.name}</p>
@@ -600,10 +620,10 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
             <div className="flex items-start gap-3">
               <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="font-medium text-white mb-1">Network Selection</h4>
+                <h4 className="font-medium text-white mb-1">Automatic Network Switching</h4>
                 <p className="text-white/70 text-sm">
                   You're currently connected to <span className="font-medium text-white">{getNetworkName(chainId || 1)}</span>.
-                  Payment methods on your current network have lower gas fees.
+                  When you select a payment method, we'll automatically prompt you to switch to the required network.
                 </p>
               </div>
             </div>
@@ -618,7 +638,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
                 prioritizationResult={prioritizationResult}
                 selectedMethodId={selectedPaymentMethod?.method.id}
                 onMethodSelect={handlePaymentMethodSelect}
-                showCostBreakdown={false}
+                showCostBreakdown={true}
                 showRecommendations={true}
                 showWarnings={true}
                 layout="list"
@@ -791,7 +811,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
           <h4 className="font-semibold text-white mb-3">Payment Confirmation</h4>
           <div className="flex items-center gap-3 mb-3">
             <div className={`p-2 rounded-lg ${selectedPaymentMethod.method.type !== PaymentMethodType.FIAT_STRIPE
-                ? 'bg-orange-500/20' : 'bg-blue-500/20'
+              ? 'bg-orange-500/20' : 'bg-blue-500/20'
               }`}>
               {selectedPaymentMethod.method.type !== PaymentMethodType.FIAT_STRIPE ? (
                 <Wallet className="w-4 h-4 text-orange-400" />
@@ -850,12 +870,6 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
           <h1 className="text-3xl font-bold text-white">Secure Checkout</h1>
           <p className="text-white/70">Complete your purchase with escrow protection</p>
         </div>
-        {/* Network Switcher */}
-        {isConnected && (
-          <div className="hidden md:block">
-            <NetworkSwitcher variant="compact" />
-          </div>
-        )}
       </div>
 
       {/* Step Indicator */}
@@ -924,14 +938,36 @@ const CryptoPaymentDetails: React.FC<{
             <span className="text-white/70">Network:</span>
             <span className="text-white">{getNetworkName(paymentMethod.method.chainId || 1)}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-white/70">Gas Fee:</span>
-            <span className="text-white">~${paymentMethod.costEstimate.gasFee.toFixed(2)}</span>
+
+          {/* Detailed Price Breakdown */}
+          <div className="border-t border-white/10 pt-3 mt-3">
+            <div className="flex justify-between mb-2">
+              <span className="text-white/70">Base Price:</span>
+              <span className="text-white">${paymentMethod.costEstimate.baseCost.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between mb-2">
+              <span className="text-white/70">Gas Fee:</span>
+              <span className={`${paymentMethod.costEstimate.gasFee > 1 ? 'text-orange-400' : 'text-white'}`}>
+                ${paymentMethod.costEstimate.gasFee.toFixed(2)}
+                {paymentMethod.costEstimate.gasFee > 1 && ' ⚠️'}
+              </span>
+            </div>
+            <div className="flex justify-between mb-2">
+              <span className="text-white/70">Platform Fee (2.5%):</span>
+              <span className="text-white">${(paymentMethod.costEstimate.baseCost * 0.025).toFixed(2)}</span>
+            </div>
           </div>
-          <div className="flex justify-between">
-            <span className="text-white/70">Total Cost:</span>
-            <span className="text-white font-semibold">${paymentMethod.costEstimate.totalCost.toFixed(2)}</span>
+
+          <div className="flex justify-between border-t border-white/10 pt-3 mt-3">
+            <span className="text-white font-medium">Total Cost:</span>
+            <span className="text-white font-semibold text-lg">${paymentMethod.costEstimate.totalCost.toFixed(2)}</span>
           </div>
+
+          <div className="flex justify-between">
+            <span className="text-white/70">Est. Time:</span>
+            <span className="text-white">~{paymentMethod.costEstimate.estimatedTime} min</span>
+          </div>
+
           <div className="flex justify-between">
             <span className="text-white/70">Escrow Type:</span>
             <span className="text-white">Smart Contract</span>
