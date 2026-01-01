@@ -357,10 +357,11 @@ export class FeedService {
             finalQuickPostFollowingFilter, // Use the correct filter for quick posts
             sql`${quickPosts.moderationStatus} IS NULL OR ${quickPosts.moderationStatus} != 'blocked'`, // Quick post moderation filter
             or(isNull(quickPosts.parentId), eq(quickPosts.isRepost, true)) // Show top-level quick posts OR reposts
-          ));
+          ))
 
         console.log('📊 [BACKEND FEED] Quick posts query result:', {
           count: quickPostsResults.length,
+          repostsCount: quickPostsResults.filter(p => p.isRepost).length,
           samplePost: quickPostsResults[0] ? {
             id: quickPostsResults[0].id,
             authorId: quickPostsResults[0].authorId,
@@ -368,6 +369,12 @@ export class FeedService {
             contentCid: quickPostsResults[0].contentCid,
             isRepost: quickPostsResults[0].isRepost,
             parentId: quickPostsResults[0].parentId
+          } : null,
+          sampleRepost: quickPostsResults.find(p => p.isRepost) ? {
+            id: quickPostsResults.find(p => p.isRepost)!.id,
+            isRepost: quickPostsResults.find(p => p.isRepost)!.isRepost,
+            parentId: quickPostsResults.find(p => p.isRepost)!.parentId,
+            content: quickPostsResults.find(p => p.isRepost)!.content
           } : null
         });
       }
