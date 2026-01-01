@@ -41,12 +41,11 @@ export default function QuotedPost({ post, className = '' }: QuotedPostProps) {
     };
 
     return (
-        <Link
-            href={postUrl}
-            className={`block group mt-2 transition-all duration-200 hover:shadow-md ${className}`}
+        <div
+            className={`block group mt-2 transition-all duration-200 ${className}`}
             onClick={(e) => e.stopPropagation()} // Prevent parent card click handler
         >
-            <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white dark:bg-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 transition-colors duration-200">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white dark:bg-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 transition-colors duration-200 cursor-default">
                 <div className="p-3">
                     {/* Header: Author & Date */}
                     <div className="flex items-center space-x-2 text-sm mb-2">
@@ -172,6 +171,6 @@ export default function QuotedPost({ post, className = '' }: QuotedPostProps) {
                     </div>
                 </div>
             </div>
-        </Link>
+        </div>
     );
 }
