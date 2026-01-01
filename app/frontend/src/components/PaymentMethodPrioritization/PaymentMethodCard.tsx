@@ -318,7 +318,7 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
             </div>
             <div>
               <span className="text-white/60">Platform Fee:</span>
-              <span className="text-white ml-2">{formatCurrency(costEstimate.platformFee || 0)}</span>
+              <span className="text-white ml-2">{formatCurrency((costEstimate as any).platformFee || 0)}</span>
             </div>
             <div>
               <span className="text-white/60">Est. Time:</span>

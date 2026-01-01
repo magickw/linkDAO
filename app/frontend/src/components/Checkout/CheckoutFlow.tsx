@@ -618,10 +618,10 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
                 prioritizationResult={prioritizationResult}
                 selectedMethodId={selectedPaymentMethod?.method.id}
                 onMethodSelect={handlePaymentMethodSelect}
-                showCostBreakdown={true}
+                showCostBreakdown={false}
                 showRecommendations={true}
                 showWarnings={true}
-                layout="grid"
+                layout="list"
                 responsive={true}
                 className="text-white"
               />

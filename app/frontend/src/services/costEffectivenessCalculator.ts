@@ -55,20 +55,23 @@ export class CostEffectivenessCalculator implements ICostEffectivenessCalculator
     switch (paymentMethod.type) {
       case PaymentMethodType.STABLECOIN_USDC:
       case PaymentMethodType.STABLECOIN_USDT:
-        gasFee = await this.calculateGasFee(paymentMethod, networkConditions);
+        // Use realistic gas fees based on network
+        gasFee = this.getRealisticGasFee(paymentMethod.chainId || 1);
         estimatedTime = this.estimateConfirmationTime(networkConditions);
-        confidence = this.calculateGasEstimateConfidence(networkConditions);
+        confidence = 0.85;
         break;
 
       case PaymentMethodType.FIAT_STRIPE:
+        // Fiat has processing fee but no gas
         networkFee = (baseCost * this.STRIPE_FEE_RATE) + this.STRIPE_FIXED_FEE;
+        gasFee = 0; // No gas for fiat
         estimatedTime = 1; // Instant for fiat
-        confidence = 0.95; // High confidence for fiat
+        confidence = 0.98; // Very high confidence for fiat
         break;
 
       case PaymentMethodType.X402:
         // X402 has minimal fees - most gas costs are covered by the protocol
-        gasFee = 0.01; // Minimal network fee
+        gasFee = 0.05; // Minimal network fee
         networkFee = 0;
         platformFee = baseCost * 0.01; // 1% platform fee for x402
         estimatedTime = 1; // ~1 minute with x402
@@ -76,15 +79,16 @@ export class CostEffectivenessCalculator implements ICostEffectivenessCalculator
         break;
 
       case PaymentMethodType.NATIVE_ETH:
-        gasFee = await this.calculateGasFee(paymentMethod, networkConditions);
+        // Use realistic gas fees based on network
+        gasFee = this.getRealisticGasFee(paymentMethod.chainId || 1);
         estimatedTime = this.estimateConfirmationTime(networkConditions);
-        confidence = this.calculateGasEstimateConfidence(networkConditions);
+        confidence = 0.85;
         break;
 
       default:
         // For unknown payment types, use minimal cost estimate
         console.warn(`Unknown payment method type: ${paymentMethod.type}, using minimal cost estimate`);
-        gasFee = 0;
+        gasFee = 0.50; // Small default fee
         networkFee = 0;
         estimatedTime = 5;
         confidence = 0.7;
@@ -108,6 +112,30 @@ export class CostEffectivenessCalculator implements ICostEffectivenessCalculator
         platformFee
       }
     };
+  }
+
+  /**
+   * Get realistic gas fees based on network
+   * These are reasonable estimates that don't vary wildly
+   */
+  private getRealisticGasFee(chainId: number): number {
+    // Realistic gas fees in USD based on network
+    switch (chainId) {
+      case 1: // Ethereum Mainnet - higher fees
+        return 2.50;
+      case 137: // Polygon - very low fees
+        return 0.05;
+      case 42161: // Arbitrum - low fees
+        return 0.15;
+      case 8453: // Base - low fees
+        return 0.10;
+      case 11155111: // Sepolia Testnet
+        return 0.01;
+      case 84532: // Base Sepolia
+        return 0.01;
+      default:
+        return 1.00; // Default reasonable fee
+    }
   }
 
   async comparePaymentMethods(
@@ -207,38 +235,8 @@ export class CostEffectivenessCalculator implements ICostEffectivenessCalculator
   ): Promise<number> {
     if (!paymentMethod.token) return 0;
 
-    try {
-      // Base gas limit for different transaction types
-      let gasLimit = 21000; // Standard transfer
-
-      // Adjust gas limit based on token type
-      if (paymentMethod.type === PaymentMethodType.STABLECOIN_USDC || 
-          paymentMethod.type === PaymentMethodType.STABLECOIN_USDT) {
-        gasLimit = 65000; // ERC-20 transfer
-      }
-
-      // Calculate gas cost in USD
-      const gasCostWei = BigInt(gasLimit) * networkConditions.gasPrice;
-      const gasCostEth = Number(gasCostWei) / 1e18;
-      
-      // Convert to USD using exchange rate service
-      const ethPriceUSD = await this.getETHPriceUSD();
-      const gasFeeUSD = gasCostEth * ethPriceUSD;
-
-      return gasFeeUSD;
-    } catch (error) {
-      console.warn('Gas fee fallback calculation failed, using static fallback:', error);
-      // Static fallback values based on payment method type
-      switch (paymentMethod.type) {
-        case PaymentMethodType.STABLECOIN_USDC:
-        case PaymentMethodType.STABLECOIN_USDT:
-          return 5; // $5 for stablecoin transfers
-        case PaymentMethodType.NATIVE_ETH:
-          return 10; // $10 for ETH transfers
-        default:
-          return 5; // $5 default
-      }
-    }
+    // Use realistic gas fees based on network - avoid wild variations
+    return this.getRealisticGasFee(paymentMethod.chainId || 1);
   }
 
   private estimateConfirmationTime(networkConditions: NetworkConditions): number {
@@ -376,42 +374,20 @@ export class CostEffectivenessCalculator implements ICostEffectivenessCalculator
   }
 
   private async getNetworkConditionsFallback(chainId: number): Promise<NetworkConditions> {
-    try {
-      // Mock implementation - would integrate with network monitoring APIs
-      const gasPrice = await this.estimateGasPrice(chainId);
-      const ethPrice = await this.getETHPriceUSD();
-      const gasPriceUSD = (Number(gasPrice) / 1e9) * (21000 / 1e9) * ethPrice;
+    // Use realistic gas prices and fees
+    const gasFeeUSD = this.getRealisticGasFee(chainId);
+    
+    // Estimate gas price based on realistic fee
+    const gasPrice = BigInt(Math.round(gasFeeUSD * 1e9)); // Simplified conversion
 
-      return {
-        chainId,
-        gasPrice,
-        gasPriceUSD,
-        networkCongestion: gasPriceUSD > 10 ? 'high' : gasPriceUSD > 5 ? 'medium' : 'low',
-        blockTime: chainId === 137 ? 2 : chainId === 42161 ? 0.25 : 12, // seconds
-        lastUpdated: new Date()
-      };
-    } catch (error) {
-      console.warn('Network conditions fallback failed, using static values:', error);
-      // Static fallback values
-      const fallbackGasPrices: Record<number, bigint> = {
-        1: BigInt(20e9), // 20 gwei for mainnet
-        137: BigInt(30e9), // 30 gwei for polygon
-        42161: BigInt(1e9), // 1 gwei for arbitrum
-        11155111: BigInt(10e9) // 10 gwei for sepolia
-      };
-
-      const gasPrice = fallbackGasPrices[chainId] || BigInt(20e9);
-      const gasPriceUSD = 5; // $5 fallback
-
-      return {
-        chainId,
-        gasPrice,
-        gasPriceUSD,
-        networkCongestion: 'medium',
-        blockTime: chainId === 137 ? 2 : chainId === 42161 ? 0.25 : 12,
-        lastUpdated: new Date()
-      };
-    }
+    return {
+      chainId,
+      gasPrice,
+      gasPriceUSD: gasFeeUSD,
+      networkCongestion: gasFeeUSD > 2 ? 'high' : gasFeeUSD > 0.5 ? 'medium' : 'low',
+      blockTime: chainId === 137 ? 2 : chainId === 42161 ? 0.25 : chainId === 8453 ? 2 : 12,
+      lastUpdated: new Date()
+    };
   }
 }
 

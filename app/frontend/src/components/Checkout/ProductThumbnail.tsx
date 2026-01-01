@@ -3,14 +3,16 @@
  * Displays product images with robust fallback mechanisms
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Package, Image as ImageIcon } from 'lucide-react';
 
 interface ProductThumbnailProps {
   item: {
     id: string;
     title: string;
-    image: string;
+    image?: string;
+    images?: string[];
+    thumbnail?: string;
     category?: string;
   };
   size?: 'small' | 'medium' | 'large';
@@ -28,6 +30,29 @@ const ProductThumbnail: React.FC<ProductThumbnailProps> = ({
 }) => {
   const [imageError, setImageError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Get the best available image URL from the item
+  const getImageUrl = (): string | null => {
+    // Priority: thumbnail > image > first image in images array
+    if (item.thumbnail && item.thumbnail.trim()) {
+      return item.thumbnail;
+    }
+    if (item.image && item.image.trim()) {
+      return item.image;
+    }
+    if (item.images && item.images.length > 0 && item.images[0].trim()) {
+      return item.images[0];
+    }
+    return null;
+  };
+
+  const imageUrl = getImageUrl();
+
+  // Reset error state when image URL changes
+  useEffect(() => {
+    setImageError(false);
+    setIsLoading(true);
+  }, [imageUrl]);
 
   const sizeClasses = {
     small: 'w-12 h-12',
@@ -54,7 +79,6 @@ const ProductThumbnail: React.FC<ProductThumbnailProps> = ({
   };
 
   const getLetterAvatar = () => {
-    // Handle null, undefined, or empty titles gracefully
     const title = item.title || 'Product';
     const letter = title.charAt(0).toUpperCase() || 'P';
     const colors = [
@@ -68,7 +92,6 @@ const ProductThumbnail: React.FC<ProductThumbnailProps> = ({
       'bg-gradient-to-br from-teal-500 to-teal-600'
     ];
     
-    // Use title hash to consistently pick a color
     const colorIndex = title.charCodeAt(0) % colors.length;
     
     return (
@@ -84,18 +107,6 @@ const ProductThumbnail: React.FC<ProductThumbnailProps> = ({
   };
 
   const getCategoryIcon = () => {
-    const categoryIcons: { [key: string]: React.ReactNode } = {
-      electronics: <Package className="w-1/2 h-1/2" />,
-      clothing: <Package className="w-1/2 h-1/2" />,
-      books: <Package className="w-1/2 h-1/2" />,
-      home: <Package className="w-1/2 h-1/2" />,
-      sports: <Package className="w-1/2 h-1/2" />,
-      toys: <Package className="w-1/2 h-1/2" />,
-      beauty: <Package className="w-1/2 h-1/2" />,
-      automotive: <Package className="w-1/2 h-1/2" />,
-      default: <Package className="w-1/2 h-1/2" />
-    };
-
     const categoryColors: { [key: string]: string } = {
       electronics: 'bg-blue-500',
       clothing: 'bg-purple-500',
@@ -109,7 +120,6 @@ const ProductThumbnail: React.FC<ProductThumbnailProps> = ({
     };
 
     const category = item.category?.toLowerCase() || 'default';
-    const icon = categoryIcons[category] || categoryIcons.default;
     const color = categoryColors[category] || categoryColors.default;
 
     return (
@@ -119,7 +129,7 @@ const ProductThumbnail: React.FC<ProductThumbnailProps> = ({
         rounded-lg flex items-center justify-center text-white
         ${className}
       `}>
-        {icon}
+        <Package className="w-1/2 h-1/2" />
       </div>
     );
   };
@@ -149,16 +159,16 @@ const ProductThumbnail: React.FC<ProductThumbnailProps> = ({
     }
   };
 
-  // Show fallback if image failed to load or if no image URL
-  if (imageError || !item.image) {
+  // Show fallback if no valid image URL or image failed to load
+  if (imageError || !imageUrl) {
     return getFallback();
   }
 
   return (
     <div className={`relative ${sizeClasses[size]} ${className}`}>
       <img
-        src={item.image}
-        alt={item.title}
+        src={imageUrl}
+        alt={item.title || 'Product'}
         className={`
           ${sizeClasses[size]} 
           rounded-lg object-cover

@@ -6,7 +6,8 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Layout from '@/components/Layout';
-import { cartService, CartItem, CartState } from '@/services/cartService';
+import { cartService, CartState } from '@/services/cartService';
+import ProductThumbnail from '@/components/Checkout/ProductThumbnail';
 import { X, Plus, Minus, ShoppingCart } from 'lucide-react';
 
 const CartPage: React.FC = () => {
@@ -108,10 +109,15 @@ const CartPage: React.FC = () => {
                     {cartState.items.map((item) => (
                       <div key={item.id} className="p-6 flex flex-col sm:flex-row gap-4">
                         <div className="flex-shrink-0">
-                          <img 
-                            src={item.image} 
-                            alt={item.title} 
-                            className="w-24 h-24 object-cover rounded-lg"
+                          <ProductThumbnail
+                            item={{
+                              id: item.id,
+                              title: item.title,
+                              image: item.image,
+                              category: item.category
+                            }}
+                            size="large"
+                            fallbackType="letter"
                           />
                         </div>
                         
