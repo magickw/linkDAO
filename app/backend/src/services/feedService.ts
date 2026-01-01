@@ -688,6 +688,44 @@ export class FeedService {
         let originalPost = null;
 
         if (rawOriginalPost) {
+          // Fetch engagement stats for the original post
+          const [originalCommentCount] = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(comments)
+            .where(eq(comments.postId, rawOriginalPost.id));
+
+          const [originalReactionCount] = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(reactions)
+            .where(eq(reactions.postId, rawOriginalPost.id));
+
+          // Count reposts of the original post
+          const [originalShareCount] = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(quickPosts)
+            .where(and(
+              eq(quickPosts.parentId, rawOriginalPost.id),
+              eq(quickPosts.isRepost, true)
+            ));
+
+          // Count upvotes for the original post
+          const [originalUpvotes] = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(reactions)
+            .where(and(
+              eq(reactions.postId, rawOriginalPost.id),
+              eq(reactions.reactionType, 'upvote')
+            ));
+
+          // Count downvotes for the original post
+          const [originalDownvotes] = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(reactions)
+            .where(and(
+              eq(reactions.postId, rawOriginalPost.id),
+              eq(reactions.reactionType, 'downvote')
+            ));
+
           // Transform raw DB result into expected frontend structure
           originalPost = {
             ...rawOriginalPost,
@@ -713,11 +751,13 @@ export class FeedService {
             previews: [],
             hashtags: [],
             mentions: [],
-            comments: 0,
-            shares: 0,
-            views: 0,
-            upvotes: 0,
-            downvotes: 0
+            // Use actual engagement counts from database
+            comments: Number(originalCommentCount?.count) || 0,
+            shares: Number(originalShareCount?.count) || 0,
+            views: 0, // Views not tracked yet
+            upvotes: Number(originalUpvotes?.count) || 0,
+            downvotes: Number(originalDownvotes?.count) || 0,
+            reactionCount: Number(originalReactionCount?.count) || 0
           };
 
           // Lazily generate shareId for original post if missing

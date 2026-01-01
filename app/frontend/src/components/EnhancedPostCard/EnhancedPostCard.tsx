@@ -461,7 +461,7 @@ const EnhancedPostCard = React.memo(({
             <div className="px-6 py-4 border-b border-gray-200/50 dark:border-gray-700/50">
               {/* Repost Label */}
               {post.isRepost && (
-                <div className="flex items-center space-x-2 mb-3 text-sm text-gray-500 dark:text-gray-400">
+                <div className="flex items-center space-x-2 mb-3 text-sm text-green-600 dark:text-green-500">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
@@ -588,22 +588,30 @@ const EnhancedPostCard = React.memo(({
 
               {/* Content - main focus */}
               <div className="mb-4">
-                <p
-                  className="text-gray-700 dark:text-gray-300 text-base leading-relaxed"
-                  id={`post-content-${post.id}`}
-                >
-                  {contentDisplay}
-                </p>
+                {post.isRepost && (!post.content || post.content.trim() === '') ? (
+                  <p className="text-gray-500 dark:text-gray-400 text-sm italic">
+                    Shared without comment
+                  </p>
+                ) : (
+                  <>
+                    <p
+                      className="text-gray-700 dark:text-gray-300 text-base leading-relaxed"
+                      id={`post-content-${post.id}`}
+                    >
+                      {contentDisplay}
+                    </p>
 
-                {!expanded && post.content.length > 280 && (
-                  <button
-                    onClick={() => setExpanded(true)}
-                    className="text-primary-600 dark:text-primary-400 hover:underline text-sm font-medium mt-2 transition-colors duration-200"
-                    aria-expanded={expanded}
-                    aria-controls={`post-content-${post.id}`}
-                  >
-                    Read more
-                  </button>
+                    {!expanded && post.content.length > 280 && (
+                      <button
+                        onClick={() => setExpanded(true)}
+                        className="text-primary-600 dark:text-primary-400 hover:underline text-sm font-medium mt-2 transition-colors duration-200"
+                        aria-expanded={expanded}
+                        aria-controls={`post-content-${post.id}`}
+                      >
+                        Read more
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
 
