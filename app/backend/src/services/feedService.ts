@@ -419,13 +419,27 @@ export class FeedService {
       // PERFORMANCE OPTIMIZATION: Batch fetch engagement metrics to avoid N+1 queries
       // Instead of 5 queries per post, we do 10 total queries (5 for regular, 5 for quick posts)
 
-      // 1. Separate posts by type
+      // 1. Separate posts by type AND collect originalPost IDs for canonical engagement
       const regularPostIds = paginatedPosts.filter(p => typeof p.id === 'string').map(p => p.id);
       const quickPostIds = paginatedPosts.filter(p => typeof p.id === 'string').map(p => p.id as string);
+
+      // CANONICAL ENGAGEMENT: Collect originalPost IDs from reposts
+      // This ensures we fetch engagement stats for quoted posts in the same bulk query
+      const originalPostIdsFromReposts = paginatedPosts
+        .filter(p => p.isRepost && p.parentId)
+        .map(p => p.parentId as string);
+
+      // Add originalPost IDs to the appropriate arrays (they could be either regular or quick posts)
+      // We'll add them to both arrays and let the queries filter appropriately
+      const allRegularPostIds = [...new Set([...regularPostIds, ...originalPostIdsFromReposts])];
+      const allQuickPostIds = [...new Set([...quickPostIds, ...originalPostIdsFromReposts])];
 
       console.log('🔍 [BACKEND FEED] Batching engagement queries for:', {
         regularPosts: regularPostIds.length,
         quickPosts: quickPostIds.length,
+        originalPostsFromReposts: originalPostIdsFromReposts.length,
+        totalRegularWithOriginals: allRegularPostIds.length,
+        totalQuickWithOriginals: allQuickPostIds.length,
         total: paginatedPosts.length
       });
 
@@ -446,46 +460,46 @@ export class FeedService {
         originalQuickPostsData
       ] = await Promise.all([
         // Regular post reactions
-        regularPostIds.length > 0
+        allRegularPostIds.length > 0
           ? db.select({
             postId: reactions.postId,
             count: sql<number>`COUNT(*)::int`
           })
             .from(reactions)
-            .where(inArray(reactions.postId, regularPostIds))
+            .where(inArray(reactions.postId, allRegularPostIds))
             .groupBy(reactions.postId)
           : Promise.resolve([]),
 
         // Quick post reactions
-        quickPostIds.length > 0
+        allQuickPostIds.length > 0
           ? db.select({
             postId: quickPostReactions.quickPostId,
             count: sql<number>`COUNT(*)::int`
           })
             .from(quickPostReactions)
-            .where(inArray(quickPostReactions.quickPostId, quickPostIds))
+            .where(inArray(quickPostReactions.quickPostId, allQuickPostIds))
             .groupBy(quickPostReactions.quickPostId)
           : Promise.resolve([]),
 
         // Regular post tips count
-        regularPostIds.length > 0
+        allRegularPostIds.length > 0
           ? db.select({
             postId: tips.postId,
             count: sql<number>`COUNT(*)::int`
           })
             .from(tips)
-            .where(inArray(tips.postId, regularPostIds))
+            .where(inArray(tips.postId, allRegularPostIds))
             .groupBy(tips.postId)
           : Promise.resolve([]),
 
         // Quick post tips count
-        quickPostIds.length > 0
+        allQuickPostIds.length > 0
           ? db.select({
             postId: quickPostTips.quickPostId,
             count: sql<number>`COUNT(*)::int`
           })
             .from(quickPostTips)
-            .where(inArray(quickPostTips.quickPostId, quickPostIds))
+            .where(inArray(quickPostTips.quickPostId, allQuickPostIds))
             .groupBy(quickPostTips.quickPostId)
           : Promise.resolve([]),
 
@@ -496,7 +510,7 @@ export class FeedService {
             total: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL)), 0)`
           })
             .from(tips)
-            .where(inArray(tips.postId, regularPostIds))
+            .where(inArray(tips.postId, allRegularPostIds))
             .groupBy(tips.postId)
           : Promise.resolve([]),
 
@@ -507,7 +521,7 @@ export class FeedService {
             total: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL)), 0)`
           })
             .from(quickPostTips)
-            .where(inArray(quickPostTips.quickPostId, quickPostIds))
+            .where(inArray(quickPostTips.quickPostId, allQuickPostIds))
             .groupBy(quickPostTips.quickPostId)
           : Promise.resolve([]),
 
@@ -519,7 +533,7 @@ export class FeedService {
           })
             .from(comments)
             .where(and(
-              inArray(comments.postId, regularPostIds),
+              inArray(comments.postId, allRegularPostIds),
               sql`(${comments.moderationStatus} IS NULL OR ${comments.moderationStatus} != 'blocked')`
             ))
             .groupBy(comments.postId)
@@ -533,7 +547,7 @@ export class FeedService {
           })
             .from(comments)
             .where(and(
-              inArray(comments.quickPostId, quickPostIds),
+              inArray(comments.quickPostId, allQuickPostIds),
               sql`(${comments.moderationStatus} IS NULL OR ${comments.moderationStatus} != 'blocked')`
             ))
             .groupBy(comments.quickPostId)
@@ -546,7 +560,7 @@ export class FeedService {
             count: sql<number>`COUNT(*)::int`
           })
             .from(views)
-            .where(inArray(views.postId, regularPostIds))
+            .where(inArray(views.postId, allRegularPostIds))
             .groupBy(views.postId)
           : Promise.resolve([]),
 
@@ -557,7 +571,7 @@ export class FeedService {
             count: sql<number>`COUNT(*)::int`
           })
             .from(quickPostViews)
-            .where(inArray(quickPostViews.quickPostId, quickPostIds))
+            .where(inArray(quickPostViews.quickPostId, allQuickPostIds))
             .groupBy(quickPostViews.quickPostId)
           : Promise.resolve([]),
 
@@ -688,42 +702,20 @@ export class FeedService {
         let originalPost = null;
 
         if (rawOriginalPost) {
-          // Fetch engagement stats for the original post
-          const [originalCommentCount] = await db
-            .select({ count: sql<number>`count(*)` })
-            .from(comments)
-            .where(eq(comments.postId, rawOriginalPost.id));
+          // CANONICAL ENGAGEMENT: Reuse engagement stats from maps (already fetched in bulk)
+          // This ensures one post = one engagement state, shared across all contexts
+          const originalCommentCount = Number(commentMap.get(rawOriginalPost.id) || 0);
+          const originalReactionCount = Number(reactionMap.get(rawOriginalPost.id) || 0);
+          const originalViewCount = Number(viewMap.get(rawOriginalPost.id) || 0);
 
-          const [originalReactionCount] = await db
-            .select({ count: sql<number>`count(*)` })
-            .from(reactions)
-            .where(eq(reactions.postId, rawOriginalPost.id));
-
-          // Count reposts of the original post
+          // Count reposts of the original post (shares)
+          // Note: This counts how many times THIS post has been reposted
           const [originalShareCount] = await db
             .select({ count: sql<number>`count(*)` })
             .from(quickPosts)
             .where(and(
               eq(quickPosts.parentId, rawOriginalPost.id),
               eq(quickPosts.isRepost, true)
-            ));
-
-          // Count upvotes for the original post
-          const [originalUpvotes] = await db
-            .select({ count: sql<number>`count(*)` })
-            .from(reactions)
-            .where(and(
-              eq(reactions.postId, rawOriginalPost.id),
-              eq(reactions.reactionType, 'upvote')
-            ));
-
-          // Count downvotes for the original post
-          const [originalDownvotes] = await db
-            .select({ count: sql<number>`count(*)` })
-            .from(reactions)
-            .where(and(
-              eq(reactions.postId, rawOriginalPost.id),
-              eq(reactions.reactionType, 'downvote')
             ));
 
           // Transform raw DB result into expected frontend structure
@@ -751,13 +743,15 @@ export class FeedService {
             previews: [],
             hashtags: [],
             mentions: [],
-            // Use actual engagement counts from database
-            comments: Number(originalCommentCount?.count) || 0,
+            // Use canonical engagement counts from maps (O(1) lookup)
+            comments: originalCommentCount,
             shares: Number(originalShareCount?.count) || 0,
-            views: 0, // Views not tracked yet
-            upvotes: Number(originalUpvotes?.count) || 0,
-            downvotes: Number(originalDownvotes?.count) || 0,
-            reactionCount: Number(originalReactionCount?.count) || 0
+            views: originalViewCount,
+            reactionCount: originalReactionCount,
+            // Note: upvotes/downvotes are derived from reactionCount
+            // Frontend can calculate these if needed, or we can add separate maps
+            upvotes: 0,  // TODO: Add upvote/downvote maps if needed
+            downvotes: 0
           };
 
           // Lazily generate shareId for original post if missing
