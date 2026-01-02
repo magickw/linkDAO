@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Package, Image as ImageIcon } from 'lucide-react';
+import { getProxiedIPFSUrl } from '@/utils/ipfsProxy';
 
 interface ProductThumbnailProps {
   item: {
@@ -167,7 +168,7 @@ const ProductThumbnail: React.FC<ProductThumbnailProps> = ({
   return (
     <div className={`relative ${sizeClasses[size]} ${className}`}>
       <img
-        src={imageUrl}
+        src={getProxiedIPFSUrl(imageUrl)}
         alt={item.title || 'Product'}
         className={`
           ${sizeClasses[size]} 

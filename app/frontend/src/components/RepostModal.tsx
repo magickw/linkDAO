@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { useWeb3 } from '@/context/Web3Context';
 import { ToastContext } from '@/context/ToastContext';
 import { getDisplayName, getDefaultAvatar } from '@/utils/userDisplay';
+import { getProxiedIPFSUrl } from '@/utils/ipfsProxy';
 
 // Custom hook to safely access toast context with fallback for portal components
 const useToastOrFallback = () => {
@@ -225,7 +226,7 @@ export default function RepostModal({
                                 {post.media && post.media.length > 0 && (
                                     <div className="mt-2 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 max-h-32">
                                         <img
-                                            src={post.media[0].startsWith('http') ? post.media[0] : `https://gateway.pinata.cloud/ipfs/${post.media[0]}`}
+                                            src={getProxiedIPFSUrl(post.media[0])}
                                             alt="Original post media"
                                             className="w-full h-full object-cover"
                                         />

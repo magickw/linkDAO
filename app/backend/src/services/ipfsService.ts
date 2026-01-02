@@ -358,10 +358,31 @@ export class IPFSService {
         safeLogger.info('Starting IPFS download via gateway (memory-constrained)', { hash: ipfsHash });
 
         // Use axios directly to avoid loading IPFS client
-        const response = await axios.get(`${this.gatewayUrl}/${ipfsHash}`, {
-          timeout: 10000,
-          responseType: 'arraybuffer' // More memory efficient
-        });
+        // Race multiple gateways for better performance
+        const gateways = [
+          this.gatewayUrl,
+          'https://cloudflare-ipfs.com/ipfs',
+          'https://dweb.link/ipfs'
+        ];
+
+        // Ensure unique gateways and remove trailing slashes
+        const uniqueGateways = [...new Set(gateways)].map(url => url.replace(/\/+$/, ''));
+
+        safeLogger.info(`Attempting download from ${uniqueGateways.length} gateways`, { hash: ipfsHash, gateways: uniqueGateways });
+
+        const downloadPromises = uniqueGateways.map(gateway =>
+          axios.get(`${gateway}/${ipfsHash}`, {
+            timeout: 10000,
+            responseType: 'arraybuffer'
+          }).then(response => ({ gateway, data: response.data }))
+        );
+
+        // Use Promise.any to get the first successful response
+        const { data, gateway } = await Promise.any(downloadPromises);
+
+        safeLogger.info(`Download successful from ${gateway}`, { hash: ipfsHash });
+
+        const response = { data }; // maintain compatibility with existing code structure
 
         const content = Buffer.from(response.data);
         const size = content.length;

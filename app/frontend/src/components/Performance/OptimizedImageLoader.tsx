@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LoadingSkeleton } from '../../design-system/components/LoadingSkeleton';
+import { getProxiedIPFSUrl } from '@/utils/ipfsProxy';
 
 interface OptimizedImageProps {
   src: string;
@@ -155,8 +156,8 @@ const getOptimizedImageURL = (
 
   // Handle IPFS CIDs by converting to gateway URL
   if (src.startsWith('Qm') || src.startsWith('baf')) {
-    const ipfsGateway = 'https://gateway.pinata.cloud/ipfs/';
-    const url = new URL(`${ipfsGateway}${src}`);
+    const proxyUrl = getProxiedIPFSUrl(src);
+    const url = new URL(proxyUrl);
 
     // Add optimization parameters
     if (width) url.searchParams.set('w', width.toString());

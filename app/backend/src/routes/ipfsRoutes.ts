@@ -1,13 +1,15 @@
 import { Router } from 'express';
 import { ipfsIntegrationService } from '../services/ipfsIntegrationService';
 import { ipfsService } from '../services/ipfsService';
+import { cacheService } from '../services/cacheService';
 import { safeLogger } from '../utils/safeLogger';
 import multer from 'multer';
+import sharp from 'sharp';
 
 // Log the imported services for debugging
-safeLogger.info('IPFS routes - imported services', { 
-  ipfsService: !!ipfsService, 
-  ipfsIntegrationService: !!ipfsIntegrationService 
+safeLogger.info('IPFS routes - imported services', {
+  ipfsService: !!ipfsService,
+  ipfsIntegrationService: !!ipfsIntegrationService
 });
 
 const router = Router();
@@ -114,7 +116,7 @@ router.post('/upload-multiple', upload.array('files', 10), async (req, res) => {
     });
   } catch (error) {
     safeLogger.error('IPFS multiple file upload error:', error);
-    
+
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Upload failed'
@@ -130,7 +132,7 @@ router.get('/health', async (req, res) => {
   try {
     // Try to get IPFS node info
     const nodeInfo = await ipfsService.getNodeInfo();
-    
+
     res.status(200).json({
       success: true,
       status: 'healthy',
@@ -168,20 +170,60 @@ router.get('/:hash', async (req, res) => {
 
     const { content, metadata } = await ipfsIntegrationService.downloadDocument(hash);
 
+    // Check for image processing parameters
+    const width = req.query.w ? parseInt(req.query.w as string) : undefined;
+    const height = req.query.h ? parseInt(req.query.h as string) : undefined;
+    const quality = req.query.q ? parseInt(req.query.q as string) : undefined;
+    const format = req.query.f as string;
+
+    let sentContent = content;
+    let contentType = metadata.mimeType || 'application/octet-stream';
+
+    // Only process if we have image parameters and it looks like an image
+    if ((width || height || quality || format) && (contentType.startsWith('image/') || contentType === 'application/octet-stream')) {
+      try {
+        let pipeline = sharp(content);
+
+        if (width || height) {
+          pipeline = pipeline.resize(width, height, {
+            fit: 'cover',
+            withoutEnlargement: true
+          });
+        }
+
+        if (format) {
+          if (format === 'webp') pipeline = pipeline.webp({ quality: quality || 80 });
+          else if (format === 'png') pipeline = pipeline.png({ quality: quality || 80 });
+          else if (format === 'jpeg' || format === 'jpg') pipeline = pipeline.jpeg({ quality: quality || 80 });
+          else if (format === 'avif') pipeline = pipeline.avif({ quality: quality || 80 });
+          contentType = `image/${format === 'jpg' ? 'jpeg' : format}`;
+        } else if (quality) {
+          // If no format specified but quality is, maintain original format if possible or default to jpeg/png
+          // For simplicity, if only quality is given, we might need to know the input format.
+          // Sharp keeps input format by default if not changed.
+        }
+
+        sentContent = await pipeline.toBuffer();
+      } catch (processError) {
+        safeLogger.warn(`Failed to process image for ${hash}, sending original:`, processError);
+        // Continue with original content
+      }
+    }
+
     // Set appropriate headers
     res.set({
-      'Content-Type': metadata.mimeType || 'application/octet-stream',
-      'Content-Length': metadata.size,
+      'Content-Type': contentType,
+      'Content-Length': sentContent.length,
       'Content-Disposition': `inline; filename="${metadata.name}"`,
       'Cache-Control': 'public, max-age=31536000', // 1 year for IPFS content
-      'ETag': `"${hash}"`
+      'ETag': `"${hash}-${width || ''}-${height || ''}-${format || ''}"`
     });
 
     // Send file content
-    res.send(content);
+    res.send(sentContent);
   } catch (error) {
     safeLogger.error(`IPFS file download error for ${req.params.hash}:`, error);
-    
+
     if ((error as any).message.includes('not found')) {
       res.status(404).json({
         success: false,
@@ -221,7 +263,7 @@ router.get('/metadata/:hash', async (req, res) => {
     });
   } catch (error) {
     safeLogger.error(`IPFS metadata fetch error for ${req.params.hash}:`, error);
-    
+
     if ((error as any).message.includes('not found')) {
       res.status(404).json({
         success: false,
@@ -270,7 +312,7 @@ router.post('/pin/:hash', async (req, res) => {
     }
   } catch (error) {
     safeLogger.error(`IPFS pin error for ${req.params.hash}:`, error);
-    
+
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Pin operation failed'
@@ -312,7 +354,7 @@ router.delete('/unpin/:hash', async (req, res) => {
     }
   } catch (error) {
     safeLogger.error(`IPFS unpin error for ${req.params.hash}:`, error);
-    
+
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Unpin operation failed'
@@ -348,7 +390,7 @@ router.get('/exists/:hash', async (req, res) => {
     });
   } catch (error) {
     safeLogger.error(`IPFS existence check error for ${req.params.hash}:`, error);
-    
+
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Existence check failed'
@@ -384,7 +426,7 @@ router.get('/pin-status/:hash', async (req, res) => {
     });
   } catch (error) {
     safeLogger.error(`IPFS pin status check error for ${req.params.hash}:`, error);
-    
+
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Pin status check failed'
@@ -426,7 +468,7 @@ router.post('/governance-proposal', async (req, res) => {
     });
   } catch (error) {
     safeLogger.error('IPFS governance proposal upload error:', error);
-    
+
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Proposal upload failed'
@@ -469,7 +511,7 @@ router.post('/post-content', async (req, res) => {
     });
   } catch (error) {
     safeLogger.error('IPFS post content upload error:', error);
-    
+
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Post upload failed'
@@ -502,7 +544,7 @@ router.get('/governance-proposal/:hash', async (req, res) => {
     });
   } catch (error) {
     safeLogger.error(`IPFS governance proposal download error for ${req.params.hash}:`, error);
-    
+
     if ((error as any).message.includes('not found')) {
       res.status(404).json({
         success: false,
@@ -542,7 +584,7 @@ router.get('/post-content/:hash', async (req, res) => {
     });
   } catch (error) {
     safeLogger.error(`IPFS post content download error for ${req.params.hash}:`, error);
-    
+
     if ((error as any).message.includes('not found')) {
       res.status(404).json({
         success: false,
