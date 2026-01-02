@@ -50,11 +50,8 @@ const ContactCard: React.FC<ContactCardProps> = ({ contact, className = '', onCo
 
   const handleMessage = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (onContactMessage) {
-      onContactMessage(contact);
-    } else {
-      startChat(contact);
-    }
+    // Direct call to context's startChat to avoid unnecessary indirection
+    startChat(contact);
   };
 
   const handleEdit = (e: React.MouseEvent) => {

@@ -4,12 +4,13 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MessageCircle, X, Bell, Minimize2, Maximize2, Send, Plus, Search, MoreVertical,
   User, Hash, ThumbsUp, Heart, Zap, Rocket, Globe, Users, ChevronDown, ChevronRight,
   Image, Link as LinkIcon, Wallet, Vote, Calendar, Tag, Settings, ArrowLeftRight,
-  Phone, Video, Shield, ArrowLeft, Loader2, AlertCircle, Wifi, WifiOff
+  Phone, Video, Shield, ArrowLeft, Loader2, AlertCircle, Wifi, WifiOff, ExternalLink
 } from 'lucide-react';
 import { ChatBubbleLeftIcon, UserGroupIcon } from '@heroicons/react/24/outline';
 import { useChatHistory } from '@/hooks/useChatHistory';
@@ -41,6 +42,8 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
   className = '',
   position = 'bottom-right'
 }) => {
+  const router = useRouter();
+  
   // ✅ PHASE 1 FIX: Consolidate to useWalletAuth only
   const { walletInfo } = useWalletAuth();
   const { address, isConnected } = useAccount();
@@ -389,11 +392,17 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
       localStorage.setItem('floatingChatWidgetOpen', JSON.stringify(true));
       localStorage.setItem('floatingChatWidgetMinimized', JSON.stringify(false));
 
-      // If hookConversations is not loaded yet, load them and return
-      // State changes will trigger this effect again when conversations are loaded
+      // Switch to contacts tab first to show the contact list
+      setActiveTab('contacts');
+
+      // If hookConversations is not loaded yet, load them and wait
       if (!hookConversations || hookConversations.length === 0) {
         console.log("FloatingChatWidget: Conversations not loaded yet, loading...");
-        loadConversations();
+        loadConversations().then(() => {
+          console.log("FloatingChatWidget: Conversations loaded, will process pending contact");
+        }).catch(error => {
+          console.error("FloatingChatWidget: Failed to load conversations:", error);
+        });
         return; // Wait for the next render when conversations are loaded
       }
 
@@ -409,7 +418,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
       console.log("FloatingChatWidget: Found existing conversation:", existingConversation);
 
       if (existingConversation) {
-        // If conversation exists, select it (inline the logic to avoid circular dependency)
+        // If conversation exists, select it
         console.log("FloatingChatWidget: Selecting existing conversation:", existingConversation);
         setSelectedConversation(existingConversation);
 
@@ -433,7 +442,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
         // If no conversation exists, automatically create one
         console.log("FloatingChatWidget: No existing conversation found, creating new conversation with address:", pendingContact.walletAddress);
 
-        // Set the recipient address in state (keeps UI in sync) and trigger conversation creation
+        // Set the recipient address in state (keeps UI in sync)
         setNewRecipientAddress(pendingContact.walletAddress);
 
         // Call startNewConversation with the pending contact address to avoid a race
@@ -460,6 +469,12 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
       });
     } catch (error) {
       console.error('Failed to send message:', error);
+    }
+  };
+
+  const navigateToFullChat = () => {
+    if (selectedConversation) {
+      router.push(`/messages/${selectedConversation.id}`);
     }
   };
 
@@ -666,13 +681,23 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
                     </button>
                   )}
                   {activeTab === 'chat' && (
-                    <button
-                      onClick={handleBackToList}
-                      className="mr-1 opacity-70 hover:opacity-100 active:scale-[0.98] transition-transform"
-                      aria-label="Back to messages"
-                    >
-                      <ArrowLeft size={16} className="text-white" />
-                    </button>
+                    <>
+                      <button
+                        onClick={navigateToFullChat}
+                        className="mr-1 opacity-70 hover:opacity-100 active:scale-[0.98] transition-transform"
+                        aria-label="Open full chat"
+                        title="Open full chat interface"
+                      >
+                        <ExternalLink size={16} className="text-white" />
+                      </button>
+                      <button
+                        onClick={handleBackToList}
+                        className="mr-1 opacity-70 hover:opacity-100 active:scale-[0.98] transition-transform"
+                        aria-label="Back to messages"
+                      >
+                        <ArrowLeft size={16} className="text-white" />
+                      </button>
+                    </>
                   )}
                   <button
                     onClick={() => {
