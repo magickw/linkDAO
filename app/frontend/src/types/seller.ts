@@ -22,6 +22,16 @@ export interface SellerProfile {
     sellerStory?: string;
     location?: string;
 
+    // Business Information
+    legalBusinessName?: string;
+    businessType?: string;
+    registeredAddressStreet?: string;
+    registeredAddressCity?: string;
+    registeredAddressState?: string;
+    registeredAddressPostalCode?: string;
+    registeredAddressCountry?: string;
+    storeDescription?: string;
+
     // ENS Support (optional)
     ensHandle?: string;
     ensVerified: boolean;

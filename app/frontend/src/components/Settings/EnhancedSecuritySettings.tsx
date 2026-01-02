@@ -18,6 +18,8 @@ export function EnhancedSecuritySettings() {
     const [verificationCode, setVerificationCode] = useState('');
     const [emailVerificationCode, setEmailVerificationCode] = useState('');
     const [email2FAMessage, setEmail2FAMessage] = useState('');
+    const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
 
     // Load all security data on mount
     useEffect(() => {
@@ -74,8 +76,14 @@ export function EnhancedSecuritySettings() {
             await securityService.verifyAndEnableTOTP(verificationCode);
             setShow2FASetup(false);
             setVerificationCode('');
-            alert('2FA enabled successfully!');
+            setSuccessMessage('2FA enabled successfully! Your account is now more secure.');
+            setShowSuccessMessage(true);
             loadSecurityData();
+            
+            // Auto-hide success message after 5 seconds
+            setTimeout(() => {
+                setShowSuccessMessage(false);
+            }, 5000);
         } catch (error) {
             console.error('Error verifying 2FA:', error);
             alert('Invalid verification code. Please try again.');
@@ -98,9 +106,14 @@ export function EnhancedSecuritySettings() {
             await securityService.verifyAndEnableEmail2FA(emailVerificationCode);
             setShowEmail2FASetup(false);
             setEmailVerificationCode('');
-            setEmail2FAMessage('');
-            alert('Email 2FA enabled successfully!');
+            setSuccessMessage('Email 2FA enabled successfully! Your account is now more secure.');
+            setShowSuccessMessage(true);
             loadSecurityData();
+            
+            // Auto-hide success message after 5 seconds
+            setTimeout(() => {
+                setShowSuccessMessage(false);
+            }, 5000);
         } catch (error) {
             console.error('Error verifying email 2FA:', error);
             alert('Invalid verification code. Please try again.');
@@ -196,6 +209,40 @@ export function EnhancedSecuritySettings() {
                 <span className="text-2xl mr-3">🔒</span>
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Security & Privacy</h2>
             </div>
+
+            {/* Success Message */}
+            {showSuccessMessage && (
+                <div className="mb-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                    <div className="flex items-start">
+                        <div className="flex-shrink-0">
+                            <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                        </div>
+                        <div className="ml-3 flex-1">
+                            <h3 className="text-sm font-medium text-green-800 dark:text-green-200">
+                                Success
+                            </h3>
+                            <div className="mt-2 text-sm text-green-700 dark:text-green-300">
+                                {successMessage}
+                            </div>
+                        </div>
+                        <div className="ml-auto pl-3">
+                            <div className="-mx-1.5 -my-1.5">
+                                <button
+                                    onClick={() => setShowSuccessMessage(false)}
+                                    className="inline-flex bg-green-50 dark:bg-green-900/20 rounded-md p-1.5 text-green-500 hover:bg-green-100 dark:hover:bg-green-900/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-green-50 focus:ring-green-600"
+                                >
+                                    <span className="sr-only">Dismiss</span>
+                                    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="space-y-6">
                 {/* Security Status Overview */}

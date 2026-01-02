@@ -8,7 +8,7 @@ import { marketplaceService } from '@/services/marketplaceService';
 import { enhancedMarketplaceService } from '@/services/enhancedMarketplaceService';
 import type { MarketplaceListing } from '@/services/marketplaceService';
 import BidModal from '@/components/Marketplace/BidModal';
-import PurchaseModal from '@/components/Marketplace/PurchaseModal';
+
 import MakeOfferModal from '@/components/Marketplace/MakeOfferModal';
 import ProductDetailModal from '@/components/Marketplace/ProductDetailModal';
 import ReturnRefundModal from '@/components/Marketplace/ReturnRefundModal';
@@ -76,7 +76,7 @@ const MarketplaceContent: React.FC = () => {
   const [selectedListing, setSelectedListing] = useState<MarketplaceListing | null>(null);
   const [showBidModal, setShowBidModal] = useState(false);
   const [showOfferModal, setShowOfferModal] = useState(false);
-  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showReturnRefundModal, setShowReturnRefundModal] = useState(false);
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
@@ -851,17 +851,7 @@ const MarketplaceContent: React.FC = () => {
                   fetchListings();
                 }}
               />
-              <PurchaseModal
-                listing={selectedListing}
-                isOpen={showPurchaseModal}
-                onClose={() => {
-                  setShowPurchaseModal(false);
-                  setSelectedListing(null);
-                }}
-                onSuccess={() => {
-                  fetchListings();
-                }}
-              />
+
               <MakeOfferModal
                 listing={selectedListing}
                 isOpen={showOfferModal}

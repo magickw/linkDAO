@@ -166,7 +166,7 @@ export function transformSellerListingToUnified(
     let shippingOptions = {
       free: false,
       cost: 0,
-      estimatedDays: 5,
+      estimatedDays: '3-5',
       international: false,
     };
     if (backendListing.shippingOptions) {
@@ -178,7 +178,7 @@ export function transformSellerListingToUnified(
           shippingOptions = {
             free: parsed.free ?? false,
             cost: parsed.cost ?? 0,
-            estimatedDays: parsed.estimatedDays ?? 5,
+            estimatedDays: parsed.estimatedDays ?? '3-5',
             international: parsed.international ?? false,
           };
         } catch {
@@ -188,14 +188,14 @@ export function transformSellerListingToUnified(
         shippingOptions = {
           free: backendListing.shipping.free ?? false,
           cost: backendListing.shipping.cost ?? 0,
-          estimatedDays: backendListing.shipping.estimatedDays ?? 5,
+          estimatedDays: backendListing.shipping.estimatedDays ?? '3-5',
           international: backendListing.shipping.international ?? false,
         };
       }
     }
 
     // Parse specifications from metadata if available
-    let specifications: any[] = [];
+    let specifications: Record<string, string> = {};
     if (backendListing.specifications) {
       specifications = backendListing.specifications;
     } else if (backendListing.metadata) {
@@ -947,7 +947,7 @@ function mapMarketplaceStatus(status: any, isActive?: boolean): UnifiedSellerLis
       'CANCELLED': 'cancelled',
       'EXPIRED': 'expired',
       'active': 'active',
-      'inactive': 'inactive',
+      'inactive': 'paused',
       'draft': 'draft',
       'DRAFT': 'draft',
       'paused': 'paused',
@@ -1179,7 +1179,7 @@ export function transformBackendListingToUnified(
 
   try {
     // Parse metadata if it's a string
-    let metadata = {};
+    let metadata: any = {};
     if (typeof backendListing.metadata === 'string') {
       try {
         metadata = JSON.parse(backendListing.metadata);
@@ -1287,7 +1287,7 @@ export function transformBackendListingToUnified(
       displayCurrency: backendListing.currency || 'USD',
 
       // Inventory and availability
-      quantity: backendListing.inventory || 1,
+      inventory: backendListing.inventory || 1,
       condition: condition as 'new' | 'used' | 'refurbished',
       availability: availability,
 
@@ -1298,31 +1298,37 @@ export function transformBackendListingToUnified(
       // Status and lifecycle
       status: mappedStatus,
       listingType: listingType,
-      saleType: saleType as 'fixed' | 'auction' | 'negotiable',
+      saleType: 'physical',
       escrowEnabled: escrowEnabled,
 
       // Shipping and fulfillment
       shippingOptions: {
         free: shipping?.freeShipping || false,
         cost: shipping?.cost || 0,
-        estimatedDays: shipping?.estimatedDelivery || 5,
+        estimatedDays: shipping?.estimatedDelivery || '3-5',
         international: shipping?.international || false,
       },
 
       // Engagement metrics
       views: backendListing.views || 0,
       favorites: backendListing.favorites || 0,
+      likes: backendListing.favorites || 0,
       questions: 0, // Not available in backend data
 
+      // Add missing escrow fields
+      isEscrowProtected: escrowEnabled,
+      isEscrowed: escrowEnabled,
+
       // Metadata
-      specifications: [], // Not directly available in backend data
+      specifications: {}, // Not directly available in backend data
       metadata: metadata,
 
       // Trust and verification
       trust: {
         verified: true, // Assume verified for now
-        score: 85, // Default score
-        endorsements: []
+        escrowProtected: escrowEnabled,
+        onChainCertified: false,
+        safetyScore: 85,
       },
       verificationStatus: 'verified',
 

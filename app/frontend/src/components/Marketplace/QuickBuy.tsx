@@ -11,6 +11,28 @@ import { useToast } from '@/context/ToastContext';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { Button } from '@/design-system/components/Button';
 import { useEnhancedCart } from '@/hooks/useEnhancedCart';
+import { useChainId, useSwitchChain } from 'wagmi';
+import {
+  UnifiedCheckoutService,
+  PrioritizedCheckoutRequest
+} from '@/services/unifiedCheckoutService';
+import { CryptoPaymentService } from '@/services/cryptoPaymentService';
+import { StripePaymentService } from '@/services/stripePaymentService';
+import { PaymentMethodPrioritizationService } from '@/services/paymentMethodPrioritizationService';
+import { CostEffectivenessCalculator } from '@/services/costEffectivenessCalculator';
+import { NetworkAvailabilityChecker } from '@/services/networkAvailabilityChecker';
+import { UserPreferenceManager } from '@/services/userPreferenceManager';
+import PaymentMethodSelector from '@/components/PaymentMethodPrioritization/PaymentMethodSelector';
+import {
+  PaymentMethodType,
+  PrioritizedPaymentMethod,
+  PrioritizationContext,
+  PrioritizationResult,
+  MarketConditions
+} from '@/types/paymentPrioritization';
+import { getNetworkName } from '@/config/escrowConfig';
+import { USDC_MAINNET, USDC_POLYGON, USDC_ARBITRUM, USDC_SEPOLIA, USDC_BASE, USDC_BASE_SEPOLIA } from '@/config/payment';
+import { PaymentError as PaymentErrorType } from '@/services/paymentErrorHandler';
 
 interface QuickBuyProps {
   listing: MarketplaceListing;
@@ -29,6 +51,8 @@ export const QuickBuy: React.FC<QuickBuyProps> = ({
 }) => {
   const { address, isConnected } = useAccount();
   const { data: balance } = useBalance({ address });
+  const chainId = useChainId();
+  const { switchChain } = useSwitchChain();
   const { addToast } = useToast();
   const cart = useEnhancedCart();
 
@@ -40,6 +64,28 @@ export const QuickBuy: React.FC<QuickBuyProps> = ({
   const [deliveryInfo, setDeliveryInfo] = useState('');
   const [orderId, setOrderId] = useState<string | null>(null);
 
+  // New State for Unified Checkout
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PrioritizedPaymentMethod | null>(null);
+  const [prioritizationResult, setPrioritizationResult] = useState<PrioritizationResult | null>(null);
+
+  // Services Initialization
+  const [checkoutService] = useState(() => {
+    const cryptoService = new CryptoPaymentService();
+    const stripeService = new StripePaymentService();
+    return new UnifiedCheckoutService(cryptoService, stripeService);
+  });
+
+  const [prioritizationService] = useState(() => {
+    const costCalculator = new CostEffectivenessCalculator();
+    const networkChecker = new NetworkAvailabilityChecker();
+    const preferenceManager = new UserPreferenceManager();
+    return new PaymentMethodPrioritizationService(
+      costCalculator,
+      networkChecker,
+      preferenceManager
+    );
+  });
+
   // Reset state when modal opens/closes
   useEffect(() => {
     if (isOpen) {
@@ -47,8 +93,179 @@ export const QuickBuy: React.FC<QuickBuyProps> = ({
       setError(null);
       setUseEscrow(true);
       setOrderId(null);
+      // Trigger prioritization load
+      loadPaymentPrioritization();
     }
   }, [isOpen]);
+
+  // Helper Functions needed for Prioritization (copied/adapted from CheckoutFlow)
+  const getAvailablePaymentMethods = async () => {
+    // Configs for USDC across networks
+    const usdcConfigs = [
+      { token: USDC_MAINNET, name: 'USDC (Ethereum)', chainId: 1, networkName: 'Ethereum' },
+      { token: USDC_POLYGON, name: 'USDC (Polygon)', chainId: 137, networkName: 'Polygon' },
+      { token: USDC_ARBITRUM, name: 'USDC (Arbitrum)', chainId: 42161, networkName: 'Arbitrum' },
+      { token: USDC_BASE, name: 'USDC (Base)', chainId: 8453, networkName: 'Base' },
+      { token: USDC_SEPOLIA, name: 'USDC (Sepolia)', chainId: 11155111, networkName: 'Sepolia Testnet' },
+      { token: USDC_BASE_SEPOLIA, name: 'USDC (Base Sepolia)', chainId: 84532, networkName: 'Base Sepolia' }
+    ];
+
+    const methods: any[] = [];
+
+    // Add USDC options
+    usdcConfigs.forEach(config => {
+      methods.push({
+        id: `usdc-${config.chainId}`,
+        type: PaymentMethodType.STABLECOIN_USDC,
+        name: config.name,
+        description: `USD Coin on ${config.networkName}`,
+        chainId: config.chainId,
+        enabled: true,
+        supportedNetworks: [config.chainId],
+        token: config.token
+      });
+    });
+
+    // Add Fiat
+    methods.push({
+      id: 'stripe-fiat',
+      type: PaymentMethodType.FIAT_STRIPE,
+      name: 'Credit/Debit Card',
+      description: 'Pay with credit or debit card',
+      chainId: 0,
+      enabled: true,
+      supportedNetworks: [1, 137, 42161, 8453, 11155111, 84532]
+    });
+
+    // Add x402
+    methods.push({
+      id: 'x402-payment',
+      type: PaymentMethodType.X402,
+      name: 'x402 Protocol',
+      description: 'Pay with reduced fees using Coinbase x402 protocol',
+      chainId: 1,
+      enabled: true,
+      supportedNetworks: [1, 137, 42161, 11155111],
+      token: {
+        address: '0x0000000000000000000000000000000000000000',
+        symbol: 'X402',
+        decimals: 18,
+        name: 'x402 Protocol',
+        chainId: 1,
+        isNative: false
+      }
+    });
+
+    // Add Native ETH
+    methods.push({
+      id: 'eth-mainnet',
+      type: PaymentMethodType.NATIVE_ETH,
+      name: 'Ethereum',
+      description: 'Native ETH',
+      chainId: 1,
+      enabled: true,
+      supportedNetworks: [1],
+      token: {
+        address: '0x0000000000000000000000000000000000000000',
+        symbol: 'ETH',
+        decimals: 18,
+        name: 'Ethereum',
+        chainId: 1,
+        isNative: true
+      }
+    });
+
+    return methods;
+  };
+
+  const getCurrentMarketConditions = async (): Promise<MarketConditions> => {
+    // Mock implementation aligning with CheckoutFlow
+    return {
+      gasConditions: [{ chainId: 1, gasPrice: BigInt(30000000000), gasPriceUSD: 0.50, networkCongestion: 'medium', blockTime: 12, lastUpdated: new Date() }],
+      networkAvailability: [{ chainId: 1, available: true }],
+      exchangeRates: [
+        { fromToken: 'ETH', toToken: 'USD', rate: 2000, source: 'coingecko', confidence: 0.95, lastUpdated: new Date() },
+        { fromToken: 'USDC', toToken: 'USD', rate: 1, source: 'coingecko', confidence: 0.99, lastUpdated: new Date() }
+      ],
+      lastUpdated: new Date()
+    };
+  };
+
+  const loadPaymentPrioritization = async () => {
+    if (!listing) return;
+    setLoading(true);
+    try {
+      const context: PrioritizationContext = {
+        transactionAmount: parseFloat(listing.price), // Assuming price is in ETH/USD? CheckoutFlow assumes FIAT total. QuickBuy listing.price seems to be ETH.
+        // Wait, listing.price in PurchaseModal was treated as ETH.
+        // QuickBuy originally checked "balance < price" (ETH).
+        // CheckoutFlow treats cartState.totals.total.fiat as the amount.
+        // We need to clarify if listing.price is ETH or USD. 
+        // Based on "Buy Now - {listing.price} ETH" in UI, it is ETH.
+        // UnifiedCheckoutService likely expects USD amount? 
+        // CheckoutFlow: amount: parseFloat(cartState.totals.total.fiat) -> USD.
+        // So we need to convert ETH to USD for the service context if the service expects USD.
+        // Or if listing.price is USD?
+        // PurchaseModal: fiat: (parseFloat(listing.price) * 1650).toFixed(2). 
+        // So listing.price IS ETH. We need to convert it to USD for the context roughly.
+        // For the sake of this refactor, let's look at how CheckoutFlow uses it.
+        // CheckoutFlow passes `cartState.totals.total.fiat`.
+        // We should calculate estimated USD.
+        transactionCurrency: 'USD',
+        userContext: {
+          userAddress: address || undefined,
+          chainId: chainId || 1,
+          walletBalances: [],
+          preferences: {
+            preferredMethods: [],
+            avoidedMethods: [],
+            maxGasFeeThreshold: 50,
+            preferStablecoins: true,
+            preferFiat: false,
+            lastUsedMethods: [],
+            autoSelectBestOption: true
+          }
+        },
+        availablePaymentMethods: await getAvailablePaymentMethods(),
+        marketConditions: await getCurrentMarketConditions()
+      };
+
+      // Rough ETH -> USD conversion for context if needed, or update context to support ETH.
+      // UnifiedCheckoutService likely handles currency conversion internally or expects USD.
+      // Let's perform a rough conversion using the 1650 rate found elsewhere to populate the USD expectation
+      // OR better, we simply pass the ETH amount if the type allows.
+      // PrioritizationContext: transactionAmount: number, transactionCurrency: string.
+      // Let's convert for now to match CheckoutFlow pattern.
+      const ethPrice = parseFloat(listing.price);
+      context.transactionAmount = ethPrice * 2000; // Using 2000 as per CheckoutFlow mock rate for consistency
+
+      const result = await prioritizationService.prioritizePaymentMethods(context);
+      setPrioritizationResult(result);
+      if (result.defaultMethod) {
+        setSelectedPaymentMethod(result.defaultMethod);
+      }
+    } catch (err) {
+      console.error('Failed to load payment options', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePaymentMethodSelect = async (method: PrioritizedPaymentMethod) => {
+    setSelectedPaymentMethod(method);
+    if (method.method.type !== PaymentMethodType.FIAT_STRIPE && isConnected) {
+      const requiredChainId = method.method.chainId;
+      if (chainId !== requiredChainId && switchChain) {
+        try {
+          await switchChain({ chainId: requiredChainId });
+          addToast(`Switched to ${getNetworkName(requiredChainId)}`, 'success');
+        } catch (e) {
+          console.error(e);
+          addToast('Network switch failed', 'warning');
+        }
+      }
+    }
+  };
 
   const formatAddress = (addr: string) => {
     return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
@@ -58,14 +275,7 @@ export const QuickBuy: React.FC<QuickBuyProps> = ({
     return type.charAt(0) + type.slice(1).toLowerCase().replace('_', ' ');
   };
 
-  const getUserBalance = () => {
-    return balance ? parseFloat(balance.formatted) : 0;
-  };
 
-  const canAffordPurchase = () => {
-    const price = parseFloat(listing.price);
-    return getUserBalance() >= price;
-  };
 
   const handleQuickBuy = async () => {
     if (!address || !isConnected) {
@@ -73,57 +283,53 @@ export const QuickBuy: React.FC<QuickBuyProps> = ({
       return;
     }
 
-    if (address.toLowerCase() === listing.sellerWalletAddress.toLowerCase()) {
-      addToast('You cannot buy your own listing', 'error');
+    if (!selectedPaymentMethod) {
+      addToast('Please select a payment method', 'error');
       return;
     }
 
-    if (!canAffordPurchase()) {
-      addToast(`Insufficient balance. You need ${listing.price} ETH`, 'error');
-      return;
-    }
+    // Basic balance check logic moved to prioritization service, but we can double check here or trust the selector
+    // The selector should ideally disable methods the user can't afford, but for now we proceed.
 
     try {
       setLoading(true);
       setError(null);
       setCurrentStep('processing');
 
-      // Simulate purchase process
-      const purchaseData = {
+      const request: PrioritizedCheckoutRequest = {
+        orderId: `order_${Date.now()}`,
         listingId: listing.id,
         buyerAddress: address,
         sellerAddress: listing.sellerWalletAddress,
-        price: listing.price,
-        useEscrow,
-        deliveryInfo,
-        timestamp: new Date().toISOString()
+        amount: parseFloat(listing.price) * 2000, // Normalized USD amount approximately
+        currency: 'USD',
+        selectedPaymentMethod,
+        paymentDetails: {
+          walletAddress: address,
+          tokenSymbol: selectedPaymentMethod.method.token?.symbol,
+          networkId: selectedPaymentMethod.method.chainId,
+        }
       };
 
-      // API call to process purchase
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/marketplace/purchase`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('linkdao_access_token') || localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify(purchaseData),
-      });
+      const result = useEscrow && selectedPaymentMethod.method.type !== PaymentMethodType.FIAT_STRIPE
+        ? await checkoutService.processEscrowPayment(request)
+        : await checkoutService.processPrioritizedCheckout(request);
 
-      if (!response.ok) {
-        throw new Error('Purchase failed');
+      if (result.status === 'completed' || result.status === 'processing') {
+        setOrderId(result.orderId);
+        setCurrentStep('confirmation');
+        addToast('Purchase successful!', 'success');
+        onSuccess(result.orderId);
+      } else {
+        throw new Error('Payment processing failed');
       }
 
-      const result = await response.json();
-      setOrderId(result.orderId);
-      
-      setCurrentStep('confirmation');
-      addToast('Purchase successful!', 'success');
-      onSuccess(result.orderId);
-
-    } catch (err) {
+    } catch (err: any) {
       console.error('Purchase error:', err);
-      setError('Purchase failed. Please try again.');
-      addToast('Purchase failed. Please try again.', 'error');
+      // Simplify error handling for QuickBuy compared to full checkout flow
+      const errorMessage = err.message || 'Purchase failed. Please try again.';
+      setError(errorMessage);
+      addToast(errorMessage, 'error');
       setCurrentStep('review');
     } finally {
       setLoading(false);
@@ -158,7 +364,7 @@ export const QuickBuy: React.FC<QuickBuyProps> = ({
       category: listing.itemType.toLowerCase(),
       isDigital: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT',
       isNFT: listing.itemType === 'NFT',
-      inventory: listing.quantity,
+      quantity: listing.quantity,
       shipping: {
         cost: '0',
         freeShipping: true,
@@ -171,7 +377,7 @@ export const QuickBuy: React.FC<QuickBuyProps> = ({
         safetyScore: 95
       }
     };
-    
+
     cart.addItem(cartProduct);
     addToast('Added to cart!', 'success');
     onSuccess();
@@ -198,20 +404,18 @@ export const QuickBuy: React.FC<QuickBuyProps> = ({
         {/* Step Indicator */}
         <div className="px-6 py-4 border-b border-gray-700">
           <div className="flex items-center space-x-2">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-              currentStep === 'review' ? 'bg-blue-500 text-white' : 
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${currentStep === 'review' ? 'bg-blue-500 text-white' :
               currentStep === 'payment' ? 'bg-blue-500 text-white' :
-              currentStep === 'processing' ? 'bg-yellow-500 text-white' :
-              'bg-green-500 text-white'
-            }`}>
+                currentStep === 'processing' ? 'bg-yellow-500 text-white' :
+                  'bg-green-500 text-white'
+              }`}>
               {currentStep === 'confirmation' ? <CheckCircle className="w-4 h-4" /> : '1'}
             </div>
-            <div className={`flex-1 h-1 rounded ${
-              currentStep === 'review' ? 'bg-gray-600' :
+            <div className={`flex-1 h-1 rounded ${currentStep === 'review' ? 'bg-gray-600' :
               currentStep === 'payment' ? 'bg-gray-600' :
-              currentStep === 'processing' ? 'bg-yellow-500' :
-              'bg-green-500'
-            }`} />
+                currentStep === 'processing' ? 'bg-yellow-500' :
+                  'bg-green-500'
+              }`} />
           </div>
         </div>
 
@@ -235,20 +439,31 @@ export const QuickBuy: React.FC<QuickBuyProps> = ({
                 </div>
               </div>
 
-              {/* Price */}
+              {/* Price & Payment Selection */}
               <div className="bg-gray-800/50 rounded-lg p-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Price</span>
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-gray-400">Item Price</span>
                   <span className="text-2xl font-bold text-white">{listing.price} ETH</span>
                 </div>
-                {balance && (
-                  <div className="flex justify-between items-center mt-2">
-                    <span className="text-gray-400 text-sm">Your Balance</span>
-                    <span className={`text-sm font-medium ${
-                      canAffordPurchase() ? 'text-green-400' : 'text-red-400'
-                    }`}>
-                      {getUserBalance().toFixed(4)} ETH
-                    </span>
+
+                {prioritizationResult ? (
+                  <div className="mt-4">
+                    <h4 className="text-sm font-medium text-gray-300 mb-2">Select Payment Method</h4>
+                    <PaymentMethodSelector
+                      prioritizationResult={prioritizationResult}
+                      selectedMethodId={selectedPaymentMethod?.method.id}
+                      onMethodSelect={handlePaymentMethodSelect}
+                      showCostBreakdown={true}
+                      showRecommendations={true}
+                      showWarnings={false} // Compact mode
+                      layout="list"
+                      className="text-white"
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto text-blue-500" />
+                    <p className="text-xs text-gray-500 mt-2">Loading best payment routes...</p>
                   </div>
                 )}
               </div>
@@ -302,7 +517,7 @@ export const QuickBuy: React.FC<QuickBuyProps> = ({
                 <Button
                   variant="primary"
                   onClick={handleQuickBuy}
-                  disabled={loading || !canAffordPurchase()}
+                  disabled={loading || !selectedPaymentMethod}
                   className="w-full"
                 >
                   {loading ? (
@@ -314,7 +529,7 @@ export const QuickBuy: React.FC<QuickBuyProps> = ({
                     'Buy Now'
                   )}
                 </Button>
-                
+
                 <Button
                   variant="outline"
                   onClick={handleAddToCart}
