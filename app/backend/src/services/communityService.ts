@@ -46,7 +46,7 @@ try {
 }
 import { feedService } from './feedService';
 import { generateShareId } from '../utils/shareIdGenerator';
-import { sanitizeInput, sanitizeObject, validateLength } from '../utils/sanitizer';
+import { sanitizeInput, sanitizeObject, validateLength, InputSanitizer, SANITIZATION_CONFIGS } from '../utils/sanitizer';
 import { communityCacheService, CommunityCacheService } from './communityCacheService';
 
 interface ListCommunitiesOptions {
@@ -1345,7 +1345,7 @@ export class CommunityService {
       };
 
       if (data.title !== undefined) updateValues.title = data.title;
-      if (data.content !== undefined) updateValues.content = data.content;
+      if (data.content !== undefined) updateValues.content = InputSanitizer.sanitizeString(data.content, SANITIZATION_CONFIGS.RICH_TEXT).sanitized;
       if (data.mediaUrls !== undefined) updateValues.mediaUrls = JSON.stringify(data.mediaUrls);
       if (data.tags !== undefined) updateValues.tags = JSON.stringify(data.tags);
 
@@ -1791,7 +1791,7 @@ export class CommunityService {
           communityId,
           authorId: userResult[0].id,
           title: title || null,
-          content: sanitizeInput(content),
+          content: InputSanitizer.sanitizeString(content, SANITIZATION_CONFIGS.RICH_TEXT).sanitized,
           contentCid: `local-${Date.now()}`, // Temporary CID for local content
           mediaCids: mediaUrls ? JSON.stringify(mediaUrls) : null,
           tags: tags ? JSON.stringify(tags) : null,

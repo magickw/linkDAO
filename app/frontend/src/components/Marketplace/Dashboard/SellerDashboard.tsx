@@ -918,7 +918,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                                   {listing.price ? (typeof listing.price === 'string' ? listing.price : listing.price.toString()) : 'N/A'} {listing.currency || 'ETH'}
                                 </span>
                                 <span className="text-gray-400">
-                                  Inventory: {(listing as any).inventory || listing.inventory}
+                                  Inventory: {listing.inventory}
                                 </span>
                                 <span className={`px-2 py-1 rounded text-xs ${listing.status === 'active' ? 'bg-green-600 text-white' :
                                   listing.status === 'sold' ? 'bg-blue-600 text-white' :

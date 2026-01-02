@@ -4,6 +4,7 @@ import { MetadataService } from './metadataService';
 import { databaseService } from './databaseService'; // Import the singleton instance
 import { UserProfileService } from './userProfileService';
 import { aiContentModerationService } from './aiContentModerationService';
+import { InputSanitizer, SANITIZATION_CONFIGS } from '../utils/sanitizer';
 
 // Use the singleton instance instead of creating a new one
 // const databaseService = new DatabaseService();
@@ -162,7 +163,7 @@ export class PostService {
           mediaCids,
           input.tags,
           input.onchainRef,
-          input.content,
+          InputSanitizer.sanitizeString(input.content, SANITIZATION_CONFIGS.RICH_TEXT).sanitized,
           undefined, // title not in CreatePostInput for now
           input.isRepost
         );
@@ -479,7 +480,7 @@ export class PostService {
       // Update post in database
       const updateData = {
         contentCid,
-        content: input.content || existingPost.content,  // Store content as fallback if provided
+        content: input.content ? InputSanitizer.sanitizeString(input.content, SANITIZATION_CONFIGS.RICH_TEXT).sanitized : existingPost.content,  // Store content as fallback if provided
         mediaCids: JSON.stringify(mediaCids),
         tags: JSON.stringify(input.tags || existingPost.tags)
       };

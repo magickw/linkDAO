@@ -61,6 +61,8 @@ const nextConfig = {
       "linkdao.io",
       "localhost",
       "127.0.0.1",
+      "res.cloudinary.com",
+      "cloudinary.com",
     ],
     formats: ["image/avif", "image/webp"],
     dangerouslyAllowSVG: true,

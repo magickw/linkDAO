@@ -58,7 +58,7 @@ export function transformDisplayListingToUnified(
       displayCurrency: formatCurrency(displayListing.currency),
 
       // Inventory and availability
-      inventory: displayListing.inventory || displayListing.quantity || 1,
+      inventory: displayListing.inventory ?? displayListing.quantity ?? 1,
       condition: displayListing.condition || 'new',
       availability: displayListing.isActive === false ? 'out_of_stock' : 'available',
 
@@ -379,7 +379,7 @@ export function transformMarketplaceListingToUnified(
       displayCurrency: formatCurrency(marketplaceListing.currency),
 
       // Inventory and availability
-      inventory: marketplaceListing.inventory || marketplaceListing.quantity || 1,
+      inventory: marketplaceListing.inventory ?? marketplaceListing.quantity ?? 1,
       condition: 'new', // Default
       availability: marketplaceListing.isActive ? 'available' : 'out_of_stock',
 
@@ -1287,7 +1287,7 @@ export function transformBackendListingToUnified(
       displayCurrency: backendListing.currency || 'USD',
 
       // Inventory and availability
-      inventory: backendListing.inventory || 1,
+      inventory: backendListing.inventory ?? backendListing.quantity ?? 0,
       condition: condition as 'new' | 'used' | 'refurbished',
       availability: availability,
 

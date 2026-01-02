@@ -286,7 +286,14 @@ export const truncateHTML = (html: string, maxLength: number): string => {
  * @returns Whether content should be truncated
  */
 export const shouldTruncateContent = (content: string, maxLength: number = 280, isExpanded: boolean = false): boolean => {
-  return content.length > maxLength && !isExpanded;
+  if (isExpanded) return false;
+
+  // Strip HTML tags to check visible text length
+  // We use a simple regex for performance in this check, or sanitizeHtml if available
+  // Using regex for quick check to avoid heavy processing on every render if possible, 
+  // but since we import sanitizeHtml, let's use a simplified approach or regex
+  const textContent = content.replace(/<[^>]*>/g, '');
+  return textContent.length > maxLength;
 };
 
 /**

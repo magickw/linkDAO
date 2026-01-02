@@ -4,7 +4,7 @@ import { Request, Response, NextFunction } from 'express';
 // Sanitization configuration interface
 export interface SanitizationConfig {
   allowedTags?: string[];
-  allowedAttributes?: string[];
+  allowedAttributes?: string[] | Record<string, string[]>;
   stripUnknown?: boolean;
   maxLength?: number;
   preserveWhitespace?: boolean;
@@ -28,16 +28,31 @@ export const SANITIZATION_CONFIGS: Record<string, SanitizationConfig> = {
     maxLength: 1000,
     preserveWhitespace: false
   },
-  
-  // Rich text content (limited HTML allowed)
+
+  // Rich text content (HTML allowed for posts)
   RICH_TEXT: {
-    allowedTags: ['p', 'br', 'strong', 'em', 'u', 'a', 'code', 'pre', 'blockquote'],
-    allowedAttributes: ['href', 'title'],
+    allowedTags: [
+      'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      'p', 'br', 'hr',
+      'strong', 'b', 'em', 'i', 'u', 's', 'strike', 'del',
+      'a', 'code', 'pre', 'blockquote',
+      'ul', 'ol', 'li',
+      'img', 'iframe', 'div', 'span'
+    ],
+    allowedAttributes: {
+      'a': ['href', 'title', 'target', 'rel', 'class'],
+      'img': ['src', 'alt', 'title', 'width', 'height', 'class'],
+      'iframe': ['src', 'width', 'height', 'allow', 'allowfullscreen', 'frameborder', 'class'],
+      'div': ['class', 'style'],
+      'span': ['class', 'style'],
+      'p': ['class', 'style'],
+      '*': ['class', 'id']
+    },
     stripUnknown: true,
-    maxLength: 10000,
+    maxLength: 50000, // Increased for longer posts
     preserveWhitespace: true
   },
-  
+
   // Marketplace description (moderate HTML allowed)
   DESCRIPTION: {
     allowedTags: ['p', 'br', 'strong', 'em', 'u', 'ul', 'ol', 'li'],
@@ -46,7 +61,7 @@ export const SANITIZATION_CONFIGS: Record<string, SanitizationConfig> = {
     maxLength: 2000,
     preserveWhitespace: true
   },
-  
+
   // Comments (minimal HTML allowed)
   COMMENT: {
     allowedTags: ['strong', 'em', 'code'],
@@ -55,7 +70,7 @@ export const SANITIZATION_CONFIGS: Record<string, SanitizationConfig> = {
     maxLength: 2000,
     preserveWhitespace: false
   },
-  
+
   // Search queries (no HTML, strict sanitization)
   SEARCH: {
     allowedTags: [],
@@ -74,7 +89,7 @@ export class InputSanitizer {
    * Sanitize a string input with comprehensive security checks
    */
   static sanitizeString(
-    input: string, 
+    input: string,
     config: SanitizationConfig = SANITIZATION_CONFIGS.TEXT
   ): SanitizationResult {
     if (!input || typeof input !== 'string') {
@@ -126,12 +141,14 @@ export class InputSanitizer {
     // Apply sanitize-html sanitization
     const sanitizeConfig: sanitizeHtml.IOptions = {
       allowedTags: config.allowedTags || [],
-      allowedAttributes: config.allowedAttributes ?
-        config.allowedAttributes.reduce((acc, attr) => {
-          acc['*'] = acc['*'] || [];
-          if (!acc['*'].includes(attr)) acc['*'].push(attr);
-          return acc;
-        }, {} as Record<string, string[]>) : {},
+      allowedAttributes: (config.allowedAttributes && !Array.isArray(config.allowedAttributes)) ?
+        config.allowedAttributes :
+        (Array.isArray(config.allowedAttributes) ?
+          config.allowedAttributes.reduce((acc, attr) => {
+            acc['*'] = acc['*'] || [];
+            if (!acc['*'].includes(attr)) acc['*'].push(attr);
+            return acc;
+          }, {} as Record<string, string[]>) : {}),
       allowProtocolRelative: false,
       disallowedTagsMode: 'discard',
     };
@@ -180,17 +197,17 @@ export class InputSanitizer {
    * Sanitize an object recursively
    */
   static sanitizeObject(
-    obj: any, 
+    obj: any,
     config: SanitizationConfig = SANITIZATION_CONFIGS.TEXT
   ): any {
     if (typeof obj === 'string') {
       return this.sanitizeString(obj, config).sanitized;
     }
-    
+
     if (Array.isArray(obj)) {
       return obj.map(item => this.sanitizeObject(item, config));
     }
-    
+
     if (obj && typeof obj === 'object') {
       const sanitized: any = {};
       for (const [key, value] of Object.entries(obj)) {
@@ -200,7 +217,7 @@ export class InputSanitizer {
       }
       return sanitized;
     }
-    
+
     return obj;
   }
 
@@ -209,15 +226,15 @@ export class InputSanitizer {
    */
   static sanitizeWalletAddress(address: string): string {
     if (!address || typeof address !== 'string') return '';
-    
+
     // Remove any non-hex characters except 0x prefix
     const cleaned = address.toLowerCase().replace(/[^0-9a-fx]/g, '');
-    
+
     // Ensure it starts with 0x and is 42 characters long
     if (cleaned.startsWith('0x') && cleaned.length === 42) {
       return cleaned;
     }
-    
+
     throw new Error('Invalid wallet address format');
   }
 
@@ -226,14 +243,14 @@ export class InputSanitizer {
    */
   static sanitizeENSName(ensName: string): string {
     if (!ensName || typeof ensName !== 'string') return '';
-    
+
     const cleaned = ensName.toLowerCase().trim();
-    
+
     // Basic ENS validation
     if (!/^[a-z0-9-]+\.eth$/.test(cleaned)) {
       throw new Error('Invalid ENS name format');
     }
-    
+
     return cleaned;
   }
 
@@ -242,14 +259,14 @@ export class InputSanitizer {
    */
   static sanitizeURL(url: string, allowedProtocols: string[] = ['https', 'http']): string {
     if (!url || typeof url !== 'string') return '';
-    
+
     try {
       const urlObj = new URL(url.trim());
-      
+
       if (!allowedProtocols.includes(urlObj.protocol.slice(0, -1))) {
         throw new Error(`Protocol ${urlObj.protocol} not allowed`);
       }
-      
+
       return urlObj.toString();
     } catch (error) {
       throw new Error('Invalid URL format');
@@ -261,14 +278,14 @@ export class InputSanitizer {
    */
   static sanitizeEmail(email: string): string {
     if (!email || typeof email !== 'string') return '';
-    
+
     const cleaned = email.toLowerCase().trim();
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    
+
     if (!emailRegex.test(cleaned)) {
       throw new Error('Invalid email format');
     }
-    
+
     return cleaned;
   }
 
@@ -276,27 +293,27 @@ export class InputSanitizer {
    * Sanitize numeric input
    */
   static sanitizeNumber(
-    input: any, 
+    input: any,
     options: { min?: number; max?: number; decimals?: number } = {}
   ): number {
     const num = Number(input);
-    
+
     if (isNaN(num)) {
       throw new Error('Invalid number format');
     }
-    
+
     if (options.min !== undefined && num < options.min) {
       throw new Error(`Number must be at least ${options.min}`);
     }
-    
+
     if (options.max !== undefined && num > options.max) {
       throw new Error(`Number must be at most ${options.max}`);
     }
-    
+
     if (options.decimals !== undefined) {
       return Number(num.toFixed(options.decimals));
     }
-    
+
     return num;
   }
 }
