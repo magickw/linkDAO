@@ -1,7 +1,7 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import { safeLogger } from '../utils/safeLogger';
 import * as schema from "../db/schema";
-import { eq, and, or, ilike, desc, lt, gte, lte, sql } from "drizzle-orm";
+import { eq, and, or, ilike, desc, lt, gte, lte, sql, inArray } from "drizzle-orm";
 import { ValidationHelper, ValidationError } from "../models/validation";
 import * as postgres from 'postgres';
 import * as dotenv from "dotenv";
@@ -112,7 +112,7 @@ export class DatabaseService {
 
 
   // Post operations
-  async createPost(authorId: string, contentCid: string, parentId?: string, mediaCids?: string[], tags?: string[], onchainRef?: string, content?: string, title?: string, isRepost: boolean = false) {
+  async createPost(authorId: string, contentCid: string, parentId?: string, mediaCids?: string[], tags?: string[], onchainRef?: string, content?: string, title?: string, isRepost: boolean = false, mediaUrls?: string[], location?: any) {
     try {
       const result = await this.db.insert(schema.posts).values({
         authorId,
@@ -124,6 +124,8 @@ export class DatabaseService {
         mediaCids: mediaCids ? JSON.stringify(mediaCids) : null,
         tags: tags ? JSON.stringify(tags) : null,
         onchainRef: onchainRef || null,
+        mediaUrls: mediaUrls ? JSON.stringify(mediaUrls) : null,
+        location: location || null,
         isTokenGated: false,
         updatedAt: new Date()
       }).returning();
@@ -236,6 +238,113 @@ export class DatabaseService {
     } catch (error) {
       safeLogger.error("Error getting quick post by ID:", error);
       throw error;
+    }
+  }
+
+  async getUserRepostIds(userId: string): Promise<Set<string>> {
+    try {
+      const regularReposts = await this.db
+        .select({ parentId: schema.posts.parentId })
+        .from(schema.posts)
+        .where(and(eq(schema.posts.authorId, userId), eq(schema.posts.isRepost, true)));
+
+      const quickReposts = await this.db
+        .select({ parentId: schema.quickPosts.parentId })
+        .from(schema.quickPosts)
+        .where(and(eq(schema.quickPosts.authorId, userId), eq(schema.quickPosts.isRepost, true)));
+
+      const ids = new Set<string>();
+      regularReposts.forEach((r: any) => { if (r.parentId) ids.add(r.parentId.toString()); });
+      quickReposts.forEach((r: any) => { if (r.parentId) ids.add(r.parentId.toString()); });
+
+      return ids;
+    } catch (error) {
+      safeLogger.error("Error getting user repost IDs:", error);
+      return new Set();
+    }
+  }
+
+  async getQuickPostsByAuthor(authorId: string) {
+    try {
+      return await this.db
+        .select({
+          id: schema.quickPosts.id,
+          authorId: schema.quickPosts.authorId,
+          content: schema.quickPosts.content,
+          contentCid: schema.quickPosts.contentCid,
+          parentId: schema.quickPosts.parentId,
+          mediaCids: schema.quickPosts.mediaCids,
+          tags: schema.quickPosts.tags,
+          stakedValue: schema.quickPosts.stakedValue,
+          reputationScore: schema.quickPosts.reputationScore,
+          isTokenGated: schema.quickPosts.isTokenGated,
+          gatedContentPreview: schema.quickPosts.gatedContentPreview,
+          moderationStatus: schema.quickPosts.moderationStatus,
+          moderationWarning: schema.quickPosts.moderationWarning,
+          riskScore: schema.quickPosts.riskScore,
+          upvotes: schema.quickPosts.upvotes,
+          downvotes: schema.quickPosts.downvotes,
+          createdAt: schema.quickPosts.createdAt,
+          updatedAt: schema.quickPosts.updatedAt,
+          onchainRef: schema.quickPosts.onchainRef,
+          isRepost: schema.quickPosts.isRepost
+        })
+        .from(schema.quickPosts)
+        .where(eq(schema.quickPosts.authorId, authorId))
+        .orderBy(desc(schema.quickPosts.createdAt));
+    } catch (error) {
+      safeLogger.error("Error getting quick posts by author:", error);
+      throw error;
+    }
+  }
+
+  async getRepostCounts(postIds: string[]): Promise<Map<string, number>> {
+    if (!postIds.length) return new Map();
+    try {
+      const counts = new Map<string, number>();
+
+      // Count in posts table
+      const regularCounts = await this.db
+        .select({
+          parentId: schema.posts.parentId,
+          count: sql`count(*)`.mapWith(Number)
+        })
+        .from(schema.posts)
+        .where(
+          and(
+            inArray(schema.posts.parentId, postIds),
+            eq(schema.posts.isRepost, true)
+          )
+        )
+        .groupBy(schema.posts.parentId);
+
+      // Count in quick_posts table
+      const quickCounts = await this.db
+        .select({
+          parentId: schema.quickPosts.parentId,
+          count: sql`count(*)`.mapWith(Number)
+        })
+        .from(schema.quickPosts)
+        .where(
+          and(
+            inArray(schema.quickPosts.parentId, postIds),
+            eq(schema.quickPosts.isRepost, true)
+          )
+        )
+        .groupBy(schema.quickPosts.parentId);
+
+      // Aggregate
+      regularCounts.forEach((r: any) => {
+        if (r.parentId) counts.set(r.parentId.toString(), (counts.get(r.parentId.toString()) || 0) + r.count);
+      });
+      quickCounts.forEach((r: any) => {
+        if (r.parentId) counts.set(r.parentId.toString(), (counts.get(r.parentId.toString()) || 0) + r.count);
+      });
+
+      return counts;
+    } catch (error) {
+      safeLogger.error("Error getting repost counts:", error);
+      return new Map();
     }
   }
 

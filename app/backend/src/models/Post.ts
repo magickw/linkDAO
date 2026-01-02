@@ -15,6 +15,15 @@ export interface Post {
   riskScore?: number;
   moderationCategories?: string[];
   isRepost?: boolean;
+  isRepostedByMe?: boolean;
+  isQuickPost?: boolean;
+  shares?: number;
+  mediaUrls?: string[];
+  location?: {
+    name: string;
+    lat?: number;
+    lng?: number;
+  };
 }
 
 export interface CreatePostInput {
@@ -26,6 +35,12 @@ export interface CreatePostInput {
   onchainRef?: string;
   communityId?: string;
   isRepost?: boolean;
+  mediaUrls?: string[];
+  location?: {
+    name: string;
+    lat?: number;
+    lng?: number;
+  };
 }
 
 export interface UpdatePostInput {

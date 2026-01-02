@@ -18,6 +18,8 @@ interface QuickPostInput {
   onchainRef?: string;
   isTokenGated?: boolean;
   gatedContentPreview?: string;
+  mediaUrls?: string[];
+  location?: any;
 }
 
 interface UpdateQuickPostInput {
@@ -114,6 +116,22 @@ export class QuickPostService {
         }
       } catch (e) {
         safeLogger.warn('GatedContentPreview field not available, skipping');
+      }
+
+      try {
+        if (postData.mediaUrls !== undefined) {
+          insertData.mediaUrls = JSON.stringify(postData.mediaUrls);
+        }
+      } catch (e) {
+        safeLogger.warn('MediaUrls field not available, skipping');
+      }
+
+      try {
+        if (postData.location !== undefined) {
+          insertData.location = postData.location;
+        }
+      } catch (e) {
+        safeLogger.warn('Location field not available, skipping');
       }
 
       console.log('🔍 [DEBUG-CREATE-SERVICE] Inserting quick post data:', JSON.stringify(insertData));
@@ -509,6 +527,8 @@ export class QuickPostService {
           walletAddress: users.walletAddress,
           handle: users.handle,
           isRepost: quickPosts.isRepost,
+          mediaUrls: quickPosts.mediaUrls,
+          location: quickPosts.location,
 
           // Original Post Fields (prefixed)
           original_id: originalPosts.id,

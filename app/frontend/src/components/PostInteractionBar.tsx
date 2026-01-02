@@ -26,13 +26,14 @@ interface PostInteractionBarProps {
       handle?: string;
     };
     stakedValue?: number;
+    shareCount?: number;
   };
   postType: 'feed' | 'community' | 'enhanced';
   userMembership?: any;
   onComment?: () => void;
   onReaction?: (postId: string, reactionType: string, amount?: number) => Promise<void>;
   onTip?: (postId: string, amount: string, token: string) => Promise<void>;
-  onShare?: (postId: string, shareType: string, message?: string, media?: string[]) => Promise<void>;
+  onShare?: (postId: string, shareType: string, message?: string, media?: string[], replyRestriction?: string) => Promise<void>;
   onUnrepost?: (postId: string) => Promise<void>;
   onAward?: (postId: string) => void;
   className?: string;
@@ -52,6 +53,23 @@ export default function PostInteractionBar({
 }: PostInteractionBarProps) {
   const { address, isConnected } = useWeb3();
   const { addToast } = useToast();
+
+  // State for repost menu
+  const [showRepostMenu, setShowRepostMenu] = useState(false);
+  const repostMenuRef = React.useRef<HTMLDivElement>(null);
+
+  // Close repost menu when clicking outside
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (repostMenuRef.current && !repostMenuRef.current.contains(event.target as Node)) {
+        setShowRepostMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const [showShareModal, setShowShareModal] = useState(false);
   const [showRepostModal, setShowRepostModal] = useState(false);
@@ -173,21 +191,91 @@ export default function PostInteractionBar({
             <span className="sm:hidden">{post.commentCount || 0}</span>
           </button>
 
-          {/* Repost Button - Only show for non-community posts and ensure strict check */}
+          {/* Repost Button & Dropdown */}
           {postType !== 'community' && !post.communityId && (
-            <button
-              onClick={handleRepostClick}
-              className={`flex items-center space-x-2 text-sm font-medium transition-colors duration-200 hover:scale-105 ${post.isRepostedByMe
-                ? 'text-green-600 dark:text-green-400'
-                : 'text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400'
-                }`}
-              aria-label={post.isRepostedByMe ? "Undo repost" : "Repost to your timeline"}
-            >
-              <svg className={`h-5 w-5 ${post.isRepostedByMe ? 'fill-current' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              <span className="hidden sm:inline">{post.isRepostedByMe ? 'Reposted' : 'Repost'}</span>
-            </button>
+            <div className="relative group" ref={repostMenuRef}>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowRepostMenu(!showRepostMenu);
+                }}
+                className={`flex items-center space-x-2 text-sm font-medium transition-colors duration-200 hover:scale-105 ${post.isRepostedByMe
+                  ? 'text-green-600 dark:text-green-400'
+                  : 'text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400'
+                  }`}
+                aria-label="Repost actions"
+                aria-haspopup="true"
+              >
+                <svg className={`h-5 w-5 ${post.isRepostedByMe ? 'fill-current' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span className="hidden sm:inline">
+                  {post.shareCount && post.shareCount > 0 ? (
+                    <>
+                      {post.shareCount}
+                    </>
+                  ) : (
+                    'Repost'
+                  )}
+                </span>
+                <span className="sm:hidden">{post.shareCount || 0}</span>
+              </button>
+
+              {/* Dropdown Menu */}
+              {showRepostMenu && (
+                <div
+                  className="absolute bottom-full left-0 mb-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden z-50 animate-fadeIn"
+                >
+                  {post.isRepostedByMe ? (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowRepostMenu(false);
+                        if (onUnrepost && window.confirm('Remove this repost from your timeline?')) {
+                          onUnrepost(post.id);
+                        }
+                      }}
+                      className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center font-medium"
+                    >
+                      <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Undo Repost
+                    </button>
+                  ) : (
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        setShowRepostMenu(false);
+                        if (onShare) {
+                          await onShare(post.id, 'timeline', undefined);
+                        }
+                      }}
+                      className="w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center font-medium"
+                    >
+                      <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Repost
+                    </button>
+                  )}
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowRepostMenu(false);
+                      setShowRepostModal(true);
+                    }}
+                    className="w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center font-medium"
+                  >
+                    <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                    Quote
+                  </button>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Share Button */}
@@ -303,9 +391,9 @@ export default function PostInteractionBar({
         isOpen={showRepostModal}
         onClose={() => setShowRepostModal(false)}
         post={post}
-        onRepost={async (postId, message) => {
+        onRepost={async (postId, message, media, replyRestriction) => {
           if (onShare) {
-            await onShare(postId, 'timeline', message);
+            await onShare(postId, 'timeline', message, media, replyRestriction);
           }
         }}
       />

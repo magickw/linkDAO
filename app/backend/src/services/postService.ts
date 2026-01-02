@@ -186,7 +186,9 @@ export class PostService {
             preserveWhitespace: true
           }).sanitized,
           undefined, // title not in CreatePostInput for now
-          input.isRepost
+          input.isRepost,
+          input.mediaUrls,
+          input.location
         );
 
         // Update post with moderation metadata
@@ -300,6 +302,8 @@ export class PostService {
         tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
         createdAt: dbPost.createdAt || new Date(),
         onchainRef: '',
+        mediaUrls: dbPost.mediaUrls ? JSON.parse(dbPost.mediaUrls) : [],
+        location: dbPost.location || undefined
       };
     } catch (error) {
       safeLogger.error('Error getting post by ID:', error);
@@ -352,6 +356,8 @@ export class PostService {
         tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
         createdAt: dbPost.createdAt || new Date(),
         onchainRef: '',
+        mediaUrls: dbPost.mediaUrls ? JSON.parse(dbPost.mediaUrls) : [],
+        location: dbPost.location || undefined
       };
     } catch (error) {
       safeLogger.error('Error getting post by share ID:', error);
@@ -667,13 +673,40 @@ export class PostService {
       // - Staking/boosted posts that should be prioritized
 
       // Get posts from followed users (including self)
+      // Get posts and quick posts from followed users (including self)
       const postsPromises = followingIds.map((userId: any) => databaseService.getPostsByAuthor(userId));
-      const postsArrays = await Promise.all(postsPromises);
+      const quickPostsPromises = followingIds.map((userId: any) => databaseService.getQuickPostsByAuthor(userId));
 
-      // Flatten the arrays and convert to Post model
+      const [postsArrays, quickPostsArrays] = await Promise.all([
+        Promise.all(postsPromises),
+        Promise.all(quickPostsPromises)
+      ]);
+
       const allPosts = postsArrays.flat();
+      const allQuickPosts = quickPostsArrays.flat();
 
-      const posts: Post[] = await Promise.all(allPosts.map(async (dbPost: any) => {
+      // Collect all post IDs for efficient querying
+      const allPostIds = new Set<string>();
+      allPosts.forEach((p: any) => allPostIds.add(p.id.toString()));
+      allQuickPosts.forEach((p: any) => allPostIds.add(p.id.toString()));
+
+      // Fetch user reposts and repost counts in parallel
+      let userReposts = new Set<string>();
+      let repostCounts = new Map<string, number>();
+
+      try {
+        const [reposts, counts] = await Promise.all([
+          databaseService.getUserRepostIds(user.id),
+          databaseService.getRepostCounts(Array.from(allPostIds))
+        ]);
+        userReposts = reposts;
+        repostCounts = counts;
+      } catch (e) {
+        safeLogger.warn('Failed to fetch enrichment data:', e);
+      }
+
+      // Map regular posts
+      const mappedPosts: Post[] = await Promise.all(allPosts.map(async (dbPost: any) => {
         // Get the author's address
         const author = await databaseService.getUserById(dbPost.authorId);
         const authorAddress = author ? author.walletAddress : 'unknown';
@@ -691,18 +724,54 @@ export class PostService {
           mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
           tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
           createdAt,
-          onchainRef: dbPost.onchainRef || ''
+          onchainRef: dbPost.onchainRef || '',
+          isRepostedByMe: userReposts.has(dbPost.id.toString()),
+          isQuickPost: false,
+          isRepost: dbPost.isRepost,
+          shares: repostCounts.get(dbPost.id.toString()) || 0,
+          mediaUrls: dbPost.mediaUrls ? JSON.parse(dbPost.mediaUrls) : [],
+          location: dbPost.location || undefined
         };
       }));
 
-      // Sort by creation date (newest first)
-      posts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      // Map quick posts
+      const mappedQuickPosts: Post[] = await Promise.all(allQuickPosts.map(async (dbPost: any) => {
+        // Get the author's address
+        const author = await databaseService.getUserById(dbPost.authorId);
+        const authorAddress = author ? author.walletAddress : 'unknown';
+
+        const createdAt = dbPost.createdAt || new Date();
+
+        return {
+          id: dbPost.id.toString(),
+          author: authorAddress,
+          parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
+          content: dbPost.content,
+          contentCid: dbPost.contentCid,
+          shareId: dbPost.shareId || '',
+          mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
+          tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
+          createdAt,
+          onchainRef: dbPost.onchainRef || '',
+          isRepostedByMe: userReposts.has(dbPost.id.toString()),
+          isQuickPost: true, // Mark as quick post
+          isRepost: dbPost.isRepost,
+          title: null, // Quick posts don't have titles
+          shares: repostCounts.get(dbPost.id.toString()) || 0,
+          mediaUrls: dbPost.mediaUrls ? JSON.parse(dbPost.mediaUrls) : [],
+          location: dbPost.location || undefined
+        };
+      }));
+
+      // Combine and sort by creation date (newest first)
+      const combinedPosts = [...mappedPosts, ...mappedQuickPosts];
+      combinedPosts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
       // Remove duplicates by ID
       const uniquePosts: Post[] = [];
       const seenIds = new Set<string>();
 
-      for (const post of posts) {
+      for (const post of combinedPosts) {
         if (!seenIds.has(post.id)) {
           seenIds.add(post.id);
           uniquePosts.push(post);

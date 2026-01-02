@@ -431,7 +431,7 @@ export class PostService {
     }
   }
 
-  static async repostPost(originalPostId: string, author: string, message?: string, media?: string[]): Promise<any> {
+  static async repostPost(originalPostId: string, author: string, message?: string, media?: string[], replyRestriction?: string): Promise<any> {
     try {
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/repost`, {
         method: 'POST',
@@ -440,7 +440,8 @@ export class PostService {
           originalPostId,
           author,
           message,
-          media: media || []
+          media: media || [],
+          replyRestriction
         })
       });
 

@@ -128,6 +128,7 @@ export const posts = pgTable("posts", {
   isRepost: boolean("is_repost").default(false),
   mediaCids: text("media_cids"), // JSON array of media IPFS CIDs
   mediaUrls: text("media_urls"), // JSON array of media URLs (HTTP/HTTPS)
+  location: jsonb("location"), // { name, lat, lng }
   tags: text("tags"), // JSON array of tags
   stakedValue: numeric("staked_value").default('0'), // Total tokens staked on this post
   reputationScore: integer("reputation_score").default(0), // Author's reputation score at time of posting
@@ -173,6 +174,8 @@ export const quickPosts = pgTable("quick_posts", {
   parentId: uuid("parent_id").references(() => quickPosts.id, { onDelete: "cascade" }), // For replies
   isRepost: boolean("is_repost").default(false),
   mediaCids: text("media_cids"), // JSON array of media IPFS CIDs
+  mediaUrls: text("media_urls"), // JSON array of media URLs (HTTP/HTTPS)
+  location: jsonb("location"), // { name, lat, lng }
   tags: text("tags"), // JSON array of tags
   stakedValue: numeric("staked_value").default('0'), // Total tokens staked on this post
   reputationScore: integer("reputation_score").default(0), // Author's reputation score at time of posting

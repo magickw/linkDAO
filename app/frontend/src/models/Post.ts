@@ -81,7 +81,7 @@ export function convertBackendPostToPost(backendPost: any): Post {
     reactions: [] as Reaction[], // Reactions will be fetched separately to avoid overfetching
     tips: [] as Tip[],
     comments: backendPost.commentCount || 0,
-    shares: backendPost.shareCount || 0,
+    shares: backendPost.shares || backendPost.shareCount || 0,
     views: backendPost.viewCount || 0,
     engagementScore: backendPost.engagementScore || 0,
     reactionCount: backendPost.reactionCount || 0, // Include reaction count for display
@@ -110,7 +110,7 @@ export function convertBackendPostToPost(backendPost: any): Post {
     media: backendPost.mediaCids ? JSON.parse(backendPost.mediaCids) : [],
 
     // All posts now belong to a community
-    isQuickPost: false,
+    isQuickPost: backendPost.isQuickPost || false,
 
     // Repost info
     isRepost: backendPost.isRepost || false,

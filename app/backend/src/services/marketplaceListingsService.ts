@@ -742,7 +742,7 @@ export class MarketplaceListingsService {
 
   /**
    * Get categories with listing counts
-   * Now queries from the products table and returns CategoryInfo format
+   * Now queries from the products table and joins with categories table to get actual names
    */
   async getCategories(): Promise<Array<{ id: string; name: string; slug: string; count: number }>> {
     try {
@@ -751,16 +751,20 @@ export class MarketplaceListingsService {
         result = await Promise.race([
           db
             .select({
-              categoryId: products.categoryId,
+              categoryId: categories.id,
+              categoryName: categories.name,
+              categorySlug: categories.slug,
               count: count()
             })
             .from(products)
+            .innerJoin(categories, eq(products.categoryId, categories.id))
             .where(and(
               eq(products.status, 'active'),
+              eq(categories.isActive, true),
               // sql`${products.publishedAt} IS NOT NULL`, // Relaxed check
               sql`${products.categoryId} IS NOT NULL`
             ))
-            .groupBy(products.categoryId)
+            .groupBy(categories.id, categories.name, categories.slug)
             .orderBy(desc(count())),
           new Promise((_, reject) =>
             setTimeout(() => reject(new Error('CATEGORIES query timeout')), 5000)
@@ -774,27 +778,14 @@ export class MarketplaceListingsService {
 
       return result.map(row => ({
         id: row.categoryId || '',
-        name: this.formatCategoryName(row.categoryId),
-        slug: row.categoryId || '',
+        name: row.categoryName || 'Uncategorized',
+        slug: row.categorySlug || '',
         count: row.count
       }));
     } catch (error) {
       safeLogger.error('Error getting categories:', error);
       return []; // Return empty array instead of throwing error
     }
-  }
-
-  /**
-   * Helper method to format category ID to readable name
-   */
-  private formatCategoryName(categoryId: string): string {
-    if (!categoryId) return 'Uncategorized';
-    
-    // Convert slug to readable name (e.g., 'digital-assets' -> 'Digital Assets')
-    return categoryId
-      .split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
   }
 
   /**

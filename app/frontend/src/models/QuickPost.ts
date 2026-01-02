@@ -103,7 +103,7 @@ export function convertBackendQuickPostToQuickPost(backendPost: any): QuickPost 
     reactions: [] as Reaction[], // Reactions will be fetched separately to avoid overfetching
     tips: [] as Tip[],
     comments: backendPost.commentCount || 0,
-    shares: backendPost.shareCount || 0,
+    shares: backendPost.shares || backendPost.shareCount || 0,
     views: backendPost.viewCount || 0,
     engagementScore: backendPost.engagementScore || 0,
     reactionCount: backendPost.reactionCount || 0, // Include reaction count for display

@@ -290,8 +290,8 @@ export const REGIONAL_CONFIGS: Record<string, {
   },
   OTHER: {
     preferredCurrency: 'USD',
-    fiatPaymentEnabled: false, // Restricted regions might not have fiat
-    restrictedMethods: [PaymentMethodType.FIAT_STRIPE],
+    fiatPaymentEnabled: true, // Enable fiat payments in all regions
+    restrictedMethods: [] as PaymentMethodType[],
     complianceLevel: 'basic'
   }
 };

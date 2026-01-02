@@ -181,20 +181,26 @@ export class SecurityService {
         // Generate backup codes
         const backupCodes = this.generateBackupCodes();
 
-        // Store in database (not enabled yet)
+        // Check if TOTP 2FA already exists for this user
+        const existingAuth = await db.select().from(twoFactorAuth)
+            .where(and(
+                eq(twoFactorAuth.userId, userId),
+                eq(twoFactorAuth.method, 'totp')
+            ));
+
+        if (existingAuth.length > 0) {
+            // Delete existing TOTP setup if it exists
+            await db.delete(twoFactorAuth)
+                .where(eq(twoFactorAuth.id, existingAuth[0].id));
+        }
+
+        // Insert new 2FA record
         await db.insert(twoFactorAuth).values({
             userId,
             method: 'totp',
             secret: this.encrypt(secret.base32),
             backupCodes: backupCodes.map(code => this.encrypt(code)),
             isEnabled: false
-        }).onConflictDoUpdate({
-            target: twoFactorAuth.userId,
-            set: {
-                secret: this.encrypt(secret.base32),
-                backupCodes: backupCodes.map(code => this.encrypt(code)),
-                updatedAt: new Date()
-            }
         });
 
         return {
@@ -314,21 +320,26 @@ export class SecurityService {
         // Generate backup codes
         const backupCodes = this.generateBackupCodes();
 
-        // Store in database (not enabled yet)
+        // Check if Email 2FA already exists for this user
+        const existingAuth = await db.select().from(twoFactorAuth)
+            .where(and(
+                eq(twoFactorAuth.userId, userId),
+                eq(twoFactorAuth.method, 'email')
+            ));
+
+        if (existingAuth.length > 0) {
+            // Delete existing Email 2FA setup if it exists
+            await db.delete(twoFactorAuth)
+                .where(eq(twoFactorAuth.id, existingAuth[0].id));
+        }
+
+        // Insert new 2FA record
         await db.insert(twoFactorAuth).values({
             userId,
             method: 'email',
             secret: null, // Email-based doesn't need a secret
             backupCodes: backupCodes.map(code => this.encrypt(code)),
             isEnabled: false
-        }).onConflictDoUpdate({
-            target: twoFactorAuth.userId,
-            set: {
-                method: 'email',
-                secret: null,
-                backupCodes: backupCodes.map(code => this.encrypt(code)),
-                updatedAt: new Date()
-            }
         });
 
         // Send test verification code

@@ -180,15 +180,17 @@ const EnhancedPostCard = React.memo(({
   }, [post.id, addToast]);
 
   const [isRepostedByMe, setIsRepostedByMe] = useState(post.isRepostedByMe);
+  const [repostCount, setRepostCount] = useState(post.shares || 0);
 
-  const handleRepost = useCallback(async (postId: string, message?: string, media?: string[]) => {
+  const handleRepost = useCallback(async (postId: string, message?: string, media?: string[], replyRestriction?: string) => {
     try {
       if (!address) {
         addToast('Please connect your wallet to repost', 'error');
         return;
       }
-      await PostService.repostPost(postId, address, message, media);
+      await PostService.repostPost(postId, address, message, media, replyRestriction);
       setIsRepostedByMe(true);
+      setRepostCount(prev => prev + 1);
       addToast('Post reposted successfully!', 'success');
       // In a real app, you might want to refresh the feed
     } catch (error) {
@@ -205,6 +207,7 @@ const EnhancedPostCard = React.memo(({
       }
       await PostService.unrepostPost(postId, address);
       setIsRepostedByMe(false);
+      setRepostCount(prev => Math.max(0, prev - 1));
       addToast('Repost removed', 'success');
     } catch (error) {
       console.error('Error removing repost:', error);
@@ -757,6 +760,7 @@ const EnhancedPostCard = React.memo(({
                   commentCount: post.comments,
                   shareId: (post as any).shareId,
                   isRepostedByMe: isRepostedByMe,
+                  shareCount: repostCount, // Pass the tracked count
                   authorProfile: post.authorProfile,
                   media: post.media
                 }}
@@ -767,9 +771,9 @@ const EnhancedPostCard = React.memo(({
                 }}
                 onReaction={onReaction}
                 onTip={onTip}
-                onShare={async (postId, shareType, message, media) => {
+                onShare={async (postId, shareType, message, media, replyRestriction) => {
                   if (shareType === 'timeline') {
-                    await handleRepost(postId, message, media);
+                    await handleRepost(postId, message, media, replyRestriction);
                   }
                 }}
                 onUnrepost={handleUnrepost}
