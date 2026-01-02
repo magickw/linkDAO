@@ -10,7 +10,12 @@ router.use((req, res, next) => {
         method: req.method,
         path: req.path,
         url: req.url,
-        hasUser: !!req.user
+        originalUrl: req.originalUrl,
+        hasUser: !!req.user,
+        headers: {
+            'content-type': req.headers['content-type'],
+            'authorization': req.headers['authorization'] ? 'Bearer ***' : undefined
+        }
     });
     next();
 });

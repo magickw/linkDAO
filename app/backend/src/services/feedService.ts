@@ -713,15 +713,51 @@ export class FeedService {
           const originalReactionCount = Number(reactionMap.get(rawOriginalPost.id) || 0);
           const originalViewCount = Number(viewMap.get(rawOriginalPost.id) || 0);
 
+          console.log('🔍 [BACKEND FEED] Original post engagement lookup:', {
+            originalPostId: rawOriginalPost.id,
+            isQuickPost: rawOriginalPost.isQuickPost,
+            commentMapSize: commentMap.size,
+            reactionMapSize: reactionMap.size,
+            viewMapSize: viewMap.size,
+            commentCount: originalCommentCount,
+            reactionCount: originalReactionCount,
+            viewCount: originalViewCount,
+            commentMapKeys: Array.from(commentMap.keys()),
+            reactionMapKeys: Array.from(reactionMap.keys())
+          });
+
           // Count reposts of the original post (shares)
           // Note: This counts how many times THIS post has been reposted
-          const [originalShareCount] = await db
-            .select({ count: sql<number>`count(*)` })
-            .from(quickPosts)
-            .where(and(
-              eq(quickPosts.parentId, rawOriginalPost.id),
-              eq(quickPosts.isRepost, true)
-            ));
+          // Check both posts and quickPosts tables for reposts
+          let originalShareCount = 0;
+
+          if (rawOriginalPost.isQuickPost) {
+            // Original is a quick post, check quickPosts for reposts
+            const [quickPostReposts] = await db
+              .select({ count: sql<number>`count(*)` })
+              .from(quickPosts)
+              .where(and(
+                eq(quickPosts.parentId, rawOriginalPost.id),
+                eq(quickPosts.isRepost, true)
+              ));
+            originalShareCount = Number(quickPostReposts?.count) || 0;
+          } else {
+            // Original is a regular post, check posts for reposts
+            const [postReposts] = await db
+              .select({ count: sql<number>`count(*)` })
+              .from(posts)
+              .where(and(
+                eq(posts.parentId, rawOriginalPost.id),
+                eq(posts.isRepost, true)
+              ));
+            originalShareCount = Number(postReposts?.count) || 0;
+          }
+
+          console.log('🔍 [BACKEND FEED] Original post repost count:', {
+            originalPostId: rawOriginalPost.id,
+            isQuickPost: rawOriginalPost.isQuickPost,
+            shareCount: originalShareCount
+          });
 
           // Transform raw DB result into expected frontend structure
           originalPost = {
