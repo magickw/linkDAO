@@ -742,9 +742,9 @@ export class MarketplaceListingsService {
 
   /**
    * Get categories with listing counts
-   * Now queries from the products table
+   * Now queries from the products table and returns CategoryInfo format
    */
-  async getCategories(): Promise<Array<{ category: string; count: number }>> {
+  async getCategories(): Promise<Array<{ id: string; name: string; slug: string; count: number }>> {
     try {
       let result: any[] = [];
       try {
@@ -773,13 +773,28 @@ export class MarketplaceListingsService {
       }
 
       return result.map(row => ({
-        category: row.categoryId || '',
+        id: row.categoryId || '',
+        name: this.formatCategoryName(row.categoryId),
+        slug: row.categoryId || '',
         count: row.count
       }));
     } catch (error) {
       safeLogger.error('Error getting categories:', error);
       return []; // Return empty array instead of throwing error
     }
+  }
+
+  /**
+   * Helper method to format category ID to readable name
+   */
+  private formatCategoryName(categoryId: string): string {
+    if (!categoryId) return 'Uncategorized';
+    
+    // Convert slug to readable name (e.g., 'digital-assets' -> 'Digital Assets')
+    return categoryId
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   }
 
   /**
