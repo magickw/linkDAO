@@ -1122,32 +1122,11 @@ export class SellerController {
 
       const { sellerService } = await import('../services/sellerService');
 
-      const profile = await sellerService.getSellerProfile(walletAddress);
+      const profile = await sellerService.getSellerProfile(walletAddress, { createIfMissing: false });
 
       if (!profile) {
         safeLogger.info("Seller profile not found for address:", walletAddress);
-
-        // Auto-create a basic seller profile for new wallets
-        try {
-          const basicProfileData = {
-            walletAddress,
-            storeName: 'My Store',
-            bio: "Welcome to my store!",
-            description: "Seller profile created automatically",
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            tier: 'bronze'
-          };
-
-          const newProfile = await sellerService.createSellerProfile(basicProfileData as any);
-          safeLogger.info("Auto-created seller profile for address:", walletAddress);
-
-          res.json({ success: true, data: newProfile });
-          return;
-        } catch (creationError) {
-          safeLogger.error("Error creating basic profile:", creationError);
-          return res.status(500).json({ success: false, error: "Failed to create basic seller profile" });
-        }
+        return res.status(404).json({ success: false, error: "Seller profile not found" });
       }
 
       safeLogger.info("Successfully fetched public seller profile for address:", walletAddress);

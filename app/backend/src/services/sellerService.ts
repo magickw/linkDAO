@@ -110,7 +110,9 @@ class SellerService {
     { field: 'ensHandle', required: false, weight: 7 }, // ENS is optional but valuable
   ];
 
-  async getSellerProfile(walletAddress: string): Promise<SellerProfileData | null> {
+  async getSellerProfile(walletAddress: string, options: { createIfMissing?: boolean } = {}): Promise<SellerProfileData | null> {
+    const { createIfMissing = false } = options;
+
     try {
       // Validate wallet address
       if (!walletAddress) {
@@ -133,6 +135,10 @@ class SellerService {
       const seller = sellerData[0];
 
       if (!seller || sellerData.length === 0) {
+        if (!createIfMissing) {
+          return null;
+        }
+
         safeLogger.info('Seller not found in database for address:', normalizedAddress);
 
         // Auto-create a basic seller profile for new wallets
@@ -140,7 +146,7 @@ class SellerService {
           safeLogger.info('Auto-creating seller profile for address:', normalizedAddress);
           // Generate a default avatar using the wallet address
           const defaultAvatar = `https://api.dicebear.com/7.x/identicon/svg?seed=${normalizedAddress}`;
-          
+
           const basicProfileData = {
             walletAddress: normalizedAddress,
             storeName: 'My Store',

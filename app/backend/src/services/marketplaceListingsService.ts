@@ -50,10 +50,11 @@ export class MarketplaceListingsService {
 
       if (sellerAddress) {
         // Need to find user by wallet address first, then filter by sellerId
+        // Use case-insensitive lookup to ensure listings are found regardless of address casing
         const userResult = await db
           .select({ id: users.id })
           .from(users)
-          .where(eq(users.walletAddress, sellerAddress))
+          .where(sql`lower(${users.walletAddress}) = ${sellerAddress.toLowerCase()}`)
           .limit(1);
 
         if (userResult.length > 0) {
@@ -557,7 +558,7 @@ export class MarketplaceListingsService {
             db
               .select({ id: users.id })
               .from(users)
-              .where(eq(users.walletAddress, filters.sellerAddress))
+              .where(sql`lower(${users.walletAddress}) = ${filters.sellerAddress.toLowerCase()}`)
               .limit(1),
             new Promise((_, reject) =>
               setTimeout(() => reject(new Error('USER_SEARCH query timeout')), 3000)
