@@ -122,7 +122,7 @@ export class MarketplaceListingsService {
               shipping: products.shipping,
               views: products.views,
               favorites: products.favorites,
-              quantity: products.inventory,
+              inventory: products.inventory,
               createdAt: products.createdAt,
               updatedAt: products.updatedAt,
             })
@@ -201,11 +201,7 @@ export class MarketplaceListingsService {
           shipping: parsedShipping,
           views: listing.views || 0,
           favorites: listing.favorites || 0,
-          createdAt: listing.createdAt || new Date(),
-          shipping: parsedShipping,
-          views: listing.views || 0,
-          favorites: listing.favorites || 0,
-          quantity: listing.quantity || 1, // Fallback to 1
+          inventory: listing.inventory || 1,
           createdAt: listing.createdAt || new Date(),
           updatedAt: listing.updatedAt || new Date()
         };
@@ -256,7 +252,7 @@ export class MarketplaceListingsService {
               shipping: products.shipping,
               views: products.views,
               favorites: products.favorites,
-              quantity: products.inventory,
+              inventory: products.inventory,
               createdAt: products.createdAt,
               updatedAt: products.updatedAt,
             })
@@ -323,7 +319,7 @@ export class MarketplaceListingsService {
         shipping: parsedShipping,
         views: listing.views || 0,
         favorites: listing.favorites || 0,
-        quantity: listing.quantity || 1,
+        inventory: listing.inventory || 1,
         createdAt: listing.createdAt || new Date(),
         updatedAt: listing.updatedAt || new Date()
       };
@@ -367,7 +363,7 @@ export class MarketplaceListingsService {
           categoryId: listingData.category || '',
           images: JSON.stringify(listingData.images || []),
           metadata: JSON.stringify({}),
-          inventory: listingData.quantity || 1,
+          inventory: listingData.inventory || 1,
           status: 'active',
           listingStatus: 'active',
           publishedAt: new Date(),
@@ -402,6 +398,7 @@ export class MarketplaceListingsService {
         images: parsedImages,
         category: listing.categoryId || undefined,
         isActive: listing.status === 'active',
+        inventory: listing.inventory || 1,
         createdAt: listing.createdAt || new Date(),
         updatedAt: listing.updatedAt || new Date()
       };
@@ -442,7 +439,7 @@ export class MarketplaceListingsService {
       if (updateData.currency !== undefined) updateValues.priceCurrency = updateData.currency;
       if (updateData.images !== undefined) updateValues.images = JSON.stringify(updateData.images);
       if (updateData.category !== undefined) updateValues.categoryId = updateData.category;
-      if (updateData.quantity !== undefined) updateValues.inventory = updateData.quantity;
+      if (updateData.inventory !== undefined) updateValues.inventory = updateData.inventory;
       if (updateData.isActive !== undefined) {
         updateValues.status = updateData.isActive ? 'active' : 'inactive';
         if (updateData.isActive) {
@@ -478,11 +475,7 @@ export class MarketplaceListingsService {
         images: parsedImages,
         category: listing.categoryId || undefined,
         isActive: listing.status === 'active',
-        createdAt: listing.createdAt || new Date(),
-        images: parsedImages,
-        category: listing.categoryId || undefined,
-        isActive: listing.status === 'active',
-        quantity: listing.inventory || 1, // Will reflect updated inventory if returned by DB
+        inventory: listing.inventory || 1,
         createdAt: listing.createdAt || new Date(),
         updatedAt: listing.updatedAt || new Date()
       };
@@ -648,7 +641,7 @@ export class MarketplaceListingsService {
               shipping: products.shipping,
               views: products.views,
               favorites: products.favorites,
-              quantity: products.inventory,
+              inventory: products.inventory,
               createdAt: products.createdAt,
               updatedAt: products.updatedAt,
             })
@@ -718,7 +711,7 @@ export class MarketplaceListingsService {
           isActive: listing.status === 'active',
           views: listing.views || 0,
           favorites: listing.favorites || 0,
-          quantity: listing.quantity || 1,
+          inventory: listing.inventory || 1,
           createdAt: listing.createdAt || new Date(),
           updatedAt: listing.updatedAt || new Date()
         };

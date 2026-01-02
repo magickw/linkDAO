@@ -92,7 +92,7 @@ export class MarketplaceListingsController {
                   slug: listing.category.toLowerCase()
                 } : null,
                 images: listing.images || [],
-                inventory: listing.quantity || 0,
+                inventory: listing.inventory || 0,
                 status: listing.isActive ? 'active' : 'inactive',
                 tags: [],
                 shipping: {
@@ -208,7 +208,7 @@ export class MarketplaceListingsController {
           slug: listing.category.toLowerCase()
         } : null,
         images: listing.images || [],
-        inventory: listing.quantity || 0,
+        inventory: listing.inventory || 0,
         status: listing.isActive ? 'active' : 'inactive',
         tags: [],
         shipping: {

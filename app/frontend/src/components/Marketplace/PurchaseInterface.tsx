@@ -150,9 +150,8 @@ export const PurchaseInterface: React.FC<PurchaseInterfaceProps> = ({
                     <Button
                       variant="outline"
                       onClick={handleSaveItem}
-                      className={`flex items-center justify-center ${
-                        isSaved ? 'text-red-400 border-red-400/30' : 'text-gray-400 border-gray-400/30'
-                      }`}
+                      className={`flex items-center justify-center ${isSaved ? 'text-red-400 border-red-400/30' : 'text-gray-400 border-gray-400/30'
+                        }`}
                     >
                       <Heart className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
                     </Button>
@@ -166,9 +165,8 @@ export const PurchaseInterface: React.FC<PurchaseInterfaceProps> = ({
                     <Button
                       variant="outline"
                       onClick={() => setCurrentView('specs')}
-                      className={`flex items-center justify-center ${
-                        currentView === 'specs' ? 'text-blue-400 border-blue-400/30' : 'text-gray-400 border-gray-400/30'
-                      }`}
+                      className={`flex items-center justify-center ${currentView === 'specs' ? 'text-blue-400 border-blue-400/30' : 'text-gray-400 border-gray-400/30'
+                        }`}
                     >
                       Specs
                     </Button>
@@ -201,8 +199,8 @@ export const PurchaseInterface: React.FC<PurchaseInterfaceProps> = ({
                         <p className="text-gray-400 text-sm">≈ ${price.usd.toLocaleString()} USD</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-gray-400 text-sm mb-1">Quantity</p>
-                        <p className="text-xl font-semibold text-white">{listing.quantity}</p>
+                        <p className="text-gray-400 text-sm mb-1">Inventory</p>
+                        <p className="text-xl font-semibold text-white">{listing.inventory}</p>
                       </div>
                     </div>
                   </div>
@@ -214,7 +212,7 @@ export const PurchaseInterface: React.FC<PurchaseInterfaceProps> = ({
                       <div>
                         <h3 className="text-lg font-semibold text-white mb-2">Description</h3>
                         <p className="text-gray-300 leading-relaxed">
-                          {listing.metadataURI ? 
+                          {listing.metadataURI ?
                             `This is a premium ${formatItemType(listing.itemType)} from a verified seller. 
                             The item is authentic and comes with blockchain verification.` :
                             'No description available for this item.'
@@ -229,7 +227,7 @@ export const PurchaseInterface: React.FC<PurchaseInterfaceProps> = ({
                           <span className="text-green-400 font-medium">Protected Purchase</span>
                         </div>
                         <p className="text-gray-300 text-sm">
-                          This transaction is protected by escrow. Your funds will only be released 
+                          This transaction is protected by escrow. Your funds will only be released
                           after you confirm receipt of the item.
                         </p>
                       </div>
@@ -254,7 +252,7 @@ export const PurchaseInterface: React.FC<PurchaseInterfaceProps> = ({
                         </div>
                         <div className="bg-gray-800/50 rounded-lg p-3">
                           <p className="text-gray-400 text-sm">Available</p>
-                          <p className="text-white font-medium">{listing.quantity} units</p>
+                          <p className="text-white font-medium">{listing.inventory} units</p>
                         </div>
                       </div>
                     </div>
@@ -284,7 +282,7 @@ export const PurchaseInterface: React.FC<PurchaseInterfaceProps> = ({
                       <ShoppingCart className="w-5 h-5 mr-2" />
                       Buy Now - {listing.price} ETH
                     </Button>
-                    
+
                     <p className="text-center text-gray-400 text-sm">
                       Protected by escrow • Instant delivery for digital items
                     </p>

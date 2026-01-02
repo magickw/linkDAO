@@ -48,19 +48,6 @@ const ProductThumbnail: React.FC<ProductThumbnailProps> = ({
 
   const imageUrl = getImageUrl();
 
-  // Debug logging to help troubleshoot image display issues
-  useEffect(() => {
-    console.log('[ProductThumbnail] Debug:', {
-      itemId: item.id,
-      itemTitle: item.title,
-      thumbnail: item.thumbnail,
-      image: item.image,
-      images: item.images,
-      resolvedImageUrl: imageUrl,
-      willShowFallback: !imageUrl || imageError
-    });
-  }, [item.id, imageUrl, imageError]);
-
   // Reset error state when image URL changes
   useEffect(() => {
     setImageError(false);

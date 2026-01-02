@@ -17,7 +17,7 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
     category: data?.category || '',
     price: data?.price || '',
     currency: data?.currency || 'USDC',
-    quantity: data?.quantity || '1',
+    inventory: data?.inventory || '1',
     condition: data?.condition || 'new',
     images: data?.images || [],
     tags: data?.tags || '',
@@ -134,10 +134,10 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
       label: 'Ethereum',
       icon: (
         <svg className="w-4 h-4" viewBox="0 0 256 417" fill="currentColor">
-          <path d="M127.961 0l-2.795 9.5v275.668l2.795 2.79 127.962-75.638z" fillOpacity=".6"/>
-          <path d="M127.962 0L0 212.32l127.962 75.639V154.158z"/>
-          <path d="M127.961 312.187l-1.575 1.92v98.199l1.575 4.6L256 236.587z" fillOpacity=".6"/>
-          <path d="M127.962 416.905v-104.72L0 236.585z"/>
+          <path d="M127.961 0l-2.795 9.5v275.668l2.795 2.79 127.962-75.638z" fillOpacity=".6" />
+          <path d="M127.962 0L0 212.32l127.962 75.639V154.158z" />
+          <path d="M127.961 312.187l-1.575 1.92v98.199l1.575 4.6L256 236.587z" fillOpacity=".6" />
+          <path d="M127.962 416.905v-104.72L0 236.585z" />
         </svg>
       )
     },
@@ -146,7 +146,7 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
       label: 'Polygon',
       icon: (
         <svg className="w-4 h-4" viewBox="0 0 38 33" fill="currentColor">
-          <path d="M29 10.2c-.7-.4-1.6-.4-2.4 0L21 13.5l-3.8 2.1-5.5 3.3c-.7.4-1.6.4-2.4 0L5 16.3c-.7-.4-1.2-1.2-1.2-2.1v-5c0-.8.4-1.6 1.2-2.1l4.3-2.5c.7-.4 1.6-.4 2.4 0L16 7.2c.7.4 1.2 1.2 1.2 2.1v3.3l3.8-2.2V7c0-.8-.4-1.6-1.2-2.1l-8-4.7c-.7-.4-1.6-.4-2.4 0L1.2 5C.4 5.4 0 6.2 0 7v9.4c0 .8.4 1.6 1.2 2.1l8.1 4.7c.7.4 1.6.4 2.4 0l5.5-3.2 3.8-2.2 5.5-3.2c.7-.4 1.6-.4 2.4 0l4.3 2.5c.7.4 1.2 1.2 1.2 2.1v5c0 .8-.4 1.6-1.2 2.1L29 28.8c-.7.4-1.6.4-2.4 0l-4.3-2.5c-.7-.4-1.2-1.2-1.2-2.1V21l-3.8 2.2v3.3c0 .8.4 1.6 1.2 2.1l8.1 4.7c.7.4 1.6.4 2.4 0l8.1-4.7c.7-.4 1.2-1.2 1.2-2.1V17c0-.8-.4-1.6-1.2-2.1L29 10.2z"/>
+          <path d="M29 10.2c-.7-.4-1.6-.4-2.4 0L21 13.5l-3.8 2.1-5.5 3.3c-.7.4-1.6.4-2.4 0L5 16.3c-.7-.4-1.2-1.2-1.2-2.1v-5c0-.8.4-1.6 1.2-2.1l4.3-2.5c.7-.4 1.6-.4 2.4 0L16 7.2c.7.4 1.2 1.2 1.2 2.1v3.3l3.8-2.2V7c0-.8-.4-1.6-1.2-2.1l-8-4.7c-.7-.4-1.6-.4-2.4 0L1.2 5C.4 5.4 0 6.2 0 7v9.4c0 .8.4 1.6 1.2 2.1l8.1 4.7c.7.4 1.6.4 2.4 0l5.5-3.2 3.8-2.2 5.5-3.2c.7-.4 1.6-.4 2.4 0l4.3 2.5c.7.4 1.2 1.2 1.2 2.1v5c0 .8-.4 1.6-1.2 2.1L29 28.8c-.7.4-1.6.4-2.4 0l-4.3-2.5c-.7-.4-1.2-1.2-1.2-2.1V21l-3.8 2.2v3.3c0 .8.4 1.6 1.2 2.1l8.1 4.7c.7.4 1.6.4 2.4 0l8.1-4.7c.7-.4 1.2-1.2 1.2-2.1V17c0-.8-.4-1.6-1.2-2.1L29 10.2z" />
         </svg>
       )
     },
@@ -155,9 +155,9 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
       label: 'Arbitrum',
       icon: (
         <svg className="w-4 h-4" viewBox="0 0 40 40" fill="currentColor">
-          <path d="M20.9 25.2l3.8 6.3c.2.3.5.5.9.5h4.3c.5 0 .8-.5.6-.9L21.5 16c-.2-.3-.5-.5-.9-.5h-3.3c-.5 0-.8.5-.6.9l4.2 8.8z"/>
-          <path d="M14.1 15.5c-.2-.3-.5-.5-.9-.5h-3.3c-.5 0-.8.5-.6.9l9.3 15.6c.2.3.5.5.9.5h4.3c.5 0 .8-.5.6-.9l-10.3-15.6z"/>
-          <path d="M31.6 8.5H8.4c-.3 0-.5.2-.5.5v2.1c0 .3.2.5.5.5h23.2c.3 0 .5-.2.5-.5V9c0-.3-.2-.5-.5-.5z"/>
+          <path d="M20.9 25.2l3.8 6.3c.2.3.5.5.9.5h4.3c.5 0 .8-.5.6-.9L21.5 16c-.2-.3-.5-.5-.9-.5h-3.3c-.5 0-.8.5-.6.9l4.2 8.8z" />
+          <path d="M14.1 15.5c-.2-.3-.5-.5-.9-.5h-3.3c-.5 0-.8.5-.6.9l9.3 15.6c.2.3.5.5.9.5h4.3c.5 0 .8-.5.6-.9l-10.3-15.6z" />
+          <path d="M31.6 8.5H8.4c-.3 0-.5.2-.5.5v2.1c0 .3.2.5.5.5h23.2c.3 0 .5-.2.5-.5V9c0-.3-.2-.5-.5-.5z" />
         </svg>
       )
     },
@@ -166,9 +166,9 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
       label: 'Optimism',
       icon: (
         <svg className="w-4 h-4" viewBox="0 0 500 500" fill="currentColor">
-          <circle cx="250" cy="250" r="250" fill="#FF0420"/>
-          <path d="M177.1 316.4c-14.9 0-26.6-4.2-35.2-12.5-8.5-8.4-12.8-20.3-12.8-35.7 0-20.4 5.6-37 16.7-49.8 11.2-12.8 26.1-19.2 44.7-19.2 14.7 0 26.3 4.1 34.7 12.4 8.4 8.2 12.6 19.7 12.6 34.3 0 20.8-5.5 37.7-16.6 50.6-11 13-26 19.5-44.8 19.5l.7-.6zm4.3-29.8c7.3 0 13.2-3.5 17.7-10.5 4.5-7.1 6.7-16.3 6.7-27.8 0-8-1.5-14.2-4.6-18.6-3-4.4-7.5-6.6-13.4-6.6-7.4 0-13.4 3.5-17.9 10.5-4.5 7-6.8 16.2-6.8 27.6 0 8.1 1.6 14.4 4.7 18.8 3.1 4.4 7.7 6.6 13.6 6.6z" fill="white"/>
-          <path d="M276.8 313.4V202h36.5c15.3 0 26.7 3.1 34.3 9.2 7.6 6.1 11.4 15.2 11.4 27.2 0 12.6-4.4 22.6-13.1 30-8.7 7.4-20.6 11.1-35.7 11.1h-11.4v33.9h-22zm22-54.2h8.1c7.3 0 12.8-1.6 16.5-4.7 3.8-3.2 5.6-7.8 5.6-13.8 0-5.5-1.7-9.6-5-12.2-3.3-2.6-8.4-3.9-15.2-3.9h-10v34.6z" fill="white"/>
+          <circle cx="250" cy="250" r="250" fill="#FF0420" />
+          <path d="M177.1 316.4c-14.9 0-26.6-4.2-35.2-12.5-8.5-8.4-12.8-20.3-12.8-35.7 0-20.4 5.6-37 16.7-49.8 11.2-12.8 26.1-19.2 44.7-19.2 14.7 0 26.3 4.1 34.7 12.4 8.4 8.2 12.6 19.7 12.6 34.3 0 20.8-5.5 37.7-16.6 50.6-11 13-26 19.5-44.8 19.5l.7-.6zm4.3-29.8c7.3 0 13.2-3.5 17.7-10.5 4.5-7.1 6.7-16.3 6.7-27.8 0-8-1.5-14.2-4.6-18.6-3-4.4-7.5-6.6-13.4-6.6-7.4 0-13.4 3.5-17.9 10.5-4.5 7-6.8 16.2-6.8 27.6 0 8.1 1.6 14.4 4.7 18.8 3.1 4.4 7.7 6.6 13.6 6.6z" fill="white" />
+          <path d="M276.8 313.4V202h36.5c15.3 0 26.7 3.1 34.3 9.2 7.6 6.1 11.4 15.2 11.4 27.2 0 12.6-4.4 22.6-13.1 30-8.7 7.4-20.6 11.1-35.7 11.1h-11.4v33.9h-22zm22-54.2h8.1c7.3 0 12.8-1.6 16.5-4.7 3.8-3.2 5.6-7.8 5.6-13.8 0-5.5-1.7-9.6-5-12.2-3.3-2.6-8.4-3.9-15.2-3.9h-10v34.6z" fill="white" />
         </svg>
       )
     },
@@ -177,7 +177,7 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
       label: 'Base',
       icon: (
         <svg className="w-4 h-4" viewBox="0 0 111 111" fill="currentColor">
-          <path d="M54.921 110.034C85.359 110.034 110.034 85.402 110.034 55.017C110.034 24.6319 85.359 0 54.921 0C26.0432 0 2.35281 22.1714 0 50.3923H72.8467V59.6416H0C2.35281 87.8625 26.0432 110.034 54.921 110.034Z" fill="#0052FF"/>
+          <path d="M54.921 110.034C85.359 110.034 110.034 85.402 110.034 55.017C110.034 24.6319 85.359 0 54.921 0C26.0432 0 2.35281 22.1714 0 50.3923H72.8467V59.6416H0C2.35281 87.8625 26.0432 110.034 54.921 110.034Z" fill="#0052FF" />
         </svg>
       )
     },
@@ -186,9 +186,9 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
       label: 'Solana',
       icon: (
         <svg className="w-4 h-4" viewBox="0 0 397 311" fill="currentColor">
-          <path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7z"/>
-          <path d="M64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8z"/>
-          <path d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z"/>
+          <path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7z" />
+          <path d="M64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8z" />
+          <path d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z" />
         </svg>
       )
     },
@@ -251,8 +251,8 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
 
     // Physical goods validation
     if (listingType === 'physical') {
-      if (!formData.quantity || parseInt(formData.quantity) <= 0) {
-        newErrors.quantity = 'Please enter a valid quantity';
+      if (!formData.inventory || parseInt(formData.inventory) <= 0) {
+        newErrors.inventory = 'Please enter a valid inventory';
       }
 
       if (!formData.shippingFree && (!formData.shippingCost || parseFloat(formData.shippingCost) < 0)) {
@@ -365,7 +365,7 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
         listingData = {
           ...listingData,
           isPhysical: true,
-          quantity: parseInt(formData.quantity),
+          inventory: parseInt(formData.inventory),
           condition: formData.condition,
           shippingCost: formData.shippingFree ? 0 : parseFloat(formData.shippingCost || '0'),
           shippingFree: formData.shippingFree,
@@ -397,7 +397,7 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
         listingData = {
           ...listingData,
           isPhysical: false,
-          quantity: 1,
+          inventory: 1,
           serviceDuration: parseFloat(formData.serviceDuration),
           serviceUnit: formData.serviceUnit,
           deliveryMethod: formData.deliveryMethod,
@@ -406,7 +406,7 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
         listingData = {
           ...listingData,
           isPhysical: false,
-          quantity: 1,
+          inventory: 1,
           blockchain: formData.blockchain,
           contractAddress: formData.contractAddress || null,
           tokenId: formData.tokenId || null,
@@ -416,7 +416,7 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
         listingData = {
           ...listingData,
           isPhysical: false,
-          quantity: 1,
+          inventory: 1,
           blockchain: formData.blockchain,
           defiProtocol: formData.defiProtocol,
           defiAssetType: formData.defiAssetType,
@@ -445,7 +445,7 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
 
   const handleInputChange = (field: string, value: string | boolean | number | string[]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    
+
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
@@ -483,23 +483,23 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
       const base64Images = await Promise.all(
         validImages.map(file => convertToBase64(file))
       );
-      
+
       setFormData(prev => ({
         ...prev,
         images: [...prev.images, ...base64Images].slice(0, 10) // Max 10 images
       }));
-      
+
       // Show success feedback
       console.log(`✅ Successfully uploaded ${validImages.length} image(s)`);
       validImages.forEach((file, index) => {
         const sizeKB = Math.round(file.size / 1024);
         console.log(`📸 ${file.name}: ${sizeKB}KB`);
       });
-      
+
       // Show temporary success indicator
       setUploadSuccess(true);
       setTimeout(() => setUploadSuccess(false), 3000);
-      
+
       // Clear any previous errors
       if (errors.images) {
         setErrors(prev => ({ ...prev, images: '' }));
@@ -536,7 +536,7 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       handleImageUpload(e.dataTransfer.files);
     }
@@ -571,11 +571,10 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
                 // Reset category when changing listing type
                 handleInputChange('category', '');
               }}
-              className={`p-4 rounded-lg border-2 text-left transition-all ${
-                listingType === type.value
-                  ? 'border-purple-500 bg-purple-900/50'
-                  : 'border-gray-600 bg-gray-800/50 hover:border-gray-500'
-              }`}
+              className={`p-4 rounded-lg border-2 text-left transition-all ${listingType === type.value
+                ? 'border-purple-500 bg-purple-900/50'
+                : 'border-gray-600 bg-gray-800/50 hover:border-gray-500'
+                }`}
             >
               <span className="text-2xl mb-2 block">{type.icon}</span>
               <span className="text-white font-medium text-sm block">{type.label}</span>
@@ -599,14 +598,13 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
             id="title"
             value={formData.title}
             onChange={(e) => handleInputChange('title', e.target.value)}
-            className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-              errors.title ? 'border-red-500' : 'border-gray-600'
-            }`}
+            className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.title ? 'border-red-500' : 'border-gray-600'
+              }`}
             placeholder={
               listingType === 'physical' ? 'e.g., Vintage Leather Jacket - Size M' :
-              listingType === 'service' ? 'e.g., Smart Contract Security Audit' :
-              listingType === 'digital' ? 'e.g., Bored Ape #1234' :
-              'e.g., Uniswap V3 ETH/USDC LP Position'
+                listingType === 'service' ? 'e.g., Smart Contract Security Audit' :
+                  listingType === 'digital' ? 'e.g., Bored Ape #1234' :
+                    'e.g., Uniswap V3 ETH/USDC LP Position'
             }
             maxLength={100}
           />
@@ -624,9 +622,8 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
               id="category"
               value={formData.category}
               onChange={(e) => handleInputChange('category', e.target.value)}
-              className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                errors.category ? 'border-red-500' : 'border-gray-600'
-              }`}
+              className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.category ? 'border-red-500' : 'border-gray-600'
+                }`}
             >
               <option value="">Select a category</option>
               {categoriesByType[listingType].map(category => (
@@ -687,14 +684,13 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
             value={formData.description}
             onChange={(e) => handleInputChange('description', e.target.value)}
             rows={4}
-            className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none ${
-              errors.description ? 'border-red-500' : 'border-gray-600'
-            }`}
+            className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none ${errors.description ? 'border-red-500' : 'border-gray-600'
+              }`}
             placeholder={
               listingType === 'physical' ? 'Describe your product in detail. Include features, size, materials, condition, etc.' :
-              listingType === 'service' ? 'Describe your service, what\'s included, your expertise, deliverables, and turnaround time.' :
-              listingType === 'digital' ? 'Describe your NFT/digital asset. Include rarity, traits, collection info, and any utility.' :
-              'Describe the DeFi position, including current value, underlying assets, and any important details.'
+                listingType === 'service' ? 'Describe your service, what\'s included, your expertise, deliverables, and turnaround time.' :
+                  listingType === 'digital' ? 'Describe your NFT/digital asset. Include rarity, traits, collection info, and any utility.' :
+                    'Describe the DeFi position, including current value, underlying assets, and any important details.'
             }
             maxLength={2000}
           />
@@ -709,7 +705,7 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
       {/* Pricing */}
       <div className="space-y-4">
         <h3 className="text-lg font-semibold text-white">
-          {listingType === 'service' ? 'Pricing' : 'Pricing & Quantity'}
+          {listingType === 'service' ? 'Pricing' : 'Pricing & inventory'}
         </h3>
 
         <div className={`grid grid-cols-1 gap-4 ${listingType === 'physical' ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
@@ -725,9 +721,8 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
                 onChange={(e) => handleInputChange('price', e.target.value)}
                 step="0.01"
                 min="0"
-                className={`w-full px-3 py-2 pr-16 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                  errors.price ? 'border-red-500' : 'border-gray-600'
-                }`}
+                className={`w-full px-3 py-2 pr-16 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.price ? 'border-red-500' : 'border-gray-600'
+                  }`}
                 placeholder="0.00"
               />
               <div className="absolute inset-y-0 right-0 flex items-center pr-3">
@@ -757,21 +752,20 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
 
           {listingType === 'physical' && (
             <div>
-              <label htmlFor="quantity" className="block text-sm font-medium text-gray-300 mb-2">
-                Quantity *
+              <label htmlFor="inventory" className="block text-sm font-medium text-gray-300 mb-2">
+                Inventory *
               </label>
               <input
                 type="number"
-                id="quantity"
-                value={formData.quantity}
-                onChange={(e) => handleInputChange('quantity', e.target.value)}
+                id="inventory"
+                value={formData.inventory}
+                onChange={(e) => handleInputChange('inventory', e.target.value)}
                 min="1"
-                className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                  errors.quantity ? 'border-red-500' : 'border-gray-600'
-                }`}
+                className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.inventory ? 'border-red-500' : 'border-gray-600'
+                  }`}
                 placeholder="1"
               />
-              {errors.quantity && <p className="mt-1 text-sm text-red-400">{errors.quantity}</p>}
+              {errors.inventory && <p className="mt-1 text-sm text-red-400">{errors.inventory}</p>}
             </div>
           )}
         </div>
@@ -794,9 +788,8 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
                 onChange={(e) => handleInputChange('serviceDuration', e.target.value)}
                 min="0"
                 step="0.5"
-                className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                  errors.serviceDuration ? 'border-red-500' : 'border-gray-600'
-                }`}
+                className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.serviceDuration ? 'border-red-500' : 'border-gray-600'
+                  }`}
                 placeholder="e.g., 2"
               />
               {errors.serviceDuration && <p className="mt-1 text-sm text-red-400">{errors.serviceDuration}</p>}
@@ -906,9 +899,8 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
                 id="defiProtocol"
                 value={formData.defiProtocol}
                 onChange={(e) => handleInputChange('defiProtocol', e.target.value)}
-                className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                  errors.defiProtocol ? 'border-red-500' : 'border-gray-600'
-                }`}
+                className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.defiProtocol ? 'border-red-500' : 'border-gray-600'
+                  }`}
               >
                 <option value="">Select protocol</option>
                 {defiProtocols.map(protocol => (
@@ -928,9 +920,8 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
                 id="defiAssetType"
                 value={formData.defiAssetType}
                 onChange={(e) => handleInputChange('defiAssetType', e.target.value)}
-                className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                  errors.defiAssetType ? 'border-red-500' : 'border-gray-600'
-                }`}
+                className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.defiAssetType ? 'border-red-500' : 'border-gray-600'
+                  }`}
               >
                 <option value="">Select asset type</option>
                 <option value="LP_POSITION">LP Position</option>
@@ -1028,20 +1019,19 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
       <div className="space-y-4">
         <h3 className="text-lg font-semibold text-white">
           {listingType === 'physical' ? 'Product Images *' :
-           listingType === 'service' ? 'Portfolio Images (Optional)' :
-           listingType === 'digital' ? 'NFT Image / Preview *' :
-           'Position Screenshot (Optional)'}
+            listingType === 'service' ? 'Portfolio Images (Optional)' :
+              listingType === 'digital' ? 'NFT Image / Preview *' :
+                'Position Screenshot (Optional)'}
         </h3>
-        
+
         {/* Drag and Drop Upload Area */}
         <div
-          className={`relative border-2 border-dashed rounded-lg p-6 transition-colors ${
-            dragActive
-              ? 'border-purple-400 bg-purple-900/20'
-              : errors.images
+          className={`relative border-2 border-dashed rounded-lg p-6 transition-colors ${dragActive
+            ? 'border-purple-400 bg-purple-900/20'
+            : errors.images
               ? 'border-red-400 bg-red-900/10'
               : 'border-gray-600 bg-gray-800/50 hover:border-gray-500'
-          }`}
+            }`}
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
           onDragOver={handleDrag}
@@ -1055,7 +1045,7 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             disabled={uploadingImage || formData.images.length >= 10}
           />
-          
+
           <div className="text-center">
             {uploadingImage ? (
               <div className="flex flex-col items-center">
@@ -1065,9 +1055,8 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
             ) : (
               <>
                 <svg
-                  className={`mx-auto h-12 w-12 mb-4 ${
-                    dragActive ? 'text-purple-400' : 'text-gray-400'
-                  }`}
+                  className={`mx-auto h-12 w-12 mb-4 ${dragActive ? 'text-purple-400' : 'text-gray-400'
+                    }`}
                   stroke="currentColor"
                   fill="none"
                   viewBox="0 0 48 48"
@@ -1080,9 +1069,8 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
                   />
                 </svg>
                 <div className="space-y-2">
-                  <p className={`text-lg font-medium ${
-                    dragActive ? 'text-purple-300' : 'text-gray-300'
-                  }`}>
+                  <p className={`text-lg font-medium ${dragActive ? 'text-purple-300' : 'text-gray-300'
+                    }`}>
                     {dragActive ? 'Drop images here' : 'Drag & drop images here'}
                   </p>
                   <p className="text-gray-400">or click to browse files</p>
@@ -1094,7 +1082,7 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
             )}
           </div>
         </div>
-        
+
         {errors.images && (
           <p className="text-sm text-red-400 flex items-center">
             <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
@@ -1103,7 +1091,7 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
             {errors.images}
           </p>
         )}
-        
+
         {/* Success notification */}
         {uploadSuccess && (
           <div className="bg-green-900/30 border border-green-500/50 rounded-lg p-3 animate-pulse">
@@ -1115,7 +1103,7 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
             </p>
           </div>
         )}
-        
+
         {/* Image Previews */}
         {formData.images.length > 0 && (
           <div className="space-y-3">
@@ -1132,7 +1120,7 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  
+
                   {/* Image Controls */}
                   <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 rounded-lg flex items-center justify-center">
                     <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex space-x-2">
@@ -1153,7 +1141,7 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
                       </button>
                     </div>
                   </div>
-                  
+
                   {/* Main Image Indicator */}
                   {index === 0 && (
                     <div className="absolute top-2 left-2 px-2 py-1 bg-purple-600 text-white text-xs rounded font-medium">
@@ -1163,7 +1151,7 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
                 </div>
               ))}
             </div>
-            
+
             <div className="bg-blue-900/30 rounded-lg p-3">
               <p className="text-blue-200 text-sm flex items-start">
                 <svg className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -1174,7 +1162,7 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
             </div>
           </div>
         )}
-        
+
         <p className="text-xs text-gray-400">
           💡 Tip: Use high-quality images from different angles. Good photos significantly increase your chances of selling!
         </p>
@@ -1217,9 +1205,8 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
                     onChange={(e) => handleInputChange('shippingCost', e.target.value)}
                     step="0.01"
                     min="0"
-                    className={`w-full px-3 py-2 pr-16 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                      errors.shippingCost ? 'border-red-500' : 'border-gray-600'
-                    }`}
+                    className={`w-full px-3 py-2 pr-16 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.shippingCost ? 'border-red-500' : 'border-gray-600'
+                      }`}
                     placeholder="0.00"
                   />
                   <div className="absolute inset-y-0 right-0 flex items-center pr-3">
@@ -1295,11 +1282,10 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
                       : [...currentMethods, method.value];
                     handleInputChange('shippingMethods', newMethods.length > 0 ? newMethods : ['standard']);
                   }}
-                  className={`p-3 rounded-lg border-2 text-center transition-all ${
-                    (formData.shippingMethods as string[]).includes(method.value)
-                      ? 'border-purple-500 bg-purple-900/50'
-                      : 'border-gray-600 bg-gray-800/50 hover:border-gray-500'
-                  }`}
+                  className={`p-3 rounded-lg border-2 text-center transition-all ${(formData.shippingMethods as string[]).includes(method.value)
+                    ? 'border-purple-500 bg-purple-900/50'
+                    : 'border-gray-600 bg-gray-800/50 hover:border-gray-500'
+                    }`}
                 >
                   <span className="text-xl block mb-1">{method.icon}</span>
                   <span className="text-white text-sm">{method.label}</span>
@@ -1544,9 +1530,8 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
               id="legalBusinessName"
               value={formData.legalBusinessName}
               onChange={(e) => handleInputChange('legalBusinessName', e.target.value)}
-              className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                errors.legalBusinessName ? 'border-red-500' : 'border-gray-600'
-              }`}
+              className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.legalBusinessName ? 'border-red-500' : 'border-gray-600'
+                }`}
               placeholder={formData.businessType === 'individual' ? 'Your full legal name' : 'Registered business name'}
             />
             {errors.legalBusinessName && <p className="mt-1 text-sm text-red-400">{errors.legalBusinessName}</p>}
@@ -1563,9 +1548,8 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
             id="registeredAddress"
             value={formData.registeredAddress}
             onChange={(e) => handleInputChange('registeredAddress', e.target.value)}
-            className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-              errors.registeredAddress ? 'border-red-500' : 'border-gray-600'
-            }`}
+            className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.registeredAddress ? 'border-red-500' : 'border-gray-600'
+              }`}
             placeholder="Street address"
           />
           {errors.registeredAddress && <p className="mt-1 text-sm text-red-400">{errors.registeredAddress}</p>}
@@ -1581,9 +1565,8 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
               id="registeredCity"
               value={formData.registeredCity}
               onChange={(e) => handleInputChange('registeredCity', e.target.value)}
-              className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                errors.registeredCity ? 'border-red-500' : 'border-gray-600'
-              }`}
+              className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.registeredCity ? 'border-red-500' : 'border-gray-600'
+                }`}
               placeholder="City"
             />
             {errors.registeredCity && <p className="mt-1 text-sm text-red-400">{errors.registeredCity}</p>}
@@ -1626,9 +1609,8 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
               id="registeredCountry"
               value={formData.registeredCountry}
               onChange={(e) => handleInputChange('registeredCountry', e.target.value)}
-              className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                errors.registeredCountry ? 'border-red-500' : 'border-gray-600'
-              }`}
+              className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.registeredCountry ? 'border-red-500' : 'border-gray-600'
+                }`}
               placeholder="Country"
             />
             {errors.registeredCountry && <p className="mt-1 text-sm text-red-400">{errors.registeredCountry}</p>}
@@ -1665,14 +1647,13 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
               id="taxId"
               value={formData.taxId}
               onChange={(e) => handleInputChange('taxId', e.target.value)}
-              className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                errors.taxId ? 'border-red-500' : 'border-gray-600'
-              }`}
+              className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.taxId ? 'border-red-500' : 'border-gray-600'
+                }`}
               placeholder={
                 formData.taxIdType === 'ssn' ? 'XXX-XX-XXXX' :
-                formData.taxIdType === 'ein' ? 'XX-XXXXXXX' :
-                formData.taxIdType === 'vat' ? 'VAT number' :
-                'Tax ID number'
+                  formData.taxIdType === 'ein' ? 'XX-XXXXXXX' :
+                    formData.taxIdType === 'vat' ? 'VAT number' :
+                      'Tax ID number'
               }
             />
             {errors.taxId && <p className="mt-1 text-sm text-red-400">{errors.taxId}</p>}
@@ -1702,9 +1683,9 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
           className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
           placeholder={
             listingType === 'physical' ? 'vintage, leather, jacket, fashion (separate with commas)' :
-            listingType === 'service' ? 'smart-contract, audit, security, solidity (separate with commas)' :
-            listingType === 'digital' ? 'nft, art, collectible, rare (separate with commas)' :
-            'defi, yield, lp, uniswap (separate with commas)'
+              listingType === 'service' ? 'smart-contract, audit, security, solidity (separate with commas)' :
+                listingType === 'digital' ? 'nft, art, collectible, rare (separate with commas)' :
+                  'defi, yield, lp, uniswap (separate with commas)'
           }
         />
         <p className="mt-1 text-xs text-gray-400">

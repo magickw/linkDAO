@@ -164,7 +164,7 @@ export const MobileQuickBuy: React.FC<MobileQuickBuyProps> = ({
       category: listing.itemType.toLowerCase(),
       isDigital: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT',
       isNFT: listing.itemType === 'NFT',
-      inventory: listing.quantity,
+      inventory: listing.inventory,
       shipping: {
         cost: '0',
         freeShipping: true,
@@ -250,7 +250,7 @@ export const MobileQuickBuy: React.FC<MobileQuickBuyProps> = ({
               </div>
               <div className="text-right">
                 <p className="text-gray-400 text-sm">Available</p>
-                <p className="text-xl font-semibold text-white">{listing.quantity}</p>
+                <p className="text-xl font-semibold text-white">{listing.inventory}</p>
               </div>
             </div>
             

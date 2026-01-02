@@ -20,7 +20,7 @@ export interface ShippingInfo {
   };
   views?: number;
   favorites?: number;
-  quantity?: number;
+  inventory?: number;
   internationalShipping?: boolean;
   internationalCost?: string;
   localPickup?: boolean;
@@ -41,7 +41,7 @@ export interface MarketplaceListing {
   updatedAt: Date;
   views?: number;
   favorites?: number;
-  quantity?: number;
+  inventory?: number;
 }
 
 export interface CreateMarketplaceListingRequest {
@@ -51,6 +51,7 @@ export interface CreateMarketplaceListingRequest {
   currency?: string;
   images?: string[];
   category?: string;
+  inventory?: number;
   shipping?: ShippingInfo;
 }
 
@@ -61,6 +62,7 @@ export interface UpdateMarketplaceListingRequest {
   currency?: string;
   images?: string[];
   category?: string;
+  inventory?: number;
   isActive?: boolean;
   shipping?: ShippingInfo;
 }

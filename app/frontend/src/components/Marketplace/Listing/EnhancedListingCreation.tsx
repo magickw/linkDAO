@@ -5,13 +5,13 @@
 
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Upload, 
-  X, 
-  Image as ImageIcon, 
-  Plus, 
-  Eye, 
-  Save, 
+import {
+  Upload,
+  X,
+  Image as ImageIcon,
+  Plus,
+  Eye,
+  Save,
   AlertTriangle,
   CheckCircle,
   Loader
@@ -35,7 +35,7 @@ interface ListingFormData {
   escrowEnabled: boolean;
   shippingCost: string;
   estimatedDelivery: string;
-  quantity: number;
+  inventory: number;
   unlimitedQuantity: boolean;
   // Auction-specific fields
   listingType: 'FIXED_PRICE' | 'AUCTION';
@@ -69,7 +69,7 @@ export const EnhancedListingCreation: React.FC = () => {
     escrowEnabled: true,
     shippingCost: '0',
     estimatedDelivery: '3-5 days',
-    quantity: 1,
+    inventory: 1,
     unlimitedQuantity: false,
     listingType: 'FIXED_PRICE',
     auctionDuration: 72, // 3 days default
@@ -84,7 +84,7 @@ export const EnhancedListingCreation: React.FC = () => {
   const [step, setStep] = useState<'details' | 'images' | 'preview'>('details');
 
   const categories = [
-    'electronics', 'fashion', 'home', 'books', 'sports', 'toys', 
+    'electronics', 'fashion', 'home', 'books', 'sports', 'toys',
     'automotive', 'health', 'beauty', 'jewelry', 'art', 'collectibles'
   ];
 
@@ -163,7 +163,7 @@ export const EnhancedListingCreation: React.FC = () => {
     if (!formData.title.trim()) newErrors.title = 'Title is required';
     if (!formData.description.trim()) newErrors.description = 'Description is required';
     if (!formData.price || parseFloat(formData.price) <= 0) newErrors.price = 'Valid price is required';
-    if (formData.quantity < 1) newErrors.quantity = 'Quantity must be at least 1';
+    if (formData.inventory < 1) newErrors.inventory = 'Inventory must be at least 1';
     if (images.length === 0) newErrors.images = 'At least one image is required';
 
     setErrors(newErrors);
@@ -173,12 +173,12 @@ export const EnhancedListingCreation: React.FC = () => {
   const uploadImages = async (): Promise<string[]> => {
     // For now, we'll create mock image URLs since there's no upload method in marketplaceService
     const mockUrls: string[] = [];
-    
+
     for (let i = 0; i < images.length; i++) {
       const image = images[i];
       if (image.uploaded) continue;
 
-      setImages(prev => prev.map((img, idx) => 
+      setImages(prev => prev.map((img, idx) =>
         idx === i ? { ...img, uploading: true } : img
       ));
 
@@ -186,17 +186,17 @@ export const EnhancedListingCreation: React.FC = () => {
         // Create a mock URL for the image
         const mockUrl = URL.createObjectURL(image.file);
         mockUrls.push(mockUrl);
-        
-        setImages(prev => prev.map((img, idx) => 
+
+        setImages(prev => prev.map((img, idx) =>
           idx === i ? { ...img, uploading: false, uploaded: true } : img
         ));
       } catch (error) {
         console.error('Error processing image:', error);
-        setImages(prev => prev.map((img, idx) => 
-          idx === i ? { 
-            ...img, 
-            uploading: false, 
-            error: 'Processing failed' 
+        setImages(prev => prev.map((img, idx) =>
+          idx === i ? {
+            ...img,
+            uploading: false,
+            error: 'Processing failed'
           } : img
         ));
         throw new Error(`Failed to process image ${i + 1}`);
@@ -231,13 +231,13 @@ export const EnhancedListingCreation: React.FC = () => {
 
       // Create listing with images
       addToast('Creating listing...', 'info');
-      
+
       // Prepare the listing data with correct types
       const listingData: any = {
         sellerWalletAddress: address,
         tokenAddress: '0x0000000000000000000000000000000000000000', // For native token
         price: formData.price,
-        quantity: formData.unlimitedQuantity ? 999999 : formData.quantity,
+        inventory: formData.unlimitedQuantity ? 999999 : formData.inventory,
         itemType: 'DIGITAL', // Default to digital for now
         listingType: formData.listingType,
         metadataURI: formData.title,
@@ -251,16 +251,16 @@ export const EnhancedListingCreation: React.FC = () => {
         // Calculate end time based on duration
         const endTime = new Date();
         endTime.setHours(endTime.getHours() + (formData.auctionDuration || 72));
-        
+
         listingData.endTime = endTime.toISOString();
         listingData.reservePrice = formData.reservePrice || undefined;
         listingData.minIncrement = formData.minIncrement || '0.001';
       }
 
       const result = await marketplaceService.createListing(listingData);
-      
+
       addToast('Listing created successfully! It should appear in the marketplace within 30 seconds.', 'success');
-      
+
       // Redirect to marketplace or listing page
       router.push('/marketplace');
     } catch (error) {
@@ -323,13 +323,13 @@ export const EnhancedListingCreation: React.FC = () => {
         </div>
 
         <div>
-          <label className="block text-white font-medium mb-2">Quantity</label>
+          <label className="block text-white font-medium mb-2">Inventory</label>
           <div className="flex items-center space-x-3">
             <input
               type="number"
               min="1"
-              value={formData.quantity}
-              onChange={(e) => handleInputChange('quantity', parseInt(e.target.value) || 1)}
+              value={formData.inventory}
+              onChange={(e) => handleInputChange('inventory', parseInt(e.target.value) || 1)}
               disabled={formData.unlimitedQuantity}
               className="flex-1 bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
             />
@@ -343,7 +343,7 @@ export const EnhancedListingCreation: React.FC = () => {
               Unlimited
             </label>
           </div>
-          {errors.quantity && <p className="text-red-400 text-sm mt-1">{errors.quantity}</p>}
+          {errors.inventory && <p className="text-red-400 text-sm mt-1">{errors.inventory}</p>}
           <p className="text-xs text-white/60 mt-1">
             Specify the number of items available for sale. Check "Unlimited" for digital products or services with unlimited availability.
           </p>
@@ -393,7 +393,7 @@ export const EnhancedListingCreation: React.FC = () => {
               placeholder="72"
             />
           </div>
-          
+
           <div>
             <label className="block text-white font-medium mb-2">Reserve Price (ETH)</label>
             <input
@@ -405,7 +405,7 @@ export const EnhancedListingCreation: React.FC = () => {
               placeholder="0.5"
             />
           </div>
-          
+
           <div>
             <label className="block text-white font-medium mb-2">Minimum Increment (ETH)</label>
             <input
@@ -491,7 +491,7 @@ export const EnhancedListingCreation: React.FC = () => {
         <p className="text-white/70 text-sm mb-4">
           Upload up to 10 high-quality images. The first image will be used as the main product image.
         </p>
-        
+
         {/* Upload Area */}
         <div
           className="border-2 border-dashed border-white/30 rounded-lg p-8 text-center hover:border-white/50 transition-colors cursor-pointer"
@@ -524,7 +524,7 @@ export const EnhancedListingCreation: React.FC = () => {
                   alt={`Preview ${index + 1}`}
                   className="w-full h-32 object-cover rounded-lg"
                 />
-                
+
                 {/* Loading overlay */}
                 {image.uploading && (
                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
@@ -584,11 +584,11 @@ export const EnhancedListingCreation: React.FC = () => {
               className="w-32 h-32 object-cover rounded-lg"
             />
           )}
-          
+
           <div className="flex-1">
             <h4 className="text-xl font-bold text-white mb-2">{formData.title}</h4>
             <p className="text-white/80 mb-4">{formData.description}</p>
-            
+
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-white/60">Price:</span>
@@ -603,8 +603,8 @@ export const EnhancedListingCreation: React.FC = () => {
                 <p className="text-white font-medium capitalize">{formData.condition}</p>
               </div>
               <div>
-                <span className="text-white/60">Quantity:</span>
-                <p className="text-white font-medium">{formData.quantity}</p>
+                <span className="text-white/60">Inventory:</span>
+                <p className="text-white font-medium">{formData.inventory}</p>
               </div>
             </div>
 
@@ -658,13 +658,12 @@ export const EnhancedListingCreation: React.FC = () => {
             return (
               <React.Fragment key={stepItem.key}>
                 <div
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg cursor-pointer transition-colors ${
-                    isActive 
-                      ? 'bg-blue-500 text-white' 
-                      : isCompleted 
-                        ? 'bg-green-500 text-white' 
-                        : 'bg-white/10 text-white/60 hover:bg-white/20'
-                  }`}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg cursor-pointer transition-colors ${isActive
+                    ? 'bg-blue-500 text-white'
+                    : isCompleted
+                      ? 'bg-green-500 text-white'
+                      : 'bg-white/10 text-white/60 hover:bg-white/20'
+                    }`}
                   onClick={() => setStep(stepItem.key as any)}
                 >
                   <Icon size={20} />

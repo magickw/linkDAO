@@ -121,7 +121,7 @@ const ProductDetailPageRoute: React.FC = () => {
             } else if (typeof productData.categoryId === 'string') {
               // Create a readable category name from the ID or use a default mapping
               const categoryId = productData.categoryId;
-              
+
               // Map common category IDs to readable names
               const categoryMap: Record<string, string> = {
                 '71ca3e53-1e18-4482-b214-ef7f228afd87': 'Digital Assets',
@@ -183,10 +183,10 @@ const ProductDetailPageRoute: React.FC = () => {
                 'manufacturing': 'Manufacturing',
                 'other': 'Other'
               };
-              
-              categoryName = categoryMap[categoryId] || 
-                           (categoryId.includes('-') ? 'Category' : categoryId) || 
-                           'General';
+
+              categoryName = categoryMap[categoryId] ||
+                (categoryId.includes('-') ? 'Category' : categoryId) ||
+                'General';
             }
 
             console.log('ProductDetail Debug:', {
@@ -219,12 +219,12 @@ const ProductDetailPageRoute: React.FC = () => {
               try {
                 const { sellerService } = await import('@/services/sellerService');
                 const sellerProfile = await sellerService.getSellerProfile(productData.sellerId);
-                
+
                 if (sellerProfile) {
                   // Prioritize storeName from profile, fallback to existing data
                   const storeName = sellerProfile.storeName || enhancedSeller.name;
                   const avatarUrl = sellerProfile.profileImageCdn || sellerProfile.profileImageUrl || sellerProfile.avatar;
-                  
+
                   enhancedSeller = {
                     ...enhancedSeller,
                     name: storeName !== 'Unknown Seller' ? storeName : `Store ${productData.sellerId.substring(0, 8)}`,
@@ -235,7 +235,7 @@ const ProductDetailPageRoute: React.FC = () => {
                     totalSales: sellerProfile.totalSales || enhancedSeller.totalSales,
                     memberSince: sellerProfile.joinedDate || sellerProfile.createdAt || enhancedSeller.memberSince
                   };
-                  
+
                   console.log('Enhanced seller profile:', {
                     sellerId: productData.sellerId,
                     storeName: enhancedSeller.name,
@@ -247,15 +247,15 @@ const ProductDetailPageRoute: React.FC = () => {
                 console.warn('Failed to fetch enhanced seller profile:', sellerError);
               }
             }
-            
+
             // Final fallbacks if still missing data
             if (!enhancedSeller.name || enhancedSeller.name === 'Unknown Seller') {
               enhancedSeller.name = productData.sellerId ? `Store ${productData.sellerId.substring(0, 8)}` : 'Unknown Seller';
             }
-            
+
             if (!enhancedSeller.avatar) {
-              enhancedSeller.avatar = productData.sellerId ? 
-                `https://api.dicebear.com/7.x/identicon/svg?seed=${productData.sellerId}&backgroundColor=b6e3f4` : 
+              enhancedSeller.avatar = productData.sellerId ?
+                `https://api.dicebear.com/7.x/identicon/svg?seed=${productData.sellerId}&backgroundColor=b6e3f4` :
                 '/images/default-avatar.png';
             }
 
@@ -263,7 +263,7 @@ const ProductDetailPageRoute: React.FC = () => {
             if (!Array.isArray(imageUrls)) {
               imageUrls = [];
             }
-            
+
             // Transform the product data to match the ProductDetailPage component interface
             const transformedProduct = {
               id: productData.id,
@@ -472,7 +472,7 @@ const ProductDetailPageRoute: React.FC = () => {
                   id: product.id,
                   title: product.title,
                   description: product.description,
-                  image: product.media[0]?.url || '',
+                  image: product.media[0]?.url || product.media[0]?.thumbnail || `https://placehold.co/150x150/4B2E83/FFFFFF?text=${encodeURIComponent(product.title.substring(0, 1))}`,
                   price: product.price,
                   seller: {
                     id: product.seller.id,
@@ -516,7 +516,7 @@ const ProductDetailPageRoute: React.FC = () => {
                   id: product.id,
                   title: product.title,
                   description: product.description,
-                  image: product.media[0]?.url || '',
+                  image: product.media[0]?.url || product.media[0]?.thumbnail || `https://placehold.co/150x150/4B2E83/FFFFFF?text=${encodeURIComponent(product.title.substring(0, 1))}`,
                   price: product.price,
                   seller: {
                     id: product.seller.id,

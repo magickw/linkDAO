@@ -70,7 +70,7 @@ export class MarketplaceController {
           slug: listing.itemType.toLowerCase()
         },
         images: [], // Extract from metadata
-        inventory: listing.quantity,
+        inventory: listing.inventory,
         status: listing.status.toLowerCase(),
         tags: [listing.itemType],
         shipping: {
@@ -254,7 +254,7 @@ export class MarketplaceController {
             slug: listing.category ? listing.category.toLowerCase() : ''
           } : null,
           images: listing.images || [],
-          inventory: listing.quantity || 1,
+          inventory: listing.inventory || 1,
           status: listing.isActive ? 'active' : 'inactive',
           tags: [],
           shipping: listing.shipping ? {
@@ -486,7 +486,7 @@ export class MarketplaceController {
           slug: listing.itemType.toLowerCase()
         },
         images: [],
-        inventory: listing.quantity,
+        inventory: listing.inventory,
         status: listing.status.toLowerCase(),
         tags: [listing.itemType],
         shipping: {
@@ -653,7 +653,7 @@ export class MarketplaceController {
           slug: listing.itemType.toLowerCase()
         },
         images: [],
-        inventory: listing.quantity,
+        inventory: listing.inventory,
         status: listing.status.toLowerCase(),
         tags: [listing.itemType],
         shipping: {

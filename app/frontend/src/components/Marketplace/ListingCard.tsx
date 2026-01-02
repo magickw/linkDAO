@@ -78,7 +78,7 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing, onAction }) => {
             {listing.price} ETH
           </p>
           <p className="text-sm text-gray-500">
-            Quantity: {listing.quantity}
+            Inventory: {(listing as any).inventory || listing.inventory}
           </p>
         </div>
         

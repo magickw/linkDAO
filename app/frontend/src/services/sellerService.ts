@@ -511,7 +511,7 @@ class SellerService {
     };
 
     // Quantity resolution
-    const quantity = listing.quantity !== undefined ? listing.quantity : (listing.inventory ?? (listing.stock ?? 1));
+    const inventory = listing.inventory !== undefined ? listing.inventory : (listing.inventory ?? (listing.stock ?? 1));
 
     return {
       id: listing.id,
@@ -521,7 +521,7 @@ class SellerService {
       subcategory: listing.subcategory || listing.subCategory,
       price,
       currency: listing.currency || listing.priceCurrency || 'ETH',
-      quantity,
+      inventory,
       condition: enhanced.condition || listing.condition || 'new',
       images,
       specifications: listing.specifications || {},

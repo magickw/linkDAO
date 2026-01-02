@@ -69,7 +69,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
           category: listing.itemType.toLowerCase(),
           isDigital: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT',
           isNFT: listing.itemType === 'NFT',
-          inventory: listing.quantity,
+          inventory: listing.inventory,
           shipping: {
             cost: '0',
             freeShipping: true,
@@ -82,7 +82,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
             safetyScore: 95
           }
         };
-        
+
         cart.addItem(cartProduct);
         addToast('Added to cart! Go to cart to complete purchase.', 'success');
         onSuccess();
@@ -93,7 +93,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
       // Direct purchase flow
       const price = parseFloat(listing.price);
       const userBalance = balance ? parseFloat(balance.formatted) : 0;
-      
+
       if (userBalance < price) {
         addToast(`Insufficient balance. You need ${price} ETH but have ${userBalance.toFixed(4)} ETH`, 'error');
         return;
@@ -221,7 +221,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
                   Use escrow for secure delivery (recommended)
                 </label>
               </div>
-              
+
               {useEscrow && (
                 <div>
                   <label className="block text-sm font-medium text-white/90 mb-2">

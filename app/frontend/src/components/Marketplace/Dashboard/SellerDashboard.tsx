@@ -563,33 +563,15 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                 </svg>
                 View Store
               </Button>
-              <TierAwareComponent
-                requiredAction={TIER_ACTIONS.CREATE_LISTING}
-                showUpgradePrompt={true}
-                fallbackComponent={({ tier, validation }: { tier: any; validation: any }) => (
-                  <Button
-                    onClick={() => { }}
-                    variant="primary"
-                    disabled
-                    title={validation?.reason || 'Feature not available for your tier'}
-                  >
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    New Listing
-                  </Button>
-                )}
+              <Button
+                onClick={() => router.push('/marketplace/seller/listings/create')}
+                variant="primary"
               >
-                <Button
-                  onClick={() => router.push('/marketplace/seller/listings/create')}
-                  variant="primary"
-                >
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  New Listing
-                </Button>
-              </TierAwareComponent>
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                New Listing
+              </Button>
             </div>
           </div>
 
@@ -936,7 +918,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                                   {listing.price ? (typeof listing.price === 'string' ? listing.price : listing.price.toString()) : 'N/A'} {listing.currency || 'ETH'}
                                 </span>
                                 <span className="text-gray-400">
-                                  Qty: {listing.quantity}
+                                  Inventory: {(listing as any).inventory || listing.inventory}
                                 </span>
                                 <span className={`px-2 py-1 rounded text-xs ${listing.status === 'active' ? 'bg-green-600 text-white' :
                                   listing.status === 'sold' ? 'bg-blue-600 text-white' :

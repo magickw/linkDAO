@@ -218,7 +218,7 @@ const MarketplaceContent: React.FC = () => {
             sellerWalletAddress: sellerAddress,
             tokenAddress: listing.tokenAddress || '0x0000000000000000000000000000000000000000',
             price: priceNum.toString(),
-            quantity: listing.inventory ?? listing.quantity ?? 1,
+            inventory: listing.inventory ?? 1,
             itemType: listing.itemType || 'DIGITAL',
             listingType: listing.listingType || 'FIXED_PRICE',
             status: listing.status || 'active',
@@ -452,7 +452,7 @@ const MarketplaceContent: React.FC = () => {
 
     // In stock filter
     if (filters.inStock) {
-      result = result.filter(listing => (listing.quantity ?? 0) > 0);
+      result = result.filter(listing => (listing.inventory ?? 0) > 0);
     }
 
     // Sorting
@@ -729,7 +729,7 @@ const MarketplaceContent: React.FC = () => {
                                 onChainCertified: enhanced?.trust?.onChainCertified ?? false,
                               },
                               category: enhanced?.category || listing.itemType?.toLowerCase() || 'general',
-                              inventory: listing.quantity ?? 1,
+                              inventory: listing.inventory ?? 1,
                               condition: (enhanced?.condition as 'new' | 'used' | 'refurbished') || 'new',
                               views: enhanced?.views ?? 0,
                               favorites: enhanced?.favorites ?? 0,
@@ -771,7 +771,7 @@ const MarketplaceContent: React.FC = () => {
                                       category: enhanced?.category || listing.itemType?.toLowerCase() || 'general',
                                       isDigital: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT',
                                       isNFT: listing.itemType === 'NFT',
-                                      inventory: listing.quantity ?? 1,
+                                      inventory: listing.inventory ?? 1,
                                       shipping: {
                                         cost: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT' ? '0' : '0.001',
                                         freeShipping: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT',
@@ -1044,7 +1044,7 @@ const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () =
                         {listing.price} ETH
                       </p>
                       <p className="text-sm text-white/70">
-                        Quantity: {listing.quantity}
+                        Quantity: {listing.inventory}
                       </p>
                     </div>
 

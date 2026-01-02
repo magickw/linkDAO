@@ -225,6 +225,7 @@ export interface MarketplaceListing {
   tokenAddress: string;
   price: string;
   quantity: number;
+  inventory: number;
   itemType: 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE';
   listingType: 'FIXED_PRICE' | 'AUCTION';
   status: 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED';
@@ -390,7 +391,7 @@ export class UnifiedMarketplaceService {
     const paramsString = params.toString();
     const separator = paramsString ? '&' : '';
     const endpoint = `/api/marketplace/listings?${paramsString}${separator}${cacheBuster}`;
-    
+
     const response = await this.makeApiRequest(endpoint);
     if (!response.ok) {
       throw new Error(`API request failed with status: ${response.status}`);
@@ -404,7 +405,7 @@ export class UnifiedMarketplaceService {
     }
   }
 
-  
+
 
   async getProductById(id: string): Promise<Product | null> {
     try {
@@ -508,7 +509,7 @@ export class UnifiedMarketplaceService {
           categoryId: listing.categoryId || listing.category?.id || '',
           images: imageUrls,
           metadata: listing.metadata || {},
-          inventory: listing.inventory ?? listing.quantity ?? 0,
+          inventory: listing.inventory ?? listing.inventory ?? 0,
           status: listing.status || 'active',
           tags: Array.isArray(listing.tags) ? listing.tags : [],
           shipping: listing.shipping,
@@ -626,9 +627,9 @@ export class UnifiedMarketplaceService {
       'other': 'Other'
     };
 
-    const name = categoryMap[categoryId] || 
-                 (categoryId.includes('-') ? 'Category' : categoryId) || 
-                 'General';
+    const name = categoryMap[categoryId] ||
+      (categoryId.includes('-') ? 'Category' : categoryId) ||
+      'General';
 
     return {
       id: categoryId,
@@ -990,7 +991,7 @@ export class UnifiedMarketplaceService {
         this.currentBaseUrl = this.primaryBaseUrl;
         return response;
       }
-      
+
       // If we get a non-OK response, log it and continue to fallback
       console.warn(`[MarketplaceService] Primary request failed with status: ${response.status}`);
     } catch (error) {
@@ -1039,10 +1040,10 @@ export class UnifiedMarketplaceService {
       // Convert to a Response object for compatibility
       if (response.success) {
         const responseData = response.data;
-        const responseText = typeof responseData === 'string' 
-          ? responseData 
+        const responseText = typeof responseData === 'string'
+          ? responseData
           : JSON.stringify(responseData);
-        
+
         return new Response(responseText, {
           status: response.status,
           headers: response.headers
@@ -1092,9 +1093,9 @@ export class UnifiedMarketplaceService {
     const paramsString = params.toString();
     const separator = paramsString ? '&' : '';
     const endpoint = `/api/marketplace/listings?${paramsString}${separator}${cacheBuster}`;
-    
+
     console.log('[MarketplaceService] Fetching listings from primary URL:', `${this.primaryBaseUrl}${endpoint}`);
-    
+
     const response = await this.makeApiRequest(endpoint, { method: 'GET' });
 
     if (!response.ok) {
@@ -1373,7 +1374,7 @@ export class UnifiedMarketplaceService {
     }
   }
 
-  
+
 
   // ============================================================================
   // SELLER MANAGEMENT (for breadcrumbs)

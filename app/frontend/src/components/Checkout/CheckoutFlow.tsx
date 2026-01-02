@@ -523,7 +523,6 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
                     id: item.id,
                     title: item.title,
                     image: item.image,
-                    images: item.images,
                     category: item.category
                   }}
                   size="medium"

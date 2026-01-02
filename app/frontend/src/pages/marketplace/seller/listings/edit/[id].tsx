@@ -49,8 +49,8 @@ interface EnhancedFormData {
   duration: number;
   royalty: number;
 
-  // Quantity & Inventory
-  quantity: number;
+  // inventory & Inventory
+  inventory: number;
   unlimitedQuantity: boolean;
 
   // Security & Trust
@@ -248,7 +248,7 @@ const EditListingPage: React.FC = () => {
     listingType: 'FIXED_PRICE',
     duration: 86400,
     royalty: 0,
-    quantity: 1,
+    inventory: 1,
     unlimitedQuantity: false,
     escrowEnabled: true,
     specifications: {
@@ -292,7 +292,7 @@ const EditListingPage: React.FC = () => {
 
       try {
         setInitialLoading(true);
-        
+
         // Load categories from API
         try {
           const categoriesData = await marketplaceService.getCategories();
@@ -306,7 +306,7 @@ const EditListingPage: React.FC = () => {
             slug: cat.value
           })));
         }
-        
+
         // Fetch the listing data from the API
         console.log('Loading listing data for ID:', id);
 
@@ -334,8 +334,8 @@ const EditListingPage: React.FC = () => {
           listingType: (listing as any).saleType === 'auction' ? 'AUCTION' : 'FIXED_PRICE',
           duration: 86400,
           royalty: 0,
-          quantity: listing.quantity || 1,
-          unlimitedQuantity: (listing.quantity || 1) >= 999999,
+          inventory: (listing as any).inventory || listing.inventory || 1,
+          unlimitedQuantity: ((listing as any).inventory || listing.inventory || 1) >= 999999,
           escrowEnabled: listing.escrowEnabled ?? true,
           specifications: listing.specifications || {
             weight: { value: 0, unit: 'g' },
@@ -435,9 +435,9 @@ const EditListingPage: React.FC = () => {
         }
         break;
 
-      case 'quantity':
+      case 'inventory':
         if (!formData.unlimitedQuantity && (value < 1)) {
-          error = 'Quantity must be at least 1';
+          error = 'Inventory must be at least 1';
         }
         break;
     }
@@ -489,8 +489,8 @@ const EditListingPage: React.FC = () => {
     }
 
     // Quantity validation
-    if (!formData.unlimitedQuantity && formData.quantity < 1) {
-      errors.quantity = 'Quantity must be at least 1';
+    if (!formData.unlimitedQuantity && formData.inventory < 1) {
+      errors.inventory = 'inventory must be at least 1';
     }
 
     // Images validation
@@ -597,7 +597,7 @@ const EditListingPage: React.FC = () => {
       case 'basic':
         return !errors.title && !errors.description && !errors.category;
       case 'details':
-        return !errors.condition && !errors.quantity;
+        return !errors.condition && !errors.inventory;
       case 'pricing':
         return !errors.price;
       case 'shipping':
@@ -858,7 +858,7 @@ const EditListingPage: React.FC = () => {
         category: formData.category,
         currency: formData.currency,
         quantity: formData.unlimitedQuantity ? 999999 : formData.quantity,
-        inventory: formData.unlimitedQuantity ? 999999 : formData.quantity,
+        inventory: formData.unlimitedQuantity ? 999999 : formData.inventory,
         tags: formData.tags,
         images: uploadedImageUrls, // Include all image URLs
         condition: formData.condition as 'new' | 'used' | 'refurbished',
@@ -1432,7 +1432,7 @@ const EditListingPage: React.FC = () => {
                           size,
                           sku: `EDIT-${size}`,
                           price: parseFloat(formData.price) || 0,
-                          inventory: formData.quantity || 0,
+                          inventory: formData.inventory || 0,
                           images: []
                         };
                       });
@@ -1484,26 +1484,26 @@ const EditListingPage: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">
-                    Quantity *
+                    Inventory *
                   </label>
                   <div className="flex items-center space-x-4">
                     <div className="flex-1">
                       <input
                         type="number"
-                        value={formData.unlimitedQuantity ? '' : formData.quantity}
+                        value={formData.unlimitedQuantity ? '' : formData.inventory}
                         onChange={(e) => {
                           const value = parseInt(e.target.value) || 0;
-                          handleFormChange('quantity', value);
+                          handleFormChange('inventory', value);
                         }}
                         min="1"
                         disabled={formData.unlimitedQuantity}
-                        className={`w-full px-4 py-3 bg-white/10 border ${fieldErrors.quantity ? 'border-red-500' : 'border-white/20'
+                        className={`w-full px-4 py-3 bg-white/10 border ${fieldErrors.inventory ? 'border-red-500' : 'border-white/20'
                           } rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${formData.unlimitedQuantity ? 'opacity-50' : ''
                           }`}
-                        placeholder="Enter quantity"
+                        placeholder="Enter inventory"
                       />
-                      {fieldErrors.quantity && (
-                        <p className="mt-1 text-sm text-red-400">{fieldErrors.quantity}</p>
+                      {fieldErrors.inventory && (
+                        <p className="mt-1 text-sm text-red-400">{fieldErrors.inventory}</p>
                       )}
                     </div>
                     <div className="flex items-center">
@@ -1889,7 +1889,7 @@ const EditListingPage: React.FC = () => {
                     <div>
                       <h4 className="text-sm font-medium text-white/70">Inventory</h4>
                       <p className="text-white">
-                        {formData.unlimitedQuantity ? 'Unlimited' : formData.quantity}
+                        {formData.unlimitedQuantity ? 'Unlimited' : formData.inventory}
                       </p>
                     </div>
 

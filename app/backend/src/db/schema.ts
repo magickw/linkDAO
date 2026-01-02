@@ -999,7 +999,7 @@ export const listings = pgTable("listings", {
   productId: uuid("product_id").references(() => products.id), // Link to products table
   tokenAddress: varchar("token_address", { length: 66 }).notNull(),
   price: numeric("price").notNull(), // Using numeric for better precision
-  quantity: integer("quantity").notNull(),
+  inventory: integer("inventory").notNull(),
   inventoryHolds: integer("inventory_holds").notNull().default(0), // Number of items currently held in temporary reservations
   itemType: varchar("item_type", { length: 32 }).notNull(), // 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE'
   listingType: varchar("listing_type", { length: 32 }).notNull(), // 'FIXED_PRICE' | 'AUCTION'

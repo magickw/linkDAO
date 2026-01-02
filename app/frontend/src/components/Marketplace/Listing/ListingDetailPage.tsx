@@ -3,15 +3,15 @@ import { useRouter } from 'next/router';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { useAccount } from 'wagmi';
-import { 
-  Star, 
-  Shield, 
-  Heart, 
-  Share2, 
-  MapPin, 
-  Clock, 
-  Truck, 
-  RotateCcw, 
+import {
+  Star,
+  Shield,
+  Heart,
+  Share2,
+  MapPin,
+  Clock,
+  Truck,
+  RotateCcw,
   MessageCircle,
   ShoppingCart,
   Gavel,
@@ -72,18 +72,18 @@ interface ListingDetailPageProps {
 const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listingId }) => {
   const router = useRouter();
   const { address: walletAddress } = useAccount();
-  
+
   const [listing, setListing] = useState<ListingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isFavorited, setIsFavorited] = useState(false);
-  const [quantity, setQuantity] = useState(1);
+  const [inventory, setInventory] = useState(1);
 
   useEffect(() => {
     const fetchListing = async () => {
       try {
         setLoading(true);
-        
+
         // Fetch actual listing data from API
         const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
         const response = await fetch(`${baseUrl}/marketplace/listings/${listingId}`);
@@ -136,7 +136,7 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listingId }) => {
             return;
           }
         }
-        
+
         // Fallback to mock data if API not successful
         const mockListings = {
           '550e8400-e29b-41d4-a716-446655440001': {
@@ -271,7 +271,7 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listingId }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
+
         {/* Breadcrumb */}
         <nav className="flex items-center space-x-2 text-sm text-white/70 mb-6">
           <button onClick={() => router.push('/marketplace')} className="hover:text-white">
@@ -284,7 +284,7 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listingId }) => {
         </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          
+
           {/* Image Gallery */}
           <div className="space-y-4">
             <div className="aspect-square bg-white/10 rounded-2xl overflow-hidden">
@@ -301,9 +301,8 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listingId }) => {
                 <button
                   key={index}
                   onClick={() => setSelectedImageIndex(index)}
-                  className={`aspect-square rounded-lg overflow-hidden border-2 transition-colors ${
-                    selectedImageIndex === index ? 'border-blue-400' : 'border-white/20'
-                  }`}
+                  className={`aspect-square rounded-lg overflow-hidden border-2 transition-colors ${selectedImageIndex === index ? 'border-blue-400' : 'border-white/20'
+                    }`}
                 >
                   <Image
                     src={image}
@@ -319,7 +318,7 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listingId }) => {
 
           {/* Listing Details */}
           <div className="space-y-6">
-            
+
             {/* Title and Price */}
             <div>
               <div className="flex items-center gap-2 mb-2">
@@ -349,11 +348,10 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listingId }) => {
 
             {/* Status and Condition */}
             <div className="flex items-center gap-4">
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                listing.status === 'ACTIVE' ? 'bg-green-500/20 text-green-400' :
-                listing.status === 'SOLD' ? 'bg-red-500/20 text-red-400' :
-                'bg-gray-500/20 text-gray-400'
-              }`}>
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${listing.status === 'ACTIVE' ? 'bg-green-500/20 text-green-400' :
+                  listing.status === 'SOLD' ? 'bg-red-500/20 text-red-400' :
+                    'bg-gray-500/20 text-gray-400'
+                }`}>
                 {listing.status}
               </span>
               <span className="text-white/70">Condition: {listing.condition}</span>
@@ -372,7 +370,7 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listingId }) => {
             {listing.category === 'Electronics' && (
               <div className="space-y-4 bg-white/5 rounded-lg p-4">
                 <h4 className="text-white font-medium">Product Options</h4>
-                
+
                 {/* Color Selection */}
                 <div>
                   <label className="text-white/70 text-sm block mb-2">Color:</label>
@@ -384,7 +382,7 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listingId }) => {
                     ))}
                   </div>
                 </div>
-                
+
                 {/* Size/Dimensions */}
                 <div>
                   <label className="text-white/70 text-sm block mb-2">Size:</label>
@@ -399,16 +397,16 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listingId }) => {
             {/* Action Buttons */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 mb-4">
-                <label className="text-white/70">Quantity:</label>
-                <select 
-                  value={quantity} 
-                  onChange={(e) => setQuantity(Number(e.target.value))}
+                <label className="text-white/70">Inventory:</label>
+                <select
+                  value={inventory}
+                  onChange={(e) => setInventory(Number(e.target.value))}
                   className="bg-white/10 text-white rounded-lg px-3 py-2 border border-white/20"
                 >
-                  {[1,2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}
+                  {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>
-              
+
               <button
                 onClick={handlePurchase}
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center justify-center gap-2"
@@ -416,7 +414,7 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listingId }) => {
                 <ShoppingCart className="w-5 h-5" />
                 Buy Now
               </button>
-              
+
               <button
                 onClick={handleMakeOffer}
                 className="w-full bg-white/10 text-white py-3 rounded-lg font-medium border border-white/20 hover:bg-white/20 transition-colors flex items-center justify-center gap-2"
@@ -424,20 +422,19 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listingId }) => {
                 <Gavel className="w-5 h-5" />
                 Make Offer
               </button>
-              
+
               <div className="flex gap-2">
                 <button
                   onClick={() => setIsFavorited(!isFavorited)}
-                  className={`flex-1 py-3 rounded-lg font-medium border transition-colors flex items-center justify-center gap-2 ${
-                    isFavorited 
-                      ? 'bg-red-500/20 text-red-400 border-red-400/30' 
+                  className={`flex-1 py-3 rounded-lg font-medium border transition-colors flex items-center justify-center gap-2 ${isFavorited
+                      ? 'bg-red-500/20 text-red-400 border-red-400/30'
                       : 'bg-white/10 text-white/70 border-white/20 hover:bg-white/20'
-                  }`}
+                    }`}
                 >
                   <Heart className={`w-5 h-5 ${isFavorited ? 'fill-current' : ''}`} />
                   {isFavorited ? 'Favorited' : 'Add to Favorites'}
                 </button>
-                
+
                 <button className="px-4 py-3 bg-white/10 text-white/70 rounded-lg border border-white/20 hover:bg-white/20 transition-colors">
                   <Share2 className="w-5 h-5" />
                 </button>
@@ -506,7 +503,7 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listingId }) => {
                 </div>
                 <div className="flex items-center gap-1">
                   <User className="w-4 h-4" />
-                  <button 
+                  <button
                     onClick={() => router.push(`/marketplace/seller/store/${listing.seller.id}`)}
                     className="text-blue-400 hover:text-blue-300 underline"
                   >
@@ -526,7 +523,7 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listingId }) => {
               <h3 className="text-2xl font-semibold text-white mb-4">Description</h3>
               <p className="text-white/80 leading-relaxed text-lg">{listing.description}</p>
             </div>
-            
+
             {/* Specifications */}
             <div>
               <h3 className="text-2xl font-semibold text-white mb-4">Specifications</h3>
@@ -549,7 +546,7 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listingId }) => {
                 </div>
                 <p className="text-white/70">{listing.policies.authenticity}</p>
               </div>
-              
+
               <div className="bg-white/5 rounded-lg p-6">
                 <div className="flex items-center gap-2 text-blue-400 mb-3">
                   <RotateCcw className="w-6 h-6" />
@@ -557,7 +554,7 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listingId }) => {
                 </div>
                 <p className="text-white/70">{listing.policies.returns}</p>
               </div>
-              
+
               <div className="bg-white/5 rounded-lg p-6">
                 <div className="flex items-center gap-2 text-purple-400 mb-3">
                   <CheckCircle className="w-6 h-6" />
