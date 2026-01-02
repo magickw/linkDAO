@@ -592,7 +592,7 @@ export class DatabaseService {
 
   // Marketplace operations
   // Marketplace operations
-  async createListing(sellerId: string, tokenAddress: string, price: string, quantity: string,
+  async createListing(sellerId: string, tokenAddress: string, price: string, inventory: string,
     itemType: string, listingType: string, metadataURI: string,
     nftStandard?: string, tokenId?: string, reservePrice?: string, minIncrement?: string,
     title: string = 'Untitled Listing', description: string = '', categoryId: string = 'general',
@@ -633,7 +633,7 @@ export class DatabaseService {
         categoryId: finalCategoryId,
         images: JSON.stringify(images),
         metadata: JSON.stringify(metadataObj),
-        inventory: parseInt(quantity), // products uses inventory
+        inventory: parseInt(inventory), // products uses inventory
         status: 'active',
         listingStatus: 'active',
         publishedAt: new Date(),
@@ -892,15 +892,15 @@ export class DatabaseService {
           const listing = await tx.select().from(schema.listings).where(eq(schema.listings.id, listingId));
           if (listing.length === 0) throw new Error('Product not found');
 
-          if (listing[0].quantity < 1) {
+          if (listing[0].inventory < 1) {
             throw new Error('Insufficient inventory');
           }
 
           // Create inventory hold record for legacy listings
-          // TODO: Re-enable when inventoryHolds table is added to schema
-          /* await tx.insert(schema.inventoryHolds).values({
+          // TODO: Re-enable when inventory table is added to schema
+          /* await tx.insert(schema.inventory).values({
             productId: listingId,
-            quantity: 1,
+            inventory: 1,
             heldBy: buyerId,
             orderId: null, // Will be updated after order creation
             holdType: 'order_pending',
@@ -917,8 +917,8 @@ export class DatabaseService {
           // Decrement legacy listing
           await tx.update(schema.listings)
             .set({
-              quantity: sql`${schema.listings.quantity} - 1`
-              // inventoryHolds: sql`${schema.listings.inventoryHolds} + 1`  // TODO: Add field to schema
+              inventory: sql`${schema.listings.inventory} - 1`
+              // inventory: sql`${schema.listings.inventory} + 1`  // TODO: Add field to schema
             })
             .where(eq(schema.listings.id, listingId));
         } else {
@@ -927,9 +927,9 @@ export class DatabaseService {
           }
 
           // Create inventory hold record
-          await tx.insert(schema.inventoryHolds).values({
+          await tx.insert(schema.inventory).values({
             productId: listingId,
-            quantity: 1,
+            inventory: 1,
             heldBy: buyerId,
             orderId: null, // Will be updated after order creation
             holdType: 'order_pending',
@@ -967,12 +967,12 @@ export class DatabaseService {
 
         // 3. Update inventory hold with order ID
         const orderId = result[0].id;
-        await tx.update(schema.inventoryHolds)
+        await tx.update(schema.inventory)
           .set({
             orderId: orderId.toString(),
             status: 'order_created'
           })
-          .where(eq(schema.inventoryHolds.heldBy, buyerId));
+          .where(eq(schema.inventory.heldBy, buyerId));
 
         // 4. Update order with inventory hold ID
         await tx.update(schema.orders)
@@ -993,7 +993,7 @@ export class DatabaseService {
   async releaseInventoryHold(holdId: string, reason: 'order_completed' | 'order_cancelled' | 'expired'): Promise<void> {
     try {
       await this.db.transaction(async (tx: any) => {
-        const hold = await tx.select().from(schema.inventoryHolds).where(eq(schema.inventoryHolds.id, holdId));
+        const hold = await tx.select().from(schema.inventory).where(eq(schema.inventory.id, holdId));
 
         if (hold.length === 0) {
           throw new Error('Inventory hold not found');
@@ -1002,13 +1002,13 @@ export class DatabaseService {
         const inventoryHold = hold[0];
 
         // Update hold status
-        await tx.update(schema.inventoryHolds)
+        await tx.update(schema.inventory)
           .set({
             status: reason === 'order_completed' ? 'consumed' : 'released',
             releasedAt: new Date(),
             releaseReason: reason
           })
-          .where(eq(schema.inventoryHolds.id, holdId));
+          .where(eq(schema.inventory.id, holdId));
 
         // Only return inventory if order was cancelled or expired (not completed)
         if (reason !== 'order_completed') {
@@ -1016,11 +1016,11 @@ export class DatabaseService {
           const product = await tx.select().from(schema.products).where(eq(schema.products.id, inventoryHold.productId));
 
           if (product.length === 0) {
-            // Legacy listing - restore quantity
+            // Legacy listing - restore inventory
             await tx.update(schema.listings)
               .set({
-                quantity: sql`${schema.listings.quantity} + 1`,
-                inventoryHolds: sql`${schema.listings.inventoryHolds} - 1`
+                inventory: sql`${schema.listings.inventory} + 1`,
+                inventory_holds: sql`${schema.listings.inventory_holds} - 1`
               })
               .where(eq(schema.listings.id, inventoryHold.productId));
           } else {
@@ -1028,7 +1028,7 @@ export class DatabaseService {
             await tx.update(schema.products)
               .set({
                 inventory: sql`${schema.products.inventory} + 1`,
-                inventoryHolds: sql`${schema.products.inventoryHolds} - 1`
+                inventory: sql`${schema.products.inventory} - 1`
               })
               .where(eq(schema.products.id, inventoryHold.productId));
           }
@@ -1056,15 +1056,15 @@ export class DatabaseService {
   /**
    * Find and release expired inventory holds
    */
-  async releaseExpiredInventoryHolds(): Promise<number> {
+  async releaseExpiredInventory(): Promise<number> {
     try {
       const expiredHolds = await this.db
         .select()
-        .from(schema.inventoryHolds)
+        .from(schema.inventory)
         .where(
           and(
-            eq(schema.inventoryHolds.status, 'active'),
-            lt(schema.inventoryHolds.expiresAt, new Date())
+            eq(schema.inventory.status, 'active'),
+            lt(schema.inventory.expiresAt, new Date())
           )
         );
 
@@ -1118,16 +1118,16 @@ export class DatabaseService {
         }
 
         return {
-          available: String(Math.max(0, listing[0].quantity)),
-          held: String(listing[0].inventoryHolds || 0),
-          total: String(listing[0].quantity + (listing[0].inventoryHolds || 0))
+          available: String(Math.max(0, listing[0].inventory)),
+          held: String(listing[0].inventory_holds || 0),
+          total: String(listing[0].inventory + (listing[0].inventoryHolds || 0))
         };
       } else {
         // Product
         return {
           available: String(Math.max(0, product[0].inventory)),
-          held: String(product[0].inventoryHolds || 0),
-          total: String(product[0].inventory + (product[0].inventoryHolds || 0))
+          held: String(product[0].inventory || 0),
+          total: String(product[0].inventory + (product[0].inventory || 0))
         };
       }
     } catch (error) {

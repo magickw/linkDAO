@@ -1242,15 +1242,6 @@ app.get('/cart', (req, res) => {
 // BUT: Only apply to API routes to avoid interfering with share URL routes
 app.use('/api', missingEndpoints);
 
-// Catch all API routes (should be just before error handlers)
-app.use('/api/*', (req, res) => {
-  res.json({
-    success: true,
-    message: `API endpoint ${req.method} ${req.originalUrl} - fixed version`,
-    data: null
-  });
-});
-
 process.stdout.write('📝 All routes and middleware registered successfully\n');
 process.stdout.write(`📡 Attempting to start server on port ${PORT}...\n`);
 

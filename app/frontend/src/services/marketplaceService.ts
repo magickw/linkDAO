@@ -224,7 +224,6 @@ export interface MarketplaceListing {
   sellerWalletAddress: string;
   tokenAddress: string;
   price: string;
-  quantity: number;
   inventory: number;
   itemType: 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE';
   listingType: 'FIXED_PRICE' | 'AUCTION';

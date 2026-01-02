@@ -238,8 +238,7 @@ export interface SellerListing {
     subcategory?: string;
     price: number;
     currency: string;
-    quantity: number;
-    inventory?: number;
+    inventory: number;
     condition: 'new' | 'used' | 'refurbished';
     images: string[];
     specifications?: Record<string, string>;

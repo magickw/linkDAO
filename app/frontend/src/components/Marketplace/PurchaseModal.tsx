@@ -106,7 +106,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
         sellerAddress: listing.sellerWalletAddress,
         price: listing.price,
         tokenAddress: listing.tokenAddress,
-        quantity: listing.quantity,
+        quantity: 1,
         deliveryInfo: listing.itemType !== 'DIGITAL' && listing.itemType !== 'NFT' && useEscrow ? {
           fullName: 'Buyer Name',
           addressLine1: deliveryInfo,

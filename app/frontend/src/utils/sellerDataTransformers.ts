@@ -58,7 +58,7 @@ export function transformDisplayListingToUnified(
       displayCurrency: formatCurrency(displayListing.currency),
 
       // Inventory and availability
-      quantity: displayListing.quantity || 1,
+      inventory: displayListing.inventory || displayListing.quantity || 1,
       condition: displayListing.condition || 'new',
       availability: displayListing.isActive === false ? 'out_of_stock' : 'available',
 
@@ -207,8 +207,8 @@ export function transformSellerListingToUnified(
       }
     }
 
-    // Get quantity from either quantity or inventory field
-    const quantity = backendListing.quantity ?? backendListing.inventory ?? 0;
+    // Get inventory from either quantity or inventory field
+    const inventory = backendListing.inventory ?? backendListing.quantity ?? 0;
 
     // Get category from either category or categoryId
     const category = backendListing.category || backendListing.categoryId || '';
@@ -261,7 +261,7 @@ export function transformSellerListingToUnified(
       displayCurrency: formatCurrency(backendListing.currency || backendListing.priceCurrency || 'USD'),
 
       // Inventory and availability
-      quantity: quantity,
+      inventory: inventory,
       condition: backendListing.condition || 'new',
       availability: backendListing.status === 'active' ? 'available' : 'out_of_stock',
 
@@ -303,7 +303,7 @@ export function transformSellerListingToUnified(
 
     transformedFields.push('likes'); // Mapped from favorites
     if (backendListing.inventory !== undefined) {
-      transformedFields.push('quantity'); // Mapped from inventory
+      transformedFields.push('inventory'); // Mapped from inventory/quantity
     }
     if (backendListing.categoryId !== undefined) {
       transformedFields.push('category'); // Mapped from categoryId
@@ -379,7 +379,7 @@ export function transformMarketplaceListingToUnified(
       displayCurrency: formatCurrency(marketplaceListing.currency),
 
       // Inventory and availability
-      quantity: marketplaceListing.quantity || 1,
+      inventory: marketplaceListing.inventory || marketplaceListing.quantity || 1,
       condition: 'new', // Default
       availability: marketplaceListing.isActive ? 'available' : 'out_of_stock',
 

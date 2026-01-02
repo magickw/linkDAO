@@ -36,7 +36,7 @@ export interface UnifiedSellerListing {
   displayCurrency: string; // User-friendly currency display
 
   // Inventory and availability
-  quantity: number;
+  inventory: number;
   condition: 'new' | 'used' | 'refurbished';
   availability: 'available' | 'out_of_stock' | 'discontinued';
 
