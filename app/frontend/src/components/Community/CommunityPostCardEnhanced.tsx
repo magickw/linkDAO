@@ -875,10 +875,14 @@ function CommunityPostCardEnhanced({
                 )}
                 <div className="text-gray-900 dark:text-white leading-relaxed prose prose-sm dark:prose-invert max-w-none">
 
-                  {processContent(getTruncatedContent(post.content, 500, isExpanded))}
+                  {isExpanded ? (
+                    processContent(post.content)
+                  ) : (
+                    processContent(getTruncatedContent(post.content, 500, false))
+                  )}
                 </div>
 
-                {shouldTruncateContent(post.content, 500, isExpanded) && (
+                {!isExpanded && shouldTruncateContent(post.content, 500, false) && (
                   <button
                     onClick={() => setIsExpanded(true)}
                     className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium mt-2 flex items-center space-x-1"
