@@ -395,13 +395,14 @@ export class GasFeeEstimationService {
    */
   private getFallbackGasPrices(chainId: number): GasPriceResponse[] {
     // Fallback gas prices (in gwei) - Updated to realistic market conditions
+    // Note: BigInt cannot have decimals, so we calculate directly in wei
     const fallbackGasPrices: Record<number, bigint> = {
       1: 5n * 1000000000n, // 5 gwei for mainnet (reduced from 30)
       137: 1n * 1000000000n, // 1 gwei for polygon (reduced from 30)
-      42161: 0.5n * 1000000000n, // 0.5 gwei for arbitrum (reduced from 1)
-      8453: 0.1n * 1000000000n, // 0.1 gwei for base
+      42161: 500000000n, // 0.5 gwei for arbitrum (reduced from 1)
+      8453: 100000000n, // 0.1 gwei for base
       11155111: 2n * 1000000000n, // 2 gwei for sepolia (reduced from 10)
-      84532: 0.1n * 1000000000n // 0.1 gwei for base sepolia
+      84532: 100000000n // 0.1 gwei for base sepolia
     };
 
     const gasPrice = fallbackGasPrices[chainId] || fallbackGasPrices[1];
@@ -678,13 +679,14 @@ export class GasFeeEstimationService {
     const safeGasLimit = gasLimit > maxGasLimit ? maxGasLimit : gasLimit;
 
     // Fallback gas prices (in gwei) - ONLY FOR DEVELOPMENT/TESTING
+    // Note: BigInt cannot have decimals, so we calculate directly in wei
     const fallbackGasPrices: Record<number, bigint> = {
       1: 5n * 1000000000n, // 5 gwei for mainnet
       137: 1n * 1000000000n, // 1 gwei for polygon
-      42161: 0.5n * 1000000000n, // 0.5 gwei for arbitrum
-      8453: 0.1n * 1000000000n, // 0.1 gwei for base
+      42161: 500000000n, // 0.5 gwei for arbitrum
+      8453: 100000000n, // 0.1 gwei for base
       11155111: 2n * 1000000000n, // 2 gwei for sepolia
-      84532: 0.1n * 1000000000n // 0.1 gwei for base sepolia
+      84532: 100000000n // 0.1 gwei for base sepolia
     };
 
     const gasPrice = fallbackGasPrices[chainId] || fallbackGasPrices[1];

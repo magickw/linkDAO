@@ -430,7 +430,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
             addToast(`Switching to ${getNetworkName(requiredChainId)}...`, 'info');
             await switchChain({ chainId: requiredChainId });
             addToast(`Successfully switched to ${getNetworkName(requiredChainId)}`, 'success');
-          } catch (error: {
+          } catch (error) {
             console.error('Network switch failed:', error);
             
             // If switch failed, provide helpful guidance
@@ -442,7 +442,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
             } else {
               addToast('Network switch cancelled or failed. Please switch manually.', 'warning');
             }
-          });
+          }
         }
       } catch (error) {
         console.error('Failed to check wallet balance:', error);
