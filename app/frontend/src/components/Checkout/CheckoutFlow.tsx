@@ -150,6 +150,12 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
         marketConditions: await getCurrentMarketConditions()
       };
 
+      // Safety check: ensure availablePaymentMethods is not empty
+      if (!context.availablePaymentMethods || context.availablePaymentMethods.length === 0) {
+        console.warn('⚠️ No available payment methods, adding fallback methods');
+        context.availablePaymentMethods = await getAvailablePaymentMethods();
+      }
+
       console.log('🔍 Payment context:', {
         hasWallet: !!address,
         chainId: context.userContext.chainId,
@@ -173,7 +179,8 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
         console.error('Payment method prioritization failed, using fallback:', prioritizationError);
 
         // Fallback: create a simple prioritization result with all methods available
-        const fallbackMethods = context.availablePaymentMethods.map(method => ({
+        const availableMethods = context.availablePaymentMethods || [];
+        const fallbackMethods = availableMethods.map(method => ({
           method,
           availabilityStatus: 'available' as any,
           priority: method.type === PaymentMethodType.FIAT_STRIPE ? 1 : 100,
@@ -194,7 +201,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
         result = {
           prioritizedMethods: fallbackMethods,
-          defaultMethod: fallbackMethods[0],
+          defaultMethod: fallbackMethods[0] || null,
           warnings: [
             {
               type: 'api_limit',
@@ -711,6 +718,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
                 showCostBreakdown={true}
                 showRecommendations={true}
                 showWarnings={true}
+                maxDisplayMethods={10}
                 layout="list"
                 responsive={true}
                 className="text-white"
