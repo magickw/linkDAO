@@ -31,6 +31,11 @@ interface StripeCheckoutProps {
   orderId: string;
 
   /**
+   * User's wallet address (required for identification)
+   */
+  userAddress?: string;
+
+  /**
    * Optional Stripe customer ID
    * If provided, payment method can be saved for future use
    */
@@ -66,6 +71,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
   amount,
   currency = 'USD',
   orderId,
+  userAddress,
   customerId,
   savePaymentMethod = false,
   metadata = {},
@@ -87,13 +93,14 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
     setError(null);
 
     try {
-      const response = await fetch('/api/stripe/create-payment-intent', {
+      const response = await fetch('/api/enhanced-fiat-payment/create-payment-intent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           amount,
+          userAddress: userAddress || '0x0000000000000000000000000000000000000000',
           currency: currency.toLowerCase(),
           orderId,
           customerId,

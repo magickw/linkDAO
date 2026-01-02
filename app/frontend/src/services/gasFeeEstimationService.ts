@@ -394,12 +394,14 @@ export class GasFeeEstimationService {
    * Get fallback gas prices for when APIs are unavailable
    */
   private getFallbackGasPrices(chainId: number): GasPriceResponse[] {
-    // Fallback gas prices (in gwei)
+    // Fallback gas prices (in gwei) - Updated to realistic market conditions
     const fallbackGasPrices: Record<number, bigint> = {
-      1: 30n * 1000000000n, // 30 gwei for mainnet
-      137: 30n * 1000000000n, // 30 gwei for polygon
-      42161: 1n * 1000000000n, // 1 gwei for arbitrum
-      11155111: 10n * 1000000000n // 10 gwei for sepolia
+      1: 5n * 1000000000n, // 5 gwei for mainnet (reduced from 30)
+      137: 1n * 1000000000n, // 1 gwei for polygon (reduced from 30)
+      42161: 0.5n * 1000000000n, // 0.5 gwei for arbitrum (reduced from 1)
+      8453: 0.1n * 1000000000n, // 0.1 gwei for base
+      11155111: 2n * 1000000000n, // 2 gwei for sepolia (reduced from 10)
+      84532: 0.1n * 1000000000n // 0.1 gwei for base sepolia
     };
 
     const gasPrice = fallbackGasPrices[chainId] || fallbackGasPrices[1];
@@ -650,14 +652,23 @@ export class GasFeeEstimationService {
     return blockTimeMap[chainId] || 12;
   }
 
-  /**
+/**
    * Get fallback gas estimate when APIs fail
+   * NOTE: This should NOT be used in production. In production, we should:
+   * 1. Show an error message to the user
+   * 2. Disable the payment method temporarily
+   * 3. Allow users to retry later when APIs are available
    */
   private getFallbackGasEstimate(
     chainId: number,
     transactionType: keyof typeof STANDARD_GAS_LIMITS,
     customGasLimit?: bigint
   ): GasEstimate {
+    // In production, throw an error instead of using fallback
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Gas fee estimation failed. Please try again later or use a different payment method.');
+    }
+
     const gasLimit = customGasLimit || STANDARD_GAS_LIMITS[transactionType];
     
     // Ensure gas limit doesn't exceed security or network limits
@@ -666,12 +677,14 @@ export class GasFeeEstimationService {
     const maxGasLimit = securityMaxGasLimit < networkMaxGasLimit ? securityMaxGasLimit : networkMaxGasLimit;
     const safeGasLimit = gasLimit > maxGasLimit ? maxGasLimit : gasLimit;
 
-    // Fallback gas prices (in gwei)
+    // Fallback gas prices (in gwei) - ONLY FOR DEVELOPMENT/TESTING
     const fallbackGasPrices: Record<number, bigint> = {
-      1: 30n * 1000000000n, // 30 gwei for mainnet
-      137: 30n * 1000000000n, // 30 gwei for polygon
-      42161: 1n * 1000000000n, // 1 gwei for arbitrum
-      11155111: 10n * 1000000000n // 10 gwei for sepolia
+      1: 5n * 1000000000n, // 5 gwei for mainnet
+      137: 1n * 1000000000n, // 1 gwei for polygon
+      42161: 0.5n * 1000000000n, // 0.5 gwei for arbitrum
+      8453: 0.1n * 1000000000n, // 0.1 gwei for base
+      11155111: 2n * 1000000000n, // 2 gwei for sepolia
+      84532: 0.1n * 1000000000n // 0.1 gwei for base sepolia
     };
 
     const gasPrice = fallbackGasPrices[chainId] || fallbackGasPrices[1];
@@ -682,7 +695,7 @@ export class GasFeeEstimationService {
       gasPrice,
       totalCost,
       totalCostUSD: this.getFallbackUSDPrice(totalCost, chainId),
-      confidence: 0.5 // Low confidence for fallback
+      confidence: 0.1 // Very low confidence for fallback
     };
   }
 

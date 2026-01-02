@@ -180,6 +180,14 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
         // Fallback: create a simple prioritization result with all methods available
         const availableMethods = context.availablePaymentMethods || [];
+        
+        if (availableMethods.length === 0) {
+          console.warn('⚠️ No available payment methods in fallback, retrying...');
+          setPrioritizationResult(null);
+          setError('Unable to load payment options. Please refresh the page.');
+          return;
+        }
+
         const fallbackMethods = availableMethods.map(method => ({
           method,
           availabilityStatus: 'available' as any,
@@ -252,12 +260,12 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
     // Add network-specific USDC options for all supported networks
     const usdcConfigs = [
-      { token: USDC_MAINNET, name: 'USDC (Ethereum)', chainId: 1, networkName: 'Ethereum' },
-      { token: USDC_POLYGON, name: 'USDC (Polygon)', chainId: 137, networkName: 'Polygon' },
-      { token: USDC_ARBITRUM, name: 'USDC (Arbitrum)', chainId: 42161, networkName: 'Arbitrum' },
-      { token: USDC_BASE, name: 'USDC (Base)', chainId: 8453, networkName: 'Base' },
-      { token: USDC_SEPOLIA, name: 'USDC (Sepolia)', chainId: 11155111, networkName: 'Sepolia Testnet' },
-      { token: USDC_BASE_SEPOLIA, name: 'USDC (Base Sepolia)', chainId: 84532, networkName: 'Base Sepolia' }
+      { token: USDC_MAINNET, name: 'USDC (Ethereum)', chainId: 1, networkName: 'Ethereum', isTestnet: false },
+      { token: USDC_POLYGON, name: 'USDC (Polygon)', chainId: 137, networkName: 'Polygon', isTestnet: false },
+      { token: USDC_ARBITRUM, name: 'USDC (Arbitrum)', chainId: 42161, networkName: 'Arbitrum', isTestnet: false },
+      { token: USDC_BASE, name: 'USDC (Base)', chainId: 8453, networkName: 'Base', isTestnet: false },
+      { token: USDC_SEPOLIA, name: 'USDC (Sepolia)', chainId: 11155111, networkName: 'Sepolia', isTestnet: true },
+      { token: USDC_BASE_SEPOLIA, name: 'USDC (Base Sepolia)', chainId: 84532, networkName: 'Base Sepolia', isTestnet: true }
     ];
 
     usdcConfigs.forEach(config => {
@@ -265,7 +273,9 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
         id: `usdc-${config.chainId}`,
         type: PaymentMethodType.STABLECOIN_USDC,
         name: config.name,
-        description: `USD Coin on ${config.networkName}`,
+        description: config.isTestnet 
+          ? `USD Coin on ${config.networkName} (Testnet)`
+          : `USD Coin on ${config.networkName}`,
         chainId: config.chainId,
         enabled: true,
         supportedNetworks: [config.chainId],
@@ -420,10 +430,19 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
             addToast(`Switching to ${getNetworkName(requiredChainId)}...`, 'info');
             await switchChain({ chainId: requiredChainId });
             addToast(`Successfully switched to ${getNetworkName(requiredChainId)}`, 'success');
-          } catch (error) {
+          } catch (error: {
             console.error('Network switch failed:', error);
-            addToast('Network switch cancelled or failed. Please switch manually.', 'warning');
-          }
+            
+            // If switch failed, provide helpful guidance
+            if (requiredChainId === 11155111) {
+              addToast(
+                'Please add Sepolia testnet to your wallet manually, or choose a mainnet payment method.',
+                'warning'
+              );
+            } else {
+              addToast('Network switch cancelled or failed. Please switch manually.', 'warning');
+            }
+          });
         }
       } catch (error) {
         console.error('Failed to check wallet balance:', error);
@@ -1144,6 +1163,7 @@ const FiatPaymentDetails: React.FC<{
           amount={paymentMethod.costEstimate.totalCost}
           currency="USD"
           orderId={`order_${Date.now()}`}
+          userAddress={address}
           metadata={{
             cartItems: cartState.items.map(item => item.id).join(','),
             itemCount: cartState.items.length.toString(),

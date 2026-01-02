@@ -44,6 +44,7 @@ export interface PurchaseRequest {
 export interface PurchaseResult {
   success: boolean;
   transactionId?: string;
+  clientSecret?: string;
   txHash?: string;
   error?: string;
   estimatedTokens?: number;

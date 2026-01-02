@@ -60,6 +60,7 @@ export class StripePaymentService implements IPaymentProcessor {
       return {
         success: true,
         transactionId: paymentIntent.id,
+        clientSecret: paymentIntent.client_secret,
         estimatedTokens: request.amount,
         finalPrice: amountInCents / 100, // Convert back to dollars
       };

@@ -1,4 +1,4 @@
-const BASE_URL = typeof window !== 'undefined' ? window.location.origin : '';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || (typeof window !== 'undefined' ? window.location.origin : '');
 
 export interface TwoFactorSetupResponse {
     secret: string;

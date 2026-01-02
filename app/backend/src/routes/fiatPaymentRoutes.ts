@@ -36,6 +36,7 @@ export function createFiatPaymentRoutes(stripeService: StripePaymentService): ex
         res.status(200).json({
           success: true,
           paymentIntentId: result.transactionId,
+          clientSecret: result.clientSecret,
           estimatedTokens: result.estimatedTokens,
           finalPrice: result.finalPrice,
         });
