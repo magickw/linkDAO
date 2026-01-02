@@ -4,6 +4,17 @@ import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 
+// Log all requests to security routes
+router.use((req, res, next) => {
+    console.log('[Security Routes]', {
+        method: req.method,
+        path: req.path,
+        url: req.url,
+        hasUser: !!req.user
+    });
+    next();
+});
+
 // All routes require authentication
 router.use(authenticateToken);
 
@@ -14,16 +25,19 @@ router.use(authenticateToken);
  * POST /api/security/2fa/setup
  */
 router.post('/2fa/setup', async (req: Request, res: Response) => {
+    console.log('[Security] POST /2fa/setup called');
     try {
         const userId = req.user?.id;
         if (!userId) {
+            console.log('[Security] No userId in request');
             return res.status(401).json({ error: 'Unauthorized' });
         }
 
+        console.log('[Security] Setting up TOTP for user:', userId);
         const result = await securityService.setupTOTP(userId);
         res.json(result);
     } catch (error) {
-        console.error('Error setting up 2FA:', error);
+        console.error('[Security] Error setting up 2FA:', error);
         res.status(500).json({ error: 'Failed to setup 2FA' });
     }
 });

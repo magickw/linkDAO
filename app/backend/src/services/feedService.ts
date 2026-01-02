@@ -526,7 +526,7 @@ export class FeedService {
           : Promise.resolve([]),
 
         // Regular post comments
-        regularPostIds.length > 0
+        allRegularPostIds.length > 0
           ? db.select({
             postId: comments.postId,
             count: sql<number>`COUNT(*)::int`
@@ -540,7 +540,7 @@ export class FeedService {
           : Promise.resolve([]),
 
         // Quick post comments
-        quickPostIds.length > 0
+        allQuickPostIds.length > 0
           ? db.select({
             postId: comments.quickPostId,
             count: sql<number>`COUNT(*)::int`
@@ -603,13 +603,16 @@ export class FeedService {
             mediaCids: posts.mediaCids,
             tags: posts.tags,
             createdAt: posts.createdAt,
+            upvotes: posts.upvotes,
+            downvotes: posts.downvotes,
 
             shareId: posts.shareId, // Include shareId
             walletAddress: users.walletAddress,
             handle: users.handle,
             displayName: users.displayName,
             profileCid: users.profileCid,
-            avatarCid: users.avatarCid
+            avatarCid: users.avatarCid,
+            isQuickPost: sql`false`
           })
             .from(posts)
             .leftJoin(users, eq(posts.authorId, users.id))
@@ -626,6 +629,8 @@ export class FeedService {
             mediaCids: quickPosts.mediaCids,
             tags: quickPosts.tags,
             createdAt: quickPosts.createdAt,
+            upvotes: quickPosts.upvotes,
+            downvotes: quickPosts.downvotes,
 
             shareId: quickPosts.shareId, // Include shareId
             walletAddress: users.walletAddress,
@@ -748,10 +753,9 @@ export class FeedService {
             shares: Number(originalShareCount?.count) || 0,
             views: originalViewCount,
             reactionCount: originalReactionCount,
-            // Note: upvotes/downvotes are derived from reactionCount
-            // Frontend can calculate these if needed, or we can add separate maps
-            upvotes: 0,  // TODO: Add upvote/downvote maps if needed
-            downvotes: 0
+            // Use actual upvotes/downvotes from database
+            upvotes: Number(rawOriginalPost.upvotes) || 0,
+            downvotes: Number(rawOriginalPost.downvotes) || 0
           };
 
           // Lazily generate shareId for original post if missing

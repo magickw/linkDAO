@@ -1345,7 +1345,28 @@ export class CommunityService {
       };
 
       if (data.title !== undefined) updateValues.title = data.title;
-      if (data.content !== undefined) updateValues.content = InputSanitizer.sanitizeString(data.content, SANITIZATION_CONFIGS.RICH_TEXT).sanitized;
+      if (data.content !== undefined) updateValues.content = InputSanitizer.sanitizeString(data.content, {
+        allowedTags: [
+          'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+          'p', 'br', 'hr',
+          'strong', 'b', 'em', 'i', 'u', 's', 'strike', 'del',
+          'a', 'code', 'pre', 'blockquote',
+          'ul', 'ol', 'li',
+          'img', 'iframe', 'div', 'span'
+        ],
+        allowedAttributes: {
+          'a': ['href', 'title', 'target', 'rel', 'class'],
+          'img': ['src', 'alt', 'title', 'width', 'height', 'class'],
+          'iframe': ['src', 'width', 'height', 'allow', 'allowfullscreen', 'frameborder', 'class'],
+          'div': ['class', 'style'],
+          'span': ['class', 'style'],
+          'p': ['class', 'style'],
+          '*': ['class', 'id']
+        },
+        stripUnknown: true,
+        maxLength: 50000,
+        preserveWhitespace: true
+      }).sanitized;
       if (data.mediaUrls !== undefined) updateValues.mediaUrls = JSON.stringify(data.mediaUrls);
       if (data.tags !== undefined) updateValues.tags = JSON.stringify(data.tags);
 
@@ -1791,7 +1812,28 @@ export class CommunityService {
           communityId,
           authorId: userResult[0].id,
           title: title || null,
-          content: InputSanitizer.sanitizeString(content, SANITIZATION_CONFIGS.RICH_TEXT).sanitized,
+          content: InputSanitizer.sanitizeString(content, {
+            allowedTags: [
+              'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+              'p', 'br', 'hr',
+              'strong', 'b', 'em', 'i', 'u', 's', 'strike', 'del',
+              'a', 'code', 'pre', 'blockquote',
+              'ul', 'ol', 'li',
+              'img', 'iframe', 'div', 'span'
+            ],
+            allowedAttributes: {
+              'a': ['href', 'title', 'target', 'rel', 'class'],
+              'img': ['src', 'alt', 'title', 'width', 'height', 'class'],
+              'iframe': ['src', 'width', 'height', 'allow', 'allowfullscreen', 'frameborder', 'class'],
+              'div': ['class', 'style'],
+              'span': ['class', 'style'],
+              'p': ['class', 'style'],
+              '*': ['class', 'id']
+            },
+            stripUnknown: true,
+            maxLength: 50000,
+            preserveWhitespace: true
+          }).sanitized,
           contentCid: `local-${Date.now()}`, // Temporary CID for local content
           mediaCids: mediaUrls ? JSON.stringify(mediaUrls) : null,
           tags: tags ? JSON.stringify(tags) : null,

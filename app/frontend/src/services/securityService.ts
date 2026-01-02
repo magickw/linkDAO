@@ -85,7 +85,10 @@ class SecurityService {
             method: 'POST',
             headers: this.getAuthHeaders(),
         });
-        if (!response.ok) throw new Error('Failed to setup 2FA');
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Failed to setup 2FA (${response.status}): ${errorText}`);
+        }
         return response.json();
     }
 

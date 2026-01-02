@@ -67,7 +67,8 @@ export function EnhancedSecuritySettings() {
             setShow2FASetup(true);
         } catch (error) {
             console.error('Error setting up 2FA:', error);
-            alert('Failed to setup 2FA. Please try again.');
+            const errorMessage = error instanceof Error ? error.message : 'Failed to setup 2FA. Please try again.';
+            alert(errorMessage);
         }
     };
 

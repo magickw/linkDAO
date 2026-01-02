@@ -163,7 +163,28 @@ export class PostService {
           mediaCids,
           input.tags,
           input.onchainRef,
-          InputSanitizer.sanitizeString(input.content, SANITIZATION_CONFIGS.RICH_TEXT).sanitized,
+          InputSanitizer.sanitizeString(input.content, {
+            allowedTags: [
+              'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+              'p', 'br', 'hr',
+              'strong', 'b', 'em', 'i', 'u', 's', 'strike', 'del',
+              'a', 'code', 'pre', 'blockquote',
+              'ul', 'ol', 'li',
+              'img', 'iframe', 'div', 'span'
+            ],
+            allowedAttributes: {
+              'a': ['href', 'title', 'target', 'rel', 'class'],
+              'img': ['src', 'alt', 'title', 'width', 'height', 'class'],
+              'iframe': ['src', 'width', 'height', 'allow', 'allowfullscreen', 'frameborder', 'class'],
+              'div': ['class', 'style'],
+              'span': ['class', 'style'],
+              'p': ['class', 'style'],
+              '*': ['class', 'id']
+            },
+            stripUnknown: true,
+            maxLength: 50000,
+            preserveWhitespace: true
+          }).sanitized,
           undefined, // title not in CreatePostInput for now
           input.isRepost
         );
@@ -478,9 +499,37 @@ export class PostService {
       }
 
       // Update post in database
+      // Calculate sanitized content
+      let content = existingPost.content;
+      if (input.content) {
+        content = InputSanitizer.sanitizeString(input.content, {
+          allowedTags: [
+            'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+            'p', 'br', 'hr',
+            'strong', 'b', 'em', 'i', 'u', 's', 'strike', 'del',
+            'a', 'code', 'pre', 'blockquote',
+            'ul', 'ol', 'li',
+            'img', 'iframe', 'div', 'span'
+          ],
+          allowedAttributes: {
+            'a': ['href', 'title', 'target', 'rel', 'class'],
+            'img': ['src', 'alt', 'title', 'width', 'height', 'class'],
+            'iframe': ['src', 'width', 'height', 'allow', 'allowfullscreen', 'frameborder', 'class'],
+            'div': ['class', 'style'],
+            'span': ['class', 'style'],
+            'p': ['class', 'style'],
+            '*': ['class', 'id']
+          },
+          stripUnknown: true,
+          maxLength: 50000,
+          preserveWhitespace: true
+        }).sanitized;
+      }
+
+      // Update post in database
       const updateData = {
         contentCid,
-        content: input.content ? InputSanitizer.sanitizeString(input.content, SANITIZATION_CONFIGS.RICH_TEXT).sanitized : existingPost.content,  // Store content as fallback if provided
+        content,
         mediaCids: JSON.stringify(mediaCids),
         tags: JSON.stringify(input.tags || existingPost.tags)
       };
