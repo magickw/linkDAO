@@ -256,7 +256,7 @@ export default function RepostModal({
             aria-labelledby="repost-modal-title"
         >
             <div
-                className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col pt-1" // Added flex-col for better layout
+                className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-2xl min-h-[600px] max-h-[90vh] shadow-2xl flex flex-col pt-1"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
@@ -295,7 +295,7 @@ export default function RepostModal({
                     </div>
                 </div>
 
-                <div className="p-4 overflow-y-auto max-h-[60vh] flex-1">
+                <div className="p-4 overflow-y-auto flex-1" style={{ maxHeight: 'calc(90vh - 180px)' }}>
                     {/* Input Area */}
                     <div className="flex gap-3 mb-2">
                         <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden flex-shrink-0 mt-1">
@@ -429,7 +429,7 @@ export default function RepostModal({
 
                         {/* Audience Menu Popover */}
                         {showAudienceMenu && (
-                            <div className="absolute top-full left-0 mt-2 w-72 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 z-50 overflow-hidden animate-fadeIn">
+                            <div className="absolute top-full left-0 mt-2 w-72 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 z-[60] overflow-visible animate-fadeIn">
                                 <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
                                     <h3 className="font-bold text-gray-900 dark:text-white">Who can reply?</h3>
                                     <p className="text-sm text-gray-500 dark:text-gray-400">Choose who can reply to this post.<br />Anyone mentioned can always reply.</p>
@@ -514,16 +514,47 @@ export default function RepostModal({
                             )}
                         </div>
 
-                        <button
-                            className="p-2 text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-full transition-colors"
-                            title="Polls (Coming Soon)"
-                            disabled
-                        >
-                            {/* Placeholder purely for visual balance if needed, or remove completely. 
-                                User asked to remove 'other buttons'. 
-                                So let's removing Polls and Schedule completely to declutter. 
-                             */}
-                        </button>
+                        {/* Emoji Picker */}
+                        <div className="relative" ref={emojiPickerRef}>
+                            <button
+                                className={`p-2 rounded-full transition-colors ${showEmojiPicker ? 'text-primary-600 bg-primary-100 dark:bg-primary-900/40' : 'text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20'}`}
+                                onClick={() => {
+                                    setShowEmojiPicker(!showEmojiPicker);
+                                    setShowGifPicker(false);
+                                    setShowLocationPicker(false);
+                                }}
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </button>
+                            {showEmojiPicker && (
+                                <div className="absolute bottom-full mb-2 left-0 z-[60]">
+                                    <EmojiPicker
+                                        onSelect={(emoji) => {
+                                            if (textareaRef.current) {
+                                                const start = textareaRef.current.selectionStart;
+                                                const end = textareaRef.current.selectionEnd;
+                                                const text = repostMessage;
+                                                const newText = text.substring(0, start) + emoji + text.substring(end);
+                                                setRepostMessage(newText);
+
+                                                setTimeout(() => {
+                                                    if (textareaRef.current) {
+                                                        textareaRef.current.selectionStart = textareaRef.current.selectionEnd = start + emoji.length;
+                                                        textareaRef.current.focus();
+                                                    }
+                                                }, 0);
+                                            } else {
+                                                setRepostMessage(prev => prev + emoji);
+                                            }
+                                            setShowEmojiPicker(false);
+                                        }}
+                                        onClose={() => setShowEmojiPicker(false)}
+                                    />
+                                </div>
+                            )}
+                        </div>
 
                         {/* Location Picker */}
                         <div className="relative" ref={locationPickerRef}>

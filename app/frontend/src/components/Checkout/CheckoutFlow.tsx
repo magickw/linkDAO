@@ -93,8 +93,6 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
   const [paymentError, setPaymentError] = useState<PaymentErrorType | null>(null);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [useEscrow, setUseEscrow] = useState(true);
-  const [walletAssets, setWalletAssets] = useState<any>(null);
-  const [bestPaymentMethod, setBestPaymentMethod] = useState<any>(null);
 
   // Services
   const [checkoutService] = useState(() => {
@@ -129,64 +127,21 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
     setLoading(true);
     try {
-      // Detect wallet assets if wallet is connected
-      let walletBalances: any[] = [];
-      let recommendedChainId = chainId || 1;
-
-      if (address && isConnected) {
-        try {
-          const assets = await walletAssetDetectionService.detectWalletAssets(
-            address,
-            parseFloat(cartState.totals.total.fiat)
-          );
-          setWalletAssets(assets);
-
-          // Get best payment method recommendation
-          const bestMethod = await walletAssetDetectionService.getBestPaymentMethod(
-            address,
-            parseFloat(cartState.totals.total.fiat)
-          );
-          setBestPaymentMethod(bestMethod);
-
-          // Use recommended chain from asset detection
-          if (bestMethod.recommendedChainId) {
-            recommendedChainId = bestMethod.recommendedChainId;
-          }
-
-          // Convert wallet assets to walletBalances format
-          walletBalances = Object.values(assets.assetsByChain).flat().map(asset => ({
-            token: asset.tokenSymbol,
-            balance: asset.balance,
-            chainId: asset.chainId,
-            balanceUSD: asset.balanceUSD
-          }));
-
-          console.log('💰 Wallet assets detected:', {
-            totalBalanceUSD: assets.totalBalanceUSD,
-            recommendedChain: bestMethod.recommendedChainId,
-            recommendedToken: bestMethod.recommendedToken,
-            shouldUseFiat: bestMethod.shouldUseFiat,
-            reason: bestMethod.reason
-          });
-        } catch (error) {
-          console.error('Failed to detect wallet assets:', error);
-        }
-      }
-
-      // Create prioritization context
+      // Create prioritization context WITHOUT wallet balance detection
+      // Balance will only be checked when user selects a crypto payment method
       const context: PrioritizationContext = {
         transactionAmount: parseFloat(cartState.totals.total.fiat),
         transactionCurrency: 'USD',
         userContext: {
           userAddress: address || undefined,
-          chainId: recommendedChainId,
-          walletBalances,
+          chainId: chainId || 1,
+          walletBalances: [], // Empty - will be populated when user selects crypto payment
           preferences: {
             preferredMethods: [],
             avoidedMethods: [],
             maxGasFeeThreshold: 50,
             preferStablecoins: true,
-            preferFiat: bestPaymentMethod?.shouldUseFiat || false,
+            preferFiat: false,
             lastUsedMethods: [],
             autoSelectBestOption: true
           }
@@ -198,22 +153,60 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       console.log('🔍 Payment context:', {
         hasWallet: !!address,
         chainId: context.userContext.chainId,
-        walletBalancesCount: walletBalances.length,
         availableMethodsCount: context.availablePaymentMethods.length,
-        fiatAvailable: context.availablePaymentMethods.some(m => m.type === PaymentMethodType.FIAT_STRIPE),
-        preferFiat: context.userContext.preferences.preferFiat
+        fiatAvailable: context.availablePaymentMethods.some(m => m.type === PaymentMethodType.FIAT_STRIPE)
       });
 
       // Get prioritized payment methods
-      const result = await prioritizationService.prioritizePaymentMethods(context);
-      setPrioritizationResult(result);
+      let result;
+      try {
+        result = await prioritizationService.prioritizePaymentMethods(context);
+        setPrioritizationResult(result);
 
-      console.log('💳 Prioritization result:', {
-        totalMethods: result.prioritizedMethods.length,
-        availableMethods: result.prioritizedMethods.filter(m => m.availabilityStatus === 'available').length,
-        fiatMethod: result.prioritizedMethods.find(m => m.method.type === PaymentMethodType.FIAT_STRIPE),
-        defaultMethod: result.defaultMethod?.method.name
-      });
+        console.log('💳 Prioritization result:', {
+          totalMethods: result.prioritizedMethods.length,
+          availableMethods: result.prioritizedMethods.filter(m => m.availabilityStatus === 'available').length,
+          fiatMethod: result.prioritizedMethods.find(m => m.method.type === PaymentMethodType.FIAT_STRIPE),
+          defaultMethod: result.defaultMethod?.method.name
+        });
+      } catch (prioritizationError) {
+        console.error('Payment method prioritization failed, using fallback:', prioritizationError);
+
+        // Fallback: create a simple prioritization result with all methods available
+        const fallbackMethods = context.availablePaymentMethods.map(method => ({
+          method,
+          availabilityStatus: 'available' as any,
+          priority: method.type === PaymentMethodType.FIAT_STRIPE ? 1 : 100,
+          costEstimate: {
+            baseCost: context.transactionAmount,
+            gasFee: 0,
+            platformFee: context.transactionAmount * 0.025,
+            totalCost: context.transactionAmount * 1.025,
+            estimatedTime: method.type === PaymentMethodType.FIAT_STRIPE ? 0 : 5,
+            currency: 'USD'
+          },
+          recommendationReason: method.type === PaymentMethodType.FIAT_STRIPE
+            ? 'Instant payment with saved card'
+            : 'Crypto payment available',
+          warnings: [],
+          benefits: []
+        }));
+
+        result = {
+          prioritizedMethods: fallbackMethods,
+          defaultMethod: fallbackMethods[0],
+          warnings: [
+            {
+              type: 'api_limit',
+              message: 'Using fallback payment options due to API rate limits',
+              actionRequired: 'Payment methods are still available'
+            }
+          ],
+          marketConditions: context.marketConditions
+        };
+
+        setPrioritizationResult(result);
+      }
 
       // Pre-select default method (but don't auto-advance)
       if (result.defaultMethod) {
@@ -389,18 +382,45 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
   const handlePaymentMethodSelect = async (method: PrioritizedPaymentMethod) => {
     setSelectedPaymentMethod(method);
 
-    // Auto-switch network if needed for crypto payments
-    if (method.method.type !== PaymentMethodType.FIAT_STRIPE && isConnected) {
-      const requiredChainId = method.method.chainId;
-      if (chainId !== requiredChainId && switchChain) {
-        try {
-          addToast(`Switching to ${getNetworkName(requiredChainId)}...`, 'info');
-          await switchChain({ chainId: requiredChainId });
-          addToast(`Successfully switched to ${getNetworkName(requiredChainId)}`, 'success');
-        } catch (error) {
-          console.error('Network switch failed:', error);
-          addToast('Network switch cancelled or failed. Please switch manually.', 'warning');
+    // Only check wallet balance and switch network for crypto payments
+    if (method.method.type !== PaymentMethodType.FIAT_STRIPE && isConnected && address) {
+      try {
+        // Check wallet balance for the selected crypto payment method
+        const assets = await walletAssetDetectionService.detectWalletAssets(
+          address,
+          parseFloat(cartState.totals.total.fiat)
+        );
+
+        // Find balance for the selected token
+        const tokenBalance = Object.values(assets.assetsByChain)
+          .flat()
+          .find(asset =>
+            asset.tokenAddress.toLowerCase() === method.method.token?.address.toLowerCase() &&
+            asset.chainId === method.method.chainId
+          );
+
+        if (tokenBalance && tokenBalance.balanceUSD < parseFloat(cartState.totals.total.fiat)) {
+          addToast(
+            `Insufficient ${tokenBalance.tokenSymbol} balance. Please add funds or choose another payment method.`,
+            'warning'
+          );
         }
+
+        // Auto-switch network if needed
+        const requiredChainId = method.method.chainId;
+        if (chainId !== requiredChainId && switchChain) {
+          try {
+            addToast(`Switching to ${getNetworkName(requiredChainId)}...`, 'info');
+            await switchChain({ chainId: requiredChainId });
+            addToast(`Successfully switched to ${getNetworkName(requiredChainId)}`, 'success');
+          } catch (error) {
+            console.error('Network switch failed:', error);
+            addToast('Network switch cancelled or failed. Please switch manually.', 'warning');
+          }
+        }
+      } catch (error) {
+        console.error('Failed to check wallet balance:', error);
+        // Continue anyway - balance check is optional
       }
     }
 

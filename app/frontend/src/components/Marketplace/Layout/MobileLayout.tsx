@@ -165,11 +165,11 @@ const MobileLayout = ({ children }: { children: React.ReactNode }) => {
                     </>
                   ) : (
                     <div className="p-3">
-                      <ConnectButton 
-                        showBalance={false}
-                        chainStatus="none"
-                      />
-                    </div>
+                      <ConnectButton
+                                      showBalance={false}
+                                      chainStatus="none"
+                                      showChain={false}
+                                    />                    </div>
                   )}
                 </div>
               </div>
