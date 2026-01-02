@@ -1792,12 +1792,15 @@ export class DatabaseService {
     });
   }
 
-  async createTrackingRecord(orderId: string, trackingNumber: string, carrier: string) {
+  async createTrackingRecord(orderId: string, trackingNumber: string, carrier: string, additionalData?: { shipmentId?: string; labelUrl?: string; trackingData?: any }) {
     return this.executeQuery(async () => {
       const [record] = await this.db.insert(schema.trackingRecords).values({
         orderId: orderId,
         trackingNumber,
         carrier,
+        shipmentId: additionalData?.shipmentId,
+        labelUrl: additionalData?.labelUrl,
+        trackingData: additionalData?.trackingData ? JSON.stringify(additionalData.trackingData) : null,
         createdAt: new Date()
       }).returning();
       return record;
@@ -1809,6 +1812,9 @@ export class DatabaseService {
       const [updated] = await this.db.update(schema.trackingRecords)
         .set({
           status: trackingInfo.status,
+          shipmentId: trackingInfo.shipmentId || undefined,
+          labelUrl: trackingInfo.labelUrl || undefined,
+          trackingData: trackingInfo.trackingData ? JSON.stringify(trackingInfo.trackingData) : undefined,
           lastUpdated: new Date(),
           events: JSON.stringify(trackingInfo.events)
         })

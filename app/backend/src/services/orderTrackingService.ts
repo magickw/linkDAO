@@ -8,13 +8,14 @@ import { safeLogger } from '../utils/safeLogger';
 import { UserProfileService } from './userProfileService';
 import { NotificationService } from './notificationService';
 import { OrderService } from './orderService';
-import { 
-  MarketplaceOrder, 
-  OrderStatus, 
+import {
+  MarketplaceOrder,
+  OrderStatus,
   OrderEvent,
   OrderAnalytics
 } from '../models/Order';
 import { AppError, NotFoundError, ForbiddenError } from '../middleware/errorHandler';
+import { shippingProviderService } from './shippingProviderService';
 
 export class OrderTrackingService {
   private databaseService: DatabaseService;
@@ -54,7 +55,7 @@ export class OrderTrackingService {
 
       // Build query conditions
       const conditions: any = {};
-      
+
       if (userType === 'buyer') {
         conditions.buyerId = user.id;
       } else {
@@ -65,7 +66,7 @@ export class OrderTrackingService {
       if (filters.status) {
         conditions.status = filters.status.toLowerCase();
       }
-      
+
       if (filters.dateFrom || filters.dateTo) {
         conditions.createdAt = {};
         if (filters.dateFrom) {
@@ -92,65 +93,65 @@ export class OrderTrackingService {
 
       // Get orders with pagination
       const offset = (page - 1) * limit;
-      
+
       // Since we don't have getOrdersWithFilters, we'll get all user orders and filter manually
       const allUserOrders = await this.databaseService.getOrdersByUser(
         conditions.buyerId || conditions.sellerId || ''
       );
-      
+
       // Apply manual filtering
       let filteredOrders = allUserOrders;
-      
+
       // Filter by status if provided
       if (conditions.status) {
-        filteredOrders = filteredOrders.filter(order => 
+        filteredOrders = filteredOrders.filter(order =>
           order.status && order.status.toLowerCase() === conditions.status.toLowerCase()
         );
       }
-      
+
       // Filter by date range if provided
       if (conditions.createdAt) {
         filteredOrders = filteredOrders.filter(order => {
           const orderDate = new Date(order.createdAt);
           let matches = true;
-          
+
           if (conditions.createdAt.gte) {
             matches = matches && orderDate >= conditions.createdAt.gte;
           }
-          
+
           if (conditions.createdAt.lte) {
             matches = matches && orderDate <= conditions.createdAt.lte;
           }
-          
+
           return matches;
         });
       }
-      
+
       // Filter by payment method if provided
       if (conditions.paymentMethod) {
-        filteredOrders = filteredOrders.filter(order => 
+        filteredOrders = filteredOrders.filter(order =>
           order.paymentMethod === conditions.paymentMethod
         );
       }
-      
+
       // Filter by amount range if provided
       if (conditions.amount) {
         filteredOrders = filteredOrders.filter(order => {
           const orderAmount = parseFloat(order.amount || '0');
           let matches = true;
-          
+
           if (conditions.amount.gte) {
             matches = matches && orderAmount >= parseFloat(conditions.amount.gte);
           }
-          
+
           if (conditions.amount.lte) {
             matches = matches && orderAmount <= parseFloat(conditions.amount.lte);
           }
-          
+
           return matches;
         });
       }
-      
+
       // Apply pagination
       const dbOrders = filteredOrders.slice(offset, offset + limit);
       const total = filteredOrders.length;
@@ -165,7 +166,7 @@ export class OrderTrackingService {
 
         if (buyer && seller) {
           const formattedOrder = await this.formatOrder(dbOrder, buyer, seller);
-          
+
           // Apply additional filters that require formatted data
           if (filters.hasDispute !== undefined) {
             const hasDispute = !!formattedOrder.disputeId;
@@ -210,7 +211,7 @@ export class OrderTrackingService {
 
       const isBuyer = dbOrder.buyerId === user.id;
       const isSeller = dbOrder.sellerId === user.id;
-      
+
       if (!isBuyer && !isSeller) {
         throw new ForbiddenError('Access denied to this order');
       }
@@ -274,7 +275,7 @@ export class OrderTrackingService {
     try {
       // Build search conditions
       const filters = query.filters || {};
-      
+
       // Add text search if provided
       if (query.text) {
         // This would require full-text search implementation
@@ -326,8 +327,8 @@ export class OrderTrackingService {
       }
 
       // Update order status
-      await this.databaseService.updateOrder(orderId, { 
-        status: status.toLowerCase() 
+      await this.databaseService.updateOrder(orderId, {
+        status: status.toLowerCase()
       });
 
       // Create order event
@@ -494,7 +495,7 @@ export class OrderTrackingService {
       }
 
       const analytics = await this.databaseService.getOrderAnalytics(user.id, timeframe);
-      
+
       return {
         totalOrders: analytics.totalOrders || 0,
         totalValue: parseFloat(analytics.totalVolume || '0'),
@@ -523,8 +524,43 @@ export class OrderTrackingService {
       }
 
       // Get tracking record from database
-      const trackingRecord = await this.databaseService.getTrackingRecord(orderId);
-      
+      let trackingRecord = await this.databaseService.getTrackingRecord(orderId);
+
+      // Check if we need to fetch fresh data from provider (if record is missing or stale > 30 mins)
+      const isStale = trackingRecord?.lastUpdated
+        ? (Date.now() - new Date(trackingRecord.lastUpdated).getTime() > 30 * 60 * 1000)
+        : true;
+
+      if ((!trackingRecord || isStale) && order.trackingNumber) {
+        try {
+          const providerInfo = await shippingProviderService.getTrackingStatus(
+            order.trackingNumber,
+            order.trackingCarrier || 'unknown'
+          );
+
+          if (trackingRecord) {
+            await this.databaseService.updateTrackingInfo(orderId, {
+              status: providerInfo.status,
+              events: providerInfo.events,
+              trackingData: providerInfo
+            });
+          } else {
+            await this.databaseService.createTrackingRecord(
+              orderId,
+              order.trackingNumber,
+              order.trackingCarrier || 'unknown',
+              { trackingData: providerInfo }
+            );
+          }
+
+          // Refresh record
+          trackingRecord = await this.databaseService.getTrackingRecord(orderId);
+        } catch (error) {
+          safeLogger.warn(`Failed to fetch tracking for order ${orderId}`, error);
+          // Continue with existing data if available
+        }
+      }
+
       if (!trackingRecord) {
         return {
           trackingNumber: order.trackingNumber,
@@ -538,6 +574,9 @@ export class OrderTrackingService {
         trackingNumber: trackingRecord.trackingNumber,
         carrier: trackingRecord.carrier,
         status: trackingRecord.status || 'UNKNOWN',
+        // Optional chaining for new fields as types might not be fully inferred yet
+        shipmentId: (trackingRecord as any).shipmentId,
+        labelUrl: (trackingRecord as any).labelUrl,
         estimatedDelivery: order.estimatedDelivery,
         actualDelivery: order.actualDelivery,
         events: trackingRecord.events ? JSON.parse(trackingRecord.events) : []
@@ -560,7 +599,7 @@ export class OrderTrackingService {
     try {
       // Get all orders (no pagination for export)
       const result = await this.getOrderHistory(userAddress, userType, 1, 10000, filters);
-      
+
       if (format === 'json') {
         return JSON.stringify(result.orders, null, 2);
       }
@@ -744,7 +783,7 @@ export class OrderTrackingService {
   private async formatOrder(dbOrder: any, buyer: any, seller: any): Promise<MarketplaceOrder> {
     // Get product information
     const product = await this.getProductInfo(dbOrder.listingId);
-    
+
     return {
       id: dbOrder.id.toString(),
       listingId: dbOrder.listingId?.toString() || '',
@@ -784,7 +823,7 @@ export class OrderTrackingService {
 
   private formatShippingAddress(dbOrder: any) {
     if (!dbOrder.shippingAddress) return undefined;
-    
+
     try {
       return JSON.parse(dbOrder.shippingAddress);
     } catch {
@@ -814,15 +853,15 @@ export class OrderTrackingService {
   private determineUserTypeFromEvent(eventType: string): 'buyer' | 'seller' | 'system' {
     const sellerEvents = ['SHIPPING_ADDED', 'ORDER_SHIPPED', 'STATUS_CHANGED'];
     const buyerEvents = ['DELIVERY_CONFIRMED', 'DISPUTE_INITIATED'];
-    
+
     if (sellerEvents.some(event => eventType.includes(event))) {
       return 'seller';
     }
-    
+
     if (buyerEvents.some(event => eventType.includes(event))) {
       return 'buyer';
     }
-    
+
     return 'system';
   }
 }

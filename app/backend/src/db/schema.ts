@@ -1113,6 +1113,9 @@ export const orders = pgTable("orders", {
   orderNotes: text("order_notes"),
   trackingNumber: varchar("tracking_number", { length: 100 }),
   trackingCarrier: varchar("tracking_carrier", { length: 50 }),
+  shipmentId: varchar("shipment_id", { length: 255 }), // External ID from shipping provider
+  shippingLabelUrl: text("shipping_label_url"), // URL to download the label
+  trackingData: text("tracking_data"), // JSON cache of the latest tracking info
   estimatedDelivery: timestamp("estimated_delivery"),
   actualDelivery: timestamp("actual_delivery"),
   deliveryConfirmation: text("delivery_confirmation"), // JSON object with delivery proof
@@ -1162,6 +1165,9 @@ export const trackingRecords = pgTable("tracking_records", {
   trackingNumber: varchar("tracking_number", { length: 128 }).notNull(),
   carrier: varchar("carrier", { length: 32 }).notNull(),
   status: varchar("status", { length: 64 }),
+  shipmentId: varchar("shipment_id", { length: 255 }),
+  labelUrl: text("label_url"),
+  trackingData: text("tracking_data"), // Full JSON response
   events: text("events"),
   createdAt: timestamp("created_at").defaultNow(),
   lastUpdated: timestamp("last_updated").defaultNow(),

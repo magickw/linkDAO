@@ -5,12 +5,12 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Truck, 
-  Package, 
-  MapPin, 
-  Clock, 
-  CheckCircle, 
+import {
+  Truck,
+  Package,
+  MapPin,
+  Clock,
+  CheckCircle,
   AlertTriangle,
   ExternalLink,
   RefreshCw,
@@ -51,7 +51,7 @@ const TrackingDisplay: React.FC<TrackingDisplayProps> = ({
       'DHL': `https://www.dhl.com/us-en/home/tracking/tracking-express.html?submit=1&tracking-id=${trackingNumber}`,
       'USPS': `https://tools.usps.com/go/TrackConfirmAction?tLabels=${trackingNumber}`,
     };
-    
+
     return urls[carrier.toUpperCase()] || `https://www.google.com/search?q=${carrier}+tracking+${trackingNumber}`;
   };
 
@@ -60,13 +60,16 @@ const TrackingDisplay: React.FC<TrackingDisplayProps> = ({
       'DELIVERED': 'text-green-600 bg-green-100 border-green-200',
       'OUT_FOR_DELIVERY': 'text-blue-600 bg-blue-100 border-blue-200',
       'IN_TRANSIT': 'text-yellow-600 bg-yellow-100 border-yellow-200',
+      'TRANSIT': 'text-yellow-600 bg-yellow-100 border-yellow-200', // Mock service uses TRANSIT
       'PICKED_UP': 'text-purple-600 bg-purple-100 border-purple-200',
       'LABEL_CREATED': 'text-gray-600 bg-gray-100 border-gray-200',
+      'PRE_TRANSIT': 'text-gray-600 bg-gray-100 border-gray-200', // Mock service uses PRE_TRANSIT
       'EXCEPTION': 'text-red-600 bg-red-100 border-red-200',
+      'FAILURE': 'text-red-600 bg-red-100 border-red-200',
       'DELAYED': 'text-orange-600 bg-orange-100 border-orange-200',
     };
-    
-    return statusColors[status] || 'text-gray-600 bg-gray-100 border-gray-200';
+
+    return statusColors[status] || statusColors[status.toUpperCase()] || 'text-gray-600 bg-gray-100 border-gray-200';
   };
 
   const getTrackingStatusIcon = (status: string) => {
@@ -79,12 +82,21 @@ const TrackingDisplay: React.FC<TrackingDisplayProps> = ({
       'EXCEPTION': AlertTriangle,
       'DELAYED': Clock,
     };
-    
+
     return statusIcons[status] || Package;
   };
 
   const formatTrackingStatus = (status: string) => {
     return status.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  const getNormalizedStatus = (status: string) => {
+    const map: Record<string, string> = {
+      'PRE_TRANSIT': 'LABEL_CREATED',
+      'TRANSIT': 'IN_TRANSIT',
+      'FAILURE': 'EXCEPTION'
+    };
+    return map[status] || status;
   };
 
   if (!order.trackingNumber) {
@@ -109,9 +121,9 @@ const TrackingDisplay: React.FC<TrackingDisplayProps> = ({
           Shipping Tracking
         </h4>
         {onRefresh && (
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={onRefresh}
             disabled={loading}
           >
@@ -226,7 +238,7 @@ const TrackingDisplay: React.FC<TrackingDisplayProps> = ({
           <h5 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Tracking History
           </h5>
-          
+
           <div className="space-y-4">
             {trackingInfo.events.map((event, index) => (
               <motion.div
@@ -258,7 +270,7 @@ const TrackingDisplay: React.FC<TrackingDisplayProps> = ({
                         </div>
                       )}
                     </div>
-                    
+
                     <div className="text-xs text-gray-500 dark:text-gray-400 ml-4">
                       {new Date(event.timestamp).toLocaleString()}
                     </div>
@@ -276,11 +288,11 @@ const TrackingDisplay: React.FC<TrackingDisplayProps> = ({
           <h5 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Delivery Progress
           </h5>
-          
+
           <div className="relative">
             {/* Progress Line */}
             <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-200 dark:bg-gray-700" />
-            
+
             {/* Progress Steps */}
             <div className="relative flex justify-between">
               {[
@@ -290,16 +302,21 @@ const TrackingDisplay: React.FC<TrackingDisplayProps> = ({
                 { key: 'OUT_FOR_DELIVERY', label: 'Out for Delivery', icon: Truck },
                 { key: 'DELIVERED', label: 'Delivered', icon: CheckCircle }
               ].map((step, index) => {
-                const isCompleted = trackingInfo.events?.some(event => event.status === step.key) || false;
-                const isActive = trackingInfo.status === step.key;
+                const normalizedCurrentStatus = getNormalizedStatus(trackingInfo.status || '');
+                // Check if step is completed based on current status or events
+                const isCompleted = trackingInfo.events?.some(event => getNormalizedStatus(event.status) === step.key) ||
+                  (step.key === 'LABEL_CREATED' && normalizedCurrentStatus !== 'LABEL_CREATED') ||
+                  (step.key === 'PICKED_UP' && ['IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(normalizedCurrentStatus));
+
+                const isActive = normalizedCurrentStatus === step.key;
                 const Icon = step.icon;
-                
+
                 return (
                   <div key={step.key} className="flex flex-col items-center">
                     <div className={`
                       w-10 h-10 rounded-full border-2 flex items-center justify-center relative z-10
-                      ${isCompleted || isActive 
-                        ? 'bg-blue-500 border-blue-500 text-white' 
+                      ${isCompleted || isActive
+                        ? 'bg-blue-500 border-blue-500 text-white'
                         : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-400'
                       }
                     `}>
@@ -307,8 +324,8 @@ const TrackingDisplay: React.FC<TrackingDisplayProps> = ({
                     </div>
                     <span className={`
                       text-xs mt-2 text-center max-w-16
-                      ${isCompleted || isActive 
-                        ? 'text-blue-600 dark:text-blue-400 font-medium' 
+                      ${isCompleted || isActive
+                        ? 'text-blue-600 dark:text-blue-400 font-medium'
                         : 'text-gray-500 dark:text-gray-400'
                       }
                     `}>
