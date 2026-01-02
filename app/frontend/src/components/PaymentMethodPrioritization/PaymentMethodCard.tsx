@@ -275,6 +275,14 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
                 </span>
               </div>
             )}
+            {/* Special badge for fiat payment */}
+            {isFiat && isAvailable && (
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/20 border border-green-500/30">
+                <span className="text-xs text-green-400 font-medium">
+                  No Wallet Needed
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>

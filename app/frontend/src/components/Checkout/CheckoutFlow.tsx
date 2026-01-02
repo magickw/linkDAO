@@ -53,6 +53,7 @@ import { WalletConnectionPrompt } from '@/components/Payment/WalletConnectionPro
 import { StripeCheckout } from '@/components/Payment/StripeCheckout';
 import ProductThumbnail from './ProductThumbnail';
 import Link from 'next/link';
+import { walletAssetDetectionService } from '@/services/walletAssetDetectionService';
 
 interface CheckoutFlowProps {
   onBack: () => void;
@@ -92,6 +93,8 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
   const [paymentError, setPaymentError] = useState<PaymentErrorType | null>(null);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [useEscrow, setUseEscrow] = useState(true);
+  const [walletAssets, setWalletAssets] = useState<any>(null);
+  const [bestPaymentMethod, setBestPaymentMethod] = useState<any>(null);
 
   // Services
   const [checkoutService] = useState(() => {
@@ -126,20 +129,64 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
     setLoading(true);
     try {
+      // Detect wallet assets if wallet is connected
+      let walletBalances: any[] = [];
+      let recommendedChainId = chainId || 1;
+
+      if (address && isConnected) {
+        try {
+          const assets = await walletAssetDetectionService.detectWalletAssets(
+            address,
+            parseFloat(cartState.totals.total.fiat)
+          );
+          setWalletAssets(assets);
+
+          // Get best payment method recommendation
+          const bestMethod = await walletAssetDetectionService.getBestPaymentMethod(
+            address,
+            parseFloat(cartState.totals.total.fiat)
+          );
+          setBestPaymentMethod(bestMethod);
+
+          // Use recommended chain from asset detection
+          if (bestMethod.recommendedChainId) {
+            recommendedChainId = bestMethod.recommendedChainId;
+          }
+
+          // Convert wallet assets to walletBalances format
+          walletBalances = Object.values(assets.assetsByChain).flat().map(asset => ({
+            token: asset.tokenSymbol,
+            balance: asset.balance,
+            chainId: asset.chainId,
+            balanceUSD: asset.balanceUSD
+          }));
+
+          console.log('💰 Wallet assets detected:', {
+            totalBalanceUSD: assets.totalBalanceUSD,
+            recommendedChain: bestMethod.recommendedChainId,
+            recommendedToken: bestMethod.recommendedToken,
+            shouldUseFiat: bestMethod.shouldUseFiat,
+            reason: bestMethod.reason
+          });
+        } catch (error) {
+          console.error('Failed to detect wallet assets:', error);
+        }
+      }
+
       // Create prioritization context
       const context: PrioritizationContext = {
         transactionAmount: parseFloat(cartState.totals.total.fiat),
         transactionCurrency: 'USD',
         userContext: {
           userAddress: address || undefined,
-          chainId: chainId || 1, // Use current chain ID
-          walletBalances: [], // Should be fetched from wallet
+          chainId: recommendedChainId,
+          walletBalances,
           preferences: {
             preferredMethods: [],
             avoidedMethods: [],
             maxGasFeeThreshold: 50,
             preferStablecoins: true,
-            preferFiat: false,
+            preferFiat: bestPaymentMethod?.shouldUseFiat || false,
             lastUsedMethods: [],
             autoSelectBestOption: true
           }
@@ -151,8 +198,10 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       console.log('🔍 Payment context:', {
         hasWallet: !!address,
         chainId: context.userContext.chainId,
+        walletBalancesCount: walletBalances.length,
         availableMethodsCount: context.availablePaymentMethods.length,
-        fiatAvailable: context.availablePaymentMethods.some(m => m.type === PaymentMethodType.FIAT_STRIPE)
+        fiatAvailable: context.availablePaymentMethods.some(m => m.type === PaymentMethodType.FIAT_STRIPE),
+        preferFiat: context.userContext.preferences.preferFiat
       });
 
       // Get prioritized payment methods
@@ -229,7 +278,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       id: 'stripe-fiat',
       type: PaymentMethodType.FIAT_STRIPE,
       name: 'Credit/Debit Card',
-      description: 'Pay with credit or debit card - No crypto wallet needed',
+      description: 'Pay with your saved card from your profile - Instant payment',
       chainId: 0, // Not applicable for fiat
       enabled: true,
       supportedNetworks: [1, 137, 42161, 8453, 11155111, 84532] // Available on all networks
@@ -613,16 +662,18 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
           </p>
         </div>
 
-        {/* Network Selection Info */}
+        {/* Network Selection Info - Only for crypto payments */}
         {isConnected && (
           <GlassPanel variant="secondary" className="p-4">
             <div className="flex items-start gap-3">
               <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="font-medium text-white mb-1">Automatic Network Switching</h4>
+                <h4 className="font-medium text-white mb-1">Smart Network Detection</h4>
                 <p className="text-white/70 text-sm">
-                  You're currently connected to <span className="font-medium text-white">{getNetworkName(chainId || 1)}</span>.
-                  When you select a payment method, we'll automatically prompt you to switch to the required network.
+                  We'll automatically detect your wallet's assets and switch to the optimal network for your selected payment method.
+                </p>
+                <p className="text-white/60 text-xs mt-2">
+                  💡 <span className="font-medium text-green-400">Credit/Debit Card</span> payment is always available and uses your saved card from your profile.
                 </p>
               </div>
             </div>

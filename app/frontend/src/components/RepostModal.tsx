@@ -256,7 +256,7 @@ export default function RepostModal({
             aria-labelledby="repost-modal-title"
         >
             <div
-                className="bg-white dark:bg-gray-800 rounded-xl max-w-lg w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col pt-1" // Added flex-col for better layout
+                className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col pt-1" // Added flex-col for better layout
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
@@ -273,7 +273,22 @@ export default function RepostModal({
                     <div className="flex items-center space-x-4">
                         <button
                             className="text-primary-600 font-semibold text-sm hover:bg-primary-50 dark:hover:bg-primary-900/20 px-4 py-1.5 rounded-full transition-colors"
-                            onClick={() => addToast("Drafts feature coming soon!", "info")}
+                            onClick={() => {
+                                // Save current content to local storage as 'draft'
+                                if (repostMessage.trim()) {
+                                    localStorage.setItem('repost_draft_' + post.id, repostMessage);
+                                    addToast("Draft saved!", "success");
+                                } else {
+                                    // Try to load
+                                    const saved = localStorage.getItem('repost_draft_' + post.id);
+                                    if (saved) {
+                                        setRepostMessage(saved);
+                                        addToast("Draft loaded!", "success");
+                                    } else {
+                                        addToast("No draft found", "info");
+                                    }
+                                }
+                            }}
                         >
                             Drafts
                         </button>
@@ -501,47 +516,13 @@ export default function RepostModal({
 
                         <button
                             className="p-2 text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-full transition-colors"
-                            onClick={() => addToast("Polls coming soon!", "info")}
+                            title="Polls (Coming Soon)"
+                            disabled
                         >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
-                            </svg>
-                        </button>
-
-                        {/* Emoji Picker */}
-                        <div className="relative" ref={emojiPickerRef}>
-                            <button
-                                className={`p-2 rounded-full transition-colors ${showEmojiPicker ? 'text-primary-600 bg-primary-100 dark:bg-primary-900/40' : 'text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20'}`}
-                                onClick={() => {
-                                    setShowEmojiPicker(!showEmojiPicker);
-                                    setShowGifPicker(false);
-                                    setShowLocationPicker(false);
-                                }}
-                            >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                            </button>
-                            {showEmojiPicker && (
-                                <div className="absolute bottom-full mb-2 left-0 z-50">
-                                    <EmojiPicker
-                                        onSelect={(emoji) => {
-                                            setRepostMessage(prev => prev + emoji);
-                                            setShowEmojiPicker(false);
-                                        }}
-                                        onClose={() => setShowEmojiPicker(false)}
-                                    />
-                                </div>
-                            )}
-                        </div>
-
-                        <button
-                            className="p-2 text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-full transition-colors"
-                            onClick={() => addToast("Schedule post coming soon!", "info")}
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
+                            {/* Placeholder purely for visual balance if needed, or remove completely. 
+                                User asked to remove 'other buttons'. 
+                                So let's removing Polls and Schedule completely to declutter. 
+                             */}
                         </button>
 
                         {/* Location Picker */}
