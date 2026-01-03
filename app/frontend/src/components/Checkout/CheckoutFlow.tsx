@@ -180,7 +180,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
         // Fallback: create a simple prioritization result with all methods available
         const availableMethods = context.availablePaymentMethods || [];
-        
+
         if (availableMethods.length === 0) {
           console.warn('⚠️ No available payment methods in fallback, retrying...');
           setPrioritizationResult(null);
@@ -217,7 +217,12 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
               actionRequired: 'Payment methods are still available'
             }
           ],
-          marketConditions: context.marketConditions
+          marketConditions: context.marketConditions,
+          metadata: {
+            calculatedAt: new Date(),
+            processingTimeMs: 0,
+            cacheHit: false
+          }
         };
 
         setPrioritizationResult(result);
@@ -273,7 +278,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
         id: `usdc-${config.chainId}`,
         type: PaymentMethodType.STABLECOIN_USDC,
         name: config.name,
-        description: config.isTestnet 
+        description: config.isTestnet
           ? `USD Coin on ${config.networkName} (Testnet)`
           : `USD Coin on ${config.networkName}`,
         chainId: config.chainId,
@@ -432,7 +437,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
             addToast(`Successfully switched to ${getNetworkName(requiredChainId)}`, 'success');
           } catch (error) {
             console.error('Network switch failed:', error);
-            
+
             // If switch failed, provide helpful guidance
             if (requiredChainId === 11155111) {
               addToast(

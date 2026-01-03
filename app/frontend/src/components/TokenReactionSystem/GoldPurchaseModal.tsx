@@ -67,7 +67,7 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
 }) => {
   const { address, isConnected } = useWeb3();
   const { addToast } = useToast();
-  
+
   const [selectedPackage, setSelectedPackage] = useState<string>('100');
   const [showCheckout, setShowCheckout] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PrioritizedPaymentMethod | null>(null);
@@ -111,30 +111,30 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
 
   // Web3-themed package names and icons
   const packageThemes: { [key: string]: { name: string; icon: string; description: string } } = {
-    '100': { 
-      name: 'Starter Stack', 
-      icon: '🚀', 
-      description: 'Perfect for your first awards' 
+    '100': {
+      name: 'Starter Stack',
+      icon: '🚀',
+      description: 'Perfect for your first awards'
     },
-    '200': { 
-      name: 'DeFi Degen', 
-      icon: '💎', 
-      description: 'For the true degen in you' 
+    '200': {
+      name: 'DeFi Degen',
+      icon: '💎',
+      description: 'For the true degen in you'
     },
-    '300': { 
-      name: 'Whale Pack', 
-      icon: '🐋', 
-      description: 'Make a splash with big awards' 
+    '300': {
+      name: 'Whale Pack',
+      icon: '🐋',
+      description: 'Make a splash with big awards'
     },
-    '500': { 
-      name: 'Diamond Hands', 
-      icon: '💎', 
-      description: 'HODL strong, award stronger' 
+    '500': {
+      name: 'Diamond Hands',
+      icon: '💎',
+      description: 'HODL strong, award stronger'
     },
-    '1000': { 
-      name: 'OG Collection', 
-      icon: '👑', 
-      description: 'Legendary status unlocked' 
+    '1000': {
+      name: 'OG Collection',
+      icon: '👑',
+      description: 'Legendary status unlocked'
     }
   };
 
@@ -199,7 +199,8 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
       // Process actual payment based on selected method
       if (selectedPaymentMethod.method.type === 'FIAT_STRIPE') {
         // Create Stripe checkout session for fiat payment
-        const response = await fetch('/api/stripe/create-payment-intent', {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.linkdao.io';
+        const response = await fetch(`${apiUrl}/api/stripe/create-payment-intent`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -219,17 +220,17 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
         }
 
         const paymentIntent = await response.json();
-        
+
         // In a real implementation, you would redirect to Stripe Checkout here
         // For now, we'll simulate the payment completion
         addToast('Redirecting to Stripe for payment...', 'info');
-        
+
         // Simulate successful payment (replace with actual Stripe redirect handling)
         setTimeout(async () => {
           try {
             // Call backend endpoint to complete purchase and send receipt
             await completeGoldPurchase(paymentIntent.id || 'stripe-' + Date.now(), selectedPackage, 'stripe');
-            
+
             addToast('Gold purchase successful! Award will be given.', 'success');
             await onPurchase(selectedPackage);
             onClose();
@@ -240,21 +241,21 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
             setIsProcessing(false);
           }
         }, 3000);
-        
+
         return; // Exit early to avoid closing modal immediately
       } else {
         // Handle crypto payment (USDC, etc.)
         addToast('Crypto payment processing...', 'info');
-        
+
         // Simulate crypto payment processing
         await new Promise(resolve => setTimeout(resolve, 3000));
-        
-        const transactionHash = '0x' + Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('');
+
+        const transactionHash = '0x' + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
         const network = selectedPaymentMethod.method.id?.replace('usdc-', '') || 'Ethereum';
-        
+
         // Call backend endpoint to complete purchase and send receipt
         await completeGoldPurchase('crypto-' + Date.now(), selectedPackage, 'usdc', network, transactionHash);
-        
+
         addToast('Gold purchase successful! Award will be given.', 'success');
         await onPurchase(selectedPackage);
         onClose();
@@ -267,8 +268,8 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
   };
 
   const completeGoldPurchase = async (
-    paymentIntentId: string, 
-    packageId: string, 
+    paymentIntentId: string,
+    packageId: string,
     paymentMethod: string,
     network?: string,
     transactionHash?: string
@@ -336,8 +337,8 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
         <div className="p-6 bg-blue-50 border-b border-gray-200">
           <div className="flex items-center space-x-2 mb-2">
             <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
-              <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd"/>
+              <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+              <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
             </svg>
             <span className="text-sm font-medium text-blue-900">How gold will be used</span>
           </div>
@@ -389,15 +390,14 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
           {/* Payment Method Selection */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-3">Payment Method</h3>
-            
+
             {/* Simple Payment Method Selection */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* USDC with Network Selector */}
-              <div className={`p-4 rounded-lg border-2 transition-all ${
-                selectedPaymentMethod?.method.type === 'STABLECOIN_USDC'
+              <div className={`p-4 rounded-lg border-2 transition-all ${selectedPaymentMethod?.method.type === 'STABLECOIN_USDC'
                   ? 'border-green-500 bg-green-50'
                   : 'border-gray-200'
-              }`}>
+                }`}>
                 <div className="flex items-center space-x-3 mb-3">
                   <div className="p-2 bg-green-100 rounded-lg">
                     <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -525,11 +525,10 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
                     recommendationReason: 'Fast and secure payment with no crypto wallet needed'
                   } as any);
                 }}
-                className={`p-4 rounded-lg border-2 transition-all ${
-                  selectedPaymentMethod?.method.type === 'FIAT_STRIPE'
+                className={`p-4 rounded-lg border-2 transition-all ${selectedPaymentMethod?.method.type === 'FIAT_STRIPE'
                     ? 'border-blue-500 bg-blue-50'
                     : 'border-gray-200 hover:border-gray-300'
-                }`}
+                  }`}
               >
                 <div className="flex items-center space-x-3">
                   <div className="p-2 bg-blue-100 rounded-lg">
@@ -547,49 +546,48 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
             </div>
 
             {/* Payment Method Info */}
-                          {selectedPaymentMethod && (
-                            <div className="p-4 bg-gray-50 rounded-lg">
-                              <div className="flex items-center space-x-3">
-                                <div className={`p-2 rounded-lg ${
-                                  selectedPaymentMethod.method.type === 'FIAT_STRIPE'
-                                    ? 'bg-blue-100'
-                                    : selectedPaymentMethod.method.id === 'usdc-base'
-                                      ? 'bg-green-100'
-                                      : 'bg-orange-100'
-                                }`}>
-                                  {selectedPaymentMethod.method.type === 'FIAT_STRIPE' ? (
-                                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                                    </svg>
-                                  ) : (
-                                    <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                  )}
-                                </div>
-                                <div className="flex-1">
-                                  <h4 className="font-medium text-gray-900">{selectedPaymentMethod.method.name}</h4>
-                                  <p className="text-sm text-gray-600">{selectedPaymentMethod.method.description}</p>
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    {selectedPaymentMethod.recommendationReason}
-                                  </p>
-                                </div>
-                                <div className="text-right">
-                                  <div className="text-lg font-semibold text-gray-900">
-                                    ${(selectedPaymentMethod.costEstimate?.totalCost || selectedPackageData?.price || 0).toFixed(2)}
-                                  </div>
-                                  <div className="text-xs text-gray-500">
-                                    {selectedPaymentMethod.costEstimate?.gasFees > 0 && 
-                                      `+ $${selectedPaymentMethod.costEstimate.gasFees.toFixed(2)} gas (you pay)`
-                                    }
-                                    {selectedPaymentMethod.costEstimate?.processingFees > 0 && 
-                                      `+ $${selectedPaymentMethod.costEstimate.processingFees.toFixed(2)} processing fee`
-                                    }
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          )}          </div>
+            {selectedPaymentMethod && (
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <div className={`p-2 rounded-lg ${selectedPaymentMethod.method.type === 'FIAT_STRIPE'
+                      ? 'bg-blue-100'
+                      : selectedPaymentMethod.method.id === 'usdc-base'
+                        ? 'bg-green-100'
+                        : 'bg-orange-100'
+                    }`}>
+                    {selectedPaymentMethod.method.type === 'FIAT_STRIPE' ? (
+                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-medium text-gray-900">{selectedPaymentMethod.method.name}</h4>
+                    <p className="text-sm text-gray-600">{selectedPaymentMethod.method.description}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {selectedPaymentMethod.recommendationReason}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-semibold text-gray-900">
+                      ${(selectedPaymentMethod.costEstimate?.totalCost || selectedPackageData?.price || 0).toFixed(2)}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {selectedPaymentMethod.costEstimate?.gasFees > 0 &&
+                        `+ $${selectedPaymentMethod.costEstimate.gasFees.toFixed(2)} gas (you pay)`
+                      }
+                      {selectedPaymentMethod.costEstimate?.processingFees > 0 &&
+                        `+ $${selectedPaymentMethod.costEstimate.processingFees.toFixed(2)} processing fee`
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}          </div>
         </div>
 
         {/* Footer */}

@@ -93,7 +93,8 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
     setError(null);
 
     try {
-      const response = await fetch('/api/stripe/create-payment-intent', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.linkdao.io';
+      const response = await fetch(`${apiUrl}/api/stripe/create-payment-intent`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
