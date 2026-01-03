@@ -59,12 +59,16 @@ import Link from 'next/link';
 import { walletAssetDetectionService } from '@/services/walletAssetDetectionService';
 import { TransactionSummary } from './TransactionSummary';
 
+import { ShippingStep } from './Steps/ShippingStep';
+import { useProfile } from '@/hooks/useProfile';
+import { ShippingAddress } from '@/hooks/useCheckoutFlow';
+
 interface CheckoutFlowProps {
   onBack: () => void;
   onComplete: (orderId: string) => void;
 }
 
-type CheckoutStep = 'review' | 'payment-method' | 'payment-details' | 'processing' | 'confirmation';
+type CheckoutStep = 'address' | 'review' | 'payment-method' | 'payment-details' | 'processing' | 'confirmation';
 
 interface PaymentMethod {
   type: 'crypto' | 'fiat';
@@ -86,8 +90,11 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
   const { switchChain } = useSwitchChain();
   const { addToast } = useToast();
 
+  // Fetch user profile for auto-filling address
+  const { profile } = useProfile(address);
+
   // State management
-  const [currentStep, setCurrentStep] = useState<CheckoutStep>('review');
+  const [currentStep, setCurrentStep] = useState<CheckoutStep>('address');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PrioritizedPaymentMethod | null>(null);
   const [prioritizationResult, setPrioritizationResult] = useState<PrioritizationResult | null>(null);
   const [recommendation, setRecommendation] = useState<CheckoutRecommendation | null>(null);
@@ -98,9 +105,21 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [useEscrow, setUseEscrow] = useState(true);
   const [taxCalculation, setTaxCalculation] = useState<TaxCalculationResult | null>(null);
-  const [shippingAddress, setShippingAddress] = useState<any>(null);
 
-  // Services
+  const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
+    firstName: '',
+    lastName: '',
+    email: '',
+    address1: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    country: 'US',
+    phone: '',
+    address2: ''
+  });
+
+  const [shippingErrors, setShippingErrors] = useState<Record<string, string>>({});
   const [checkoutService] = useState(() => {
     const cryptoService = new CryptoPaymentService();
     const stripeService = new StripePaymentService();
@@ -295,8 +314,8 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
           country: address.country,
           state: address.state,
           city: address.city,
-          postalCode: address.postalCode,
-          line1: address.addressLine1
+          postalCode: address.zipCode || address.postalCode,
+          line1: address.address1 || address.addressLine1
         },
         shippingCost
       );
@@ -527,12 +546,15 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
     try {
       // Create checkout request with selected payment method
+      const taxAmount = taxCalculation?.taxAmount || 0;
+      const totalAmount = parseFloat(cartState.totals.total.fiat) + taxAmount;
+
       const request: PrioritizedCheckoutRequest = {
         orderId: `order_${Date.now()}`,
         listingId: cartState.items[0]?.id || '',
         buyerAddress: address,
         sellerAddress: cartState.items[0]?.seller.id || '',
-        amount: parseFloat(cartState.totals.total.fiat),
+        amount: totalAmount,
         currency: 'USD',
         selectedPaymentMethod,
         paymentDetails: {
@@ -637,38 +659,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
     }
   };
 
-  const renderStepIndicator = () => {
-    const steps = [
-      { key: 'review', label: 'Review', completed: ['payment-method', 'payment-details', 'processing', 'confirmation'].includes(currentStep) },
-      { key: 'payment-method', label: 'Payment', completed: ['payment-details', 'processing', 'confirmation'].includes(currentStep) },
-      { key: 'payment-details', label: 'Details', completed: ['processing', 'confirmation'].includes(currentStep) },
-      { key: 'processing', label: 'Processing', completed: currentStep === 'confirmation' },
-      { key: 'confirmation', label: 'Complete', completed: false }
-    ];
 
-    return (
-      <div className="flex items-center justify-center mb-8">
-        {steps.map((step, index) => (
-          <React.Fragment key={step.key}>
-            <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${step.completed || currentStep === step.key
-              ? 'bg-blue-500 border-blue-500 text-white'
-              : 'border-white/30 text-white/60'
-              }`}>
-              {step.completed ? (
-                <CheckCircle className="w-4 h-4" />
-              ) : (
-                <span className="text-sm font-medium">{index + 1}</span>
-              )}
-            </div>
-            {index < steps.length - 1 && (
-              <div className={`w-12 h-0.5 mx-2 ${step.completed ? 'bg-blue-500' : 'bg-white/30'
-                }`} />
-            )}
-          </React.Fragment>
-        ))}
-      </div>
-    );
-  };
 
   const renderOrderSummary = () => (
     <GlassPanel variant="secondary" className="p-6">
@@ -730,11 +721,21 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
             <span>Platform Fee (2.5%)</span>
             <span>${(parseFloat(cartState.totals.total.fiat) * 0.025).toFixed(2)}</span>
           </div>
+
+          {taxCalculation && taxCalculation.taxAmount > 0 && (
+            <div className="flex justify-between text-white/70">
+              <span>Estimated Tax ({((taxCalculation.taxRate || 0) * 100).toFixed(1)}%)</span>
+              <span>${taxCalculation.taxAmount.toFixed(2)}</span>
+            </div>
+          )}
+
           <hr className="border-white/20" />
           <div className="flex justify-between text-white font-semibold text-lg">
             <span>Total</span>
             <div className="text-right">
-              <div>${cartState.totals.total.fiat}</div>
+              <div>
+                ${(parseFloat(cartState.totals.total.fiat) + (taxCalculation?.taxAmount || 0)).toFixed(2)}
+              </div>
               <div className="text-sm text-white/60 font-normal">
                 ≈ {cartState.totals.total.crypto} {cartState.totals.total.cryptoSymbol}
               </div>
@@ -832,7 +833,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
         <div className="bg-white/5 backdrop-blur-sm rounded-lg p-6">
           <TransactionSummary
             selectedMethod={selectedPaymentMethod}
-            totalAmount={parseFloat(cartState.totals.total.fiat)}
+            totalAmount={parseFloat(cartState.totals.total.fiat) + (taxCalculation?.taxAmount || 0)}
             onConfirm={() => setCurrentStep('payment-details')}
             isProcessing={loading}
             taxBreakdown={taxCalculation?.taxBreakdown}
@@ -1000,13 +1001,113 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
     );
   }
 
+
+  const validateShippingAddress = () => {
+    const newErrors: Record<string, string> = {};
+    if (!shippingAddress.firstName?.trim()) newErrors.firstName = 'First name is required';
+    if (!shippingAddress.lastName?.trim()) newErrors.lastName = 'Last name is required';
+    if (!shippingAddress.email?.trim()) newErrors.email = 'Email is required';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(shippingAddress.email)) newErrors.email = 'Invalid email format';
+    if (!shippingAddress.address1?.trim()) newErrors.address1 = 'Address is required';
+    if (!shippingAddress.city?.trim()) newErrors.city = 'City is required';
+    if (!shippingAddress.state?.trim()) newErrors.state = 'State is required';
+    if (!shippingAddress.zipCode?.trim()) newErrors.zipCode = 'ZIP code is required';
+    if (!shippingAddress.country) newErrors.country = 'Country is required';
+
+    setShippingErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleAddressSubmit = async () => {
+    if (validateShippingAddress()) {
+      // Calculate tax and verify address before proceeding
+      await calculateOrderTax(shippingAddress);
+      setCurrentStep('payment-method');
+    } else {
+      addToast('Please fill in all required fields correctly', 'error');
+    }
+  };
+
+  const renderStepIndicator = () => {
+    const steps = [
+      { key: 'address', label: 'Address', completed: ['review', 'payment-method', 'payment-details', 'processing', 'confirmation'].includes(currentStep) },
+      // 'review' step is implied/skipped or merged, but keeping step logic
+      { key: 'payment-method', label: 'Payment', completed: ['payment-details', 'processing', 'confirmation'].includes(currentStep) },
+      { key: 'payment-details', label: 'Details', completed: ['processing', 'confirmation'].includes(currentStep) },
+      { key: 'processing', label: 'Processing', completed: currentStep === 'confirmation' },
+      { key: 'confirmation', label: 'Complete', completed: false }
+    ];
+
+    return (
+      <div className="flex items-center justify-center mb-8">
+        {steps.map((step, index) => (
+          <React.Fragment key={step.key}>
+            <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${step.completed || currentStep === step.key
+              ? 'bg-blue-500 border-blue-500 text-white'
+              : 'border-white/30 text-white/60'
+              }`}>
+              {step.completed ? (
+                <CheckCircle className="w-4 h-4" />
+              ) : (
+                <span className="text-sm font-medium">{index + 1}</span>
+              )}
+            </div>
+            {index < steps.length - 1 && (
+              <div className={`w-12 h-0.5 mx-2 ${step.completed ? 'bg-blue-500' : 'bg-white/30'
+                }`} />
+            )}
+            <span className={`absolute mt-10 text-xs ${currentStep === step.key ? 'text-white' : 'text-white/50'}`}>
+              {step.label}
+            </span>
+          </React.Fragment>
+        ))}
+      </div>
+    );
+  };
+
+  const renderAddressStep = () => (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold text-white">Shipping & Billing Address</h2>
+      </div>
+
+      <GlassPanel variant="secondary" className="p-6">
+        <ShippingStep
+          shippingAddress={shippingAddress}
+          errors={shippingErrors}
+          onAddressChange={(updates) => setShippingAddress(prev => ({ ...prev, ...updates }))}
+          userProfile={profile}
+        />
+
+        <div className="mt-8 flex justify-end">
+          <Button
+            variant="primary"
+            onClick={handleAddressSubmit}
+            className="w-full md:w-auto px-8"
+          >
+            Continue to Payment
+          </Button>
+        </div>
+      </GlassPanel>
+    </div>
+  );
+
+  const getStepBackAction = () => {
+    switch (currentStep) {
+      case 'address': return onBack;
+      case 'payment-method': return () => setCurrentStep('address');
+      case 'payment-details': return () => setCurrentStep('payment-method');
+      default: return onBack;
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <Button
           variant="ghost"
-          onClick={onBack}
+          onClick={getStepBackAction()}
           className="flex items-center gap-2 text-white/70 hover:text-white"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -1024,13 +1125,16 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Content */}
         <div className="lg:col-span-2">
-          <GlassPanel variant="secondary" className="p-8">
-            {currentStep === 'review' && renderPaymentMethodSelection()}
-            {currentStep === 'payment-method' && renderPaymentMethodSelection()}
-            {currentStep === 'payment-details' && renderPaymentDetails()}
-            {currentStep === 'processing' && renderProcessing()}
-            {currentStep === 'confirmation' && renderConfirmation()}
-          </GlassPanel>
+          {currentStep === 'address' && renderAddressStep()}
+          {currentStep === 'address' ? null : (
+            <GlassPanel variant="secondary" className="p-8">
+              {currentStep === 'review' && renderPaymentMethodSelection()}
+              {currentStep === 'payment-method' && renderPaymentMethodSelection()}
+              {currentStep === 'payment-details' && renderPaymentDetails()}
+              {currentStep === 'processing' && renderProcessing()}
+              {currentStep === 'confirmation' && renderConfirmation()}
+            </GlassPanel>
+          )}
         </div>
 
         {/* Order Summary Sidebar */}
