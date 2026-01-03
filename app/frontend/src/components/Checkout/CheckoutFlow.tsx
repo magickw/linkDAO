@@ -825,6 +825,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
         <FiatPaymentDetails
           paymentMethod={selectedPaymentMethod}
           onProceed={handlePaymentSubmit}
+          address={address}
         />
       );
     }
@@ -1115,7 +1116,8 @@ const CryptoPaymentDetails: React.FC<{
 const FiatPaymentDetails: React.FC<{
   paymentMethod: PrioritizedPaymentMethod;
   onProceed: () => void;
-}> = ({ paymentMethod, onProceed }) => {
+  address?: string;
+}> = ({ paymentMethod, onProceed, address }) => {
   const { state: cartState } = useCart();
   const router = useRouter();
 

@@ -11,6 +11,7 @@ export function EnhancedSecuritySettings() {
     const [alerts, setAlerts] = useState<SecurityAlert[]>([]);
     const [alertsConfig, setAlertsConfig] = useState<SecurityAlertsConfig | null>(null);
     const [privacySettings, setPrivacySettings] = useState<PrivacySettings | null>(null);
+    const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
     const [show2FASetup, setShow2FASetup] = useState(false);
     const [showEmail2FASetup, setShowEmail2FASetup] = useState(false);
     const [qrCode, setQrCode] = useState<string>('');
@@ -35,14 +36,16 @@ export function EnhancedSecuritySettings() {
                 devicesData,
                 alertsData,
                 configData,
-                privacyData
+                privacyData,
+                twoFactorData
             ] = await Promise.all([
                 securityService.getSessions().catch(() => []),
                 securityService.getActivityLog(10).catch(() => []),
                 securityService.getTrustedDevices().catch(() => []),
                 securityService.getAlerts(true).catch(() => []),
                 securityService.getAlertsConfig().catch(() => null),
-                securityService.getPrivacySettings().catch(() => null)
+                securityService.getPrivacySettings().catch(() => null),
+                securityService.get2FAStatus().catch(() => ({ enabled: false, methods: [] }))
             ]);
 
             setSessions(sessionsData);
@@ -51,6 +54,7 @@ export function EnhancedSecuritySettings() {
             setAlerts(alertsData);
             setAlertsConfig(configData);
             setPrivacySettings(privacyData);
+            setTwoFactorEnabled(twoFactorData.enabled);
         } catch (error) {
             console.error('Error loading security data:', error);
         } finally {
@@ -118,6 +122,27 @@ export function EnhancedSecuritySettings() {
         } catch (error) {
             console.error('Error verifying email 2FA:', error);
             alert('Invalid verification code. Please try again.');
+        }
+    };
+
+    const handleDisable2FA = async () => {
+        if (!confirm('Are you sure you want to disable two-factor authentication? This will make your account less secure.')) {
+            return;
+        }
+
+        try {
+            await securityService.disable2FA();
+            setSuccessMessage('2FA disabled successfully.');
+            setShowSuccessMessage(true);
+            loadSecurityData();
+            
+            // Auto-hide success message after 5 seconds
+            setTimeout(() => {
+                setShowSuccessMessage(false);
+            }, 5000);
+        } catch (error) {
+            console.error('Error disabling 2FA:', error);
+            alert('Failed to disable 2FA. Please try again.');
         }
     };
 
@@ -272,12 +297,21 @@ export function EnhancedSecuritySettings() {
                                 <div className="text-sm font-medium text-gray-900 dark:text-white">Authenticator App (TOTP)</div>
                                 <div className="text-xs text-gray-600 dark:text-gray-400">Use an authenticator app for additional security</div>
                             </div>
-                            <button
-                                onClick={handleSetup2FA}
-                                className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors"
-                            >
-                                Enable
-                            </button>
+                            {twoFactorEnabled ? (
+                                <button
+                                    onClick={handleDisable2FA}
+                                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+                                >
+                                    Disable
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={handleSetup2FA}
+                                    className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors"
+                                >
+                                    Enable
+                                </button>
+                            )}
                         </div>
                         <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-600">
                             <div className="flex-1">

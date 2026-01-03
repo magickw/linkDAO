@@ -73,6 +73,25 @@ router.post('/2fa/verify', async (req: Request, res: Response) => {
 });
 
 /**
+ * Get 2FA status
+ * GET /api/security/2fa/status
+ */
+router.get('/2fa/status', async (req: Request, res: Response) => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const status = await securityService.get2FAStatus(userId);
+        res.json(status);
+    } catch (error) {
+        console.error('Error getting 2FA status:', error);
+        res.status(500).json({ error: 'Failed to get 2FA status' });
+    }
+});
+
+/**
  * Disable 2FA
  * DELETE /api/security/2fa
  */

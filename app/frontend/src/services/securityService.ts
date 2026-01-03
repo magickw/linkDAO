@@ -102,6 +102,26 @@ class SecurityService {
         return response.json();
     }
 
+    async get2FAStatus(): Promise<{
+        enabled: boolean;
+        methods: Array<{
+            type: string;
+            enabled: boolean;
+            verifiedAt?: Date;
+        }>;
+    }> {
+        const response = await fetch(`${BASE_URL}/api/security/2fa/status`, {
+            method: 'GET',
+            headers: this.getAuthHeaders()
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to get 2FA status');
+        }
+
+        return response.json();
+    }
+
     async disable2FA(): Promise<{ success: boolean }> {
         const response = await fetch(`${BASE_URL}/api/security/2fa`, {
             method: 'DELETE',

@@ -30,6 +30,23 @@ export class SecurityService {
     }
 
     /**
+     * Get 2FA status for user
+     */
+    async get2FAStatus(userId: string) {
+        const authMethods = await db.select().from(twoFactorAuth)
+            .where(eq(twoFactorAuth.userId, userId));
+
+        return {
+            enabled: authMethods.some(method => method.isEnabled),
+            methods: authMethods.map(method => ({
+                type: method.method,
+                enabled: method.isEnabled,
+                verifiedAt: method.verifiedAt
+            }))
+        };
+    }
+
+    /**
      * Check if email should be sent based on user preferences
      */
     private async shouldSendEmail(userId: string, emailType: string): Promise<boolean> {
@@ -348,10 +365,14 @@ export class SecurityService {
 
         // Send email with code
         if (await this.shouldSendEmail(userId, '2fa_setup')) {
-            await emailService.send2FAVerificationEmail(email, {
+            const emailSent = await emailService.send2FAVerificationEmail(email, {
                 code: verificationCode,
                 expiresIn: 10 // minutes
-            }).catch(err => console.error('Failed to send 2FA setup email:', err));
+            });
+
+            if (!emailSent) {
+                throw new Error('Failed to send verification email. Email service may not be configured. Please contact support.');
+            }
         }
 
         return {
@@ -419,10 +440,14 @@ export class SecurityService {
         await this.storeEmailVerificationCode(userId, verificationCode);
 
         // Send email with code
-        await emailService.send2FAVerificationEmail(email, {
+        const emailSent = await emailService.send2FAVerificationEmail(email, {
             code: verificationCode,
             expiresIn: 10 // minutes
         });
+
+        if (!emailSent) {
+            throw new Error('Failed to send verification email. Email service may not be configured. Please contact support.');
+        }
     }
 
     /**

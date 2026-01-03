@@ -199,14 +199,14 @@ class AuthController {
       try {
         // Only check 2FA if the table exists (graceful degradation)
         if (twoFactorAuth) {
-          const [authRecord] = await db
+          const authRecords = await db
             .select()
             .from(twoFactorAuth)
-            .where(eq(twoFactorAuth.userId, userData.id))
-            .limit(1);
+            .where(eq(twoFactorAuth.userId, userData.id));
 
-          userHas2FA = authRecord?.isEnabled || false;
-          safeLogger.info('2FA status checked', { userId: userData.id, has2FA: userHas2FA });
+          // Check if ANY 2FA method is enabled
+          userHas2FA = authRecords.some(record => record.isEnabled === true);
+          safeLogger.info('2FA status checked', { userId: userData.id, has2FA: userHas2FA, methods: authRecords.length });
         }
       } catch (twoFactorError: any) {
         // Silently skip 2FA check if table doesn't exist or other DB error
