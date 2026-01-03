@@ -201,13 +201,21 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
             platformFee: context.transactionAmount * 0.025,
             totalCost: context.transactionAmount * 1.025,
             estimatedTime: method.type === PaymentMethodType.FIAT_STRIPE ? 0 : 5,
-            currency: 'USD'
+            currency: 'USD',
+            breakdown: { // Ensure breakdown is present
+              amount: context.transactionAmount,
+              networkFee: 0,
+              platformFee: context.transactionAmount * 0.025
+            },
+            confidence: 0.1 // Low confidence marker
           },
           recommendationReason: method.type === PaymentMethodType.FIAT_STRIPE
             ? 'Instant payment with saved card'
             : 'Crypto payment available',
-          warnings: [],
-          benefits: []
+          warnings: ['Estimated costs unavailable'], // Ensure array
+          benefits: [], // Ensure array
+          userPreferenceScore: 0,
+          totalScore: 0.5
         }));
 
         result = {
@@ -743,58 +751,51 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
           </GlassPanel>
         )}
 
-        {/* Enhanced Payment Method Selector with Transaction Summary */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Payment Methods - Takes 2 columns on large screens */}
-          <div className="lg:col-span-2">
-            <div className="bg-white/5 backdrop-blur-sm rounded-lg p-6">
-              {prioritizationResult && prioritizationResult.prioritizedMethods.length > 0 ? (
-                <>
-                  <PaymentMethodSelector
-                    prioritizationResult={prioritizationResult}
-                    selectedMethodId={selectedPaymentMethod?.method.id}
-                    onMethodSelect={handlePaymentMethodSelect}
-                    showCostBreakdown={true}
-                    showRecommendations={true}
-                    showWarnings={true}
-                    maxDisplayMethods={10}
-                    layout="list"
-                    responsive={true}
-                    className="text-white"
-                  />
-                </>
-              ) : (
-                <div className="text-center py-8">
-                  <AlertCircle className="w-12 h-12 text-orange-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-white mb-2">
-                    Payment Options Unavailable
-                  </h3>
-                  <p className="text-white/70 mb-4">
-                    We're having trouble loading payment options. Please try refreshing the page.
-                  </p>
-                  <Button
-                    variant="outline"
-                    onClick={() => window.location.reload()}
-                    className="mx-auto"
-                  >
-                    Refresh Page
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Transaction Summary - Takes 1 column on large screens, sticky on desktop */}
-          <div className="lg:col-span-1">
-            <div className="lg:sticky lg:top-6">
-              <TransactionSummary
-                selectedMethod={selectedPaymentMethod}
-                totalAmount={parseFloat(cartState.totals.total.fiat)}
-                onConfirm={() => setCurrentStep('payment-details')}
-                isProcessing={loading}
+        {/* Payment Method Selector */}
+        <div className="bg-white/5 backdrop-blur-sm rounded-lg p-6">
+          {prioritizationResult && prioritizationResult.prioritizedMethods.length > 0 ? (
+            <>
+              <PaymentMethodSelector
+                prioritizationResult={prioritizationResult}
+                selectedMethodId={selectedPaymentMethod?.method.id}
+                onMethodSelect={handlePaymentMethodSelect}
+                showCostBreakdown={true}
+                showRecommendations={true}
+                showWarnings={true}
+                maxDisplayMethods={10}
+                layout="list"
+                responsive={true}
+                className="text-white"
               />
+            </>
+          ) : (
+            <div className="text-center py-8">
+              <AlertCircle className="w-12 h-12 text-orange-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-white mb-2">
+                Payment Options Unavailable
+              </h3>
+              <p className="text-white/70 mb-4">
+                We're having trouble loading payment options. Please try refreshing the page.
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => window.location.reload()}
+                className="mx-auto"
+              >
+                Refresh Page
+              </Button>
             </div>
-          </div>
+          )}
+        </div>
+
+        {/* Transaction Summary - Same styling as payment method selector */}
+        <div className="bg-white/5 backdrop-blur-sm rounded-lg p-6">
+          <TransactionSummary
+            selectedMethod={selectedPaymentMethod}
+            totalAmount={parseFloat(cartState.totals.total.fiat)}
+            onConfirm={() => setCurrentStep('payment-details')}
+            isProcessing={loading}
+          />
         </div>
       </div>
     );

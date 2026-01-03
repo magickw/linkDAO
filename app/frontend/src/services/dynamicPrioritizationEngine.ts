@@ -65,35 +65,42 @@ export class DynamicPrioritizationEngine {
     currentMethods?: PrioritizedPaymentMethod[]
   ): Promise<DynamicPrioritizationResult> {
     const startTime = Date.now();
-    
+
     // Generate cache key
     const cacheKey = this.generateCacheKey(context);
-    
-    // Check cache first
-    const cachedResult = this.getCachedResult(cacheKey, context.marketConditions);
-    if (cachedResult) {
-      return {
-        prioritizedMethods: cachedResult.prioritizedMethods,
-        adjustments: [],
-        cacheHit: true,
-        processingTimeMs: Date.now() - startTime,
-        marketConditionsChanged: false
-      };
+
+    // Check cache first (only if we're not explicitly verifying current methods)
+    if (!currentMethods) {
+      const cachedResult = this.getCachedResult(cacheKey, context.marketConditions);
+      if (cachedResult) {
+        return {
+          prioritizedMethods: cachedResult.prioritizedMethods,
+          adjustments: [],
+          cacheHit: true,
+          processingTimeMs: Date.now() - startTime,
+          marketConditionsChanged: false
+        };
+      }
     }
 
     // Detect market condition changes
-    const marketConditionsChanged = currentMethods ? 
+    // If currentMethods are provided, we check if we need to update them or use them as base
+    // In the context of initial load with pre-calculated costs, we treat them as fresh
+    const marketConditionsChanged = currentMethods ?
       this.detectMarketConditionChanges(currentMethods, context.marketConditions) : false;
 
     // Calculate new prioritization
-    const prioritizedMethods = await this.calculateDynamicPrioritization(context);
-    
+    // If currentMethods is provided, we use it to avoid re-fetching costs
+    const prioritizedMethods = currentMethods
+      ? await this.recalculateScoresOnly(currentMethods, context)
+      : await this.calculateDynamicPrioritization(context);
+
     // Apply threshold-based adjustments
     const adjustments = this.applyThresholdAdjustments(prioritizedMethods, context);
-    
+
     // Update cache
     this.updateCache(cacheKey, prioritizedMethods, context.marketConditions);
-    
+
     return {
       prioritizedMethods,
       adjustments,
@@ -104,79 +111,38 @@ export class DynamicPrioritizationEngine {
   }
 
   /**
-   * Update existing prioritization based on new market conditions
+   * Recalculate scores for existing methods without re-fetching costs
    */
-  async updatePrioritization(
-    currentMethods: PrioritizedPaymentMethod[],
-    newMarketConditions: MarketConditions
+  private async recalculateScoresOnly(
+    methods: PrioritizedPaymentMethod[],
+    context: PrioritizationContext
   ): Promise<PrioritizedPaymentMethod[]> {
-    const updatedMethods = await Promise.all(
-      currentMethods.map(async (prioritizedMethod) => {
-        const networkCondition = newMarketConditions.gasConditions.find(
-          gc => gc.chainId === prioritizedMethod.method.chainId
-        );
-
-        if (!networkCondition) {
-          return prioritizedMethod; // No update if no network condition
-        }
-
-        // Recalculate cost estimate with new conditions
-        let updatedCostEstimate: CostEstimate;
-        try {
-          updatedCostEstimate = await this.costCalculator.calculateTransactionCost(
-            prioritizedMethod.method,
-            prioritizedMethod.costEstimate.baseCost,
-            networkCondition
-          );
-        } catch (error) {
-          console.warn(`Failed to update cost for ${prioritizedMethod.method.type}, using previous estimate:`, error);
-          // Use previous cost estimate if update fails
-          updatedCostEstimate = prioritizedMethod.costEstimate;
-        }
-
-        // Recalculate scoring components
-        const context: PrioritizationContext = {
-          userContext: {
-            chainId: prioritizedMethod.method.chainId || 1,
-            preferences: {
-              preferredMethods: [],
-              avoidedMethods: [],
-              maxGasFeeThreshold: 25,
-              preferStablecoins: true,
-              preferFiat: false,
-              lastUsedMethods: [],
-              autoSelectBestOption: true
-            },
-            walletBalances: []
-          },
-          transactionAmount: prioritizedMethod.costEstimate.baseCost,
-          transactionCurrency: 'USD',
-          marketConditions: newMarketConditions,
-          availablePaymentMethods: [prioritizedMethod.method]
-        };
-
-        const newScoringComponents = await this.scoringSystem.calculateMethodScore(
-          prioritizedMethod.method,
+    const scoredMethods = await Promise.all(
+      methods.map(async (pm, index) => {
+        // Calculate scoring components using existing cost estimate
+        const scoringComponents = await this.scoringSystem.calculateMethodScore(
+          pm.method,
           context,
-          updatedCostEstimate
+          pm.costEstimate
         );
 
-        const updatedPrioritizedMethod: PrioritizedPaymentMethod = {
-          ...prioritizedMethod,
-          costEstimate: updatedCostEstimate,
-          totalScore: newScoringComponents.totalScore,
-          availabilityStatus: this.determineAvailabilityStatus(
-            prioritizedMethod.method,
-            updatedCostEstimate
-          )
+        const prioritizedMethod: PrioritizedPaymentMethod = {
+          ...pm,
+          priority: index + 1, // Will be updated after sorting
+          availabilityStatus: this.determineAvailabilityStatus(pm.method, pm.costEstimate),
+          userPreferenceScore: scoringComponents.preferenceScore,
+          recommendationReason: this.generateRecommendationReason(pm.method, scoringComponents),
+          totalScore: scoringComponents.totalScore,
+          warnings: this.generateMethodWarnings(pm.method, pm.costEstimate, context),
+          benefits: this.generateMethodBenefits(pm.method, pm.costEstimate, scoringComponents)
         };
 
-        return updatedPrioritizedMethod;
+        return prioritizedMethod;
       })
     );
 
-    // Re-sort by total score and update priorities
-    return this.resortByScore(updatedMethods);
+    // Sort by total score and update priorities
+    return this.resortByScore(scoredMethods);
   }
 
   /**
@@ -328,11 +294,11 @@ export class DynamicPrioritizationEngine {
       if (!newNetworkCondition) continue;
 
       // Check for significant gas price changes
-      const estimatedOldGasPrice = method.costEstimate.gasFee / 
+      const estimatedOldGasPrice = method.costEstimate.gasFee /
         (method.costEstimate.breakdown.gasLimit ? Number(method.costEstimate.breakdown.gasLimit) / 1e9 : 21000);
-      
+
       const gasPriceChange = Math.abs(newNetworkCondition.gasPriceUSD - estimatedOldGasPrice) / estimatedOldGasPrice;
-      
+
       if (gasPriceChange > this.COST_CHANGE_THRESHOLD) {
         return true;
       }
@@ -356,21 +322,21 @@ export class DynamicPrioritizationEngine {
       context.userContext.userAddress || 'anonymous',
       context.availablePaymentMethods.map(m => m.id).sort().join(',')
     ];
-    
+
     return keyComponents.join('|');
   }
 
   private generateMarketConditionsHash(marketConditions: MarketConditions): string {
     const hashComponents = [
       marketConditions.lastUpdated.getTime(),
-      ...marketConditions.gasConditions.map(gc => 
+      ...marketConditions.gasConditions.map(gc =>
         `${gc.chainId}:${gc.gasPriceUSD}:${gc.networkCongestion}`
       ),
-      ...marketConditions.exchangeRates.map(er => 
+      ...marketConditions.exchangeRates.map(er =>
         `${er.fromToken}:${er.toToken}:${er.rate}`
       )
     ];
-    
+
     return hashComponents.join('|');
   }
 
@@ -379,7 +345,7 @@ export class DynamicPrioritizationEngine {
     currentMarketConditions: MarketConditions
   ): PrioritizationCache | null {
     const cached = this.cache.get(cacheKey);
-    
+
     if (!cached) return null;
 
     // Check if cache is expired
@@ -419,7 +385,7 @@ export class DynamicPrioritizationEngine {
 
   private cleanupCache(): void {
     const now = Date.now();
-    
+
     const entries = Array.from(this.cache.entries());
     for (const [key, entry] of entries) {
       if (now - entry.timestamp.getTime() > entry.ttl) {
@@ -545,13 +511,13 @@ export class DynamicPrioritizationEngine {
     newestEntry: Date | null;
   } {
     const entries = Array.from(this.cache.values());
-    
+
     return {
       size: this.cache.size,
       hitRate: 0, // Would track this in production
-      oldestEntry: entries.length > 0 ? 
+      oldestEntry: entries.length > 0 ?
         new Date(Math.min(...entries.map(e => e.timestamp.getTime()))) : null,
-      newestEntry: entries.length > 0 ? 
+      newestEntry: entries.length > 0 ?
         new Date(Math.max(...entries.map(e => e.timestamp.getTime()))) : null
     };
   }

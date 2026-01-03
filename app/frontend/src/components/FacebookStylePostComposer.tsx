@@ -1,9 +1,16 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { ipfsUploadService } from '@/services/ipfsUploadService';
 import { CreatePostInput } from '@/models/Post';
-import { Camera, Image, Link as LinkIcon, Smile, MapPin, Video, X, AlertCircle } from 'lucide-react';
+import { Camera, Image, Link as LinkIcon, Smile, MapPin, Video, X, AlertCircle, Loader2 } from 'lucide-react';
 import VideoEmbed from './VideoEmbed';
 import { extractVideoUrls } from '@/utils/videoUtils';
+import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
+import { contentPreviewService } from '@/services/contentPreviewService';
+import { LinkPreview } from '@/services/contentPreviewService'; // Assuming type is exported or available
+// If LinkPreview is not exported from service, we might need to import it from types if defined there.
+// Checking contentPreviewService.ts file again... it imports LinkPreview from '../types/contentPreview'.
+// So I should import from types.
+import { LinkPreview as LinkPreviewType } from '@/types/contentPreview';
 
 interface FacebookStylePostComposerProps {
   onSubmit: (postData: CreatePostInput) => Promise<void>;
@@ -30,16 +37,40 @@ const FacebookStylePostComposer = React.memo(({
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
-  const [feeling, setFeeling] = useState('');
-  const [location, setLocation] = useState('');
-  const [linkUrl, setLinkUrl] = useState('');
-  const [showFeelingInput, setShowFeelingInput] = useState(false);
-  const [showLocationInput, setShowLocationInput] = useState(false);
-  const [showLinkInput, setShowLinkInput] = useState(false);
+
+  // New State for Enhanced Features
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [linkPreviews, setLinkPreviews] = useState<LinkPreviewType[]>([]);
+  const [fetchingPreviews, setFetchingPreviews] = useState<Set<string>>(new Set());
+
+  // Location State
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [locationSearch, setLocationSearch] = useState('');
+  const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]); // Replace any with proper type if available
+  const [selectedLocation, setSelectedLocation] = useState<{ name: string, address?: string } | null>(null);
+  const [gettingCurrentLocation, setGettingCurrentLocation] = useState(false);
+
   const [uploadError, setUploadError] = useState<string>('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const locationPickerRef = useRef<HTMLDivElement>(null);
+
+  // Close pickers when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+      if (locationPickerRef.current && !locationPickerRef.current.contains(e.target as Node)) {
+        setShowLocationPicker(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Get max file size from service
   const maxFileSize = useMemo(() => ipfsUploadService.getMaxFileSize(), []);
@@ -65,6 +96,136 @@ const FacebookStylePostComposer = React.memo(({
   const handleFocus = useCallback(() => {
     setIsExpanded(true);
   }, []);
+
+  // --- Auto-detect Links ---
+  const detectLinks = useCallback((text: string) => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    return text.match(urlRegex) || [];
+  }, []);
+
+  const fetchLinkPreview = useCallback(async (url: string) => {
+    if (fetchingPreviews.has(url)) return;
+
+    setFetchingPreviews(prev => new Set(prev).add(url));
+
+    try {
+      const preview = await contentPreviewService.generatePreview(url);
+      if (preview && preview.type === 'link' && preview.data) {
+        setLinkPreviews(prev => {
+          if (prev.some(p => p.url === url)) return prev;
+          return [...prev, preview.data as LinkPreviewType];
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch link preview:', error);
+    } finally {
+      setFetchingPreviews(prev => {
+        const next = new Set(prev);
+        next.delete(url);
+        return next;
+      });
+    }
+  }, [fetchingPreviews]);
+
+  const removeLinkPreview = useCallback((url: string) => {
+    setLinkPreviews(prev => prev.filter(p => p.url !== url));
+  }, []);
+
+  // --- Emoji Picker ---
+  const handleEmojiClick = useCallback((emojiData: EmojiClickData) => {
+    // Insert emoji at cursor position
+    if (textareaRef.current) {
+      const textarea = textareaRef.current;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const text = content;
+      const before = text.substring(0, start);
+      const after = text.substring(end, text.length);
+
+      const newContent = before + emojiData.emoji + after;
+      setContent(newContent);
+
+      // Update cursor position
+      setTimeout(() => {
+        textarea.selectionStart = start + emojiData.emoji.length;
+        textarea.selectionEnd = start + emojiData.emoji.length;
+        textarea.focus();
+      }, 0);
+    } else {
+      setContent(prev => prev + emojiData.emoji);
+    }
+    setShowEmojiPicker(false);
+  }, [content]);
+
+  // --- Location Picker ---
+  const getCurrentLocation = useCallback(() => {
+    setGettingCurrentLocation(true);
+    if (!navigator.geolocation) {
+      setUploadError('Geolocation is not supported by your browser');
+      setGettingCurrentLocation(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          // In a real app, use a geocoding service here. 
+          // For now, we'll just use the coordinates or a mock name.
+          // const { latitude, longitude } = position.coords;
+          // const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`);
+          // const data = await res.json();
+
+          setSelectedLocation({
+            name: `Current Location (${position.coords.latitude.toFixed(2)}, ${position.coords.longitude.toFixed(2)})`,
+            address: 'GPS Coordinates'
+          });
+          setShowLocationPicker(false);
+        } catch (error) {
+          console.error('Error getting location name', error);
+          setUploadError('Failed to get location name');
+        } finally {
+          setGettingCurrentLocation(false);
+        }
+      },
+      (error) => {
+        console.error('Error getting location', error);
+        setUploadError('Failed to get location: ' + error.message);
+        setGettingCurrentLocation(false);
+      }
+    );
+  }, []);
+
+  const handleLocationSearch = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    setLocationSearch(query);
+    // Mock suggestions for now
+    if (query.length > 2) {
+      const mockLocations = [
+        { name: query, address: 'Custom Location' },
+        { name: 'San Francisco, CA', address: 'USA' },
+        { name: 'New York, NY', address: 'USA' },
+        { name: 'London, UK', address: 'UK' }
+      ].filter(l => l.name.toLowerCase().includes(query.toLowerCase()));
+      setLocationSuggestions(mockLocations);
+    } else {
+      setLocationSuggestions([]);
+    }
+  }, []);
+
+  const handleTextChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = e.target.value;
+    setContent(text);
+
+    // Debounced link detection could be better, but simple is fine for now
+    const detected = detectLinks(text);
+    if (detected) {
+        detected.forEach(url => {
+            if (!linkPreviews.some(p => p.url === url)) {
+                fetchLinkPreview(url);
+            }
+        });
+    }
+  }, [detectLinks, fetchLinkPreview, linkPreviews]);
 
   // Extract video URLs from content
   const extractVideoLinks = useCallback((text: string) => {
@@ -103,9 +264,13 @@ const FacebookStylePostComposer = React.memo(({
 
       // Build content with additional info
       let finalContent = content.trim();
-      if (feeling) finalContent += ` — feeling ${feeling}`;
-      if (location) finalContent += ` at ${location}`;
-      if (linkUrl) finalContent += ` ${linkUrl}`;
+      
+      // Append location if selected
+      if (selectedLocation) {
+         finalContent += ` — at ${selectedLocation.name}`;
+      }
+      
+      // Append links if any (they are already in content usually, but we can ensure they are preserved)
 
       // Upload files if any
       let mediaCids: string[] = [];
@@ -129,22 +294,22 @@ const FacebookStylePostComposer = React.memo(({
         author: userName || '', // Use the userName prop as author
         content: finalContent,
         tags: tagArray,
-        media: mediaCids.length > 0 ? mediaCids : undefined
+        media: mediaCids.length > 0 ? mediaCids : undefined,
+        // We could also pass structured data like location and links if the backend supports it
       };
 
       await onSubmit(postData);
 
       // Reset form only after successful submission
       setContent('');
-      setFeeling('');
-      setLocation('');
-      setLinkUrl('');
+      setSelectedLocation(null);
+      setLinkPreviews([]);
+      setFetchingPreviews(new Set());
       setSelectedFiles([]);
       setPreviews([]);
       setIsExpanded(false);
-      setShowFeelingInput(false);
-      setShowLocationInput(false);
-      setShowLinkInput(false);
+      setShowEmojiPicker(false);
+      setShowLocationPicker(false);
       setUploadError('');
     } catch (error) {
       console.error('Error submitting post:', error);
@@ -152,7 +317,7 @@ const FacebookStylePostComposer = React.memo(({
       const errorMessage = error instanceof Error ? error.message : 'Failed to create post. Please try again.';
       setUploadError(errorMessage);
     }
-  }, [content, feeling, location, linkUrl, selectedFiles, onSubmit, extractHashtags, userName]);
+  }, [content, selectedLocation, selectedFiles, onSubmit, extractHashtags, userName]);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -163,7 +328,7 @@ const FacebookStylePostComposer = React.memo(({
     if (oversizedFiles.length > 0) {
       const fileNames = oversizedFiles.map(f => f.name).join(', ');
       const maxSizeMB = maxFileSize / 1024 / 1024;
-      setUploadError(`The following files exceed the ${maxSizeMB}MB limit: ${fileNames}`);
+      setUploadError(`The following files exceed the ${ maxSizeMB }MB limit: ${ fileNames }`);
       // Reset the input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -197,7 +362,7 @@ const FacebookStylePostComposer = React.memo(({
     if (oversizedFiles.length > 0) {
       const fileNames = oversizedFiles.map(f => f.name).join(', ');
       const maxSizeMB = maxFileSize / 1024 / 1024;
-      setUploadError(`The following videos exceed the ${maxSizeMB}MB limit: ${fileNames}`);
+      setUploadError(`The following videos exceed the ${ maxSizeMB }MB limit: ${ fileNames }`);
       // Reset the input
       if (videoInputRef.current) {
         videoInputRef.current.value = '';
@@ -231,15 +396,14 @@ const FacebookStylePostComposer = React.memo(({
 
   const handleCancel = useCallback(() => {
     setContent('');
-    setFeeling('');
-    setLocation('');
-    setLinkUrl('');
+    setSelectedLocation(null);
+    setLinkPreviews([]);
+    setFetchingPreviews(new Set());
     setSelectedFiles([]);
     setPreviews([]);
     setIsExpanded(false);
-    setShowFeelingInput(false);
-    setShowLocationInput(false);
-    setShowLinkInput(false);
+    setShowEmojiPicker(false);
+    setShowLocationPicker(false);
     setUploadError('');
   }, []);
 
@@ -291,14 +455,14 @@ const FacebookStylePostComposer = React.memo(({
                   ) : (
                     <img
                       src={preview}
-                      alt={`Preview ${index + 1}`}
+                      alt={`Preview ${ index + 1}`}
                       className="w-full h-32 object-cover rounded-lg"
                     />
                   )}
                   {/* File info overlay */}
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 rounded-b-lg">
                     <div className="text-white text-xs truncate">{file?.name}</div>
-                    <div className={`text-xs font-medium ${sizeColor}`}>{fileSize}</div>
+                    <div className={`text - xs font - medium ${ sizeColor } `}>{fileSize}</div>
                   </div>
                   <button
                     type="button"
@@ -317,7 +481,7 @@ const FacebookStylePostComposer = React.memo(({
   }, [previews, selectedFiles, removeFile, videoEmbeds]);
 
   return (
-    <div className={`group rounded-xl shadow-sm hover:shadow-md border border-gray-200 dark:border-gray-700 ${className} bg-white dark:bg-gray-800 transition-all duration-300 focus-within:ring-2 focus-within:ring-primary-500/20 focus-within:border-primary-500/50`}>
+    <div className={`group rounded - xl shadow - sm hover: shadow - md border border - gray - 200 dark: border - gray - 700 ${ className } bg - white dark: bg - gray - 800 transition - all duration - 300 focus - within: ring - 2 focus - within: ring - primary - 500 / 20 focus - within: border - primary - 500 / 50`}>
       <form onSubmit={handleSubmit}>
         {/* Main composer area */}
         <div className="p-4">
@@ -342,7 +506,7 @@ const FacebookStylePostComposer = React.memo(({
               <textarea
                 ref={textareaRef}
                 value={content}
-                onChange={(e) => setContent(e.target.value)}
+                onChange={handleTextChange}
                 onFocus={handleFocus}
                 placeholder={content.length ? '' : HINTS[hintIdx]}
                 className="w-full resize-none border-none outline-none bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 text-lg leading-relaxed"
@@ -350,6 +514,46 @@ const FacebookStylePostComposer = React.memo(({
                 disabled={isLoading}
                 style={{ minHeight: isExpanded ? '80px' : '40px' }}
               />
+
+              {/* Link Previews */}
+              {linkPreviews.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {linkPreviews.map((preview, idx) => (
+                    <div key={idx} className="relative flex border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-700/30">
+                        {preview.image && (
+                            <div className="w-24 h-24 flex-shrink-0">
+                                <img src={preview.image} alt={preview.title} className="w-full h-full object-cover" />
+                            </div>
+                        )}
+                        <div className="p-3 flex-1 min-w-0 flex flex-col justify-center">
+                            <h4 className="text-sm font-semibold text-gray-900 dark:text-white truncate">{preview.title}</h4>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">{preview.description}</p>
+                            <span className="text-xs text-primary-500 mt-1 flex items-center gap-1">
+                                <LinkIcon size={10} /> {new URL(preview.url).hostname}
+                            </span>
+                        </div>
+                        <button 
+                            type="button"
+                            onClick={() => removeLinkPreview(preview.url)}
+                            className="absolute top-1 right-1 p-1 bg-black/50 text-white rounded-full hover:bg-black/70"
+                        >
+                            <X size={12} />
+                        </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Selected Location Tag */}
+              {selectedLocation && (
+                <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-full text-sm">
+                    <MapPin size={14} />
+                    <span>{selectedLocation.name}</span>
+                    <button type="button" onClick={() => setSelectedLocation(null)} className="ml-1 hover:text-red-800">
+                        <X size={14} />
+                    </button>
+                </div>
+              )}
 
               {/* Hashtag preview */}
               {hashtagPreview}
@@ -377,91 +581,7 @@ const FacebookStylePostComposer = React.memo(({
 
               {/* Additional inputs when expanded */}
               {isExpanded && (
-                <div className="mt-4 space-y-3 animate-fade-in">
-                  {/* Feeling input */}
-                  {showFeelingInput && (
-                    <div className="flex items-center space-x-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-2 border border-gray-100 dark:border-gray-700">
-                      <div className="w-8 h-8 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
-                        <Smile className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
-                      </div>
-                      <input
-                        type="text"
-                        value={feeling}
-                        onChange={(e) => setFeeling(e.target.value)}
-                        placeholder="How are you feeling?"
-                        className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-gray-900 dark:text-white placeholder-gray-500"
-                        disabled={isLoading}
-                        autoFocus
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowFeelingInput(false);
-                          setFeeling('');
-                        }}
-                        className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Location input */}
-                  {showLocationInput && (
-                    <div className="flex items-center space-x-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-2 border border-gray-100 dark:border-gray-700">
-                      <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                        <MapPin className="w-5 h-5 text-red-600 dark:text-red-400" />
-                      </div>
-                      <input
-                        type="text"
-                        value={location}
-                        onChange={(e) => setLocation(e.target.value)}
-                        placeholder="Where are you?"
-                        className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-gray-900 dark:text-white placeholder-gray-500"
-                        disabled={isLoading}
-                        autoFocus
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowLocationInput(false);
-                          setLocation('');
-                        }}
-                        className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Link input */}
-                  {showLinkInput && (
-                    <div className="flex items-center space-x-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-2 border border-gray-100 dark:border-gray-700">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                        <LinkIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <input
-                        type="url"
-                        value={linkUrl}
-                        onChange={(e) => setLinkUrl(e.target.value)}
-                        placeholder="Add a link..."
-                        className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-gray-900 dark:text-white placeholder-gray-500"
-                        disabled={isLoading}
-                        autoFocus
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowLinkInput(false);
-                          setLinkUrl('');
-                        }}
-                        className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
-                </div>
+              {/* Old inputs removed from here */}
               )}
             </div>
           </div>
@@ -486,10 +606,11 @@ const FacebookStylePostComposer = React.memo(({
                 <button
                   type="button"
                   onClick={() => videoInputRef.current?.click()}
-                  className={`p-2 rounded-lg transition-all ${showLinkInput
-                    ? 'text-purple-600 bg-purple-50 dark:bg-purple-900/20'
-                    : 'text-gray-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20'
-                    }`}
+                  className={`p - 2 rounded - lg transition - all ${
+          showLinkInput
+            ? 'text-purple-600 bg-purple-50 dark:bg-purple-900/20'
+            : 'text-gray-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20'
+        } `}
                   title="Add Video (YouTube, Vimeo, TikTok, Instagram, Twitter, Facebook)"
                   disabled={isLoading}
                 >
@@ -498,44 +619,104 @@ const FacebookStylePostComposer = React.memo(({
 
                 <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
 
-                <button
-                  type="button"
-                  onClick={() => setShowLinkInput(!showLinkInput)}
-                  className={`p-2 rounded-lg transition-all ${showLinkInput
-                    ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20'
-                    : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-                    }`}
-                  title="Add Link"
-                  disabled={isLoading}
-                >
-                  <LinkIcon className="w-5 h-5" />
-                </button>
+                <div className="relative" ref={emojiPickerRef}>
+                    <button
+                      type="button"
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className={`p - 2 rounded - lg transition - all ${
+          showEmojiPicker
+            ? 'text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20'
+            : 'text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'
+        } `}
+                      title="Add Emoji"
+                      disabled={isLoading}
+                    >
+                      <Smile className="w-5 h-5" />
+                    </button>
+                    {showEmojiPicker && (
+                      <div className="absolute bottom-full left-0 mb-2 z-50 shadow-2xl rounded-2xl">
+                        <EmojiPicker 
+                            onEmojiClick={handleEmojiClick}
+                            width={320}
+                            height={400}
+                        />
+                      </div>
+                    )}
+                </div>
 
-                <button
-                  type="button"
-                  onClick={() => setShowFeelingInput(!showFeelingInput)}
-                  className={`p-2 rounded-lg transition-all ${showFeelingInput
-                    ? 'text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20'
-                    : 'text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'
-                    }`}
-                  title="Add Feeling"
-                  disabled={isLoading}
-                >
-                  <Smile className="w-5 h-5" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowLocationInput(!showLocationInput)}
-                  className={`p-2 rounded-lg transition-all ${showLocationInput
-                    ? 'text-red-600 bg-red-50 dark:bg-red-900/20'
-                    : 'text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20'
-                    }`}
-                  title="Add Location"
-                  disabled={isLoading}
-                >
-                  <MapPin className="w-5 h-5" />
-                </button>
+                <div className="relative" ref={locationPickerRef}>
+                    <button
+                      type="button"
+                      onClick={() => setShowLocationPicker(!showLocationPicker)}
+                      className={`p - 2 rounded - lg transition - all ${
+          showLocationPicker || selectedLocation
+          ? 'text-red-600 bg-red-50 dark:bg-red-900/20'
+          : 'text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20'
+        } `}
+                      title="Add Location"
+                      disabled={isLoading}
+                    >
+                      <MapPin className="w-5 h-5" />
+                    </button>
+                    {showLocationPicker && (
+                      <div className="absolute bottom-full left-0 mb-2 w-72 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden">
+                          <div className="p-3 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                              <h4 className="font-semibold text-sm">Add Location</h4>
+                              <button onClick={() => setShowLocationPicker(false)}><X size={16} /></button>
+                          </div>
+                          
+                          <button 
+                            type="button"
+                            onClick={getCurrentLocation}
+                            disabled={gettingCurrentLocation}
+                            className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 text-left transition-colors"
+                          >
+                            {gettingCurrentLocation ? (
+                                <Loader2 className="w-5 h-5 animate-spin text-primary-500" />
+                            ) : (
+                                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+                                    <MapPin size={16} />
+                                </div>
+                            )}
+                            <div className="flex-1">
+                                <div className="text-sm font-medium">Use current location</div>
+                            </div>
+                          </button>
+                          
+                          <div className="p-2">
+                                <input 
+                                    type="text" 
+                                    placeholder="Search location..." 
+                                    className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-900 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                    value={locationSearch}
+                                    onChange={handleLocationSearch}
+                                    autoFocus
+                                />
+                          </div>
+                          
+                          {locationSuggestions.length > 0 && (
+                            <div className="max-h-48 overflow-y-auto">
+                                {locationSuggestions.map((loc, idx) => (
+                                    <button 
+                                        key={idx}
+                                        type="button"
+                                        onClick={() => {
+                                            setSelectedLocation(loc);
+                                            setShowLocationPicker(false);
+                                            setLocationSearch('');
+                                        }}
+                                        className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm flex items-center gap-2"
+                                    >
+                                        <MapPin size={14} className="text-gray-400" />
+                                        <span>{loc.name}</span>
+                                        {loc.address && <span className="text-xs text-gray-500 ml-auto">{loc.address}</span>}
+                                    </button>
+                                ))}
+                            </div>
+                          )}
+                      </div>
+                    )}
+                </div>
               </div>
 
               {/* Submit and cancel buttons */}
@@ -564,7 +745,7 @@ const FacebookStylePostComposer = React.memo(({
         {isExpanded && (
           <div className="px-4 pb-2 bg-gray-50/50 dark:bg-gray-800/50 rounded-b-xl -mt-2">
             <div className="text-right">
-              <span className={`text-xs font-medium ${content.length > 280 ? 'text-red-500' : 'text-gray-400'}`}>
+              <span className={`text - xs font - medium ${ content.length > 280 ? 'text-red-500' : 'text-gray-400' } `}>
                 {content.length}/280
               </span>
             </div>
