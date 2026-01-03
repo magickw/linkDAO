@@ -7,8 +7,8 @@ import { PurchaseRequest } from '../types/ldaoAcquisition';
 export function createFiatPaymentRoutes(stripeService: StripePaymentService): express.Router {
   const router = express.Router();
 
-  // Create payment intent
-  router.post('/create-payment-intent', csrfProtection,  async (req, res) => {
+  // Create payment intent (no CSRF protection - wallet address is validated)
+  router.post('/create-payment-intent', async (req, res) => {
     try {
       const { amount, userAddress } = req.body;
 

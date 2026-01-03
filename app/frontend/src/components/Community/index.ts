@@ -36,3 +36,7 @@ export { TokenGatedPost } from './TokenGatedPost';
 export { default as TokenPriceSparkline } from './TokenPriceSparkline';
 export { default as ViewModeToggle } from './ViewModeToggle';
 export { default as VotingParticipationMetrics } from './VotingParticipationMetrics';
+
+// New enhanced components
+export { default as RichContentPreview } from './RichContentPreview';
+export { default as EmptyState, NoPostsEmptyState, NoQuestsEmptyState, NoSearchResultsEmptyState, NoCommentsEmptyState, ErrorEmptyState } from './EmptyState';

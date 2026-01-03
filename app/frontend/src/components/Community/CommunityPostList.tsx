@@ -13,6 +13,7 @@ import { useWebSocket } from '../../hooks/useWebSocket';
 import { CommunityPostService } from '../../services/communityPostService';
 import { CommunityOfflineCacheService } from '../../services/communityOfflineCacheService';
 import { Community } from '../../models/Community';
+import { NoPostsEmptyState } from './EmptyState';
 
 interface CommunityPostListProps {
   communityId: string;
@@ -74,7 +75,7 @@ export const CommunityPostList: React.FC<CommunityPostListProps> = ({
 
     // Check if we're in a browser environment
     const isBrowser = typeof window !== 'undefined';
-    
+
     if (isBrowser) {
       window.addEventListener('online', updateNetworkStatus);
       window.addEventListener('offline', updateNetworkStatus);
@@ -110,13 +111,13 @@ export const CommunityPostList: React.FC<CommunityPostListProps> = ({
       });
 
       const response = await fetch(`/api/communities/${communityId}/posts?${params}`);
-      
+
       if (!response.ok) {
         throw new Error('Failed to load posts');
       }
 
       const data = await response.json();
-      
+
       if (reset || pageNum === 1) {
         setPosts(data.posts);
       } else {
@@ -127,7 +128,7 @@ export const CommunityPostList: React.FC<CommunityPostListProps> = ({
       setPage(pageNum);
     } catch (err) {
       console.error('Error loading posts:', err);
-      
+
       // If offline, try to get from cache
       if (!isOnline) {
         try {
@@ -147,7 +148,7 @@ export const CommunityPostList: React.FC<CommunityPostListProps> = ({
           console.error('Error loading cached posts:', cacheError);
         }
       }
-      
+
       setError(err instanceof Error ? err.message : 'Failed to load posts');
     } finally {
       if (pageNum === 1) {
@@ -173,7 +174,7 @@ export const CommunityPostList: React.FC<CommunityPostListProps> = ({
 
   // Handle post updates (reactions, comments, etc.)
   const handlePostUpdate = (postId: string, updates: Partial<EnhancedPost>) => {
-    setPosts(prev => prev.map(post => 
+    setPosts(prev => prev.map(post =>
       post.id === postId ? { ...post, ...updates } : post
     ));
   };
@@ -370,19 +371,9 @@ export const CommunityPostList: React.FC<CommunityPostListProps> = ({
           </button>
         </div>
       ) : posts.length === 0 ? (
-        <div className="no-posts">
-          <h3>No posts yet</h3>
-          <p>Be the first to post in this community!</p>
-          {canPost && (
-            <button
-              onClick={() => setShowComposer(true)}
-              className="btn btn-primary"
-              disabled={!isOnline}
-            >
-              {isOnline ? 'Create First Post' : 'Offline - Post creation unavailable'}
-            </button>
-          )}
-        </div>
+        <NoPostsEmptyState
+          onCreatePost={canPost && isOnline ? () => setShowComposer(true) : undefined}
+        />
       ) : (
         <InfiniteScroll
           hasMore={hasMore}

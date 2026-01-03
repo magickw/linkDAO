@@ -23,6 +23,7 @@ import { motion } from 'framer-motion';
 import { ldaoTokenService } from '@/services/web3/ldaoTokenService';
 import { processContent, shouldTruncateContent, getTruncatedContent } from '@/utils/contentParser';
 import { createPropsComparatorIgnoring } from '@/utils/performanceUtils';
+import RichContentPreview from './RichContentPreview';
 
 // Helper function to check if post is a community post
 const isCommunityPost = (post: EnhancedPost): boolean => {
@@ -873,31 +874,14 @@ function CommunityPostCardEnhanced({
                     </Link>
                   )
                 )}
-                <div className="text-gray-900 dark:text-white leading-relaxed prose prose-sm dark:prose-invert max-w-none">
-
-                  {isExpanded ? (
-                    processContent(post.content)
-                  ) : (
-                    processContent(getTruncatedContent(post.content, 500, false))
-                  )}
-                </div>
-
-                {!isExpanded && shouldTruncateContent(post.content, 500, false) && (
-                  <button
-                    onClick={() => setIsExpanded(true)}
-                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium mt-2 flex items-center space-x-1"
-                  >
-                    <span>Show more</span>
-                  </button>
-                )}
-                {isExpanded && shouldTruncateContent(post.content, 500, false) && (
-                  <button
-                    onClick={() => setIsExpanded(false)}
-                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium mt-2 flex items-center space-x-1"
-                  >
-                    <span>Show less</span>
-                  </button>
-                )}
+                <RichContentPreview
+                  content={post.content}
+                  contentType="html"
+                  maxLength={500}
+                  isExpanded={isExpanded}
+                  onToggleExpand={() => setIsExpanded(!isExpanded)}
+                  className="mb-4"
+                />
               </>
             )}
 
@@ -928,6 +912,24 @@ function CommunityPostCardEnhanced({
             {isCommunityPostType && post.onchainRef && (
               <div className="mt-3 p-3 bg-gradient-to-r from-primary-50 to-secondary-50 dark:from-primary-900/20 dark:to-secondary-900/20 rounded-lg border border-primary-200 dark:border-primary-700">
                 <div className="flex items-center space-x-2">
+                  {/* Trending Badge */}
+                  {post.trendingStatus === 'trending' && (
+                    <div className="flex items-center gap-1 px-2 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-full text-xs font-medium">
+                      <span>🔥</span>
+                      <span>Trending</span>
+                    </div>
+                  )}
+                  {/* Hot Badge */}
+                  {post.trendingStatus === 'hot' && (
+                    <div className="flex items-center gap-1 px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full text-xs font-medium">
+                      <span>🚀</span>
+                      <span>Hot</span>
+                    </div>
+                  )}
+                  <span className="text-gray-500 dark:text-gray-400">&bull;</span>
+                  <span className="text-gray-500 dark:text-gray-400">
+                    {new Date(post.createdAt).toLocaleDateString()}
+                  </span>
                   <span className="text-lg">🔗</span>
                   <span className="text-sm font-medium text-primary-700 dark:text-primary-300">
                     Onchain Reference: {post.onchainRef}
@@ -943,17 +945,14 @@ function CommunityPostCardEnhanced({
             {isCommunityPostType && post.tags && post.tags.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-2">
                 {post.tags.map((tag) => (
-                  <span
+                  <Link
                     key={tag}
-                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer transition-colors duration-200"
-                    onClick={() => window.open(`/tag/${tag}`, '_blank')}
-                    onKeyDown={(e) => e.key === 'Enter' && window.open(`/tag/${tag}`, '_blank')}
-                    tabIndex={0}
-                    role="button"
-                    aria-label={`Tag: ${tag}`}
+                    href={`/communities/${encodeURIComponent(community.slug ?? community.id)}?tag=${encodeURIComponent(tag)}`}
+                    className="px-2.5 py-1 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 text-xs font-medium rounded-full transition-colors cursor-pointer"
+                    onClick={(e) => e.stopPropagation()}
                   >
                     #{tag}
-                  </span>
+                  </Link>
                 ))}
               </div>
             )}
@@ -1050,7 +1049,7 @@ function CommunityPostCardEnhanced({
           {!showComments && (
             <div className="mt-4 text-center py-3 px-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
               {comments.length === 0 ? (
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <div className="text-sm text-gray-600 dark:text-gray-400">
                   No comments yet.
                   <button
                     onClick={toggleComments}
@@ -1058,7 +1057,7 @@ function CommunityPostCardEnhanced({
                   >
                     Be the first to comment!
                   </button>
-                </p>
+                </div>
               ) : (
                 <button
                   onClick={toggleComments}
@@ -1085,7 +1084,7 @@ function CommunityPostCardEnhanced({
                           <div className="bg-gradient-to-br from-primary-400 to-secondary-500 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0">
                             <span className="text-white font-bold text-xs">
                               {address ? address.slice(2, 4).toUpperCase() : 'U'}
-                            </span>
+                            </Link>
                           </div>
                           <div className="flex-1">
                             {/* Image Preview */}

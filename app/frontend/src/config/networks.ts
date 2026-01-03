@@ -224,6 +224,65 @@ export const TRANSACTION_HELPERS = {
       throw error;
     }
   },
+
+  // Add Sepolia testnet to MetaMask
+  addSepoliaToMetaMask: async () => {
+    if (typeof window.ethereum === 'undefined') {
+      throw new Error('MetaMask is not installed');
+    }
+
+    const SEPOLIA_CHAIN_ID = 11155111;
+    const SEPOLIA_HEX_ID = `0x${SEPOLIA_CHAIN_ID.toString(16)}`;
+
+    try {
+      await window.ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [
+          {
+            chainId: SEPOLIA_HEX_ID,
+            chainName: 'Sepolia testnet',
+            nativeCurrency: {
+              name: 'SepoliaETH',
+              symbol: 'ETH',
+              decimals: 18,
+            },
+            rpcUrls: ['https://rpc.sepolia.org'],
+            blockExplorerUrls: ['https://sepolia.etherscan.io'],
+          },
+        ],
+      });
+    } catch (error: any) {
+      if (error.code === 4001) {
+        throw new Error('User rejected the request');
+      }
+      throw error;
+    }
+  },
+
+  // Switch to Sepolia testnet
+  switchToSepolia: async () => {
+    if (typeof window.ethereum === 'undefined') {
+      throw new Error('MetaMask is not installed');
+    }
+
+    const SEPOLIA_CHAIN_ID = 11155111;
+    const SEPOLIA_HEX_ID = `0x${SEPOLIA_CHAIN_ID.toString(16)}`;
+
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: SEPOLIA_HEX_ID }],
+      });
+    } catch (error: any) {
+      if (error.code === 4902) {
+        // Network not found, try adding it
+        await TRANSACTION_HELPERS.addSepoliaToMetaMask();
+      } else if (error.code === 4001) {
+        throw new Error('User rejected the request');
+      }
+      throw error;
+    }
+  },
 };
 
 // Network status helpers

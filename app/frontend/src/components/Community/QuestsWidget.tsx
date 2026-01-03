@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Target, CheckCircle, Clock, Gift, TrendingUp } from 'lucide-react';
+import { NoQuestsEmptyState } from './EmptyState';
 
 interface Quest {
     id: string;
@@ -128,29 +129,8 @@ export const QuestsWidget: React.FC<QuestsWidgetProps> = ({
     // Empty state when no quests available
     if (quests.length === 0) {
         return (
-            <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm ${className}`}>
-                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center gap-2">
-                        <Target className="w-5 h-5 text-purple-500" />
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                            Daily Quests
-                        </h3>
-                    </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Complete quests to earn LDAO rewards
-                    </p>
-                </div>
-                <div className="p-8 text-center">
-                    <div className="text-gray-400 dark:text-gray-500 mb-3">
-                        <Gift className="w-10 h-10 mx-auto opacity-50" />
-                    </div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                        No quests available
-                    </p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                        Check back later for new quests
-                    </p>
-                </div>
+            <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden ${className}`}>
+                <NoQuestsEmptyState />
             </div>
         );
     }
@@ -184,15 +164,15 @@ export const QuestsWidget: React.FC<QuestsWidgetProps> = ({
                     <div
                         key={quest.id}
                         className={`p-4 transition-colors ${quest.completed
-                                ? 'bg-green-50 dark:bg-green-900/10'
-                                : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                            ? 'bg-green-50 dark:bg-green-900/10'
+                            : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
                             }`}
                     >
                         <div className="flex items-start gap-3">
                             {/* Icon */}
                             <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${quest.completed
-                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
-                                    : 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'
+                                ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
+                                : 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'
                                 }`}>
                                 {quest.completed ? <CheckCircle className="w-5 h-5" /> : getQuestIcon(quest.icon)}
                             </div>
