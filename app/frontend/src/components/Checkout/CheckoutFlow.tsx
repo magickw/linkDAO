@@ -261,13 +261,14 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
         setPrioritizationResult(result);
       }
 
-      // Pre-select default method (but don't auto-advance)
-      if (result.defaultMethod) {
+      // Pre-select default method only if none is selected
+      if (result.defaultMethod && !selectedPaymentMethod) {
         setSelectedPaymentMethod(result.defaultMethod);
       }
 
-      // Keep user on payment method selection screen to allow choice
-      setCurrentStep('payment-method');
+      // DO NOT force navigation to payment-method here. 
+      // User must complete address step first.
+      // setCurrentStep('payment-method');
 
       // Also get legacy recommendation for backward compatibility
       const request: UnifiedCheckoutRequest = {
@@ -292,6 +293,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
   const calculateOrderTax = async (address: any) => {
     if (!address || !address.country) {
+      console.log('Address incompelete, resetting tax calculation');
       setTaxCalculation(null);
       return;
     }
@@ -545,9 +547,20 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
     setPaymentError(null);
 
     try {
-      // Create checkout request with selected payment method
       const taxAmount = taxCalculation?.taxAmount || 0;
       const totalAmount = parseFloat(cartState.totals.total.fiat) + taxAmount;
+
+      console.log('Proceeding with payment:', {
+        subtotal: cartState.totals.total.fiat,
+        tax: taxAmount,
+        total: totalAmount,
+        method: selectedPaymentMethod?.method.type
+      });
+
+      // Stripe requires at least $0.50 USD
+      if (selectedPaymentMethod?.method.type === PaymentMethodType.FIAT_STRIPE && totalAmount < 0.50) {
+        throw new Error(`Order total ($${totalAmount.toFixed(2)}) must be at least $0.50 USD for card payments.`);
+      }
 
       const request: PrioritizedCheckoutRequest = {
         orderId: `order_${Date.now()}`,
@@ -1030,19 +1043,27 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
   const renderStepIndicator = () => {
     const steps = [
+      { key: 'cart', label: 'Cart', completed: true }, // Always completed as we are in checkout
       { key: 'address', label: 'Address', completed: ['review', 'payment-method', 'payment-details', 'processing', 'confirmation'].includes(currentStep) },
-      // 'review' step is implied/skipped or merged, but keeping step logic
-      { key: 'payment-method', label: 'Payment', completed: ['payment-details', 'processing', 'confirmation'].includes(currentStep) },
-      { key: 'payment-details', label: 'Details', completed: ['processing', 'confirmation'].includes(currentStep) },
-      { key: 'processing', label: 'Processing', completed: currentStep === 'confirmation' },
+      // Merge Payment Method and Details into one visual step 'Payment'
+      { key: 'payment', label: 'Payment', completed: ['processing', 'confirmation'].includes(currentStep) },
       { key: 'confirmation', label: 'Complete', completed: false }
     ];
+
+    // Helper to check if step is active
+    const isStepActive = (stepKey: string) => {
+      if (stepKey === 'cart') return false;
+      if (stepKey === 'address') return currentStep === 'address';
+      if (stepKey === 'payment') return ['payment-method', 'payment-details', 'review'].includes(currentStep);
+      if (stepKey === 'confirmation') return currentStep === 'confirmation';
+      return false;
+    };
 
     return (
       <div className="flex items-center justify-center mb-8">
         {steps.map((step, index) => (
           <React.Fragment key={step.key}>
-            <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${step.completed || currentStep === step.key
+            <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${step.completed || isStepActive(step.key)
               ? 'bg-blue-500 border-blue-500 text-white'
               : 'border-white/30 text-white/60'
               }`}>
@@ -1056,7 +1077,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
               <div className={`w-12 h-0.5 mx-2 ${step.completed ? 'bg-blue-500' : 'bg-white/30'
                 }`} />
             )}
-            <span className={`absolute mt-10 text-xs ${currentStep === step.key ? 'text-white' : 'text-white/50'}`}>
+            <span className={`absolute mt-10 text-xs ${isStepActive(step.key) ? 'text-white' : 'text-white/50'}`}>
               {step.label}
             </span>
           </React.Fragment>
@@ -1095,6 +1116,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
   const getStepBackAction = () => {
     switch (currentStep) {
       case 'address': return onBack;
+      case 'review': return () => setCurrentStep('address'); // Fix: 'review' should go back to address, not exit
       case 'payment-method': return () => setCurrentStep('address');
       case 'payment-details': return () => setCurrentStep('payment-method');
       default: return onBack;

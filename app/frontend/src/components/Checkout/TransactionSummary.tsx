@@ -1,5 +1,10 @@
 import React from 'react';
-import { PrioritizedPaymentMethod, PaymentMethodType } from '../../types/paymentPrioritization';
+import {
+    PrioritizationContext,
+    PrioritizationResult,
+    PrioritizedPaymentMethod,
+    PaymentMethodType
+} from '../../types/paymentPrioritization';
 import { NetworkIcon } from '../Payment/NetworkIcon';
 
 interface TransactionSummaryProps {

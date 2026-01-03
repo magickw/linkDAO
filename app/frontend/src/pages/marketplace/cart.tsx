@@ -11,7 +11,14 @@ import { cartService, CartState } from '@/services/cartService';
 import ProductThumbnail from '@/components/Checkout/ProductThumbnail';
 import { X, Plus, Minus, ShoppingCart, Info, Tag, Percent, CheckCircle } from 'lucide-react';
 
+import { useAccount } from 'wagmi';
+import { useProfile } from '@/hooks/useProfile';
+import { taxService } from '@/services/taxService';
+
 const CartPage: React.FC = () => {
+  const { address } = useAccount();
+  const { profile } = useProfile(address);
+
   const [cartState, setCartState] = useState<CartState>({
     items: [],
     totals: {
@@ -48,12 +55,13 @@ const CartPage: React.FC = () => {
     error: string
   }>>({});
   const [gasFee, setGasFee] = useState(0);
+  const [estimatedTax, setEstimatedTax] = useState(0);
   const [showFeeBreakdown, setShowFeeBreakdown] = useState(false);
 
   const router = useRouter();
 
   // Calculate real-time totals with per-item discounts
-  const { subtotal, totalDiscount, totalWithDiscount, totalWithGas } = useMemo(() => {
+  const { subtotal, totalDiscount, totalWithDiscount, totalWithGas, grandTotal } = useMemo(() => {
     const subtotal = cartState.items.reduce((sum, item) => {
       return sum + (parseFloat(item.price.fiat) * item.quantity);
     }, 0);
@@ -72,15 +80,58 @@ const CartPage: React.FC = () => {
     }, 0);
 
     const totalWithDiscount = subtotal - totalDiscount;
-    const totalWithGas = totalWithDiscount + gasFee;
+    const totalWithGas = totalWithDiscount + gasFee; // Note: gasFee is separate from tax
+    const grandTotal = totalWithGas + estimatedTax;
 
     return {
       subtotal,
       totalDiscount,
       totalWithDiscount,
-      totalWithGas
+      totalWithGas,
+      grandTotal
     };
-  }, [cartState.items, itemPromoCodes, gasFee]);
+  }, [cartState.items, itemPromoCodes, gasFee, estimatedTax]);
+
+  // Calculate tax when profile or cart items change
+  useEffect(() => {
+    const calculateCartTax = async () => {
+      if (!profile || (!profile.shippingCountry && !profile.billingCountry) || cartState.items.length === 0) {
+        setEstimatedTax(0);
+        return;
+      }
+
+      try {
+        const taxableItems = cartState.items.map(item => ({
+          id: item.id,
+          name: item.title || 'Product',
+          price: parseFloat(item.price.fiat),
+          quantity: item.quantity,
+          isDigital: item.isDigital,
+          isTaxExempt: false
+        }));
+
+        const address = {
+          country: profile.shippingCountry || profile.billingCountry || 'US',
+          state: profile.shippingState || profile.billingState,
+          city: profile.shippingCity || profile.billingCity,
+          postalCode: profile.shippingZipCode || profile.billingZipCode,
+          line1: profile.shippingAddress1 || profile.billingAddress1
+        };
+
+        const result = await taxService.calculateTax(
+          taxableItems,
+          address,
+          10 // Default shipping cost estimate
+        );
+
+        setEstimatedTax(result.taxAmount || 0);
+      } catch (error) {
+        console.error("Failed to estimate tax:", error);
+      }
+    };
+
+    calculateCartTax();
+  }, [profile, cartState.items]);
 
   useEffect(() => {
     // Load cart items
@@ -221,11 +272,16 @@ const CartPage: React.FC = () => {
               <div className="w-16 h-0.5 bg-white/20"></div>
               <div className="flex items-center text-white/50">
                 <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white mr-2">2</div>
-                Payment
+                Address
               </div>
               <div className="w-16 h-0.5 bg-white/20"></div>
               <div className="flex items-center text-white/50">
                 <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white mr-2">3</div>
+                Payment
+              </div>
+              <div className="w-16 h-0.5 bg-white/20"></div>
+              <div className="flex items-center text-white/50">
+                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white mr-2">4</div>
                 Confirmation
               </div>
             </div>
@@ -420,6 +476,19 @@ const CartPage: React.FC = () => {
                       </span>
                     </div>
 
+                    {/* Tax Estimate */}
+                    <div className="flex justify-between">
+                      <span className="text-white/70">Estimated Tax</span>
+                      <span className="font-medium text-white">
+                        {estimatedTax > 0 ? `$${estimatedTax.toFixed(2)}` : 'Calculated at checkout'}
+                      </span>
+                    </div>
+                    {estimatedTax === 0 && (
+                      <div className="text-xs text-white/40 text-right mt-[-8px] mb-2">
+                        Log in or fill address to see tax
+                      </div>
+                    )}
+
                     {/* Gas Fee Preview */}
                     <div className="flex justify-between items-center group">
                       <span className="text-white/70 flex items-center gap-2">
@@ -458,7 +527,7 @@ const CartPage: React.FC = () => {
                       <span className="text-lg font-semibold text-white">Total</span>
                       <div className="text-right">
                         <span className="text-lg font-semibold text-white">
-                          ${totalWithGas.toFixed(2)}
+                          ${grandTotal.toFixed(2)}
                         </span>
                         <div className="text-xs text-white/50">incl. all fees</div>
                       </div>
