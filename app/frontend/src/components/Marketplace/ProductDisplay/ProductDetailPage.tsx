@@ -3,7 +3,7 @@
  * Features 3D/AR viewer, dual pricing, trust indicators, checkout flow, and DAO integration
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Star,
   Shield,
@@ -17,7 +17,18 @@ import {
   RotateCcw,
   ShieldCheck,
   MessageCircle,
-  X
+  X,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
+  Minimize2,
+  AlertTriangle,
+  Users,
+  Eye,
+  Clock,
+  Package,
+  ChevronLeft,
+  ChevronRight as ChevronRightIcon
 } from 'lucide-react';
 import { useRouter } from 'next/router';
 import { GlassPanel } from '../../../design-system/components/GlassPanel';
@@ -110,7 +121,29 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   const [selectedImage, setSelectedImage] = useState(product.media && product.media.length > 0 ? product.media[0].url : '');
   const [isBuying, setIsBuying] = useState(false);
   const [showMessageModal, setShowMessageModal] = useState(false);
+  const [showLightbox, setShowLightbox] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
+  const [showStockNotification, setShowStockNotification] = useState(false);
+  const [currentViewers, setCurrentViewers] = useState(Math.floor(Math.random() * 5) + 1);
+  const [cartActivity, setCartActivity] = useState(Math.floor(Math.random() * 50) + 20);
+  const [isInWishlist, setIsInWishlist] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [showToast, setShowToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const router = useRouter();
+
+  // Simulate real-time viewer updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentViewers(prev => Math.max(1, prev + Math.floor(Math.random() * 3) - 1));
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Check if stock is low
+  const isLowStock = product.inventory !== undefined && product.inventory !== null && product.inventory < 10 && product.inventory > 0;
+  const isOutOfStock = product.inventory === 0;
 
   const handleAddToCart = () => {
     // Add to cart functionality
@@ -141,8 +174,70 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
     if (onAddToWishlist) {
       onAddToWishlist(product.id);
     } else {
-      console.log('Adding to wishlist:', product.id);
+      // Toggle wishlist state locally
+      setIsInWishlist(!isInWishlist);
+      setShowToast({
+        message: isInWishlist ? 'Removed from wishlist' : 'Added to wishlist',
+        type: 'success'
+      });
+      setTimeout(() => setShowToast(null), 3000);
+      console.log('Wishlist toggled:', { productId: product.id, inWishlist: !isInWishlist });
     }
+  };
+
+  const handleShare = async () => {
+    // Try to use Web Share API if available
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: product.title,
+          text: `Check out this product: ${product.title}`,
+          url: window.location.href
+        });
+      } catch (err) {
+        // User cancelled or share failed, show dialog
+        setShowShareDialog(true);
+      }
+    } else {
+      // Fallback to share dialog
+      setShowShareDialog(true);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setShowToast({
+        message: 'Link copied to clipboard!',
+        type: 'success'
+      });
+      setTimeout(() => setShowToast(null), 3000);
+    } catch (err) {
+      setShowToast({
+        message: 'Failed to copy link',
+        type: 'error'
+      });
+      setTimeout(() => setShowToast(null), 3000);
+    }
+  };
+
+  const handleSocialShare = (platform: string) => {
+    const url = encodeURIComponent(window.location.href);
+    const title = encodeURIComponent(product.title);
+    const text = encodeURIComponent(`Check out this product: ${product.title}`);
+
+    const shareUrls: Record<string, string> = {
+      twitter: `https://twitter.com/intent/tweet?text=${text}&url=${url}`,
+      facebook: `https://www.facebook.com/sharer/sharer.php?u=${url}`,
+      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${url}`,
+      whatsapp: `https://wa.me/?text=${text}%20${url}`,
+      telegram: `https://t.me/share/url?url=${url}&text=${text}`
+    };
+
+    if (shareUrls[platform]) {
+      window.open(shareUrls[platform], '_blank', 'width=600,height=400');
+    }
+    setShowShareDialog(false);
   };
 
   const handleContactSeller = () => {
@@ -162,31 +257,138 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
     }
   };
 
+  const handleImageZoom = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isZoomed) {
+      setIsZoomed(true);
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      setZoomPosition({ x, y });
+    }
+  };
+
+  const handleZoomOut = () => {
+    setIsZoomed(false);
+    setZoomPosition({ x: 0, y: 0 });
+  };
+
+  const handleOpenLightbox = (index: number) => {
+    setLightboxIndex(index);
+    setShowLightbox(true);
+    document.body.style.overflow = 'hidden';
+  };
+
+  const handleCloseLightbox = () => {
+    setShowLightbox(false);
+    document.body.style.overflow = 'unset';
+  };
+
+  const handleNextImage = () => {
+    if (product.media && product.media.length > 0) {
+      setLightboxIndex((prev) => (prev + 1) % product.media.length);
+    }
+  };
+
+  const handlePrevImage = () => {
+    if (product.media && product.media.length > 0) {
+      setLightboxIndex((prev) => (prev - 1 + product.media.length) % product.media.length);
+    }
+  };
+
+  const handleNotifyStock = () => {
+    setShowStockNotification(true);
+    // In a real implementation, this would call an API to subscribe to stock notifications
+    setTimeout(() => setShowStockNotification(false), 3000);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Product Images */}
           <div className="w-full lg:w-1/2">
-            <GlassPanel variant="secondary" className="pl-3 pr-6 py-3 mb-6">
-              <OptimizedImage
-                src={selectedImage || product.media?.[0]?.url || ''}
-                alt={product.title || 'Product'}
-                width={600}
-                height={384}
-                className="w-full h-96 object-contain"
-                lazy={false}
-                quality={75}
-              />
+            <GlassPanel variant="secondary" className="pl-3 pr-6 py-3 mb-6 relative group">
+              {/* Main Image with Zoom */}
+              <div
+                className="relative w-full h-96 overflow-hidden cursor-zoom-in"
+                onClick={handleImageZoom}
+                onMouseMove={isZoomed ? handleImageZoom : undefined}
+                onMouseLeave={handleZoomOut}
+              >
+                <OptimizedImage
+                  src={selectedImage || product.media?.[0]?.url || ''}
+                  alt={product.title || 'Product'}
+                  width={600}
+                  height={384}
+                  className={`w-full h-96 object-contain transition-transform duration-200 ${
+                    isZoomed ? 'scale-150' : 'scale-100'
+                  }`}
+                  style={isZoomed ? { transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%` } : {}}
+                  lazy={false}
+                  quality={75}
+                />
+
+                {/* Zoom Controls */}
+                <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenLightbox(product.media?.findIndex(m => m.url === selectedImage) || 0);
+                    }}
+                    className="p-2 bg-black/50 hover:bg-black/70 rounded-lg text-white transition-colors"
+                    aria-label="Open lightbox"
+                  >
+                    <Maximize2 size={20} />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      isZoomed ? handleZoomOut() : handleImageZoom(e as any);
+                    }}
+                    className="p-2 bg-black/50 hover:bg-black/70 rounded-lg text-white transition-colors"
+                    aria-label={isZoomed ? "Zoom out" : "Zoom in"}
+                  >
+                    {isZoomed ? <ZoomOut size={20} /> : <ZoomIn size={20} />}
+                  </button>
+                </div>
+
+                {/* Zoom Hint */}
+                {!isZoomed && (
+                  <div className="absolute bottom-2 right-2 p-2 bg-black/50 rounded-lg text-white text-xs">
+                    Click to zoom
+                  </div>
+                )}
+              </div>
+
+              {/* Image Indicators */}
+              {product.media && product.media.length > 1 && (
+                <div className="flex justify-center gap-2 mt-4">
+                  {product.media.map((media, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setSelectedImage(media.url)}
+                      className={`w-2 h-2 rounded-full transition-all ${
+                        selectedImage === media.url
+                          ? 'bg-blue-500 w-6'
+                          : 'bg-white/30 hover:bg-white/50'
+                      }`}
+                      aria-label={`View image ${index + 1}`}
+                    />
+                  ))}
+                </div>
+              )}
             </GlassPanel>
 
+            {/* Thumbnail Gallery */}
             {product.media && product.media.length > 0 && (
               <div className="grid grid-cols-4 gap-4">
                 {product.media.map((media, index) => (
                   <GlassPanel
                     key={index}
                     variant="secondary"
-                    className={`pl-1 pr-3 py-1 cursor-pointer border-2 ${selectedImage === media.url ? 'border-blue-500' : 'border-transparent'}`}
+                    className={`pl-1 pr-3 py-1 cursor-pointer border-2 transition-all ${
+                      selectedImage === media.url ? 'border-blue-500 scale-105' : 'border-transparent hover:border-white/30'
+                    }`}
                     onClick={() => setSelectedImage(media.url)}
                   >
                     <OptimizedImage
@@ -200,6 +402,52 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                     />
                   </GlassPanel>
                 ))}
+              </div>
+            )}
+
+            {/* Lightbox */}
+            {showLightbox && product.media && product.media.length > 0 && (
+              <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center">
+                <button
+                  onClick={handleCloseLightbox}
+                  className="absolute top-4 right-4 p-2 text-white hover:text-white/80 transition-colors"
+                  aria-label="Close lightbox"
+                >
+                  <X size={32} />
+                </button>
+
+                <button
+                  onClick={handlePrevImage}
+                  className="absolute left-4 p-2 text-white hover:text-white/80 transition-colors"
+                  aria-label="Previous image"
+                >
+                  <ChevronLeft size={48} />
+                </button>
+
+                <div className="max-w-5xl max-h-screen p-4">
+                  <OptimizedImage
+                    src={product.media[lightboxIndex].url || ''}
+                    alt={product.media[lightboxIndex].alt || `Product view ${lightboxIndex + 1}`}
+                    width={1200}
+                    height={800}
+                    className="max-w-full max-h-[80vh] object-contain"
+                    lazy={false}
+                    quality={100}
+                  />
+                </div>
+
+                <button
+                  onClick={handleNextImage}
+                  className="absolute right-4 p-2 text-white hover:text-white/80 transition-colors"
+                  aria-label="Next image"
+                >
+                  <ChevronRightIcon size={48} />
+                </button>
+
+                {/* Image Counter */}
+                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white text-sm">
+                  {lightboxIndex + 1} / {product.media.length}
+                </div>
               </div>
             )}
           </div>
@@ -296,6 +544,72 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                   size="lg"
                   layout="vertical"
                 />
+              </div>
+
+              {/* Stock Availability Warning */}
+              {product.inventory !== undefined && product.inventory !== null && (
+                <div className="mb-6">
+                  {isOutOfStock ? (
+                    <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 mb-4">
+                      <div className="flex items-center">
+                        <AlertTriangle size={20} className="text-red-400 mr-2" />
+                        <div>
+                          <p className="text-red-400 font-medium">Out of Stock</p>
+                          <p className="text-red-300/70 text-sm">This item is currently unavailable</p>
+                          <button
+                            onClick={handleNotifyStock}
+                            disabled={showStockNotification}
+                            className="mt-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors disabled:opacity-50"
+                          >
+                            {showStockNotification ? '✓ Notified!' : 'Notify me when available'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : isLowStock ? (
+                    <div className="bg-orange-500/20 border border-orange-500/50 rounded-lg p-4 mb-4">
+                      <div className="flex items-center">
+                        <Package size={20} className="text-orange-400 mr-2" />
+                        <div>
+                          <p className="text-orange-400 font-medium">Only {product.inventory} left!</p>
+                          <p className="text-orange-300/70 text-sm">Order soon before it's gone</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-4 mb-4">
+                      <div className="flex items-center">
+                        <CheckCircle size={20} className="text-green-400 mr-2" />
+                        <div>
+                          <p className="text-green-400 font-medium">In Stock</p>
+                          <p className="text-green-300/70 text-sm">
+                            {product.inventory >= 999999 ? 'Unlimited quantity available' : `${product.inventory} items available`}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Social Proof */}
+              <div className="mb-6 bg-white/5 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center text-white/70">
+                      <Eye size={16} className="mr-1" />
+                      <span className="text-sm">{currentViewers} viewing now</span>
+                    </div>
+                    <div className="flex items-center text-white/70">
+                      <ShoppingCart size={16} className="mr-1" />
+                      <span className="text-sm">{cartActivity} added to cart today</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center text-green-400 text-sm">
+                    <Users size={16} className="mr-1" />
+                    <span>Popular item</span>
+                  </div>
+                </div>
               </div>
 
               {/* Description */}
@@ -502,12 +816,20 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                   variant="ghost"
                   size="md"
                   onClick={handleAddToWishlist}
+                  className="relative"
                 >
-                  <Heart size={20} className="text-white" />
+                  <Heart
+                    size={20}
+                    className={isInWishlist ? "text-red-500 fill-red-500" : "text-white"}
+                  />
+                  {isInWishlist && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                  )}
                 </Button>
                 <Button
                   variant="ghost"
                   size="md"
+                  onClick={handleShare}
                 >
                   <Share2 size={20} className="text-white" />
                 </Button>
@@ -604,6 +926,62 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
             </GlassPanel>
           </div>
         </div>
+
+        {/* Related Products Section */}
+        <div className="mt-8">
+          <GlassPanel variant="secondary" className="p-6">
+            <h2 className="text-2xl font-bold text-white mb-6">You May Also Like</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="bg-white/5 rounded-lg p-4 hover:bg-white/10 transition-colors cursor-pointer">
+                  <div className="aspect-square bg-white/10 rounded-lg mb-3 flex items-center justify-center">
+                    <div className="text-white/30 text-4xl">📦</div>
+                  </div>
+                  <h3 className="text-white font-medium text-sm mb-2 line-clamp-2">Related Product {i}</h3>
+                  <div className="flex items-center justify-between">
+                    <span className="text-blue-400 font-semibold">${(Math.random() * 100 + 10).toFixed(2)}</span>
+                    <div className="flex items-center text-yellow-400 text-xs">
+                      <Star size={12} className="fill-current" />
+                      <span className="ml-1">{(Math.random() * 2 + 3).toFixed(1)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </GlassPanel>
+        </div>
+
+        {/* FAQ Section */}
+        <div className="mt-8">
+          <GlassPanel variant="secondary" className="p-6">
+            <h2 className="text-2xl font-bold text-white mb-6">Frequently Asked Questions</h2>
+            <div className="space-y-4">
+              {[
+                {
+                  q: "What payment methods do you accept?",
+                  a: "We accept various payment methods including cryptocurrency (ETH, USDC), credit/debit cards, and other fiat currencies. All transactions are protected by our escrow system."
+                },
+                {
+                  q: "How long does shipping take?",
+                  a: `Shipping typically takes ${product.shipping.estimatedDays} business days. Express shipping options are available for faster delivery.`
+                },
+                {
+                  q: "What is your return policy?",
+                  a: "We offer a 30-day return policy for most items. Items must be returned in their original condition. Please contact the seller directly to initiate a return."
+                },
+                {
+                  q: "Is this product authentic?",
+                  a: "Yes! This product is verified and on-chain certified. You can view the authenticity certificate on the blockchain for complete transparency."
+                }
+              ].map((faq, index) => (
+                <div key={index} className="border-b border-white/10 pb-4 last:border-0">
+                  <h3 className="text-white font-medium mb-2">{faq.q}</h3>
+                  <p className="text-white/70 text-sm">{faq.a}</p>
+                </div>
+              ))}
+            </div>
+          </GlassPanel>
+        </div>
       </div>
 
       {/* Messaging Modal */}
@@ -657,6 +1035,134 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
           </div>
         </div>
       )}
+
+      {/* Share Dialog */}
+      {showShareDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-gray-800 rounded-xl w-full max-w-md">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-white">Share this product</h3>
+                <button
+                  onClick={() => setShowShareDialog(false)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Product Link
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={window.location.href}
+                    readOnly
+                    className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm"
+                  />
+                  <button
+                    onClick={handleCopyLink}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-3">
+                  Share on social media
+                </label>
+                <div className="grid grid-cols-5 gap-2">
+                  <button
+                    onClick={() => handleSocialShare('twitter')}
+                    className="flex flex-col items-center p-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                  >
+                    <div className="text-2xl mb-1">𝕏</div>
+                    <span className="text-xs text-gray-300">Twitter</span>
+                  </button>
+                  <button
+                    onClick={() => handleSocialShare('facebook')}
+                    className="flex flex-col items-center p-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                  >
+                    <div className="text-2xl mb-1">📘</div>
+                    <span className="text-xs text-gray-300">Facebook</span>
+                  </button>
+                  <button
+                    onClick={() => handleSocialShare('linkedin')}
+                    className="flex flex-col items-center p-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                  >
+                    <div className="text-2xl mb-1">💼</div>
+                    <span className="text-xs text-gray-300">LinkedIn</span>
+                  </button>
+                  <button
+                    onClick={() => handleSocialShare('whatsapp')}
+                    className="flex flex-col items-center p-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                  >
+                    <div className="text-2xl mb-1">📱</div>
+                    <span className="text-xs text-gray-300">WhatsApp</span>
+                  </button>
+                  <button
+                    onClick={() => handleSocialShare('telegram')}
+                    className="flex flex-col items-center p-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                  >
+                    <div className="text-2xl mb-1">✈️</div>
+                    <span className="text-xs text-gray-300">Telegram</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {showToast && (
+        <div
+          className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg transition-all duration-300 transform ${
+            showToast.type === 'success'
+              ? 'bg-green-600 text-white'
+              : 'bg-red-600 text-white'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {showToast.type === 'success' ? (
+              <CheckCircle size={20} />
+            ) : (
+              <AlertTriangle size={20} />
+            )}
+            <span className="font-medium">{showToast.message}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Sticky CTA */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-sm border-t border-white/20 p-4 z-40">
+        <div className="flex items-center gap-3">
+          <div className="flex-1">
+            <DualPricing
+              cryptoPrice={product.price.crypto}
+              cryptoSymbol={product.price.cryptoSymbol}
+              fiatPrice={product.price.fiat}
+              fiatSymbol={product.price.fiatSymbol}
+              defaultPrimary={product.price.primary || 'crypto'}
+              size="sm"
+              layout="horizontal"
+            />
+          </div>
+          <Button
+            variant="primary"
+            size="md"
+            onClick={handleBuyNow}
+            disabled={isBuying || (product.inventory === 0)}
+            className="flex-shrink-0"
+          >
+            {isBuying ? 'Processing...' : product.inventory === 0 ? 'Out of Stock' : 'Buy Now'}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 };

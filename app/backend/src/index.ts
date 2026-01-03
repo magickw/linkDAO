@@ -822,6 +822,8 @@ import marketplaceRoutes from './routes/marketplaceRoutes';
 import cartRoutes from './routes/cartRoutes';
 // Import checkout routes
 import checkoutRoutes from './routes/checkoutRoutes';
+// Import promo code routes
+import promoCodeRoutes from './routes/promoCodeRoutes';
 // Import database schema
 import { users } from './db/schema';
 import { eq, sql } from 'drizzle-orm';
@@ -1020,6 +1022,7 @@ app.use('/api/marketplace/seller/verification', sellerVerificationRoutes);
 app.use('/api/marketplace/search', marketplaceSearchRoutes);
 app.use('/api/marketplace/listings', marketplaceListingsRoutes);
 app.use('/api/marketplace/ens', ensValidationRoutes);
+app.use('/api/marketplace/promo-codes', promoCodeRoutes);
 
 // 3. PRODUCT VARIANTS (specific pattern matching)
 // -------------------------------------------------------------------------

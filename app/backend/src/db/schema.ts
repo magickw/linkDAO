@@ -800,17 +800,49 @@ export const products = pgTable("products", {
 // Product Tags - for efficient querying
 export const productTags = pgTable("product_tags", {
   id: serial("id").primaryKey(),
-  productId: uuid("product_id").references(() => products.id).notNull(),
-  tag: varchar("tag", { length: 100 }).notNull(),
+  productId: uuid("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  tag: varchar("tag", { length: 64 }).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
-  productTagIdx: index("product_tag_idx").on(t.productId, t.tag),
-  tagIdx: index("tag_idx").on(t.tag),
+  idx: index("product_tag_idx").on(t.productId, t.tag),
   productFk: foreignKey({
     columns: [t.productId],
     foreignColumns: [products.id]
   })
 }));
+
+// Promo Codes
+export const promoCodes = pgTable("promo_codes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  code: varchar("code", { length: 50 }).notNull(),
+  sellerId: uuid("seller_id").references(() => users.id).notNull(), // Promo codes belong to a seller
+  productId: uuid("product_id").references(() => products.id), // Optional: specific to a product
+  discountType: varchar("discount_type", { length: 20 }).notNull(), // 'percentage' | 'fixed_amount'
+  discountValue: numeric("discount_value", { precision: 20, scale: 2 }).notNull(),
+  minOrderAmount: numeric("min_order_amount", { precision: 20, scale: 2 }),
+  maxDiscountAmount: numeric("max_discount_amount", { precision: 20, scale: 2 }),
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  usageLimit: integer("usage_limit"),
+  usageCount: integer("usage_count").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  uniqueCode: unique("unique_promo_code_per_seller").on(t.code, t.sellerId),
+  sellerIdx: index("promo_code_seller_idx").on(t.sellerId),
+  productIdx: index("promo_code_product_idx").on(t.productId),
+  codeIdx: index("promo_code_code_idx").on(t.code),
+  sellerFk: foreignKey({
+    columns: [t.sellerId],
+    foreignColumns: [users.id]
+  }),
+  productFk: foreignKey({
+    columns: [t.productId],
+    foreignColumns: [products.id]
+  })
+}));
+
 
 // Inventory Holds - for temporary inventory reservations during checkout
 export const inventoryHolds = pgTable("inventory_holds", {

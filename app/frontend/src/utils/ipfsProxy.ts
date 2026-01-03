@@ -12,6 +12,24 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
 export function getProxiedIPFSUrl(ipfsUrl: string): string {
     if (!ipfsUrl) return '';
 
+    // Check if URL is already a proxied URL (backend proxy or any gateway)
+    try {
+        const url = new URL(ipfsUrl, window.location.href);
+        // Check if it contains /api/ipfs/ or any IPFS gateway
+        if (
+            url.pathname.includes('/api/ipfs/') ||
+            url.pathname.includes('/ipfs/') ||
+            url.hostname.includes('ipfs.io') ||
+            url.hostname.includes('cloudflare-ipfs.com') ||
+            url.hostname.includes('pinata.cloud') ||
+            url.hostname.includes('dweb.link')
+        ) {
+            return ipfsUrl; // Return as-is, already proxied
+        }
+    } catch {
+        // If URL parsing fails, continue with hash extraction
+    }
+
     // Extract IPFS hash from various URL formats
     let hash = '';
 

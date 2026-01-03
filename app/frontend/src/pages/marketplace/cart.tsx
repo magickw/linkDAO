@@ -39,7 +39,14 @@ const CartPage: React.FC = () => {
   });
 
   // Track promo codes per item
-  const [itemPromoCodes, setItemPromoCodes] = useState<Record<string, { code: string; discount: number; applied: boolean; error: string }>>({});
+  const [itemPromoCodes, setItemPromoCodes] = useState<Record<string, {
+    code: string;
+    discount: number;
+    calculatedAmount?: number;
+    type?: 'percentage' | 'fixed_amount';
+    applied: boolean;
+    error: string
+  }>>({});
   const [gasFee, setGasFee] = useState(0);
   const [showFeeBreakdown, setShowFeeBreakdown] = useState(false);
 
@@ -55,6 +62,9 @@ const CartPage: React.FC = () => {
     const totalDiscount = cartState.items.reduce((sum, item) => {
       const itemPromo = itemPromoCodes[item.id];
       if (itemPromo?.applied) {
+        if (itemPromo.calculatedAmount !== undefined) {
+          return sum + itemPromo.calculatedAmount;
+        }
         const itemTotal = parseFloat(item.price.fiat) * item.quantity;
         return sum + (itemTotal * itemPromo.discount / 100);
       }
@@ -111,7 +121,8 @@ const CartPage: React.FC = () => {
     }
   };
 
-  const handleApplyPromoCode = (itemId: string) => {
+  const handleApplyPromoCode = async (itemId: string) => {
+    const item = cartState.items.find(i => i.id === itemId);
     const itemPromo = itemPromoCodes[itemId] || { code: '', discount: 0, applied: false, error: '' };
 
     if (!itemPromo.code.trim()) {
@@ -122,28 +133,50 @@ const CartPage: React.FC = () => {
       return;
     }
 
-    // Mock promo code validation
-    const validCodes: Record<string, number> = {
-      'SAVE10': 10,
-      'WELCOME20': 20,
-      'LINKDAO15': 15,
-      'FIRSTORDER': 25
-    };
+    // Clear previous errors
+    setItemPromoCodes(prev => ({
+      ...prev,
+      [itemId]: { ...prev[itemId], error: '' }
+    }));
 
-    if (validCodes[itemPromo.code.toUpperCase()]) {
+    try {
+      const response = await fetch('/api/marketplace/promo-codes/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          code: itemPromo.code,
+          sellerId: item?.seller.id,
+          productId: itemId,
+          price: parseFloat(item?.price.fiat || '0') * (item?.quantity || 1)
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.data.isValid) {
+        setItemPromoCodes(prev => ({
+          ...prev,
+          [itemId]: {
+            code: itemPromo.code.toUpperCase(),
+            discount: result.data.promoCode.discountValue,
+            calculatedAmount: result.data.promoCode.calculatedDiscount,
+            type: result.data.promoCode.discountType,
+            applied: true,
+            error: ''
+          }
+        }));
+      } else {
+        setItemPromoCodes(prev => ({
+          ...prev,
+          [itemId]: { ...prev[itemId], error: result.data?.error || 'Invalid promo code', applied: false }
+        }));
+      }
+    } catch (error) {
       setItemPromoCodes(prev => ({
         ...prev,
-        [itemId]: {
-          code: itemPromo.code.toUpperCase(),
-          discount: validCodes[itemPromo.code.toUpperCase()],
-          applied: true,
-          error: ''
-        }
-      }));
-    } else {
-      setItemPromoCodes(prev => ({
-        ...prev,
-        [itemId]: { ...prev[itemId], error: 'Invalid promo code', applied: false }
+        [itemId]: { ...prev[itemId], error: 'Error validating code', applied: false }
       }));
     }
   };
@@ -220,7 +253,12 @@ const CartPage: React.FC = () => {
                     {cartState.items.map((item) => {
                       const itemPromo = itemPromoCodes[item.id] || { code: '', discount: 0, applied: false, error: '' };
                       const itemTotal = parseFloat(item.price.fiat) * item.quantity;
-                      const itemDiscount = itemPromo.applied ? (itemTotal * itemPromo.discount / 100) : 0;
+                      let itemDiscount = 0;
+                      if (itemPromo.applied) {
+                        itemDiscount = itemPromo.calculatedAmount !== undefined
+                          ? itemPromo.calculatedAmount
+                          : (itemTotal * itemPromo.discount / 100);
+                      }
                       const itemFinalPrice = itemTotal - itemDiscount;
 
                       return (
@@ -293,7 +331,9 @@ const CartPage: React.FC = () => {
                                   <div className="text-sm text-white/60">
                                     {item.price.fiatSymbol}{parseFloat(item.price.fiat).toFixed(2)} × {item.quantity}
                                     {itemPromo.applied && (
-                                      <span className="text-green-400 ml-2">(-{itemPromo.discount}%)</span>
+                                      <span className="text-green-400 ml-2">
+                                        (-{itemPromo.type === 'fixed_amount' ? '$' + itemPromo.discount : itemPromo.discount + '%'})
+                                      </span>
                                     )}
                                   </div>
                                 </div>

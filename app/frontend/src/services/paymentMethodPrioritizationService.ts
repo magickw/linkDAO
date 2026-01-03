@@ -339,17 +339,22 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
         } catch (error) {
           console.warn(`Failed to calculate cost for ${method.type}, using fallback:`, error);
           // Return fallback cost estimate
+          // Fiat payments should have 0 gas fee
+          const isFiatPayment = method.type === PaymentMethodType.FIAT_STRIPE;
+          const fallbackGasFee = isFiatPayment ? 0 : 5;
+          const fallbackNetworkFee = isFiatPayment ? (amount * 0.029 + 0.30) : 5; // Stripe fee for fiat
+
           const fallbackCostEstimate: CostEstimate = {
-            totalCost: amount + 5, // Base amount + $5 fallback
+            totalCost: amount + fallbackGasFee + fallbackNetworkFee + (amount * 0.025),
             baseCost: amount,
-            gasFee: 5,
+            gasFee: fallbackGasFee,
             exchangeRate: 1,
-            estimatedTime: 5,
+            estimatedTime: isFiatPayment ? 1 : 5, // Instant for fiat
             confidence: 0.3, // Low confidence
             currency: 'USD',
             breakdown: {
               amount,
-              networkFee: 5,
+              networkFee: fallbackNetworkFee,
               platformFee: amount * 0.025 // 2.5% platform fee
             }
           };

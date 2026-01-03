@@ -41,8 +41,31 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
     );
   }
 
+  // Check if the URL is already a proxied URL (backend proxy or any gateway)
+  const isAlreadyProxied = (() => {
+    try {
+      // Check if it's a full URL (not just a CID)
+      const url = new URL(src, window.location.href);
+      // Check if it contains /api/ipfs/ or any IPFS gateway
+      return (
+        url.pathname.includes('/api/ipfs/') ||
+        url.pathname.includes('/ipfs/') ||
+        url.hostname.includes('ipfs.io') ||
+        url.hostname.includes('cloudflare-ipfs.com') ||
+        url.hostname.includes('pinata.cloud') ||
+        url.hostname.includes('dweb.link')
+      );
+    } catch {
+      // If URL parsing fails, it's likely a CID
+      return false;
+    }
+  })();
+
   // Handle IPFS CIDs with multiple gateway fallbacks
   const isIpfsCid = (() => {
+    // Skip if already proxied
+    if (isAlreadyProxied) return false;
+
     // Handle various IPFS formats:
     // 1. Raw CID: Qm..., baf...
     // 2. Full IPFS URL: https://gateway.pinata.cloud/ipfs/Qm...
@@ -70,6 +93,11 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   // Generate URLs for all gateways if it's an IPFS CID
   const generateUrls = () => {
     try {
+      // If already proxied, return as-is
+      if (isAlreadyProxied) {
+        return [src];
+      }
+
       if (isIpfsCid) {
         // Extract the actual CID from various formats
         let cid = src;
