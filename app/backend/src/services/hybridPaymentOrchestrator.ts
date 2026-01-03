@@ -351,10 +351,23 @@ export class HybridPaymentOrchestrator {
       }
 
       // Calculate total amount including fees
-      const totalAmount = Math.round((request.amount + pathDecision.fees.totalFees) * 100); // Convert to cents
+      // Check if amount is already in cents (>= 100) or in dollars (< 100)
+      const amountInDollars = request.amount >= 100 ? request.amount / 100 : request.amount;
+      const feesInDollars = pathDecision.fees.totalFees >= 100 ? pathDecision.fees.totalFees / 100 : pathDecision.fees.totalFees;
+      
+      const totalAmount = Math.round((amountInDollars + feesInDollars) * 100); // Convert to cents
       const platformFee = Math.round(pathDecision.fees.platformFee * 100);
 
-      // Validate minimum amount for Stripe ($0.50 USD)
+      safeLogger.info(`Stripe PaymentIntent calculation:`, {
+        requestAmount: request.amount,
+        requestAmountInDollars: amountInDollars,
+        fees: pathDecision.fees.totalFees,
+        feesInDollars: feesInDollars,
+        totalAmountInCents: totalAmount,
+        totalAmountInDollars: totalAmount / 100
+      });
+
+      // Validate minimum amount for Stripe ($0.50 USD = 50 cents)
       if (totalAmount < 50) {
         throw new Error(`Payment amount ($${(totalAmount / 100).toFixed(2)}) is below the Stripe minimum requirement of $0.50 USD.`);
       }

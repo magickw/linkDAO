@@ -5,7 +5,15 @@ import { authMiddleware } from '../middleware/authMiddleware';
 
 const router = Router();
 
-// Apply authentication middleware to all routes
+// Public routes
+/**
+ * @route GET /api/referrals/leaderboard
+ * @desc Get referral leaderboard
+ * @access Public
+ */
+router.get('/leaderboard', referralController.getReferralLeaderboard.bind(referralController));
+
+// Apply authentication middleware to all protected routes
 router.use(authMiddleware);
 
 /**
@@ -28,13 +36,6 @@ router.post('/validate', csrfProtection, referralController.validateReferralCode
  * @access Private
  */
 router.get('/stats', referralController.getReferralStats.bind(referralController));
-
-/**
- * @route GET /api/referrals/leaderboard
- * @desc Get referral leaderboard
- * @access Private
- */
-router.get('/leaderboard', referralController.getReferralLeaderboard.bind(referralController));
 
 /**
  * @route GET /api/referrals/history

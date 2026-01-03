@@ -1,7 +1,7 @@
 import { db } from '../db/index';
 import { safeLogger } from '../utils/safeLogger';
 import { eq, and, desc, sum, count, gte, lte, sql } from 'drizzle-orm';
-import { 
+import {
   earningActivities,
   users,
   referralActivities
@@ -61,8 +61,8 @@ class ReferralService {
         .from(referralActivities)
         .where(
           and(
-            eq(referralActivities.referrerId, data.referrerId),
-            eq(referralActivities.refereeId, data.refereeId)
+            eq(referralActivities.referrerId, sql`${data.referrerId}::uuid`),
+            eq(referralActivities.refereeId, sql`${data.refereeId}::uuid`)
           )
         )
         .limit(1);
@@ -86,7 +86,7 @@ class ReferralService {
           .from(referralActivities)
           .where(eq(referralActivities.id, referralCode))
           .limit(1);
-        
+
         isUnique = existing.length === 0;
         attempts++;
       }
@@ -147,7 +147,7 @@ class ReferralService {
         baseReward: signupBonusAmount.toString(),
         multiplier: '1.0',
         isPremiumBonus: false,
-        metadata: JSON.stringify({ 
+        metadata: JSON.stringify({
           referralId,
           rewardType: 'signup_bonus',
           bonusAmount: signupBonusAmount
@@ -206,7 +206,7 @@ class ReferralService {
         .from(referralActivities)
         .where(
           and(
-            eq(referralActivities.refereeId, refereeId)
+            eq(referralActivities.refereeId, sql`${refereeId}::uuid`)
           )
         );
 
@@ -224,7 +224,7 @@ class ReferralService {
             baseReward: bonusAmount.toString(),
             multiplier: '1.0',
             isPremiumBonus: false,
-            metadata: JSON.stringify({ 
+            metadata: JSON.stringify({
               referralId: referral.id,
               refereeId,
               rewardType: 'activity_bonus',
@@ -288,10 +288,10 @@ class ReferralService {
   async processMilestoneBonus(referrerId: string): Promise<void> {
     try {
       const stats = await this.getReferralStats(referrerId);
-      
+
       // Get milestone rewards from config
       const milestoneRewards = await referralConfigService.getMilestoneRewards();
-      
+
       // Process milestones based on config
       for (const [countStr, reward] of Object.entries(milestoneRewards)) {
         const count = parseInt(countStr);
@@ -349,7 +349,7 @@ class ReferralService {
       const [totalReferralsResult] = await db
         .select({ count: count() })
         .from(referralActivities)
-        .where(eq(referralActivities.referrerId, userId));
+        .where(eq(referralActivities.referrerId, sql`${userId}::uuid`));
 
       // Get active referrals
       const [activeReferralsResult] = await db
@@ -357,7 +357,7 @@ class ReferralService {
         .from(referralActivities)
         .where(
           and(
-            eq(referralActivities.referrerId, userId),
+            eq(referralActivities.referrerId, sql`${userId}::uuid`),
             eq(referralActivities.activityType, 'referral_created')
           )
         );
@@ -366,7 +366,7 @@ class ReferralService {
       const [totalEarnedResult] = await db
         .select({ total: sum(referralActivities.tokensEarned) })
         .from(referralActivities)
-        .where(eq(referralActivities.referrerId, userId));
+        .where(eq(referralActivities.referrerId, sql`${userId}::uuid`));
 
       // Get this month's earnings
       const monthStart = new Date();
@@ -392,7 +392,7 @@ class ReferralService {
           earned: sum(referralActivities.tokensEarned)
         })
         .from(referralActivities)
-        .where(eq(referralActivities.referrerId, userId))
+        .where(eq(referralActivities.referrerId, sql`${userId}::uuid`))
         .groupBy(referralActivities.tierLevel);
 
       const topTier = Math.max(...referralsByTier.map(r => r.tier), 1);
@@ -478,7 +478,7 @@ class ReferralService {
         })
         .from(referralActivities)
         .leftJoin(users, eq(referralActivities.refereeId, users.id))
-        .where(eq(referralActivities.referrerId, userId))
+        .where(sql`${referralActivities.referrerId} = ${userId}::uuid`)
         .orderBy(desc(referralActivities.createdAt))
         .limit(limit)
         .offset(offset);
@@ -645,7 +645,7 @@ class ReferralService {
         .from(earningActivities)
         .where(
           and(
-            eq(earningActivities.userId, userId),
+            eq(earningActivities.userId, sql`${userId}::uuid`),
             eq(earningActivities.activityType, 'referral'),
             gte(earningActivities.createdAt, sixMonthsAgo)
           )
@@ -655,16 +655,16 @@ class ReferralService {
       // Generate all months in the range (including months with 0 activity)
       const result: Array<{ month: string; amount: number }> = [];
       const current = new Date(sixMonthsAgo);
-      
+
       while (current <= now) {
         const monthStr = current.toISOString().substring(0, 7); // YYYY-MM
         const existing = monthlyEarnings.find(e => e.month.startsWith(monthStr));
-        
+
         result.push({
           month: monthStr,
           amount: existing ? parseFloat(existing.total || '0') : 0
         });
-        
+
         current.setMonth(current.getMonth() + 1);
       }
 
