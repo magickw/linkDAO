@@ -42,6 +42,15 @@ export default function EnhancedHomeFeed({
   const LIMIT = 10;
   const { addToast } = useToast();
   const { address: userAddress, isConnected } = useWeb3();
+  const [showBackToTop, setShowBackToTop] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowBackToTop(window.scrollY > 400);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Refs to prevent concurrent requests
   const fetchRequestRef = useRef<string | null>(null);
@@ -66,8 +75,8 @@ export default function EnhancedHomeFeed({
 
     // Prevent concurrent requests and add debouncing - use ref to check loading state
     if (isLoadingRef.current ||
-        (fetchRequestRef.current === requestKey) ||
-        (timeSinceLastFetch < FETCH_DEBOUNCE_DELAY && !isRefresh)) {
+      (fetchRequestRef.current === requestKey) ||
+      (timeSinceLastFetch < FETCH_DEBOUNCE_DELAY && !isRefresh)) {
       console.log('[FEED] Skipping fetch - request in progress or debounced');
       return;
     }
@@ -198,8 +207,8 @@ export default function EnhancedHomeFeed({
                 try {
                   const response = await FeedService.upvotePost(postId);
                   // Update the post in state with new vote counts
-                  setPosts(prev => prev.map(post => 
-                    post.id === postId 
+                  setPosts(prev => prev.map(post =>
+                    post.id === postId
                       ? { ...post, upvotes: response.upvotes !== undefined ? response.upvotes : (post.upvotes || 0) + 1 }
                       : post
                   ));
@@ -212,8 +221,8 @@ export default function EnhancedHomeFeed({
                 try {
                   const response = await FeedService.downvotePost(postId);
                   // Update the post in state with new vote counts
-                  setPosts(prev => prev.map(post => 
-                    post.id === postId 
+                  setPosts(prev => prev.map(post =>
+                    post.id === postId
                       ? { ...post, downvotes: response.downvotes !== undefined ? response.downvotes : (post.downvotes || 0) + 1 }
                       : post
                   ));
@@ -225,31 +234,31 @@ export default function EnhancedHomeFeed({
               onReaction={async (postId, type, amount) => {
                 // Store the previous count for rollback in case of failure
                 const previousReactionCount = posts.find(p => p.id === postId)?.reactionCount || 0;
-                
+
                 // Optimistic update
-                setPosts(prevPosts => 
-                  prevPosts.map(p => 
-                    p.id === postId 
-                      ? { 
-                          ...p, 
-                          reactionCount: (p.reactionCount || 0) + 1 
-                        } 
+                setPosts(prevPosts =>
+                  prevPosts.map(p =>
+                    p.id === postId
+                      ? {
+                        ...p,
+                        reactionCount: (p.reactionCount || 0) + 1
+                      }
                       : p
                   )
                 );
-                
+
                 try {
                   await FeedService.addReaction(postId, type, amount || 0);
                   addToast('Reaction added successfully!', 'success');
                 } catch (error) {
                   // Revert the optimistic update on error
-                  setPosts(prevPosts => 
-                    prevPosts.map(p => 
-                      p.id === postId 
-                        ? { 
-                            ...p, 
-                            reactionCount: previousReactionCount
-                          } 
+                  setPosts(prevPosts =>
+                    prevPosts.map(p =>
+                      p.id === postId
+                        ? {
+                          ...p,
+                          reactionCount: previousReactionCount
+                        }
                         : p
                     )
                   );
@@ -261,17 +270,17 @@ export default function EnhancedHomeFeed({
                 if (amount && token) {
                   // Store the previous amount for rollback in case of failure
                   const previousTipAmount = posts.find(p => p.id === postId)?.totalTipAmount || 0;
-                  
+
                   try {
                     await FeedService.sendTip(postId, parseFloat(amount), token, '');
                     // Update the local state to reflect the new tip
-                    setPosts(prevPosts => 
-                      prevPosts.map(p => 
-                        p.id === postId 
-                          ? { 
-                              ...p, 
-                              totalTipAmount: (p.totalTipAmount || 0) + parseFloat(amount)
-                            } 
+                    setPosts(prevPosts =>
+                      prevPosts.map(p =>
+                        p.id === postId
+                          ? {
+                            ...p,
+                            totalTipAmount: (p.totalTipAmount || 0) + parseFloat(amount)
+                          }
                           : p
                       )
                     );
@@ -322,6 +331,18 @@ export default function EnhancedHomeFeed({
             Be the first to post something!
           </p>
         </div>
+      )}
+      {/* Back to Top Button */}
+      {showBackToTop && (
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed bottom-6 right-6 p-3 rounded-full bg-primary-600 text-white shadow-lg hover:bg-primary-700 hover:shadow-xl transition-all duration-300 z-50 animate-fade-in"
+          aria-label="Back to top"
+        >
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+          </svg>
+        </button>
       )}
     </div>
   );

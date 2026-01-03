@@ -1084,7 +1084,7 @@ function CommunityPostCardEnhanced({
                           <div className="bg-gradient-to-br from-primary-400 to-secondary-500 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0">
                             <span className="text-white font-bold text-xs">
                               {address ? address.slice(2, 4).toUpperCase() : 'U'}
-                            </Link>
+                            </span>
                           </div>
                           <div className="flex-1">
                             {/* Image Preview */}

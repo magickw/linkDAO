@@ -22,9 +22,7 @@ import { useAccount, useConnect, useChainId, useSwitchChain } from 'wagmi';
 import { Button } from '@/design-system/components/Button';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import {
-  UnifiedCheckoutService
-} from '@/services/firstPrioritization';
-import {
+  UnifiedCheckoutService,
   CheckoutRecommendation,
   UnifiedCheckoutRequest,
   PrioritizedCheckoutRequest
@@ -803,76 +801,6 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
   };
 
 
-
-  const handlePaymentSubmit = async () => {
-    if (!selectedPaymentMethod) return;
-
-    setLoading(true);
-    setPaymentError(null);
-    setShowErrorModal(false);
-
-    try {
-      // Process payment based on type
-      if (selectedPaymentMethod.method.type === PaymentMethodType.FIAT_STRIPE) {
-        // Stripe payment is handled by the Stripe component's onSuccess callback
-        // This function will be called AFTER payment is confirmed
-        setCurrentStep('processing');
-
-        // Simulate processing delay
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        // Create order record
-        const orderId = `order_${Date.now()}`;
-        setOrderData({
-          orderId,
-          status: 'completed',
-          paymentPath: 'Stripe',
-          estimatedCompletionTime: new Date(Date.now() + 30 * 60000)
-        });
-        setCurrentStep('confirmation');
-      } else {
-        // Crypto payment logic
-        setCurrentStep('processing');
-
-        // In a real implementation, we would call checkoutService.processPayment here
-        // await checkoutService.processPayment(...)
-
-        // Simulate blockchain transaction
-        await new Promise(resolve => setTimeout(resolve, 3000));
-
-        const orderId = `order_${Date.now()}`;
-        setOrderData({
-          orderId,
-          status: 'processing',
-          paymentPath: selectedPaymentMethod.method.name,
-          transactionId: '0x' + Array(64).fill('0').map(() => Math.floor(Math.random() * 16).toString(16)).join(''),
-          escrowType: useEscrow ? 'smart_contract' : 'none',
-          estimatedCompletionTime: new Date(Date.now() + 15 * 60000)
-        });
-        setCurrentStep('confirmation');
-      }
-
-      addToast('Payment processed successfully!', 'success');
-      // Ideally call onComplete after some time or user action
-    } catch (err) {
-      console.error('Payment failed:', err);
-      setPaymentError(new PaymentErrorType({
-        code: PaymentErrorCode.TRANSACTION_FAILED,
-        message: err instanceof Error ? err.message : 'Payment processing failed',
-        userMessage: 'Payment processing failed. Please try again.',
-        recoveryOptions: [{
-          action: 'retry',
-          label: 'Try Again',
-          description: 'Retry the payment',
-          priority: 'primary'
-        }],
-        retryable: true
-      }));
-      setShowErrorModal(true);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const renderPaymentDetails = () => {
     if (!selectedPaymentMethod) return null;

@@ -410,6 +410,15 @@ const EnhancedPostCard = React.memo(({
     }
   }, [expanded, post.id]);
 
+  // Log missing original post for debugging
+  if (!isNested && post.isRepost && !post.originalPost) {
+    console.log('⚠️ [FRONTEND] Repost missing originalPost:', {
+      postId: post.id,
+      isRepost: post.isRepost,
+      parentId: (post as any).parentId
+    });
+  }
+
   return (
     <GestureHandler
       onDoubleTap={handleDoubleTap}
@@ -461,7 +470,7 @@ const EnhancedPostCard = React.memo(({
             className={`${categoryStyle} ${className} transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary-500/10 dark:hover:shadow-primary-900/20`}
           >
             {/* Header with improved visual hierarchy */}
-            <div className="px-6 py-4 border-b border-gray-200/50 dark:border-gray-700/50">
+            <div className="px-4 py-3 border-b border-gray-200/50 dark:border-gray-700/50">
               {/* Repost Label */}
               {post.isRepost && (
                 <div className="flex items-center space-x-2 mb-3 text-sm text-green-600 dark:text-green-500">
@@ -578,7 +587,7 @@ const EnhancedPostCard = React.memo(({
             </div>
 
             {/* Content with emphasized hierarchy */}
-            <div className="px-6 py-4">
+            <div className="px-4 py-2">
               {/* Title - emphasized */}
               {post.title && (
                 <h2
@@ -637,15 +646,15 @@ const EnhancedPostCard = React.memo(({
 
               {/* Media */}
               {post.media && post.media.length > 0 && (
-                <div className="mb-4 rounded-xl overflow-hidden">
+                <div className="mb-4 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 flex justify-center cursor-zoom-in" onClick={() => window.open(post.media[0], '_blank')}>
                   <OptimizedImage
                     src={post.media[0]}
                     alt="Post media"
-                    width={600}
-                    height={300}
-                    className="w-full h-64 object-cover transition-transform duration-500 hover:scale-105"
+                    width={800}
+                    height={600}
+                    className="max-h-[500px] w-auto object-contain"
                     lazy={true}
-                    quality={85}
+                    quality={90}
                   />
                 </div>
               )}
@@ -658,7 +667,6 @@ const EnhancedPostCard = React.memo(({
               )}
               {!isNested && post.isRepost && !post.originalPost && (
                 <div className="mb-4 mt-2 px-1 text-sm text-gray-500 italic">
-                  {console.log('⚠️ [FRONTEND] Repost missing originalPost:', { postId: post.id, isRepost: post.isRepost, parentId: (post as any).parentId })}
                   Original post unavailable
                 </div>
               )}
@@ -747,69 +755,73 @@ const EnhancedPostCard = React.memo(({
                 </div>
               )}
 
-              {/* Enhanced Interactions */}
-              <PostInteractionBar
-                post={{
-                  id: post.id,
-                  title: post.title,
-                  contentCid: post.contentCid, // Use contentCid field instead of content
-                  content: post.content,
-                  author: post.author,
-                  communityId: post.communityId,
-                  communityName: post.communityName || 'general',
-                  commentCount: post.comments,
-                  shareId: (post as any).shareId,
-                  isRepostedByMe: isRepostedByMe,
-                  shareCount: repostCount, // Pass the tracked count
-                  authorProfile: post.authorProfile,
-                  media: post.media
-                }}
-                postType={post.communityId ? 'community' : 'feed'}
-                onComment={() => {
-                  setExpanded(true);
-                  if (onExpand) onExpand();
-                }}
-                onReaction={onReaction}
-                onTip={onTip}
-                onShare={async (postId, shareType, message, media, replyRestriction) => {
-                  if (shareType === 'timeline') {
-                    await handleRepost(postId, message, media, replyRestriction);
-                  }
-                }}
-                onUnrepost={handleUnrepost}
-              />
+              {/* Consolidated Engagement Bar */}
+              <div className="mt-3 pt-2 border-t border-gray-100 dark:border-gray-800 flex items-center gap-4">
+                {/* Voting Section */}
+                <div className="flex items-center space-x-1 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-1">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleUpvote(); }}
+                    disabled={!onUpvote}
+                    className={`p-1.5 rounded-md transition-colors ${onUpvote
+                      ? 'text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'
+                      : 'text-gray-300 cursor-not-allowed'}`}
+                    aria-label="Upvote"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                    </svg>
+                  </button>
+                  <span className={`text-sm font-bold min-w-[1.5rem] text-center ${(post.upvotes || 0) > 0 ? 'text-green-600' : 'text-gray-500'}`}>
+                    {(post.upvotes || 0) - (post.downvotes || 0)}
+                  </span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleDownvote(); }}
+                    disabled={!onDownvote}
+                    className={`p-1.5 rounded-md transition-colors ${onDownvote
+                      ? 'text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20'
+                      : 'text-gray-300 cursor-not-allowed'}`}
+                    aria-label="Downvote"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                </div>
 
-              {/* Upvote/Downvote Buttons */}
-              <div className="flex items-center justify-center space-x-6 mt-4 pt-4 border-t border-gray-200/50 dark:border-gray-700/50">
-                <button
-                  onClick={handleUpvote}
-                  disabled={!onUpvote}
-                  className={`flex items-center space-x-2 ${onUpvote
-                    ? 'text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400'
-                    : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
-                    } transition-colors duration-200`}
-                  aria-label="Upvote post"
-                >
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                  </svg>
-                  <span className="font-medium">{post.upvotes || 0}</span>
-                </button>
-
-                <button
-                  onClick={handleDownvote}
-                  disabled={!onDownvote}
-                  className={`flex items-center space-x-2 ${onDownvote
-                    ? 'text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400'
-                    : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
-                    } transition-colors duration-200`}
-                  aria-label="Downvote post"
-                >
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                  <span className="font-medium">{post.downvotes || 0}</span>
-                </button>
+                {/* Interactions Section */}
+                <div className="flex-1">
+                  <PostInteractionBar
+                    post={{
+                      id: post.id,
+                      title: post.title,
+                      contentCid: post.contentCid,
+                      content: post.content,
+                      author: post.author,
+                      communityId: post.communityId,
+                      communityName: post.communityName || 'general',
+                      commentCount: post.comments,
+                      shareId: (post as any).shareId,
+                      isRepostedByMe: isRepostedByMe,
+                      shareCount: repostCount,
+                      authorProfile: post.authorProfile,
+                      media: post.media
+                    }}
+                    postType={post.communityId ? 'community' : 'feed'}
+                    onComment={() => {
+                      setExpanded(true);
+                      if (onExpand) onExpand();
+                    }}
+                    onReaction={onReaction}
+                    onTip={onTip}
+                    onShare={async (postId, shareType, message, media, replyRestriction) => {
+                      if (shareType === 'timeline') {
+                        await handleRepost(postId, message, media, replyRestriction);
+                      }
+                    }}
+                    onUnrepost={handleUnrepost}
+                    className="border-none p-0 !bg-transparent"
+                  />
+                </div>
               </div>
 
               {/* Comment System - Show when expanded */}
