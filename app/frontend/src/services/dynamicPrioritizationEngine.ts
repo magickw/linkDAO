@@ -409,12 +409,47 @@ export class DynamicPrioritizationEngine {
       });
   }
 
+
+  /**
+   * Update prioritization for existing methods with new market conditions
+   */
+  async updatePrioritization(
+    currentMethods: PrioritizedPaymentMethod[],
+    marketConditions: MarketConditions
+  ): Promise<PrioritizedPaymentMethod[]> {
+    // Check if market conditions have changed significantly
+    if (this.detectMarketConditionChanges(currentMethods, marketConditions)) {
+      // Create context with updated conditions but preserving other data
+      // Note: This is an estimation since we don't have full context here
+      // Ideally updatePrioritization should receive full context
+      const tempContext: PrioritizationContext = {
+        userContext: { chainId: 1, walletBalances: [], preferences: {} as any }, // Stub
+        transactionAmount: 0, // Stub
+        transactionCurrency: 'USD',
+        marketConditions: marketConditions,
+        availablePaymentMethods: []
+      };
+
+      return this.recalculateScoresOnly(currentMethods, tempContext);
+    }
+
+    return currentMethods;
+  }
+
   private determineAvailabilityStatus(
     method: PaymentMethod,
     costEstimate: CostEstimate
   ): AvailabilityStatus {
-    // Fiat and x402 are always available
-    if (method.type === PaymentMethodType.FIAT_STRIPE || method.type === PaymentMethodType.X402) {
+    // Fiat stripe check minimum amount
+    if (method.type === PaymentMethodType.FIAT_STRIPE) {
+      if (costEstimate.totalCost < 0.50) {
+        return AvailabilityStatus.UNAVAILABLE_MINIMUM_AMOUNT;
+      }
+      return AvailabilityStatus.AVAILABLE;
+    }
+
+    // x402 is always available
+    if (method.type === PaymentMethodType.X402) {
       return AvailabilityStatus.AVAILABLE;
     }
 

@@ -64,7 +64,8 @@ export enum AvailabilityStatus {
   UNAVAILABLE_NETWORK_UNSUPPORTED = 'unavailable_network_unsupported',
   UNAVAILABLE_HIGH_GAS_FEES = 'unavailable_high_gas_fees',
   UNAVAILABLE_SERVICE_DOWN = 'unavailable_service_down',
-  UNAVAILABLE_REGION_RESTRICTED = 'unavailable_region_restricted'
+  UNAVAILABLE_REGION_RESTRICTED = 'unavailable_region_restricted',
+  UNAVAILABLE_MINIMUM_AMOUNT = 'unavailable_minimum_amount'
 }
 
 export interface PrioritizedPaymentMethod {

@@ -444,12 +444,22 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
   ): AvailabilityStatus {
     const config = this.configs[method.type];
 
+
     // Fiat payments and x402 payments are ALWAYS available regardless of:
     // - Wallet connection status
     // - Network/chain ID
     // - Gas fees (fiat has no gas fees, x402 has reduced fees)
     // Users can choose fiat even when their wallet is connected
-    if (method.type === PaymentMethodType.FIAT_STRIPE || method.type === PaymentMethodType.X402) {
+    if (method.type === PaymentMethodType.FIAT_STRIPE) {
+      // Check for Stripe minimum amount ($0.50 USD)
+      // We assume costEstimate.totalCost roughly reflects the USD value
+      if (costEstimate.totalCost < 0.50) {
+        return AvailabilityStatus.UNAVAILABLE_MINIMUM_AMOUNT; // Or a specific status if available
+      }
+      return AvailabilityStatus.AVAILABLE;
+    }
+
+    if (method.type === PaymentMethodType.X402) {
       return AvailabilityStatus.AVAILABLE;
     }
 

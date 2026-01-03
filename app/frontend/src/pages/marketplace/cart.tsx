@@ -38,31 +38,39 @@ const CartPage: React.FC = () => {
     lastUpdated: new Date()
   });
 
-  const [promoCode, setPromoCode] = useState('');
-  const [discount, setDiscount] = useState(0);
-  const [promoApplied, setPromoApplied] = useState(false);
-  const [promoError, setPromoError] = useState('');
+  // Track promo codes per item
+  const [itemPromoCodes, setItemPromoCodes] = useState<Record<string, { code: string; discount: number; applied: boolean; error: string }>>({});
   const [gasFee, setGasFee] = useState(0);
   const [showFeeBreakdown, setShowFeeBreakdown] = useState(false);
 
   const router = useRouter();
 
-  // Calculate real-time totals
-  const { subtotal, totalWithDiscount, totalWithGas } = useMemo(() => {
+  // Calculate real-time totals with per-item discounts
+  const { subtotal, totalDiscount, totalWithDiscount, totalWithGas } = useMemo(() => {
     const subtotal = cartState.items.reduce((sum, item) => {
       return sum + (parseFloat(item.price.fiat) * item.quantity);
     }, 0);
 
-    const discountAmount = subtotal * (discount / 100);
-    const totalWithDiscount = subtotal - discountAmount;
+    // Calculate total discount from all items
+    const totalDiscount = cartState.items.reduce((sum, item) => {
+      const itemPromo = itemPromoCodes[item.id];
+      if (itemPromo?.applied) {
+        const itemTotal = parseFloat(item.price.fiat) * item.quantity;
+        return sum + (itemTotal * itemPromo.discount / 100);
+      }
+      return sum;
+    }, 0);
+
+    const totalWithDiscount = subtotal - totalDiscount;
     const totalWithGas = totalWithDiscount + gasFee;
 
     return {
       subtotal,
+      totalDiscount,
       totalWithDiscount,
       totalWithGas
     };
-  }, [cartState.items, discount, gasFee]);
+  }, [cartState.items, itemPromoCodes, gasFee]);
 
   useEffect(() => {
     // Load cart items
@@ -103,9 +111,14 @@ const CartPage: React.FC = () => {
     }
   };
 
-  const handleApplyPromoCode = () => {
-    if (!promoCode.trim()) {
-      setPromoError('Please enter a promo code');
+  const handleApplyPromoCode = (itemId: string) => {
+    const itemPromo = itemPromoCodes[itemId] || { code: '', discount: 0, applied: false, error: '' };
+
+    if (!itemPromo.code.trim()) {
+      setItemPromoCodes(prev => ({
+        ...prev,
+        [itemId]: { ...prev[itemId], error: 'Please enter a promo code' }
+      }));
       return;
     }
 
@@ -113,24 +126,40 @@ const CartPage: React.FC = () => {
     const validCodes: Record<string, number> = {
       'SAVE10': 10,
       'WELCOME20': 20,
-      'LINKDAO15': 15
+      'LINKDAO15': 15,
+      'FIRSTORDER': 25
     };
 
-    if (validCodes[promoCode.toUpperCase()]) {
-      setDiscount(validCodes[promoCode.toUpperCase()]);
-      setPromoApplied(true);
-      setPromoError('');
+    if (validCodes[itemPromo.code.toUpperCase()]) {
+      setItemPromoCodes(prev => ({
+        ...prev,
+        [itemId]: {
+          code: itemPromo.code.toUpperCase(),
+          discount: validCodes[itemPromo.code.toUpperCase()],
+          applied: true,
+          error: ''
+        }
+      }));
     } else {
-      setPromoError('Invalid promo code');
-      setPromoApplied(false);
+      setItemPromoCodes(prev => ({
+        ...prev,
+        [itemId]: { ...prev[itemId], error: 'Invalid promo code', applied: false }
+      }));
     }
   };
 
-  const handleRemovePromoCode = () => {
-    setPromoCode('');
-    setDiscount(0);
-    setPromoApplied(false);
-    setPromoError('');
+  const handleRemovePromoCode = (itemId: string) => {
+    setItemPromoCodes(prev => ({
+      ...prev,
+      [itemId]: { code: '', discount: 0, applied: false, error: '' }
+    }));
+  };
+
+  const handlePromoCodeChange = (itemId: string, value: string) => {
+    setItemPromoCodes(prev => ({
+      ...prev,
+      [itemId]: { ...prev[itemId], code: value, error: '' }
+    }));
   };
 
   const handleCheckout = () => {
@@ -188,80 +217,134 @@ const CartPage: React.FC = () => {
               <div className="lg:col-span-2">
                 <div className="bg-white/10 backdrop-blur-sm rounded-2xl overflow-hidden border border-white/20">
                   <div className="divide-y divide-white/10">
-                    {cartState.items.map((item) => (
-                      <div key={item.id} className="p-6 flex flex-col sm:flex-row gap-4">
-                        <Link href={`/marketplace/product/${item.id}`}>
-                          <a className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity">
-                            <ProductThumbnail
-                              item={{
-                                id: item.id,
-                                title: item.title,
-                                image: item.image,
-                                category: item.category
-                              }}
-                              size="large"
-                              fallbackType="letter"
-                            />
-                          </a>
-                        </Link>
+                    {cartState.items.map((item) => {
+                      const itemPromo = itemPromoCodes[item.id] || { code: '', discount: 0, applied: false, error: '' };
+                      const itemTotal = parseFloat(item.price.fiat) * item.quantity;
+                      const itemDiscount = itemPromo.applied ? (itemTotal * itemPromo.discount / 100) : 0;
+                      const itemFinalPrice = itemTotal - itemDiscount;
 
-                        <div className="flex-grow">
-                          <div className="flex justify-between">
+                      return (
+                        <div key={item.id} className="p-6 flex flex-col gap-4">
+                          <div className="flex flex-col sm:flex-row gap-4">
                             <Link href={`/marketplace/product/${item.id}`}>
-                              <a className="hover:text-blue-400 transition-colors">
-                                <h3 className="font-semibold text-white">{item.title}</h3>
+                              <a className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity">
+                                <ProductThumbnail
+                                  item={{
+                                    id: item.id,
+                                    title: item.title,
+                                    image: item.image,
+                                    category: item.category
+                                  }}
+                                  size="large"
+                                  fallbackType="letter"
+                                />
                               </a>
                             </Link>
-                            <button
-                              onClick={() => handleRemoveItem(item.id)}
-                              className="text-white/50 hover:text-white"
-                              aria-label="Remove item"
-                            >
-                              <X size={20} />
-                            </button>
+
+                            <div className="flex-grow">
+                              <div className="flex justify-between">
+                                <Link href={`/marketplace/product/${item.id}`}>
+                                  <a className="hover:text-blue-400 transition-colors">
+                                    <h3 className="font-semibold text-white">{item.title}</h3>
+                                  </a>
+                                </Link>
+                                <button
+                                  onClick={() => handleRemoveItem(item.id)}
+                                  className="text-white/50 hover:text-white"
+                                  aria-label="Remove item"
+                                >
+                                  <X size={20} />
+                                </button>
+                              </div>
+
+                              <p className="text-white/70 text-sm mb-2">{item.seller.name}</p>
+
+                              <div className="flex flex-wrap items-center gap-4 mt-4">
+                                <div className="flex items-center border border-white/20 rounded-lg bg-white/10">
+                                  <button
+                                    onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+                                    disabled={item.quantity <= 1}
+                                    className="p-2 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    aria-label="Decrease quantity"
+                                  >
+                                    <Minus size={16} />
+                                  </button>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={item.quantity}
+                                    onChange={(e) => handleQuantityInputChange(item.id, e.target.value)}
+                                    className="w-16 px-2 py-2 text-white bg-transparent text-center border-x border-white/20 focus:outline-none"
+                                    aria-label="Quantity"
+                                  />
+                                  <button
+                                    onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                                    className="p-2 hover:bg-white/20"
+                                    aria-label="Increase quantity"
+                                  >
+                                    <Plus size={16} />
+                                  </button>
+                                </div>
+
+                                <div className="flex flex-col items-end">
+                                  <div className="text-lg font-semibold text-white">
+                                    {item.price.fiatSymbol}{itemFinalPrice.toFixed(2)}
+                                  </div>
+                                  <div className="text-sm text-white/60">
+                                    {item.price.fiatSymbol}{parseFloat(item.price.fiat).toFixed(2)} × {item.quantity}
+                                    {itemPromo.applied && (
+                                      <span className="text-green-400 ml-2">(-{itemPromo.discount}%)</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
                           </div>
 
-                          <p className="text-white/70 text-sm mb-2">{item.seller.name}</p>
-
-                          <div className="flex flex-wrap items-center gap-4 mt-4">
-                            <div className="flex items-center border border-white/20 rounded-lg bg-white/10">
-                              <button
-                                onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
-                                disabled={item.quantity <= 1}
-                                className="p-2 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed"
-                                aria-label="Decrease quantity"
-                              >
-                                <Minus size={16} />
-                              </button>
+                          {/* Promo Code Field for This Item */}
+                          <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Tag size={16} className="text-blue-400" />
+                              <span className="text-sm font-medium text-white">Promo Code</span>
+                            </div>
+                            <div className="flex gap-2">
                               <input
-                                type="number"
-                                min="1"
-                                value={item.quantity}
-                                onChange={(e) => handleQuantityInputChange(item.id, e.target.value)}
-                                className="w-16 px-2 py-2 text-white bg-transparent text-center border-x border-white/20 focus:outline-none"
-                                aria-label="Quantity"
+                                type="text"
+                                value={itemPromo.code}
+                                onChange={(e) => handlePromoCodeChange(item.id, e.target.value)}
+                                placeholder="Enter promo code"
+                                disabled={itemPromo.applied}
+                                className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                               />
-                              <button
-                                onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
-                                className="p-2 hover:bg-white/20"
-                                aria-label="Increase quantity"
-                              >
-                                <Plus size={16} />
-                              </button>
+                              {!itemPromo.applied ? (
+                                <button
+                                  onClick={() => handleApplyPromoCode(item.id)}
+                                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
+                                >
+                                  Apply
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleRemovePromoCode(item.id)}
+                                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center gap-1 text-sm font-medium"
+                                >
+                                  <X size={14} />
+                                </button>
+                              )}
                             </div>
-
-                            <div className="flex flex-col items-end">
-                              <div className="text-lg font-semibold text-white">
-                                {item.price.fiatSymbol}{(parseFloat(item.price.fiat) * item.quantity).toFixed(2)}
-                              </div>
-                              <div className="text-sm text-white/60">
-                                {item.price.fiatSymbol}{parseFloat(item.price.fiat).toFixed(2)} × {item.quantity}
-                              </div>
-                            </div>
+                            {itemPromo.error && (
+                              <p className="text-red-400 text-xs mt-2">{itemPromo.error}</p>
+                            )}
+                            {itemPromo.applied && (
+                              <p className="text-green-400 text-xs mt-2 flex items-center gap-1">
+                                <CheckCircle size={12} />
+                                Promo code applied! You save {item.price.fiatSymbol}{itemDiscount.toFixed(2)}
+                              </p>
+                            )}
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -270,44 +353,6 @@ const CartPage: React.FC = () => {
                 <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 sticky top-8 border border-white/20">
                   <h2 className="text-xl font-semibold text-white mb-4">Order Summary</h2>
 
-                  {/* Promo Code Field */}
-                  <div className="mb-4">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={promoCode}
-                        onChange={(e) => setPromoCode(e.target.value)}
-                        placeholder="Promo code"
-                        disabled={promoApplied}
-                        className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                      />
-                      {!promoApplied ? (
-                        <button
-                          onClick={handleApplyPromoCode}
-                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-                        >
-                          Apply
-                        </button>
-                      ) : (
-                        <button
-                          onClick={handleRemovePromoCode}
-                          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center gap-1"
-                        >
-                          <X size={16} />
-                        </button>
-                      )}
-                    </div>
-                    {promoError && (
-                      <p className="text-red-400 text-sm mt-2">{promoError}</p>
-                    )}
-                    {promoApplied && (
-                      <p className="text-green-400 text-sm mt-2 flex items-center gap-1">
-                        <CheckCircle size={14} />
-                        Promo code applied: {discount}% off
-                      </p>
-                    )}
-                  </div>
-
                   <div className="space-y-3 mb-6">
                     <div className="flex justify-between">
                       <span className="text-white/70">Subtotal</span>
@@ -315,15 +360,15 @@ const CartPage: React.FC = () => {
                         ${subtotal.toFixed(2)}
                       </span>
                     </div>
-                    
-                    {promoApplied && (
+
+                    {totalDiscount > 0 && (
                       <div className="flex justify-between text-green-400">
                         <span className="flex items-center gap-1">
                           <Percent size={14} />
-                          Discount ({discount}%)
+                          Total Discount
                         </span>
                         <span className="font-medium">
-                          -${(subtotal * discount / 100).toFixed(2)}
+                          -${totalDiscount.toFixed(2)}
                         </span>
                       </div>
                     )}
@@ -379,11 +424,11 @@ const CartPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {promoApplied && (
+                    {totalDiscount > 0 && (
                       <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 text-sm">
                         <div className="flex items-center gap-2 text-green-400">
                           <Tag size={16} />
-                          <span className="font-medium">You saved ${(subtotal * discount / 100).toFixed(2)}!</span>
+                          <span className="font-medium">You saved ${totalDiscount.toFixed(2)}!</span>
                         </div>
                       </div>
                     )}

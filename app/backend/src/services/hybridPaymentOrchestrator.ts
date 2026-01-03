@@ -354,6 +354,11 @@ export class HybridPaymentOrchestrator {
       const totalAmount = Math.round((request.amount + pathDecision.fees.totalFees) * 100); // Convert to cents
       const platformFee = Math.round(pathDecision.fees.platformFee * 100);
 
+      // Validate minimum amount for Stripe ($0.50 USD)
+      if (totalAmount < 50) {
+        throw new Error(`Payment amount ($${(totalAmount / 100).toFixed(2)}) is below the Stripe minimum requirement of $0.50 USD.`);
+      }
+
       const paymentIntentParams: Stripe.PaymentIntentCreateParams = {
         amount: totalAmount,
         currency: pathDecision.fees.currency.toLowerCase(),
@@ -407,7 +412,7 @@ export class HybridPaymentOrchestrator {
       };
     } catch (error) {
       safeLogger.error('Error creating Stripe PaymentIntent:', error);
-      
+
       // Provide more specific error messages
       if (error instanceof Error) {
         if (error.message.includes('api_key')) {
@@ -420,7 +425,7 @@ export class HybridPaymentOrchestrator {
           throw new Error('Invalid payment amount for Stripe');
         }
       }
-      
+
       throw new Error('Failed to create Stripe payment: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   }
@@ -639,16 +644,16 @@ export class HybridPaymentOrchestrator {
   }> {
     try {
       const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-      
+
       if (paymentIntent.status !== 'requires_capture') {
         throw new Error(`Payment intent ${paymentIntentId} is not in capturable state: ${paymentIntent.status}`);
       }
 
       // Capture the payment
       const capturedIntent = await stripe.paymentIntents.capture(paymentIntentId);
-      
+
       safeLogger.info(`Captured Stripe payment ${paymentIntentId} for order ${orderId}`);
-      
+
       // Create transfer if using Connect
       let transferId: string | undefined;
       if (capturedIntent.transfer_data?.destination) {
@@ -656,8 +661,8 @@ export class HybridPaymentOrchestrator {
           const transfer = await stripe.transfers.create({
             amount: capturedIntent.transfer_data.amount,
             currency: capturedIntent.currency,
-            destination: typeof capturedIntent.transfer_data.destination === 'string' 
-              ? capturedIntent.transfer_data.destination 
+            destination: typeof capturedIntent.transfer_data.destination === 'string'
+              ? capturedIntent.transfer_data.destination
               : capturedIntent.transfer_data.destination.id,
             transfer_group: capturedIntent.transfer_group,
             metadata: {
@@ -695,7 +700,7 @@ export class HybridPaymentOrchestrator {
   }> {
     try {
       const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-      
+
       if (paymentIntent.status === 'canceled') {
         throw new Error(`Payment intent ${paymentIntentId} is already cancelled`);
       }
@@ -711,7 +716,7 @@ export class HybridPaymentOrchestrator {
       });
 
       safeLogger.info(`Created Stripe refund ${refund.id} for payment ${paymentIntentId}`);
-      
+
       return {
         refunded: true,
         amount: refund.amount / 100,
@@ -730,10 +735,10 @@ export class HybridPaymentOrchestrator {
   async cancelStripePayment(paymentIntentId: string, orderId: string): Promise<boolean> {
     try {
       const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-      
-      if (paymentIntent.status !== 'requires_payment_method' && 
-          paymentIntent.status !== 'requires_capture' && 
-          paymentIntent.status !== 'requires_confirmation') {
+
+      if (paymentIntent.status !== 'requires_payment_method' &&
+        paymentIntent.status !== 'requires_capture' &&
+        paymentIntent.status !== 'requires_confirmation') {
         throw new Error(`Payment intent ${paymentIntentId} cannot be cancelled in state: ${paymentIntent.status}`);
       }
 
@@ -767,9 +772,9 @@ export class HybridPaymentOrchestrator {
       const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
         expand: ['charges']
       });
-      
+
       const refunds = (paymentIntent as any).charges?.data?.[0]?.refunds?.data || [];
-      
+
       return {
         status: paymentIntent.status,
         amount: paymentIntent.amount / 100,
