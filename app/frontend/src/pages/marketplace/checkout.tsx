@@ -43,7 +43,7 @@ const CheckoutPage: React.FC = () => {
 
   if (isDirectBuy) {
     return (
-      <Layout title="Checkout - LinkDAO Marketplace">
+      <Layout title="Checkout - LinkDAO Marketplace" fullWidth={true}>
         <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
@@ -57,7 +57,7 @@ const CheckoutPage: React.FC = () => {
   // Empty cart state
   if (state.items.length === 0 && currentView === 'checkout') {
     return (
-      <Layout title="Checkout - LinkDAO Marketplace">
+      <Layout title="Checkout - LinkDAO Marketplace" fullWidth={true}>
         <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <GlassPanel variant="secondary" className="text-center py-16">
@@ -77,7 +77,7 @@ const CheckoutPage: React.FC = () => {
   }
 
   return (
-    <Layout title="Checkout - LinkDAO Marketplace">
+    <Layout title="Checkout - LinkDAO Marketplace" fullWidth={true}>
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {currentView === 'checkout' ? (

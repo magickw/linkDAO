@@ -369,6 +369,16 @@ export class HybridPaymentOrchestrator {
 
       // Validate minimum amount for Stripe ($0.50 USD = 50 cents)
       if (totalAmount < 50) {
+        safeLogger.error('Stripe minimum amount validation failed:', {
+          requestAmount: request.amount,
+          pathDecisionFees: pathDecision.fees,
+          amountInDollars,
+          feesInDollars,
+          totalAmountInCents: totalAmount,
+          totalAmountInDollars: totalAmount / 100,
+          minimumRequired: 50,
+          shortfall: 50 - totalAmount
+        });
         throw new Error(`Payment amount ($${(totalAmount / 100).toFixed(2)}) is below the Stripe minimum requirement of $0.50 USD.`);
       }
 

@@ -496,7 +496,7 @@ const MarketplaceContent: React.FC = () => {
         keywords={['nft marketplace', 'crypto trading', 'web3 ecommerce', 'buy nfts', 'linkdao marketplace']}
         type="website"
       />
-      <Layout>
+      <Layout fullWidth={true}>
         <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
           {/* Service Unavailable Banner */}
           {serviceUnavailable && (
