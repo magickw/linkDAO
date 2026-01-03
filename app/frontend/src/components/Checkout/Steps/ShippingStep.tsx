@@ -15,6 +15,7 @@ export interface ShippingStepProps {
   onAddressChange: (address: Partial<ShippingAddress>) => void;
   userProfile?: any; // User profile for saved addresses
   variant?: 'desktop' | 'mobile';
+  title?: string;
 }
 
 export const ShippingStep: React.FC<ShippingStepProps> = ({
@@ -22,7 +23,8 @@ export const ShippingStep: React.FC<ShippingStepProps> = ({
   errors,
   onAddressChange,
   userProfile,
-  variant = 'desktop'
+  variant = 'desktop',
+  title = 'Shipping Information'
 }) => {
   const [showSavedAddresses, setShowSavedAddresses] = useState(false);
 
@@ -44,29 +46,29 @@ export const ShippingStep: React.FC<ShippingStepProps> = ({
     const savedAddress =
       type === 'billing'
         ? {
-            firstName: userProfile.billingFirstName || '',
-            lastName: userProfile.billingLastName || '',
-            email: userProfile.email || '',
-            address1: userProfile.billingAddress1 || '',
-            address2: userProfile.billingAddress2 || '',
-            city: userProfile.billingCity || '',
-            state: userProfile.billingState || '',
-            zipCode: userProfile.billingZipCode || '',
-            country: userProfile.billingCountry || 'US',
-            phone: userProfile.billingPhone || '',
-          }
+          firstName: userProfile.billingFirstName || '',
+          lastName: userProfile.billingLastName || '',
+          email: userProfile.email || '',
+          address1: userProfile.billingAddress1 || '',
+          address2: userProfile.billingAddress2 || '',
+          city: userProfile.billingCity || '',
+          state: userProfile.billingState || '',
+          zipCode: userProfile.billingZipCode || '',
+          country: userProfile.billingCountry || 'US',
+          phone: userProfile.billingPhone || '',
+        }
         : {
-            firstName: userProfile.shippingFirstName || '',
-            lastName: userProfile.shippingLastName || '',
-            email: userProfile.email || '',
-            address1: userProfile.shippingAddress1 || '',
-            address2: userProfile.shippingAddress2 || '',
-            city: userProfile.shippingCity || '',
-            state: userProfile.shippingState || '',
-            zipCode: userProfile.shippingZipCode || '',
-            country: userProfile.shippingCountry || 'US',
-            phone: userProfile.shippingPhone || '',
-          };
+          firstName: userProfile.shippingFirstName || '',
+          lastName: userProfile.shippingLastName || '',
+          email: userProfile.email || '',
+          address1: userProfile.shippingAddress1 || '',
+          address2: userProfile.shippingAddress2 || '',
+          city: userProfile.shippingCity || '',
+          state: userProfile.shippingState || '',
+          zipCode: userProfile.shippingZipCode || '',
+          country: userProfile.shippingCountry || 'US',
+          phone: userProfile.shippingPhone || '',
+        };
 
     onAddressChange(savedAddress);
     setShowSavedAddresses(false);
@@ -74,7 +76,7 @@ export const ShippingStep: React.FC<ShippingStepProps> = ({
 
   return (
     <div className="space-y-6">
-      {!isMobile && <h2 className="text-xl font-bold text-white mb-4">Shipping Information</h2>}
+      {!isMobile && <h2 className="text-xl font-bold text-white mb-4">{title}</h2>}
 
       {/* Saved Addresses Section */}
       {userProfile && (userProfile.billingAddress1 || userProfile.shippingAddress1) && (

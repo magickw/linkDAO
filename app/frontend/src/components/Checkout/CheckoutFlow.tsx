@@ -118,8 +118,13 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
     phone: '',
     address2: ''
   });
+  const [billingAddress, setBillingAddress] = useState<ShippingAddress>({
+    firstName: '', lastName: '', email: '', address1: '', city: '', state: '', zipCode: '', country: 'US', phone: '', address2: ''
+  });
+  const [sameAsShipping, setSameAsShipping] = useState(true);
 
   const [shippingErrors, setShippingErrors] = useState<Record<string, string>>({});
+  const [billingErrors, setBillingErrors] = useState<Record<string, string>>({});
   const [checkoutService] = useState(() => {
     const cryptoService = new CryptoPaymentService();
     const stripeService = new StripePaymentService();
@@ -575,6 +580,8 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
           walletAddress: address,
           tokenSymbol: selectedPaymentMethod.method.token?.symbol,
           networkId: selectedPaymentMethod.method.chainId,
+          // For fiat payments
+          billingAddress: sameAsShipping ? shippingAddress : billingAddress
         }
       };
 
@@ -1015,20 +1022,31 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
   }
 
 
-  const validateShippingAddress = () => {
+  const validateAddress = (addr: ShippingAddress, setErrors: (e: Record<string, string>) => void) => {
     const newErrors: Record<string, string> = {};
-    if (!shippingAddress.firstName?.trim()) newErrors.firstName = 'First name is required';
-    if (!shippingAddress.lastName?.trim()) newErrors.lastName = 'Last name is required';
-    if (!shippingAddress.email?.trim()) newErrors.email = 'Email is required';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(shippingAddress.email)) newErrors.email = 'Invalid email format';
-    if (!shippingAddress.address1?.trim()) newErrors.address1 = 'Address is required';
-    if (!shippingAddress.city?.trim()) newErrors.city = 'City is required';
-    if (!shippingAddress.state?.trim()) newErrors.state = 'State is required';
-    if (!shippingAddress.zipCode?.trim()) newErrors.zipCode = 'ZIP code is required';
-    if (!shippingAddress.country) newErrors.country = 'Country is required';
+    if (!addr.firstName?.trim()) newErrors.firstName = 'First name is required';
+    if (!addr.lastName?.trim()) newErrors.lastName = 'Last name is required';
+    if (!addr.email?.trim()) newErrors.email = 'Email is required';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addr.email)) newErrors.email = 'Invalid email format';
+    if (!addr.address1?.trim()) newErrors.address1 = 'Address is required';
+    if (!addr.city?.trim()) newErrors.city = 'City is required';
+    if (!addr.state?.trim()) newErrors.state = 'State is required';
+    if (!addr.zipCode?.trim()) newErrors.zipCode = 'ZIP code is required';
+    if (!addr.country) newErrors.country = 'Country is required';
 
-    setShippingErrors(newErrors);
+    setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const validateShippingAddress = () => {
+    const isShippingValid = validateAddress(shippingAddress, setShippingErrors);
+    let isBillingValid = true;
+
+    if (!sameAsShipping) {
+      isBillingValid = validateAddress(billingAddress, setBillingErrors);
+    }
+
+    return isShippingValid && isBillingValid;
   };
 
   const handleAddressSubmit = async () => {
@@ -1060,26 +1078,28 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
     };
 
     return (
-      <div className="flex items-center justify-center mb-8">
+      <div className="flex items-center justify-center mb-8 w-full">
         {steps.map((step, index) => (
           <React.Fragment key={step.key}>
-            <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${step.completed || isStepActive(step.key)
-              ? 'bg-blue-500 border-blue-500 text-white'
-              : 'border-white/30 text-white/60'
-              }`}>
-              {step.completed ? (
-                <CheckCircle className="w-4 h-4" />
-              ) : (
-                <span className="text-sm font-medium">{index + 1}</span>
-              )}
+            <div className="relative flex flex-col items-center">
+              <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 z-10 bg-gray-900 ${step.completed || isStepActive(step.key)
+                ? 'bg-blue-500 border-blue-500 text-white'
+                : 'border-white/30 text-white/60'
+                }`}>
+                {step.completed ? (
+                  <CheckCircle className="w-4 h-4" />
+                ) : (
+                  <span className="text-sm font-medium">{index + 1}</span>
+                )}
+              </div>
+              <span className={`absolute top-10 text-xs whitespace-nowrap ${isStepActive(step.key) ? 'text-white' : 'text-white/50'}`}>
+                {step.label}
+              </span>
             </div>
             {index < steps.length - 1 && (
-              <div className={`w-12 h-0.5 mx-2 ${step.completed ? 'bg-blue-500' : 'bg-white/30'
+              <div className={`w-12 h-0.5 mx-2 mb-4 ${step.completed ? 'bg-blue-500' : 'bg-white/30'
                 }`} />
             )}
-            <span className={`absolute mt-10 text-xs ${isStepActive(step.key) ? 'text-white' : 'text-white/50'}`}>
-              {step.label}
-            </span>
           </React.Fragment>
         ))}
       </div>
@@ -1098,7 +1118,32 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
           errors={shippingErrors}
           onAddressChange={(updates) => setShippingAddress(prev => ({ ...prev, ...updates }))}
           userProfile={profile}
+          title="Shipping Address"
         />
+
+        <div className="pt-4 border-t border-white/10">
+          <label className="flex items-center gap-2 cursor-pointer mb-4">
+            <input
+              type="checkbox"
+              checked={sameAsShipping}
+              onChange={(e) => setSameAsShipping(e.target.checked)}
+              className="form-checkbox h-5 w-5 text-blue-600 bg-white/10 border-white/20 rounded focus:ring-blue-500"
+            />
+            <span className="text-white">Billing address is same as shipping</span>
+          </label>
+
+          {!sameAsShipping && (
+            <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+              <ShippingStep
+                shippingAddress={billingAddress}
+                errors={billingErrors}
+                onAddressChange={(updates) => setBillingAddress(prev => ({ ...prev, ...updates }))}
+                userProfile={profile}
+                title="Billing Address"
+              />
+            </div>
+          )}
+        </div>
 
         <div className="mt-8 flex justify-end">
           <Button
@@ -1124,7 +1169,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <Button
