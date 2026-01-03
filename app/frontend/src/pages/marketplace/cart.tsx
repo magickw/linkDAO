@@ -45,52 +45,57 @@ const CartPage: React.FC = () => {
     lastUpdated: new Date()
   });
 
-  // Track promo codes per item
-  const [itemPromoCodes, setItemPromoCodes] = useState<Record<string, {
+  // Track promo code input state per item
+  const [promoCodeInputs, setPromoCodeInputs] = useState<Record<string, {
     code: string;
-    discount: number;
-    calculatedAmount?: number;
-    type?: 'percentage' | 'fixed_amount';
-    applied: boolean;
-    error: string
+    loading: boolean;
+    error: string;
   }>>({});
+
   const [gasFee, setGasFee] = useState(0);
   const [estimatedTax, setEstimatedTax] = useState(0);
   const [showFeeBreakdown, setShowFeeBreakdown] = useState(false);
 
   const router = useRouter();
 
-  // Calculate real-time totals with per-item discounts
-  const { subtotal, totalDiscount, totalWithDiscount, totalWithGas, grandTotal } = useMemo(() => {
-    const subtotal = cartState.items.reduce((sum, item) => {
-      return sum + (parseFloat(item.price.fiat) * item.quantity);
+  // Initialize promo inputs from cart state
+  useEffect(() => {
+    if (cartState.items.length > 0) {
+      setPromoCodeInputs(prev => {
+        const next = { ...prev };
+        cartState.items.forEach(item => {
+          // If item has a promo code applied but no input state, set it
+          // We don't have the code string itself, so we can't pre-fill it for display easily
+          // unless we store it. For now, we just rely on the 'applied' state in UI.
+          if (!next[item.id]) {
+            next[item.id] = { code: '', loading: false, error: '' };
+          }
+        });
+        return next;
+      });
+    }
+  }, [cartState.items]);
+
+  // Derived totals from cartState
+  // cartService now handles discount calculations in totals
+  const { subtotal, totalDiscount, grandTotal } = useMemo(() => {
+    // Parse subtotal from string to float
+    const subtotalVal = parseFloat(cartState.totals.subtotal.fiat);
+
+    // Calculate total discount by summing up item discounts
+    const totalDiscountVal = cartState.items.reduce((sum, item) => {
+      return sum + (parseFloat(item.appliedDiscount || '0'));
     }, 0);
 
-    // Calculate total discount from all items
-    const totalDiscount = cartState.items.reduce((sum, item) => {
-      const itemPromo = itemPromoCodes[item.id];
-      if (itemPromo?.applied) {
-        if (itemPromo.calculatedAmount !== undefined) {
-          return sum + itemPromo.calculatedAmount;
-        }
-        const itemTotal = parseFloat(item.price.fiat) * item.quantity;
-        return sum + (itemTotal * itemPromo.discount / 100);
-      }
-      return sum;
-    }, 0);
-
-    const totalWithDiscount = subtotal - totalDiscount;
-    const totalWithGas = totalWithDiscount + gasFee; // Note: gasFee is separate from tax
-    const grandTotal = totalWithGas + estimatedTax;
+    const totalWithGas = subtotalVal + gasFee;
+    const grandTotalVal = totalWithGas + (typeof estimatedTax === 'number' ? estimatedTax : 0);
 
     return {
-      subtotal,
-      totalDiscount,
-      totalWithDiscount,
-      totalWithGas,
-      grandTotal
+      subtotal: subtotalVal + totalDiscountVal, // Subtotal should be pre-discount
+      totalDiscount: totalDiscountVal,
+      grandTotal: grandTotalVal
     };
-  }, [cartState.items, itemPromoCodes, gasFee, estimatedTax]);
+  }, [cartState, gasFee, estimatedTax]);
 
   // Calculate tax when profile or cart items change
   useEffect(() => {
@@ -107,7 +112,8 @@ const CartPage: React.FC = () => {
           price: parseFloat(item.price.fiat),
           quantity: item.quantity,
           isDigital: item.isDigital,
-          isTaxExempt: false
+          isTaxExempt: false,
+          discount: parseFloat(item.appliedDiscount || '0')
         }));
 
         const address = {
@@ -133,8 +139,8 @@ const CartPage: React.FC = () => {
     calculateCartTax();
   }, [profile, cartState.items]);
 
+  // Load cart logic remains the same...
   useEffect(() => {
-    // Load cart items
     const loadCart = async () => {
       const state = await cartService.getCartState();
       setCartState(state);
@@ -142,7 +148,6 @@ const CartPage: React.FC = () => {
 
     loadCart();
 
-    // Subscribe to cart changes
     const unsubscribe = cartService.subscribe((state) => {
       setCartState(state);
     });
@@ -173,76 +178,57 @@ const CartPage: React.FC = () => {
   };
 
   const handleApplyPromoCode = async (itemId: string) => {
-    const item = cartState.items.find(i => i.id === itemId);
-    const itemPromo = itemPromoCodes[itemId] || { code: '', discount: 0, applied: false, error: '' };
+    const inputState = promoCodeInputs[itemId];
 
-    if (!itemPromo.code.trim()) {
-      setItemPromoCodes(prev => ({
+    if (!inputState?.code?.trim()) {
+      setPromoCodeInputs(prev => ({
         ...prev,
         [itemId]: { ...prev[itemId], error: 'Please enter a promo code' }
       }));
       return;
     }
 
-    // Clear previous errors
-    setItemPromoCodes(prev => ({
+    setPromoCodeInputs(prev => ({
       ...prev,
-      [itemId]: { ...prev[itemId], error: '' }
+      [itemId]: { ...prev[itemId], loading: true, error: '' }
     }));
 
     try {
-      const response = await fetch('/api/marketplace/promo-codes/verify', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          code: itemPromo.code,
-          sellerId: item?.seller.id,
-          productId: itemId,
-          price: parseFloat(item?.price.fiat || '0') * (item?.quantity || 1)
-        }),
-      });
+      await cartService.applyPromoCode(itemId, inputState.code);
 
-      const result = await response.json();
-
-      if (result.success && result.data.isValid) {
-        setItemPromoCodes(prev => ({
-          ...prev,
-          [itemId]: {
-            code: itemPromo.code.toUpperCase(),
-            discount: result.data.promoCode.discountValue,
-            calculatedAmount: result.data.promoCode.calculatedDiscount,
-            type: result.data.promoCode.discountType,
-            applied: true,
-            error: ''
-          }
-        }));
-      } else {
-        setItemPromoCodes(prev => ({
-          ...prev,
-          [itemId]: { ...prev[itemId], error: result.data?.error || 'Invalid promo code', applied: false }
-        }));
-      }
-    } catch (error) {
-      setItemPromoCodes(prev => ({
+      setPromoCodeInputs(prev => ({
         ...prev,
-        [itemId]: { ...prev[itemId], error: 'Error validating code', applied: false }
+        [itemId]: { ...prev[itemId], loading: false, error: '' }
+      }));
+    } catch (error: any) {
+      setPromoCodeInputs(prev => ({
+        ...prev,
+        [itemId]: {
+          ...prev[itemId],
+          loading: false,
+          error: error.message || 'Failed to apply promo code'
+        }
       }));
     }
   };
 
-  const handleRemovePromoCode = (itemId: string) => {
-    setItemPromoCodes(prev => ({
-      ...prev,
-      [itemId]: { code: '', discount: 0, applied: false, error: '' }
-    }));
+  const handleRemovePromoCode = async (itemId: string) => {
+    try {
+      await cartService.removePromoCode(itemId);
+      // Clear input on remove
+      setPromoCodeInputs(prev => ({
+        ...prev,
+        [itemId]: { ...prev[itemId], code: '', error: '' }
+      }));
+    } catch (error) {
+      console.error('Failed to remove promo code:', error);
+    }
   };
 
   const handlePromoCodeChange = (itemId: string, value: string) => {
-    setItemPromoCodes(prev => ({
+    setPromoCodeInputs(prev => ({
       ...prev,
-      [itemId]: { ...prev[itemId], code: value, error: '' }
+      [itemId]: { ...prev[itemId] || { loading: false, error: '' }, code: value, error: '' }
     }));
   };
 
@@ -307,15 +293,11 @@ const CartPage: React.FC = () => {
                 <div className="bg-white/10 backdrop-blur-sm rounded-2xl overflow-hidden border border-white/20">
                   <div className="divide-y divide-white/10">
                     {cartState.items.map((item) => {
-                      const itemPromo = itemPromoCodes[item.id] || { code: '', discount: 0, applied: false, error: '' };
+                      const inputState = promoCodeInputs[item.id] || { code: '', loading: false, error: '' };
                       const itemTotal = parseFloat(item.price.fiat) * item.quantity;
-                      let itemDiscount = 0;
-                      if (itemPromo.applied) {
-                        itemDiscount = itemPromo.calculatedAmount !== undefined
-                          ? itemPromo.calculatedAmount
-                          : (itemTotal * itemPromo.discount / 100);
-                      }
+                      const itemDiscount = parseFloat(item.appliedDiscount || '0');
                       const itemFinalPrice = itemTotal - itemDiscount;
+                      const isPromoApplied = !!item.appliedPromoCodeId;
 
                       return (
                         <div key={item.id} className="p-6 flex flex-col gap-4">
@@ -386,9 +368,9 @@ const CartPage: React.FC = () => {
                                   </div>
                                   <div className="text-sm text-white/60">
                                     {item.price.fiatSymbol}{parseFloat(item.price.fiat).toFixed(2)} × {item.quantity}
-                                    {itemPromo.applied && (
+                                    {isPromoApplied && (
                                       <span className="text-green-400 ml-2">
-                                        (-{itemPromo.type === 'fixed_amount' ? '$' + itemPromo.discount : itemPromo.discount + '%'})
+                                        (-{item.price.fiatSymbol}{itemDiscount.toFixed(2)})
                                       </span>
                                     )}
                                   </div>
@@ -406,18 +388,19 @@ const CartPage: React.FC = () => {
                             <div className="flex gap-2">
                               <input
                                 type="text"
-                                value={itemPromo.code}
+                                value={inputState.code}
                                 onChange={(e) => handlePromoCodeChange(item.id, e.target.value)}
-                                placeholder="Enter promo code"
-                                disabled={itemPromo.applied}
+                                placeholder={isPromoApplied ? "Promo code applied" : "Enter promo code"}
+                                disabled={isPromoApplied || inputState.loading}
                                 className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                               />
-                              {!itemPromo.applied ? (
+                              {!isPromoApplied ? (
                                 <button
                                   onClick={() => handleApplyPromoCode(item.id)}
-                                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
+                                  disabled={inputState.loading || !inputState.code}
+                                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium"
                                 >
-                                  Apply
+                                  {inputState.loading ? 'Applying...' : 'Apply'}
                                 </button>
                               ) : (
                                 <button
@@ -428,10 +411,10 @@ const CartPage: React.FC = () => {
                                 </button>
                               )}
                             </div>
-                            {itemPromo.error && (
-                              <p className="text-red-400 text-xs mt-2">{itemPromo.error}</p>
+                            {inputState.error && (
+                              <p className="text-red-400 text-xs mt-2">{inputState.error}</p>
                             )}
-                            {itemPromo.applied && (
+                            {isPromoApplied && (
                               <p className="text-green-400 text-xs mt-2 flex items-center gap-1">
                                 <CheckCircle size={12} />
                                 Promo code applied! You save {item.price.fiatSymbol}{itemDiscount.toFixed(2)}

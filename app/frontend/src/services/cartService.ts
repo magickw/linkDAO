@@ -7,7 +7,6 @@ import { enhancedAuthService } from './enhancedAuthService';
 
 export interface CartItem {
   id: string;
-  cartItemId?: string; // Backend cart item ID for updates/deletes
   title: string;
   description: string;
   image: string;
@@ -42,6 +41,9 @@ export interface CartItem {
     safetyScore: number;
   };
   addedAt: Date;
+  cartItemId?: string; // For backend reference
+  appliedPromoCodeId?: string;
+  appliedDiscount?: string;
 }
 
 export interface CartState {
@@ -77,6 +79,8 @@ export interface CartActions {
   clearCart: () => void;
   getItem: (itemId: string) => CartItem | undefined;
   isInCart: (itemId: string) => boolean;
+  applyPromoCode: (itemId: string, code: string) => Promise<void>;
+  removePromoCode: (itemId: string) => Promise<void>;
 }
 
 class CartService {
@@ -340,6 +344,16 @@ class CartService {
         const shippingCost = parseFloat(String(item.shipping.cost)) || 0;
         shippingCrypto += shippingCost;
         shippingFiat += shippingCost * 2400; // Rough ETH to USD conversion
+      }
+    });
+
+    // Apply item-level discounts
+    items.forEach(item => {
+      if (item.appliedDiscount) {
+        const discount = parseFloat(item.appliedDiscount);
+        subtotalFiat = Math.max(0, subtotalFiat - discount);
+        // Approx conversion for crypto discount (using fixed rate for now)
+        subtotalCrypto = Math.max(0, subtotalCrypto - (discount / 2400));
       }
     });
 
@@ -762,6 +776,94 @@ class CartService {
     }
   }
 
+  // Apply promo code to item
+  async applyPromoCode(itemId: string, code: string): Promise<void> {
+    const currentState = await this.getCartState();
+    const item = currentState.items.find(i => i.id === itemId);
+
+    if (!item) return;
+
+    // Optimistic update
+    // Note: We can't calculate the exact discount locally easily without duplicating logic
+    // So we'll rely on the backend response to update the state correctly via getCartFromBackend
+
+    if (this.isAuthenticated && item.cartItemId) {
+      try {
+        await this.applyPromoCodeToBackend(item.cartItemId, code);
+        // Refresh cart from backend to get the applied discount
+        const updatedCart = await this.getCartFromBackend();
+        if (updatedCart) {
+          await this.saveCartState(updatedCart);
+          this.notifyListeners(updatedCart);
+        }
+      } catch (error) {
+        console.error('Failed to apply promo code:', error);
+        throw error;
+      }
+    } else {
+      console.warn('Identifying local item for promo not supported yet without backend');
+    }
+  }
+
+  // Remove promo code from item
+  async removePromoCode(itemId: string): Promise<void> {
+    const currentState = await this.getCartState();
+    const item = currentState.items.find(i => i.id === itemId);
+
+    if (!item) return;
+
+    if (this.isAuthenticated && item.cartItemId) {
+      try {
+        await this.removePromoCodeFromBackend(item.cartItemId);
+        // Refresh cart
+        const updatedCart = await this.getCartFromBackend();
+        if (updatedCart) {
+          await this.saveCartState(updatedCart);
+          this.notifyListeners(updatedCart);
+        }
+      } catch (error) {
+        console.error('Failed to remove promo code:', error);
+        throw error;
+      }
+    }
+  }
+
+  private async applyPromoCodeToBackend(cartItemId: string, code: string): Promise<void> {
+    try {
+      const headers = await this.getAuthHeaders();
+      const response = await fetch(`${this.baseURL}/api/cart/items/${cartItemId}/promo`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ code }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Error applying promo code to backend:', error);
+      throw error;
+    }
+  }
+
+  private async removePromoCodeFromBackend(cartItemId: string): Promise<void> {
+    try {
+      const headers = await this.getAuthHeaders();
+      const response = await fetch(`${this.baseURL}/api/cart/items/${cartItemId}/promo`, {
+        method: 'DELETE',
+        headers,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Error removing promo code from backend:', error);
+      throw error;
+    }
+  }
+
   private async clearBackendCart(): Promise<void> {
     try {
       const headers = await this.getAuthHeaders();
@@ -835,7 +937,7 @@ class CartService {
         const localItem = merged[existingIndex];
         const localTime = new Date(localItem.addedAt).getTime();
         const backendTime = new Date(backendItem.addedAt).getTime();
-        
+
         if (backendTime > localTime) {
           // Backend item is more recent, use its data but keep local quantity if higher
           merged[existingIndex] = {
@@ -968,7 +1070,7 @@ class CartService {
       let lastKnownToken = this.authToken;
       setInterval(() => {
         const currentToken = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token') || sessionStorage.getItem('token') || sessionStorage.getItem('authToken');
-        
+
         // Only check auth status if token actually changed
         if (currentToken !== lastKnownToken) {
           lastKnownToken = currentToken;

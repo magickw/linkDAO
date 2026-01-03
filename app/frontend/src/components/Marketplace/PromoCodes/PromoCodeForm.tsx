@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { CreatePromoCodeInput } from '../../../services/promoCodeService';
 import { Button } from '../../../design-system';
 import { useToast } from '../../../context/ToastContext';
+import { CalendarIcon } from '@heroicons/react/24/outline';
 
 interface PromoCodeFormProps {
     sellerId: string;
@@ -103,22 +104,32 @@ export const PromoCodeForm: React.FC<PromoCodeFormProps> = ({
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">Start Date</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                        <CalendarIcon className="h-4 w-4 inline mr-1" />
+                        Start Date
+                    </label>
                     <input
                         type="date"
-                        value={formData.startDate}
+                        value={formData.startDate || ''}
                         onChange={(e) => handleChange('startDate', e.target.value)}
+                        min={new Date().toISOString().split('T')[0]}
                         className={inputClasses}
+                        onClick={(e) => (e.target as HTMLInputElement).showPicker()}
                     />
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">End Date</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                        <CalendarIcon className="h-4 w-4 inline mr-1" />
+                        End Date
+                    </label>
                     <input
                         type="date"
-                        value={formData.endDate}
+                        value={formData.endDate || ''}
                         onChange={(e) => handleChange('endDate', e.target.value)}
+                        min={formData.startDate || new Date().toISOString().split('T')[0]}
                         className={inputClasses}
+                        onClick={(e) => (e.target as HTMLInputElement).showPicker()}
                     />
                 </div>
 

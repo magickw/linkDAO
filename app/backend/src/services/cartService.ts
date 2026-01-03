@@ -14,6 +14,8 @@ export interface CartItem {
   metadata?: any;
   createdAt: Date;
   updatedAt: Date;
+  appliedPromoCodeId?: string | null;
+  appliedDiscount?: string;
   product?: {
     id: string;
     title: string;
@@ -78,7 +80,7 @@ export class CartService {
             metadata: JSON.stringify({}),
           })
           .returning();
-        
+
         cart = newCart;
       }
 
@@ -339,6 +341,8 @@ export class CartService {
         metadata: item.cartItem.metadata ? JSON.parse(item.cartItem.metadata) : {},
         createdAt: item.cartItem.createdAt,
         updatedAt: item.cartItem.updatedAt,
+        appliedPromoCodeId: item.cartItem.appliedPromoCodeId,
+        appliedDiscount: item.cartItem.appliedDiscount,
         product: {
           id: item.product.id,
           title: item.product.title,
@@ -361,10 +365,21 @@ export class CartService {
    */
   private formatCart(cartData: any, items: CartItem[]): Cart {
     const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-    
+
+    // Calculate total amount (assuming all items are in the same currency for simplicity)
     // Calculate total amount (assuming all items are in the same currency for simplicity)
     const totalAmount = items.reduce((sum, item) => {
-      return sum + (parseFloat(item.priceAtTime) * item.quantity);
+      const itemPrice = parseFloat(item.priceAtTime);
+      const quantity = item.quantity;
+      const discount = parseFloat(item.appliedDiscount || '0');
+
+      // Calculate item subtotal
+      const itemSubtotal = itemPrice * quantity;
+
+      // Subtract discount (ensure we don't go below 0)
+      const discountedSubtotal = Math.max(0, itemSubtotal - discount);
+
+      return sum + discountedSubtotal;
     }, 0);
 
     return {
@@ -405,7 +420,7 @@ export class CartService {
       for (const localItem of localCartItems) {
         try {
           const existingItem = existingItemsMap.get(localItem.productId);
-          
+
           if (existingItem) {
             // Update existing item instead of adding duplicate
             await this.updateItem(user, existingItem.id, { quantity: localItem.quantity });
@@ -423,6 +438,121 @@ export class CartService {
       return this.getOrCreateCart(user);
     } catch (error) {
       safeLogger.error('Error syncing cart:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Apply promo code to a cart item
+   */
+  async applyPromoCode(user: AuthenticatedUser, itemId: string, promoCodeStr: string): Promise<Cart> {
+    if (!db) {
+      throw new Error('Database connection not available');
+    }
+
+    try {
+      // 1. Get the cart item
+      const item = await db
+        .select({
+          cartItem: cartItems,
+          cart: carts,
+          product: products
+        })
+        .from(cartItems)
+        .innerJoin(carts, eq(cartItems.cartId, carts.id))
+        .innerJoin(products, eq(cartItems.productId, products.id))
+        .where(
+          and(
+            eq(cartItems.id, itemId),
+            eq(carts.userId, user.id),
+            eq(carts.status, 'active')
+          )
+        )
+        .limit(1);
+
+      if (item.length === 0) {
+        throw new Error('Cart item not found');
+      }
+
+      const { cartItem, product } = item[0];
+
+      // 2. Verify the promo code using the service
+      // We need to import promoCodeService dynamically or checking imports
+      const { promoCodeService } = require('./promoCodeService');
+      const promoResult = await promoCodeService.verifyPromoCode(promoCodeStr, {
+        sellerId: product.sellerId,
+        productId: product.id,
+        orderAmount: parseFloat(cartItem.priceAtTime) * cartItem.quantity
+      });
+
+      if (!promoResult.isValid) {
+        throw new Error(promoResult.error || 'Invalid promo code');
+      }
+
+      // 3. Update the cart item with the promo code and applied discount
+      const discountAmount = promoResult.discountAmount || 0;
+
+      await db
+        .update(cartItems)
+        .set({
+          appliedPromoCodeId: promoResult.promoCode.id,
+          appliedDiscount: discountAmount.toString(),
+          updatedAt: new Date()
+        })
+        .where(eq(cartItems.id, itemId));
+
+      // 4. Return updated cart
+      return this.getOrCreateCart(user);
+    } catch (error) {
+      safeLogger.error('Error applying promo code:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Remove promo code from a cart item
+   */
+  async removePromoCode(user: AuthenticatedUser, itemId: string): Promise<Cart> {
+    if (!db) {
+      throw new Error('Database connection not available');
+    }
+
+    try {
+      // 1. Verify item belongs to user
+      const item = await db
+        .select({
+          cartItem: cartItems,
+          cart: carts
+        })
+        .from(cartItems)
+        .innerJoin(carts, eq(cartItems.cartId, carts.id))
+        .where(
+          and(
+            eq(cartItems.id, itemId),
+            eq(carts.userId, user.id),
+            eq(carts.status, 'active')
+          )
+        )
+        .limit(1);
+
+      if (item.length === 0) {
+        throw new Error('Cart item not found');
+      }
+
+      // 2. Remove promo code/discount from item
+      await db
+        .update(cartItems)
+        .set({
+          appliedPromoCodeId: null,
+          appliedDiscount: '0',
+          updatedAt: new Date()
+        })
+        .where(eq(cartItems.id, itemId));
+
+      // 3. Return updated cart
+      return this.getOrCreateCart(user);
+    } catch (error) {
+      safeLogger.error('Error removing promo code:', error);
       throw error;
     }
   }

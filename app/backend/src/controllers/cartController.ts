@@ -64,7 +64,7 @@ export class CartController {
       successResponse(res, cart, 201);
     } catch (error) {
       safeLogger.error('Error adding item to cart:', error);
-      
+
       if (error instanceof Error) {
         if (error.message === 'Product not found') {
           errorResponse(res, 'PRODUCT_NOT_FOUND', 'Product not found', 404);
@@ -117,7 +117,7 @@ export class CartController {
       successResponse(res, cart);
     } catch (error) {
       safeLogger.error('Error updating cart item:', error);
-      
+
       if (error instanceof Error) {
         if (error.message === 'Cart item not found') {
           errorResponse(res, 'ITEM_NOT_FOUND', 'Cart item not found', 404);
@@ -160,7 +160,7 @@ export class CartController {
       successResponse(res, cart);
     } catch (error) {
       safeLogger.error('Error removing cart item:', error);
-      
+
       if (error instanceof Error) {
         if (error.message === 'Cart item not found') {
           errorResponse(res, 'ITEM_NOT_FOUND', 'Cart item not found', 404);
@@ -187,7 +187,7 @@ export class CartController {
       successResponse(res, cart);
     } catch (error) {
       safeLogger.error('Error clearing cart:', error);
-      
+
       if (error instanceof Error) {
         if (error.message === 'Cart not found') {
           errorResponse(res, 'CART_NOT_FOUND', 'Cart not found', 404);
@@ -236,6 +236,88 @@ export class CartController {
     } catch (error) {
       safeLogger.error('Error syncing cart:', error);
       errorResponse(res, 'CART_ERROR', 'Failed to sync cart', 500);
+    }
+  }
+
+  /**
+   * Apply promo code to cart item
+   * POST /api/cart/items/:id/promo
+   */
+  async applyPromoCode(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        errorResponse(res, 'UNAUTHORIZED', 'Authentication required', 401);
+        return;
+      }
+
+      const { id } = req.params;
+      const { code } = req.body;
+
+      if (!id || !code) {
+        validationErrorResponse(res, [
+          { field: 'id', message: 'Item ID is required' },
+          { field: 'code', message: 'Promo code is required' }
+        ]);
+        return;
+      }
+
+      const cart = await cartService.applyPromoCode(req.user, id, code);
+      successResponse(res, cart);
+    } catch (error) {
+      safeLogger.error('Error applying promo code:', error);
+
+      if (error instanceof Error) {
+        if (error.message === 'Cart item not found') {
+          errorResponse(res, 'ITEM_NOT_FOUND', 'Cart item not found', 404);
+          return;
+        }
+        if (error.message === 'Invalid promo code') {
+          errorResponse(res, 'INVALID_PROMO', 'Invalid promo code', 400);
+          return;
+        }
+        if (error.message.includes('Promo code not applicable') || error.message.includes('Minimum order amount')) {
+          errorResponse(res, 'INVALID_PROMO', error.message, 400);
+          return;
+        }
+      }
+
+      errorResponse(res, 'CART_ERROR', 'Failed to apply promo code', 500);
+    }
+  }
+
+  /**
+   * Remove promo code from cart item
+   * DELETE /api/cart/items/:id/promo
+   */
+  async removePromoCode(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        errorResponse(res, 'UNAUTHORIZED', 'Authentication required', 401);
+        return;
+      }
+
+      const { id } = req.params;
+
+      if (!id) {
+        validationErrorResponse(res, [
+          { field: 'id', message: 'Item ID is required' }
+        ]);
+        return;
+      }
+
+      const cart = await cartService.removePromoCode(req.user, id);
+      successResponse(res, cart);
+    } catch (error) {
+      safeLogger.error('Error removing promo code:', error);
+
+      if (error instanceof Error) {
+        if (error.message === 'Cart item not found') {
+          errorResponse(res, 'ITEM_NOT_FOUND', 'Cart item not found', 404);
+          return;
+        }
+      }
+
+      errorResponse(res, 'CART_ERROR', 'Failed to remove promo code', 500);
     }
   }
 }

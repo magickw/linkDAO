@@ -681,98 +681,157 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
 
 
-  const renderOrderSummary = () => (
-    <GlassPanel variant="secondary" className="p-6">
-      <h3 className="text-lg font-semibold text-white mb-4">Order Summary</h3>
-      <div className="space-y-4">
-        {cartState.items.map((item) => (
-          <div key={item.id} className="flex items-center gap-4">
-            <Link href={`/marketplace/product/${item.id}`}>
-              <a className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity">
-                <ProductThumbnail
-                  item={{
-                    id: item.id,
-                    title: item.title,
-                    image: item.image,
-                    category: item.category
-                  }}
-                  size="medium"
-                  fallbackType="letter"
-                  className="flex-shrink-0"
-                />
-              </a>
-            </Link>
-            <div className="flex-1 min-w-0">
-              <Link href={`/marketplace/product/${item.id}`}>
-                <a className="hover:text-blue-400 transition-colors">
-                  <h4 className="font-medium text-white truncate">{item.title}</h4>
-                </a>
-              </Link>
-              <p className="text-white/70 text-sm">Qty: {item.quantity}</p>
-              {item.seller && (
-                <p className="text-white/60 text-xs">by {item.seller.name}</p>
-              )}
-            </div>
-            <div className="text-right flex-shrink-0">
-              <p className="font-medium text-white">${item.price.fiat}</p>
-              {item.quantity > 1 && (
-                <p className="text-white/60 text-xs">
-                  ${(parseFloat(item.price.fiat) * item.quantity).toFixed(2)} total
-                </p>
-              )}
-            </div>
-          </div>
-        ))}
+  const renderOrderSummary = () => {
+    // Calculate total discount from items
+    const totalDiscount = cartState.items.reduce((sum, item) => {
+      return sum + (parseFloat(item.appliedDiscount || '0'));
+    }, 0);
 
-        <hr className="border-white/20" />
+    return (
+      <GlassPanel variant="secondary" className="p-6">
+        <h3 className="text-lg font-semibold text-white mb-4">Order Summary</h3>
+        <div className="space-y-4">
+          {cartState.items.map((item) => {
+            const itemTotal = parseFloat(item.price.fiat) * item.quantity;
+            const itemDiscount = parseFloat(item.appliedDiscount || '0');
+            const itemFinalPrice = itemTotal - itemDiscount;
 
-        <div className="space-y-2">
-          <div className="flex justify-between text-white/70">
-            <span>Subtotal ({cartState.totals.itemCount} items)</span>
-            <span>${cartState.totals.subtotal.fiat}</span>
-          </div>
-          {parseFloat(cartState.totals.shipping.fiat) > 0 && (
-            <div className="flex justify-between text-white/70">
-              <span>Shipping</span>
-              <span>${cartState.totals.shipping.fiat}</span>
-            </div>
-          )}
-          <div className="flex justify-between text-white/70">
-            <span>Platform Fee (2.5%)</span>
-            <span>${(parseFloat(cartState.totals.total.fiat) * 0.025).toFixed(2)}</span>
-          </div>
-
-          {taxCalculation && taxCalculation.taxAmount > 0 && (
-            <div className="flex justify-between text-white/70">
-              <span>Estimated Tax ({((taxCalculation.taxRate || 0) * 100).toFixed(1)}%)</span>
-              <span>${taxCalculation.taxAmount.toFixed(2)}</span>
-            </div>
-          )}
+            return (
+              <div key={item.id} className="flex items-center gap-4">
+                <Link href={`/marketplace/product/${item.id}`}>
+                  <a className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity">
+                    <ProductThumbnail
+                      item={{
+                        id: item.id,
+                        title: item.title,
+                        image: item.image,
+                        category: item.category
+                      }}
+                      size="medium"
+                      fallbackType="letter"
+                      className="flex-shrink-0"
+                    />
+                  </a>
+                </Link>
+                <div className="flex-1 min-w-0">
+                  <Link href={`/marketplace/product/${item.id}`}>
+                    <a className="hover:text-blue-400 transition-colors">
+                      <h4 className="font-medium text-white truncate">{item.title}</h4>
+                    </a>
+                  </Link>
+                  <p className="text-white/70 text-sm">Qty: {item.quantity}</p>
+                  {item.seller && (
+                    <p className="text-white/60 text-xs">by {item.seller.name}</p>
+                  )}
+                  {itemDiscount > 0 && (
+                    <p className="text-green-400 text-xs">
+                      Promo applied: -${itemDiscount.toFixed(2)}
+                    </p>
+                  )}
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="font-medium text-white">${itemFinalPrice.toFixed(2)}</p>
+                  {item.quantity > 1 && (
+                    <p className="text-white/60 text-xs">
+                      ${(parseFloat(item.price.fiat) * item.quantity).toFixed(2)} total
+                    </p>
+                  )}
+                  {itemDiscount > 0 && (
+                    <p className="text-white/40 text-xs line-through">
+                      ${itemTotal.toFixed(2)}
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
 
           <hr className="border-white/20" />
-          <div className="flex justify-between text-white font-semibold text-lg">
-            <span>Total</span>
-            <div className="text-right">
-              <div>
-                ${(parseFloat(cartState.totals.total.fiat) + (taxCalculation?.taxAmount || 0)).toFixed(2)}
+
+          <div className="space-y-2">
+            <div className="flex justify-between text-white/70">
+              <span>Subtotal ({cartState.totals.itemCount} items)</span>
+              {/* Subtotal in cartState is already calculated? No, cartState.totals.subtotal usually implies pre-discount in many systems, 
+                  but here I need to be careful. 
+                  In cartService.ts, calculateTotals:
+                  subtotalFiat += itemTotalFiat;
+                  subtotalFiat -= discountFiat; 
+                  So cartState.totals.subtotal.fiat IS the discounted subtotal.
+                  
+                  Actually, usually "Subtotal" SHOULD be the gross amount before discounts.
+                  Users expect:
+                  Subtotal: $100
+                  Discount: -$10
+                  Total: $90
+                  
+                  If cartState sends "Subtotal" as $90, then distincting "Discount" is harder. 
+                  Let's re-read cartService.ts to be sure.
+                  
+                  In cartService.ts:
+                   let subtotalFiat = 0;
+                   // ...
+                   const itemTotalFiat = price.times(item.quantity);
+                   // ...
+                   const discountFiat = new BigNumber(item.appliedDiscount || 0);
+                   
+                   subtotalFiat = subtotalFiat.plus(itemTotalFiat).minus(discountFiat);
+                   
+                  So yes, the `subtotal` returned by backend IS the Net Subtotal.
+                  To display the Gross Subtotal, I need to add back the discount.
+              */}
+              <span>${(parseFloat(cartState.totals.subtotal.fiat) + totalDiscount).toFixed(2)}</span>
+            </div>
+
+            {totalDiscount > 0 && (
+              <div className="flex justify-between text-green-400">
+                <span>Total Discount</span>
+                <span>-${totalDiscount.toFixed(2)}</span>
               </div>
-              <div className="text-sm text-white/60 font-normal">
-                ≈ {cartState.totals.total.crypto} {cartState.totals.total.cryptoSymbol}
+            )}
+
+            {parseFloat(cartState.totals.shipping.fiat) > 0 && (
+              <div className="flex justify-between text-white/70">
+                <span>Shipping</span>
+                <span>${cartState.totals.shipping.fiat}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-white/70">
+              <span>Platform Fee (2.5%)</span>
+              <span>${(parseFloat(cartState.totals.total.fiat) * 0.025).toFixed(2)}</span>
+            </div>
+
+            {taxCalculation && taxCalculation.taxAmount > 0 && (
+              <div className="flex justify-between text-white/70">
+                <span>Estimated Tax ({((taxCalculation.taxRate || 0) * 100).toFixed(1)}%)</span>
+                <span>${taxCalculation.taxAmount.toFixed(2)}</span>
+              </div>
+            )}
+
+            <hr className="border-white/20" />
+            <div className="flex justify-between text-white font-semibold text-lg">
+              <span>Total</span>
+              <div className="text-right">
+                <div>
+                  ${(parseFloat(cartState.totals.total.fiat) + (taxCalculation?.taxAmount || 0)).toFixed(2)}
+                </div>
+                <div className="text-sm text-white/60 font-normal">
+                  ≈ {cartState.totals.total.crypto} {cartState.totals.total.cryptoSymbol}
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Trust indicators */}
-        <div className="mt-4 pt-4 border-t border-white/20">
-          <div className="flex items-center gap-2 text-xs text-white/60">
-            <Shield className="w-4 h-4 text-green-400" />
-            <span>Escrow protected • Secure payment</span>
+          {/* Trust indicators */}
+          <div className="mt-4 pt-4 border-t border-white/20">
+            <div className="flex items-center gap-2 text-xs text-white/60">
+              <Shield className="w-4 h-4 text-green-400" />
+              <span>Escrow protected • Secure payment</span>
+            </div>
           </div>
         </div>
-      </div>
-    </GlassPanel>
-  );
+      </GlassPanel>
+    );
+  };
 
   const renderPaymentMethodSelection = () => {
     if (!prioritizationResult) return null;

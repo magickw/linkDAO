@@ -88,12 +88,30 @@ export default async function handler(
       });
     }
 
-    // Check amount limits
-    const amountInCents = toCents(amount);
+    // Smart detection: Check if amount is already in cents (>= 100) or in dollars (< 100)
+    // This handles cases where the frontend might send cents instead of dollars
+    const amountInCents = amount >= 100 ? amount : toCents(amount);
+    const amountInDollars = amount >= 100 ? amount / 100 : amount;
+
+    console.log('Stripe PaymentIntent amount calculation:', {
+      receivedAmount: amount,
+      amountInDollars,
+      amountInCents,
+      assumedUnit: amount >= 100 ? 'cents' : 'dollars'
+    });
+
     if (amountInCents < STRIPE_CONFIG.limits.minAmount) {
+      console.error('Stripe minimum amount validation failed:', {
+        receivedAmount: amount,
+        amountInDollars,
+        amountInCents,
+        minimumRequired: STRIPE_CONFIG.limits.minAmount,
+        minimumInDollars: STRIPE_CONFIG.limits.minAmount / 100,
+        shortfall: STRIPE_CONFIG.limits.minAmount - amountInCents
+      });
       return res.status(400).json({
         error: 'Amount too low',
-        details: `Minimum amount is $${STRIPE_CONFIG.limits.minAmount / 100}`
+        details: `Payment amount ($${amountInDollars.toFixed(2)}) is below the Stripe minimum requirement of $${STRIPE_CONFIG.limits.minAmount / 100}`
       });
     }
 

@@ -22,7 +22,7 @@ router.get('/', cartController.getCart.bind(cartController));
  * @access Private
  * @body { productId: string, quantity: number }
  */
-router.post('/items', csrfProtection, 
+router.post('/items', csrfProtection,
   validateRequest({
     body: {
       productId: { type: 'string', required: true },
@@ -39,7 +39,7 @@ router.post('/items', csrfProtection,
  * @params { id: string }
  * @body { quantity: number }
  */
-router.put('/items/:id', csrfProtection, 
+router.put('/items/:id', csrfProtection,
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -57,7 +57,7 @@ router.put('/items/:id', csrfProtection,
  * @access Private
  * @params { id: string }
  */
-router.delete('/items/:id', csrfProtection, 
+router.delete('/items/:id', csrfProtection,
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -67,11 +67,45 @@ router.delete('/items/:id', csrfProtection,
 );
 
 /**
+ * @route POST /api/cart/items/:id/promo
+ * @desc Apply promo code to cart item
+ * @access Private
+ * @params { id: string }
+ * @body { code: string }
+ */
+router.post('/items/:id/promo', csrfProtection,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    },
+    body: {
+      code: { type: 'string', required: true }
+    }
+  }),
+  cartController.applyPromoCode.bind(cartController)
+);
+
+/**
+ * @route DELETE /api/cart/items/:id/promo
+ * @desc Remove promo code from cart item
+ * @access Private
+ * @params { id: string }
+ */
+router.delete('/items/:id/promo', csrfProtection,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    }
+  }),
+  cartController.removePromoCode.bind(cartController)
+);
+
+/**
  * @route DELETE /api/cart
  * @desc Clear cart
  * @access Private
  */
-router.delete('/', csrfProtection,  cartController.clearCart.bind(cartController));
+router.delete('/', csrfProtection, cartController.clearCart.bind(cartController));
 
 /**
  * @route POST /api/cart/sync
@@ -79,7 +113,7 @@ router.delete('/', csrfProtection,  cartController.clearCart.bind(cartController
  * @access Private
  * @body { items: Array<{ productId: string, quantity: number }> }
  */
-router.post('/sync', csrfProtection, 
+router.post('/sync', csrfProtection,
   validateRequest({
     body: {
       items: { type: 'array', required: true }

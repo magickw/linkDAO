@@ -4108,6 +4108,8 @@ export const cartItems = pgTable("cart_items", {
   quantity: integer("quantity").notNull(),
   priceAtTime: numeric("price_at_time", { precision: 20, scale: 8 }).notNull(),
   currency: varchar("currency", { length: 10 }).notNull(),
+  appliedPromoCodeId: uuid("applied_promo_code_id").references(() => promoCodes.id),
+  appliedDiscount: numeric("applied_discount", { precision: 20, scale: 8 }).default("0"),
   metadata: text("metadata"), // JSON additional data
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
