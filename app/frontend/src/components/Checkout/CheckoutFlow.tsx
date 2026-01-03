@@ -49,6 +49,7 @@ import { useToast } from '@/context/ToastContext';
 import { getNetworkName } from '@/config/escrowConfig';
 import { USDC_MAINNET, USDC_POLYGON, USDC_ARBITRUM, USDC_SEPOLIA, USDC_BASE, USDC_BASE_SEPOLIA } from '@/config/payment';
 import { TRANSACTION_HELPERS } from '@/config/networks';
+import { taxService, TaxCalculationResult } from '@/services/taxService';
 
 import { PaymentErrorModal } from '@/components/Payment/PaymentErrorModal';
 import { WalletConnectionPrompt } from '@/components/Payment/WalletConnectionPrompt';
@@ -96,6 +97,8 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
   const [paymentError, setPaymentError] = useState<PaymentErrorType | null>(null);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [useEscrow, setUseEscrow] = useState(true);
+  const [taxCalculation, setTaxCalculation] = useState<TaxCalculationResult | null>(null);
+  const [shippingAddress, setShippingAddress] = useState<any>(null);
 
   // Services
   const [checkoutService] = useState(() => {
@@ -265,6 +268,43 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       setError('Failed to load payment options. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const calculateOrderTax = async (address: any) => {
+    if (!address || !address.country) {
+      setTaxCalculation(null);
+      return;
+    }
+
+    try {
+      const items = cartState.items.map(item => ({
+        id: item.id,
+        name: item.product?.title || 'Product',
+        price: parseFloat(item.priceAtTime),
+        quantity: item.quantity,
+        isDigital: false,
+        isTaxExempt: false
+      }));
+
+      const shippingCost = 10; // Default shipping cost
+
+      const taxResult = await taxService.calculateTax(
+        items,
+        {
+          country: address.country,
+          state: address.state,
+          city: address.city,
+          postalCode: address.postalCode,
+          line1: address.addressLine1
+        },
+        shippingCost
+      );
+
+      setTaxCalculation(taxResult);
+    } catch (error) {
+      console.error('Failed to calculate tax:', error);
+      setTaxCalculation(null);
     }
   };
 
@@ -795,6 +835,8 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
             totalAmount={parseFloat(cartState.totals.total.fiat)}
             onConfirm={() => setCurrentStep('payment-details')}
             isProcessing={loading}
+            taxBreakdown={taxCalculation?.taxBreakdown}
+            taxRate={taxCalculation?.taxRate}
           />
         </div>
       </div>

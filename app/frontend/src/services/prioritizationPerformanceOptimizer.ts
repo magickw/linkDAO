@@ -98,10 +98,10 @@ export class PrioritizationPerformanceOptimizer {
 
     const promises = tasks.map(async (task) => {
       await semaphore.acquire();
-      
+
       try {
         const cacheKey = this.generateCostCacheKey(task.method, userContext, transactionAmount);
-        
+
         // Check cache first
         const cached = await intelligentCacheService.getCachedPrioritizationResult(cacheKey);
         if (cached) {
@@ -110,7 +110,7 @@ export class PrioritizationPerformanceOptimizer {
         }
 
         cacheMisses++;
-        
+
         // Calculate cost estimate
         const costEstimate = await this.calculateCostEstimate(
           task.method,
@@ -131,7 +131,7 @@ export class PrioritizationPerformanceOptimizer {
     });
 
     const taskResults = await Promise.all(promises);
-    
+
     // Filter out null results and collect valid estimates
     for (const result of taskResults) {
       if (result) {
@@ -163,7 +163,7 @@ export class PrioritizationPerformanceOptimizer {
     lazy: Promise<PrioritizedPaymentMethod[]>;
   }> {
     const finalConfig = { ...this.DEFAULT_LAZY_CONFIG, ...config };
-    
+
     // Separate critical and non-critical methods
     const criticalMethods = this.getCriticalMethods(methods);
     const nonCriticalMethods = this.getNonCriticalMethods(methods);
@@ -205,7 +205,7 @@ export class PrioritizationPerformanceOptimizer {
 
     // Calculate TTL based on result volatility
     const ttl = this.calculateResultCacheTTL(results);
-    
+
     await intelligentCacheService.cachePrioritizationResult(
       contextKey,
       cacheData,
@@ -224,10 +224,10 @@ export class PrioritizationPerformanceOptimizer {
     }>
   ): Promise<Array<PrioritizedPaymentMethod[]>> {
     const startTime = performance.now();
-    
+
     // Group similar requests for optimization
     const groupedRequests = this.groupSimilarRequests(requests);
-    
+
     // Process groups in parallel
     const results = await Promise.all(
       groupedRequests.map(group => this.processRequestGroup(group))
@@ -289,7 +289,7 @@ export class PrioritizationPerformanceOptimizer {
     );
 
     // Force garbage collection of task queue
-    this.taskQueue = this.taskQueue.filter(task => 
+    this.taskQueue = this.taskQueue.filter(task =>
       Date.now() - parseInt(task.id.split('_').pop() || '0') < 300000 // 5 minutes
     );
 
@@ -307,8 +307,16 @@ export class PrioritizationPerformanceOptimizer {
     // This would integrate with actual cost calculation services
     // For now, return a mock estimate
     const baseCost = transactionAmount;
-    const gasFee = method.type === PaymentMethodType.NATIVE_ETH ? 25 : 5;
-    
+    let gasFee = 5; // Default fallback
+
+    if (method.type === PaymentMethodType.NATIVE_ETH) {
+      gasFee = 25;
+    } else if (method.type === PaymentMethodType.FIAT_STRIPE) {
+      gasFee = 0;
+    } else if (method.type === PaymentMethodType.X402) {
+      gasFee = 0.1;
+    }
+
     return {
       totalCost: baseCost + gasFee,
       baseCost,
@@ -366,14 +374,14 @@ export class PrioritizationPerformanceOptimizer {
 
   private getCriticalMethods(methods: PaymentMethod[]): PaymentMethod[] {
     // Critical methods are those with high priority or user preference
-    return methods.filter(method => 
+    return methods.filter(method =>
       method.type === PaymentMethodType.STABLECOIN_USDC ||
       method.type === PaymentMethodType.FIAT_STRIPE
     );
   }
 
   private getNonCriticalMethods(methods: PaymentMethod[]): PaymentMethod[] {
-    return methods.filter(method => 
+    return methods.filter(method =>
       method.type !== PaymentMethodType.STABLECOIN_USDC &&
       method.type !== PaymentMethodType.FIAT_STRIPE
     );
@@ -385,7 +393,7 @@ export class PrioritizationPerformanceOptimizer {
   ): Promise<PrioritizedPaymentMethod[]> {
     // Process critical methods with high priority
     const results: PrioritizedPaymentMethod[] = [];
-    
+
     for (const method of methods) {
       const costEstimate = await this.calculateCostEstimate(method, userContext, 100);
       results.push({
@@ -409,13 +417,13 @@ export class PrioritizationPerformanceOptimizer {
   ): Promise<PrioritizedPaymentMethod[]> {
     // Process non-critical methods in batches
     const results: PrioritizedPaymentMethod[] = [];
-    
+
     for (let i = 0; i < methods.length; i += config.batchSize) {
       const batch = methods.slice(i, i + config.batchSize);
-      
+
       // Add small delay to avoid blocking critical operations
       await new Promise(resolve => setTimeout(resolve, 10));
-      
+
       const batchResults = await Promise.all(
         batch.map(async (method) => {
           const costEstimate = await this.calculateCostEstimate(method, userContext, 100);
@@ -430,7 +438,7 @@ export class PrioritizationPerformanceOptimizer {
           };
         })
       );
-      
+
       results.push(...batchResults);
     }
 
@@ -446,10 +454,10 @@ export class PrioritizationPerformanceOptimizer {
   ): Array<Array<typeof requests[0]>> {
     // Group requests by chain ID and similar transaction amounts
     const groups = new Map<string, typeof requests>();
-    
+
     for (const request of requests) {
       const groupKey = `${request.userContext.chainId}_${Math.round(request.transactionAmount / 100) * 100}`;
-      
+
       if (!groups.has(groupKey)) {
         groups.set(groupKey, []);
       }
@@ -520,11 +528,11 @@ export class PrioritizationPerformanceOptimizer {
 
   private calculateResultCacheTTL(results: PrioritizedPaymentMethod[]): number {
     // Calculate TTL based on result volatility
-    const hasVolatileMethods = results.some(result => 
+    const hasVolatileMethods = results.some(result =>
       result.method.type === PaymentMethodType.NATIVE_ETH
     );
 
-    const hasHighConfidence = results.every(result => 
+    const hasHighConfidence = results.every(result =>
       result.costEstimate.confidence > 0.8
     );
 
@@ -561,7 +569,7 @@ export class PrioritizationPerformanceOptimizer {
       this.performanceMetrics.concurrencyLevel,
       concurrency
     );
-    this.performanceMetrics.averageTaskDuration = 
+    this.performanceMetrics.averageTaskDuration =
       this.performanceMetrics.totalExecutionTime / Math.max(1, this.taskQueue.length);
   }
 

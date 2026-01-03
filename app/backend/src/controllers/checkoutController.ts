@@ -6,6 +6,7 @@ import { apiResponse } from '../utils/apiResponse';
 import { cartService } from '../services/cartService';
 import { OrderService } from '../services/orderService';
 import { StripePaymentService } from '../services/stripePaymentService';
+import { taxCalculationService, TaxableItem, Address } from '../services/taxCalculationService';
 import { db } from '../db';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -73,7 +74,7 @@ export class CheckoutController {
      */
     async createSession(req: AuthenticatedRequest, res: Response): Promise<void> {
         try {
-            const { items, userAddress } = req.body;
+            const { items, userAddress, shippingAddress, taxExemption } = req.body;
 
             // Validate items
             if (!items || !Array.isArray(items) || items.length === 0) {
@@ -87,7 +88,48 @@ export class CheckoutController {
             // Calculate totals
             const subtotal = items.reduce((sum: number, item: CartItem) => sum + (parseFloat(item.priceAtTime) * item.quantity), 0);
             const shipping = this.calculateShipping(items);
-            const tax = this.calculateTax(subtotal, shipping);
+            
+            // Calculate tax with proper service
+            let tax = 0;
+            let taxBreakdown: any[] = [];
+            
+            if (shippingAddress) {
+                try {
+                    const taxableItems: TaxableItem[] = items.map(item => ({
+                        id: item.id,
+                        name: item.product?.title || 'Product',
+                        price: parseFloat(item.priceAtTime),
+                        quantity: item.quantity,
+                        isDigital: false,
+                        isTaxExempt: false
+                    }));
+
+                    const address: Address = {
+                        country: shippingAddress.country,
+                        state: shippingAddress.state,
+                        city: shippingAddress.city,
+                        postalCode: shippingAddress.postalCode,
+                        line1: shippingAddress.addressLine1
+                    };
+
+                    const taxResult = await taxCalculationService.calculateTax(
+                        taxableItems,
+                        address,
+                        shipping,
+                        'USD',
+                        taxExemption
+                    );
+                    
+                    tax = taxResult.taxAmount;
+                    taxBreakdown = taxResult.taxBreakdown;
+                } catch (error) {
+                    safeLogger.error('Tax calculation failed, using fallback:', error);
+                    tax = this.calculateTax(items, shipping);
+                }
+            } else {
+                tax = await this.calculateTax(items, shipping);
+            }
+            
             const platformFee = subtotal * 0.025; // 2.5% platform fee
             const total = subtotal + shipping + tax + platformFee;
 
@@ -114,7 +156,10 @@ export class CheckoutController {
             // For now, we'll just return it and let frontend manage it
             safeLogger.info(`Checkout session created: ${sessionId} for user: ${buyerAddress || 'guest'}`);
 
-            res.status(201).json(apiResponse.success(session, 'Checkout session created successfully'));
+            res.status(201).json(apiResponse.success({
+                ...session,
+                taxBreakdown
+            }, 'Checkout session created successfully'));
         } catch (error) {
             safeLogger.error('Error creating checkout session:', error);
             res.status(500).json(apiResponse.error('Failed to create checkout session'));
@@ -318,6 +363,31 @@ export class CheckoutController {
     }
 
     /**
+     * Validate tax exemption certificate
+     * POST /api/checkout/validate-tax-exemption
+     */
+    async validateTaxExemption(req: AuthenticatedRequest, res: Response): Promise<void> {
+        try {
+            const { certificateId } = req.body;
+
+            if (!certificateId || certificateId.trim().length === 0) {
+                res.status(400).json(apiResponse.error('Certificate ID is required', 400));
+                return;
+            }
+
+            const isValid = await taxCalculationService.validateTaxExemption(certificateId);
+
+            res.status(200).json(apiResponse.success({
+                valid: isValid,
+                certificateId
+            }, isValid ? 'Tax exemption certificate is valid' : 'Invalid tax exemption certificate'));
+        } catch (error) {
+            safeLogger.error('Error validating tax exemption:', error);
+            res.status(500).json(apiResponse.error('Failed to validate tax exemption certificate'));
+        }
+    }
+
+    /**
      * Apply discount code
      * POST /api/checkout/discount
      */
@@ -367,9 +437,49 @@ export class CheckoutController {
         return totalWeight * 5; // $5 per item
     }
 
-    private calculateTax(subtotal: number, shipping: number): number {
-        // Simple tax calculation (8% sales tax)
-        return (subtotal + shipping) * 0.08;
+    private calculateTax(
+        items: CartItem[],
+        shipping: number,
+        shippingAddress?: ShippingAddress,
+        taxExemption?: any
+    ): number {
+        // Use tax calculation service if shipping address is provided
+        if (shippingAddress) {
+            try {
+                const taxableItems: TaxableItem[] = items.map(item => ({
+                    id: item.id,
+                    name: item.product?.title || 'Product',
+                    price: parseFloat(item.priceAtTime),
+                    quantity: item.quantity,
+                    isDigital: false, // Default to physical goods
+                    isTaxExempt: false
+                }));
+
+                const address: Address = {
+                    country: shippingAddress.country,
+                    state: shippingAddress.state,
+                    city: shippingAddress.city,
+                    postalCode: shippingAddress.postalCode,
+                    line1: shippingAddress.addressLine1
+                };
+
+                const taxResult = taxCalculationService.calculateTax(
+                    taxableItems,
+                    address,
+                    shipping,
+                    'USD',
+                    taxExemption
+                );
+
+                return taxResult.then(result => result.taxAmount);
+            } catch (error) {
+                safeLogger.error('Tax calculation failed, using fallback:', error);
+                // Fallback to simple calculation
+            }
+        }
+
+        // Fallback to simple tax calculation (8% sales tax)
+        return Promise.resolve((items.reduce((sum, item) => sum + (parseFloat(item.priceAtTime) * item.quantity), 0) + shipping) * 0.08);
     }
 
     private generateNextSteps(paymentMethod: string, paymentResult: any): string[] {
