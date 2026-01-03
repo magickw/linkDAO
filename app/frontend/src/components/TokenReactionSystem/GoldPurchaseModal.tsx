@@ -199,7 +199,7 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
       // Process actual payment based on selected method
       if (selectedPaymentMethod.method.type === 'FIAT_STRIPE') {
         // Create Stripe checkout session for fiat payment
-        const response = await fetch('/api/enhanced-fiat-payment/create-payment-intent', {
+        const response = await fetch('/api/stripe/create-payment-intent', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

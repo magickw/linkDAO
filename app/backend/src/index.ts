@@ -469,6 +469,8 @@ import securityRoutes from './routes/security';
 import emailRoutes from './routes/email';
 import adminAnalyticsRoutes from './routes/adminAnalytics';
 import searchRoutes from './routes/searchRoutes';
+import { StripePaymentService } from './services/stripePaymentService';
+import { createFiatPaymentRoutes } from './routes/fiatPaymentRoutes';
 // Import reputation routes
 import reputationRoutes from './routes/reputationRoutes';
 import advancedReputationRoutes from './routes/advancedReputationRoutes';
@@ -530,6 +532,15 @@ app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/enhanced-fiat-payment', enhancedFiatPaymentRoutes);
 // Backward compatibility alias without /api prefix (for service worker or cached requests)
 app.use('/enhanced-fiat-payment', enhancedFiatPaymentRoutes);
+
+// Stripe payment routes (for checkout flow)
+const stripePaymentService = new StripePaymentService({
+  secretKey: process.env.STRIPE_SECRET_KEY || '',
+  publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
+  webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+  apiVersion: '2023-10-16'
+});
+app.use('/api/stripe', createFiatPaymentRoutes(stripePaymentService));
 
 // Add root-level health endpoint for frontend compatibility
 app.get('/health', async (req, res) => {

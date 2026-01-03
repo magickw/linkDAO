@@ -5,6 +5,9 @@
 
 import React from 'react';
 import { PrioritizedPaymentMethod, PaymentMethodType } from '../../types/paymentPrioritization';
+import { NetworkIcon } from '../Payment/NetworkIcon';
+import { PaymentMethodTooltip } from '../Payment/PaymentMethodTooltip';
+import { getNetworkColor } from '../../utils/networkUtils';
 
 interface PaymentMethodCardProps {
   paymentMethod: PrioritizedPaymentMethod;
@@ -150,18 +153,26 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
           }
         }}
       >
-        {/* Icon */}
-        <img
-          src={getMethodIcon(method.type)}
-          alt={method.name}
-          className="w-8 h-8 rounded-full flex-shrink-0"
-          onError={(e) => {
-            const img = e.target as HTMLImageElement;
-            if (!img.src.includes('payment-default.svg')) {
-              img.src = '/icons/payment-default.svg';
-            }
-          }}
-        />
+        {/* Network Icon */}
+        <div className="flex-shrink-0">
+          {method.chainId !== undefined ? (
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${getNetworkColor(method.chainId)}`}>
+              <NetworkIcon chainId={method.chainId} size={20} />
+            </div>
+          ) : (
+            <img
+              src={getMethodIcon(method.type)}
+              alt={method.name}
+              className="w-8 h-8 rounded-full"
+              onError={(e) => {
+                const img = e.target as HTMLImageElement;
+                if (!img.src.includes('payment-default.svg')) {
+                  img.src = '/icons/payment-default.svg';
+                }
+              }}
+            />
+          )}
+        </div>
 
         {/* Name and Network */}
         <div className="flex-1 min-w-0">
@@ -181,12 +192,17 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
           </div>
         </div>
 
-        {/* Total Cost */}
-        <div className="text-right flex-shrink-0">
-          <div className={`text-sm font-bold ${isDisabled ? 'text-white/50' : 'text-white'}`}>
-            {formatCurrency(costEstimate.totalCost, costEstimate.currency)}
+        {/* Total Cost with Tooltip */}
+        <PaymentMethodTooltip paymentMethod={paymentMethod}>
+          <div className="text-right flex-shrink-0 cursor-help">
+            <div className={`text-sm font-bold ${isDisabled ? 'text-white/50' : 'text-white'}`}>
+              {formatCurrency(costEstimate.totalCost, costEstimate.currency)}
+            </div>
+            {costEstimate.gasFee > 0 && (
+              <div className="text-xs text-orange-400">+{formatCurrency(costEstimate.gasFee)} gas</div>
+            )}
           </div>
-        </div>
+        </PaymentMethodTooltip>
 
         {/* Status Indicator */}
         <div className={`
@@ -210,8 +226,9 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
         {/* Recommended Badge */}
         {isRecommended && (
           <div className="absolute -top-1 -right-1">
-            <div className="px-1.5 py-0.5 text-xs font-semibold text-green-800 bg-green-100 border border-green-300 rounded-full">
-              ★
+            <div className="px-2 py-0.5 text-xs font-semibold text-green-800 bg-green-100 border border-green-300 rounded-full flex items-center gap-1">
+              <span>★</span>
+              <span className="hidden sm:inline">Best</span>
             </div>
           </div>
         )}

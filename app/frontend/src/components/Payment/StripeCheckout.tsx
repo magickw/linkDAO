@@ -93,7 +93,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
     setError(null);
 
     try {
-      const response = await fetch('/api/enhanced-fiat-payment/create-payment-intent', {
+      const response = await fetch('/api/stripe/create-payment-intent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

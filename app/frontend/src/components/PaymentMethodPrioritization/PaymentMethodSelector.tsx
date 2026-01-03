@@ -11,6 +11,7 @@ import {
   PrioritizationResult,
   AvailabilityStatus
 } from '../../types/paymentPrioritization';
+import { groupPaymentMethods, GroupedPaymentMethods } from '../../utils/networkUtils';
 
 interface PaymentMethodSelectorProps {
   prioritizationResult: PrioritizationResult;
@@ -42,6 +43,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   const [selectedMethod, setSelectedMethod] = useState<PrioritizedPaymentMethod | null>(null);
   const [expandedMethods, setExpandedMethods] = useState<Set<string>>(new Set());
   const [isMobile, setIsMobile] = useState(false);
+  const [showTestnets, setShowTestnets] = useState(false);
 
   // Responsive detection
   useEffect(() => {
@@ -84,7 +86,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
 
     setSelectedMethod(method);
     onMethodSelect(method);
-    
+
     if (onMethodChange && method !== selectedMethod) {
       onMethodChange(method);
     }
@@ -110,6 +112,11 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   };
 
   const recommendedMethod = getRecommendedMethod();
+
+  // Group available methods by network type
+  const groupedMethods: GroupedPaymentMethods = useMemo(() => {
+    return groupPaymentMethods(availableMethods);
+  }, [availableMethods]);
 
   return (
     <div className={`payment-method-selector ${className}`}>
@@ -147,25 +154,132 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
         </div>
       )}
 
-      {/* Available Payment Methods - Compact List View */}
+      {/* Grouped Payment Methods */}
       {availableMethods.length > 0 && (
-        <div className="mb-6">
-          <div className="space-y-3">
-            {availableMethods.map((method) => (
-              <PaymentMethodCard
-                key={method.method.id}
-                paymentMethod={method}
-                isSelected={selectedMethod?.method.id === method.method.id}
-                isRecommended={recommendedMethod?.method.id === method.method.id}
-                onSelect={handleMethodSelect}
-                viewMode="compact"
-                showCostBreakdown={showCostBreakdown}
-                showBenefits={false}
-                showNetworkDetails={false}
-                className="w-full"
-              />
-            ))}
-          </div>
+        <div className="mb-6 space-y-6">
+          {/* Fiat Payment Methods */}
+          {groupedMethods.fiat.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-white/80 mb-3 flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <rect x="2" y="6" width="20" height="12" rx="2" strokeWidth="2" />
+                  <path d="M2 10h20" strokeWidth="2" />
+                </svg>
+                Credit/Debit Card
+              </h3>
+              <div className="space-y-3">
+                {groupedMethods.fiat.map((method) => (
+                  <PaymentMethodCard
+                    key={method.method.id}
+                    paymentMethod={method}
+                    isSelected={selectedMethod?.method.id === method.method.id}
+                    isRecommended={recommendedMethod?.method.id === method.method.id}
+                    onSelect={handleMethodSelect}
+                    viewMode="compact"
+                    showCostBreakdown={showCostBreakdown}
+                    showBenefits={false}
+                    showNetworkDetails={false}
+                    className="w-full"
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Mainnet L1 */}
+          {groupedMethods.mainnetL1.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-white/80 mb-3 flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-blue-400"></div>
+                Mainnet (Layer 1)
+              </h3>
+              <div className="space-y-3">
+                {groupedMethods.mainnetL1.map((method) => (
+                  <PaymentMethodCard
+                    key={method.method.id}
+                    paymentMethod={method}
+                    isSelected={selectedMethod?.method.id === method.method.id}
+                    isRecommended={recommendedMethod?.method.id === method.method.id}
+                    onSelect={handleMethodSelect}
+                    viewMode="compact"
+                    showCostBreakdown={showCostBreakdown}
+                    showBenefits={false}
+                    showNetworkDetails={true}
+                    className="w-full"
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* L2 Solutions */}
+          {groupedMethods.l2Solutions.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-white/80 mb-3 flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-purple-400"></div>
+                Layer 2 Solutions
+                <span className="text-xs text-green-400 bg-green-400/10 px-2 py-0.5 rounded-full">Lower Fees</span>
+              </h3>
+              <div className="space-y-3">
+                {groupedMethods.l2Solutions.map((method) => (
+                  <PaymentMethodCard
+                    key={method.method.id}
+                    paymentMethod={method}
+                    isSelected={selectedMethod?.method.id === method.method.id}
+                    isRecommended={recommendedMethod?.method.id === method.method.id}
+                    onSelect={handleMethodSelect}
+                    viewMode="compact"
+                    showCostBreakdown={showCostBreakdown}
+                    showBenefits={false}
+                    showNetworkDetails={true}
+                    className="w-full"
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Testnets - Collapsible */}
+          {groupedMethods.testnets.length > 0 && (
+            <div>
+              <button
+                onClick={() => setShowTestnets(!showTestnets)}
+                className="w-full text-left mb-3 flex items-center justify-between text-sm font-semibold text-white/60 hover:text-white/80 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+                  Testnets
+                  <span className="text-xs text-gray-400 bg-gray-400/10 px-2 py-0.5 rounded-full">For Testing</span>
+                </div>
+                <svg
+                  className={`w-4 h-4 transition-transform ${showTestnets ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {showTestnets && (
+                <div className="space-y-3">
+                  {groupedMethods.testnets.map((method) => (
+                    <PaymentMethodCard
+                      key={method.method.id}
+                      paymentMethod={method}
+                      isSelected={selectedMethod?.method.id === method.method.id}
+                      isRecommended={false}
+                      onSelect={handleMethodSelect}
+                      viewMode="compact"
+                      showCostBreakdown={showCostBreakdown}
+                      showBenefits={false}
+                      showNetworkDetails={true}
+                      className="w-full opacity-75"
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -203,7 +317,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
                 paymentMethod={method}
                 isSelected={false}
                 isRecommended={false}
-                onSelect={() => {}}
+                onSelect={() => { }}
                 viewMode="compact"
                 showCostBreakdown={false}
                 showBenefits={false}
