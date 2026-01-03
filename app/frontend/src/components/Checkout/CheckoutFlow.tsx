@@ -54,6 +54,7 @@ import { StripeCheckout } from '@/components/Payment/StripeCheckout';
 import ProductThumbnail from './ProductThumbnail';
 import Link from 'next/link';
 import { walletAssetDetectionService } from '@/services/walletAssetDetectionService';
+import { TransactionSummary } from './TransactionSummary';
 
 interface CheckoutFlowProps {
   onBack: () => void;
@@ -731,280 +732,286 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
           </GlassPanel>
         )}
 
-        {/* Enhanced Payment Method Selector */}
-        <div className="bg-white/5 backdrop-blur-sm rounded-lg p-6">
-          {prioritizationResult && prioritizationResult.prioritizedMethods.length > 0 ? (
-            <>
-              <PaymentMethodSelector
-                prioritizationResult={prioritizationResult}
-                selectedMethodId={selectedPaymentMethod?.method.id}
-                onMethodSelect={handlePaymentMethodSelect}
-                showCostBreakdown={true}
-                showRecommendations={true}
-                showWarnings={true}
-                maxDisplayMethods={10}
-                layout="list"
-                responsive={true}
-                className="text-white"
-              />
-
-              {/* Continue Button */}
-              {selectedPaymentMethod && (
-                <div className="mt-6 flex justify-center">
+        {/* Enhanced Payment Method Selector with Transaction Summary */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Payment Methods - Takes 2 columns on large screens */}
+          <div className="lg:col-span-2">
+            <div className="bg-white/5 backdrop-blur-sm rounded-lg p-6">
+              {prioritizationResult && prioritizationResult.prioritizedMethods.length > 0 ? (
+                <>
+                  <PaymentMethodSelector
+                    prioritizationResult={prioritizationResult}
+                    selectedMethodId={selectedPaymentMethod?.method.id}
+                    onMethodSelect={handlePaymentMethodSelect}
+                    showCostBreakdown={true}
+                    showRecommendations={true}
+                    showWarnings={true}
+                    maxDisplayMethods={10}
+                    layout="list"
+                    responsive={true}
+                    className="text-white"
+                  />
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <AlertCircle className="w-12 h-12 text-orange-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-white mb-2">
+                    Payment Options Unavailable
+                  </h3>
+                  <p className="text-white/70 mb-4">
+                    We're having trouble loading payment options. Please try refreshing the page.
+                  </p>
                   <Button
-                    variant="primary"
-                    size="lg"
-                    onClick={() => setCurrentStep('payment-details')}
-                    className="px-8"
+                    variant="outline"
+                    onClick={() => window.location.reload()}
+                    className="mx-auto"
                   >
-                    Continue with {selectedPaymentMethod.method.name}
+                    Refresh Page
                   </Button>
                 </div>
               )}
-            </>
-          ) : (
-            <div className="text-center py-8">
-              <AlertCircle className="w-12 h-12 text-orange-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-white mb-2">
-                Payment Options Unavailable
-              </h3>
-              <p className="text-white/70 mb-4">
-                We're having trouble loading payment options. Please try refreshing the page.
-              </p>
-              <Button
-                variant="outline"
-                onClick={() => window.location.reload()}
-                className="mx-auto"
-              >
-                Refresh Page
-              </Button>
-            </div>
-          )}
-        </div>
-
-        {/* Security Notice */}
-        <GlassPanel variant="secondary" className="p-4">
-          <div className="flex items-center gap-3">
-            <Shield className="w-5 h-5 text-green-400" />
-            <div>
-              <h4 className="font-medium text-white">Secure Escrow Protection</h4>
-              <p className="text-white/70 text-sm">
-                Your payment is held securely until you confirm delivery.
-                {selectedPaymentMethod?.method.type === PaymentMethodType.FIAT_STRIPE
-                  ? ' Stripe Connect provides buyer protection.'
-                  : ' Smart contract escrow ensures trustless transactions.'
-                }
-              </p>
             </div>
           </div>
-        </GlassPanel>
+
+          {/* Transaction Summary - Takes 1 column on large screens, sticky on desktop */}
+          <div className="lg:col-span-1">
+            <div className="lg:sticky lg:top-6">
+              <TransactionSummary
+                selectedMethod={selectedPaymentMethod}
+                totalAmount={parseFloat(cartState.totals.total.fiat)}
+                onConfirm={() => setCurrentStep('payment-details')}
+                isProcessing={loading}
+              />
+            </div>
+          </div>
+        </div>
       </div>
     );
   };
 
-  const renderPaymentDetails = () => {
-    if (!selectedPaymentMethod) return null;
-
-    const handleConnected = () => {
-      addToast('Wallet connected successfully!', 'success');
-    };
-
-    const handleError = (error: Error) => {
-      addToast(`Wallet connection failed: ${error.message}`, 'error');
-    };
-
-    if (selectedPaymentMethod.method.type !== PaymentMethodType.FIAT_STRIPE) {
-      return (
-        <CryptoPaymentDetails
-          paymentMethod={selectedPaymentMethod}
-          onProceed={handlePaymentSubmit}
-          useEscrow={useEscrow}
-          setUseEscrow={setUseEscrow}
-          onConnected={handleConnected}
-          onError={handleError}
-          isConnected={isConnected}
-        />
-      );
-    } else {
-      return (
-        <FiatPaymentDetails
-          paymentMethod={selectedPaymentMethod}
-          onProceed={handlePaymentSubmit}
-          address={address}
-        />
-      );
-    }
-  };
-
-  const renderProcessing = () => (
-    <div className="text-center space-y-6">
-      <div className="flex justify-center">
-        <Loader2 className="w-16 h-16 text-blue-400 animate-spin" />
-      </div>
+  {/* Security Notice */ }
+  <GlassPanel variant="secondary" className="p-4">
+    <div className="flex items-center gap-3">
+      <Shield className="w-5 h-5 text-green-400" />
       <div>
-        <h2 className="text-2xl font-bold text-white mb-2">Processing Payment</h2>
-        <p className="text-white/70">
-          {selectedPaymentMethod?.method.type !== PaymentMethodType.FIAT_STRIPE
-            ? 'Waiting for blockchain confirmation...'
-            : 'Processing your payment securely...'
+        <h4 className="font-medium text-white">Secure Escrow Protection</h4>
+        <p className="text-white/70 text-sm">
+          Your payment is held securely until you confirm delivery.
+          {selectedPaymentMethod?.method.type === PaymentMethodType.FIAT_STRIPE
+            ? ' Stripe Connect provides buyer protection.'
+            : ' Smart contract escrow ensures trustless transactions.'
           }
         </p>
       </div>
-      <div className="max-w-md mx-auto">
-        <div className="bg-white/10 rounded-full h-2">
-          <div className="bg-blue-400 h-2 rounded-full animate-pulse" style={{ width: '60%' }} />
-        </div>
-      </div>
     </div>
-  );
+  </GlassPanel>
+      </div >
+    );
+  };
 
-  const renderConfirmation = () => (
-    <div className="text-center space-y-6">
-      <div className="flex justify-center">
-        <CheckCircle className="w-16 h-16 text-green-400" />
-      </div>
-      <div>
-        <h2 className="text-2xl font-bold text-white mb-2">Order Confirmed!</h2>
-        <p className="text-white/70">
-          Your order has been placed successfully using {selectedPaymentMethod?.method.name} and is now being processed.
-        </p>
-      </div>
+const renderPaymentDetails = () => {
+  if (!selectedPaymentMethod) return null;
 
-      {orderData && (
-        <GlassPanel variant="secondary" className="p-6 text-left">
-          <h3 className="font-semibold text-white mb-4">Order Details</h3>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-white/70">Order ID:</span>
-              <span className="text-white font-mono">{orderData.orderId}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-white/70">Payment Method:</span>
-              <span className="text-white">{selectedPaymentMethod?.method.name || orderData.paymentPath}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-white/70">Total Paid:</span>
-              <span className="text-white">${selectedPaymentMethod?.costEstimate.totalCost.toFixed(2) || 'N/A'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-white/70">Status:</span>
-              <span className="text-green-400 capitalize">{orderData.status}</span>
-            </div>
-            {orderData.escrowType === 'smart_contract' && orderData.transactionId && (
-              <div className="flex justify-between">
-                <span className="text-white/70">Escrow ID:</span>
-                <Link href={`/escrow/${orderData.transactionId}`}>
-                  <a className="text-blue-400 hover:underline">{orderData.transactionId}</a>
-                </Link>
-              </div>
-            )}
-            <div className="flex justify-between">
-              <span className="text-white/70">Estimated Completion:</span>
-              <span className="text-white">
-                {orderData.estimatedCompletionTime.toLocaleDateString()}
-              </span>
-            </div>
-          </div>
-        </GlassPanel>
-      )}
+  const handleConnected = () => {
+    addToast('Wallet connected successfully!', 'success');
+  };
 
-      {/* Payment Method Confirmation */}
-      {selectedPaymentMethod && (
-        <GlassPanel variant="secondary" className="p-4 text-left">
-          <h4 className="font-semibold text-white mb-3">Payment Confirmation</h4>
-          <div className="flex items-center gap-3 mb-3">
-            <div className={`p-2 rounded-lg ${selectedPaymentMethod.method.type !== PaymentMethodType.FIAT_STRIPE
-              ? 'bg-orange-500/20' : 'bg-blue-500/20'
-              }`}>
-              {selectedPaymentMethod.method.type !== PaymentMethodType.FIAT_STRIPE ? (
-                <Wallet className="w-4 h-4 text-orange-400" />
-              ) : (
-                <CreditCard className="w-4 h-4 text-blue-400" />
-              )}
-            </div>
-            <div>
-              <p className="text-white font-medium">{selectedPaymentMethod.method.name}</p>
-              <p className="text-white/70 text-sm">{selectedPaymentMethod.recommendationReason}</p>
-            </div>
-          </div>
+  const handleError = (error: Error) => {
+    addToast(`Wallet connection failed: ${error.message}`, 'error');
+  };
 
-          {selectedPaymentMethod.method.type !== PaymentMethodType.FIAT_STRIPE && (
-            <div className="text-xs text-white/60">
-              <p>• Transaction will be confirmed on {selectedPaymentMethod.method.chainId === 1 ? 'Ethereum' : `Chain ${selectedPaymentMethod.method.chainId}`}</p>
-              <p>• Funds are held in secure escrow until delivery confirmation</p>
-            </div>
-          )}
-        </GlassPanel>
-      )}
-
-      <div className="flex gap-4 justify-center">
-        <Button variant="outline" onClick={() => router.push('/marketplace')}>
-          Continue Shopping
-        </Button>
-        <Button variant="primary" onClick={() => router.push('/orders')}>
-          Track Order
-        </Button>
-      </div>
-    </div>
-  );
-
-  if (loading && !prioritizationResult) {
+  if (selectedPaymentMethod.method.type !== PaymentMethodType.FIAT_STRIPE) {
     return (
-      <div className="text-center py-16">
-        <Loader2 className="w-8 h-8 text-blue-400 animate-spin mx-auto mb-4" />
-        <p className="text-white/70">Loading intelligent payment options...</p>
-      </div>
+      <CryptoPaymentDetails
+        paymentMethod={selectedPaymentMethod}
+        onProceed={handlePaymentSubmit}
+        useEscrow={useEscrow}
+        setUseEscrow={setUseEscrow}
+        onConnected={handleConnected}
+        onError={handleError}
+        isConnected={isConnected}
+      />
+    );
+  } else {
+    return (
+      <FiatPaymentDetails
+        paymentMethod={selectedPaymentMethod}
+        onProceed={handlePaymentSubmit}
+        address={address}
+      />
     );
   }
+};
 
+const renderProcessing = () => (
+  <div className="text-center space-y-6">
+    <div className="flex justify-center">
+      <Loader2 className="w-16 h-16 text-blue-400 animate-spin" />
+    </div>
+    <div>
+      <h2 className="text-2xl font-bold text-white mb-2">Processing Payment</h2>
+      <p className="text-white/70">
+        {selectedPaymentMethod?.method.type !== PaymentMethodType.FIAT_STRIPE
+          ? 'Waiting for blockchain confirmation...'
+          : 'Processing your payment securely...'
+        }
+      </p>
+    </div>
+    <div className="max-w-md mx-auto">
+      <div className="bg-white/10 rounded-full h-2">
+        <div className="bg-blue-400 h-2 rounded-full animate-pulse" style={{ width: '60%' }} />
+      </div>
+    </div>
+  </div>
+);
+
+const renderConfirmation = () => (
+  <div className="text-center space-y-6">
+    <div className="flex justify-center">
+      <CheckCircle className="w-16 h-16 text-green-400" />
+    </div>
+    <div>
+      <h2 className="text-2xl font-bold text-white mb-2">Order Confirmed!</h2>
+      <p className="text-white/70">
+        Your order has been placed successfully using {selectedPaymentMethod?.method.name} and is now being processed.
+      </p>
+    </div>
+
+    {orderData && (
+      <GlassPanel variant="secondary" className="p-6 text-left">
+        <h3 className="font-semibold text-white mb-4">Order Details</h3>
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-white/70">Order ID:</span>
+            <span className="text-white font-mono">{orderData.orderId}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-white/70">Payment Method:</span>
+            <span className="text-white">{selectedPaymentMethod?.method.name || orderData.paymentPath}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-white/70">Total Paid:</span>
+            <span className="text-white">${selectedPaymentMethod?.costEstimate.totalCost.toFixed(2) || 'N/A'}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-white/70">Status:</span>
+            <span className="text-green-400 capitalize">{orderData.status}</span>
+          </div>
+          {orderData.escrowType === 'smart_contract' && orderData.transactionId && (
+            <div className="flex justify-between">
+              <span className="text-white/70">Escrow ID:</span>
+              <Link href={`/escrow/${orderData.transactionId}`}>
+                <a className="text-blue-400 hover:underline">{orderData.transactionId}</a>
+              </Link>
+            </div>
+          )}
+          <div className="flex justify-between">
+            <span className="text-white/70">Estimated Completion:</span>
+            <span className="text-white">
+              {orderData.estimatedCompletionTime.toLocaleDateString()}
+            </span>
+          </div>
+        </div>
+      </GlassPanel>
+    )}
+
+    {/* Payment Method Confirmation */}
+    {selectedPaymentMethod && (
+      <GlassPanel variant="secondary" className="p-4 text-left">
+        <h4 className="font-semibold text-white mb-3">Payment Confirmation</h4>
+        <div className="flex items-center gap-3 mb-3">
+          <div className={`p-2 rounded-lg ${selectedPaymentMethod.method.type !== PaymentMethodType.FIAT_STRIPE
+            ? 'bg-orange-500/20' : 'bg-blue-500/20'
+            }`}>
+            {selectedPaymentMethod.method.type !== PaymentMethodType.FIAT_STRIPE ? (
+              <Wallet className="w-4 h-4 text-orange-400" />
+            ) : (
+              <CreditCard className="w-4 h-4 text-blue-400" />
+            )}
+          </div>
+          <div>
+            <p className="text-white font-medium">{selectedPaymentMethod.method.name}</p>
+            <p className="text-white/70 text-sm">{selectedPaymentMethod.recommendationReason}</p>
+          </div>
+        </div>
+
+        {selectedPaymentMethod.method.type !== PaymentMethodType.FIAT_STRIPE && (
+          <div className="text-xs text-white/60">
+            <p>• Transaction will be confirmed on {selectedPaymentMethod.method.chainId === 1 ? 'Ethereum' : `Chain ${selectedPaymentMethod.method.chainId}`}</p>
+            <p>• Funds are held in secure escrow until delivery confirmation</p>
+          </div>
+        )}
+      </GlassPanel>
+    )}
+
+    <div className="flex gap-4 justify-center">
+      <Button variant="outline" onClick={() => router.push('/marketplace')}>
+        Continue Shopping
+      </Button>
+      <Button variant="primary" onClick={() => router.push('/orders')}>
+        Track Order
+      </Button>
+    </div>
+  </div>
+);
+
+if (loading && !prioritizationResult) {
   return (
-    <div className="max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-8">
-        <Button
-          variant="ghost"
-          onClick={onBack}
-          className="flex items-center gap-2 text-white/70 hover:text-white"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold text-white">Secure Checkout</h1>
-          <p className="text-white/70">Complete your purchase with escrow protection</p>
-        </div>
-      </div>
-
-      {/* Step Indicator */}
-      {renderStepIndicator()}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Content */}
-        <div className="lg:col-span-2">
-          <GlassPanel variant="secondary" className="p-8">
-            {currentStep === 'review' && renderPaymentMethodSelection()}
-            {currentStep === 'payment-method' && renderPaymentMethodSelection()}
-            {currentStep === 'payment-details' && renderPaymentDetails()}
-            {currentStep === 'processing' && renderProcessing()}
-            {currentStep === 'confirmation' && renderConfirmation()}
-          </GlassPanel>
-        </div>
-
-        {/* Order Summary Sidebar */}
-        <div className="lg:col-span-1">
-          {renderOrderSummary()}
-        </div>
-      </div>
-
-      {/* Payment Error Modal */}
-      <PaymentErrorModal
-        error={paymentError}
-        isOpen={showErrorModal}
-        onClose={() => setShowErrorModal(false)}
-        onRecoveryAction={handleRecoveryAction}
-      />
+    <div className="text-center py-16">
+      <Loader2 className="w-8 h-8 text-blue-400 animate-spin mx-auto mb-4" />
+      <p className="text-white/70">Loading intelligent payment options...</p>
     </div>
   );
+}
+
+return (
+  <div className="max-w-4xl mx-auto">
+    {/* Header */}
+    <div className="flex items-center gap-4 mb-8">
+      <Button
+        variant="ghost"
+        onClick={onBack}
+        className="flex items-center gap-2 text-white/70 hover:text-white"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back
+      </Button>
+      <div className="flex-1">
+        <h1 className="text-3xl font-bold text-white">Secure Checkout</h1>
+        <p className="text-white/70">Complete your purchase with escrow protection</p>
+      </div>
+    </div>
+
+    {/* Step Indicator */}
+    {renderStepIndicator()}
+
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* Main Content */}
+      <div className="lg:col-span-2">
+        <GlassPanel variant="secondary" className="p-8">
+          {currentStep === 'review' && renderPaymentMethodSelection()}
+          {currentStep === 'payment-method' && renderPaymentMethodSelection()}
+          {currentStep === 'payment-details' && renderPaymentDetails()}
+          {currentStep === 'processing' && renderProcessing()}
+          {currentStep === 'confirmation' && renderConfirmation()}
+        </GlassPanel>
+      </div>
+
+      {/* Order Summary Sidebar */}
+      <div className="lg:col-span-1">
+        {renderOrderSummary()}
+      </div>
+    </div>
+
+    {/* Payment Error Modal */}
+    <PaymentErrorModal
+      error={paymentError}
+      isOpen={showErrorModal}
+      onClose={() => setShowErrorModal(false)}
+      onRecoveryAction={handleRecoveryAction}
+    />
+  </div>
+);
 };
 
 // Crypto Payment Details Component

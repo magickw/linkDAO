@@ -2,14 +2,14 @@
  * Cart Page - Displays user's shopping cart
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
 import Layout from '@/components/Layout';
 import { cartService, CartState } from '@/services/cartService';
 import ProductThumbnail from '@/components/Checkout/ProductThumbnail';
-import { X, Plus, Minus, ShoppingCart } from 'lucide-react';
+import { X, Plus, Minus, ShoppingCart, Info, Tag, Percent, CheckCircle } from 'lucide-react';
 
 const CartPage: React.FC = () => {
   const [cartState, setCartState] = useState<CartState>({
@@ -38,7 +38,31 @@ const CartPage: React.FC = () => {
     lastUpdated: new Date()
   });
 
+  const [promoCode, setPromoCode] = useState('');
+  const [discount, setDiscount] = useState(0);
+  const [promoApplied, setPromoApplied] = useState(false);
+  const [promoError, setPromoError] = useState('');
+  const [gasFee, setGasFee] = useState(0);
+  const [showFeeBreakdown, setShowFeeBreakdown] = useState(false);
+
   const router = useRouter();
+
+  // Calculate real-time totals
+  const { subtotal, totalWithDiscount, totalWithGas } = useMemo(() => {
+    const subtotal = cartState.items.reduce((sum, item) => {
+      return sum + (parseFloat(item.price.fiat) * item.quantity);
+    }, 0);
+
+    const discountAmount = subtotal * (discount / 100);
+    const totalWithDiscount = subtotal - discountAmount;
+    const totalWithGas = totalWithDiscount + gasFee;
+
+    return {
+      subtotal,
+      totalWithDiscount,
+      totalWithGas
+    };
+  }, [cartState.items, discount, gasFee]);
 
   useEffect(() => {
     // Load cart items
@@ -72,6 +96,43 @@ const CartPage: React.FC = () => {
     cartService.updateQuantity(itemId, quantity);
   };
 
+  const handleQuantityInputChange = (itemId: string, value: string) => {
+    const quantity = parseInt(value);
+    if (!isNaN(quantity) && quantity > 0) {
+      handleUpdateQuantity(itemId, quantity);
+    }
+  };
+
+  const handleApplyPromoCode = () => {
+    if (!promoCode.trim()) {
+      setPromoError('Please enter a promo code');
+      return;
+    }
+
+    // Mock promo code validation
+    const validCodes: Record<string, number> = {
+      'SAVE10': 10,
+      'WELCOME20': 20,
+      'LINKDAO15': 15
+    };
+
+    if (validCodes[promoCode.toUpperCase()]) {
+      setDiscount(validCodes[promoCode.toUpperCase()]);
+      setPromoApplied(true);
+      setPromoError('');
+    } else {
+      setPromoError('Invalid promo code');
+      setPromoApplied(false);
+    }
+  };
+
+  const handleRemovePromoCode = () => {
+    setPromoCode('');
+    setDiscount(0);
+    setPromoApplied(false);
+    setPromoError('');
+  };
+
   const handleCheckout = () => {
     router.push('/marketplace/checkout');
   };
@@ -88,6 +149,26 @@ const CartPage: React.FC = () => {
 
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Progress Indicator */}
+          <div className="mb-8">
+            <div className="flex items-center justify-center space-x-4 text-sm">
+              <div className="flex items-center text-blue-400 font-medium">
+                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white mr-2">1</div>
+                Cart
+              </div>
+              <div className="w-16 h-0.5 bg-white/20"></div>
+              <div className="flex items-center text-white/50">
+                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white mr-2">2</div>
+                Payment
+              </div>
+              <div className="w-16 h-0.5 bg-white/20"></div>
+              <div className="flex items-center text-white/50">
+                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white mr-2">3</div>
+                Confirmation
+              </div>
+            </div>
+          </div>
+
           <h1 className="text-3xl font-bold text-white mb-8">Shopping Cart</h1>
 
           {cartState.items.length === 0 ? (
@@ -134,6 +215,7 @@ const CartPage: React.FC = () => {
                             <button
                               onClick={() => handleRemoveItem(item.id)}
                               className="text-white/50 hover:text-white"
+                              aria-label="Remove item"
                             >
                               <X size={20} />
                             </button>
@@ -145,21 +227,36 @@ const CartPage: React.FC = () => {
                             <div className="flex items-center border border-white/20 rounded-lg bg-white/10">
                               <button
                                 onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
-                                className="p-2 hover:bg-white/20"
+                                disabled={item.quantity <= 1}
+                                className="p-2 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                                aria-label="Decrease quantity"
                               >
                                 <Minus size={16} />
                               </button>
-                              <span className="px-4 py-2 text-white">{item.quantity}</span>
+                              <input
+                                type="number"
+                                min="1"
+                                value={item.quantity}
+                                onChange={(e) => handleQuantityInputChange(item.id, e.target.value)}
+                                className="w-16 px-2 py-2 text-white bg-transparent text-center border-x border-white/20 focus:outline-none"
+                                aria-label="Quantity"
+                              />
                               <button
                                 onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
                                 className="p-2 hover:bg-white/20"
+                                aria-label="Increase quantity"
                               >
                                 <Plus size={16} />
                               </button>
                             </div>
 
-                            <div className="text-lg font-semibold text-white">
-                              {item.price.fiatSymbol}{(parseFloat(item.price.fiat) * item.quantity).toFixed(2)}
+                            <div className="flex flex-col items-end">
+                              <div className="text-lg font-semibold text-white">
+                                {item.price.fiatSymbol}{(parseFloat(item.price.fiat) * item.quantity).toFixed(2)}
+                              </div>
+                              <div className="text-sm text-white/60">
+                                {item.price.fiatSymbol}{parseFloat(item.price.fiat).toFixed(2)} × {item.quantity}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -173,32 +270,133 @@ const CartPage: React.FC = () => {
                 <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 sticky top-8 border border-white/20">
                   <h2 className="text-xl font-semibold text-white mb-4">Order Summary</h2>
 
+                  {/* Promo Code Field */}
+                  <div className="mb-4">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={promoCode}
+                        onChange={(e) => setPromoCode(e.target.value)}
+                        placeholder="Promo code"
+                        disabled={promoApplied}
+                        className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                      />
+                      {!promoApplied ? (
+                        <button
+                          onClick={handleApplyPromoCode}
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                        >
+                          Apply
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handleRemovePromoCode}
+                          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center gap-1"
+                        >
+                          <X size={16} />
+                        </button>
+                      )}
+                    </div>
+                    {promoError && (
+                      <p className="text-red-400 text-sm mt-2">{promoError}</p>
+                    )}
+                    {promoApplied && (
+                      <p className="text-green-400 text-sm mt-2 flex items-center gap-1">
+                        <CheckCircle size={14} />
+                        Promo code applied: {discount}% off
+                      </p>
+                    )}
+                  </div>
+
                   <div className="space-y-3 mb-6">
                     <div className="flex justify-between">
                       <span className="text-white/70">Subtotal</span>
                       <span className="font-medium text-white">
-                        {cartState.totals.subtotal.fiatSymbol}{cartState.totals.subtotal.fiat}
+                        ${subtotal.toFixed(2)}
                       </span>
                     </div>
+                    
+                    {promoApplied && (
+                      <div className="flex justify-between text-green-400">
+                        <span className="flex items-center gap-1">
+                          <Percent size={14} />
+                          Discount ({discount}%)
+                        </span>
+                        <span className="font-medium">
+                          -${(subtotal * discount / 100).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+
                     <div className="flex justify-between">
                       <span className="text-white/70">Shipping</span>
                       <span className="font-medium text-white">
                         {cartState.totals.shipping.fiatSymbol}{cartState.totals.shipping.fiat}
                       </span>
                     </div>
-                    <div className="flex justify-between pt-3 border-t border-white/20">
-                      <span className="text-lg font-semibold text-white">Total</span>
-                      <span className="text-lg font-semibold text-white">
-                        {cartState.totals.total.fiatSymbol}{cartState.totals.total.fiat}
+
+                    {/* Gas Fee Preview */}
+                    <div className="flex justify-between items-center group">
+                      <span className="text-white/70 flex items-center gap-2">
+                        Estimated Gas Fee
+                        <button
+                          onClick={() => setShowFeeBreakdown(!showFeeBreakdown)}
+                          className="text-white/50 hover:text-white transition-colors"
+                          aria-label="Show fee breakdown"
+                        >
+                          <Info size={16} />
+                        </button>
+                      </span>
+                      <span className="font-medium text-white">
+                        ${gasFee.toFixed(2)}
                       </span>
                     </div>
+
+                    {showFeeBreakdown && (
+                      <div className="bg-white/5 rounded-lg p-3 text-sm space-y-2">
+                        <div className="flex justify-between text-white/70">
+                          <span>Network Fee</span>
+                          <span>${(gasFee * 0.6).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-white/70">
+                          <span>Protocol Fee</span>
+                          <span>${(gasFee * 0.3).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-white/70">
+                          <span>Service Fee</span>
+                          <span>${(gasFee * 0.1).toFixed(2)}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between pt-3 border-t border-white/20">
+                      <span className="text-lg font-semibold text-white">Total</span>
+                      <div className="text-right">
+                        <span className="text-lg font-semibold text-white">
+                          ${totalWithGas.toFixed(2)}
+                        </span>
+                        <div className="text-xs text-white/50">incl. all fees</div>
+                      </div>
+                    </div>
+
+                    {promoApplied && (
+                      <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 text-sm">
+                        <div className="flex items-center gap-2 text-green-400">
+                          <Tag size={16} />
+                          <span className="font-medium">You saved ${(subtotal * discount / 100).toFixed(2)}!</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <button
                     onClick={handleCheckout}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg transition-colors font-medium mb-3"
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg transition-colors font-medium mb-3 flex items-center justify-center gap-2"
                   >
                     Proceed to Checkout
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </button>
 
                   <button
@@ -207,6 +405,24 @@ const CartPage: React.FC = () => {
                   >
                     Continue Shopping
                   </button>
+
+                  {/* Security Badges */}
+                  <div className="mt-6 pt-6 border-t border-white/20">
+                    <div className="flex items-center justify-center gap-4 text-white/50 text-sm">
+                      <div className="flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                        <span>Secure Payment</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                        <span>Buyer Protection</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
