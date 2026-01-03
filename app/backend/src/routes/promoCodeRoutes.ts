@@ -22,4 +22,14 @@ router.post('/',
     promoCodeController.create
 );
 
+// List promo codes for a seller
+router.get('/',
+    validateRequest({
+        query: {
+            sellerId: { type: 'string', required: true }
+        }
+    }),
+    promoCodeController.list
+);
+
 export default router;

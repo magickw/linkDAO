@@ -14,6 +14,7 @@ import { countries } from '../../../utils/countries';
 import { PayoutSetupStep } from '../Seller/onboarding/PayoutSetupStep';
 import { paymentMethodService, CreatePaymentMethodInput } from '../../../services/paymentMethodService';
 import { OptimizedImage } from '../../Performance/OptimizedImageLoader';
+import { PromoCodesManager } from '../PromoCodes/PromoCodesManager';
 
 interface SellerDashboardProps {
   mockWalletAddress?: string;
@@ -502,10 +503,10 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
               <div>
                 <h1 className="text-2xl font-bold text-white">{profile?.storeName || 'Seller Store'}</h1>
                 <div className="flex items-center space-x-2 mt-1">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${currentTier?.id === 'diamond' ? 'bg-gradient-to-r from-cyan-500 to-indigo-600 text-white' :
-                    currentTier?.id === 'platinum' ? 'bg-gradient-to-r from-slate-400 to-slate-600 text-white' :
-                      currentTier?.id === 'gold' ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-gray-900' :
-                        currentTier?.id === 'silver' ? 'bg-gradient-to-r from-gray-300 to-gray-500 text-gray-900' :
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${(currentTier?.id as string) === 'diamond' ? 'bg-gradient-to-r from-cyan-500 to-indigo-600 text-white' :
+                    (currentTier?.id as string) === 'platinum' ? 'bg-gradient-to-r from-slate-400 to-slate-600 text-white' :
+                      (currentTier?.id as string) === 'gold' ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-gray-900' :
+                        (currentTier?.id as string) === 'silver' ? 'bg-gradient-to-r from-gray-300 to-gray-500 text-gray-900' :
                           'bg-gradient-to-r from-orange-400 to-orange-600 text-white'
                     }`}>
                     {currentTier?.name}
@@ -631,6 +632,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
               { id: 'analytics', label: 'Analytics', icon: '📈' },
               { id: 'messaging', label: 'Messaging', icon: '💬' },
               { id: 'payouts', label: 'Payouts', icon: '💰' },
+              { id: 'promotions', label: 'Promotions', icon: '🏷️' },
               { id: 'billing', label: 'Billing', icon: '💳' },
               { id: 'notifications', label: 'Notifications', icon: '🔔' },
               { id: 'profile', label: 'Profile', icon: '👤' },
@@ -656,6 +658,10 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
 
           {/* Tab Content */}
           <div className="space-y-6">
+            {activeTab === 'promotions' && dashboardAddress && (
+              <PromoCodesManager walletAddress={dashboardAddress} />
+            )}
+
             {activeTab === 'overview' && (
               <GlassPanel className="p-6">
                 {/* Check if user has listings */}

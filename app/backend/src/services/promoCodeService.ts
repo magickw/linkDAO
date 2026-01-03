@@ -156,6 +156,24 @@ export class PromoCodeService {
             .set({ usageCount: sql`${promoCodes.usageCount} + 1` })
             .where(and(eq(promoCodes.code, code), eq(promoCodes.sellerId, sellerId)));
     }
+
+    /**
+     * Get all promo codes for a seller
+     */
+    async getPromoCodes(sellerId: string) {
+        try {
+            const codes = await db
+                .select()
+                .from(promoCodes)
+                .where(eq(promoCodes.sellerId, sellerId))
+                .orderBy(sql`${promoCodes.createdAt} DESC`);
+
+            return codes;
+        } catch (error) {
+            safeLogger.error('Error fetching promo codes:', error);
+            throw error;
+        }
+    }
 }
 
 export const promoCodeService = new PromoCodeService();

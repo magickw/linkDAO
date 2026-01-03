@@ -94,4 +94,35 @@ export class PromoCodeController {
             });
         }
     }
+
+    /**
+     * Get all promo codes for a seller
+     * GET /api/marketplace/promo-codes?sellerId=...
+     */
+    async list(req: Request, res: Response) {
+        try {
+            const { sellerId } = req.query;
+
+            if (!sellerId || typeof sellerId !== 'string') {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Seller ID is required'
+                });
+            }
+
+            const codes = await promoCodeService.getPromoCodes(sellerId);
+
+            return res.json({
+                success: true,
+                data: codes
+            });
+
+        } catch (error) {
+            safeLogger.error('Error listing promo codes:', error);
+            return res.status(500).json({
+                success: false,
+                error: 'Internal server error'
+            });
+        }
+    }
 }

@@ -31,6 +31,7 @@ import {
   ChevronRight as ChevronRightIcon
 } from 'lucide-react';
 import { useRouter } from 'next/router';
+import Link from 'next/link';
 import { GlassPanel } from '../../../design-system/components/GlassPanel';
 import { Button } from '../../../design-system/components/Button';
 import { DualPricing } from '../../../design-system/components/DualPricing';
@@ -131,6 +132,8 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [showToast, setShowToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
+  const [loadingRelated, setLoadingRelated] = useState(false);
   const router = useRouter();
 
   // Simulate real-time viewer updates
@@ -140,6 +143,39 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
     }, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  // Fetch related products
+  useEffect(() => {
+    const fetchRelatedProducts = async () => {
+      setLoadingRelated(true);
+      try {
+        // Import marketplaceService dynamically to avoid circular dependencies
+        const { marketplaceService } = await import('../../../services/marketplaceService');
+        
+        // Fetch products from the same category, excluding current product
+        const listings = await marketplaceService.getMarketplaceListings({
+          limit: 8,
+          offset: 0,
+          sortBy: 'createdAt',
+          sortOrder: 'desc'
+        });
+        
+        // Filter out current product and limit to 4 items
+        const related = listings
+          .filter((item: any) => item.id !== product.id)
+          .slice(0, 4);
+        
+        setRelatedProducts(related);
+      } catch (error) {
+        console.error('Error fetching related products:', error);
+        setRelatedProducts([]);
+      } finally {
+        setLoadingRelated(false);
+      }
+    };
+
+    fetchRelatedProducts();
+  }, [product.id]);
 
   // Check if stock is low
   const isLowStock = product.inventory !== undefined && product.inventory !== null && product.inventory < 10 && product.inventory > 0;
@@ -931,23 +967,64 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
         <div className="mt-8">
           <GlassPanel variant="secondary" className="p-6">
             <h2 className="text-2xl font-bold text-white mb-6">You May Also Like</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="bg-white/5 rounded-lg p-4 hover:bg-white/10 transition-colors cursor-pointer">
-                  <div className="aspect-square bg-white/10 rounded-lg mb-3 flex items-center justify-center">
-                    <div className="text-white/30 text-4xl">📦</div>
+            
+            {loadingRelated ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="bg-white/5 rounded-lg p-4 animate-pulse">
+                    <div className="aspect-square bg-white/10 rounded-lg mb-3"></div>
+                    <div className="h-4 bg-white/10 rounded mb-2"></div>
+                    <div className="h-4 bg-white/10 rounded w-2/3"></div>
                   </div>
-                  <h3 className="text-white font-medium text-sm mb-2 line-clamp-2">Related Product {i}</h3>
-                  <div className="flex items-center justify-between">
-                    <span className="text-blue-400 font-semibold">${(Math.random() * 100 + 10).toFixed(2)}</span>
-                    <div className="flex items-center text-yellow-400 text-xs">
-                      <Star size={12} className="fill-current" />
-                      <span className="ml-1">{(Math.random() * 2 + 3).toFixed(1)}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : relatedProducts.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {relatedProducts.map((relatedProduct) => {
+                  const imageUrl = relatedProduct.images?.[0] || relatedProduct.image || '';
+                  const price = relatedProduct.price?.amount || relatedProduct.priceAmount || 0;
+                  const priceDisplay = typeof price === 'number' ? price.toFixed(2) : price;
+                  const rating = relatedProduct.rating || relatedProduct.reviews?.average || 4.5;
+
+                  return (
+                    <Link key={relatedProduct.id} href={`/marketplace/listing/${relatedProduct.id}`}>
+                      <a className="block bg-white/5 rounded-lg p-4 hover:bg-white/10 transition-colors cursor-pointer group">
+                        <div className="aspect-square bg-white/10 rounded-lg mb-3 overflow-hidden">
+                          <OptimizedImage
+                            src={imageUrl || `https://placehold.co/300x300/4B2E83/FFFFFF?text=${encodeURIComponent(relatedProduct.title || 'Product')}`}
+                            alt={relatedProduct.title || 'Product'}
+                            width={300}
+                            height={300}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            lazy={true}
+                            quality={75}
+                          />
+                        </div>
+                        <h3 className="text-white font-medium text-sm mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors">
+                          {relatedProduct.title || 'Untitled Product'}
+                        </h3>
+                        <div className="flex items-center justify-between">
+                          <span className="text-blue-400 font-semibold">${priceDisplay}</span>
+                          <div className="flex items-center text-yellow-400 text-xs">
+                            <Star size={12} className="fill-current" />
+                            <span className="ml-1">{rating.toFixed(1)}</span>
+                          </div>
+                        </div>
+                        {relatedProduct.seller?.name && (
+                          <p className="text-white/50 text-xs mt-2 truncate">
+                            by {relatedProduct.seller.name}
+                          </p>
+                        )}
+                      </a>
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-white/50">
+                No related products available at the moment
+              </div>
+            )}
           </GlassPanel>
         </div>
 
