@@ -127,13 +127,9 @@ export async function getSigner() {
     
     if (client) {
       // Check if the client has the necessary methods before accessing them
-      if (typeof client.getChainId === 'function') {
-        try {
-          const chainId = await client.getChainId();
-          console.log('Wallet client chain ID:', chainId);
-        } catch (e) {
-          console.warn('Failed to get chain ID from wallet client:', e);
-        }
+      // Note: Use client.chain.id instead of client.getChainId() to avoid connector issues
+      if (client.chain && typeof client.chain.id !== 'undefined') {
+        console.log('Wallet client chain ID:', client.chain.id);
       }
       
       const injectedProvider = (client as any).transport?.provider;
