@@ -225,27 +225,36 @@ export class ReceiptService {
 
   private async storeReceipt(receipt: PaymentReceipt): Promise<void> {
     try {
-      await this.databaseService.createReceipt({
+      const orderId = 'orderId' in receipt ? receipt.orderId : undefined;
+
+      // Map to new order_receipts schema
+      const dbReceipt = {
         id: receipt.id,
-        type: receipt.type,
-        orderId: 'orderId' in receipt ? receipt.orderId : undefined,
-        transactionId: receipt.transactionId,
-        buyerAddress: receipt.buyerAddress,
-        amount: receipt.amount,
-        currency: receipt.currency,
-        paymentMethod: receipt.paymentMethod,
-        transactionHash: receipt.transactionHash,
-        status: receipt.status,
-        items: 'items' in receipt ? JSON.stringify(receipt.items) : undefined,
-        fees: receipt.fees ? JSON.stringify(receipt.fees) : undefined,
-        sellerAddress: 'sellerAddress' in receipt ? receipt.sellerAddress : undefined,
-        sellerName: 'sellerName' in receipt ? receipt.sellerName : undefined,
+        orderId: orderId,
         receiptNumber: receipt.receiptNumber,
-        downloadUrl: receipt.downloadUrl,
-        createdAt: receipt.createdAt,
-        completedAt: receipt.completedAt,
-        metadata: receipt.metadata ? JSON.stringify(receipt.metadata) : undefined
-      });
+        buyerInfo: {
+          walletAddress: receipt.buyerAddress,
+          // Add other buyer info if available in metadata
+          ...((receipt.metadata as any)?.buyerInfo || {})
+        },
+        items: 'items' in receipt ? receipt.items : [],
+        pricing: {
+          amount: receipt.amount,
+          currency: receipt.currency,
+          fees: receipt.fees
+        },
+        paymentDetails: {
+          method: receipt.paymentMethod,
+          transactionId: receipt.transactionId,
+          transactionHash: receipt.transactionHash,
+          status: receipt.status
+        },
+        pdfUrl: receipt.downloadUrl,
+        emailSentAt: null, // Initial creation, email not sent yet
+        createdAt: receipt.createdAt
+      };
+
+      await this.databaseService.createReceipt(dbReceipt);
     } catch (error) {
       safeLogger.error('Error storing receipt:', error);
       throw error;

@@ -75,6 +75,7 @@ export enum OrderStatus {
   DELIVERED = 'DELIVERED',
   COMPLETED = 'COMPLETED',
   DISPUTED = 'DISPUTED',
+  CANCELLATION_REQUESTED = 'CANCELLATION_REQUESTED',
   CANCELLED = 'CANCELLED',
   REFUNDED = 'REFUNDED'
 }
@@ -140,7 +141,7 @@ export interface MarketplaceOrder {
   trackingInfo?: TrackingInfo;
   events?: OrderEvent[];
   notes?: string;
-  
+
   // Additional properties for order tracking
   trackingNumber?: string;
   trackingCarrier?: string;

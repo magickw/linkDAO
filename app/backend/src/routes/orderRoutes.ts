@@ -200,6 +200,19 @@ router.delete(
 );
 
 /**
+ * @route POST /api/orders/:orderId/cancel-request
+ * @desc Request order cancellation
+ * @access Private
+ */
+router.post(
+  '/:orderId/cancel-request',
+  orderRateLimit,
+  authMiddleware,
+  validateRequest,
+  orderController.requestCancellation.bind(orderController)
+);
+
+/**
  * @route POST /api/orders/:orderId/refund
  * @desc Refund order
  * @access Private
@@ -209,6 +222,18 @@ router.post(
   orderRateLimit,
   authMiddleware,
   orderController.refundOrder.bind(orderController)
+);
+
+/**
+ * @route GET /api/orders/:orderId/receipt
+ * @desc Get order receipt
+ * @access Private
+ */
+router.get(
+  '/:orderId/receipt',
+  orderRateLimit,
+  authMiddleware,
+  orderController.getReceipt.bind(orderController)
 );
 
 /**

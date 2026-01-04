@@ -16,12 +16,15 @@ import {
   ShippingInfo,
   OrderAnalytics
 } from '../models/Order';
+import { ReceiptStatus } from '../types/receipt';
 
 const databaseService = new DatabaseService();
 const userProfileService = new UserProfileService();
 const shippingService = new ShippingService();
 const notificationService = new NotificationService();
 const blockchainEventService = new BlockchainEventService();
+import { ReceiptService } from './receiptService';
+const receiptService = new ReceiptService();
 // orderWebSocketService is now lazy-loaded via getOrderWebSocketService()
 
 export class OrderService {
@@ -406,6 +409,104 @@ export class OrderService {
 
   // Private helper methods
 
+  /**
+   * Request order cancellation (by buyer or system)
+   */
+  async requestCancellation(orderId: string, requesterAddress: string, reason: string, description?: string): Promise<boolean> {
+    try {
+      const order = await this.getOrderById(orderId);
+      if (!order) throw new Error('Order not found');
+
+      // Check eligibility (e.g., status is not already completed/shipped if strict, but maybe allow if seller agrees)
+      if ([OrderStatus.COMPLETED, OrderStatus.DELIVERED, OrderStatus.CANCELLED, OrderStatus.REFUNDED].includes(order.status)) {
+        throw new Error('Order cannot be cancelled in its current state');
+      }
+
+      // Check if user is buyer or seller (or admin - not implemented yet)
+      const requesterProfile = await userProfileService.getProfileByAddress(requesterAddress);
+      if (!requesterProfile) throw new Error('Requester profile not found');
+
+      // Create cancellation request
+      await databaseService.createCancellationRequest({
+        orderId,
+        requesterId: requesterProfile.id,
+        reason,
+        description,
+        status: 'pending'
+      });
+
+      // Update order status
+      await this.updateOrderStatus(orderId, OrderStatus.CANCELLATION_REQUESTED);
+
+      // Notify the other party
+      const otherParty = requesterAddress === order.buyerWalletAddress ? order.sellerWalletAddress : order.buyerWalletAddress;
+      await notificationService.sendOrderNotification(otherParty, 'CANCELLATION_REQUESTED', orderId, { reason });
+
+      return true;
+    } catch (error) {
+      safeLogger.error('Error requesting cancellation:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Process cancellation request (Seller approval/rejection)
+   */
+  async processCancellation(
+    orderId: string,
+    processorAddress: string,
+    action: 'approve' | 'reject',
+    resolutionNotes?: string
+  ): Promise<boolean> {
+    try {
+      const order = await this.getOrderById(orderId);
+      if (!order) throw new Error('Order not found');
+
+      const cancellationRequest = await databaseService.getCancellationByOrderId(orderId);
+      if (!cancellationRequest) throw new Error('No active cancellation request found');
+
+      // Verify processor is the seller (or admin)
+      if (processorAddress !== order.sellerWalletAddress) {
+        throw new Error('Only the seller can process cancellation requests');
+      }
+
+      if (action === 'approve') {
+        // Issue refund logic would go here
+        // For now, assuming refund is handled externally or strictly via update
+
+        // Return items to inventory logic (using databaseService.updateListing or similar if we tracked inventory there)
+        // TODO: Implement inventory restoration
+
+        // Update cancellation status
+        await databaseService.updateCancellationStatus(cancellationRequest.id, 'approved', resolutionNotes);
+
+        // Update order status
+        await this.updateOrderStatus(orderId, OrderStatus.CANCELLED);
+
+        // Notification
+        await notificationService.sendOrderNotification(order.buyerWalletAddress, 'CANCELLATION_APPROVED', orderId);
+      } else {
+        // Update cancellation status
+        await databaseService.updateCancellationStatus(cancellationRequest.id, 'rejected', resolutionNotes);
+
+        // Revert order status to previous state? Or just 'processing'/'paid'.
+        // Ideally we should know the previous state. For now, reverting to PAID or PROCESSING as safe default if it was requested.
+        // Actually, if it was 'cancellation_requested', we should probably move it back to 'processing' or 'paid'.
+        await this.updateOrderStatus(orderId, OrderStatus.PROCESSING); // Fallback
+
+        // Notification
+        await notificationService.sendOrderNotification(order.buyerWalletAddress, 'CANCELLATION_REJECTED', orderId, { reason: resolutionNotes });
+      }
+
+      return true;
+    } catch (error) {
+      safeLogger.error('Error processing cancellation:', error);
+      throw error;
+    }
+  }
+
+  // Private helper methods
+
   private validateCreateOrderInput(input: CreateOrderInput): void {
     if (!input.listingId || !input.buyerAddress || !input.sellerAddress || !input.amount || !input.paymentToken) {
       throw new Error('Missing required fields for order creation');
@@ -510,8 +611,31 @@ export class OrderService {
   }
 
   private async handleStatusSpecificLogic(orderId: string, status: OrderStatus, metadata?: any): Promise<void> {
+    const order = await this.getOrderById(orderId);
+    if (!order) return;
+
     switch (status) {
       case OrderStatus.PAID:
+        // Generate Receipt
+        try {
+          await receiptService.generateMarketplaceReceipt({
+            orderId: order.id,
+            transactionId: order.escrowId || `txn_${Date.now()}`,
+            buyerAddress: order.buyerWalletAddress,
+            amount: order.amount,
+            currency: 'USDC', // Defaulting for now effectively
+            paymentMethod: order.paymentToken ? 'crypto' : 'unknown',
+            transactionHash: metadata?.txHash,
+            status: ReceiptStatus.COMPLETED, // Receipt status
+            items: [], // Load items if available
+            sellerAddress: order.sellerWalletAddress,
+            createdAt: new Date(),
+            completedAt: new Date()
+          });
+        } catch (error) {
+          safeLogger.error('Failed to generate receipt during status update', error);
+        }
+
         // Notify seller to process the order
         await this.updateOrderStatus(orderId, OrderStatus.PROCESSING);
         break;

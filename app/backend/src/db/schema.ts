@@ -1128,6 +1128,71 @@ export const disputeEvidence = pgTable("dispute_evidence", {
   verified: boolean("verified").default(false),
 });
 
+// Order Receipts
+export const orderReceipts = pgTable("order_receipts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  orderId: uuid("order_id").references(() => orders.id),
+  receiptNumber: varchar("receipt_number", { length: 64 }),
+  buyerInfo: jsonb("buyer_info"),
+  items: jsonb("items"),
+  pricing: jsonb("pricing"),
+  paymentDetails: jsonb("payment_details"),
+  pdfUrl: text("pdf_url"),
+  emailSentAt: timestamp("email_sent_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Order Cancellations
+export const orderCancellations = pgTable("order_cancellations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  orderId: uuid("order_id").references(() => orders.id),
+  buyerId: uuid("buyer_id").references(() => users.id),
+  sellerId: uuid("seller_id").references(() => users.id),
+  reason: text("reason"),
+  status: varchar("status", { length: 32 }).default("pending"), // 'pending', 'approved', 'denied', 'auto_approved'
+  requestedAt: timestamp("requested_at").defaultNow(),
+  respondedAt: timestamp("responded_at"),
+  responseReason: text("response_reason"),
+  refundStatus: varchar("refund_status", { length: 32 }), // 'pending', 'processing', 'completed', 'failed'
+  refundDetails: jsonb("refund_details"),
+});
+
+// Delivery Estimates
+export const deliveryEstimates = pgTable("delivery_estimates", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  orderId: uuid("order_id").references(() => orders.id),
+  estimatedDeliveryMin: timestamp("estimated_delivery_min"),
+  estimatedDeliveryMax: timestamp("estimated_delivery_max"),
+  confidence: varchar("confidence", { length: 20 }).default("medium"), // 'high', 'medium', 'low'
+  factors: jsonb("factors"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Seller Notification Queue
+export const sellerNotificationQueue = pgTable("seller_notification_queue", {
+  id: serial("id").primaryKey(),
+  sellerId: uuid("seller_id").references(() => users.id),
+  type: varchar("type", { length: 64 }),
+  priority: varchar("priority", { length: 20 }).default("normal"), // 'normal', 'high', 'urgent'
+  title: varchar("title", { length: 255 }),
+  body: text("body"),
+  data: jsonb("data"),
+  channels: text("channels").array(), // Array of channels e.g. ['push', 'email']
+  status: varchar("status", { length: 20 }).default("pending"), // 'pending', 'sent', 'failed'
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Seller Notification Preferences
+export const sellerNotificationPreferences = pgTable("seller_notification_preferences", {
+  userId: uuid("user_id").primaryKey().references(() => users.id),
+  pushEnabled: boolean("push_enabled").default(true),
+  emailEnabled: boolean("email_enabled").default(true),
+  inAppEnabled: boolean("in_app_enabled").default(true),
+  quietHoursStart: varchar("quiet_hours_start", { length: 5 }), // HH:mm
+  quietHoursEnd: varchar("quiet_hours_end", { length: 5 }), // HH:mm
+  batchingEnabled: boolean("batching_enabled").default(true),
+});
+
 // Orders
 export const orders = pgTable("orders", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -1162,6 +1227,13 @@ export const orders = pgTable("orders", {
   metadata: jsonb("metadata"), // Additional metadata as JSONB
   stripePaymentIntentId: varchar("stripe_payment_intent_id", { length: 255 }),
   stripeTransferGroup: varchar("stripe_transfer_group", { length: 255 }),
+  // New lifecycle fields
+  cancellationRequestedAt: timestamp("cancellation_requested_at"),
+  cancellationReason: text("cancellation_reason"),
+  receiptGeneratedAt: timestamp("receipt_generated_at"),
+  receiptId: uuid("receipt_id").references(() => orderReceipts.id),
+  estimatedDeliveryMin: timestamp("estimated_delivery_min"),
+  estimatedDeliveryMax: timestamp("estimated_delivery_max"),
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
   checkoutSessionIdx: index("idx_orders_checkout_session_id").on(t.checkoutSessionId),
@@ -1204,6 +1276,10 @@ export const trackingRecords = pgTable("tracking_records", {
   labelUrl: text("label_url"),
   trackingData: text("tracking_data"), // Full JSON response
   events: text("events"),
+  // New lifecycle fields
+  deliveryEstimateUpdatedAt: timestamp("delivery_estimate_updated_at"),
+  exceptionType: varchar("exception_type", { length: 64 }),
+  exceptionDetails: text("exception_details"),
   createdAt: timestamp("created_at").defaultNow(),
   lastUpdated: timestamp("last_updated").defaultNow(),
 });
