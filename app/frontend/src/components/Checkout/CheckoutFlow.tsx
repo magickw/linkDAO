@@ -89,7 +89,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
   const publicClient = usePublicClient();
-  const walletClient = useWalletClient();
+  const { data: walletClientData } = useWalletClient();
   const { addToast } = useToast();
 
   // Fetch user profile for auto-filling address
@@ -127,11 +127,12 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
   const [shippingErrors, setShippingErrors] = useState<Record<string, string>>({});
   const [billingErrors, setBillingErrors] = useState<Record<string, string>>({});
-  const [checkoutService] = useState(() => {
-    const cryptoService = new CryptoPaymentService(publicClient, walletClient);
+
+  const checkoutService = React.useMemo(() => {
+    const cryptoService = new CryptoPaymentService(publicClient, walletClientData);
     const stripeService = new StripePaymentService();
     return new UnifiedCheckoutService(cryptoService, stripeService);
-  });
+  }, [publicClient, walletClientData]);
 
   const [prioritizationService] = useState(() => {
     const costCalculator = new CostEffectivenessCalculator();
@@ -298,9 +299,15 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
     }
   };
 
+  // Calculate tax when entering review step or when address changes
+  useEffect(() => {
+    if ((currentStep === 'review' || currentStep === 'payment-method') && shippingAddress.country) {
+      calculateOrderTax(shippingAddress);
+    }
+  }, [currentStep, shippingAddress, cartState.items]);
+
   const calculateOrderTax = async (address: any) => {
     if (!address || !address.country) {
-      console.log('Address incomplete, resetting tax calculation');
       setTaxCalculation(null);
       return;
     }
@@ -308,16 +315,15 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
     try {
       const items = cartState.items.map(item => ({
         id: item.id,
-        name: item.product?.title || 'Product',
-        price: parseFloat(item.priceAtTime),
+        name: item.title,
+        price: parseFloat(item.price.fiat),
         quantity: item.quantity,
         isDigital: false,
         isTaxExempt: false
       }));
 
-      const shippingCost = 10; // Default shipping cost
-
-      console.log('Calculating tax with:', { items, address, shippingCost });
+      // Calculate pseudo-shipping cost based on total
+      const shippingCost = parseFloat(cartState.totals.shipping.fiat) || 0;
 
       const taxResult = await taxService.calculateTax(
         items,
@@ -331,12 +337,187 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
         shippingCost
       );
 
-      console.log('Tax calculation result:', taxResult);
       setTaxCalculation(taxResult);
     } catch (error) {
       console.error('Failed to calculate tax:', error);
+      // Even if it fails, we shouldn't block checkout, but maybe warn?
+      // For now, fail silently or with null
       setTaxCalculation(null);
     }
+  };
+
+  const handlePaymentSubmit = async () => {
+    if (!selectedPaymentMethod || !address) return;
+
+    setLoading(true);
+    setError(null);
+    setPaymentError(null);
+
+    try {
+      const taxAmount = taxCalculation?.taxAmount || 0;
+      // Recalculate total ensuring we use the same numbers as UI
+      // Subtotal (already discounted in logic? No, check cart totals)
+      // Cart logic: subtotal matches UI. 
+      // Total = Subtotal + Shipping + Tax
+      const subtotal = parseFloat(cartState.totals.subtotal.fiat);
+      const shipping = parseFloat(cartState.totals.shipping.fiat);
+      const totalAmount = subtotal + shipping + taxAmount;
+
+      if (selectedPaymentMethod?.method.type === PaymentMethodType.FIAT_STRIPE && totalAmount < 0.50) {
+        throw new Error(`Order total ($${totalAmount.toFixed(2)}) must be at least $0.50 USD for card payments.`);
+      }
+
+      const request: PrioritizedCheckoutRequest = {
+        orderId: `order_${Date.now()}`,
+        listingId: cartState.items[0]?.id || '',
+        buyerAddress: address,
+        sellerAddress: cartState.items[0]?.seller.id || '',
+        amount: totalAmount,
+        currency: 'USD',
+        selectedPaymentMethod,
+        paymentDetails: {
+          walletAddress: address,
+          tokenSymbol: selectedPaymentMethod.method.token?.symbol,
+          networkId: selectedPaymentMethod.method.chainId,
+          billingAddress: sameAsShipping ? shippingAddress : billingAddress
+        }
+      };
+
+      const result = useEscrow && selectedPaymentMethod.method.type !== PaymentMethodType.FIAT_STRIPE
+        ? await checkoutService.processEscrowPayment(request)
+        : await checkoutService.processPrioritizedCheckout(request);
+
+      if (result.status === 'completed' || result.status === 'processing') {
+        setOrderData(result);
+        setCurrentStep('confirmation');
+        onComplete(result.orderId);
+      } else {
+        throw new Error('Payment processing failed');
+      }
+    } catch (err) {
+      console.error('Checkout failed:', err);
+      const paymentErr = PaymentErrorType.fromError(err);
+      setPaymentError(paymentErr);
+      setShowErrorModal(true);
+      addToast(paymentErr.userMessage, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ... (rest of methods)
+
+  const renderOrderSummary = () => {
+    // Calculate total discount from items
+    const totalDiscount = cartState.items.reduce((sum, item) => {
+      return sum + (parseFloat(item.appliedDiscount || '0'));
+    }, 0);
+
+    // Derived values for display
+    const subtotal = parseFloat(cartState.totals.subtotal.fiat);
+    const shipping = parseFloat(cartState.totals.shipping.fiat);
+    const tax = taxCalculation?.taxAmount || 0;
+    // Note: totalDiscount is already subtracted from subtotal in cart logic? 
+    // Wait, earlier I saw: "Subtotal (${cartState.totals.subtotal.fiat}) + Total Discount". 
+    // CartService typically: subtotal = sum(price * qty) - discount. 
+    // So subtotal IS the discounted price.
+    // If we want to show "Gross Subtotal", we add back discount.
+    const grossSubtotal = subtotal + totalDiscount;
+    const finalTotal = subtotal + shipping + tax;
+
+    return (
+      <GlassPanel variant="secondary" className="p-6">
+        <h3 className="text-lg font-semibold text-white mb-4">Order Summary</h3>
+        <div className="space-y-4">
+          {cartState.items.map((item) => {
+            const itemTotal = parseFloat(item.price.fiat) * item.quantity;
+            const itemDiscount = parseFloat(item.appliedDiscount || '0');
+            const itemFinalPrice = itemTotal - itemDiscount;
+
+            return (
+              <div key={item.id} className="flex items-center gap-4">
+                {/* ... item rendering code ... */}
+                {/* Keep existing item rendering but update checks if needed */}
+                <Link href={`/marketplace/product/${item.id}`}>
+                  <a className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity">
+                    <ProductThumbnail
+                      item={{
+                        id: item.id,
+                        title: item.title,
+                        image: item.image,
+                        category: item.category
+                      }}
+                      size="medium"
+                      fallbackType="letter"
+                      className="flex-shrink-0"
+                    />
+                  </a>
+                </Link>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-white truncate">{item.title}</h4>
+                  <p className="text-white/70 text-sm">Qty: {item.quantity}</p>
+                  {itemDiscount > 0 && (
+                    <p className="text-green-400 text-xs">
+                      Promo applied: -${itemDiscount.toFixed(2)}
+                    </p>
+                  )}
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="font-medium text-white">${itemFinalPrice.toFixed(2)}</p>
+                </div>
+              </div>
+            );
+          })}
+
+          <hr className="border-white/20" />
+
+          <div className="space-y-2">
+            <div className="flex justify-between text-white/70">
+              <span>Subtotal ({cartState.totals.itemCount} items)</span>
+              <span>${grossSubtotal.toFixed(2)}</span>
+            </div>
+
+            {totalDiscount > 0 && (
+              <div className="flex justify-between text-green-400">
+                <span>Total Discount</span>
+                <span>-${totalDiscount.toFixed(2)}</span>
+              </div>
+            )}
+
+            {shipping > 0 ? (
+              <div className="flex justify-between text-white/70">
+                <span>Shipping</span>
+                <span>${shipping.toFixed(2)}</span>
+              </div>
+            ) : (
+              <div className="flex justify-between text-white/70">
+                <span>Shipping</span>
+                <span className="text-green-400">Free</span>
+              </div>
+            )}
+
+            {/* Tax Display */}
+            <div className="flex justify-between text-white/70">
+              <span>Tax {taxCalculation ? `(${taxCalculation.taxRate * 100}%)` : '(Est.)'}</span>
+              <span>${tax.toFixed(2)}</span>
+            </div>
+
+            <hr className="border-white/20 my-2" />
+
+            <div className="flex justify-between text-lg font-bold text-white">
+              <span>Total</span>
+              <span>${finalTotal.toFixed(2)}</span>
+            </div>
+
+            {selectedPaymentMethod?.method.type !== PaymentMethodType.FIAT_STRIPE && (
+              <div className="text-right text-xs text-white/50">
+                ≈ {selectedPaymentMethod?.costEstimate?.totalCost.toFixed(4)} {selectedPaymentMethod?.method.token?.symbol}
+              </div>
+            )}
+          </div>
+        </div>
+      </GlassPanel>
+    );
   };
 
   const getAvailablePaymentMethods = async (): Promise<PrioritizedPaymentMethodType[]> => {
@@ -441,6 +622,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
     return methods;
   };
+
 
   const getCurrentMarketConditions = async (): Promise<MarketConditions> => {
     // Mock implementation - should be replaced with actual market data
@@ -549,73 +731,8 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
     console.log('Payment method selected:', method.method.name);
   };
 
-  const handlePaymentSubmit = async () => {
-    if (!selectedPaymentMethod || !address) return;
 
-    setLoading(true);
-    setError(null);
-    setPaymentError(null);
 
-    try {
-      const taxAmount = taxCalculation?.taxAmount || 0;
-      const totalAmount = parseFloat(cartState.totals.total.fiat) + taxAmount;
-
-      console.log('Proceeding with payment:', {
-        subtotal: cartState.totals.total.fiat,
-        tax: taxAmount,
-        total: totalAmount,
-        method: selectedPaymentMethod?.method.type
-      });
-
-      // Stripe requires at least $0.50 USD
-      if (selectedPaymentMethod?.method.type === PaymentMethodType.FIAT_STRIPE && totalAmount < 0.50) {
-        throw new Error(`Order total ($${totalAmount.toFixed(2)}) must be at least $0.50 USD for card payments.`);
-      }
-
-      const request: PrioritizedCheckoutRequest = {
-        orderId: `order_${Date.now()}`,
-        listingId: cartState.items[0]?.id || '',
-        buyerAddress: address,
-        sellerAddress: cartState.items[0]?.seller.id || '',
-        amount: totalAmount,
-        currency: 'USD',
-        selectedPaymentMethod,
-        paymentDetails: {
-          // For crypto payments
-          walletAddress: address,
-          tokenSymbol: selectedPaymentMethod.method.token?.symbol,
-          networkId: selectedPaymentMethod.method.chainId,
-          // For fiat payments
-          billingAddress: sameAsShipping ? shippingAddress : billingAddress
-        }
-      };
-
-      // Process checkout with selected payment method
-      const result = useEscrow && selectedPaymentMethod.method.type !== PaymentMethodType.FIAT_STRIPE
-        ? await checkoutService.processEscrowPayment(request)
-        : await checkoutService.processPrioritizedCheckout(request);
-
-      if (result.status === 'completed' || result.status === 'processing') {
-        setOrderData(result);
-        setCurrentStep('confirmation');
-        onComplete(result.orderId);
-      } else {
-        throw new Error('Payment processing failed');
-      }
-    } catch (err) {
-      console.error('Checkout failed:', err);
-
-      // Use PaymentError.fromError for intelligent error handling
-      const paymentErr = PaymentErrorType.fromError(err);
-      setPaymentError(paymentErr);
-      setShowErrorModal(true);
-
-      // Also show toast for immediate feedback
-      addToast(paymentErr.userMessage, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleProcessPayment = () => {
     setCurrentStep('processing');
@@ -686,157 +803,8 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
 
 
-  const renderOrderSummary = () => {
-    // Calculate total discount from items
-    const totalDiscount = cartState.items.reduce((sum, item) => {
-      return sum + (parseFloat(item.appliedDiscount || '0'));
-    }, 0);
 
-    return (
-      <GlassPanel variant="secondary" className="p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">Order Summary</h3>
-        <div className="space-y-4">
-          {cartState.items.map((item) => {
-            const itemTotal = parseFloat(item.price.fiat) * item.quantity;
-            const itemDiscount = parseFloat(item.appliedDiscount || '0');
-            const itemFinalPrice = itemTotal - itemDiscount;
 
-            return (
-              <div key={item.id} className="flex items-center gap-4">
-                <Link href={`/marketplace/product/${item.id}`}>
-                  <a className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity">
-                    <ProductThumbnail
-                      item={{
-                        id: item.id,
-                        title: item.title,
-                        image: item.image,
-                        category: item.category
-                      }}
-                      size="medium"
-                      fallbackType="letter"
-                      className="flex-shrink-0"
-                    />
-                  </a>
-                </Link>
-                <div className="flex-1 min-w-0">
-                  <Link href={`/marketplace/product/${item.id}`}>
-                    <a className="hover:text-blue-400 transition-colors">
-                      <h4 className="font-medium text-white truncate">{item.title}</h4>
-                    </a>
-                  </Link>
-                  <p className="text-white/70 text-sm">Qty: {item.quantity}</p>
-                  {item.seller && (
-                    <p className="text-white/60 text-xs">by {item.seller.name}</p>
-                  )}
-                  {itemDiscount > 0 && (
-                    <p className="text-green-400 text-xs">
-                      Promo applied: -${itemDiscount.toFixed(2)}
-                    </p>
-                  )}
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="font-medium text-white">${itemFinalPrice.toFixed(2)}</p>
-                  {item.quantity > 1 && (
-                    <p className="text-white/60 text-xs">
-                      ${(parseFloat(item.price.fiat) * item.quantity).toFixed(2)} total
-                    </p>
-                  )}
-                  {itemDiscount > 0 && (
-                    <p className="text-white/40 text-xs line-through">
-                      ${itemTotal.toFixed(2)}
-                    </p>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-
-          <hr className="border-white/20" />
-
-          <div className="space-y-2">
-            <div className="flex justify-between text-white/70">
-              <span>Subtotal ({cartState.totals.itemCount} items)</span>
-              {/* Subtotal in cartState is already calculated? No, cartState.totals.subtotal usually implies pre-discount in many systems, 
-                  but here I need to be careful. 
-                  In cartService.ts, calculateTotals:
-                  subtotalFiat += itemTotalFiat;
-                  subtotalFiat -= discountFiat; 
-                  So cartState.totals.subtotal.fiat IS the discounted subtotal.
-                  
-                  Actually, usually "Subtotal" SHOULD be the gross amount before discounts.
-                  Users expect:
-                  Subtotal: $100
-                  Discount: -$10
-                  Total: $90
-                  
-                  If cartState sends "Subtotal" as $90, then distincting "Discount" is harder. 
-                  Let's re-read cartService.ts to be sure.
-                  
-                  In cartService.ts:
-                   let subtotalFiat = 0;
-                   // ...
-                   const itemTotalFiat = price.times(item.quantity);
-                   // ...
-                   const discountFiat = new BigNumber(item.appliedDiscount || 0);
-                   
-                   subtotalFiat = subtotalFiat.plus(itemTotalFiat).minus(discountFiat);
-                   
-                  So yes, the `subtotal` returned by backend IS the Net Subtotal.
-                  To display the Gross Subtotal, I need to add back the discount.
-              */}
-              <span>${(parseFloat(cartState.totals.subtotal.fiat) + totalDiscount).toFixed(2)}</span>
-            </div>
-
-            {totalDiscount > 0 && (
-              <div className="flex justify-between text-green-400">
-                <span>Total Discount</span>
-                <span>-${totalDiscount.toFixed(2)}</span>
-              </div>
-            )}
-
-            {parseFloat(cartState.totals.shipping.fiat) > 0 && (
-              <div className="flex justify-between text-white/70">
-                <span>Shipping</span>
-                <span>${cartState.totals.shipping.fiat}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-white/70">
-              <span>Platform Fee (2.5%)</span>
-              <span>${(parseFloat(cartState.totals.total.fiat) * 0.025).toFixed(2)}</span>
-            </div>
-
-            {taxCalculation && taxCalculation.taxAmount > 0 && (
-              <div className="flex justify-between text-white/70">
-                <span>Estimated Tax ({((taxCalculation.taxRate || 0) * 100).toFixed(1)}%)</span>
-                <span>${taxCalculation.taxAmount.toFixed(2)}</span>
-              </div>
-            )}
-
-            <hr className="border-white/20" />
-            <div className="flex justify-between text-white font-semibold text-lg">
-              <span>Total</span>
-              <div className="text-right">
-                <div>
-                  ${(parseFloat(cartState.totals.total.fiat) + (taxCalculation?.taxAmount || 0)).toFixed(2)}
-                </div>
-                <div className="text-sm text-white/60 font-normal">
-                  ≈ {cartState.totals.total.crypto} {cartState.totals.total.cryptoSymbol}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Trust indicators */}
-          <div className="mt-4 pt-4 border-t border-white/20">
-            <div className="flex items-center gap-2 text-xs text-white/60">
-              <Shield className="w-4 h-4 text-green-400" />
-              <span>Escrow protected • Secure payment</span>
-            </div>
-          </div>
-        </div>
-      </GlassPanel>
-    );
-  };
 
   const renderPaymentMethodSelection = () => {
     if (!prioritizationResult) return null;

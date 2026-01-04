@@ -164,90 +164,92 @@ export const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
     );
   }
 
-  // Show processing state
-  if (isProcessing) {
-    return (
-      <LoadingState
-        message="Processing payment..."
-        submessage="Please do not close this window. This may take a few moments."
-        progress={50}
-      />
-    );
-  }
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Amount Display */}
-      <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <CreditCard className="text-blue-400" size={24} />
-            <span className="text-white/70">Total Amount:</span>
-          </div>
-          <span className="text-2xl font-bold text-white">
-            {currency} {amount.toFixed(2)}
-          </span>
-        </div>
-      </div>
-
-      {/* Stripe Payment Element */}
-      <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-        <PaymentElement options={paymentElementOptions} />
-      </div>
-
-      {/* Error Display */}
-      {paymentError && (
-        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="text-red-400 flex-shrink-0 mt-0.5" size={20} />
-            <div>
-              <h4 className="text-sm font-semibold text-red-400 mb-1">
-                Payment Failed
-              </h4>
-              <p className="text-xs text-white/70">{paymentError}</p>
-            </div>
-          </div>
+    <div className="relative">
+      {/* Loading Overlay */}
+      {isProcessing && (
+        <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm rounded-lg flex items-center justify-center">
+          <LoadingState
+            message="Processing payment..."
+            submessage="Please do not close this window. This may take a few moments."
+            progress={50}
+          />
         </div>
       )}
 
-      {/* Security Notice */}
-      <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
-        <p className="text-xs text-white/70">
-          🔒 Your payment information is encrypted and secure. We use Stripe for payment processing
-          and never store your card details.
-        </p>
-      </div>
+      <form onSubmit={handleSubmit} className={`space-y-6 ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}>
+        {/* Amount Display */}
+        <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <CreditCard className="text-blue-400" size={24} />
+              <span className="text-white/70">Total Amount:</span>
+            </div>
+            <span className="text-2xl font-bold text-white">
+              {currency} {amount.toFixed(2)}
+            </span>
+          </div>
+        </div>
 
-      {/* Action Buttons */}
-      <div className="flex gap-3">
-        {onCancel && (
+        {/* Stripe Payment Element */}
+        <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+          <PaymentElement options={paymentElementOptions} />
+        </div>
+
+        {/* Error Display */}
+        {paymentError && (
+          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="text-red-400 flex-shrink-0 mt-0.5" size={20} />
+              <div>
+                <h4 className="text-sm font-semibold text-red-400 mb-1">
+                  Payment Failed
+                </h4>
+                <p className="text-xs text-white/70">{paymentError}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Security Notice */}
+        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+          <p className="text-xs text-white/70">
+            🔒 Your payment information is encrypted and secure. We use Stripe for payment processing
+            and never store your card details.
+          </p>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-3">
+          {onCancel && (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onCancel}
+              disabled={isProcessing}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+          )}
           <Button
-            type="button"
-            variant="secondary"
-            onClick={onCancel}
-            disabled={isProcessing}
+            type="submit"
+            variant="primary"
+            disabled={!stripe || isProcessing}
             className="flex-1"
           >
-            Cancel
+            {isProcessing ? 'Processing...' : `Pay ${currency} ${amount.toFixed(2)}`}
           </Button>
-        )}
-        <Button
-          type="submit"
-          variant="primary"
-          disabled={!stripe || isProcessing}
-          className="flex-1"
-        >
-          {isProcessing ? 'Processing...' : `Pay ${currency} ${amount.toFixed(2)}`}
-        </Button>
-      </div>
+        </div>
 
-      {/* 3D Secure Notice */}
-      <div className="text-center">
-        <p className="text-xs text-white/50">
-          You may be asked to verify your payment with your bank (3D Secure)
-        </p>
-      </div>
-    </form>
+        {/* 3D Secure Notice */}
+        <div className="text-center">
+          <p className="text-xs text-white/50">
+            You may be asked to verify your payment with your bank (3D Secure)
+          </p>
+        </div>
+      </form>
+    </div>
   );
 };
 

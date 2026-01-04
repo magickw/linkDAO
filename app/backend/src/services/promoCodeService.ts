@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { promoCodes, users } from '../db/schema';
+import { promoCodes, users, sellers } from '../db/schema';
 import { eq, and, gte, lte, or, isNull, sql } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 import { v4 as uuidv4 } from 'uuid';
@@ -35,17 +35,43 @@ export class PromoCodeService {
             return sellerIdOrAddress;
         }
 
-        // Otherwise assume it's a wallet address and look up the user
-        const user = await db.query.users.findFirst({
-            where: eq(users.walletAddress, sellerIdOrAddress),
-            columns: { id: true }
-        });
+        const normalizedAddress = sellerIdOrAddress.toLowerCase();
 
-        if (!user) {
+        // First, try to find the user in the users table
+        const userResult = await db
+            .select({ id: users.id })
+            .from(users)
+            .where(eq(users.walletAddress, normalizedAddress))
+            .limit(1);
+
+        if (userResult.length > 0) {
+            return userResult[0].id;
+        }
+
+        // If not found in users table, check if seller exists in sellers table
+        const sellerResult = await db
+            .select({ id: sellers.id, storeName: sellers.storeName })
+            .from(sellers)
+            .where(eq(sellers.walletAddress, normalizedAddress))
+            .limit(1);
+
+        if (sellerResult.length === 0) {
             throw new Error(`Seller not found for address: ${sellerIdOrAddress}`);
         }
 
-        return user.id;
+        const seller = sellerResult[0];
+
+        // Seller exists in sellers table but not in users table
+        // Create a corresponding user record
+        safeLogger.info(`Creating user record for existing seller: ${normalizedAddress}`);
+        const [newUser] = await db.insert(users).values({
+            id: uuidv4(),
+            walletAddress: normalizedAddress,
+            displayName: seller.storeName || 'Seller',
+            role: 'seller'
+        }).returning();
+
+        return newUser.id;
     }
 
     /**

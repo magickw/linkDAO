@@ -3,8 +3,8 @@
  * Provides immediate purchase experience without cart complexity
  */
 
-import React, { useState, useEffect } from 'react';
-import { useAccount, useBalance } from 'wagmi';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useAccount, useBalance, usePublicClient, useWalletClient } from 'wagmi';
 import { X, ShoppingBag, Wallet, Shield, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { MarketplaceListing } from '@/services/marketplaceService';
 import { useToast } from '@/context/ToastContext';
@@ -33,6 +33,7 @@ import {
 import { getNetworkName } from '@/config/escrowConfig';
 import { USDC_MAINNET, USDC_POLYGON, USDC_ARBITRUM, USDC_SEPOLIA, USDC_BASE, USDC_BASE_SEPOLIA } from '@/config/payment';
 import { PaymentError as PaymentErrorType } from '@/services/paymentErrorHandler';
+import { taxService, TaxCalculationResult } from '@/services/taxService';
 
 interface QuickBuyProps {
   listing: MarketplaceListing;
@@ -53,6 +54,9 @@ export const QuickBuy: React.FC<QuickBuyProps> = ({
   const { data: balance } = useBalance({ address });
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
+  const publicClient = usePublicClient();
+  const { data: walletClientData } = useWalletClient();
+
   const { addToast } = useToast();
   const cart = useEnhancedCart();
 
@@ -63,17 +67,18 @@ export const QuickBuy: React.FC<QuickBuyProps> = ({
   const [useEscrow, setUseEscrow] = useState(true);
   const [deliveryInfo, setDeliveryInfo] = useState('');
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [taxCalculation, setTaxCalculation] = useState<TaxCalculationResult | null>(null);
 
   // New State for Unified Checkout
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PrioritizedPaymentMethod | null>(null);
   const [prioritizationResult, setPrioritizationResult] = useState<PrioritizationResult | null>(null);
 
   // Services Initialization
-  const [checkoutService] = useState(() => {
-    const cryptoService = new CryptoPaymentService();
+  const checkoutService = useMemo(() => {
+    const cryptoService = new CryptoPaymentService(publicClient, walletClientData);
     const stripeService = new StripePaymentService();
     return new UnifiedCheckoutService(cryptoService, stripeService);
-  });
+  }, [publicClient, walletClientData]);
 
   const [prioritizationService] = useState(() => {
     const costCalculator = new CostEffectivenessCalculator();
@@ -95,8 +100,49 @@ export const QuickBuy: React.FC<QuickBuyProps> = ({
       setOrderId(null);
       // Trigger prioritization load
       loadPaymentPrioritization();
+      // Trigger tax calculation
+      calculateTax();
     }
   }, [isOpen]);
+
+  // Tax calculation
+  const calculateTax = async () => {
+    try {
+      // Mock address for estimation (since QuickBuy typically is fast)
+      // Ideally we'd user user profile address or IP geo
+      const address = {
+        country: 'US',
+        state: 'CA',
+        city: 'San Francisco',
+        postalCode: '94105',
+        line1: '123 Market St'
+      };
+
+      const price = parseFloat(listing.price);
+      // Estimate USD price (assuming ~2000 ETH/USD for now as per CheckoutFlow mock)
+      const estimatedUsdPrice = price * 2000;
+
+      const items = [{
+        id: listing.id,
+        name: listing.metadataURI || 'Item',
+        price: estimatedUsdPrice,
+        quantity: 1,
+        isDigital: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT',
+        isTaxExempt: false
+      }];
+
+      const taxResult = await taxService.calculateTax(
+        items,
+        address,
+        0 // shipping
+      );
+
+      setTaxCalculation(taxResult);
+    } catch (e) {
+      console.warn('Tax calc failed', e);
+      setTaxCalculation(null);
+    }
+  };
 
   // Helper Functions needed for Prioritization (copied/adapted from CheckoutFlow)
   const getAvailablePaymentMethods = async () => {
@@ -301,7 +347,7 @@ export const QuickBuy: React.FC<QuickBuyProps> = ({
         listingId: listing.id,
         buyerAddress: address,
         sellerAddress: listing.sellerWalletAddress,
-        amount: parseFloat(listing.price) * 2000, // Normalized USD amount approximately
+        amount: (parseFloat(listing.price) * 2000) + (taxCalculation?.taxAmount || 0), // Include tax
         currency: 'USD',
         selectedPaymentMethod,
         paymentDetails: {
@@ -364,7 +410,7 @@ export const QuickBuy: React.FC<QuickBuyProps> = ({
       category: listing.itemType.toLowerCase(),
       isDigital: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT',
       isNFT: listing.itemType === 'NFT',
-      quantity: listing.quantity,
+      quantity: 1,
       shipping: {
         cost: '0',
         freeShipping: true,
@@ -445,6 +491,13 @@ export const QuickBuy: React.FC<QuickBuyProps> = ({
                   <span className="text-gray-400">Item Price</span>
                   <span className="text-2xl font-bold text-white">{listing.price} ETH</span>
                 </div>
+
+                {taxCalculation && (
+                  <div className="flex justify-between items-center mb-4 text-sm">
+                    <span className="text-gray-400">Est. Tax ({taxCalculation.taxRate * 100}%)</span>
+                    <span className="text-white">${taxCalculation.taxAmount.toFixed(2)}</span>
+                  </div>
+                )}
 
                 {prioritizationResult ? (
                   <div className="mt-4">
