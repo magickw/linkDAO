@@ -127,22 +127,12 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   const [isZoomed, setIsZoomed] = useState(false);
   const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
   const [showStockNotification, setShowStockNotification] = useState(false);
-  const [currentViewers, setCurrentViewers] = useState(Math.floor(Math.random() * 5) + 1);
-  const [cartActivity, setCartActivity] = useState(Math.floor(Math.random() * 50) + 20);
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [showToast, setShowToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
   const router = useRouter();
-
-  // Simulate real-time viewer updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentViewers(prev => Math.max(1, prev + Math.floor(Math.random() * 3) - 1));
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Fetch related products
   useEffect(() => {
@@ -629,24 +619,32 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
               )}
 
               {/* Social Proof */}
-              <div className="mb-6 bg-white/5 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center text-white/70">
-                      <Eye size={16} className="mr-1" />
-                      <span className="text-sm">{currentViewers} viewing now</span>
+              {(product.views !== undefined || product.soldCount !== undefined) && (
+                <div className="mb-6 bg-white/5 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      {product.views !== undefined && (
+                        <div className="flex items-center text-white/70">
+                          <Eye size={16} className="mr-1" />
+                          <span className="text-sm">{product.views} views</span>
+                        </div>
+                      )}
+                      {product.soldCount !== undefined && product.soldCount > 0 && (
+                        <div className="flex items-center text-white/70">
+                          <ShoppingCart size={16} className="mr-1" />
+                          <span className="text-sm">{product.soldCount} sold</span>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex items-center text-white/70">
-                      <ShoppingCart size={16} className="mr-1" />
-                      <span className="text-sm">{cartActivity} added to cart today</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center text-green-400 text-sm">
-                    <Users size={16} className="mr-1" />
-                    <span>Popular item</span>
+                    {(product.views !== undefined && product.views > 100) || (product.soldCount !== undefined && product.soldCount > 10) ? (
+                      <div className="flex items-center text-green-400 text-sm">
+                        <Users size={16} className="mr-1" />
+                        <span>Popular item</span>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Description */}
               <div className="mb-6">

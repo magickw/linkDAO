@@ -41,8 +41,18 @@ export class StripePaymentService implements IPaymentProcessor {
 
   public async processPayment(request: PurchaseRequest): Promise<PurchaseResult> {
     try {
-      // Convert LDAO amount to USD cents (assuming $0.01 per LDAO)
-      const amountInCents = Math.round(request.amount * 1); // $0.01 per LDAO = 1 cent
+      // Convert amount to USD cents
+      // Smart detection: Check if amount is already in cents (>= 100) or in dollars (< 100)
+      const amountInCents = request.amount >= 100 
+        ? request.amount 
+        : Math.round(request.amount * 100); // Convert dollars to cents
+
+      safeLogger.info('Stripe payment amount calculation:', {
+        receivedAmount: request.amount,
+        amountInCents,
+        amountInDollars: amountInCents / 100,
+        assumedUnit: request.amount >= 100 ? 'cents' : 'dollars'
+      });
 
       const paymentIntent = await this.stripe.paymentIntents.create({
         amount: amountInCents,

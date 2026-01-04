@@ -298,7 +298,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
   const calculateOrderTax = async (address: any) => {
     if (!address || !address.country) {
-      console.log('Address incompelete, resetting tax calculation');
+      console.log('Address incomplete, resetting tax calculation');
       setTaxCalculation(null);
       return;
     }
@@ -315,6 +315,8 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
       const shippingCost = 10; // Default shipping cost
 
+      console.log('Calculating tax with:', { items, address, shippingCost });
+
       const taxResult = await taxService.calculateTax(
         items,
         {
@@ -327,6 +329,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
         shippingCost
       );
 
+      console.log('Tax calculation result:', taxResult);
       setTaxCalculation(taxResult);
     } catch (error) {
       console.error('Failed to calculate tax:', error);
