@@ -162,6 +162,30 @@ router.get(
 );
 
 /**
+ * @route GET /api/orders/:orderId/timeline
+ * @desc Get detailed order timeline with milestones
+ * @access Private
+ */
+router.get(
+  '/:orderId/timeline',
+  orderRateLimit,
+  authMiddleware,
+  orderController.getTimeline.bind(orderController)
+);
+
+/**
+ * @route GET /api/orders/:orderId/tracking
+ * @desc Get tracking info for an order
+ * @access Private
+ */
+router.get(
+  '/:orderId/tracking',
+  orderRateLimit,
+  authMiddleware,
+  orderController.getTrackingInfo.bind(orderController)
+);
+
+/**
  * @route GET /api/orders/analytics/:userAddress
  * @desc Get order analytics for a user
  * @access Private

@@ -2101,6 +2101,15 @@ export class DatabaseService {
     });
   }
 
+  async getTrackingRecords(orderId: string) {
+    return this.executeQuery(async () => {
+      const result = await this.db.select()
+        .from(schema.trackingRecords)
+        .where(eq(schema.trackingRecords.orderId, orderId));
+      return result;
+    });
+  }
+
   async getOrderStatusCounts(userId: string, userType: 'buyer' | 'seller') {
     return this.executeQuery(async () => {
       const result = await this.db.select({

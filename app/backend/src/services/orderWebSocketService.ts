@@ -217,6 +217,33 @@ export class OrderWebSocketService {
     this.handleOrderUpdate(event);
   }
 
+  /**
+   * Generic method to emit any order event (used by OrderTimelineService)
+   */
+  emitOrderEvent(orderId: string, eventType: string, data: any): void {
+    // Collect all subscribers for this order
+    const subscribers = this.getSubscribedUsersForOrder(orderId);
+
+    // If no specific subscribers, we can't target anyone specific easily unless we fetch the order
+    // But for timeline updates, usually the relevant parties are already subscribed via the UI
+
+    // We'll construct a generic event
+    // Note: We need a target wallet address for the OrderUpdateEvent interface
+    // Ideally we broadcast to the room/channel. 
+    // Since handleOrderUpdate iterates over subscribers if they exist:
+
+    if (this.orderSubscriptions.has(orderId)) {
+      const orderSubscribers = this.orderSubscriptions.get(orderId)!;
+      for (const subscriber of orderSubscribers) {
+        this.sendToUser(subscriber, eventType, {
+          orderId,
+          ...data,
+          timestamp: new Date()
+        }, 'medium');
+      }
+    }
+  }
+
   // Send order notification
   private sendOrderNotification(order: MarketplaceOrder, eventType: string, previousStatus?: string): void {
     // Send to buyer
@@ -288,7 +315,7 @@ export class OrderWebSocketService {
   // Health check
   performHealthCheck(): { healthy: boolean; issues: string[] } {
     const issues: string[] = [];
-    
+
     if (!this.webSocketService) {
       issues.push('WebSocket service not available');
     }
@@ -312,12 +339,12 @@ export class OrderWebSocketService {
     // Clear all reconnection timeouts
     this.reconnectTimeouts.forEach(timeout => clearTimeout(timeout));
     this.reconnectTimeouts.clear();
-    
+
     // Clear data structures
     this.orderSubscriptions.clear();
     this.userOrderSubscriptions.clear();
     this.reconnectAttempts.clear();
-    
+
     // Reset metrics
     this.connectionMetrics = {
       connectedUsers: 0,

@@ -407,6 +407,18 @@ export class OrderService {
     }
   }
 
+  /**
+   * Get tracking information for an order
+   */
+  async getOrderTracking(orderId: string): Promise<any[]> {
+    try {
+      return await databaseService.getTrackingRecords(orderId);
+    } catch (error) {
+      safeLogger.error('Error getting order tracking:', error);
+      throw error;
+    }
+  }
+
   // Private helper methods
 
   /**

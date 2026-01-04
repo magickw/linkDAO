@@ -798,6 +798,12 @@ import { advancedAnalyticsRouter } from './routes/advancedAnalyticsRoutes';
 // Import marketplace seller routes
 import marketplaceSellerRoutes from './routes/marketplaceSellerRoutes';
 import sellerRoutes from './routes/sellerRoutes';
+import sellerWorkflowRoutes from './routes/sellerWorkflowRoutes';
+
+// Register verified seller routes
+// app.use('/api/seller', marketplaceSellerRoutes); // DEPRECATED
+// app.use('/api/seller', sellerRoutes); // ALREADY REGISTERED AT /api/sellers
+app.use('/api/sellers/workflow', sellerWorkflowRoutes);
 // Import seller profile API routes
 import sellerProfileRoutes from './routes/sellerProfileRoutes';
 // Import seller dashboard routes

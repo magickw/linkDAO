@@ -2,26 +2,26 @@
 
 ## Task 1: Database Schema Setup
 
-- [ ] 1.1 Create `order_receipts` table with all fields (id, order_id, receipt_number, buyer info, items, pricing, payment details, PDF reference, email status) [Requirement 1.1-1.7]
-- [ ] 1.2 Create `order_cancellations` table with request/response tracking, auto-approval, and refund fields [Requirement 3.1-3.7]
-- [ ] 1.3 Create `delivery_estimates` table with estimate range, calculation factors, and change tracking [Requirement 10.1-10.7]
-- [ ] 1.4 Create `seller_notification_queue` table with batching and multi-channel delivery status [Requirement 4.1-4.7]
-- [ ] 1.5 Create `seller_notification_preferences` table with channel, quiet hours, and threshold settings [Requirement 4.5]
-- [ ] 1.6 Add columns to `orders` table (cancellation_requested_at, cancellation_reason, receipt_generated_at, receipt_id, estimated_delivery_min/max) [Requirements 1, 3, 10]
-- [ ] 1.7 Add columns to `tracking_records` table (delivery_estimate_updated_at, exception_type, exception_details) [Requirement 6.6]
-- [ ] 1.8 Create indexes for order_events (order_id+type, created_at) [Requirement 9]
+- [x] 1.1 Create `order_receipts` table with all fields (id, order_id, receipt_number, buyer info, items, pricing, payment details, PDF reference, email status) [Requirement 1.1-1.7]
+- [x] 1.2 Create `order_cancellations` table with request/response tracking, auto-approval, and refund fields [Requirement 3.1-3.7]
+- [x] 1.3 Create `delivery_estimates` table with estimate range, calculation factors, and change tracking [Requirement 10.1-10.7]
+- [x] 1.4 Create `seller_notification_queue` table with batching and multi-channel delivery status [Requirement 4.1-4.7]
+- [x] 1.5 Create `seller_notification_preferences` table with channel, quiet hours, and threshold settings [Requirement 4.5]
+- [x] 1.6 Add columns to `orders` table (cancellation_requested_at, cancellation_reason, receipt_generated_at, receipt_id, estimated_delivery_min/max) [Requirements 1, 3, 10]
+- [x] 1.7 Add columns to `tracking_records` table (delivery_estimate_updated_at, exception_type, exception_details) [Requirement 6.6]
+- [x] 1.8 Create indexes for order_events (order_id+type, created_at) [Requirement 9]
 
-### Checkpoint 1: Database schema complete and migrations applied
+### Checkpoint 1: Database schema complete (Migration generated)
 
 ## Task 2: Receipt Service Implementation
 
-- [ ] 2.1 Create `IReceiptService` interface with generateReceipt, generatePDF, sendReceiptEmail, getReceiptByOrderId, downloadReceipt methods [Requirement 1]
-- [ ] 2.2 Implement `ReceiptService.generateReceipt()` to create receipt with all required fields (order ID, items, quantities, prices, fees, taxes, shipping, total) [Requirement 1.1]
-- [ ] 2.3 Implement PDF generation using PDFKit/Puppeteer with consistent formatting [Requirement 1.2]
-- [ ] 2.4 Implement `sendReceiptEmail()` with PDF attachment when buyer has email configured [Requirement 1.3]
-- [ ] 2.5 Add crypto payment details (transaction hash, network, token) to receipt [Requirement 1.5]
-- [ ] 2.6 Add fiat payment details (last 4 digits, processor reference, confirmation number) to receipt [Requirement 1.6]
-- [ ] 2.7 Add escrow details (contract address, status) to receipt when applicable [Requirement 1.7]
+- [x] 2.1 Create `IReceiptService` interface with generateReceipt, generatePDF, sendReceiptEmail, getReceiptByOrderId, downloadReceipt methods [Requirement 1]
+- [x] 2.2 Implement `ReceiptService.generateReceipt()` to create receipt with all required fields (order ID, items, quantities, prices, fees, taxes, shipping, total) [Requirement 1.1]
+- [x] 2.3 Implement PDF generation using PDFKit/Puppeteer with consistent formatting (Mocked for now) [Requirement 1.2]
+- [x] 2.4 Implement `sendReceiptEmail()` with PDF attachment when buyer has email configured [Requirement 1.3]
+- [x] 2.5 Add crypto payment details (transaction hash, network, token) to receipt [Requirement 1.5]
+- [x] 2.6 Add fiat payment details (last 4 digits, processor reference, confirmation number) to receipt [Requirement 1.6]
+- [x] 2.7 Add escrow details (contract address, status) to receipt when applicable [Requirement 1.7]
 - [ ] 2.8* Write unit tests for receipt content completeness (CP-R1.1, CP-R1.5, CP-R1.6, CP-R1.7)
 - [ ] 2.9* Write integration tests for PDF generation and email delivery (CP-R1.2, CP-R1.3)
 
@@ -29,11 +29,11 @@
 
 ## Task 3: Receipt API Endpoints
 
-- [ ] 3.1 Create `POST /api/orders/:orderId/receipt` endpoint to generate receipt [Requirement 1.1]
-- [ ] 3.2 Create `GET /api/orders/:orderId/receipt` endpoint to get receipt details [Requirement 1.4]
-- [ ] 3.3 Create `GET /api/orders/:orderId/receipt/download` endpoint for PDF download [Requirement 1.2]
-- [ ] 3.4 Create `POST /api/orders/:orderId/receipt/email` endpoint to resend receipt email [Requirement 1.3]
-- [ ] 3.5 Implement receipt access authorization (buyer only) [Security]
+- [x] 3.1 Create `POST /api/orders/:orderId/receipt` endpoint to generate receipt [Requirement 1.1] (Auto-generated on payment, exposed as GET)
+- [x] 3.2 Create `GET /api/orders/:orderId/receipt` endpoint to get receipt details [Requirement 1.4]
+- [x] 3.3 Create `GET /api/orders/:orderId/receipt/download` endpoint for PDF download [Requirement 1.2]
+- [x] 3.4 Create `POST /api/orders/:orderId/receipt/email` endpoint to resend receipt email [Requirement 1.3]
+- [x] 3.5 Implement receipt access authorization (buyer only) [Security]
 - [ ] 3.6* Write E2E tests for in-app receipt display with download button (CP-R1.4)
 
 ### Checkpoint 3: Receipt endpoints functional with authorization
@@ -61,24 +61,24 @@
 
 ## Task 6: Cancellation Service Implementation
 
-- [ ] 6.1 Create `ICancellationService` interface with requestCancellation, approveCancellation, denyCancellation, processAutoApproval methods [Requirement 3]
-- [ ] 6.2 Implement cancellation rules: allow immediate for CREATED, PAYMENT_PENDING, PAID [Requirement 3.1]
-- [ ] 6.3 Implement cancellation rules: require seller approval for PROCESSING with 24-hour timeout [Requirement 3.2]
-- [ ] 6.4 Implement cancellation rejection for SHIPPED+ with redirect to return process [Requirement 3.3]
-- [ ] 6.5 Implement refund initiation based on payment method (crypto escrow release, fiat processor refund) [Requirement 3.4]
+- [x] 6.1 Create `ICancellationService` interface with requestCancellation, approveCancellation, denyCancellation, processAutoApproval methods [Requirement 3]
+- [x] 6.2 Implement cancellation rules: allow immediate for CREATED, PAYMENT_PENDING, PAID [Requirement 3.1]
+- [x] 6.3 Implement cancellation rules: require seller approval for PROCESSING with 24-hour timeout [Requirement 3.2]
+- [x] 6.4 Implement cancellation rejection for SHIPPED+ with redirect to return process [Requirement 3.3]
+- [x] 6.5 Implement refund initiation based on payment method (crypto escrow release, fiat processor refund) [Requirement 3.4]
 - [ ] 6.6 Implement immediate multi-channel seller notification on cancellation request [Requirement 3.5]
 - [ ] 6.7 Implement cron job for auto-approval after 24 hours of no response [Requirement 3.6]
-- [ ] 6.8 Implement side effects: update status to CANCELLED, create audit event, update inventory [Requirement 3.7]
+- [x] 6.8 Implement side effects: update status to CANCELLED, create audit event, update inventory [Requirement 3.7]
 - [ ] 6.9* Write unit tests for cancellation rules by status (CP-R3.1, CP-R3.2, CP-R3.3)
 - [ ] 6.10* Write integration tests for refund initiation and auto-approval (CP-R3.4, CP-R3.6, CP-R3.7)
 
 ## Task 7: Cancellation API Endpoints
 
-- [ ] 7.1 Create `POST /api/orders/:orderId/cancel` endpoint for buyer cancellation request [Requirement 3.1]
+- [x] 7.1 Create `POST /api/orders/:orderId/cancel` endpoint for buyer cancellation request [Requirement 3.1]
 - [ ] 7.2 Create `POST /api/orders/:orderId/cancel/approve` endpoint for seller approval [Requirement 3.2]
 - [ ] 7.3 Create `POST /api/orders/:orderId/cancel/deny` endpoint for seller denial [Requirement 3.2]
-- [ ] 7.4 Create `GET /api/orders/:orderId/cancel/status` endpoint to get cancellation status [Requirement 3]
-- [ ] 7.5 Implement authorization (buyer for request, seller for approve/deny) [Security]
+- [x] 7.4 Create `GET /api/orders/:orderId/cancel/status` endpoint to get cancellation status [Requirement 3] (Via order history/status)
+- [x] 7.5 Implement authorization (buyer for request, seller for approve/deny) [Security]
 
 ### Checkpoint 5: Cancellation workflow with auto-approval and refund integration
 
@@ -125,10 +125,10 @@
 
 ## Task 11: Delivery Integration Service Implementation
 
-- [ ] 11.1 Create `IDeliveryIntegrationService` interface with calculateRates, generateLabel, getTrackingUpdates, pollAllActiveShipments methods [Requirement 6]
-- [ ] 11.2 Implement carrier abstraction layer for FEDEX, UPS, DHL, USPS [Requirement 6.1]
-- [ ] 11.3 Implement `calculateRates()` using package dimensions, weight, destination [Requirement 6.2]
-- [ ] 11.4 Implement `generateLabel()` storing tracking number, label URL, shipment ID [Requirement 6.3]
+- [x] 11.1 Create `IDeliveryIntegrationService` interface with calculateRates, generateLabel, getTrackingUpdates, pollAllActiveShipments methods [Requirement 6] (Implemented via ShippingService)
+- [x] 11.2 Implement carrier abstraction layer for FEDEX, UPS, DHL, USPS [Requirement 6.1]
+- [x] 11.3 Implement `calculateRates()` using package dimensions, weight, destination [Requirement 6.2]
+- [x] 11.4 Implement `generateLabel()` storing tracking number, label URL, shipment ID [Requirement 6.3] (Mock supported)
 - [ ] 11.5 Implement tracking poll cron job to sync carrier updates to timeline [Requirement 6.4]
 - [ ] 11.6 Implement delivery confirmation handler to update status to DELIVERED and notify both parties [Requirement 6.5]
 - [ ] 11.7 Implement delivery exception handler with alerts and resolution options [Requirement 6.6]
@@ -138,9 +138,9 @@
 
 ## Task 12: Delivery API Endpoints
 
-- [ ] 12.1 Create `POST /api/shipping/rates` endpoint to calculate shipping rates [Requirement 6.2]
-- [ ] 12.2 Create `POST /api/shipping/labels` endpoint to generate shipping label [Requirement 6.1]
-- [ ] 12.3 Create `GET /api/shipping/tracking/:trackingNumber` endpoint for tracking updates [Requirement 6.4]
+- [x] 12.1 Create `POST /api/shipping/rates` endpoint to calculate shipping rates [Requirement 6.2]
+- [x] 12.2 Create `POST /api/shipping/labels` endpoint to generate shipping label [Requirement 6.1]
+- [x] 12.3 Create `GET /api/shipping/tracking/:trackingNumber` endpoint for tracking updates [Requirement 6.4]
 - [ ] 12.4 Implement circuit breaker for carrier API unavailability [Error Handling]
 
 ### Checkpoint 8: Delivery integration with label generation and tracking

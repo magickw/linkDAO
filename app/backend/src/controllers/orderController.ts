@@ -13,11 +13,14 @@ import {
 } from '../models/Order';
 import { AppError, NotFoundError, ValidationError } from '../middleware/errorHandler';
 
+import { OrderTimelineService } from '../services/orderTimelineService';
+
 const orderService = new OrderService();
 const shippingService = new ShippingService();
 const receiptService = new ReceiptService();
 const notificationService = new NotificationService();
 const blockchainEventService = new BlockchainEventService();
+const orderTimelineService = new OrderTimelineService();
 
 export class OrderController {
   /**
@@ -270,6 +273,22 @@ export class OrderController {
 
       const trackingInfo = await shippingService.trackShipment(trackingNumber, carrier);
       return res.json(trackingInfo);
+    } catch (error: any) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw new AppError(error.message);
+    }
+  }
+
+  /**
+   * Get tracking info for an order
+   */
+  async getTrackingInfo(req: Request, res: Response): Promise<Response> {
+    try {
+      const { orderId } = req.params;
+      const tracking = await orderService.getOrderTracking(orderId);
+      return res.json(tracking);
     } catch (error: any) {
       if (error instanceof AppError) {
         throw error;
@@ -598,6 +617,22 @@ export class OrderController {
 
       // Return the most recent receipt
       return res.json(receipts[0]);
+    } catch (error: any) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw new AppError(error.message);
+    }
+  }
+
+  /**
+   * Get order timeline
+   */
+  async getTimeline(req: Request, res: Response): Promise<Response> {
+    try {
+      const { orderId } = req.params;
+      const timeline = await orderTimelineService.getTimeline(orderId);
+      return res.json(timeline);
     } catch (error: any) {
       if (error instanceof AppError) {
         throw error;

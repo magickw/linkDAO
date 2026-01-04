@@ -121,9 +121,9 @@ export class NotificationService {
    * Send order notification to user
    */
   async sendOrderNotification(
-    userAddress: string, 
-    type: string, 
-    orderId: string, 
+    userAddress: string,
+    type: string,
+    orderId: string,
     metadata?: any
   ): Promise<void> {
     try {
@@ -177,11 +177,24 @@ export class NotificationService {
   }
 
   /**
+   * Notify user about order status change
+   */
+  async notifyOrderStatusChange(
+    userAddress: string,
+    orderId: string,
+    newStatus: string,
+    metadata?: any
+  ): Promise<void> {
+    const notificationType = `ORDER_${newStatus}`; // e.g., ORDER_PROCESSING, ORDER_SHIPPED
+    await this.sendOrderNotification(userAddress, notificationType, orderId, metadata);
+  }
+
+  /**
    * Get notifications for a user
    */
   async getUserNotifications(
-    userAddress: string, 
-    limit: number = 50, 
+    userAddress: string,
+    limit: number = 50,
     offset: number = 0
   ): Promise<OrderNotification[]> {
     try {
@@ -232,7 +245,7 @@ export class NotificationService {
    * Update notification preferences
    */
   async updateNotificationPreferences(
-    userAddress: string, 
+    userAddress: string,
     preferences: {
       email?: boolean;
       push?: boolean;
@@ -313,7 +326,7 @@ export class NotificationService {
   }
 
   private async sendRealTimeNotification(
-    userAddress: string, 
+    userAddress: string,
     notification: {
       title: string;
       message: string;
@@ -338,9 +351,9 @@ export class NotificationService {
   }
 
   private async sendEmailNotification(
-    userAddress: string, 
-    title: string, 
-    message: string, 
+    userAddress: string,
+    title: string,
+    message: string,
     actionUrl?: string
   ): Promise<void> {
     try {
@@ -367,9 +380,9 @@ export class NotificationService {
   }
 
   private async sendPushNotification(
-    userAddress: string, 
-    title: string, 
-    message: string, 
+    userAddress: string,
+    title: string,
+    message: string,
     actionUrl?: string
   ): Promise<void> {
     try {
@@ -456,7 +469,7 @@ export class NotificationService {
     try {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - daysOld);
-      
+
       await databaseService.deleteOldNotifications(cutoffDate);
       safeLogger.info(`Cleaned up notifications older than ${daysOld} days`);
     } catch (error) {
