@@ -15,6 +15,8 @@ import SendTokenModal from '@/components/WalletActions/SendTokenModal';
 import ReceiveTokenModal from '@/components/WalletActions/ReceiveTokenModal';
 import SwapTokenModal from '@/components/WalletActions/SwapTokenModal';
 import StakeTokenModal from '@/components/WalletActions/StakeTokenModal';
+import WhatsHappeningWidget from './WhatsHappeningWidget';
+import WhoToFollowWidget from './WhoToFollowWidget';
 
 interface SmartRightSidebarProps {
   context: 'feed' | 'community';
@@ -320,6 +322,12 @@ export default function SmartRightSidebar({
           </div>
         </div>
 
+        {/* What's Happening Widget (available even when wallet is disconnected) */}
+        <WhatsHappeningWidget />
+
+        {/* Who to Follow Widget (available even when wallet is disconnected) */}
+        <WhoToFollowWidget />
+
         {/* Trending Now (available even when wallet is disconnected) */}
         <TrendingContentWidget context={context} />
       </div>
@@ -335,6 +343,12 @@ export default function SmartRightSidebar({
           onQuickAction={handleQuickAction}
           onPortfolioClick={handlePortfolioClick}
         />
+
+        {/* What's Happening Widget */}
+        <WhatsHappeningWidget />
+
+        {/* Who to Follow Widget */}
+        <WhoToFollowWidget />
 
         {/* Trending Now (moved here from left sidebar) */}
         <TrendingContentWidget context={context} />

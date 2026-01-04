@@ -18,7 +18,7 @@ import {
   Info
 } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
-import { useAccount, useConnect, useChainId, useSwitchChain } from 'wagmi';
+import { useAccount, useConnect, useChainId, useSwitchChain, usePublicClient, useWalletClient } from 'wagmi';
 import { Button } from '@/design-system/components/Button';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import {
@@ -88,6 +88,8 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
   const { connect, connectors } = useConnect();
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
+  const publicClient = usePublicClient();
+  const walletClient = useWalletClient();
   const { addToast } = useToast();
 
   // Fetch user profile for auto-filling address
@@ -126,7 +128,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
   const [shippingErrors, setShippingErrors] = useState<Record<string, string>>({});
   const [billingErrors, setBillingErrors] = useState<Record<string, string>>({});
   const [checkoutService] = useState(() => {
-    const cryptoService = new CryptoPaymentService();
+    const cryptoService = new CryptoPaymentService(publicClient, walletClient);
     const stripeService = new StripePaymentService();
     return new UnifiedCheckoutService(cryptoService, stripeService);
   });

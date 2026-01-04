@@ -22,6 +22,7 @@ import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { UnifiedCheckoutService } from '@/services/unifiedCheckoutService';
 import { CryptoPaymentService } from '@/services/cryptoPaymentService';
 import { StripePaymentService } from '@/services/stripePaymentService';
+import { usePublicClient, useWalletClient } from 'wagmi';
 
 interface PaymentMethodComparisonProps {
   amount: number;
@@ -72,6 +73,9 @@ export const PaymentMethodComparison: React.FC<PaymentMethodComparisonProps> = (
   userCountry,
   onMethodSelect
 }) => {
+  const publicClient = usePublicClient();
+  const walletClient = useWalletClient();
+  
   const [comparison, setComparison] = useState<PaymentComparison | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedMethod, setSelectedMethod] = useState<'crypto' | 'fiat' | null>(null);
@@ -79,7 +83,7 @@ export const PaymentMethodComparison: React.FC<PaymentMethodComparisonProps> = (
 
   // Services
   const [checkoutService] = useState(() => {
-    const cryptoService = new CryptoPaymentService();
+    const cryptoService = new CryptoPaymentService(publicClient, walletClient);
     const stripeService = new StripePaymentService();
     return new UnifiedCheckoutService(cryptoService, stripeService);
   });

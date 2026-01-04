@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { promoCodes } from '../db/schema';
+import { promoCodes, users } from '../db/schema';
 import { eq, and, gte, lte, or, isNull, sql } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 import { v4 as uuidv4 } from 'uuid';
@@ -26,15 +26,40 @@ export interface VerifyPromoCodeInput {
 
 export class PromoCodeService {
     /**
+     * Helper to resolve seller ID (UUID) from wallet address if needed
+     */
+    private async resolveSellerId(sellerIdOrAddress: string): Promise<string> {
+        // If it's already a UUID, return it
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (uuidRegex.test(sellerIdOrAddress)) {
+            return sellerIdOrAddress;
+        }
+
+        // Otherwise assume it's a wallet address and look up the user
+        const user = await db.query.users.findFirst({
+            where: eq(users.walletAddress, sellerIdOrAddress),
+            columns: { id: true }
+        });
+
+        if (!user) {
+            throw new Error(`Seller not found for address: ${sellerIdOrAddress}`);
+        }
+
+        return user.id;
+    }
+
+    /**
      * Create a new promo code
      */
     async createPromoCode(input: CreatePromoCodeInput) {
         try {
+            const sellerId = await this.resolveSellerId(input.sellerId);
+
             // Check if code already exists for this seller
             const existing = await db
                 .select()
                 .from(promoCodes)
-                .where(and(eq(promoCodes.code, input.code), eq(promoCodes.sellerId, input.sellerId)))
+                .where(and(eq(promoCodes.code, input.code), eq(promoCodes.sellerId, sellerId)))
                 .limit(1);
 
             if (existing.length > 0) {
@@ -44,6 +69,7 @@ export class PromoCodeService {
             const [newPromo] = await db.insert(promoCodes).values({
                 id: uuidv4(),
                 ...input,
+                sellerId, // Use resolved UUID
                 discountValue: input.discountValue.toString(), // Convert to string for numeric
                 minOrderAmount: input.minOrderAmount?.toString(),
                 maxDiscountAmount: input.maxDiscountAmount?.toString(),
@@ -66,22 +92,28 @@ export class PromoCodeService {
             const now = new Date();
 
             // Find the promo code
-            // We search by code string first. 
-            // Note: Codes might be duplicated across sellers, so we might need sellerId to distinguish
-            // or we return all matching codes and filter.
-
             let query = db.select().from(promoCodes).where(eq(promoCodes.code, input.code));
-
             const potentialCodes = await query;
 
             if (potentialCodes.length === 0) {
                 return { isValid: false, error: 'Promo code not found' };
             }
 
+            // Resolve sellerId if provided
+            let targetSellerId: string | undefined;
+            if (input.sellerId) {
+                try {
+                    targetSellerId = await this.resolveSellerId(input.sellerId);
+                } catch (e) {
+                    // If seller not found, validation fails if code belongs to specific seller
+                    // But here we can just ignore and let the loop fail
+                }
+            }
+
             // Filter based on context (seller/product)
             const validCode = potentialCodes.find(promo => {
                 // 1. Check Seller ID match (if input sellerId provided)
-                if (input.sellerId && promo.sellerId !== input.sellerId) return false;
+                if (targetSellerId && promo.sellerId !== targetSellerId) return false;
 
                 // 2. Check Product ID match (if promo is product-specific)
                 if (promo.productId && promo.productId !== input.productId) return false;
@@ -103,11 +135,8 @@ export class PromoCodeService {
             });
 
             if (!validCode) {
-                // Determine why it failed (simplified)
                 const codeExists = potentialCodes.some(p => p.code === input.code);
                 if (codeExists) {
-                    // It existed but failed validation. 
-                    // We could be more specific but "Invalid or expired" is safe.
                     return { isValid: false, error: 'Promo code is invalid, expired, or not applicable to this item' };
                 }
                 return { isValid: false, error: 'Promo code not found' };
@@ -151,10 +180,11 @@ export class PromoCodeService {
      * Track usage (should be called on checkout completion)
      */
     async trackUsage(code: string, sellerId: string) {
+        const resolvedSellerId = await this.resolveSellerId(sellerId);
         await db
             .update(promoCodes)
             .set({ usageCount: sql`${promoCodes.usageCount} + 1` })
-            .where(and(eq(promoCodes.code, code), eq(promoCodes.sellerId, sellerId)));
+            .where(and(eq(promoCodes.code, code), eq(promoCodes.sellerId, resolvedSellerId)));
     }
 
     /**
@@ -162,10 +192,11 @@ export class PromoCodeService {
      */
     async getPromoCodes(sellerId: string) {
         try {
+            const resolvedSellerId = await this.resolveSellerId(sellerId);
             const codes = await db
                 .select()
                 .from(promoCodes)
-                .where(eq(promoCodes.sellerId, sellerId))
+                .where(eq(promoCodes.sellerId, resolvedSellerId))
                 .orderBy(sql`${promoCodes.createdAt} DESC`);
 
             return codes;

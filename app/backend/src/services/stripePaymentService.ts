@@ -57,7 +57,7 @@ export class StripePaymentService implements IPaymentProcessor {
       const paymentIntent = await this.stripe.paymentIntents.create({
         amount: amountInCents,
         currency: 'usd',
-        payment_method_types: ['card', 'apple_pay', 'google_pay'],
+        payment_method_types: ['card'],
         metadata: {
           userId: request.userAddress,
           ldaoAmount: request.amount.toString(),
