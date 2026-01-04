@@ -843,6 +843,51 @@ export class MarketplaceController {
       });
     }
   }
+
+  /**
+   * Check inventory availability for a listing
+   */
+  async checkInventoryAvailability(req: Request, res: Response) {
+    try {
+      const { listingId } = req.params;
+
+      if (!listingId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Listing ID is required'
+        });
+      }
+
+      // Fetch the listing
+      const listing = await marketplaceService.getListingById(listingId);
+
+      if (!listing) {
+        return res.status(404).json({
+          success: false,
+          error: 'Listing not found'
+        });
+      }
+
+      // For now, simpler inventory logic:
+      // If listing exists and status is 'active', it has inventory.
+      // Real implementation would check quantity and holds.
+      const totalInventory = listing.inventory !== undefined ? listing.inventory : 1;
+      const heldInventory = 0; // Implement hold logic if needed
+      const availableInventory = listing.status === 'active' ? (totalInventory - heldInventory) : 0;
+
+      return res.json({
+        available: availableInventory,
+        held: heldInventory,
+        total: totalInventory
+      });
+    } catch (error) {
+      safeLogger.error('Error checking inventory availability:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to check inventory'
+      });
+    }
+  }
 }
 
 // Create a singleton instance

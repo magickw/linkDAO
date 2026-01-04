@@ -79,7 +79,7 @@ router.get('/test', (req, res) => {
 });
 
 // POST /api/marketplace/test/create - Create a test product
-router.post('/test/create', csrfProtection,  async (req, res) => {
+router.post('/test/create', csrfProtection, async (req, res) => {
   try {
     // This is a simplified test endpoint to create a product
     res.json({
@@ -152,7 +152,7 @@ router.get('/health', async (req, res) => {
     try {
       const { marketplaceService } = await import('../services/marketplaceService');
       const healthCheck = await marketplaceService.healthCheck();
-      
+
       if (!healthCheck.healthy) {
         return res.status(503).json({
           success: false,
@@ -205,13 +205,13 @@ router.get('/auctions/active', marketplaceController.getActiveAuctions);
 router.get('/stats', async (req, res) => {
   try {
     const listingsService = new (await import('../services/marketplaceListingsService')).MarketplaceListingsService();
-    
+
     // Get total listings count
     const listingsResult = await listingsService.getListings({ limit: 1, offset: 0 });
-    
+
     // Get categories
     const categories = await listingsService.getCategories();
-    
+
     res.json({
       success: true,
       data: {
@@ -223,7 +223,7 @@ router.get('/stats', async (req, res) => {
     });
   } catch (error) {
     safeLogger.error('Error getting marketplace stats:', error);
-    
+
     // Return graceful fallback
     res.status(200).json({
       success: true,
@@ -237,5 +237,8 @@ router.get('/stats', async (req, res) => {
     });
   }
 });
+
+// GET /api/marketplace/inventory/:listingId - Check inventory availability
+router.get('/inventory/:listingId', marketplaceController.checkInventoryAvailability);
 
 export default router;
