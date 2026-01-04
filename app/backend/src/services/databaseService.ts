@@ -2101,6 +2101,22 @@ export class DatabaseService {
     });
   }
 
+  async getStaleCancellationRequests(hoursOld: number) {
+    return this.executeQuery(async () => {
+      const cutoff = new Date();
+      cutoff.setHours(cutoff.getHours() - hoursOld);
+
+      return await this.db.select()
+        .from(schema.orderCancellations)
+        .where(
+          and(
+            eq(schema.orderCancellations.status, 'pending'),
+            lte(schema.orderCancellations.requestedAt, cutoff)
+          )
+        );
+    });
+  }
+
   async getTrackingRecords(orderId: string) {
     return this.executeQuery(async () => {
       const result = await this.db.select()
@@ -3023,6 +3039,335 @@ export class DatabaseService {
       safeLogger.error("Error getting admin notification stats:", error);
       return { total: 0, unread: 0, byType: {}, byCategory: {} };
     }
+  }
+
+  // ============ Seller Notification Methods ============
+
+  /**
+   * Get seller notification preferences
+   */
+  async getSellerNotificationPreferences(sellerId: string): Promise<any | null> {
+    this.checkConnection();
+    try {
+      const results = await this.db
+        .select()
+        .from(schema.sellerNotificationPreferences)
+        .where(eq(schema.sellerNotificationPreferences.userId, sellerId))
+        .limit(1);
+
+      if (results.length === 0) {
+        return null;
+      }
+
+      const row = results[0];
+      return {
+        sellerId: row.userId,
+        pushEnabled: row.pushEnabled ?? true,
+        emailEnabled: row.emailEnabled ?? true,
+        inAppEnabled: row.inAppEnabled ?? true,
+        quietHoursEnabled: !!(row.quietHoursStart && row.quietHoursEnd),
+        quietHoursStart: row.quietHoursStart,
+        quietHoursEnd: row.quietHoursEnd,
+        quietHoursTimezone: 'UTC',
+        batchingEnabled: row.batchingEnabled ?? true,
+        batchWindowMinutes: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+    } catch (error) {
+      safeLogger.error("Error getting seller notification preferences:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Upsert seller notification preferences
+   */
+  async upsertSellerNotificationPreferences(preferences: any): Promise<void> {
+    this.checkConnection();
+    try {
+      await this.db
+        .insert(schema.sellerNotificationPreferences)
+        .values({
+          userId: preferences.sellerId,
+          pushEnabled: preferences.pushEnabled,
+          emailEnabled: preferences.emailEnabled,
+          inAppEnabled: preferences.inAppEnabled,
+          quietHoursStart: preferences.quietHoursStart,
+          quietHoursEnd: preferences.quietHoursEnd,
+          batchingEnabled: preferences.batchingEnabled,
+        })
+        .onConflictDoUpdate({
+          target: schema.sellerNotificationPreferences.userId,
+          set: {
+            pushEnabled: preferences.pushEnabled,
+            emailEnabled: preferences.emailEnabled,
+            inAppEnabled: preferences.inAppEnabled,
+            quietHoursStart: preferences.quietHoursStart,
+            quietHoursEnd: preferences.quietHoursEnd,
+            batchingEnabled: preferences.batchingEnabled,
+          },
+        });
+    } catch (error) {
+      safeLogger.error("Error upserting seller notification preferences:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Upsert a seller notification
+   */
+  async upsertSellerNotification(notification: any): Promise<void> {
+    this.checkConnection();
+    try {
+      await this.db
+        .insert(schema.sellerNotificationQueue)
+        .values({
+          sellerId: notification.sellerId,
+          type: notification.type,
+          priority: notification.priority,
+          title: notification.title,
+          body: notification.body,
+          data: notification.data,
+          channels: notification.channels,
+          status: notification.status,
+        })
+        .onConflictDoNothing();
+    } catch (error) {
+      safeLogger.error("Error upserting seller notification:", error);
+      // Don't throw - notification storage failure shouldn't block delivery
+    }
+  }
+
+  /**
+   * Get pending notifications for a specific seller
+   */
+  async getSellerPendingNotifications(sellerId: string, limit: number = 50): Promise<any[]> {
+    this.checkConnection();
+    try {
+      const results = await this.db
+        .select()
+        .from(schema.sellerNotificationQueue)
+        .where(
+          and(
+            eq(schema.sellerNotificationQueue.sellerId, sellerId),
+            eq(schema.sellerNotificationQueue.status, 'pending')
+          )
+        )
+        .orderBy(desc(schema.sellerNotificationQueue.createdAt))
+        .limit(limit);
+
+      return results.map(this.mapNotificationRow);
+    } catch (error) {
+      safeLogger.error("Error getting seller pending notifications:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Get all pending seller notifications (for queue processing)
+   */
+  async getAllPendingSellerNotifications(): Promise<any[]> {
+    this.checkConnection();
+    try {
+      const results = await this.db
+        .select()
+        .from(schema.sellerNotificationQueue)
+        .where(eq(schema.sellerNotificationQueue.status, 'pending'))
+        .orderBy(desc(schema.sellerNotificationQueue.createdAt));
+
+      return results.map(this.mapNotificationRow);
+    } catch (error) {
+      safeLogger.error("Error getting all pending seller notifications:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Get notification history for a seller
+   */
+  async getSellerNotificationHistory(
+    sellerId: string,
+    limit: number,
+    offset: number,
+    type?: string,
+    startDate?: Date,
+    endDate?: Date
+  ): Promise<any[]> {
+    this.checkConnection();
+    try {
+      let query = this.db
+        .select()
+        .from(schema.sellerNotificationQueue)
+        .where(eq(schema.sellerNotificationQueue.sellerId, sellerId));
+
+      if (type) {
+        query = query.where(eq(schema.sellerNotificationQueue.type, type));
+      }
+
+      if (startDate) {
+        query = query.where(gte(schema.sellerNotificationQueue.createdAt, startDate));
+      }
+
+      if (endDate) {
+        query = query.where(lte(schema.sellerNotificationQueue.createdAt, endDate));
+      }
+
+      const results = await query
+        .orderBy(desc(schema.sellerNotificationQueue.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      return results.map(this.mapNotificationRow);
+    } catch (error) {
+      safeLogger.error("Error getting seller notification history:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Get total notification count for a seller
+   */
+  async getSellerNotificationCount(sellerId: string, type?: string): Promise<number> {
+    this.checkConnection();
+    try {
+      let conditions = [eq(schema.sellerNotificationQueue.sellerId, sellerId)];
+      
+      if (type) {
+        conditions.push(eq(schema.sellerNotificationQueue.type, type));
+      }
+
+      const result = await this.db
+        .select({ count: sql<number>`count(*)` })
+        .from(schema.sellerNotificationQueue)
+        .where(and(...conditions));
+
+      return parseInt(result[0]?.count?.toString() || '0');
+    } catch (error) {
+      safeLogger.error("Error getting seller notification count:", error);
+      return 0;
+    }
+  }
+
+  /**
+   * Get unread notification count for a seller
+   */
+  async getSellerUnreadNotificationCount(sellerId: string): Promise<number> {
+    this.checkConnection();
+    try {
+      const result = await this.db
+        .select({ count: sql<number>`count(*)` })
+        .from(schema.sellerNotificationQueue)
+        .where(
+          and(
+            eq(schema.sellerNotificationQueue.sellerId, sellerId),
+            eq(schema.sellerNotificationQueue.status, 'sent')
+          )
+        );
+
+      return parseInt(result[0]?.count?.toString() || '0');
+    } catch (error) {
+      safeLogger.error("Error getting seller unread notification count:", error);
+      return 0;
+    }
+  }
+
+  /**
+   * Mark a seller notification as read
+   */
+  async markSellerNotificationAsRead(notificationId: string, sellerId: string): Promise<boolean> {
+    this.checkConnection();
+    try {
+      const result = await this.db
+        .update(schema.sellerNotificationQueue)
+        .set({ status: 'read' })
+        .where(
+          and(
+            eq(schema.sellerNotificationQueue.id, parseInt(notificationId)),
+            eq(schema.sellerNotificationQueue.sellerId, sellerId)
+          )
+        )
+        .returning();
+
+      return result.length > 0;
+    } catch (error) {
+      safeLogger.error("Error marking seller notification as read:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Mark all seller notifications as read
+   */
+  async markAllSellerNotificationsAsRead(sellerId: string): Promise<number> {
+    this.checkConnection();
+    try {
+      const result = await this.db
+        .update(schema.sellerNotificationQueue)
+        .set({ status: 'read' })
+        .where(
+          and(
+            eq(schema.sellerNotificationQueue.sellerId, sellerId),
+            eq(schema.sellerNotificationQueue.status, 'sent')
+          )
+        )
+        .returning();
+
+      return result.length;
+    } catch (error) {
+      safeLogger.error("Error marking all seller notifications as read:", error);
+      return 0;
+    }
+  }
+
+  /**
+   * Cancel a pending seller notification
+   */
+  async cancelSellerNotification(notificationId: string, sellerId: string): Promise<boolean> {
+    this.checkConnection();
+    try {
+      const result = await this.db
+        .update(schema.sellerNotificationQueue)
+        .set({ status: 'cancelled' })
+        .where(
+          and(
+            eq(schema.sellerNotificationQueue.id, parseInt(notificationId)),
+            eq(schema.sellerNotificationQueue.sellerId, sellerId),
+            or(
+              eq(schema.sellerNotificationQueue.status, 'pending'),
+              eq(schema.sellerNotificationQueue.status, 'batched')
+            )
+          )
+        )
+        .returning();
+
+      return result.length > 0;
+    } catch (error) {
+      safeLogger.error("Error cancelling seller notification:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Helper to map database row to notification object
+   */
+  private mapNotificationRow(row: any): any {
+    return {
+      id: row.id?.toString(),
+      sellerId: row.sellerId,
+      type: row.type,
+      priority: row.priority || 'normal',
+      title: row.title,
+      body: row.body,
+      data: row.data || {},
+      channels: row.channels || ['push', 'email', 'in_app'],
+      status: row.status || 'pending',
+      createdAt: row.createdAt,
+      sentAt: row.sentAt,
+      batchId: row.batchId,
+      error: row.error,
+      channelStatus: {},
+    };
   }
 
 }

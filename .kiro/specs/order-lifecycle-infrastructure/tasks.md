@@ -85,8 +85,8 @@
 
 ## Task 8: Seller Notification Service Implementation
 
-- [ ] 8.1 Create `ISellerNotificationService` interface with queueNotification, processNotificationQueue, getNotificationPreferences methods [Requirement 4]
-- [ ] 8.2 Implement push notification delivery within 30 seconds of new order [Requirement 4.1]
+- [x] 8.1 Create `ISellerNotificationService` interface with queueNotification, processNotificationQueue, getNotificationPreferences methods [Requirement 4]
+- [x] 8.2 Implement push notification delivery within 30 seconds of new order [Requirement 4.1]
 - [ ] 8.3 Implement email notification with order summary, buyer info, and action links [Requirement 4.2]
 - [ ] 8.4 Implement in-app notification badge and pending queue addition [Requirement 4.3]
 - [ ] 8.5 Implement notification batching (max 1 per minute for rapid orders) [Requirement 4.4]

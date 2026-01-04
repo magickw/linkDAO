@@ -517,6 +517,46 @@ export class OrderService {
     }
   }
 
+  /**
+   * Process pending cancellation requests that require auto-approval (e.g., no response > 24h)
+   */
+  async processAutoApprovals(): Promise<number> {
+    try {
+      // Get pending cancellations older than 24 hours
+      const staleRequests = await databaseService.getStaleCancellationRequests(24);
+      let processedCount = 0;
+
+      for (const request of staleRequests) {
+        try {
+          // Verify it's still pending
+          if (request.status !== 'pending') continue;
+
+          // Auto-approve
+          await databaseService.updateCancellationStatus(request.id, 'auto_approved', 'Auto-approved due to no response from seller within 24 hours.');
+
+          // Update order status
+          await this.updateOrderStatus(request.orderId, OrderStatus.CANCELLED, { reason: 'Cancellation Auto-Approved' });
+
+          // Notify buyer
+          const order = await this.getOrderById(request.orderId);
+          if (order) {
+            await notificationService.sendOrderNotification(order.buyerWalletAddress, 'CANCELLATION_AUTO_APPROVED', request.orderId);
+            await notificationService.sendOrderNotification(order.sellerWalletAddress, 'CANCELLATION_AUTO_APPROVED', request.orderId);
+          }
+
+          processedCount++;
+        } catch (err) {
+          safeLogger.error(`Error processing auto-approval for cancellation ${request.id}:`, err);
+        }
+      }
+
+      return processedCount;
+    } catch (error) {
+      safeLogger.error('Error processing auto-approvals:', error);
+      throw error;
+    }
+  }
+
   // Private helper methods
 
   private validateCreateOrderInput(input: CreateOrderInput): void {

@@ -298,6 +298,60 @@ export class OrderController {
   }
 
   /**
+   * Approve cancellation request
+   */
+  async approveCancellation(req: Request, res: Response): Promise<Response> {
+    try {
+      const { orderId } = req.params;
+      const { resolutionNotes } = req.body;
+      const userId = (req as any).user.id;
+      const userAddress = (req as any).user.walletAddress || sanitizeWalletAddress(userId); // Fallback if ID is address, though middleware should set user
+
+      // More robust address extraction from auth middleware
+      const processorAddress = (req as any).user.walletAddress;
+
+      const success = await orderService.processCancellation(
+        orderId,
+        processorAddress,
+        'approve',
+        resolutionNotes
+      );
+
+      return res.json({ success });
+    } catch (error: any) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw new AppError(error.message);
+    }
+  }
+
+  /**
+   * Deny cancellation request
+   */
+  async denyCancellation(req: Request, res: Response): Promise<Response> {
+    try {
+      const { orderId } = req.params;
+      const { resolutionNotes } = req.body;
+      const processorAddress = (req as any).user.walletAddress;
+
+      const success = await orderService.processCancellation(
+        orderId,
+        processorAddress,
+        'reject',
+        resolutionNotes
+      );
+
+      return res.json({ success });
+    } catch (error: any) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw new AppError(error.message);
+    }
+  }
+
+  /**
    * Validate shipping address
    */
   async validateAddress(req: Request, res: Response): Promise<Response> {

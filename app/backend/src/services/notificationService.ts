@@ -109,6 +109,30 @@ export class NotificationService {
         title: 'Vote Cast',
         message: 'Your vote has been cast for dispute resolution',
         actionUrl: '/orders/{orderId}/dispute'
+      },
+      {
+        type: 'CANCELLATION_REQUESTED',
+        title: 'Cancellation Requested',
+        message: 'A cancellation has been requested for your order',
+        actionUrl: '/orders/{orderId}/cancellation'
+      },
+      {
+        type: 'CANCELLATION_APPROVED',
+        title: 'Cancellation Approved',
+        message: 'The cancellation request for your order has been approved',
+        actionUrl: '/orders/{orderId}'
+      },
+      {
+        type: 'CANCELLATION_REJECTED',
+        title: 'Cancellation Rejected',
+        message: 'The cancellation request for your order has been rejected',
+        actionUrl: '/orders/{orderId}'
+      },
+      {
+        type: 'CANCELLATION_AUTO_APPROVED',
+        title: 'Cancellation Auto-Approved',
+        message: 'The cancellation request was automatically approved due to no response',
+        actionUrl: '/orders/{orderId}'
       }
     ];
 

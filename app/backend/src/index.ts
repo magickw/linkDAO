@@ -200,6 +200,15 @@ setTimeout(async () => {
   } catch (err) {
     console.warn('⚠️ Blockchain event monitoring failed to start (this is OK if blockchain is temporarily unavailable):', err);
   }
+
+  // Start cancellation scheduler
+  try {
+    const { cancellationSchedulerService } = await import('./services/cancellationSchedulerService');
+    cancellationSchedulerService.start();
+    console.log('✅ Cancellation scheduler started');
+  } catch (err) {
+    console.warn('⚠️ Cancellation scheduler failed to start:', err);
+  }
 }, 2000); // Slight delay to allow other services to initialize first
 
 // Validate security configuration on startup

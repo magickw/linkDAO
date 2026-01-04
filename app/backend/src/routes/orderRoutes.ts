@@ -237,6 +237,30 @@ router.post(
 );
 
 /**
+ * @route POST /api/orders/:orderId/cancel/approve
+ * @desc Approve cancellation request (Seller only)
+ * @access Private
+ */
+router.post(
+  '/:orderId/cancel/approve',
+  orderRateLimit,
+  authMiddleware,
+  orderController.approveCancellation.bind(orderController)
+);
+
+/**
+ * @route POST /api/orders/:orderId/cancel/deny
+ * @desc Deny cancellation request (Seller only)
+ * @access Private
+ */
+router.post(
+  '/:orderId/cancel/deny',
+  orderRateLimit,
+  authMiddleware,
+  orderController.denyCancellation.bind(orderController)
+);
+
+/**
  * @route POST /api/orders/:orderId/refund
  * @desc Refund order
  * @access Private
