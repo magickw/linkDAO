@@ -367,9 +367,14 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
         throw new Error(`Order total ($${totalAmount.toFixed(2)}) must be at least $0.50 USD for card payments.`);
       }
 
+      const listingId = cartState.items[0]?.id;
+      if (!listingId || listingId === 'undefined') {
+        throw new Error('Invalid product information: Listing ID is missing');
+      }
+
       const request: PrioritizedCheckoutRequest = {
         orderId: `order_${Date.now()}`,
-        listingId: cartState.items[0]?.id || '',
+        listingId: listingId,
         buyerAddress: address,
         sellerAddress: cartState.items[0]?.seller.id || '',
         amount: totalAmount,
@@ -382,6 +387,8 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
           billingAddress: sameAsShipping ? shippingAddress : billingAddress
         }
       };
+
+      console.log('🚀 Processing checkout request:', request);
 
       const result = useEscrow && selectedPaymentMethod.method.type !== PaymentMethodType.FIAT_STRIPE
         ? await checkoutService.processEscrowPayment(request)

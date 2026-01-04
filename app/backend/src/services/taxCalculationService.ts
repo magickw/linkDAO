@@ -18,11 +18,11 @@ interface TaxRate {
 }
 
 // Tax exemption types
-export type TaxExemptionType = 
-  | 'resale' 
-  | 'non_profit' 
-  | 'government' 
-  | 'educational' 
+export type TaxExemptionType =
+  | 'resale'
+  | 'non_profit'
+  | 'government'
+  | 'educational'
   | 'medical'
   | 'charity';
 
@@ -156,6 +156,16 @@ export class TaxCalculationService {
       appliesToDigital: true
     });
 
+    // Default US Tax (for testing purpose - represents average sales tax)
+    this.addTaxRate({
+      country: 'US',
+      rate: 0.08, // 8% average
+      type: 'sales_tax',
+      name: 'US Sales Tax (Estimated)',
+      appliesToShipping: true,
+      appliesToDigital: false
+    });
+
     this.addTaxRate({
       country: 'CA',
       state: 'QC',
@@ -267,6 +277,13 @@ export class TaxCalculationService {
       country: 'US',
       state: 'TX',
       threshold: 500000,
+      hasNexus: true
+    });
+
+    // Default US Nexus (for testing)
+    this.addTaxNexus({
+      country: 'US',
+      threshold: 0,
       hasNexus: true
     });
 
@@ -517,11 +534,11 @@ export class TaxCalculationService {
     }
 
     // Check if exemption applies to current jurisdiction
-    const jurisdictionKeys = taxRates.map(r => 
+    const jurisdictionKeys = taxRates.map(r =>
       r.country + (r.state ? `-${r.state}` : '')
     );
 
-    const applies = exemption.jurisdictions.some(jurisdiction => 
+    const applies = exemption.jurisdictions.some(jurisdiction =>
       jurisdictionKeys.includes(jurisdiction.toUpperCase())
     );
 
@@ -534,7 +551,7 @@ export class TaxCalculationService {
   getTaxRateForDisplay(country: string, state?: string): number {
     const rates = this.getApplicableTaxRates({ country, state });
     if (rates.length === 0) return 0;
-    
+
     // Return the highest rate for display
     return Math.max(...rates.map(r => r.rate));
   }
@@ -553,7 +570,7 @@ export class TaxCalculationService {
    */
   getSupportedJurisdictions(): string[] {
     const jurisdictions = new Set<string>();
-    
+
     for (const [key, rates] of this.taxRates.entries()) {
       rates.forEach(rate => {
         jurisdictions.add(`${rate.country}${rate.state ? ` - ${rate.state}` : ''}`);
@@ -575,7 +592,7 @@ export class TaxCalculationService {
    */
   updateTaxNexus(country: string, state: string | undefined, hasNexus: boolean): void {
     const key = country + (state ? `-${state}` : '');
-    
+
     if (this.taxNexus.has(key)) {
       this.taxNexus.get(key)!.hasNexus = hasNexus;
     } else {

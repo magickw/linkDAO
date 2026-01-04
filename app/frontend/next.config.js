@@ -66,7 +66,7 @@ const nextConfig = {
     ],
     formats: ["image/avif", "image/webp"],
     dangerouslyAllowSVG: true,
-    contentSecurityPolicy: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https:; font-src 'self'; connect-src 'self' https:; frame-src 'self' https:; worker-src 'self' blob:;",
+    contentSecurityPolicy: "default-src 'self'; script-src 'self' https://js.stripe.com https://*.stripe.com; style-src 'self' 'unsafe-inline' https://*.stripe.com; img-src 'self' blob: data: https:; font-src 'self' https://*.stripe.com; connect-src 'self' https:; frame-src 'self' https://*.stripe.com https://*.stripes.com; worker-src 'self' blob:; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self' https://*.stripe.com;",
   },
 
   webpack: (config, { isServer, dev, webpack }) => {
@@ -224,6 +224,18 @@ const nextConfig = {
           {
             key: 'X-Content-Type-Options',
             value: 'nosniff'
+          },
+          {
+            key: 'X-WebKit-CSP',
+            value: "default-src 'self'; script-src 'self' https://js.stripe.com https://*.stripe.com; style-src 'self' 'unsafe-inline' https://*.stripe.com; img-src 'self' blob: data: https:; font-src 'self' https://*.stripe.com; connect-src 'self' https:; frame-src 'self' https://*.stripe.com https://*.stripes.com; worker-src 'self' blob:; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self' https://*.stripe.com;"
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin'
+          },
+          {
+            key: 'Permissions-Policy',
+            value: 'interest-cohort=()'
           }
         ],
       }

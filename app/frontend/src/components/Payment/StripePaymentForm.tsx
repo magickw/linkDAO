@@ -83,6 +83,7 @@ export const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
 
     if (!stripe || !elements) {
       // Stripe.js hasn't loaded yet
+      setPaymentError('Payment system not ready. Please refresh the page.');
       return;
     }
 
@@ -134,8 +135,15 @@ export const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
       }
     } catch (err) {
       const error = err as Error;
-      const friendlyError = PaymentErrorMessages.getUserFriendlyError(error);
-      setPaymentError(friendlyError.message);
+      console.error('Payment processing error:', err);
+      
+      // Check if this is an extension-related error
+      if (error.message?.includes('extension') || error.message?.includes('context') || error.message?.includes('permission')) {
+        setPaymentError('Browser extension detected. Please disable extensions that modify page content and try again.');
+      } else {
+        const friendlyError = PaymentErrorMessages.getUserFriendlyError(error);
+        setPaymentError(friendlyError.message);
+      }
 
       if (onError) {
         onError(error);
@@ -193,7 +201,9 @@ export const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
 
         {/* Stripe Payment Element */}
         <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-          <PaymentElement options={paymentElementOptions} />
+          <div className="rounded-md overflow-hidden">
+            <PaymentElement options={paymentElementOptions} />
+          </div>
         </div>
 
         {/* Error Display */}

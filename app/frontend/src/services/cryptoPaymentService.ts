@@ -136,7 +136,7 @@ export class CryptoPaymentService {
     const securityMaxGasLimit = 500000n; // Security limit from token transaction security config
     const networkMaxGasLimit = 16777215n; // Maximum safe gas limit (just under 16,777,216 block limit)
     const maxGasLimit = securityMaxGasLimit < networkMaxGasLimit ? securityMaxGasLimit : networkMaxGasLimit;
-    
+
     if (gasEstimate.gasLimit > maxGasLimit) {
       throw new Error(`Gas limit ${gasEstimate.gasLimit} exceeds maximum allowable limit of ${maxGasLimit}. Please try again.`);
     }
@@ -196,7 +196,7 @@ export class CryptoPaymentService {
     const securityMaxGasLimit = 500000n; // Security limit from token transaction security config
     const networkMaxGasLimit = 16777215n; // Maximum safe gas limit (just under 16,777,216 block limit)
     const maxGasLimit = securityMaxGasLimit < networkMaxGasLimit ? securityMaxGasLimit : networkMaxGasLimit;
-    
+
     if (gasEstimate > maxGasLimit) {
       throw new Error(`Gas limit ${gasEstimate} exceeds maximum allowable limit of ${maxGasLimit}. Please try again.`);
     }
@@ -231,7 +231,7 @@ export class CryptoPaymentService {
     const securityMaxGasLimit = 500000n; // Security limit from token transaction security config
     const networkMaxGasLimit = 16777215n; // Maximum safe gas limit (just under 16,777,216 block limit)
     const maxGasLimit = securityMaxGasLimit < networkMaxGasLimit ? securityMaxGasLimit : networkMaxGasLimit;
-    
+
     if (gasEstimate > maxGasLimit) {
       throw new Error(`Gas limit ${gasEstimate} exceeds maximum allowable limit of ${maxGasLimit}. Please try again.`);
     }
@@ -260,7 +260,7 @@ export class CryptoPaymentService {
     const securityMaxGasLimit = 500000n; // Security limit from token transaction security config
     const networkMaxGasLimit = 16777215n; // Maximum safe gas limit (just under 16,777,216 block limit)
     const maxGasLimit = securityMaxGasLimit < networkMaxGasLimit ? securityMaxGasLimit : networkMaxGasLimit;
-    
+
     if (gasEstimate.gasLimit > maxGasLimit) {
       throw new Error(`Gas limit ${gasEstimate.gasLimit} exceeds maximum allowable limit of ${maxGasLimit}. Please try again.`);
     }
@@ -338,7 +338,7 @@ export class CryptoPaymentService {
     const checkStatus = async () => {
       try {
         attempts++;
-        
+
         const receipt = await this.publicClient!.getTransactionReceipt({
           hash: transaction.hash as Hash
         });
@@ -381,7 +381,7 @@ export class CryptoPaymentService {
         }
       } catch (error) {
         console.error('Transaction monitoring error:', error);
-        
+
         // Retry if we haven't exceeded max attempts
         if (attempts < maxAttempts) {
           setTimeout(checkStatus, 10000); // Wait longer on error
@@ -403,7 +403,7 @@ export class CryptoPaymentService {
    */
   async retryPayment(transactionId: string): Promise<PaymentTransaction> {
     const transaction = this.activeTransactions.get(transactionId);
-    
+
     if (!transaction) {
       throw new Error('Transaction not found');
     }
@@ -435,7 +435,7 @@ export class CryptoPaymentService {
    */
   async cancelPayment(transactionId: string): Promise<void> {
     const transaction = this.activeTransactions.get(transactionId);
-    
+
     if (!transaction) {
       throw new Error('Transaction not found');
     }
@@ -535,7 +535,7 @@ export class CryptoPaymentService {
         abi: erc20Abi,
         functionName: "balanceOf",
         args: [userAddress],
-        authorizationList: []
+        authorizationList: undefined
       });
     }
 
@@ -569,7 +569,7 @@ export class CryptoPaymentService {
       abi: erc20Abi,
       functionName: 'allowance',
       args: [userAddress, spender as `0x${string}`],
-      authorizationList: []
+      authorizationList: undefined
     }) as bigint;
 
     // If allowance is sufficient, no need to approve
@@ -610,7 +610,7 @@ export class CryptoPaymentService {
     if (!this.gasFeeService) {
       throw new Error('Gas fee service not initialized');
     }
-    
+
     const { token, amount, recipient } = request;
 
     let gasEstimate;
@@ -626,7 +626,7 @@ export class CryptoPaymentService {
     const securityMaxGasLimit = 500000n; // Security limit from token transaction security config
     const networkMaxGasLimit = 16777215n; // Maximum safe gas limit (just under 16,777,216 block limit)
     const maxGasLimit = securityMaxGasLimit < networkMaxGasLimit ? securityMaxGasLimit : networkMaxGasLimit;
-    
+
     if (gasEstimate.gasLimit > maxGasLimit) {
       console.warn(`Gas limit ${gasEstimate.gasLimit} exceeds maximum ${maxGasLimit}, reducing to maximum`);
       gasEstimate.gasLimit = maxGasLimit;
@@ -653,27 +653,27 @@ export class CryptoPaymentService {
 
       // Add buffer to gas estimate but ensure it doesn't exceed the block gas limit
       let gasLimitWithBuffer = BigInt(Math.floor(Number(gasEstimate) * PAYMENT_CONFIG.GAS_LIMIT_BUFFER));
-      
+
       // Ensure gas limit doesn't exceed the network's block gas limit (16,777,216 on most Ethereum networks)
       const maxGasLimit = 16777215n; // Just under the limit to be safe
-      
+
       if (gasLimitWithBuffer > maxGasLimit) {
         console.warn(`Gas limit ${gasLimitWithBuffer} exceeds maximum ${maxGasLimit}, reducing to maximum`);
         return maxGasLimit;
       }
-      
+
       return gasLimitWithBuffer;
     } catch (error) {
       console.error('Gas limit estimation failed:', error);
       // Return a reasonable default for simple transfers
       let defaultGasLimit = BigInt(21000 * PAYMENT_CONFIG.GAS_LIMIT_BUFFER);
-      
+
       // Ensure default doesn't exceed the network's block gas limit
       const maxGasLimit = 16777215n;
       if (defaultGasLimit > maxGasLimit) {
         defaultGasLimit = maxGasLimit;
       }
-      
+
       return defaultGasLimit;
     }
   }
@@ -686,9 +686,9 @@ export class CryptoPaymentService {
     if (!this.walletClient) {
       throw new Error('Wallet client not initialized');
     }
-    
+
     const accounts = await this.walletClient.getAddresses();
-    
+
     return {
       id: `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       orderId: request.orderId,

@@ -205,7 +205,7 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
       );
 
       // Use the enhanced prioritized methods
-      const prioritizedMethods = stablecoinResult.prioritizedStablecoins.length > 0
+      const prioritizedMethods = stablecoinResult?.prioritizedStablecoins?.length > 0
         ? this.mergeStablecoinResults(dynamicResult.prioritizedMethods, stablecoinResult)
         : dynamicResult.prioritizedMethods;
 

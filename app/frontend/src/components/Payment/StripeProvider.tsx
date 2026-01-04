@@ -20,7 +20,13 @@ const getStripe = () => {
       return Promise.resolve(null);
     }
 
-    stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY);
+    // Wrap Stripe loading in try-catch to handle potential extension interference
+    try {
+      stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY);
+    } catch (error) {
+      console.error('Failed to initialize Stripe:', error);
+      return Promise.resolve(null);
+    }
   }
   return stripePromise;
 };
