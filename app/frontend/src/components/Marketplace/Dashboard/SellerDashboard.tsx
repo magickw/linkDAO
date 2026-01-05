@@ -15,6 +15,7 @@ import { PayoutSetupStep } from '../Seller/onboarding/PayoutSetupStep';
 import { paymentMethodService, CreatePaymentMethodInput } from '../../../services/paymentMethodService';
 import { OptimizedImage } from '../../Performance/OptimizedImageLoader';
 import { PromoCodesManager } from '../PromoCodes/PromoCodesManager';
+import { SellerOrdersTab } from './SellerOrdersTab';
 
 interface SellerDashboardProps {
   mockWalletAddress?: string;
@@ -660,6 +661,10 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
           <div className="space-y-6">
             {activeTab === 'promotions' && dashboardAddress && (
               <PromoCodesManager walletAddress={dashboardAddress} />
+            )}
+
+            {activeTab === 'orders' && (
+              <SellerOrdersTab isActive={activeTab === 'orders'} />
             )}
 
             {activeTab === 'overview' && (

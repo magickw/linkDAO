@@ -87,21 +87,21 @@
 
 - [x] 8.1 Create `ISellerNotificationService` interface with queueNotification, processNotificationQueue, getNotificationPreferences methods [Requirement 4]
 - [x] 8.2 Implement push notification delivery within 30 seconds of new order [Requirement 4.1]
-- [ ] 8.3 Implement email notification with order summary, buyer info, and action links [Requirement 4.2]
-- [ ] 8.4 Implement in-app notification badge and pending queue addition [Requirement 4.3]
-- [ ] 8.5 Implement notification batching (max 1 per minute for rapid orders) [Requirement 4.4]
-- [ ] 8.6 Implement quiet hours and channel preference filtering [Requirement 4.5]
-- [ ] 8.7 Implement high-value/expedited order priority marking [Requirement 4.6]
-- [ ] 8.8 Implement one-click deep link to order details [Requirement 4.7]
-- [ ] 8.9 Create cron job to process notification queue every minute [Requirement 4.4]
-- [ ] 8.10* Write unit tests for batching logic and preference filtering (CP-R4.4, CP-R4.5, CP-R4.6)
-- [ ] 8.11* Write performance tests for notification latency (CP-R4.1)
+- [x] 8.3 Implement email notification with order summary, buyer info, and action links [Requirement 4.2]
+- [x] 8.4 Implement in-app notification badge and pending queue addition [Requirement 4.3]
+- [x] 8.5 Implement notification batching (max 1 per minute for rapid orders) [Requirement 4.4]
+- [x] 8.6 Implement quiet hours and channel preference filtering [Requirement 4.5]
+- [x] 8.7 Implement high-value/expedited order priority marking [Requirement 4.6]
+- [x] 8.8 Implement one-click deep link to order details [Requirement 4.7]
+- [x] 8.9 Create cron job to process notification queue every minute [Requirement 4.4]
+- [x] 8.10* Write unit tests for batching logic and preference filtering (CP-R4.4, CP-R4.5, CP-R4.6)
+- [x] 8.11* Write performance tests for notification latency (CP-R4.1)
 
 ### Checkpoint 6: Seller notifications with batching and preferences
 
 ## Task 9: Seller Workflow Service Implementation
 
-- [ ] 9.1 Create `ISellerWorkflowService` interface with getOrderDashboard, startProcessing, markReadyToShip, generateShippingLabel, confirmShipment methods [Requirement 5]
+- [x] 9.1 Create `ISellerWorkflowService` interface with getOrderDashboard, startProcessing, markReadyToShip, generateShippingLabel, confirmShipment methods [Requirement 5]
 - [ ] 9.2 Implement `getOrderDashboard()` with orders grouped by status (New, Processing, Ready to Ship, Shipped) [Requirement 5.1]
 - [ ] 9.3 Implement `startProcessing()` to update status to PROCESSING and notify buyer [Requirement 5.2]
 - [ ] 9.4 Implement `markReadyToShip()` with shipping method prompt and label generation [Requirement 5.3]
@@ -113,11 +113,10 @@
 
 ## Task 10: Seller Workflow API Endpoints
 
-- [ ] 10.1 Create `GET /api/seller/orders/dashboard` endpoint for seller order dashboard [Requirement 5.1]
-- [ ] 10.2 Create `POST /api/seller/orders/:orderId/process` endpoint to start processing [Requirement 5.2]
-- [ ] 10.3 Create `POST /api/seller/orders/:orderId/ready` endpoint to mark ready to ship [Requirement 5.3]
-- [ ] 10.4 Create `POST /api/seller/orders/:orderId/ship` endpoint to confirm shipment [Requirement 5.5]
-- [ ] 10.5 Create `GET /api/seller/orders/:orderId/packing-slip` endpoint for packing slip [Requirement 5.6]
+- [ ] 10.2 Create `POST /api/marketplace/seller/orders/:orderId/process` endpoint to start processing [Requirement 5.2]
+- [ ] 10.3 Create `POST /api/marketplace/seller/orders/:orderId/ready` endpoint to mark ready to ship [Requirement 5.3]
+- [ ] 10.4 Create `POST /api/marketplace/seller/orders/:orderId/ship` endpoint to confirm shipment [Requirement 5.5]
+- [ ] 10.5 Create `GET /api/marketplace/seller/orders/:orderId/packing-slip` endpoint for packing slip [Requirement 5.6]
 - [ ] 10.6 Implement seller authorization for all endpoints [Security]
 
 ### Checkpoint 7: Seller workflow dashboard and order processing

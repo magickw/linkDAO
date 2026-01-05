@@ -1121,6 +1121,9 @@ app.get('/csrf-token', getCSRFToken);
 // Import order event listener service
 import { orderEventListenerService } from './services/orderEventListenerService';
 
+// Import cron jobs
+import { initializeAllCronJobs, stopAllCronJobs } from './cron';
+
 // Import order event handler routes
 import orderEventHandlerRoutes from './routes/orderEventHandlerRoutes';
 
@@ -1447,6 +1450,15 @@ httpServer.listen(PORT, () => {
         } catch (error) {
           console.warn('⚠️ Order event listener failed to start:', error);
         }
+
+        // Initialize cron jobs for background processing
+        try {
+          initializeAllCronJobs();
+          console.log('✅ Cron jobs initialized');
+          console.log('⏰ Seller notification queue processor running (every minute)');
+        } catch (error) {
+          console.warn('⚠️ Cron jobs failed to initialize:', error);
+        }
       } else {
         console.log('⚠️ Order event listener disabled to save resources');
       }
@@ -1517,6 +1529,15 @@ const gracefulShutdown = async (signal: string) => {
       console.log('✅ Comprehensive monitoring service stopped');
     } catch (error) {
       console.warn('⚠️ Error stopping comprehensive monitoring service:', error);
+    }
+
+    // Stop cron jobs
+    console.log('⏰ Stopping cron jobs...');
+    try {
+      stopAllCronJobs();
+      console.log('✅ Cron jobs stopped');
+    } catch (error) {
+      console.warn('⚠️ Error stopping cron jobs:', error);
     }
 
     console.log('⚡ Stopping performance optimizer...');

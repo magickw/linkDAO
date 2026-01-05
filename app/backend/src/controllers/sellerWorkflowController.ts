@@ -62,6 +62,30 @@ export class SellerWorkflowController {
     }
 
     /**
+     * Confirm shipment (add tracking)
+     */
+    async confirmShipment(req: Request, res: Response): Promise<Response> {
+        try {
+            const sellerId = (req as any).user?.id;
+            if (!sellerId) throw new AppError('User not authenticated', 401);
+
+            const { orderId } = req.params;
+            const { trackingNumber, carrier } = req.body;
+
+            if (!trackingNumber || !carrier) {
+                throw new ValidationError('Tracking number and carrier are required');
+            }
+
+            const result = await sellerWorkflowService.confirmShipment(orderId, sellerId, trackingNumber, carrier);
+
+            return res.json(result);
+        } catch (error: any) {
+            if (error instanceof AppError) throw error;
+            throw new AppError(error.message);
+        }
+    }
+
+    /**
      * Get packing slip
      */
     async getPackingSlip(req: Request, res: Response): Promise<Response> {

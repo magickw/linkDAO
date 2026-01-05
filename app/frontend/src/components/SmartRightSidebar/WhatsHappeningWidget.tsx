@@ -23,11 +23,11 @@ export default function WhatsHappeningWidget({ className = '' }: WhatsHappeningW
         setIsLoading(true);
         
         // Fetch recent posts from the feed
-        const feedData = await FeedService.getEnhancedFeed({
+        const feedResponse = await FeedService.getEnhancedFeed({
           limit: 100,
-          sortBy: 'createdAt',
-          sortOrder: 'desc',
-          includeAllTypes: true
+          sortBy: FeedSortType.NEW,
+          timeRange: 'all',
+          feedSource: 'all'
         });
 
         // Extract hashtags and calculate trending score
@@ -50,6 +50,9 @@ export default function WhatsHappeningWidget({ className = '' }: WhatsHappeningW
           'ai': 'Technology',
           'dev': 'Development'
         };
+
+        // Access the posts array from the response
+        const feedData = feedResponse.posts || [];
 
         feedData.forEach(post => {
           // Extract hashtags from content

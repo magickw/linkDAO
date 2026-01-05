@@ -48,6 +48,18 @@ router.post(
 );
 
 /**
+ * @route POST /api/seller/orders/:orderId/ship
+ * @desc Confirm shipment (add tracking)
+ * @access Private
+ */
+router.post(
+    '/:orderId/ship',
+    limiter,
+    authMiddleware,
+    controller.confirmShipment.bind(controller)
+);
+
+/**
  * @route GET /api/seller/orders/:orderId/packing-slip
  * @desc Get packing slip
  * @access Private

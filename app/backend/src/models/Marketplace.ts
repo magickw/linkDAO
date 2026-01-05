@@ -4,6 +4,7 @@ export interface CreateListingInput {
   tokenAddress: string;
   price: string; // Stored as string to handle big numbers
   quantity: number;
+  inventory: number;
   itemType: 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE' | 'DEFI_COLLECTIBLE';
   listingType: 'FIXED_PRICE' | 'AUCTION';
   duration?: number; // For auctions
@@ -52,6 +53,7 @@ export interface MarketplaceListing {
   tokenAddress: string;
   price: string;
   quantity: number;
+  inventory: number;
   itemType: 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE' | 'DEFI_COLLECTIBLE';
   listingType: 'FIXED_PRICE' | 'AUCTION';
   status: 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED';

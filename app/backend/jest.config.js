@@ -12,4 +12,12 @@ module.exports = {
   coverageDirectory: 'coverage',
   verbose: true,
   setupFilesAfterEnv: [],
+  transform: {
+    '^.+\\.tsx?$': ['ts-jest', {
+      tsconfig: {
+        types: ['jest', 'node'],
+        esModuleInterop: true,
+      },
+    }],
+  },
 };

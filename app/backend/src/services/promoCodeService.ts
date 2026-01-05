@@ -29,13 +29,17 @@ export class PromoCodeService {
      * Helper to resolve seller ID (UUID) from wallet address if needed
      */
     private async resolveSellerId(sellerIdOrAddress: string): Promise<string> {
+        safeLogger.info(`[PromoCodeService] Resolving seller ID for: ${sellerIdOrAddress}`);
+        
         // If it's already a UUID, return it
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         if (uuidRegex.test(sellerIdOrAddress)) {
+            safeLogger.info(`[PromoCodeService] Already a UUID, returning: ${sellerIdOrAddress}`);
             return sellerIdOrAddress;
         }
 
         const normalizedAddress = sellerIdOrAddress.toLowerCase();
+        safeLogger.info(`[PromoCodeService] Normalized address: ${normalizedAddress}`);
 
         // First, try to find the user in the users table
         const userResult = await db
@@ -44,7 +48,10 @@ export class PromoCodeService {
             .where(eq(users.walletAddress, normalizedAddress))
             .limit(1);
 
+        safeLogger.info(`[PromoCodeService] User table result count: ${userResult.length}`);
+        
         if (userResult.length > 0) {
+            safeLogger.info(`[PromoCodeService] Found user with ID: ${userResult[0].id}`);
             return userResult[0].id;
         }
 
@@ -55,15 +62,19 @@ export class PromoCodeService {
             .where(eq(sellers.walletAddress, normalizedAddress))
             .limit(1);
 
+        safeLogger.info(`[PromoCodeService] Sellers table result count: ${sellerResult.length}`);
+
         if (sellerResult.length === 0) {
+            safeLogger.error(`[PromoCodeService] Seller not found for address: ${sellerIdOrAddress}`);
             throw new Error(`Seller not found for address: ${sellerIdOrAddress}`);
         }
 
         const seller = sellerResult[0];
+        safeLogger.info(`[PromoCodeService] Found seller with ID: ${seller.id}`);
 
         // Seller exists in sellers table but not in users table
         // Create a corresponding user record
-        safeLogger.info(`Creating user record for existing seller: ${normalizedAddress}`);
+        safeLogger.info(`[PromoCodeService] Creating user record for existing seller: ${normalizedAddress}`);
         const [newUser] = await db.insert(users).values({
             id: uuidv4(),
             walletAddress: normalizedAddress,
@@ -71,6 +82,7 @@ export class PromoCodeService {
             role: 'seller'
         }).returning();
 
+        safeLogger.info(`[PromoCodeService] Created new user with ID: ${newUser.id}`);
         return newUser.id;
     }
 
@@ -79,7 +91,9 @@ export class PromoCodeService {
      */
     async createPromoCode(input: CreatePromoCodeInput) {
         try {
+            safeLogger.info(`[PromoCodeService] Creating promo code for sellerId: ${input.sellerId}`);
             const sellerId = await this.resolveSellerId(input.sellerId);
+            safeLogger.info(`[PromoCodeService] Resolved sellerId to: ${sellerId}`);
 
             // Check if code already exists for this seller
             const existing = await db
@@ -103,9 +117,10 @@ export class PromoCodeService {
                 isActive: true
             }).returning();
 
+            safeLogger.info(`[PromoCodeService] Created promo code with ID: ${newPromo.id}`);
             return newPromo;
         } catch (error) {
-            safeLogger.error('Error creating promo code:', error);
+            safeLogger.error('[PromoCodeService] Error creating promo code:', error);
             throw error;
         }
     }
@@ -218,16 +233,20 @@ export class PromoCodeService {
      */
     async getPromoCodes(sellerId: string) {
         try {
+            safeLogger.info(`[PromoCodeService] Fetching promo codes for sellerId: ${sellerId}`);
             const resolvedSellerId = await this.resolveSellerId(sellerId);
+            safeLogger.info(`[PromoCodeService] Resolved sellerId to: ${resolvedSellerId}`);
+            
             const codes = await db
                 .select()
                 .from(promoCodes)
                 .where(eq(promoCodes.sellerId, resolvedSellerId))
                 .orderBy(sql`${promoCodes.createdAt} DESC`);
 
+            safeLogger.info(`[PromoCodeService] Found ${codes.length} promo codes`);
             return codes;
         } catch (error) {
-            safeLogger.error('Error fetching promo codes:', error);
+            safeLogger.error('[PromoCodeService] Error fetching promo codes:', error);
             throw error;
         }
     }

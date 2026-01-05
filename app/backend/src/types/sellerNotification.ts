@@ -222,6 +222,22 @@ export const NOTIFICATION_BATCHING = {
   
   /** Whether urgent notifications bypass batching */
   urgentBypassBatching: true,
+  
+  /** Minimum interval between notifications to same seller (ms) - enforces max 1 per minute */
+  minIntervalMs: 60000,
+} as const;
+
+/**
+ * High-value order threshold configuration
+ * 
+ * @requirement 4.6 - High-value/expedited orders marked as high priority
+ */
+export const HIGH_VALUE_ORDER_CONFIG = {
+  /** Default threshold in USD for marking orders as high-value */
+  defaultThresholdUSD: 500,
+  
+  /** Expedited shipping keywords to detect */
+  expeditedKeywords: ['expedited', 'express', 'overnight', 'rush', 'priority', 'next-day', 'same-day', 'next day', 'same day'],
 } as const;
 
 /**
@@ -265,4 +281,39 @@ export interface NotificationBatch {
   
   /** When the batch was created */
   createdAt: Date;
+}
+
+/**
+ * Seller notification timing tracker for enforcing batching rules
+ * 
+ * @requirement 4.4 - Max 1 notification per minute for rapid orders
+ */
+export interface SellerNotificationTiming {
+  /** Seller ID */
+  sellerId: string;
+  
+  /** Timestamp of last notification sent to this seller */
+  lastNotificationSentAt: Date;
+  
+  /** Count of notifications batched since last send */
+  batchedCount: number;
+}
+
+/**
+ * Priority determination result
+ * 
+ * @requirement 4.6 - High-value/expedited orders marked as high priority
+ */
+export interface PriorityDetermination {
+  /** Determined priority level */
+  priority: NotificationPriority;
+  
+  /** Reasons for the priority determination */
+  reasons: string[];
+  
+  /** Whether this is a high-value order */
+  isHighValue: boolean;
+  
+  /** Whether this has expedited shipping */
+  isExpedited: boolean;
 }

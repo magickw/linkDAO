@@ -224,7 +224,8 @@ export interface MarketplaceListing {
   sellerWalletAddress: string;
   tokenAddress: string;
   price: string;
-  inventory: number;
+  quantity: number; // Purchase quantity (how many items the user wants to buy)
+  inventory: number; // Available stock (how many items are available in the listing)
   itemType: 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE';
   listingType: 'FIXED_PRICE' | 'AUCTION';
   status: 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED';
@@ -565,14 +566,9 @@ export class UnifiedMarketplaceService {
     }
 
     // Map common category IDs to readable names
+    // Using consistent format: slug/name as key, readable name as value
     const categoryMap: Record<string, string> = {
-      '71ca3e53-1e18-4482-b214-ef7f228afd87': 'Digital Assets',
-      '1710bad2-ebd0-4a0d-b707-4b729bfa12eb': 'Electronics',
-      '2cb41c1b-7318-4bd1-8352-948f6ef64b00': 'Fashion',
-      '5d517645-201a-4bb1-bf5c-8f92d0c30405': 'Home & Garden',
-      '8b31a8cc-d37e-4b65-b545-98b1f71a7350': 'Books & Media',
-      '042019d5-5793-4a55-a99c-edfe60fa2b32': 'Sports & Outdoors',
-      // Add more mappings as needed
+      // Name/slug-based category mappings
       'art': 'Art & Collectibles',
       'music': 'Music & Audio',
       'gaming': 'Gaming & Virtual Worlds',
@@ -586,7 +582,7 @@ export class UnifiedMarketplaceService {
       'digital-fashion': 'Digital Fashion',
       'trading-cards': 'Trading Cards',
       'tickets': 'Tickets & Events',
-      'electronics': 'Electronics',
+      'electronics': 'Electronics & Tech',
       'fashion': 'Fashion & Wearables',
       'home': 'Home & Garden',
       'books': 'Books & Media',

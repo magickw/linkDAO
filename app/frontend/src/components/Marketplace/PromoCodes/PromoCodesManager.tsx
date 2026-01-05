@@ -17,10 +17,12 @@ export const PromoCodesManager: React.FC<PromoCodesManagerProps> = ({ walletAddr
     const fetchPromoCodes = async () => {
         setLoading(true);
         try {
+            console.log('[PromoCodesManager] Fetching promo codes for seller:', walletAddress);
             const codes = await promoCodeService.getPromoCodes(walletAddress);
+            console.log('[PromoCodesManager] Fetched promo codes:', codes);
             setPromoCodes(codes);
         } catch (error) {
-            console.error('Failed to fetch promo codes', error);
+            console.error('[PromoCodesManager] Failed to fetch promo codes:', error);
         } finally {
             setLoading(false);
         }

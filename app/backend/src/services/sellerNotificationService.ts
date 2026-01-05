@@ -28,11 +28,49 @@ import {
   ChannelDeliveryStatus,
   DEFAULT_NOTIFICATION_PREFERENCES,
   NOTIFICATION_BATCHING,
+  HIGH_VALUE_ORDER_CONFIG,
+  PriorityDetermination,
+  SellerNotificationTiming,
 } from '../types/sellerNotification';
 import { DatabaseService } from './databaseService';
 import { NotificationService } from './notificationService';
 import { WebSocketService } from './webSocketService';
+import { EmailService } from './emailService';
 import { safeLogger } from '../utils/safeLogger';
+
+/**
+ * Order email data structure for email notifications
+ * @requirement 4.2 - Email with order summary, buyer info, action links
+ */
+export interface OrderEmailData {
+  orderId: string;
+  orderNumber?: string;
+  buyerName?: string;
+  buyerEmail?: string;
+  buyerAddress?: string;
+  shippingAddress?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    country?: string;
+  };
+  items?: Array<{
+    name: string;
+    quantity: number;
+    price: number;
+    imageUrl?: string;
+  }>;
+  subtotal?: number;
+  shippingCost?: number;
+  taxes?: number;
+  totalAmount?: number;
+  currency?: string;
+  paymentMethod?: string;
+  isExpedited?: boolean;
+  specialInstructions?: string;
+  createdAt?: Date;
+}
 
 /**
  * SellerNotificationService implementation
@@ -47,15 +85,26 @@ export class SellerNotificationService implements ISellerNotificationService {
   private databaseService: DatabaseService;
   private notificationService: NotificationService;
   private webSocketService: WebSocketService | null = null;
+  private emailService: EmailService;
+  
+  /**
+   * In-memory cache for tracking last notification time per seller
+   * Used to enforce the "max 1 per minute" batching rule
+   * 
+   * @requirement 4.4 - Batching for rapid orders (max 1 per minute)
+   */
+  private sellerNotificationTimings: Map<string, SellerNotificationTiming> = new Map();
 
   constructor(
     databaseService?: DatabaseService,
     notificationService?: NotificationService,
-    webSocketService?: WebSocketService | null
+    webSocketService?: WebSocketService | null,
+    emailService?: EmailService
   ) {
     this.databaseService = databaseService || new DatabaseService();
     this.notificationService = notificationService || new NotificationService();
     this.webSocketService = webSocketService || null;
+    this.emailService = emailService || EmailService.getInstance();
   }
 
   /**
@@ -84,10 +133,34 @@ export class SellerNotificationService implements ISellerNotificationService {
     // Check if this should be sent immediately (urgent or new_order with high priority)
     const shouldSendImmediately = this.shouldSendImmediately(notification);
 
+    // Check if this should be batched based on timing rules
+    const shouldBatch = !shouldSendImmediately && this.shouldBatchNotification(notification.sellerId, notification);
+
+    if (shouldBatch) {
+      // Mark as batched and update timing
+      notification.status = 'batched';
+      await this.storeNotification(notification);
+      this.updateSellerNotificationTiming(notification.sellerId, true);
+      
+      safeLogger.info(`Notification batched for seller ${notification.sellerId}`, {
+        notificationId: notification.id,
+        type: notification.type,
+        priority: notification.priority,
+        reason: 'Rate limiting - max 1 per minute',
+      });
+
+      return notification;
+    }
+
     if (shouldSendImmediately) {
       // Send immediately to meet 30-second requirement
-      return await this.sendImmediateNotification(input);
+      const result = await this.sendImmediateNotification(input);
+      this.updateSellerNotificationTiming(notification.sellerId, false);
+      return result;
     }
+
+    // Update timing tracker
+    this.updateSellerNotificationTiming(notification.sellerId, false);
 
     safeLogger.info(`Notification queued for seller ${notification.sellerId}`, {
       notificationId: notification.id,
@@ -117,7 +190,10 @@ export class SellerNotificationService implements ISellerNotificationService {
     };
 
     try {
-      // Get all pending notifications
+      // Clean up old timing entries
+      this.cleanupOldTimings();
+
+      // Get all pending and batched notifications
       const pendingNotifications = await this.getPendingNotificationsFromDb();
 
       if (pendingNotifications.length === 0) {
@@ -138,12 +214,35 @@ export class SellerNotificationService implements ISellerNotificationService {
             const urgentNotifications = notifications.filter(n => n.priority === 'urgent');
             if (urgentNotifications.length === 0) {
               result.batched += notifications.length;
+              safeLogger.debug(`Skipping ${notifications.length} notifications for seller ${sellerId} during quiet hours`);
               continue;
             }
             // Only process urgent notifications
             await this.processSellerNotifications(sellerId, urgentNotifications, preferences, result);
+            result.batched += notifications.length - urgentNotifications.length;
           } else {
-            await this.processSellerNotifications(sellerId, notifications, preferences, result);
+            // Check if we should batch based on timing
+            const timing = this.sellerNotificationTimings.get(sellerId);
+            const timeSinceLastNotification = timing 
+              ? Date.now() - timing.lastNotificationSentAt.getTime() 
+              : NOTIFICATION_BATCHING.minIntervalMs + 1;
+
+            if (timeSinceLastNotification < NOTIFICATION_BATCHING.minIntervalMs) {
+              // Still within batching window, only send urgent
+              const urgentNotifications = notifications.filter(n => n.priority === 'urgent' || n.priority === 'high');
+              const normalNotifications = notifications.filter(n => n.priority === 'normal');
+              
+              if (urgentNotifications.length > 0) {
+                await this.processSellerNotifications(sellerId, urgentNotifications, preferences, result);
+              }
+              
+              // Keep normal notifications batched
+              result.batched += normalNotifications.length;
+            } else {
+              // Outside batching window, process all
+              await this.processSellerNotifications(sellerId, notifications, preferences, result);
+              this.updateSellerNotificationTiming(sellerId, false);
+            }
           }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
@@ -415,14 +514,20 @@ export class SellerNotificationService implements ISellerNotificationService {
   private createNotificationFromInput(input: SellerNotificationInput): SellerNotification {
     const now = new Date();
     
-    // Determine priority - new_order notifications default to high priority
-    let priority = input.priority || 'normal';
-    if (input.type === 'new_order' && priority === 'normal') {
-      priority = 'high';
-    }
+    // Determine priority using enhanced logic
+    const priorityResult = this.determinePriority(input);
+    const priority = input.priority || priorityResult.priority;
 
     // Default channels if not specified
     const channels = input.channels || ['push', 'email', 'in_app'];
+
+    // Enhance data with priority reasons if applicable
+    const enhancedData = {
+      ...input.data,
+      priorityReasons: priorityResult.reasons,
+      isHighValue: priorityResult.isHighValue,
+      isExpedited: priorityResult.isExpedited,
+    };
 
     return {
       id: uuidv4(),
@@ -432,12 +537,140 @@ export class SellerNotificationService implements ISellerNotificationService {
       orderId: input.orderId,
       title: input.title,
       body: input.body,
-      data: input.data || {},
+      data: enhancedData,
       channels,
       createdAt: now,
       status: 'pending',
       channelStatus: {},
     };
+  }
+
+  /**
+   * Determine notification priority based on order value and shipping type
+   * 
+   * @requirement 4.6 - High-value/expedited orders marked as high priority
+   */
+  private determinePriority(input: SellerNotificationInput): PriorityDetermination {
+    const reasons: string[] = [];
+    let isHighValue = false;
+    let isExpedited = false;
+    let priority: 'normal' | 'high' | 'urgent' = 'normal';
+
+    // Check for explicit priority
+    if (input.priority === 'urgent') {
+      return { priority: 'urgent', reasons: ['Explicitly marked as urgent'], isHighValue: false, isExpedited: false };
+    }
+
+    const data = input.data || {};
+
+    // Check for high-value order
+    const orderTotal = data.totalAmount as number || data.orderTotal as number || data.amount as number || 0;
+    const highValueThreshold = data.highValueThreshold as number || HIGH_VALUE_ORDER_CONFIG.defaultThresholdUSD;
+    
+    if (orderTotal >= highValueThreshold) {
+      isHighValue = true;
+      reasons.push(`High-value order: $${orderTotal.toFixed(2)} (threshold: $${highValueThreshold})`);
+      priority = 'high';
+    }
+
+    // Check for expedited shipping
+    const shippingMethod = (data.shippingMethod as string || '').toLowerCase();
+    const shippingType = (data.shippingType as string || '').toLowerCase();
+    const isExpeditedFlag = data.isExpedited as boolean || data.expeditedShipping as boolean;
+    
+    if (isExpeditedFlag) {
+      isExpedited = true;
+      reasons.push('Expedited shipping requested');
+      priority = 'high';
+    } else {
+      // Check shipping method/type for expedited keywords
+      const combinedShipping = `${shippingMethod} ${shippingType}`;
+      for (const keyword of HIGH_VALUE_ORDER_CONFIG.expeditedKeywords) {
+        if (combinedShipping.includes(keyword)) {
+          isExpedited = true;
+          reasons.push(`Expedited shipping detected: ${keyword}`);
+          priority = 'high';
+          break;
+        }
+      }
+    }
+
+    // New orders default to high priority if not already set
+    if (input.type === 'new_order' && priority === 'normal') {
+      priority = 'high';
+      reasons.push('New order notification');
+    }
+
+    // Cancellation requests and disputes are urgent
+    if (input.type === 'cancellation_request' || input.type === 'dispute_opened') {
+      priority = 'urgent';
+      reasons.push(`${input.type === 'cancellation_request' ? 'Cancellation request' : 'Dispute opened'} requires immediate attention`);
+    }
+
+    return { priority, reasons, isHighValue, isExpedited };
+  }
+
+  /**
+   * Check if a notification should be batched based on timing rules
+   * 
+   * @requirement 4.4 - Batching for rapid orders (max 1 per minute)
+   */
+  private shouldBatchNotification(sellerId: string, notification: SellerNotification): boolean {
+    // Urgent notifications never get batched
+    if (notification.priority === 'urgent') {
+      return false;
+    }
+
+    // High priority notifications bypass batching if configured
+    if (notification.priority === 'high' && NOTIFICATION_BATCHING.urgentBypassBatching) {
+      return false;
+    }
+
+    // Check timing for this seller
+    const timing = this.sellerNotificationTimings.get(sellerId);
+    if (!timing) {
+      return false; // No previous notification, don't batch
+    }
+
+    const timeSinceLastNotification = Date.now() - timing.lastNotificationSentAt.getTime();
+    
+    // If less than minIntervalMs since last notification, batch this one
+    return timeSinceLastNotification < NOTIFICATION_BATCHING.minIntervalMs;
+  }
+
+  /**
+   * Update the notification timing tracker for a seller
+   * 
+   * @requirement 4.4 - Batching for rapid orders (max 1 per minute)
+   */
+  private updateSellerNotificationTiming(sellerId: string, wasBatched: boolean = false): void {
+    const existing = this.sellerNotificationTimings.get(sellerId);
+    
+    if (wasBatched && existing) {
+      // Increment batched count
+      existing.batchedCount++;
+    } else {
+      // Reset timing on actual send
+      this.sellerNotificationTimings.set(sellerId, {
+        sellerId,
+        lastNotificationSentAt: new Date(),
+        batchedCount: 0,
+      });
+    }
+  }
+
+  /**
+   * Clean up old timing entries (called periodically)
+   */
+  private cleanupOldTimings(): void {
+    const maxAge = NOTIFICATION_BATCHING.maxBatchWindowMs * 5; // Keep for 5 minutes
+    const now = Date.now();
+    
+    for (const [sellerId, timing] of this.sellerNotificationTimings) {
+      if (now - timing.lastNotificationSentAt.getTime() > maxAge) {
+        this.sellerNotificationTimings.delete(sellerId);
+      }
+    }
   }
 
   /**
@@ -771,7 +1004,7 @@ export class SellerNotificationService implements ISellerNotificationService {
   }
 
   /**
-   * Send email notification
+   * Send email notification with order summary, buyer info, and action links
    * 
    * @requirement 4.2 - Email with order summary, buyer info, action links
    */
@@ -787,29 +1020,43 @@ export class SellerNotificationService implements ISellerNotificationService {
         notification.channelStatus.email = {
           status: 'skipped',
         };
+        safeLogger.info(`No email found for seller ${notification.sellerId}, skipping email notification`);
         return;
       }
 
-      // Use the notification service to send email
-      await this.notificationService.sendOrderNotification(
-        notification.sellerId,
-        notification.type.toUpperCase(),
-        notification.orderId || notification.id,
-        {
-          title: notification.title,
-          body: notification.body,
+      // Extract order data from notification
+      const orderData = this.extractOrderEmailData(notification);
+      
+      // Generate email HTML based on notification type
+      const emailHtml = this.generateSellerNotificationEmailHtml(notification, orderData);
+      
+      // Generate email subject
+      const emailSubject = this.generateEmailSubject(notification, orderData);
+
+      // Send email using EmailService
+      const emailSent = await this.emailService.sendEmail({
+        to: sellerProfile.email,
+        subject: emailSubject,
+        html: emailHtml,
+      });
+
+      if (emailSent) {
+        notification.channelStatus.email = {
+          status: 'sent',
+          sentAt: new Date(),
+        };
+        safeLogger.info(`Email notification sent to seller ${notification.sellerId}`, {
+          notificationId: notification.id,
+          type: notification.type,
           email: sellerProfile.email,
-          actionUrl: this.getActionUrl(notification),
-          ...notification.data,
-        }
-      );
-
-      notification.channelStatus.email = {
-        status: 'sent',
-        sentAt: new Date(),
-      };
-
-      safeLogger.debug(`Email notification sent to seller ${notification.sellerId}`);
+        });
+      } else {
+        notification.channelStatus.email = {
+          status: 'failed',
+          error: 'Email service returned false',
+        };
+        safeLogger.warn(`Email notification failed for seller ${notification.sellerId}`);
+      }
     } catch (error) {
       notification.channelStatus.email = {
         status: 'failed',
@@ -817,6 +1064,408 @@ export class SellerNotificationService implements ISellerNotificationService {
       };
       // Don't throw - email failure shouldn't block other channels
       safeLogger.warn(`Email notification failed for seller ${notification.sellerId}:`, error);
+    }
+  }
+
+  /**
+   * Extract order email data from notification
+   */
+  private extractOrderEmailData(notification: SellerNotification): OrderEmailData {
+    const data = notification.data || {};
+    
+    return {
+      orderId: notification.orderId || data.orderId as string || '',
+      orderNumber: data.orderNumber as string,
+      buyerName: data.buyerName as string,
+      buyerEmail: data.buyerEmail as string,
+      buyerAddress: data.buyerAddress as string,
+      shippingAddress: data.shippingAddress as OrderEmailData['shippingAddress'],
+      items: data.items as OrderEmailData['items'],
+      subtotal: data.subtotal as number,
+      shippingCost: data.shippingCost as number,
+      taxes: data.taxes as number,
+      totalAmount: data.totalAmount as number || data.orderTotal as number,
+      currency: data.currency as string || 'USD',
+      paymentMethod: data.paymentMethod as string,
+      isExpedited: data.isExpedited as boolean || data.expeditedShipping as boolean,
+      specialInstructions: data.specialInstructions as string,
+      createdAt: data.createdAt ? new Date(data.createdAt as string) : new Date(),
+    };
+  }
+
+  /**
+   * Generate email subject based on notification type
+   */
+  private generateEmailSubject(notification: SellerNotification, orderData: OrderEmailData): string {
+    const orderRef = orderData.orderNumber || orderData.orderId || 'Order';
+    
+    switch (notification.type) {
+      case 'new_order':
+        const priorityPrefix = notification.priority === 'urgent' ? '🚨 URGENT: ' : 
+                              notification.priority === 'high' ? '⚡ ' : '';
+        return `${priorityPrefix}New Order Received - ${orderRef}`;
+      case 'cancellation_request':
+        return `⚠️ Cancellation Request - ${orderRef}`;
+      case 'dispute_opened':
+        return `🔴 Dispute Opened - ${orderRef}`;
+      case 'review_received':
+        return `⭐ New Review Received`;
+      case 'order_update':
+        return `Order Update - ${orderRef}`;
+      case 'payment_received':
+        return `💰 Payment Received - ${orderRef}`;
+      case 'return_requested':
+        return `📦 Return Requested - ${orderRef}`;
+      default:
+        return `Notification - ${orderRef}`;
+    }
+  }
+
+  /**
+   * Generate seller notification email HTML
+   * 
+   * @requirement 4.2 - Email with order summary, buyer info, action links
+   */
+  private generateSellerNotificationEmailHtml(
+    notification: SellerNotification,
+    orderData: OrderEmailData
+  ): string {
+    const baseUrl = process.env.FRONTEND_URL || 'https://linkdao.io';
+    const actionUrl = this.getActionUrl(notification);
+    
+    // Format currency
+    const formatCurrency = (amount: number | undefined, currency: string = 'USD'): string => {
+      if (amount === undefined || amount === null) return 'N/A';
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
+    };
+
+    // Format date
+    const formatDate = (date: Date | undefined): string => {
+      if (!date) return 'N/A';
+      return new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(date);
+    };
+
+    // Generate items HTML if available
+    const itemsHtml = orderData.items && orderData.items.length > 0 
+      ? this.generateOrderItemsHtml(orderData.items, orderData.currency || 'USD')
+      : '';
+
+    // Generate shipping address HTML
+    const shippingAddressHtml = orderData.shippingAddress 
+      ? this.generateShippingAddressHtml(orderData.shippingAddress)
+      : '';
+
+    // Priority badge
+    const priorityBadge = notification.priority === 'urgent' 
+      ? '<span style="background: #dc2626; color: white; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; margin-left: 8px;">URGENT</span>'
+      : notification.priority === 'high'
+      ? '<span style="background: #f59e0b; color: white; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; margin-left: 8px;">HIGH PRIORITY</span>'
+      : '';
+
+    // Expedited shipping badge
+    const expeditedBadge = orderData.isExpedited 
+      ? '<span style="background: #7c3aed; color: white; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; margin-left: 8px;">⚡ EXPEDITED</span>'
+      : '';
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${notification.title}</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #f4f5f7;">
+        <div style="max-width: 600px; margin: 40px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px 20px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">
+              ${this.getNotificationIcon(notification.type)} ${notification.title}
+            </h1>
+            <div style="margin-top: 8px;">
+              ${priorityBadge}
+              ${expeditedBadge}
+            </div>
+          </div>
+
+          <!-- Main Content -->
+          <div style="padding: 30px;">
+            
+            <!-- Notification Message -->
+            <p style="color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">
+              ${notification.body}
+            </p>
+
+            <!-- Order Summary Section -->
+            ${orderData.orderId ? `
+              <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 24px;">
+                <h2 style="color: #1a1a1a; font-size: 18px; margin: 0 0 16px 0; border-bottom: 2px solid #667eea; padding-bottom: 8px;">
+                  📦 Order Summary
+                </h2>
+                
+                <div style="display: grid; gap: 12px;">
+                  <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                    <span style="color: #6b7280; font-size: 14px;">Order ID</span>
+                    <span style="color: #1f2937; font-size: 14px; font-weight: 600;">${orderData.orderNumber || orderData.orderId}</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                    <span style="color: #6b7280; font-size: 14px;">Order Date</span>
+                    <span style="color: #1f2937; font-size: 14px;">${formatDate(orderData.createdAt)}</span>
+                  </div>
+                  ${orderData.paymentMethod ? `
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                      <span style="color: #6b7280; font-size: 14px;">Payment Method</span>
+                      <span style="color: #1f2937; font-size: 14px;">${orderData.paymentMethod}</span>
+                    </div>
+                  ` : ''}
+                  ${orderData.totalAmount !== undefined ? `
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+                      <span style="color: #1f2937; font-size: 16px; font-weight: 600;">Total Amount</span>
+                      <span style="color: #10b981; font-size: 18px; font-weight: 700;">${formatCurrency(orderData.totalAmount, orderData.currency)}</span>
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- Order Items Section -->
+            ${itemsHtml}
+
+            <!-- Buyer Information Section -->
+            ${orderData.buyerName || orderData.buyerEmail || shippingAddressHtml ? `
+              <div style="background: #f0f9ff; padding: 20px; border-radius: 8px; margin-bottom: 24px; border-left: 4px solid #0ea5e9;">
+                <h2 style="color: #1a1a1a; font-size: 18px; margin: 0 0 16px 0;">
+                  👤 Buyer Information
+                </h2>
+                
+                ${orderData.buyerName ? `
+                  <div style="margin-bottom: 8px;">
+                    <span style="color: #6b7280; font-size: 14px;">Name: </span>
+                    <span style="color: #1f2937; font-size: 14px; font-weight: 500;">${orderData.buyerName}</span>
+                  </div>
+                ` : ''}
+                
+                ${orderData.buyerEmail ? `
+                  <div style="margin-bottom: 8px;">
+                    <span style="color: #6b7280; font-size: 14px;">Email: </span>
+                    <span style="color: #1f2937; font-size: 14px;">${orderData.buyerEmail}</span>
+                  </div>
+                ` : ''}
+                
+                ${shippingAddressHtml}
+              </div>
+            ` : ''}
+
+            <!-- Special Instructions -->
+            ${orderData.specialInstructions ? `
+              <div style="background: #fef3c7; padding: 16px; border-radius: 8px; margin-bottom: 24px; border-left: 4px solid #f59e0b;">
+                <h3 style="color: #92400e; font-size: 14px; margin: 0 0 8px 0; font-weight: 600;">
+                  📝 Special Instructions
+                </h3>
+                <p style="color: #78350f; font-size: 14px; margin: 0; line-height: 1.5;">
+                  ${orderData.specialInstructions}
+                </p>
+              </div>
+            ` : ''}
+
+            <!-- Action Buttons -->
+            <div style="text-align: center; margin-top: 30px;">
+              <a href="${actionUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-right: 12px;">
+                ${this.getActionButtonText(notification.type)}
+              </a>
+              
+              ${notification.type === 'new_order' ? `
+                <a href="${baseUrl}/seller/orders" style="display: inline-block; background: #f3f4f6; color: #374151; text-decoration: none; padding: 14px 24px; border-radius: 6px; font-weight: 500; font-size: 14px;">
+                  View All Orders
+                </a>
+              ` : ''}
+            </div>
+
+            <!-- Quick Actions for New Orders -->
+            ${notification.type === 'new_order' ? `
+              <div style="margin-top: 24px; padding: 20px; background: #f0fdf4; border-radius: 8px; border: 1px solid #86efac;">
+                <h3 style="color: #15803d; font-size: 14px; margin: 0 0 12px 0; font-weight: 600;">
+                  ⚡ Quick Actions
+                </h3>
+                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                  <a href="${baseUrl}/seller/orders/${orderData.orderId}/process" style="color: #15803d; font-size: 13px; text-decoration: none; padding: 8px 16px; background: white; border-radius: 4px; border: 1px solid #86efac;">
+                    Start Processing
+                  </a>
+                  <a href="${baseUrl}/seller/orders/${orderData.orderId}/packing-slip" style="color: #15803d; font-size: 13px; text-decoration: none; padding: 8px 16px; background: white; border-radius: 4px; border: 1px solid #86efac;">
+                    Print Packing Slip
+                  </a>
+                  <a href="${baseUrl}/seller/orders/${orderData.orderId}/label" style="color: #15803d; font-size: 13px; text-decoration: none; padding: 8px 16px; background: white; border-radius: 4px; border: 1px solid #86efac;">
+                    Generate Label
+                  </a>
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- Cancellation Request Actions -->
+            ${notification.type === 'cancellation_request' ? `
+              <div style="margin-top: 24px; padding: 20px; background: #fef2f2; border-radius: 8px; border: 1px solid #fecaca;">
+                <h3 style="color: #dc2626; font-size: 14px; margin: 0 0 12px 0; font-weight: 600;">
+                  ⏰ Action Required
+                </h3>
+                <p style="color: #7f1d1d; font-size: 13px; margin: 0 0 12px 0;">
+                  Please respond within 24 hours. If no response is received, the cancellation will be automatically approved.
+                </p>
+                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                  <a href="${baseUrl}/seller/orders/${orderData.orderId}/cancel/approve" style="color: white; font-size: 13px; text-decoration: none; padding: 8px 16px; background: #dc2626; border-radius: 4px;">
+                    Approve Cancellation
+                  </a>
+                  <a href="${baseUrl}/seller/orders/${orderData.orderId}/cancel/deny" style="color: #dc2626; font-size: 13px; text-decoration: none; padding: 8px 16px; background: white; border-radius: 4px; border: 1px solid #fecaca;">
+                    Deny Request
+                  </a>
+                </div>
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- Footer -->
+          <div style="background: #f8f9fa; padding: 24px 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+            <p style="color: #6b7280; font-size: 14px; margin: 0 0 8px 0;">
+              LinkDAO Marketplace - Seller Dashboard
+            </p>
+            <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+              You received this email because you're a seller on LinkDAO.
+              <a href="${baseUrl}/seller/settings/notifications" style="color: #667eea; text-decoration: none;">Manage notification preferences</a>
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  /**
+   * Generate HTML for order items list
+   */
+  private generateOrderItemsHtml(items: OrderEmailData['items'], currency: string): string {
+    if (!items || items.length === 0) return '';
+
+    const formatCurrency = (amount: number): string => {
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
+    };
+
+    const itemRows = items.map(item => `
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            ${item.imageUrl ? `<img src="${item.imageUrl}" alt="${item.name}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;" />` : ''}
+            <span style="color: #1f2937; font-size: 14px;">${item.name}</span>
+          </div>
+        </td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 14px;">
+          ${item.quantity}
+        </td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right; color: #1f2937; font-size: 14px; font-weight: 500;">
+          ${formatCurrency(item.price * item.quantity)}
+        </td>
+      </tr>
+    `).join('');
+
+    return `
+      <div style="margin-bottom: 24px;">
+        <h2 style="color: #1a1a1a; font-size: 18px; margin: 0 0 16px 0;">
+          🛒 Order Items
+        </h2>
+        <table style="width: 100%; border-collapse: collapse; background: #f8f9fa; border-radius: 8px; overflow: hidden;">
+          <thead>
+            <tr style="background: #e5e7eb;">
+              <th style="padding: 12px; text-align: left; color: #374151; font-size: 12px; font-weight: 600; text-transform: uppercase;">Item</th>
+              <th style="padding: 12px; text-align: center; color: #374151; font-size: 12px; font-weight: 600; text-transform: uppercase;">Qty</th>
+              <th style="padding: 12px; text-align: right; color: #374151; font-size: 12px; font-weight: 600; text-transform: uppercase;">Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemRows}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  /**
+   * Generate HTML for shipping address
+   */
+  private generateShippingAddressHtml(address: OrderEmailData['shippingAddress']): string {
+    if (!address) return '';
+
+    const parts = [
+      address.street,
+      address.city,
+      address.state,
+      address.postalCode,
+      address.country,
+    ].filter(Boolean);
+
+    if (parts.length === 0) return '';
+
+    return `
+      <div style="margin-top: 12px;">
+        <span style="color: #6b7280; font-size: 14px; display: block; margin-bottom: 4px;">Shipping Address:</span>
+        <div style="color: #1f2937; font-size: 14px; line-height: 1.5; padding: 12px; background: white; border-radius: 4px;">
+          ${address.street ? `${address.street}<br>` : ''}
+          ${address.city ? `${address.city}` : ''}${address.state ? `, ${address.state}` : ''} ${address.postalCode || ''}<br>
+          ${address.country || ''}
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Get notification icon based on type
+   */
+  private getNotificationIcon(type: string): string {
+    switch (type) {
+      case 'new_order':
+        return '🛍️';
+      case 'cancellation_request':
+        return '⚠️';
+      case 'dispute_opened':
+        return '🔴';
+      case 'review_received':
+        return '⭐';
+      case 'order_update':
+        return '📋';
+      case 'payment_received':
+        return '💰';
+      case 'return_requested':
+        return '📦';
+      default:
+        return '📬';
+    }
+  }
+
+  /**
+   * Get action button text based on notification type
+   */
+  private getActionButtonText(type: string): string {
+    switch (type) {
+      case 'new_order':
+        return 'View Order Details';
+      case 'cancellation_request':
+        return 'Review Cancellation';
+      case 'dispute_opened':
+        return 'View Dispute';
+      case 'review_received':
+        return 'View Review';
+      case 'order_update':
+        return 'View Order';
+      case 'payment_received':
+        return 'View Payment';
+      case 'return_requested':
+        return 'Review Return';
+      default:
+        return 'View Details';
     }
   }
 

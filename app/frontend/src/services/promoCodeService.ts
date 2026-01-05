@@ -56,18 +56,27 @@ class FrontendPromoCodeService {
     }
 
     async getPromoCodes(sellerId: string): Promise<PromoCode[]> {
-        const response = await fetch(`${this.baseUrl}/api/marketplace/promo-codes?sellerId=${sellerId}`, {
+        console.log('[promoCodeService] Fetching promo codes for sellerId:', sellerId);
+        console.log('[promoCodeService] Base URL:', this.baseUrl);
+        const url = `${this.baseUrl}/api/marketplace/promo-codes?sellerId=${sellerId}`;
+        console.log('[promoCodeService] Full URL:', url);
+
+        const response = await fetch(url, {
             headers: {
                 'Content-Type': 'application/json',
             },
         });
 
+        console.log('[promoCodeService] Response status:', response.status);
+
         if (!response.ok) {
             const errorData = await response.json();
+            console.error('[promoCodeService] Error response:', errorData);
             throw new Error(errorData.error || 'Failed to fetch promo codes');
         }
 
         const result = await response.json();
+        console.log('[promoCodeService] Success response:', result);
         return result.data;
     }
 }
