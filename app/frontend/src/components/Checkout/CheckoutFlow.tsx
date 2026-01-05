@@ -1045,8 +1045,8 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
         <Button variant="outline" onClick={() => router.push('/marketplace')}>
           Continue Shopping
         </Button>
-        <Button variant="primary" onClick={() => router.push('/orders')}>
-          Track Order
+        <Button variant="primary" onClick={() => router.push('/marketplace/orders')}>
+          View Orders
         </Button>
       </div>
     </div>

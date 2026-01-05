@@ -157,7 +157,7 @@ export const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
   if (paymentSucceeded) {
     return (
       <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-6">
-        <div className="flex items-center gap-4 mb-4">
+        <div className="flex items-center gap-4 mb-6">
           <CheckCircle className="text-green-400" size={48} />
           <div>
             <h3 className="text-xl font-semibold text-white mb-1">
@@ -167,6 +167,24 @@ export const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
               Your payment of {currency} {amount.toFixed(2)} has been processed.
             </p>
           </div>
+        </div>
+        
+        {/* Navigation Buttons */}
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            onClick={() => window.location.href = '/marketplace/orders'}
+            className="flex-1"
+          >
+            View Orders
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => window.location.href = '/marketplace'}
+            className="flex-1"
+          >
+            Continue Shopping
+          </Button>
         </div>
       </div>
     );
