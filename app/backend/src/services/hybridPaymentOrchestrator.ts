@@ -415,14 +415,27 @@ export class HybridPaymentOrchestrator {
 
       // Store payment intent details in database for tracking
       try {
-        await this.databaseService.createPayment(
-          request.buyerAddress,
-          request.sellerAddress,
-          'USD',
-          request.amount.toString(),
-          paymentIntent.id,
-          `Order ${request.orderId} payment intent`
-        );
+        // Look up buyer and seller user IDs
+        const buyer = await this.databaseService.getUserByAddress?.(request.buyerAddress);
+        const seller = await this.databaseService.getUserByAddress?.(request.sellerAddress);
+
+        if (!buyer?.id || !seller?.id) {
+          safeLogger.warn('Could not find buyer or seller user IDs for payment record:', {
+            buyerAddress: request.buyerAddress,
+            sellerAddress: request.sellerAddress,
+            buyerId: buyer?.id,
+            sellerId: seller?.id
+          });
+        } else {
+          await this.databaseService.createPayment(
+            buyer.id, // Use user ID instead of wallet address
+            seller.id, // Use user ID instead of wallet address
+            'USD',
+            request.amount.toString(),
+            paymentIntent.id,
+            `Order ${request.orderId} payment intent`
+          );
+        }
       } catch (dbError) {
         safeLogger.warn('Failed to store payment intent in database:', dbError);
       }

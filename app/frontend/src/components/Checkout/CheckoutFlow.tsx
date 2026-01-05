@@ -163,7 +163,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       // Create prioritization context WITHOUT wallet balance detection
       // Balance will only be checked when user selects a crypto payment method
       const context: PrioritizationContext = {
-        transactionAmount: parseFloat(cartState.totals.total.fiat),
+        transactionAmount: parseFloat(cartState.totals.subtotal.fiat), // Use subtotal, not total
         transactionCurrency: 'USD',
         userContext: {
           userAddress: address || undefined,

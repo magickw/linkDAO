@@ -134,7 +134,7 @@ export class TransactionCostCalculator {
         savings: savings > 0 ? savings : undefined,
         costDifference: costDifference > 0 ? costDifference : undefined,
         isRecommended,
-        reasonForRecommendation: isRecommended 
+        reasonForRecommendation: isRecommended
           ? this.getRecommendationReason(estimate, costEstimates)
           : undefined
       };
@@ -287,8 +287,8 @@ export class TransactionCostCalculator {
       throw new Error('Chain ID required for gas estimation');
     }
 
-    const transactionType = paymentMethod.type === PaymentMethodType.NATIVE_ETH 
-      ? 'ethTransfer' 
+    const transactionType = paymentMethod.type === PaymentMethodType.NATIVE_ETH
+      ? 'ethTransfer'
       : 'erc20Transfer';
 
     try {
@@ -298,12 +298,13 @@ export class TransactionCostCalculator {
       );
     } catch (error) {
       console.warn('Gas estimation failed, using fallback estimate:', error);
-      // Return a fallback gas estimate when API fails
+      // Return a fallback gas estimate when API fails with realistic values
+      const fallbackGasFeeUSD = this.getRealisticGasFeeForChain(paymentMethod.chainId || 1);
       return {
         gasLimit: BigInt(21000),
         gasPrice: BigInt(20e9), // 20 gwei
         totalCost: BigInt(21000 * 20e9),
-        totalCostUSD: 25, // $25 fallback
+        totalCostUSD: fallbackGasFeeUSD,
         confidence: 0.3 // Low confidence for fallback
       };
     }
@@ -401,7 +402,7 @@ export class TransactionCostCalculator {
         `https://api.coingecko.com/api/v3/simple/price?ids=${coingeckoId}&vs_currencies=${toToken.toLowerCase()}`
       );
       const data = await response.json();
-      
+
       const rate = data[coingeckoId]?.[toToken.toLowerCase()];
       if (rate) {
         return {
@@ -437,8 +438,8 @@ export class TransactionCostCalculator {
    * Check if payment method is crypto-based
    */
   private isCryptoPayment(paymentMethod: PaymentMethod): boolean {
-    return paymentMethod.type !== PaymentMethodType.FIAT_STRIPE && 
-           paymentMethod.type !== PaymentMethodType.X402;
+    return paymentMethod.type !== PaymentMethodType.FIAT_STRIPE &&
+      paymentMethod.type !== PaymentMethodType.X402;
   }
 
   /**
@@ -481,6 +482,28 @@ export class TransactionCostCalculator {
   }
 
   /**
+   * Get realistic gas fee for a specific chain (fallback values)
+   */
+  private getRealisticGasFeeForChain(chainId: number): number {
+    switch (chainId) {
+      case 1: // Ethereum Mainnet
+        return 2.50;
+      case 137: // Polygon
+        return 0.05;
+      case 42161: // Arbitrum
+        return 0.15;
+      case 8453: // Base
+        return 0.10;
+      case 11155111: // Sepolia Testnet
+        return 0.01;
+      case 84532: // Base Sepolia
+        return 0.01;
+      default:
+        return 1.00; // Default reasonable fee
+    }
+  }
+
+  /**
    * Determine if method is recommended
    */
   private isRecommendedMethod(
@@ -488,7 +511,7 @@ export class TransactionCostCalculator {
     allEstimates: { method: PaymentMethod; costEstimate: CostEstimate }[]
   ): boolean {
     const { costEstimate } = estimate;
-    
+
     // Recommend if it's the cheapest
     const cheapestCost = Math.min(...allEstimates.map(e => e.costEstimate.totalCost));
     if (costEstimate.totalCost === cheapestCost) {
@@ -552,7 +575,7 @@ export class TransactionCostCalculator {
 
     let estimatedGasFee = 0;
     if (this.isCryptoPayment(paymentMethod)) {
-      estimatedGasFee = 25; // $25 fallback for crypto
+      estimatedGasFee = this.getRealisticGasFeeForChain(paymentMethod.chainId || 1);
     } else if (paymentMethod.type === PaymentMethodType.X402) {
       estimatedGasFee = 0.1; // Very low fee for x402
     }

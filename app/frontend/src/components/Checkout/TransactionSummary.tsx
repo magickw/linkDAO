@@ -183,7 +183,10 @@ export const TransactionSummary: React.FC<TransactionSummaryProps> = ({
                         <div className="pt-3 border-t-2 border-gray-200 dark:border-gray-700 flex justify-between items-center">
                             <span className="font-bold text-gray-900 dark:text-white">Total Amount</span>
                             <span className="font-bold text-xl text-green-600">
-                                {formatCurrency(costEstimate.totalCost)}
+                                {formatCurrency(
+                                    costEstimate.totalCost +
+                                    (taxBreakdown?.reduce((sum, tax) => sum + tax.amount, 0) || 0)
+                                )}
                             </span>
                         </div>
                     </div>
