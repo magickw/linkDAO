@@ -2223,8 +2223,25 @@ export class DatabaseService {
           }
         })
         .returning();
+
       return updated !== null;
     });
+  }
+
+  /**
+   * Get user wallet address by UUID
+   */
+  async getUserAddressById(userId: string): Promise<string | null> {
+    try {
+      const result = await this.db.select({ walletAddress: schema.users.walletAddress })
+        .from(schema.users)
+        .where(eq(schema.users.id, userId))
+        .limit(1);
+      return result[0]?.walletAddress || null;
+    } catch (error) {
+      safeLogger.error('Error fetching user address by ID:', error);
+      return null;
+    }
   }
 
   async getNotificationPreferences(userAddress: string) {
@@ -3232,7 +3249,7 @@ export class DatabaseService {
     this.checkConnection();
     try {
       let conditions = [eq(schema.sellerNotificationQueue.sellerId, sellerId)];
-      
+
       if (type) {
         conditions.push(eq(schema.sellerNotificationQueue.type, type));
       }

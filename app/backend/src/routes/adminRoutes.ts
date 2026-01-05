@@ -108,9 +108,9 @@ router.use('/returns', (req, res, next) => {
   const user = (req as any).user;
   // Allow if user has returns permissions, system.analytics, or is super_admin
   if (user && (
-    user.permissions?.includes('returns.view') || 
-    user.permissions?.includes('returns.analytics') || 
-    user.permissions?.includes('system.analytics') || 
+    user.permissions?.includes('returns.view') ||
+    user.permissions?.includes('returns.analytics') ||
+    user.permissions?.includes('system.analytics') ||
     user.permissions?.includes('*') ||
     user.role === 'super_admin' ||
     user.role === 'admin'
@@ -130,5 +130,13 @@ router.get('/analytics/disputes', requirePermission('system.analytics'), adminCo
 router.get('/analytics/moderation', requirePermission('system.analytics'), adminController.getModerationAnalytics.bind(adminController));
 router.get('/analytics/demographics', requirePermission('system.analytics'), adminController.getUserDemographics.bind(adminController));
 router.get('/analytics/content', requirePermission('system.analytics'), adminController.getContentAnalytics.bind(adminController));
+
+// Order Management Routes (Task 15)
+router.get('/orders/metrics', adminController.getOrderMetrics.bind(adminController));
+router.get('/orders/delayed', adminController.getDelayedOrders.bind(adminController));
+router.get('/orders', adminController.getOrders.bind(adminController));
+router.get('/orders/:id', adminController.getOrderDetails.bind(adminController));
+router.post('/orders/:id/action', csrfProtection, requireRole('admin'), adminController.performAdminAction.bind(adminController));
+
 
 export default router;

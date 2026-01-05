@@ -201,9 +201,8 @@ export class SellerWorkflowService {
                 shippedAt: new Date().toISOString()
             });
 
-            // Start delivery monitoring (via ShippingService or just implicit via cron)
-            // If ShippingService has method, call it.
-            // await this.shippingService.startMonitoring(orderId, trackingNumber, carrier);
+            // Start delivery monitoring
+            await this.shippingService.startDeliveryTracking(orderId, trackingNumber, carrier);
 
             // Notify buyer
             await this.notificationService.notifyOrderStatusChange(order.buyerWalletAddress, orderId, OrderStatus.SHIPPED);

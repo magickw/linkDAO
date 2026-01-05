@@ -502,6 +502,83 @@ export class NotificationService {
   }
 
   /**
+ 
+  /**
+   * Enqueue a notification (Generic wrapper)
+   * Handles user resolution (UUID -> Address) and dispatch
+   */
+  async enqueueNotification(params: {
+    userId: string;
+    type: string;
+    title: string;
+    message: string;
+    data?: any;
+    priority?: string;
+  }): Promise<void> {
+    try {
+      const userAddress = await this.resolveUserAddress(params.userId);
+      if (!userAddress) {
+        safeLogger.warn(`Could not resolve user address for notification: ${params.userId}`);
+        return;
+      }
+
+      // Construct Action URL (Simple mapping)
+      let actionUrl = '';
+      if (params.data && params.data.orderId) {
+        actionUrl = `/orders/${params.data.orderId}`;
+      }
+
+      const notification: any = {
+        userAddress, // Schema uses userAddress
+        type: params.type,
+        message: params.message,
+        metadata: params.data,
+        read: false,
+        // timestamps handled by DB default
+      };
+
+      // If orderId is in data, map it column
+      if (params.data && params.data.orderId) {
+        notification.orderId = params.data.orderId;
+      }
+
+      // Persist
+      await databaseService.createNotification(notification);
+
+      // Real-time
+      await this.sendRealTimeNotification(userAddress, {
+        title: params.title,
+        message: params.message,
+        actionUrl,
+        metadata: params.data
+      });
+
+      // Email/Push checks
+      if (await this.shouldSendEmail(userAddress, params.type)) {
+        await this.sendEmailNotification(userAddress, params.type, params.message, actionUrl);
+      }
+    } catch (error) {
+      safeLogger.error('Error enqueuing notification:', error);
+    }
+  }
+
+  private async resolveUserAddress(userIdOrAddress: string): Promise<string | null> {
+    if (userIdOrAddress.startsWith('0x')) return userIdOrAddress;
+
+    // Lookup by ID
+    // This requires circular dependency or moving logic? 
+    // Safe option: Use DatabaseService if it has getUserById, or direct DB query.
+    // NotificationService imports DatabaseService.
+    // Let's assume DatabaseService has getUser or we use simple query if we can import db/schema here.
+    // NotificationService doesn't import db/schema at top. Use databaseService.
+
+    // Looking at imports: import { DatabaseService } from './databaseService';
+    // I should check if DatabaseService has getUser.
+    // If not, I can import db/schema/eq here.
+    return await databaseService.getUserAddressById(userIdOrAddress);
+  }
+
+  /**
    * Get notification statistics
    */
   async getNotificationStats(userAddress: string): Promise<{

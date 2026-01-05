@@ -113,11 +113,11 @@
 
 ## Task 10: Seller Workflow API Endpoints
 
-- [ ] 10.2 Create `POST /api/marketplace/seller/orders/:orderId/process` endpoint to start processing [Requirement 5.2]
-- [ ] 10.3 Create `POST /api/marketplace/seller/orders/:orderId/ready` endpoint to mark ready to ship [Requirement 5.3]
-- [ ] 10.4 Create `POST /api/marketplace/seller/orders/:orderId/ship` endpoint to confirm shipment [Requirement 5.5]
-- [ ] 10.5 Create `GET /api/marketplace/seller/orders/:orderId/packing-slip` endpoint for packing slip [Requirement 5.6]
-- [ ] 10.6 Implement seller authorization for all endpoints [Security]
+- [x] 10.2 Create `POST /api/marketplace/seller/orders/:orderId/process` endpoint to start processing [Requirement 5.2]
+- [x] 10.3 Create `POST /api/marketplace/seller/orders/:orderId/ready` endpoint to mark ready to ship [Requirement 5.3]
+- [x] 10.4 Create `POST /api/marketplace/seller/orders/:orderId/ship` endpoint to confirm shipment [Requirement 5.5]
+- [x] 10.5 Create `GET /api/marketplace/seller/orders/:orderId/packing-slip` endpoint for packing slip [Requirement 5.6]
+- [x] 10.6 Implement seller authorization for all endpoints [Security]
 
 ### Checkpoint 7: Seller workflow dashboard and order processing
 
@@ -128,50 +128,52 @@
 - [x] 11.2 Implement carrier abstraction layer for FEDEX, UPS, DHL, USPS [Requirement 6.1]
 - [x] 11.3 Implement `calculateRates()` using package dimensions, weight, destination [Requirement 6.2]
 - [x] 11.4 Implement `generateLabel()` storing tracking number, label URL, shipment ID [Requirement 6.3] (Mock supported)
-- [ ] 11.5 Implement tracking poll cron job to sync carrier updates to timeline [Requirement 6.4]
-- [ ] 11.6 Implement delivery confirmation handler to update status to DELIVERED and notify both parties [Requirement 6.5]
-- [ ] 11.7 Implement delivery exception handler with alerts and resolution options [Requirement 6.6]
-- [ ] 11.8 Implement manual tracking entry path without label generation [Requirement 6.7]
-- [ ] 11.9* Write unit tests for carrier availability and data persistence (CP-R6.1, CP-R6.3, CP-R6.7)
-- [ ] 11.10* Write integration tests for rate calculation and tracking sync (CP-R6.2, CP-R6.4, CP-R6.5, CP-R6.6)
-
-## Task 12: Delivery API Endpoints
-
-- [x] 12.1 Create `POST /api/shipping/rates` endpoint to calculate shipping rates [Requirement 6.2]
-- [x] 12.2 Create `POST /api/shipping/labels` endpoint to generate shipping label [Requirement 6.1]
-- [x] 12.3 Create `GET /api/shipping/tracking/:trackingNumber` endpoint for tracking updates [Requirement 6.4]
-- [ ] 12.4 Implement circuit breaker for carrier API unavailability [Error Handling]
+- [x] 11.5 Implement tracking poll cron job to sync carrier updates to timeline [Requirement 6.4]
+- [x] 11.6 Implement delivery confirmation handler to update status to DELIVERED and notify both parties [Requirement 6.5]
+- [x] 11.7 Implement delivery exception handler with alerts and resolution options [Requirement 6.6]
+- [x] 11.8 Implement manual tracking entry path without label generation [Requirement 6.7]
+- [x] 11.9* Write unit tests for carrier availability and data persistence (CP-R6.1, CP-R6.3, CP-R6.7)
+- [x] 11.10* Write integration tests for rate calculation and tracking sync (CP-R6.2, CP-R6.4, CP-R6.5, CP-R6.6)
+ 
+ ## Task 12: Delivery API Endpoints
+ 
+ - [x] 12.1 Create `POST /api/shipping/rates` endpoint to calculate shipping rates [Requirement 6.2]
+ - [x] 12.2 Create `POST /api/shipping/labels` endpoint to generate shipping label [Requirement 6.1]
+ - [x] 12.3 Create `GET /api/shipping/tracking/:trackingNumber` endpoint for tracking updates [Requirement 6.4]
+ - [x] 12.4 Implement circuit breaker for carrier API unavailability [Error Handling]
 
 ### Checkpoint 8: Delivery integration with label generation and tracking
 
 ## Task 13: Delivery Estimate Service Implementation
 
-- [ ] 13.1 Create `IDeliveryEstimateService` interface with calculateInitialEstimate, updateEstimateFromCarrier, recalculateOnDelay, notifyEstimateChange methods [Requirement 10]
-- [ ] 13.2 Implement initial estimate calculation from seller processing time + shipping method [Requirement 10.1]
-- [ ] 13.3 Implement estimate update on label generation using carrier transit data [Requirement 10.2]
-- [ ] 13.4 Implement estimate recalculation on tracking delays [Requirement 10.3]
-- [ ] 13.5 Implement date range display accounting for carrier variability [Requirement 10.4]
-- [ ] 13.6 Implement imminent delivery notification (within 24 hours) [Requirement 10.5]
-- [ ] 13.7 Implement significant change notification (>2 days difference) [Requirement 10.6]
-- [ ] 13.8 Implement historical seller processing time integration [Requirement 10.7]
-- [ ] 13.9* Write unit tests for calculation formula and change threshold (CP-R10.1, CP-R10.4, CP-R10.6, CP-R10.7)
-- [ ] 13.10* Write integration tests for estimate updates and notifications (CP-R10.2, CP-R10.3, CP-R10.5)
+- [x] 13.1 Create `IDeliveryEstimateService` interface with calculateInitialEstimate, updateEstimateFromCarrier, recalculateOnDelay, notifyEstimateChange methods [Requirement 10]
+- [x] 13.2 Implement initial estimate calculation from seller processing time + shipping method [Requirement 10.1]
+- [x] 13.3 Implement estimate update on label generation using carrier transit data [Requirement 10.2]
+- [x] 13.4 Implement estimate recalculation on tracking delays [Requirement 10.3]
+- [x] 13.5 Implement date range display accounting for carrier variability [Requirement 10.4]
+- [x] 13.6 Implement imminent delivery notification (within 24 hours) [Requirement 10.5]
+- [x] 13.7 Implement significant change notification (>2 days difference) [Requirement 10.6]
+- [x] 13.8 Implement historical seller processing time integration [Requirement 10.7]
+- [x] 13.9* Write unit tests for calculation formula and change threshold (CP-R10.1, CP-R10.4, CP-R10.6, CP-R10.7)
+- [x] 13.10* Write integration tests for estimate updates and notifications (CP-R10.2, CP-R10.3, CP-R10.5)
 
 ### Checkpoint 9: Delivery estimates with automatic updates and notifications
 
 
 ## Task 14: Admin Dashboard Service Implementation
 
-- [ ] 14.1 Create `IAdminDashboardService` interface with getOrderMetrics, getOrders, getOrderDetails, getDelayedOrders, performAdminAction methods [Requirement 7]
-- [ ] 14.2 Implement `getOrderMetrics()` for total orders, by status, avg fulfillment time, dispute rate [Requirement 7.1]
-- [ ] 14.3 Implement `getOrders()` with filters: status, date, seller, buyer, payment method, amount [Requirement 7.2]
-- [ ] 14.4 Implement `getOrderDetails()` with order, timeline, audit log, available actions [Requirement 7.3]
-- [ ] 14.5 Implement `getDelayedOrders()` with SLA threshold highlighting [Requirement 7.4]
-- [ ] 14.6 Implement dispute surfacing with evidence access [Requirement 7.5]
-- [ ] 14.7 Implement `getOrderTrends()` for volume, revenue, status distribution charts [Requirement 7.6]
-- [ ] 14.8 Implement `performAdminAction()` for contact, override status, refund, escalate [Requirement 7.7]
-- [ ] 14.9* Write unit tests for metric calculations and SLA threshold logic (CP-R7.1, CP-R7.4, CP-R7.6)
-- [ ] 14.10* Write E2E tests for filter functionality and admin actions (CP-R7.2, CP-R7.3, CP-R7.5, CP-R7.7)
+- [x] 14.1 Create `IAdminDashboardService` interface with getOrderMetrics, getOrders, getOrderDetails, getDelayedOrders, performAdminAction methods [Requirement 7]
+- [x] 14.2 Implement `getOrderMetrics()` for total orders, by status, avg fulfillment time, dispute rate [Requirement 7.1]
+- [x] 14.3 Implement `getOrders()` with filters: status, date, seller, buyer, payment method, amount [Requirement 7.2]
+- [x] 14.4 Implement `getOrderDetails()` with order, timeline, audit log, available actions [Requirement 7.3]
+- [x] 14.5 Implement `getDelayedOrders()` with SLA threshold highlighting [Requirement 7.4]
+- [x] 14.6 Implement dispute surfacing with evidence access [Requirement 7.5]
+- [x] 14.7 Implement `getOrderTrends()` for volume, revenue, status distribution charts [Requirement 7.6]
+- [x] 14.8 Implement `performAdminAction()` for contact, override status, refund, escalate [Requirement 7.7]
+- [x] 14.9* Write unit tests for metric calculations and SLA threshold logic (CP-R7.1, CP-R7.4, CP-R7.6)
+- [x] 14.10* Write E2E tests for filter functionality and admin actions (CP-R7.2, CP-R7.3, CP-R7.5, CP-R7.7)
+
+### Checkpoint 10: Admin dashboard with metrics, filtering, and actions
 
 ## Task 15: Admin Dashboard API Endpoints
 

@@ -41,11 +41,11 @@ export class PromoCodeService {
         const normalizedAddress = sellerIdOrAddress.toLowerCase();
         safeLogger.info(`[PromoCodeService] Normalized address: ${normalizedAddress}`);
 
-        // First, try to find the user in the users table
+        // First, try to find the user in the users table (case-insensitive)
         const userResult = await db
             .select({ id: users.id })
             .from(users)
-            .where(eq(users.walletAddress, normalizedAddress))
+            .where(sql`LOWER(${users.walletAddress}) = ${normalizedAddress}`)
             .limit(1);
 
         safeLogger.info(`[PromoCodeService] User table result count: ${userResult.length}`);
@@ -55,11 +55,11 @@ export class PromoCodeService {
             return userResult[0].id;
         }
 
-        // If not found in users table, check if seller exists in sellers table
+        // If not found in users table, check if seller exists in sellers table (case-insensitive)
         const sellerResult = await db
             .select({ id: sellers.id, storeName: sellers.storeName })
             .from(sellers)
-            .where(eq(sellers.walletAddress, normalizedAddress))
+            .where(sql`LOWER(${sellers.walletAddress}) = ${normalizedAddress}`)
             .limit(1);
 
         safeLogger.info(`[PromoCodeService] Sellers table result count: ${sellerResult.length}`);
@@ -75,15 +75,35 @@ export class PromoCodeService {
         // Seller exists in sellers table but not in users table
         // Create a corresponding user record
         safeLogger.info(`[PromoCodeService] Creating user record for existing seller: ${normalizedAddress}`);
-        const [newUser] = await db.insert(users).values({
-            id: uuidv4(),
-            walletAddress: normalizedAddress,
-            displayName: seller.storeName || 'Seller',
-            role: 'seller'
-        }).returning();
+        
+        try {
+            const [newUser] = await db.insert(users).values({
+                id: uuidv4(),
+                walletAddress: normalizedAddress,
+                displayName: seller.storeName || 'Seller',
+                role: 'seller'
+            }).returning();
 
-        safeLogger.info(`[PromoCodeService] Created new user with ID: ${newUser.id}`);
-        return newUser.id;
+            safeLogger.info(`[PromoCodeService] Created new user with ID: ${newUser.id}`);
+            return newUser.id;
+        } catch (userCreateError: any) {
+            safeLogger.error(`[PromoCodeService] Failed to create user record: ${userCreateError.message}`);
+            
+            // Try to fetch the user again in case it was created by another process
+            // or if there's a case mismatch
+            const retryUserResult = await db
+                .select({ id: users.id })
+                .from(users)
+                .where(sql`LOWER(${users.walletAddress}) = ${normalizedAddress}`)
+                .limit(1);
+
+            if (retryUserResult.length > 0) {
+                safeLogger.info(`[PromoCodeService] Found user on retry with ID: ${retryUserResult[0].id}`);
+                return retryUserResult[0].id;
+            }
+
+            throw new Error(`Failed to create user record for seller: ${userCreateError.message}`);
+        }
     }
 
     /**

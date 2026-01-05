@@ -3,6 +3,7 @@ import { safeLogger } from '../utils/safeLogger';
 import { ShippingInfo, TrackingInfo, TrackingEvent, ShippingAddress } from '../models/Order';
 import { DatabaseService } from './databaseService';
 import { NotificationService } from './notificationService';
+import { CircuitBreaker } from '../utils/circuitBreaker';
 
 const databaseService = new DatabaseService();
 const notificationService = new NotificationService();
@@ -60,6 +61,13 @@ export class ShippingService {
     baseUrl: process.env.USPS_BASE_URL || 'https://secure.shippingapis.com/ShippingAPI.dll'
   };
 
+  private breakers: { [key: string]: CircuitBreaker } = {
+    FEDEX: new CircuitBreaker('FEDEX', { failureThreshold: 3, resetTimeout: 30000 }),
+    UPS: new CircuitBreaker('UPS', { failureThreshold: 3, resetTimeout: 30000 }),
+    DHL: new CircuitBreaker('DHL', { failureThreshold: 3, resetTimeout: 30000 }),
+    USPS: new CircuitBreaker('USPS', { failureThreshold: 3, resetTimeout: 30000 })
+  };
+
   /**
    * Create a shipment with the specified carrier
    */
@@ -73,13 +81,13 @@ export class ShippingService {
 
       switch (input.carrier) {
         case 'FEDEX':
-          return await this.createFedExShipment(input);
+          return await this.breakers.FEDEX.execute(() => this.createFedExShipment(input));
         case 'UPS':
-          return await this.createUPSShipment(input);
+          return await this.breakers.UPS.execute(() => this.createUPSShipment(input));
         case 'DHL':
-          return await this.createDHLShipment(input);
+          return await this.breakers.DHL.execute(() => this.createDHLShipment(input));
         case 'USPS':
-          return await this.createUSPSShipment(input);
+          return await this.breakers.USPS.execute(() => this.createUSPSShipment(input));
         default:
           throw new Error(`Unsupported carrier: ${input.carrier}`);
       }
@@ -138,13 +146,13 @@ export class ShippingService {
     try {
       switch (carrier.toUpperCase()) {
         case 'FEDEX':
-          return await this.trackFedExShipment(trackingNumber);
+          return await this.breakers.FEDEX.execute(() => this.trackFedExShipment(trackingNumber));
         case 'UPS':
-          return await this.trackUPSShipment(trackingNumber);
+          return await this.breakers.UPS.execute(() => this.trackUPSShipment(trackingNumber));
         case 'DHL':
-          return await this.trackDHLShipment(trackingNumber);
+          return await this.breakers.DHL.execute(() => this.trackDHLShipment(trackingNumber));
         case 'USPS':
-          return await this.trackUSPSShipment(trackingNumber);
+          return await this.breakers.USPS.execute(() => this.trackUSPSShipment(trackingNumber));
         default:
           throw new Error(`Unsupported carrier for tracking: ${carrier}`);
       }
@@ -725,34 +733,9 @@ export class ShippingService {
 
   // Utility methods
   private scheduleTrackingUpdates(orderId: string, trackingNumber: string, carrier: string): void {
-    const updateInterval = setInterval(async () => {
-      try {
-        const trackingInfo = await this.trackShipment(trackingNumber, carrier);
-
-        // Update database with latest tracking info
-        await databaseService.updateTrackingInfo(orderId, trackingInfo);
-
-        // Check if delivered
-        if (trackingInfo.status.toLowerCase().includes('delivered')) {
-          clearInterval(updateInterval);
-
-          // Notify order service about delivery
-          await notificationService.sendOrderNotification(
-            '', // Will be filled by order service
-            'DELIVERY_CONFIRMED',
-            orderId,
-            { trackingInfo }
-          );
-        }
-      } catch (error) {
-        safeLogger.error('Error updating tracking info:', error);
-      }
-    }, 60 * 60 * 1000); // Update every hour
-
-    // Clear interval after 30 days
-    setTimeout(() => {
-      clearInterval(updateInterval);
-    }, 30 * 24 * 60 * 60 * 1000);
+    // Replaced by TrackingPollerService cron job
+    // We no longer populate in-memory intervals
+    safeLogger.info(`Scheduled tracking updates for ${orderId} via TrackingPollerService`);
   }
 
   private extractFromXML(xml: string, tag: string): string | null {

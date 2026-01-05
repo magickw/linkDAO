@@ -209,6 +209,15 @@ setTimeout(async () => {
   } catch (err) {
     console.warn('⚠️ Cancellation scheduler failed to start:', err);
   }
+
+  // Start tracking poller
+  try {
+    const { trackingPollerService } = await import('./services/trackingPollerService');
+    trackingPollerService.start();
+    console.log('✅ Tracking poller service started');
+  } catch (err) {
+    console.warn('⚠️ Tracking poller service failed to start:', err);
+  }
 }, 2000); // Slight delay to allow other services to initialize first
 
 // Validate security configuration on startup
@@ -805,13 +814,7 @@ import { daoShippingPartnersRouter } from './routes/daoShippingPartnersRoutes';
 import { advancedAnalyticsRouter } from './routes/advancedAnalyticsRoutes';
 
 // Import marketplace seller routes
-import marketplaceSellerRoutes from './routes/marketplaceSellerRoutes';
-import sellerRoutes from './routes/sellerRoutes';
-import sellerWorkflowRoutes from './routes/sellerWorkflowRoutes';
-
-// Register verified seller routes
-// app.use('/api/seller', marketplaceSellerRoutes); // DEPRECATED
-// app.use('/api/seller', sellerRoutes); // ALREADY REGISTERED AT /api/sellers
+// ALREADY REGISTERED AT /api/sellers
 app.use('/api/sellers/workflow', sellerWorkflowRoutes);
 // Import seller profile API routes
 import sellerProfileRoutes from './routes/sellerProfileRoutes';
@@ -1028,6 +1031,9 @@ app.use('/api/orders', orderCreationRoutes);
 // -------------------------------------------------------------------------
 app.use('/api/marketplace/seller/dashboard', sellerDashboardRoutes);
 app.use('/api/marketplace/seller/orders', sellerOrderRoutes);
+
+// Shipping Routes
+app.use('/api/shipping', shippingRoutes);
 app.use('/api/marketplace/seller/listings', sellerListingRoutes);
 app.use('/api/marketplace/seller/images', sellerImageRoutes);
 app.use('/api/marketplace/seller/verification', sellerVerificationRoutes);
@@ -1538,6 +1544,14 @@ const gracefulShutdown = async (signal: string) => {
       console.log('✅ Cron jobs stopped');
     } catch (error) {
       console.warn('⚠️ Error stopping cron jobs:', error);
+    }
+
+    try {
+      const { trackingPollerService } = await import('./services/trackingPollerService');
+      trackingPollerService.stop();
+      console.log('✅ Tracking poller service stopped');
+    } catch (error) {
+      console.warn('⚠️ Error stopping tracking poller service:', error);
     }
 
     console.log('⚡ Stopping performance optimizer...');

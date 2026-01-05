@@ -1,3 +1,13 @@
+
+import { MarketplaceOrder as Order } from '../models/Order';
+import { db } from '../db';
+import { orders, orderEvents } from '../db/schema';
+import { sql, eq, count, sum, avg, desc } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
+import { cacheService } from './cacheService';
+
+// --- Existing Dashboard Interfaces ---
+
 interface DashboardConfig {
   layout: LayoutConfig[];
   refreshInterval: number;
@@ -16,8 +26,6 @@ interface LayoutConfig {
   visible: boolean;
   minimized?: boolean;
 }
-
-import { cacheService } from './cacheService';
 
 interface NotificationPreferences {
   enabled: boolean;
@@ -84,14 +92,55 @@ interface AdminAlert {
   resolvedAt?: Date;
 }
 
-class AdminDashboardService {
+// --- New Order Management Interfaces ---
+
+export interface AdminOrderMetrics {
+  totalOrders: number;
+  totalRevenue: number; // Sum of order amounts
+  ordersByStatus: Record<string, number>;
+  averageFulfillmentTimeHours: number; // Time from paid to shipped
+  disputeRate: number; // Percentage of orders with disputes
+}
+
+export interface AdminOrderFilters {
+  status?: string | string[];
+  startDate?: Date;
+  endDate?: Date;
+  sellerId?: string;
+  buyerId?: string;
+  minAmount?: number;
+  maxAmount?: number;
+  paymentMethod?: string;
+}
+
+export interface AdminOrderDetails extends Order {
+  timeline: any[]; // Order events
+  auditLog: any[]; // Admin actions on this order
+  availableActions: string[]; // List of actions admin can perform (e.g. 'refund', 'override_status')
+  riskScore?: number;
+}
+
+export interface IAdminDashboardService {
+  // Order Management Methods
+  getOrderMetrics(): Promise<AdminOrderMetrics>;
+  getOrders(filters: AdminOrderFilters, page: number, limit: number): Promise<{ orders: Order[], total: number }>;
+  getOrderDetails(orderId: string): Promise<AdminOrderDetails | null>;
+  getDelayedOrders(page: number, limit: number): Promise<{ orders: Order[], total: number }>;
+  performAdminAction(orderId: string, action: string, adminId: string, reason: string, metadata?: any): Promise<void>;
+
+  // Existing Dashboard Methods (Implicitly part of the service, added here for completeness if needed)
+  getDashboardConfig(adminId: string): Promise<DashboardConfig>;
+  getDashboardMetrics(adminId: string, options?: any): Promise<DashboardMetrics>;
+}
+
+export class AdminDashboardService implements IAdminDashboardService {
   // OPTIMIZED: In-memory storage with size limits and cleanup
   // In production, this would use a database
   private dashboardConfigs: Map<string, DashboardConfig> = new Map();
   private userPreferences: Map<string, UserPreferences> = new Map();
   private alerts: Map<string, AdminAlert> = new Map();
   private usageAnalytics: Map<string, any> = new Map();
-  
+
   // OPTIMIZED: Cleanup intervals and size limits
   private maxMapSize = 1000;
   private cleanupInterval: NodeJS.Timeout;
@@ -116,20 +165,20 @@ class AdminDashboardService {
       const alertsToDelete = Array.from(this.alerts.entries())
         .filter(([_, alert]) => alert.timestamp < sevenDaysAgo)
         .map(([id, _]) => id);
-      
+
       alertsToDelete.forEach(id => this.alerts.delete(id));
-      
+
       // Clean up old analytics (older than 30 days)
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       const analyticsToDelete = Array.from(this.usageAnalytics.entries())
         .filter(([_, analytics]) => analytics.lastActive < thirtyDaysAgo)
         .map(([id, _]) => id);
-      
+
       analyticsToDelete.forEach(id => this.usageAnalytics.delete(id));
-      
+
       // Enforce size limits
       this.enforceMapSizeLimits();
-      
+
       if (alertsToDelete.length > 0 || analyticsToDelete.length > 0) {
         console.log(`Cleaned up ${alertsToDelete.length} alerts and ${analyticsToDelete.length} analytics records`);
       }
@@ -196,14 +245,238 @@ class AdminDashboardService {
     });
   }
 
-  // Dashboard configuration methods
+  // --- Order Management Implementation (Task 14) ---
+
+  /**
+   * Get high-level metrics for the admin dashboard (Orders)
+   */
+  async getOrderMetrics(): Promise<AdminOrderMetrics> {
+    try {
+      // 1. Total Orders & Revenue
+      const totals = await db.select({
+        count: count(),
+        revenue: sum(orders.totalAmount)
+      }).from(orders);
+
+      const totalOrders = totals[0]?.count || 0;
+      const totalRevenue = Number(totals[0]?.revenue || 0);
+
+      // 2. Orders by Status
+      const byStatus = await db.select({
+        status: orders.status,
+        count: count()
+      }).from(orders)
+        .groupBy(orders.status);
+
+      const ordersByStatus: Record<string, number> = {};
+      let disputeCount = 0;
+
+      byStatus.forEach(item => {
+        if (item.status) {
+          ordersByStatus[item.status] = item.count;
+          if (item.status.toLowerCase().includes('dispute')) {
+            disputeCount += item.count;
+          }
+        }
+      });
+
+      // 3. Dispute Rate
+      const disputeRate = totalOrders > 0 ? (disputeCount / totalOrders) * 100 : 0;
+
+      // 4. Avg Fulfillment Time
+      const deliveryTimes = await db.select({
+        avgTime: sql<number>`avg(extract(epoch from (${orders.actualDelivery} - ${orders.createdAt})))`
+      })
+        .from(orders)
+        .where(eq(orders.status, 'DELIVERED'));
+
+      const avgSeconds = Number(deliveryTimes[0]?.avgTime || 0);
+      const averageFulfillmentTimeHours = avgSeconds / 3600;
+
+      return {
+        totalOrders,
+        totalRevenue,
+        ordersByStatus,
+        averageFulfillmentTimeHours,
+        disputeRate
+      };
+
+    } catch (error) {
+      safeLogger.error('Error fetching admin metrics:', error);
+      throw error;
+    }
+  }
+
+  async getOrders(filters: AdminOrderFilters, page: number, limit: number): Promise<{ orders: Order[], total: number }> {
+    try {
+      const offset = (page - 1) * limit;
+      const conditions: any[] = [];
+
+      if (filters.status) {
+        if (Array.isArray(filters.status)) {
+          conditions.push(sql`${orders.status} IN ${filters.status}`);
+        } else {
+          conditions.push(eq(orders.status, filters.status));
+        }
+      }
+
+      if (filters.startDate) {
+        conditions.push(sql`${orders.createdAt} >= ${filters.startDate}`);
+      }
+
+      if (filters.endDate) {
+        conditions.push(sql`${orders.createdAt} <= ${filters.endDate}`);
+      }
+
+      if (filters.sellerId) conditions.push(eq(orders.sellerId, filters.sellerId));
+      if (filters.buyerId) conditions.push(eq(orders.buyerId, filters.buyerId));
+
+      if (filters.minAmount) conditions.push(sql`${orders.totalAmount} >= ${filters.minAmount}`);
+      if (filters.maxAmount) conditions.push(sql`${orders.totalAmount} <= ${filters.maxAmount}`);
+
+      if (filters.paymentMethod) conditions.push(eq(orders.paymentMethod, filters.paymentMethod));
+
+      const whereClause = conditions.length > 0 ? sql.join(conditions, sql` AND `) : undefined;
+
+      // Get count
+      const countRes = await db.select({ count: count() })
+        .from(orders)
+        .where(whereClause);
+
+      const total = countRes[0]?.count || 0;
+
+      // Get data
+      const results = await db.select()
+        .from(orders)
+        .where(whereClause)
+        .limit(limit)
+        .offset(offset)
+        .orderBy(desc(orders.createdAt));
+
+      return { orders: results as any[], total };
+
+    } catch (error) {
+      safeLogger.error('Error fetching admin orders:', error);
+      throw error;
+    }
+  }
+
+  async getOrderDetails(orderId: string): Promise<AdminOrderDetails | null> {
+    try {
+      const order = await db.select().from(orders).where(eq(orders.id, orderId)).then(res => res[0]);
+      if (!order) return null;
+
+      // Fetch timeline (orderEvents)
+      const timeline = await db.select().from(orderEvents)
+        .where(eq(orderEvents.orderId, orderId))
+        .orderBy(desc(orderEvents.timestamp));
+
+      // Fetch Audit Log 
+      const auditLog = timeline.filter(e => e.eventType.startsWith('ADMIN_'));
+
+      // Determine available actions
+      const availableActions: string[] = ['add_note'];
+
+      if (['pending', 'paid', 'processing'].includes(order.status || '')) {
+        availableActions.push('cancel');
+      }
+      if (order.status === 'disputed') {
+        availableActions.push('resolve_dispute');
+      }
+      availableActions.push('override_status');
+
+      return {
+        ...order,
+        timeline,
+        auditLog,
+        availableActions,
+        riskScore: 0 // Placeholder
+      } as any as AdminOrderDetails;
+    } catch (error) {
+      safeLogger.error(`Error getOrderDetails ${orderId}:`, error);
+      return null;
+    }
+  }
+
+  async getDelayedOrders(page: number, limit: number): Promise<{ orders: Order[], total: number }> {
+    try {
+      const offset = (page - 1) * limit;
+      const now = new Date();
+
+      // Logic: estimatedDeliveryMax < now AND status NOT IN ('DELIVERED', 'CANCELLED', 'RETURNED')
+      const whereClause = sql`
+                ${orders.estimatedDeliveryMax} < ${now} 
+                AND ${orders.status} NOT IN ('DELIVERED', 'Delivered', 'CANCELLED', 'Cancelled', 'RETURNED', 'Returned')
+            `;
+
+      const countRes = await db.select({ count: count() }).from(orders).where(whereClause);
+      const total = countRes[0]?.count || 0;
+
+      const results = await db.select()
+        .from(orders)
+        .where(whereClause)
+        .limit(limit)
+        .offset(offset)
+        .orderBy(desc(orders.estimatedDeliveryMax));
+
+      return { orders: results as any[], total };
+    } catch (error) {
+      safeLogger.error('Error fetching delayed orders:', error);
+      return { orders: [], total: 0 };
+    }
+  }
+
+  async performAdminAction(orderId: string, action: string, adminId: string, reason: string, metadata?: any): Promise<void> {
+    try {
+      safeLogger.info(`Admin ${adminId} performing ${action} on order ${orderId}. Reason: ${reason}`);
+
+      // Log action to orderEvents
+      await db.insert(orderEvents).values({
+        orderId,
+        eventType: `ADMIN_ACTION_${action.toUpperCase()}`,
+        description: `Admin Action: ${action} - ${reason}`,
+        metadata: JSON.stringify({ adminId, reason, ...metadata }),
+        timestamp: new Date()
+      } as any);
+
+      switch (action) {
+        case 'cancel':
+          await db.update(orders)
+            .set({ status: 'cancelled', cancellationReason: `Admin Cancelled: ${reason}` })
+            .where(eq(orders.id, orderId));
+          break;
+
+        case 'override_status':
+          if (metadata && metadata.newStatus) {
+            await db.update(orders)
+              .set({ status: metadata.newStatus })
+              .where(eq(orders.id, orderId));
+          }
+          break;
+
+        case 'refund':
+          await db.update(orders)
+            .set({ status: 'refunded' })
+            .where(eq(orders.id, orderId));
+          break;
+
+        default:
+          safeLogger.warn(`Unknown admin action: ${action}`);
+      }
+    } catch (error) {
+      safeLogger.error('Error performing admin action:', error);
+      throw error;
+    }
+  }
+
+  // --- Existing Dashboard Methods ---
+
   async getDashboardConfig(adminId: string): Promise<DashboardConfig> {
     const config = this.dashboardConfigs.get(adminId);
     if (config) {
       return config;
     }
 
-    // Return default configuration
     const defaultConfig = this.getDefaultDashboardConfig();
     this.dashboardConfigs.set(adminId, defaultConfig);
     return defaultConfig;
@@ -212,39 +485,36 @@ class AdminDashboardService {
   async updateDashboardConfig(adminId: string, configUpdates: Partial<DashboardConfig>): Promise<DashboardConfig> {
     const currentConfig = await this.getDashboardConfig(adminId);
     const updatedConfig = { ...currentConfig, ...configUpdates };
-    
+
     this.dashboardConfigs.set(adminId, updatedConfig);
-    
-    // OPTIMIZED: Invalidate related caches
+
     const cacheKeys = [
       `admin:dashboard:metrics:${adminId}:*`,
       `admin:dashboard:alerts:${adminId}:*`
     ];
-    
+
     for (const key of cacheKeys) {
       await cacheService.invalidatePattern(key);
     }
-    
-    // Log the update for analytics
+
     this.logConfigUpdate(adminId, 'dashboard_config', configUpdates);
-    
+
     return updatedConfig;
   }
 
   async resetDashboardConfig(adminId: string): Promise<DashboardConfig> {
     const defaultConfig = this.getDefaultDashboardConfig();
     this.dashboardConfigs.set(adminId, defaultConfig);
-    
-    // Log the reset for analytics
+
     this.logConfigUpdate(adminId, 'dashboard_reset', {});
-    
+
     return defaultConfig;
   }
 
   async exportDashboardConfig(adminId: string): Promise<any> {
     const config = await this.getDashboardConfig(adminId);
     const preferences = await this.getUserPreferences(adminId);
-    
+
     return {
       dashboardConfig: config,
       userPreferences: preferences,
@@ -256,41 +526,33 @@ class AdminDashboardService {
 
   async importDashboardConfig(adminId: string, configData: any): Promise<DashboardConfig> {
     try {
-      // Validate the imported data
       if (!configData.dashboardConfig) {
         throw new Error('Invalid configuration data: missing dashboardConfig');
       }
 
       const importedConfig = configData.dashboardConfig;
-      
-      // Validate the structure
       this.validateDashboardConfig(importedConfig);
-      
-      // Store the imported configuration
+
       this.dashboardConfigs.set(adminId, importedConfig);
-      
-      // Import user preferences if available
+
       if (configData.userPreferences) {
         this.userPreferences.set(adminId, configData.userPreferences);
       }
-      
-      // Log the import for analytics
+
       this.logConfigUpdate(adminId, 'dashboard_import', { version: configData.version });
-      
+
       return importedConfig;
     } catch (error) {
       throw new Error(`Failed to import configuration: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
-  // User preferences methods
   async getUserPreferences(adminId: string): Promise<UserPreferences> {
     const preferences = this.userPreferences.get(adminId);
     if (preferences) {
       return preferences;
     }
 
-    // Return default preferences
     const defaultPreferences = this.getDefaultUserPreferences();
     this.userPreferences.set(adminId, defaultPreferences);
     return defaultPreferences;
@@ -299,16 +561,14 @@ class AdminDashboardService {
   async updateUserPreferences(adminId: string, preferencesUpdates: Partial<UserPreferences>): Promise<UserPreferences> {
     const currentPreferences = await this.getUserPreferences(adminId);
     const updatedPreferences = { ...currentPreferences, ...preferencesUpdates };
-    
+
     this.userPreferences.set(adminId, updatedPreferences);
-    
-    // Log the update for analytics
+
     this.logConfigUpdate(adminId, 'user_preferences', preferencesUpdates);
-    
+
     return updatedPreferences;
   }
 
-  // Layout configuration methods
   async getLayoutConfig(adminId: string): Promise<LayoutConfig[]> {
     const config = await this.getDashboardConfig(adminId);
     return config.layout;
@@ -317,19 +577,17 @@ class AdminDashboardService {
   async updateLayoutConfig(adminId: string, layout: LayoutConfig[]): Promise<LayoutConfig[]> {
     const config = await this.getDashboardConfig(adminId);
     config.layout = layout;
-    
+
     this.dashboardConfigs.set(adminId, config);
-    
-    // Log the update for analytics
+
     this.logConfigUpdate(adminId, 'layout_update', { widgetCount: layout.length });
-    
+
     return layout;
   }
 
   async addWidget(adminId: string, widget: LayoutConfig): Promise<LayoutConfig> {
     const config = await this.getDashboardConfig(adminId);
-    
-    // Ensure unique ID
+
     const existingIds = config.layout.map(w => w.id);
     let newId = widget.id;
     let counter = 1;
@@ -337,65 +595,59 @@ class AdminDashboardService {
       newId = `${widget.id}-${counter}`;
       counter++;
     }
-    
+
     const newWidget = { ...widget, id: newId };
     config.layout.push(newWidget);
-    
+
     this.dashboardConfigs.set(adminId, config);
-    
-    // Log the addition for analytics
+
     this.logConfigUpdate(adminId, 'widget_add', { widgetType: widget.type, widgetId: newId });
-    
+
     return newWidget;
   }
 
   async updateWidget(adminId: string, widgetId: string, updates: Partial<LayoutConfig>): Promise<LayoutConfig> {
     const config = await this.getDashboardConfig(adminId);
     const widget = config.layout.find(w => w.id === widgetId);
-    
+
     if (!widget) {
       throw new Error(`Widget with ID ${widgetId} not found`);
     }
-    
+
     Object.assign(widget, updates);
     this.dashboardConfigs.set(adminId, config);
-    
-    // Log the update for analytics
+
     this.logConfigUpdate(adminId, 'widget_update', { widgetId, updates: Object.keys(updates) });
-    
+
     return widget;
   }
 
   async removeWidget(adminId: string, widgetId: string): Promise<void> {
     const config = await this.getDashboardConfig(adminId);
     const initialLength = config.layout.length;
-    
+
     config.layout = config.layout.filter(w => w.id !== widgetId);
-    
+
     if (config.layout.length === initialLength) {
       throw new Error(`Widget with ID ${widgetId} not found`);
     }
-    
+
     this.dashboardConfigs.set(adminId, config);
-    
-    // Log the removal for analytics
+
     this.logConfigUpdate(adminId, 'widget_remove', { widgetId });
   }
 
-  // OPTIMIZED: Dashboard data methods with caching
   async getDashboardMetrics(adminId: string, options: {
     timeRange?: string;
     categories?: string[];
   } = {}): Promise<DashboardMetrics> {
-    // OPTIMIZED: Check cache first
     const cacheKey = `admin:dashboard:metrics:${adminId}:${JSON.stringify(options)}`;
     const cachedMetrics = await cacheService.get<DashboardMetrics>(cacheKey);
-    
+
     if (cachedMetrics) {
       return cachedMetrics;
     }
 
-    // Generate metrics (in production, this would query actual database)
     const metrics: DashboardMetrics = {
       systemMetrics: {
         cpu: Math.random() * 100,
@@ -425,7 +677,6 @@ class AdminDashboardService {
       }
     };
 
-    // Filter by categories if specified
     if (options.categories && options.categories.length > 0) {
       const filteredMetrics: any = {};
       options.categories.forEach(category => {
@@ -433,15 +684,13 @@ class AdminDashboardService {
           filteredMetrics[category] = metrics[category as keyof DashboardMetrics];
         }
       });
-      
-      // Cache filtered metrics with shorter TTL
+
       await cacheService.set(cacheKey, filteredMetrics, 30);
       return filteredMetrics;
     }
 
-    // Cache full metrics for 1 minute
     await cacheService.set(cacheKey, metrics, 60);
-    
+
     return metrics;
   }
 
@@ -450,7 +699,6 @@ class AdminDashboardService {
     acknowledged?: boolean;
     limit?: number;
   } = {}): Promise<AdminAlert[]> {
-    // OPTIMIZED: Use memory-managed alert retrieval
     return this.getAlertsWithMemoryManagement(options);
   }
 
@@ -466,7 +714,6 @@ class AdminDashboardService {
 
     this.alerts.set(alertId, alert);
 
-    // Log the acknowledgment for analytics
     this.logConfigUpdate(adminId, 'alert_acknowledge', { alertId, alertType: alert.type });
   }
 
@@ -478,11 +725,9 @@ class AdminDashboardService {
 
     this.alerts.delete(alertId);
 
-    // Log the dismissal for analytics
     this.logConfigUpdate(adminId, 'alert_dismiss', { alertId, alertType: alert.type });
   }
 
-  // Analytics methods
   async getDashboardUsageAnalytics(adminId: string, options: {
     timeRange?: string;
   } = {}): Promise<any> {
@@ -515,7 +760,8 @@ class AdminDashboardService {
     };
   }
 
-  // Utility methods
+  // --- Privates and Helpers ---
+
   private getDefaultDashboardConfig(): DashboardConfig {
     return {
       layout: [
@@ -523,7 +769,7 @@ class AdminDashboardService {
           id: 'system-overview',
           type: 'metric',
           position: { x: 0, y: 0, w: 6, h: 4 },
-          config: { 
+          config: {
             metric: 'system',
             title: 'System Overview',
             showTrend: true,
@@ -535,7 +781,7 @@ class AdminDashboardService {
           id: 'user-metrics',
           type: 'chart',
           position: { x: 6, y: 0, w: 6, h: 4 },
-          config: { 
+          config: {
             chartType: 'line',
             metric: 'users',
             title: 'User Metrics',
@@ -547,7 +793,7 @@ class AdminDashboardService {
           id: 'business-metrics',
           type: 'chart',
           position: { x: 0, y: 4, w: 6, h: 4 },
-          config: { 
+          config: {
             chartType: 'bar',
             metric: 'business',
             title: 'Business Metrics',
@@ -559,7 +805,7 @@ class AdminDashboardService {
           id: 'security-alerts',
           type: 'alert',
           position: { x: 6, y: 4, w: 6, h: 4 },
-          config: { 
+          config: {
             title: 'Security Alerts',
             maxItems: 10,
             autoRefresh: true
@@ -614,9 +860,9 @@ class AdminDashboardService {
       if (!widget.id || !widget.type || !widget.position) {
         throw new Error(`Invalid widget at index ${index}: missing required fields`);
       }
-      
-      if (!widget.position.x !== undefined || widget.position.y === undefined || 
-          widget.position.w === undefined || widget.position.h === undefined) {
+
+      if (!widget.position.x !== undefined || widget.position.y === undefined ||
+        widget.position.w === undefined || widget.position.h === undefined) {
         throw new Error(`Invalid widget at index ${index}: invalid position`);
       }
     });
@@ -641,7 +887,6 @@ class AdminDashboardService {
       timestamp: new Date()
     });
 
-    // OPTIMIZED: Enforce action history limit
     if (currentAnalytics.actions.length > this.actionHistoryLimit) {
       currentAnalytics.actions = currentAnalytics.actions.slice(-this.actionHistoryLimit);
     }
@@ -649,12 +894,10 @@ class AdminDashboardService {
     this.usageAnalytics.set(adminId, currentAnalytics);
   }
 
-  // OPTIMIZED: Public cleanup method for manual cleanup
   public performCleanup(): void {
     this.cleanupExpiredData();
   }
 
-  // OPTIMIZED: Public method to check memory usage
   public getMemoryUsage(): {
     dashboardConfigs: number;
     userPreferences: number;
@@ -671,7 +914,6 @@ class AdminDashboardService {
     };
   }
 
-  // OPTIMIZED: Graceful shutdown
   public shutdown(): void {
     if (this.cleanupInterval) {
       clearInterval(this.cleanupInterval);
@@ -680,35 +922,30 @@ class AdminDashboardService {
     console.log('AdminDashboardService shutdown completed');
   }
 
-  // OPTIMIZED: Add alert with memory management
   public addAlert(alert: AdminAlert): void {
-    // Check if we're approaching the limit
     if (this.alerts.size >= this.maxMapSize) {
-      // Remove oldest alerts to make space
       const oldestAlerts = Array.from(this.alerts.entries())
         .sort((a, b) => a[1].timestamp.getTime() - b[1].timestamp.getTime())
-        .slice(0, 100); // Remove oldest 100
-      
+        .slice(0, 100);
+
       oldestAlerts.forEach(([id]) => this.alerts.delete(id));
       console.log(`Removed ${oldestAlerts.length} old alerts to make space for new alert`);
     }
-    
+
     this.alerts.set(alert.id, alert);
   }
 
-  // OPTIMIZED: Generate sample alert with memory management
   public generateSampleAlert(): AdminAlert {
-    // Check memory usage before generating
     if (this.alerts.size >= this.maxMapSize) {
       throw new Error('Alert limit reached. Please clean up expired alerts first.');
     }
 
     const alertTypes = ['anomaly', 'threshold', 'security', 'system', 'business'] as const;
     const severities = ['low', 'medium', 'high', 'critical'] as const;
-    
+
     const type = alertTypes[Math.floor(Math.random() * alertTypes.length)];
     const severity = severities[Math.floor(Math.random() * severities.length)];
-    
+
     const alertTemplates = {
       system: {
         title: 'System Performance Alert',
@@ -733,14 +970,14 @@ class AdminDashboardService {
     };
 
     const template = alertTemplates[type];
-    
+
     return {
       id: `alert-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       type,
       severity,
       title: template.title,
       message: template.message,
-      data: { 
+      data: {
         value: Math.random() * 100,
         threshold: 80,
         source: 'monitoring-system'
@@ -750,7 +987,6 @@ class AdminDashboardService {
     };
   }
 
-  // OPTIMIZED: Bulk alert management
   public addAlerts(alerts: AdminAlert[]): void {
     alerts.forEach(alert => {
       try {
@@ -761,31 +997,25 @@ class AdminDashboardService {
     });
   }
 
-  // OPTIMIZED: Get alerts with memory management
   public getAlertsWithMemoryManagement(options: {
     severity?: string;
     acknowledged?: boolean;
     limit?: number;
   } = {}): Promise<AdminAlert[]> {
-    // Enforce maximum limit regardless of options
-    const maxLimit = Math.min(options.limit || 50, 200); // Max 200 alerts
-    
+    const maxLimit = Math.min(options.limit || 50, 200);
+
     let alerts = Array.from(this.alerts.values());
 
-    // Filter by severity
     if (options.severity) {
       alerts = alerts.filter(alert => alert.severity === options.severity);
     }
 
-    // Filter by acknowledged status
     if (options.acknowledged !== undefined) {
       alerts = alerts.filter(alert => alert.acknowledged === options.acknowledged);
     }
 
-    // Sort by timestamp (newest first)
     alerts.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
-    // Apply limit
     alerts = alerts.slice(0, maxLimit);
 
     return Promise.resolve(alerts);

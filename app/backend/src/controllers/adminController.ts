@@ -309,7 +309,7 @@ export class AdminController {
     try {
       // Get real analytics data
       const analytics = await analyticsService.getOverviewMetrics();
-      
+
       // Get dispute statistics
       const db = databaseService.getDatabase();
       const disputeStatsResult = await db.select({
@@ -317,22 +317,22 @@ export class AdminController {
         resolved: sql<number>`count(*) filter (where status = 'resolved')`
       }).from(disputes);
       const disputeStats = disputeStatsResult[0] || { total: 0, resolved: 0 };
-      
+
       // Get user statistics
       const userStatsResult = await db.select({
         total: sql<number>`count(*)`,
         sellers: sql<number>`count(*) filter (where role = 'seller')`
       }).from(users)
-      .leftJoin(marketplaceUsers, eq(users.id, marketplaceUsers.userId));
+        .leftJoin(marketplaceUsers, eq(users.id, marketplaceUsers.userId));
       const userStats = userStatsResult[0] || { total: 0, sellers: 0 };
-      
+
       // Get moderation statistics
       const moderationStatsResult = await db.select({
         pending: sql<number>`count(*) filter (where status = 'pending')`,
         inReview: sql<number>`count(*) filter (where status = 'in_review')`
       }).from(moderationCases);
       const moderationStats = moderationStatsResult[0] || { pending: 0, inReview: 0 };
-      
+
       res.json({
         totalAlerts: analytics.totalOrders,
         activeAlerts: analytics.activeUsers.daily,
@@ -350,14 +350,14 @@ export class AdminController {
   async getAdminStats(req: Request, res: Response) {
     try {
       const db = databaseService.getDatabase();
-      
+
       let pendingModerations = 0;
       let pendingSellerApplications = 0;
       let openDisputes = 0;
       let totalUsers = 0;
       let totalSellers = 0;
       let pendingCharityProposals = 0;
-      
+
       try {
         // Get moderation statistics
         const pendingModerationsResult = await db.select({ count: sql<number>`count(*)` })
@@ -368,7 +368,7 @@ export class AdminController {
         safeLogger.warn("Error fetching moderation stats:", moderationError);
         pendingModerations = 0; // Default to 0 if table doesn't exist or query fails
       }
-      
+
       try {
         // Get seller application statistics
         const pendingSellersResult = await db.select({ count: sql<number>`count(*)` })
@@ -379,7 +379,7 @@ export class AdminController {
         safeLogger.warn("Error fetching seller verification stats:", sellerError);
         pendingSellerApplications = 0; // Default to 0 if table doesn't exist or query fails
       }
-      
+
       try {
         // Get dispute statistics
         const openDisputesResult = await db.select({ count: sql<number>`count(*)` })
@@ -390,7 +390,7 @@ export class AdminController {
         safeLogger.warn("Error fetching dispute stats:", disputeError);
         openDisputes = 0; // Default to 0 if table doesn't exist or query fails
       }
-      
+
       try {
         // Get user statistics
         const totalUsersResult = await db.select({ count: sql<number>`count(*)` })
@@ -400,7 +400,7 @@ export class AdminController {
         safeLogger.warn("Error fetching user stats:", userError);
         totalUsers = 0; // Default to 0 if table doesn't exist or query fails
       }
-      
+
       try {
         const totalSellersResult = await db.select({ count: sql<number>`count(*)` })
           .from(marketplaceUsers)
@@ -410,13 +410,13 @@ export class AdminController {
         safeLogger.warn("Error fetching marketplace user stats:", marketplaceError);
         totalSellers = 0; // Default to 0 if table doesn't exist or query fails
       }
-      
+
       try {
         // Get charity proposal statistics
         const charityStatsResult = await db.select({ count: sql<number>`count(*)` })
           .from(communityGovernanceProposals)
           .where(eq(communityGovernanceProposals.type, 'charity'));
-        
+
         if (charityStatsResult.length > 0) {
           pendingCharityProposals = charityStatsResult[0].count || 0;
         }
@@ -424,13 +424,13 @@ export class AdminController {
         safeLogger.warn("Error fetching charity stats:", charityError);
         pendingCharityProposals = 0; // Default to 0 if table doesn't exist or query fails
       }
-      
+
       // Get suspended users (placeholder - would need actual suspension table)
       const suspendedUsers = 0;
-      
+
       // Get recent actions (placeholder - would need actual audit log)
       const recentActions = [];
-      
+
       res.json({
         pendingModerations,
         pendingSellerApplications,
@@ -478,7 +478,7 @@ export class AdminController {
   async searchAuditLogs(req: Request, res: Response) {
     try {
       const { actorId, actionType, startDate, endDate, page = 1, limit = 10 } = req.query;
-      
+
       const auditTrail = await this.auditLoggingService.getAuditTrail({
         actorId: actorId as string,
         actionType: actionType as string,
@@ -487,7 +487,7 @@ export class AdminController {
         limit: parseInt(limit as string),
         offset: (parseInt(page as string) - 1) * parseInt(limit as string)
       });
-      
+
       res.json({
         logs: auditTrail.logs,
         pagination: {
@@ -508,7 +508,7 @@ export class AdminController {
         startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Last 30 days
         endDate: new Date()
       });
-      
+
       res.json({
         summary: {
           totalLogs: stats.totalLogs,
@@ -539,13 +539,13 @@ export class AdminController {
   async exportAuditLogs(req: Request, res: Response) {
     try {
       const { format = 'json', startDate, endDate } = req.query;
-      
+
       const exportData = await this.auditLoggingService.exportAuditTrail({
         startDate: startDate ? new Date(startDate as string) : undefined,
         endDate: endDate ? new Date(endDate as string) : undefined,
         format: format as 'json' | 'csv'
       });
-      
+
       res.json({
         exportId: "export-123",
         status: "completed",
@@ -744,9 +744,9 @@ export class AdminController {
         resolved: sql<number>`count(*) filter (where status = 'resolved' or status = 'closed')`,
         pending: sql<number>`count(*) filter (where status = 'open' or status = 'investigating' or status = 'awaiting_response')`
       }).from(disputes);
-      
+
       const stats = disputeStats[0] || { total: 0, resolved: 0, pending: 0 };
-      
+
       res.json({
         success: true,
         data: {
@@ -771,9 +771,9 @@ export class AdminController {
         approved: sql<number>`count(*) filter (where decision = 'approve' or decision = 'approved')`,
         rejected: sql<number>`count(*) filter (where decision = 'reject' or decision = 'rejected' or decision = 'remove')`
       }).from(moderationCases);
-      
+
       const stats = moderationStats[0] || { total: 0, pending: 0, approved: 0, rejected: 0 };
-      
+
       res.json({
         success: true,
         data: {
@@ -821,6 +821,126 @@ export class AdminController {
     } catch (error) {
       safeLogger.error("Error fetching content analytics:", error);
       res.status(500).json({ success: false, error: "Failed to fetch content analytics" });
+    }
+  }
+
+  // --- Order Management Methods (Task 15) ---
+
+  /**
+   * GET /api/admin/metrics
+   * Get high-level order metrics
+   */
+  async getOrderMetrics(req: Request, res: Response) {
+    try {
+      const { adminDashboardService } = await import('../services/adminDashboardService');
+      const metrics = await adminDashboardService.getOrderMetrics();
+      res.json(metrics);
+    } catch (error) {
+      safeLogger.error('Error in getOrderMetrics:', error);
+      res.status(500).json({ error: 'Failed to fetch admin metrics' });
+    }
+  }
+
+  /**
+   * GET /api/admin/orders
+   * List orders with filtering and pagination
+   */
+  async getOrders(req: Request, res: Response) {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+
+      const { adminDashboardService } = await import('../services/adminDashboardService');
+
+      const filters: any = {
+        status: req.query.status as string | string[],
+        sellerId: req.query.sellerId as string,
+        buyerId: req.query.buyerId as string,
+        paymentMethod: req.query.paymentMethod as string,
+      };
+
+      if (req.query.startDate) {
+        filters.startDate = new Date(req.query.startDate as string);
+      }
+      if (req.query.endDate) {
+        filters.endDate = new Date(req.query.endDate as string);
+      }
+      if (req.query.minAmount) {
+        filters.minAmount = parseFloat(req.query.minAmount as string);
+      }
+      if (req.query.maxAmount) {
+        filters.maxAmount = parseFloat(req.query.maxAmount as string);
+      }
+
+      const result = await adminDashboardService.getOrders(filters, page, limit);
+      res.json(result);
+    } catch (error) {
+      safeLogger.error('Error in getOrders:', error);
+      res.status(500).json({ error: 'Failed to fetch orders' });
+    }
+  }
+
+  /**
+   * GET /api/admin/orders/delayed
+   * List orders that are past their delivery estimate
+   */
+  async getDelayedOrders(req: Request, res: Response) {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+
+      const { adminDashboardService } = await import('../services/adminDashboardService');
+      const result = await adminDashboardService.getDelayedOrders(page, limit);
+      res.json(result);
+    } catch (error) {
+      safeLogger.error('Error in getDelayedOrders:', error);
+      res.status(500).json({ error: 'Failed to fetch delayed orders' });
+    }
+  }
+
+  /**
+   * GET /api/admin/orders/:id
+   * Get comprehensive details for a single order
+   */
+  async getOrderDetails(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { adminDashboardService } = await import('../services/adminDashboardService');
+      const details = await adminDashboardService.getOrderDetails(id);
+
+      if (!details) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+
+      res.json(details);
+    } catch (error) {
+      safeLogger.error(`Error in getOrderDetails for ${req.params.id}:`, error);
+      res.status(500).json({ error: 'Failed to fetch order details' });
+    }
+  }
+
+  /**
+   * POST /api/admin/orders/:id/action
+   * Perform an administrative action on an order
+   */
+  async performAdminAction(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { action, reason, metadata } = req.body;
+      const adminReq = req as AuthenticatedRequest;
+      const adminId = adminReq.user?.id || 'system-admin';
+
+      if (!action || !reason) {
+        return res.status(400).json({ error: 'Action and reason are required' });
+      }
+
+      const { adminDashboardService } = await import('../services/adminDashboardService');
+      await adminDashboardService.performAdminAction(id, action, adminId, reason, metadata);
+
+      res.json({ success: true, message: `Action ${action} performed successfully` });
+    } catch (error) {
+      safeLogger.error(`Error in performAdminAction for ${req.params.id}:`, error);
+      res.status(500).json({ error: 'Failed to perform admin action' });
     }
   }
 }

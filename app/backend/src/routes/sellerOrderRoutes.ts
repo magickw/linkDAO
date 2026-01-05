@@ -80,7 +80,7 @@ router.get('/:walletAddress',
  * PUT /api/marketplace/seller/orders/:orderId/status
  * Update order status
  */
-router.put('/:orderId/status', csrfProtection, 
+router.put('/:orderId/status', csrfProtection,
   rateLimitWithCache(req => `order_status_update:${req.ip}`, 30, 60), // 30 requests per minute
   cachingMiddleware.invalidate('sellerOrders'),
   async (req: Request, res: Response) => {
@@ -137,7 +137,7 @@ router.put('/:orderId/status', csrfProtection,
  * PUT /api/marketplace/seller/orders/:orderId/tracking
  * Update order tracking information
  */
-router.put('/:orderId/tracking', csrfProtection, 
+router.put('/:orderId/tracking', csrfProtection,
   rateLimitWithCache(req => `order_tracking_update:${req.ip}`, 30, 60), // 30 requests per minute
   cachingMiddleware.invalidate('sellerOrders'),
   async (req: Request, res: Response) => {
@@ -245,5 +245,114 @@ router.get('/detail/:orderId',
       );
     }
   });
+
+// Initialize SellerWorkflowService
+import { SellerWorkflowService } from '../services/sellerWorkflowService';
+import { authMiddleware } from '../middleware/authMiddleware';
+const sellerWorkflowService = new SellerWorkflowService();
+
+/**
+ * POST /api/marketplace/seller/orders/:orderId/process
+ * Start processing an order
+ */
+router.post('/:orderId/process',
+  authMiddleware,
+  rateLimitWithCache(req => `order_process:${req.ip}`, 30, 60),
+  async (req: Request, res: Response) => {
+    try {
+      const sellerId = (req as any).user?.id;
+      if (!sellerId) return errorResponse(res, 'UNAUTHORIZED', 'User not authenticated', 401);
+
+      const { orderId } = req.params;
+      await sellerWorkflowService.startProcessing(orderId, sellerId);
+
+      return successResponse(res, { message: 'Order processing started' }, 200);
+    } catch (error: any) {
+      if (error.message.includes('not found')) return notFoundResponse(res, error.message);
+      if (error.message.includes('authorized')) return errorResponse(res, 'FORBIDDEN', error.message, 403);
+      return errorResponse(res, 'PROCESS_ERROR', error.message, 500);
+    }
+  }
+);
+
+/**
+ * POST /api/marketplace/seller/orders/:orderId/ready
+ * Mark order as ready to ship
+ */
+router.post('/:orderId/ready',
+  authMiddleware,
+  rateLimitWithCache(req => `order_ready:${req.ip}`, 30, 60),
+  async (req: Request, res: Response) => {
+    try {
+      const sellerId = (req as any).user?.id;
+      if (!sellerId) return errorResponse(res, 'UNAUTHORIZED', 'User not authenticated', 401);
+
+      const { orderId } = req.params;
+      const packageDetails = req.body;
+      const result = await sellerWorkflowService.markReadyToShip(orderId, sellerId, packageDetails);
+
+      return successResponse(res, result, 200);
+    } catch (error: any) {
+      if (error.message.includes('not found')) return notFoundResponse(res, error.message);
+      if (error.message.includes('authorized')) return errorResponse(res, 'FORBIDDEN', error.message, 403);
+      return errorResponse(res, 'READY_ERROR', error.message, 500);
+    }
+  }
+);
+
+/**
+ * POST /api/marketplace/seller/orders/:orderId/ship
+ * Confirm shipment
+ */
+router.post('/:orderId/ship',
+  authMiddleware,
+  rateLimitWithCache(req => `order_ship:${req.ip}`, 30, 60),
+  async (req: Request, res: Response) => {
+    try {
+      const sellerId = (req as any).user?.id;
+      if (!sellerId) return errorResponse(res, 'UNAUTHORIZED', 'User not authenticated', 401);
+
+      const { orderId } = req.params;
+      const { trackingNumber, carrier } = req.body;
+
+      if (!trackingNumber || !carrier) {
+        return validationErrorResponse(res, [{ field: 'tracking', message: 'Tracking number and carrier required' }]);
+      }
+
+      const result = await sellerWorkflowService.confirmShipment(orderId, sellerId, trackingNumber, carrier);
+
+      return successResponse(res, result, 200);
+    } catch (error: any) {
+      if (error.message.includes('Invalid tracking')) return validationErrorResponse(res, [{ field: 'trackingNumber', message: error.message }]);
+      if (error.message.includes('not found')) return notFoundResponse(res, error.message);
+      if (error.message.includes('authorized')) return errorResponse(res, 'FORBIDDEN', error.message, 403);
+      return errorResponse(res, 'SHIP_ERROR', error.message, 500);
+    }
+  }
+);
+
+/**
+ * GET /api/marketplace/seller/orders/:orderId/packing-slip
+ * Get packing slip
+ */
+router.get('/:orderId/packing-slip',
+  authMiddleware,
+  rateLimitWithCache(req => `order_slip:${req.ip}`, 60, 60),
+  async (req: Request, res: Response) => {
+    try {
+      const sellerId = (req as any).user?.id;
+      if (!sellerId) return errorResponse(res, 'UNAUTHORIZED', 'User not authenticated', 401);
+
+      const { orderId } = req.params;
+      const result = await sellerWorkflowService.getPackingSlip(orderId, sellerId);
+
+      return successResponse(res, result, 200);
+    } catch (error: any) {
+      if (error.message.includes('not found')) return notFoundResponse(res, error.message);
+      if (error.message.includes('authorized')) return errorResponse(res, 'FORBIDDEN', error.message, 403);
+      return errorResponse(res, 'SLIP_ERROR', error.message, 500);
+    }
+  }
+);
 
 export default router;
