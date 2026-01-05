@@ -278,12 +278,13 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       // User must complete address step first.
       // setCurrentStep('payment-method');
 
+
       // Also get legacy recommendation for backward compatibility
       const request: UnifiedCheckoutRequest = {
         orderId: `order_${Date.now()}`,
         listingId: cartState.items[0]?.id || '',
         buyerAddress: address || '',
-        sellerAddress: cartState.items[0]?.seller.id || '',
+        sellerAddress: cartState.items[0]?.seller?.walletAddress || cartState.items[0]?.seller?.id || '',
         amount: parseFloat(cartState.totals.total.fiat),
         currency: 'USD',
         preferredMethod: 'auto'
