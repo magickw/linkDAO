@@ -88,11 +88,11 @@ export class CheckoutController {
             // Calculate totals
             const subtotal = items.reduce((sum: number, item: CartItem) => sum + (parseFloat(item.priceAtTime) * item.quantity), 0);
             const shipping = this.calculateShipping(items);
-            
+
             // Calculate tax with proper service
             let tax = 0;
             let taxBreakdown: any[] = [];
-            
+
             if (shippingAddress) {
                 try {
                     const taxableItems: TaxableItem[] = items.map(item => ({
@@ -119,17 +119,17 @@ export class CheckoutController {
                         'USD',
                         taxExemption
                     );
-                    
+
                     tax = taxResult.taxAmount;
                     taxBreakdown = taxResult.taxBreakdown;
                 } catch (error) {
                     safeLogger.error('Tax calculation failed, using fallback:', error);
-                    tax = this.calculateTax(items, shipping);
+                    tax = await this.calculateTax(items, shipping);
                 }
             } else {
                 tax = await this.calculateTax(items, shipping);
             }
-            
+
             const platformFee = subtotal * 0.025; // 2.5% platform fee
             const total = subtotal + shipping + tax + platformFee;
 
@@ -224,7 +224,7 @@ export class CheckoutController {
             // Calculate totals
             const subtotal = cart.items.reduce((sum, item) => sum + (parseFloat(item.product?.priceAmount || item.priceAtTime) * item.quantity), 0);
             const shipping = this.calculateShipping(cart.items);
-            const tax = this.calculateTax(subtotal, shipping);
+            const tax = await this.calculateTax(cart.items, shipping);
             const platformFee = subtotal * 0.025;
             const total = subtotal + shipping + tax + platformFee;
 
@@ -437,12 +437,12 @@ export class CheckoutController {
         return totalWeight * 5; // $5 per item
     }
 
-    private calculateTax(
+    private async calculateTax(
         items: CartItem[],
         shipping: number,
         shippingAddress?: ShippingAddress,
         taxExemption?: any
-    ): number {
+    ): Promise<number> {
         // Use tax calculation service if shipping address is provided
         if (shippingAddress) {
             try {

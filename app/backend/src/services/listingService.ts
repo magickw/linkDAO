@@ -134,7 +134,7 @@ export class ProductListingService {
 
                 // Generate search optimization data
                 const searchVector = await this.generateSearchVector(input);
-                
+
                 // Update with listing-specific metadata
                 await tx.update(schema.products)
                     .set({
@@ -217,7 +217,7 @@ export class ProductListingService {
                         category: currentListing.category
                     };
                     const searchVector = await this.generateSearchVector(mergedData);
-                    
+
                     await tx.update(schema.products)
                         .set({
                             metadata: {
@@ -340,6 +340,7 @@ export class ProductListingService {
                 tokenAddress: options?.tokenAddress || '0x0000000000000000000000000000000000000000', // Default to ETH
                 price: listing.price.amount,
                 quantity: listing.inventory,
+                inventory: listing.inventory,
                 itemType: options?.itemType || 'PHYSICAL',
                 listingType: options?.listingType || 'FIXED_PRICE',
                 duration: options?.duration,
@@ -511,13 +512,13 @@ export class ProductListingService {
         errors?: string[];
     }> {
         const errors: string[] = [];
-        
+
         try {
             // Step 1: Create the product listing using this service
             const productListing = await this.createListing(input);
-            
+
             let blockchainListing: MarketplaceListing | undefined;
-            
+
             // Step 2: Optionally publish to blockchain using MarketplaceService
             if (input.publishToBlockchain) {
                 try {
@@ -529,7 +530,7 @@ export class ProductListingService {
                     errors.push(`Blockchain publication failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
                 }
             }
-            
+
             return {
                 productListing,
                 blockchainListing,
@@ -562,17 +563,17 @@ export class ProductListingService {
     }> {
         // Get product listing data
         const productListing = await this.getListingById(listingId);
-        
+
         // Get blockchain data if product exists
-        const blockchainData = productListing 
+        const blockchainData = productListing
             ? await this.getBlockchainData(listingId)
             : { listing: null, bids: [], offers: [], escrow: null };
-        
+
         // Check sync status
-        const syncResult = productListing 
+        const syncResult = productListing
             ? await this.syncWithBlockchain(listingId)
             : { productListing: null, blockchainListing: null, synced: false };
-        
+
         return {
             productListing,
             blockchainData,
@@ -597,7 +598,7 @@ export class ProductListingService {
     }> {
         const successful: string[] = [];
         const failed: { listingId: string; error: string }[] = [];
-        
+
         for (const listingId of listingIds) {
             try {
                 await this.publishToBlockchain(listingId, options);
@@ -609,7 +610,7 @@ export class ProductListingService {
                 });
             }
         }
-        
+
         return { successful, failed };
     }
 
@@ -778,7 +779,7 @@ export class ProductListingService {
     private async findByBlockchainListingId(blockchainListingId: string): Promise<Product | null> {
         // Search for product by blockchain listing ID in metadata
         const db = this.databaseService.getDatabase();
-        
+
         try {
             const result = await db.select()
                 .from(schema.products)
@@ -790,7 +791,7 @@ export class ProductListingService {
         } catch (error) {
             safeLogger.error('Error finding product by blockchain listing ID:', error);
         }
-        
+
         return null;
     }
 
@@ -834,14 +835,14 @@ export class ProductListingService {
         // Get seller review stats
         let sellerRating = 0;
         if (dbProduct.sellerId) {
-          try {
-            // Import review service dynamically to avoid circular dependencies
-            const { reviewService } = await import('./reviewService');
-            const reviewStats = await reviewService.getReviewStats(dbProduct.sellerId);
-            sellerRating = reviewStats.averageRating;
-          } catch (error) {
-            safeLogger.warn('Failed to fetch seller review stats:', error);
-          }
+            try {
+                // Import review service dynamically to avoid circular dependencies
+                const { reviewService } = await import('./reviewService');
+                const reviewStats = await reviewService.getReviewStats(dbProduct.sellerId);
+                sellerRating = reviewStats.averageRating;
+            } catch (error) {
+                safeLogger.warn('Failed to fetch seller review stats:', error);
+            }
         }
 
         const category = dbCategory ? this.mapCategoryFromDb(dbCategory) : {
@@ -872,12 +873,12 @@ export class ProductListingService {
                 try {
                     // Parse images from the images field (could be Cloudinary URLs or IPFS hashes)
                     let images = JSON.parse(dbProduct.images || '[]');
-                    
+
                     // Process each image URL
                     images = images.map((url: string) => {
                         // If it's already a full URL (including Cloudinary), return as-is
                         if (url.startsWith('http')) return url;
-                        
+
                         // If it's an IPFS hash, convert to gateway URL
                         if (url.startsWith('Qm') || url.startsWith('baf') || url.startsWith('ipfs://')) {
                             if (url.startsWith('ipfs://')) {
@@ -885,11 +886,11 @@ export class ProductListingService {
                             }
                             return `https://ipfs.io/ipfs/${url}`;
                         }
-                        
+
                         // For any other format, return as-is
                         return url;
                     });
-                    
+
                     return images;
                 } catch (error) {
                     safeLogger.warn('Failed to parse images:', error);

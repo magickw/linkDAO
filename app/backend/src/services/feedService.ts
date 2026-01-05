@@ -786,7 +786,7 @@ export class FeedService {
             mentions: [],
             // Use canonical engagement counts from maps (O(1) lookup)
             comments: originalCommentCount,
-            shares: Number(originalShareCount?.count) || 0,
+            shares: Number(originalShareCount) || 0,
             views: originalViewCount,
             reactionCount: originalReactionCount,
             // Use actual upvotes/downvotes from database

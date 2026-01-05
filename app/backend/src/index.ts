@@ -811,7 +811,17 @@ import { gasFeeSponsorshipRouter } from './routes/gasFeeSponsorshipRoutes';
 // Import DAO shipping partners routes
 import { daoShippingPartnersRouter } from './routes/daoShippingPartnersRoutes';
 // Import advanced analytics routes
+// Import advanced analytics routes
 import { advancedAnalyticsRouter } from './routes/advancedAnalyticsRoutes';
+
+// Import seller routes (general)
+import sellerRoutes from './routes/sellerRoutes';
+
+// Import seller workflow routes
+import sellerWorkflowRoutes from './routes/sellerWorkflowRoutes';
+
+// Import shipping routes
+import shippingRoutes from './routes/shippingRoutes';
 
 // Import marketplace seller routes
 // ALREADY REGISTERED AT /api/sellers

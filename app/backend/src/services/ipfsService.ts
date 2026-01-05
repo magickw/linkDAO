@@ -378,7 +378,19 @@ export class IPFSService {
         );
 
         // Use Promise.any to get the first successful response
-        const { data, gateway } = await Promise.any(downloadPromises);
+        const promiseAny = <T>(promises: Promise<T>[]): Promise<T> => {
+          return new Promise((resolve, reject) => {
+            let errors: any[] = [];
+            let pending = promises.length;
+            if (pending === 0) return reject(new Error('No promises'));
+            promises.forEach(p => p.then(resolve).catch(e => {
+              errors.push(e);
+              if (--pending === 0) reject(new Error('All gateways failed'));
+            }));
+          });
+        };
+
+        const { data, gateway } = await promiseAny(downloadPromises);
 
         safeLogger.info(`Download successful from ${gateway}`, { hash: ipfsHash });
 

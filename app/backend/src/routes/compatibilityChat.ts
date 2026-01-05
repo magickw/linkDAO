@@ -286,18 +286,17 @@ router.get('/api/messaging/conversations/:conversationId/messages', authMiddlewa
         deletedAt: chatMessages.deletedAt,
       }).from(chatMessages).where(eq(chatMessages.conversationId, conversationId));
 
+      let msgs;
       // Apply pagination
       if (before) {
-        query = query.order(desc(chatMessages.sentAt)).limit(limit);
+        msgs = await query.orderBy(desc(chatMessages.sentAt)).limit(limit);
       } else if (after) {
         // For 'after' cursor, we'd need to implement proper cursor pagination
         // For now, just order by sentAt
-        query = query.order(desc(chatMessages.sentAt)).limit(limit);
+        msgs = await query.orderBy(desc(chatMessages.sentAt)).limit(limit);
       } else {
-        query = query.order(desc(chatMessages.sentAt)).limit(limit);
+        msgs = await query.orderBy(desc(chatMessages.sentAt)).limit(limit);
       }
-
-      const msgs = await query;
 
       const convRows = await db.select().from(conversations).where(eq(conversations.id, conversationId)).limit(1);
       const convRow = convRows[0];

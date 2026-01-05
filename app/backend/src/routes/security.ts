@@ -222,7 +222,7 @@ router.delete('/sessions/:sessionId', async (req: Request, res: Response) => {
 router.post('/sessions/terminate-others', async (req: Request, res: Response) => {
     try {
         const userId = req.user?.id;
-        const currentSessionId = req.session?.id; // Assuming session ID is available
+        const currentSessionId = (req as any).session?.id; // Assuming session ID is available
 
         if (!userId || !currentSessionId) {
             return res.status(401).json({ error: 'Unauthorized' });

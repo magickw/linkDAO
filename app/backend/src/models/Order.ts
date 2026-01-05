@@ -129,6 +129,8 @@ export interface MonthlyTrend {
 export interface MarketplaceOrder {
   id: string;
   listingId: string;
+  buyerId?: string;
+  sellerId?: string;
   buyerWalletAddress: string;
   sellerWalletAddress: string;
   escrowId?: string;

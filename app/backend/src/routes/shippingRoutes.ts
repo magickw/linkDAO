@@ -2,7 +2,7 @@
 import express from 'express';
 import { ShippingController } from '../controllers/shippingController';
 import { authMiddleware } from '../middleware/authMiddleware';
-import { rateLimitWithCache } from '../middleware/rateLimitWithCache';
+import { rateLimiter } from '../middleware/rateLimiter';
 
 const router = express.Router();
 const shippingController = new ShippingController();
@@ -13,21 +13,21 @@ router.use(authMiddleware);
 // Rate calculation
 router.post(
     '/rates',
-    rateLimitWithCache('shipping_rates', 60, 10), // 10 request per minute
+    rateLimiter({ windowMs: 60 * 1000, max: 10, message: 'Too many rate calculation requests' }),
     shippingController.calculateRates
 );
 
 // Label generation
 router.post(
     '/labels',
-    rateLimitWithCache('shipping_labels', 60, 5), // 5 requests per minute
+    rateLimiter({ windowMs: 60 * 1000, max: 5, message: 'Too many label generation requests' }),
     shippingController.generateLabel
 );
 
 // Tracking
 router.get(
     '/tracking/:trackingNumber',
-    rateLimitWithCache('shipping_tracking', 60, 20),
+    rateLimiter({ windowMs: 60 * 1000, max: 20, message: 'Too many tracking requests' }),
     shippingController.getTracking
 );
 

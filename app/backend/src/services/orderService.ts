@@ -591,6 +591,8 @@ export class OrderService {
     return {
       id: dbOrder.id.toString(),
       listingId: dbOrder.listingId?.toString() || '',
+      buyerId: buyer.id?.toString(),
+      sellerId: seller.id?.toString(),
       buyerWalletAddress: buyer.walletAddress,
       sellerWalletAddress: seller.walletAddress,
       escrowId,

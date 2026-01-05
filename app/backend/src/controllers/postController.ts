@@ -349,7 +349,7 @@ export class PostController {
         contentCid: contentCid,
         parentId: targetPostId, // Use the flattened target ID
         tags: JSON.stringify(originalQuickPost.tags || []),
-        onchainRef: originalQuickPost.onchainRef,
+        // onchainRef: originalQuickPost.onchainRef, // Not available in type
         isTokenGated: originalQuickPost.isTokenGated,
         gatedContentPreview: originalQuickPost.gatedContentPreview,
         isRepost: true
