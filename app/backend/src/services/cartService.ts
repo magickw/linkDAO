@@ -25,6 +25,7 @@ export interface CartItem {
     images?: string[];
     sellerId: string;
     status: string;
+    inventory: number;
   };
 }
 
@@ -352,6 +353,7 @@ export class CartService {
           images: item.product.images ? JSON.parse(item.product.images) : [],
           sellerId: item.product.sellerId,
           status: item.product.status,
+          inventory: item.product.inventory,
         },
       }));
     } catch (error) {
