@@ -8,7 +8,10 @@ import {
   SellerAnalytics,
   SellerProfileUpdateRequest,
   SellerProfileUpdateResponse,
-  ENSValidationResult
+  ENSValidationResult,
+  SellerWorkflowDashboard,
+  ShippingLabelResult,
+  PackingSlip
 } from '../types/seller';
 import {
   SellerTier,
@@ -127,6 +130,13 @@ interface SellerAPIEndpoints {
   getTierCriteria: () => string;
   getTierEvaluationHistory: (walletAddress: string) => string;
   getTierUpgradeNotifications: (walletAddress: string) => string;
+
+  // Workflow endpoints
+  getWorkflowDashboard: () => string;
+  startProcessingOrder: (orderId: string) => string;
+  markOrderReadyToShip: (orderId: string) => string;
+  confirmOrderShipment: (orderId: string) => string;
+  getOrderPackingSlip: (orderId: string) => string;
 }
 
 // Unified error types for seller system
@@ -218,6 +228,13 @@ export class UnifiedSellerAPIClient {
     getTierCriteria: () => `${this.baseURL}/tier/criteria`,
     getTierEvaluationHistory: (walletAddress: string) => `${this.baseURL}/tier/history`, // Uses authenticated user
     getTierUpgradeNotifications: (walletAddress: string) => `${this.baseURL}/tier/notifications/${walletAddress}`,
+
+    // Workflow endpoints - specifically mounted at /api/sellers/workflow
+    getWorkflowDashboard: () => `${BACKEND_API_BASE_URL}/api/sellers/workflow/dashboard`,
+    startProcessingOrder: (orderId: string) => `${BACKEND_API_BASE_URL}/api/sellers/workflow/${orderId}/process`,
+    markOrderReadyToShip: (orderId: string) => `${BACKEND_API_BASE_URL}/api/sellers/workflow/${orderId}/ready`,
+    confirmOrderShipment: (orderId: string) => `${BACKEND_API_BASE_URL}/api/sellers/workflow/${orderId}/ship`,
+    getOrderPackingSlip: (orderId: string) => `${BACKEND_API_BASE_URL}/api/sellers/workflow/${orderId}/packing-slip`,
   };
 
   async request<T>(endpoint: string, options?: RequestInit, requireAuth: boolean = true): Promise<T> {
@@ -760,11 +777,39 @@ export class UnifiedSellerAPIClient {
     return await this.request<any>(this.endpoints.getTierUpgradeNotifications(walletAddress), undefined, true);
   }
 
-  async refreshTierData(walletAddress: string): Promise<void> {
     await this.request<void>(this.endpoints.refreshTierData(walletAddress), {
-      method: 'POST'
-    }, true);
+    method: 'POST'
+  }, true);
   }
+
+  // Workflow API methods
+  async getWorkflowDashboard(): Promise < SellerWorkflowDashboard > {
+  return await this.request<SellerWorkflowDashboard>(this.endpoints.getWorkflowDashboard(), undefined, true);
+}
+
+  async startProcessingOrder(orderId: string): Promise < void> {
+  await this.request<void>(this.endpoints.startProcessingOrder(orderId), {
+    method: 'POST'
+  }, true);
+}
+
+  async markOrderReadyToShip(orderId: string, packageDetails: any): Promise < ShippingLabelResult > {
+  return await this.request<ShippingLabelResult>(this.endpoints.markOrderReadyToShip(orderId), {
+    method: 'POST',
+    body: JSON.stringify(packageDetails)
+  }, true);
+}
+
+  async confirmOrderShipment(orderId: string, trackingNumber: string, carrier: string): Promise < void> {
+  await this.request<void>(this.endpoints.confirmOrderShipment(orderId), {
+    method: 'POST',
+    body: JSON.stringify({ trackingNumber, carrier })
+  }, true);
+}
+
+  async getOrderPackingSlip(orderId: string): Promise < PackingSlip > {
+  return await this.request<PackingSlip>(this.endpoints.getOrderPackingSlip(orderId), undefined, true);
+}
 }
 
 // Export singleton instance

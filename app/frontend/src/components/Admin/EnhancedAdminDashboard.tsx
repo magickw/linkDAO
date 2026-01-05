@@ -68,6 +68,7 @@ import { UserMonitoringDashboard } from './UserMonitoringDashboard';
 import { NewsletterManagement } from './NewsletterManagement';
 import { ReturnMonitoringDashboard } from './returns/ReturnMonitoringDashboard';
 import { ReceiptsManagement } from './ReceiptsManagement';
+import { AdminOrderDashboard } from './OrderManagement/AdminOrderDashboard';
 
 interface AdminStats {
   pendingModerations: number;
@@ -324,6 +325,7 @@ export function EnhancedAdminDashboard() {
     { id: 'returns', label: 'Return Monitoring', icon: Package, permission: 'marketplace.seller_view', category: 'business' },
     { id: 'receipts', label: 'Receipts', icon: Receipt, permission: 'system.audit', category: 'finance' },
     { id: 'charity-verification', label: 'Charity Verification', icon: Heart, permission: 'governance.verify', category: 'governance' },
+    { id: 'orders', label: 'Orders', icon: Package, permission: 'marketplace.seller_view', category: 'business' },
   ].filter(tab => !tab.permission || hasPermission(tab.permission));
 
   const filteredTabs = showFavoritesOnly
@@ -795,6 +797,10 @@ export function EnhancedAdminDashboard() {
 
             {activeTab === 'performance' && hasPermission('marketplace.seller_view') && (
               <SellerPerformance />
+            )}
+
+            {activeTab === 'orders' && hasPermission('marketplace.seller_view') && (
+              <AdminOrderDashboard />
             )}
 
             {activeTab === 'disputes' && hasPermission('disputes.view') && (

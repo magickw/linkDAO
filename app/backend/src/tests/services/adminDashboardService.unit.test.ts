@@ -101,4 +101,48 @@ describe('AdminDashboardService', () => {
             expect(result.orders[0].id).toBe('1');
         });
     });
+
+    describe('getOrderDetails', () => {
+        it('should return order details with timeline and available actions', async () => {
+            const mockOrder = { id: 'order-1', status: 'pending' };
+            const mockTimeline = [
+                { orderId: 'order-1', eventType: 'CREATED', timestamp: new Date() },
+                { orderId: 'order-1', eventType: 'ADMIN_ACTION_NOTE', timestamp: new Date() }
+            ];
+
+            // 1. Order details
+            (db.select as any).mockReturnValueOnce({
+                from: (jest.fn() as any).mockReturnValue({
+                    where: (jest.fn() as any).mockResolvedValue([mockOrder])
+                })
+            });
+            // 2. Timeline
+            (db.select as any).mockReturnValueOnce({
+                from: (jest.fn() as any).mockReturnValue({
+                    where: (jest.fn() as any).mockReturnValue({
+                        orderBy: (jest.fn() as any).mockResolvedValue(mockTimeline)
+                    })
+                })
+            });
+
+            const result = await adminDashboardService.getOrderDetails('order-1');
+
+            expect(result).not.toBeNull();
+            expect(result!.id).toBe('order-1');
+            expect(result?.availableActions).toContain('cancel');
+            expect(result?.auditLog).toHaveLength(1); // One ADMIN_ action
+        });
+    });
+
+    describe('performAdminAction', () => {
+        it('should update order status on cancel', async () => {
+            (db.insert as any).mockReturnValue({ values: (jest.fn() as any).mockResolvedValue({}) }); // Log event
+            (db.update as any).mockReturnValue({ set: (jest.fn() as any).mockReturnValue({ where: (jest.fn() as any).mockResolvedValue({}) }) }); // Update order
+
+            await adminDashboardService.performAdminAction('order-1', 'cancel', 'admin-1', 'Fraud suspected');
+
+            expect(db.insert).toHaveBeenCalled();
+            expect(db.update).toHaveBeenCalled();
+        });
+    });
 });

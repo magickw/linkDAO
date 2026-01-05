@@ -215,11 +215,15 @@ export interface SellerNotification {
 
 export interface SellerOrder {
     id: string;
-    listingId: string;
-    listingTitle: string;
+    items: Array<{
+        listingId: string;
+        title: string;
+        quantity: number;
+        price: number;
+        image?: string;
+    }>;
     buyerAddress: string;
     buyerName?: string;
-    quantity: number;
     totalAmount: number;
     currency: string;
     status: 'pending' | 'paid' | 'processing' | 'shipped' | 'delivered' | 'disputed' | 'cancelled';
@@ -261,6 +265,7 @@ export interface SellerListing {
         cost?: number;
         estimatedDays: string;
         international: boolean;
+        internationalCost?: number;
     };
     views: number;
     favorites: number;
@@ -411,4 +416,44 @@ export interface ImageUploadResult {
         format: string;
         size: number;
     };
+}
+
+// Seller Workflow Types
+export interface SellerWorkflowDashboard {
+    stats: {
+        pendingCount: number;
+        processingCount: number;
+        readyToShipCount: number;
+        shippedCount: number;
+        completedCount: number;
+        revenue: string;
+    };
+    orders: {
+        new: SellerOrder[];
+        processing: SellerOrder[];
+        readyToShip: SellerOrder[];
+        shipped: SellerOrder[];
+        completed: SellerOrder[];
+        cancelled: SellerOrder[];
+    };
+}
+
+export interface ShippingLabelResult {
+    labelUrl: string;
+    trackingNumber: string;
+}
+
+export interface PackingSlip {
+    orderId: string;
+    date: string;
+    buyerAddress?: {
+        name: string;
+        address: string;
+        city: string;
+        state: string;
+        zipCode: string;
+        country: string;
+    };
+    items: Array<{ description: string; quantity: number }>;
+    sellerId: string;
 }

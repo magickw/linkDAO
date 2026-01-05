@@ -1,9 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
-import { sellerWorkflowService, IWorkflowDashboard, IWorkflowOrder } from '../services/sellerWorkflowService';
+import { sellerWorkflowService } from '../services/sellerWorkflowService';
+import {
+    SellerWorkflowDashboard,
+    ShippingLabelResult,
+    PackingSlip
+} from '../types/seller';
 import { useToast } from '../context/ToastContext';
 
 export function useSellerWorkflow(isActive: boolean = false) {
-    const [dashboardData, setDashboardData] = useState<IWorkflowDashboard | null>(null);
+    const [dashboardData, setDashboardData] = useState<SellerWorkflowDashboard | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const { addToast } = useToast();
@@ -14,7 +19,7 @@ export function useSellerWorkflow(isActive: boolean = false) {
         setLoading(true);
         setError(null);
         try {
-            const data = await sellerWorkflowService.getDashboard();
+            const data = await sellerWorkflowService.getOrderDashboard();
             setDashboardData(data);
         } catch (err: any) {
             console.error('Error fetching seller workflow dashboard:', err);
@@ -41,7 +46,7 @@ export function useSellerWorkflow(isActive: boolean = false) {
         }
     };
 
-    const markReadyToShip = async (orderId: string, packageDetails: any) => {
+    const markReadyToShip = async (orderId: string, packageDetails: any): Promise<ShippingLabelResult | null> => {
         try {
             const result = await sellerWorkflowService.markReadyToShip(orderId, packageDetails);
             addToast(`Label generated! Tracking: ${result.trackingNumber}`, 'success');
@@ -65,7 +70,7 @@ export function useSellerWorkflow(isActive: boolean = false) {
         }
     };
 
-    const getPackingSlip = async (orderId: string) => {
+    const getPackingSlip = async (orderId: string): Promise<PackingSlip | null> => {
         try {
             return await sellerWorkflowService.getPackingSlip(orderId);
         } catch (err: any) {

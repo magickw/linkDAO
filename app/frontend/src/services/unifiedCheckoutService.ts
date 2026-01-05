@@ -882,11 +882,15 @@ export class UnifiedCheckoutService {
     // Convert BigInt values to strings before serialization
     const serializedBody = convertBigIntToStrings(requestBody);
 
+    // Get auth token
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || '';
+
     // Call existing fiat payment processing
     const response = await fetch(`${this.apiBaseUrl}/api/hybrid-payment/checkout`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify(serializedBody)
     });

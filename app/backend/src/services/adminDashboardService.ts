@@ -363,7 +363,7 @@ export class AdminDashboardService implements IAdminDashboardService {
 
   async getOrderDetails(orderId: string): Promise<AdminOrderDetails | null> {
     try {
-      const order = await db.select().from(orders).where(eq(orders.id, orderId)).then(res => res[0]);
+      const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
       if (!order) return null;
 
       // Fetch timeline (orderEvents)

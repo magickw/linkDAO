@@ -43,10 +43,10 @@ export const SellerOrdersTab: React.FC<SellerOrdersTabProps> = ({ isActive }) =>
     const orders = (() => {
         if (!dashboardData) return [];
         switch (activeStatus) {
-            case 'new': return dashboardData.newOrders;
-            case 'processing': return dashboardData.processingOrders;
-            case 'ready': return dashboardData.readyToShipOrders;
-            case 'shipped': return dashboardData.shippedOrders;
+            case 'new': return dashboardData.orders.new;
+            case 'processing': return dashboardData.orders.processing;
+            case 'ready': return dashboardData.orders.readyToShip;
+            case 'shipped': return dashboardData.orders.shipped;
             default: return [];
         }
     })();
@@ -81,26 +81,30 @@ export const SellerOrdersTab: React.FC<SellerOrdersTabProps> = ({ isActive }) =>
     return (
         <div className="space-y-6">
             <div className="flex flex-wrap gap-2">
-                {(['new', 'processing', 'ready', 'shipped'] as const).map(status => (
-                    <button
-                        key={status}
-                        onClick={() => setActiveStatus(status)}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeStatus === status
-                            ? 'bg-purple-600 text-white'
-                            : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                            }`}
-                    >
-                        {status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ')}
-                        <span className="ml-2 bg-gray-900 px-2 py-0.5 rounded-full text-xs">
-                            {dashboardData ? (
-                                status === 'new' ? dashboardData.newOrders.length :
-                                    status === 'processing' ? dashboardData.processingOrders.length :
-                                        status === 'ready' ? dashboardData.readyToShipOrders.length :
-                                            dashboardData.shippedOrders.length
-                            ) : 0}
-                        </span>
-                    </button>
-                ))}
+                {(['new', 'processing', 'ready', 'shipped'] as const).map(status => {
+                    const count = dashboardData ? (
+                        status === 'new' ? dashboardData.orders.new.length :
+                            status === 'processing' ? dashboardData.orders.processing.length :
+                                status === 'ready' ? dashboardData.orders.readyToShip.length :
+                                    dashboardData.orders.shipped.length
+                    ) : 0;
+
+                    return (
+                        <button
+                            key={status}
+                            onClick={() => setActiveStatus(status)}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeStatus === status
+                                ? 'bg-purple-600 text-white'
+                                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                                }`}
+                        >
+                            {status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ')}
+                            <span className="ml-2 bg-gray-900 px-2 py-0.5 rounded-full text-xs">
+                                {count}
+                            </span>
+                        </button>
+                    );
+                })}
             </div>
 
             <div className="space-y-4">
@@ -127,21 +131,27 @@ export const SellerOrdersTab: React.FC<SellerOrdersTabProps> = ({ isActive }) =>
                             <div className="mb-4">
                                 <h4 className="text-sm font-semibold text-gray-300 mb-2">Items</h4>
                                 <ul className="space-y-1">
-                                    {order.items.map((item, idx) => (
-                                        <li key={idx} className="text-sm text-gray-400 flex justify-between">
-                                            <span>{item.title}</span>
-                                            <span>x{item.quantity}</span>
-                                        </li>
-                                    ))}
+                                    {order.items && order.items.length > 0 ? (
+                                        order.items.map((item, idx) => (
+                                            <li key={idx} className="text-sm text-gray-400 flex justify-between">
+                                                <span>{item.title}</span>
+                                                <span>x{item.quantity}</span>
+                                            </li>
+                                        ))
+                                    ) : (
+                                        <li className="text-sm text-gray-500 italic">No items details available</li>
+                                    )}
                                 </ul>
                             </div>
 
-                            <div className="mb-6">
-                                <h4 className="text-sm font-semibold text-gray-300 mb-2">Shipping to</h4>
-                                <p className="text-sm text-gray-400">{order.shippingAddress.fullName}</p>
-                                <p className="text-sm text-gray-400">{order.shippingAddress.streetAddress}</p>
-                                <p className="text-sm text-gray-400">{order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.postalCode}</p>
-                            </div>
+                            {order.shippingAddress && (
+                                <div className="mb-6">
+                                    <h4 className="text-sm font-semibold text-gray-300 mb-2">Shipping to</h4>
+                                    <p className="text-sm text-gray-400">{order.shippingAddress.name}</p>
+                                    <p className="text-sm text-gray-400">{order.shippingAddress.address}</p>
+                                    <p className="text-sm text-gray-400">{order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.zipCode}</p>
+                                </div>
+                            )}
 
                             <div className="flex gap-2 border-t border-gray-700 pt-4">
                                 <Button size="sm" variant="secondary" onClick={() => handlePrintPackingSlip(order.id)}>
