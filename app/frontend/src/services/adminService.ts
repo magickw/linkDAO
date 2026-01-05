@@ -125,6 +125,8 @@ interface NotificationStats {
   byCategory: Record<string, number>;
 }
 
+import { OrderEvent } from '@/types/order';
+
 export interface AdminOrderMetrics {
   totalOrders: number;
   totalRevenue: number;
@@ -159,7 +161,7 @@ export interface AdminOrderDetails {
   items: any[];
   shippingAddress: any;
   paymentDetails: any;
-  timeline: any[];
+  timeline: OrderEvent[];
   availableActions: string[];
   auditLog: any[];
 }
@@ -299,6 +301,24 @@ class AdminService {
     } catch (error) {
       console.error('Error in performAdminAction:', error);
       return { success: false, message: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  async getOrderReceipt(orderId: string): Promise<any | null> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/orders/${orderId}/receipt`, {
+        headers: await this.getHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch receipt: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result.data || null;
+    } catch (error) {
+      console.error('Error in getOrderReceipt:', error);
+      return null;
     }
   }
 

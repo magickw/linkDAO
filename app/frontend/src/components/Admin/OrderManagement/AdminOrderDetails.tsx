@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { adminService, AdminOrderDetails as IAdminOrderDetails } from '@/services/adminService';
 import { GlassPanel, Button } from '@/design-system';
 import { Badge } from '@/components/ui/badge';
-import { Package, Clock, ShieldAlert, CheckCircle, XCircle } from 'lucide-react';
+import { Package, Clock, ShieldAlert, CheckCircle, XCircle, FileText } from 'lucide-react';
 import { useToast } from '@/context/ToastContext';
+import OrderTimeline from '@/components/Marketplace/OrderTracking/OrderTimeline';
+import { ReceiptDisplay } from '@/components/Marketplace/Receipt/ReceiptDisplay';
 
 interface AdminOrderDetailsProps {
     orderId: string;
@@ -15,6 +17,8 @@ export function AdminOrderDetails({ orderId, onBack }: AdminOrderDetailsProps) {
     const [loading, setLoading] = useState(true);
     const { addToast } = useToast();
     const [actionLoading, setActionLoading] = useState(false);
+    const [showReceipt, setShowReceipt] = useState(false);
+    const [receipt, setReceipt] = useState<any>(null);
 
     useEffect(() => {
         loadOrderDetails();
@@ -54,6 +58,20 @@ export function AdminOrderDetails({ orderId, onBack }: AdminOrderDetailsProps) {
         }
     };
 
+    const handleViewReceipt = async () => {
+        try {
+            const data = await adminService.getOrderReceipt(orderId);
+            if (data) {
+                setReceipt(data);
+                setShowReceipt(true);
+            } else {
+                addToast('Receipt not found', 'error');
+            }
+        } catch (error) {
+            addToast('Failed to load receipt', 'error');
+        }
+    };
+
     if (loading) return <div className="p-8 text-center text-gray-400">Loading order details...</div>;
     if (!order) return <div className="p-8 text-center text-red-400">Order not found</div>;
 
@@ -65,6 +83,14 @@ export function AdminOrderDetails({ orderId, onBack }: AdminOrderDetailsProps) {
                     <p className="text-gray-400 text-sm">Created on {new Date(order.createdAt).toLocaleString()}</p>
                 </div>
                 <div className="flex gap-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleViewReceipt}
+                    >
+                        <FileText className="w-4 h-4 mr-2" />
+                        View Receipt
+                    </Button>
                     {order.availableActions.map(action => (
                         <Button
                             key={action}
@@ -103,23 +129,7 @@ export function AdminOrderDetails({ orderId, onBack }: AdminOrderDetailsProps) {
                     </GlassPanel>
 
                     <GlassPanel className="p-6">
-                        <h3 className="text-lg font-semibold text-white mb-4">Timeline</h3>
-                        <div className="space-y-4">
-                            {order.timeline?.map((event: any, i: number) => (
-                                <div key={i} className="flex gap-4">
-                                    <div className="flex flex-col items-center">
-                                        <div className="w-2 h-2 rounded-full bg-blue-500 mt-2"></div>
-                                        {i < (order.timeline.length - 1) && <div className="w-0.5 flex-1 bg-gray-800 my-1"></div>}
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-medium text-white">{event.eventType?.replace(/_/g, ' ')}</p>
-                                        <p className="text-xs text-gray-500">{new Date(event.timestamp).toLocaleString()}</p>
-                                        {event.details && <p className="text-xs text-gray-400 mt-1">{JSON.stringify(event.details)}</p>}
-                                    </div>
-                                </div>
-                            ))}
-                            {(!order.timeline || order.timeline.length === 0) && <p className="text-gray-500 text-sm">No timeline events.</p>}
-                        </div>
+                        <OrderTimeline events={order.timeline || []} />
                     </GlassPanel>
                 </div>
 
@@ -127,7 +137,15 @@ export function AdminOrderDetails({ orderId, onBack }: AdminOrderDetailsProps) {
                 <div className="space-y-6">
                     <GlassPanel className="p-6">
                         <h3 className="text-sm font-semibold text-gray-400 mb-2 uppercase">Status</h3>
-                        <Badge variant={order.status === 'completed' ? 'success' : order.status === 'cancelled' ? 'danger' : 'warning'}>
+                        <Badge
+                            variant={order.status === 'cancelled' ? 'destructive' : 'secondary'}
+                            className={
+                                order.status === 'completed' ? 'bg-green-500 hover:bg-green-600' :
+                                    order.status === 'processing' ? 'bg-blue-500 hover:bg-blue-600' :
+                                        order.status === 'shipped' ? 'bg-indigo-500 hover:bg-indigo-600' :
+                                            ''
+                            }
+                        >
                             {order.status.toUpperCase()}
                         </Badge>
                     </GlassPanel>
@@ -166,6 +184,23 @@ export function AdminOrderDetails({ orderId, onBack }: AdminOrderDetailsProps) {
                     )}
                 </div>
             </div>
+
+            {/* Receipt Modal */}
+            {showReceipt && receipt && (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 font-sans">
+                    <div className="relative max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="absolute top-4 right-4 z-10 text-gray-500 hover:text-gray-700"
+                            onClick={() => setShowReceipt(false)}
+                        >
+                            Close
+                        </Button>
+                        <ReceiptDisplay receipt={receipt} onPrint={() => window.print()} />
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

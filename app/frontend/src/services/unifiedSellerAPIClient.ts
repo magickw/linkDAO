@@ -777,9 +777,10 @@ export class UnifiedSellerAPIClient {
     return await this.request<any>(this.endpoints.getTierUpgradeNotifications(walletAddress), undefined, true);
   }
 
+  async refreshTierData(walletAddress: string): Promise<void> {
     await this.request<void>(this.endpoints.refreshTierData(walletAddress), {
-    method: 'POST'
-  }, true);
+      method: 'POST'
+    }, true);
   }
 
   // Workflow API methods
