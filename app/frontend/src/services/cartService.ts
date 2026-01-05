@@ -792,7 +792,20 @@ class CartService {
 
     // Check if item has cartItemId (backend sync required)
     if (!item.cartItemId) {
-      throw new Error('Cart item needs to be synced with the server. Please refresh the page or try again.');
+      // Try to sync the cart with the backend first
+      console.log('Cart item not synced, syncing with backend...');
+      await this.syncCartWithBackend();
+
+      // Get the updated cart state after sync
+      const syncedState = await this.getCartState();
+      const syncedItem = syncedState.items.find(i => i.id === itemId);
+
+      if (!syncedItem || !syncedItem.cartItemId) {
+        throw new Error('Failed to sync cart item. Please refresh the page and try again.');
+      }
+
+      // Use the synced item
+      item.cartItemId = syncedItem.cartItemId;
     }
 
     // Optimistic update
@@ -829,7 +842,20 @@ class CartService {
 
     // Check if item has cartItemId (backend sync required)
     if (!item.cartItemId) {
-      throw new Error('Cart item needs to be synced with the server. Please refresh the page or try again.');
+      // Try to sync the cart with the backend first
+      console.log('Cart item not synced, syncing with backend...');
+      await this.syncCartWithBackend();
+
+      // Get the updated cart state after sync
+      const syncedState = await this.getCartState();
+      const syncedItem = syncedState.items.find(i => i.id === itemId);
+
+      if (!syncedItem || !syncedItem.cartItemId) {
+        throw new Error('Failed to sync cart item. Please refresh the page and try again.');
+      }
+
+      // Use the synced item
+      item.cartItemId = syncedItem.cartItemId;
     }
 
     try {

@@ -33,6 +33,7 @@ export const PromoCodeList: React.FC<PromoCodeListProps> = ({
                 <thead>
                     <tr className="text-gray-400 border-b border-white/10">
                         <th className="py-3 px-4">Code</th>
+                        <th className="py-3 px-4">Product</th>
                         <th className="py-3 px-4">Discount</th>
                         <th className="py-3 px-4">Usage</th>
                         <th className="py-3 px-4">Status</th>
@@ -43,6 +44,13 @@ export const PromoCodeList: React.FC<PromoCodeListProps> = ({
                     {promoCodes.map((promo) => (
                         <tr key={promo.id} className="border-b border-white/5 hover:bg-white/5">
                             <td className="py-3 px-4 font-mono font-bold text-lg">{promo.code}</td>
+                            <td className="py-3 px-4">
+                                {promo.productId ? (
+                                    <span className="text-purple-400">Specific Product</span>
+                                ) : (
+                                    <span className="text-gray-400">All Products</span>
+                                )}
+                            </td>
                             <td className="py-3 px-4">
                                 {promo.discountType === 'percentage'
                                     ? `${promo.discountValue}%`

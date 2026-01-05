@@ -1,8 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CreatePromoCodeInput } from '../../../services/promoCodeService';
 import { Button } from '../../../design-system';
 import { useToast } from '../../../context/ToastContext';
 import { CalendarIcon } from '@heroicons/react/24/outline';
+import { useUnifiedSellerListings } from '../../../hooks/useUnifiedSeller';
+
+interface Product {
+    id: string;
+    title: string;
+    price: {
+        fiat: string;
+        fiatSymbol: string;
+    };
+}
 
 interface PromoCodeFormProps {
     sellerId: string;
@@ -19,6 +29,8 @@ export const PromoCodeForm: React.FC<PromoCodeFormProps> = ({
 }) => {
     const { addToast } = useToast();
     const [loading, setLoading] = useState(false);
+    const [productsLoading, setProductsLoading] = useState(false);
+    const [products, setProducts] = useState<Product[]>([]);
     const [formData, setFormData] = useState<Partial<CreatePromoCodeInput>>({
         code: '',
         discountType: 'percentage',
@@ -27,6 +39,19 @@ export const PromoCodeForm: React.FC<PromoCodeFormProps> = ({
         maxDiscountAmount: 0,
         usageLimit: 0,
     });
+
+    // Fetch seller's products
+    const { listings, loading: listingsLoading } = useUnifiedSellerListings(sellerId);
+
+    useEffect(() => {
+        if (listings && listings.length > 0) {
+            setProducts(listings.map((listing: any) => ({
+                id: listing.id,
+                title: listing.title || 'Untitled Product',
+                price: listing.price || { fiat: '0.00', fiatSymbol: 'USD' }
+            })));
+        }
+    }, [listings]);
 
     const handleChange = (field: keyof CreatePromoCodeInput, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -74,6 +99,23 @@ export const PromoCodeForm: React.FC<PromoCodeFormProps> = ({
                         required
                         className={`${inputClasses} uppercase`}
                     />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">Product (Optional)</label>
+                    <select
+                        value={formData.productId || ''}
+                        onChange={(e) => handleChange('productId', e.target.value || undefined)}
+                        className={inputClasses}
+                    >
+                        <option value="">All Products</option>
+                        {products.map(product => (
+                            <option key={product.id} value={product.id}>
+                                {product.title} - {product.price.fiatSymbol}{product.price.fiat}
+                            </option>
+                        ))}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">Leave empty to apply to all products</p>
                 </div>
 
                 <div>
