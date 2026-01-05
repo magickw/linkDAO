@@ -30,7 +30,7 @@ export class PromoCodeService {
      */
     private async resolveSellerId(sellerIdOrAddress: string): Promise<string> {
         safeLogger.info(`[PromoCodeService] Resolving seller ID for: ${sellerIdOrAddress}`);
-        
+
         // If it's already a UUID, return it
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         if (uuidRegex.test(sellerIdOrAddress)) {
@@ -49,7 +49,7 @@ export class PromoCodeService {
             .limit(1);
 
         safeLogger.info(`[PromoCodeService] User table result count: ${userResult.length}`);
-        
+
         if (userResult.length > 0) {
             safeLogger.info(`[PromoCodeService] Found user with ID: ${userResult[0].id}`);
             return userResult[0].id;
@@ -75,7 +75,7 @@ export class PromoCodeService {
         // Seller exists in sellers table but not in users table
         // Create a corresponding user record
         safeLogger.info(`[PromoCodeService] Creating user record for existing seller: ${normalizedAddress}`);
-        
+
         try {
             const [newUser] = await db.insert(users).values({
                 id: uuidv4(),
@@ -88,7 +88,7 @@ export class PromoCodeService {
             return newUser.id;
         } catch (userCreateError: any) {
             safeLogger.error(`[PromoCodeService] Failed to create user record: ${userCreateError.message}`);
-            
+
             // Try to fetch the user again in case it was created by another process
             // or if there's a case mismatch
             const retryUserResult = await db
@@ -148,128 +148,133 @@ export class PromoCodeService {
     /**
      * Verify and return promo code details if valid
      */
-    async verifyPromoCode(input: VerifyPromoCodeInput) {
         try {
-            const now = new Date();
+    const now = new Date();
 
-            // Find the promo code
-            let query = db.select().from(promoCodes).where(eq(promoCodes.code, input.code));
-            const potentialCodes = await query;
+    // Find the promo code (case-insensitive)
+    const potentialCodes = await db
+        .select()
+        .from(promoCodes)
+        .where(sql`UPPER(${promoCodes.code}) = UPPER(${input.code})`);
 
-            if (potentialCodes.length === 0) {
-                return { isValid: false, error: 'Promo code not found' };
-            }
+    if (potentialCodes.length === 0) {
+        return { isValid: false, error: 'Promo code not found' };
+    }
 
-            // Resolve sellerId if provided
-            let targetSellerId: string | undefined;
-            if (input.sellerId) {
-                try {
-                    targetSellerId = await this.resolveSellerId(input.sellerId);
-                } catch (e) {
-                    // If seller not found, validation fails if code belongs to specific seller
-                    // But here we can just ignore and let the loop fail
-                }
-            }
-
-            // Filter based on context (seller/product)
-            const validCode = potentialCodes.find(promo => {
-                // 1. Check Seller ID match (if input sellerId provided)
-                if (targetSellerId && promo.sellerId !== targetSellerId) return false;
-
-                // 2. Check Product ID match (if promo is product-specific)
-                if (promo.productId && promo.productId !== input.productId) return false;
-
-                // 3. Check Active Status
-                if (!promo.isActive) return false;
-
-                // 4. Check Dates
-                if (promo.startDate && new Date(promo.startDate) > now) return false;
-                if (promo.endDate && new Date(promo.endDate) < now) return false;
-
-                // 5. Check Usage Limit
-                if (promo.usageLimit !== null && (promo.usageCount || 0) >= promo.usageLimit) return false;
-
-                // 6. Check Min Order Amount
-                if (promo.minOrderAmount && input.orderAmount < parseFloat(promo.minOrderAmount)) return false;
-
-                return true;
-            });
-
-            if (!validCode) {
-                const codeExists = potentialCodes.some(p => p.code === input.code);
-                if (codeExists) {
-                    return { isValid: false, error: 'Promo code is invalid, expired, or not applicable to this item' };
-                }
-                return { isValid: false, error: 'Promo code not found' };
-            }
-
-            // Calculate discount amount
-            let discountAmount = 0;
-            if (validCode.discountType === 'percentage') {
-                discountAmount = (input.orderAmount * parseFloat(validCode.discountValue)) / 100;
-            } else {
-                discountAmount = parseFloat(validCode.discountValue);
-            }
-
-            // Apply max discount cap
-            if (validCode.maxDiscountAmount && discountAmount > parseFloat(validCode.maxDiscountAmount)) {
-                discountAmount = parseFloat(validCode.maxDiscountAmount);
-            }
-
-            // Ensure discount doesn't exceed order amount
-            if (discountAmount > input.orderAmount) {
-                discountAmount = input.orderAmount;
-            }
-
-            return {
-                isValid: true,
-                promoCode: {
-                    code: validCode.code,
-                    discountType: validCode.discountType,
-                    discountValue: parseFloat(validCode.discountValue),
-                    calculatedDiscount: discountAmount
-                }
-            };
-
-        } catch (error) {
-            safeLogger.error('Error verifying promo code:', error);
-            throw error;
+    // Resolve sellerId if provided
+    let targetSellerId: string | undefined;
+    if (input.sellerId) {
+        try {
+            targetSellerId = await this.resolveSellerId(input.sellerId);
+        } catch (e) {
+            // If seller not found, validation fails if code belongs to specific seller
+            // But here we can just ignore and let the loop fail
         }
+    }
+
+    // Filter based on context (seller/product)
+    const validCode = potentialCodes.find(promo => {
+        // 1. Check Seller ID match (if input sellerId provided)
+        if (targetSellerId && promo.sellerId !== targetSellerId) return false;
+
+        // 2. Check Product ID match (if promo is product-specific)
+        if (promo.productId && promo.productId !== input.productId) return false;
+
+        // 3. Check Active Status
+        if (!promo.isActive) return false;
+
+        // 4. Check Dates
+        if (promo.startDate && new Date(promo.startDate) > now) return false;
+        if (promo.endDate && new Date(promo.endDate) < now) return false;
+
+        // 5. Check Usage Limit
+        if (promo.usageLimit !== null && (promo.usageCount || 0) >= promo.usageLimit) return false;
+
+        // 6. Check Min Order Amount
+        if (promo.minOrderAmount && input.orderAmount < parseFloat(promo.minOrderAmount)) return false;
+
+        return true;
+    });
+
+    if (!validCode) {
+        const codeExists = potentialCodes.some(p => p.code === input.code);
+        if (codeExists) {
+            return { isValid: false, error: 'Promo code is invalid, expired, or not applicable to this item' };
+        }
+        return { isValid: false, error: 'Promo code not found' };
+    }
+
+    // Calculate discount amount
+    let discountAmount = 0;
+    if (validCode.discountType === 'percentage') {
+        discountAmount = (input.orderAmount * parseFloat(validCode.discountValue)) / 100;
+    } else {
+        discountAmount = parseFloat(validCode.discountValue);
+    }
+
+    // Apply max discount cap
+    if (validCode.maxDiscountAmount && discountAmount > parseFloat(validCode.maxDiscountAmount)) {
+        discountAmount = parseFloat(validCode.maxDiscountAmount);
+    }
+
+    // Ensure discount doesn't exceed order amount
+    if (discountAmount > input.orderAmount) {
+        discountAmount = input.orderAmount;
+    }
+
+    return {
+        isValid: true,
+        promoCode: {
+            code: validCode.code,
+            discountType: validCode.discountType,
+            discountValue: parseFloat(validCode.discountValue),
+            calculatedDiscount: discountAmount
+        }
+    };
+
+} catch (error) {
+    safeLogger.error('Error verifying promo code:', error);
+    throw error;
+}
     }
 
     /**
      * Track usage (should be called on checkout completion)
      */
     async trackUsage(code: string, sellerId: string) {
-        const resolvedSellerId = await this.resolveSellerId(sellerId);
-        await db
-            .update(promoCodes)
-            .set({ usageCount: sql`${promoCodes.usageCount} + 1` })
-            .where(and(eq(promoCodes.code, code), eq(promoCodes.sellerId, resolvedSellerId)));
-    }
+    const resolvedSellerId = await this.resolveSellerId(sellerId);
+    await db
+        .update(promoCodes)
+        .set({ usageCount: sql`${promoCodes.usageCount} + 1` })
+        .where(and(
+            sql`UPPER(${promoCodes.code}) = UPPER(${code})`,
+            eq(promoCodes.sellerId, resolvedSellerId)
+        ));
+}
 
     /**
      * Get all promo codes for a seller
      */
     async getPromoCodes(sellerId: string) {
-        try {
-            safeLogger.info(`[PromoCodeService] Fetching promo codes for sellerId: ${sellerId}`);
-            const resolvedSellerId = await this.resolveSellerId(sellerId);
-            safeLogger.info(`[PromoCodeService] Resolved sellerId to: ${resolvedSellerId}`);
-            
-            const codes = await db
-                .select()
-                .from(promoCodes)
-                .where(eq(promoCodes.sellerId, resolvedSellerId))
-                .orderBy(sql`${promoCodes.createdAt} DESC`);
+    try {
+        safeLogger.info(`[PromoCodeService] Fetching promo codes for sellerId: ${sellerId}`);
+        const resolvedSellerId = await this.resolveSellerId(sellerId);
+        safeLogger.info(`[PromoCodeService] Resolved sellerId to: ${resolvedSellerId}`);
 
-            safeLogger.info(`[PromoCodeService] Found ${codes.length} promo codes`);
-            return codes;
-        } catch (error) {
-            safeLogger.error('[PromoCodeService] Error fetching promo codes:', error);
-            throw error;
-        }
+        const codes = await db
+            .select()
+            .from(promoCodes)
+            .where(eq(promoCodes.sellerId, resolvedSellerId))
+            .orderBy(sql`${promoCodes.createdAt} DESC`);
+
+        safeLogger.info(`[PromoCodeService] Found ${codes.length} promo codes`);
+        return codes;
+    } catch (error) {
+        safeLogger.error('[PromoCodeService] Error fetching promo codes:', error);
+        throw error;
     }
+}
+}
 }
 
 export const promoCodeService = new PromoCodeService();
