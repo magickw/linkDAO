@@ -249,4 +249,145 @@ export class SellerWorkflowService {
             throw error;
         }
     }
+
+    /**
+     * Bulk print packing slips for multiple orders
+     */
+    async bulkPrintPackingSlips(orderIds: string[], sellerId: string): Promise<{
+        successful: string[];
+        failed: Array<{ orderId: string; error: string }>;
+        packingSlips: any[];
+    }> {
+        try {
+            const successful: string[] = [];
+            const failed: Array<{ orderId: string; error: string }> = [];
+            const packingSlips: any[] = [];
+
+            for (const orderId of orderIds) {
+                try {
+                    const packingSlip = await this.getPackingSlip(orderId, sellerId);
+                    packingSlips.push(packingSlip);
+                    successful.push(orderId);
+                } catch (error) {
+                    failed.push({
+                        orderId,
+                        error: error instanceof Error ? error.message : 'Unknown error'
+                    });
+                }
+            }
+
+            safeLogger.info(`Bulk print packing slips: ${successful.length} successful, ${failed.length} failed`);
+
+            return {
+                successful,
+                failed,
+                packingSlips
+            };
+        } catch (error) {
+            safeLogger.error('Error in bulk print packing slips:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Bulk print shipping labels for multiple orders
+     */
+    async bulkPrintShippingLabels(orderIds: string[], sellerId: string): Promise<{
+        successful: string[];
+        failed: Array<{ orderId: string; error: string }>;
+        labels: any[];
+    }> {
+        try {
+            const successful: string[] = [];
+            const failed: Array<{ orderId: string; error: string }> = [];
+            const labels: any[] = [];
+
+            for (const orderId of orderIds) {
+                try {
+                    const order = await this.databaseService.getOrderById(orderId);
+                    if (!order) {
+                        failed.push({ orderId, error: 'Order not found' });
+                        continue;
+                    }
+
+                    const isSeller = order.sellerId === sellerId || order.sellerWalletAddress === sellerId;
+                    if (!isSeller) {
+                        failed.push({ orderId, error: 'Unauthorized' });
+                        continue;
+                    }
+
+                    // Generate shipping label (mocked for now)
+                    const label = {
+                        orderId,
+                        labelUrl: `https://shipping-provider.com/label/${orderId}`,
+                        trackingNumber: order.trackingNumber || `TRACK-${Date.now()}`,
+                        carrier: order.shippingMethod || 'USPS',
+                        generatedAt: new Date().toISOString()
+                    };
+
+                    labels.push(label);
+                    successful.push(orderId);
+                } catch (error) {
+                    failed.push({
+                        orderId,
+                        error: error instanceof Error ? error.message : 'Unknown error'
+                    });
+                }
+            }
+
+            safeLogger.info(`Bulk print shipping labels: ${successful.length} successful, ${failed.length} failed`);
+
+            return {
+                successful,
+                failed,
+                labels
+            };
+        } catch (error) {
+            safeLogger.error('Error in bulk print shipping labels:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Bulk ship multiple orders
+     */
+    async bulkShipOrders(
+        orders: Array<{ orderId: string; trackingNumber: string; carrier?: string }>,
+        sellerId: string
+    ): Promise<{
+        successful: string[];
+        failed: Array<{ orderId: string; error: string }>;
+    }> {
+        try {
+            const successful: string[] = [];
+            const failed: Array<{ orderId: string; error: string }> = [];
+
+            for (const orderData of orders) {
+                try {
+                    await this.confirmShipment(
+                        orderData.orderId,
+                        sellerId,
+                        orderData.trackingNumber,
+                        orderData.carrier
+                    );
+                    successful.push(orderData.orderId);
+                } catch (error) {
+                    failed.push({
+                        orderId: orderData.orderId,
+                        error: error instanceof Error ? error.message : 'Unknown error'
+                    });
+                }
+            }
+
+            safeLogger.info(`Bulk ship orders: ${successful.length} successful, ${failed.length} failed`);
+
+            return {
+                successful,
+                failed
+            };
+        } catch (error) {
+            safeLogger.error('Error in bulk ship orders:', error);
+            throw error;
+        }
+    }
 }

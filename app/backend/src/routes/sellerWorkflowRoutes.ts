@@ -71,4 +71,40 @@ router.get(
     controller.getPackingSlip.bind(controller)
 );
 
+/**
+ * @route POST /api/seller/orders/bulk/packing-slips
+ * @desc Bulk print packing slips
+ * @access Private
+ */
+router.post(
+    '/bulk/packing-slips',
+    limiter,
+    authMiddleware,
+    controller.bulkPrintPackingSlips.bind(controller)
+);
+
+/**
+ * @route POST /api/seller/orders/bulk/labels
+ * @desc Bulk print shipping labels
+ * @access Private
+ */
+router.post(
+    '/bulk/labels',
+    limiter,
+    authMiddleware,
+    controller.bulkPrintShippingLabels.bind(controller)
+);
+
+/**
+ * @route POST /api/seller/orders/bulk/ship
+ * @desc Bulk ship orders
+ * @access Private
+ */
+router.post(
+    '/bulk/ship',
+    limiter,
+    authMiddleware,
+    controller.bulkShipOrders.bind(controller)
+);
+
 export default router;

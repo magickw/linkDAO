@@ -133,6 +133,10 @@ export interface IAdminDashboardService {
   getDashboardMetrics(adminId: string, options?: any): Promise<DashboardMetrics>;
 }
 
+import { FinancialMonitoringService } from './financialMonitoringService'; // New Import
+
+// ... existing imports
+
 export class AdminDashboardService implements IAdminDashboardService {
   // OPTIMIZED: In-memory storage with size limits and cleanup
   // In production, this would use a database
@@ -140,6 +144,7 @@ export class AdminDashboardService implements IAdminDashboardService {
   private userPreferences: Map<string, UserPreferences> = new Map();
   private alerts: Map<string, AdminAlert> = new Map();
   private usageAnalytics: Map<string, any> = new Map();
+  private financialService: FinancialMonitoringService; // New property
 
   // OPTIMIZED: Cleanup intervals and size limits
   private maxMapSize = 1000;
@@ -147,6 +152,7 @@ export class AdminDashboardService implements IAdminDashboardService {
   private actionHistoryLimit = 100;
 
   constructor() {
+    this.financialService = new FinancialMonitoringService(); // Initialize
     this.initializeDefaultData();
     this.setupPeriodicCleanup();
   }
@@ -648,6 +654,28 @@ export class AdminDashboardService implements IAdminDashboardService {
       return cachedMetrics;
     }
 
+    // Fetch real financial metrics
+    let businessMetrics;
+    try {
+      const financials = await this.financialService.getFinancialMetrics();
+      const orderMetrics = await this.getOrderMetrics(); // Use existing order metrics for count
+
+      businessMetrics = {
+        revenue: parseFloat(financials.totalRevenue),
+        transactions: orderMetrics.totalOrders,
+        conversionRate: (Math.random() * 5).toFixed(2), // Still mocked for now (requires analytics service)
+        averageOrderValue: orderMetrics.totalOrders > 0 ? (parseFloat(financials.totalRevenue) / orderMetrics.totalOrders) : 0
+      };
+    } catch (e) {
+      console.error('Failed to fetch financial metrics, using fallback', e);
+      businessMetrics = {
+        revenue: 0,
+        transactions: 0,
+        conversionRate: '0.00',
+        averageOrderValue: 0
+      };
+    }
+
     const metrics: DashboardMetrics = {
       systemMetrics: {
         cpu: Math.random() * 100,
@@ -658,17 +686,12 @@ export class AdminDashboardService implements IAdminDashboardService {
         uptime: process.uptime()
       },
       userMetrics: {
-        totalUsers: 10000 + Math.floor(Math.random() * 1000),
+        totalUsers: 10000 + Math.floor(Math.random() * 1000), // Should ideally come from UserService
         activeUsers: 500 + Math.floor(Math.random() * 100),
         newRegistrations: Math.floor(Math.random() * 50),
         userGrowthRate: (Math.random() * 10).toFixed(2)
       },
-      businessMetrics: {
-        revenue: 50000 + Math.random() * 10000,
-        transactions: 1000 + Math.floor(Math.random() * 200),
-        conversionRate: (Math.random() * 5).toFixed(2),
-        averageOrderValue: 100 + Math.random() * 50
-      },
+      businessMetrics: businessMetrics,
       securityMetrics: {
         threatLevel: ['low', 'medium', 'high'][Math.floor(Math.random() * 3)],
         blockedRequests: Math.floor(Math.random() * 100),

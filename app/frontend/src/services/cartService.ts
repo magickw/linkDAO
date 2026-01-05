@@ -781,27 +781,35 @@ class CartService {
     const currentState = await this.getCartState();
     const item = currentState.items.find(i => i.id === itemId);
 
-    if (!item) return;
+    if (!item) {
+      throw new Error('Item not found in cart');
+    }
+
+    // Check if user is authenticated
+    if (!this.isAuthenticated) {
+      throw new Error('Please log in to apply promo codes');
+    }
+
+    // Check if item has cartItemId (backend sync required)
+    if (!item.cartItemId) {
+      throw new Error('Cart item needs to be synced with the server. Please refresh the page or try again.');
+    }
 
     // Optimistic update
     // Note: We can't calculate the exact discount locally easily without duplicating logic
     // So we'll rely on the backend response to update the state correctly via getCartFromBackend
 
-    if (this.isAuthenticated && item.cartItemId) {
-      try {
-        await this.applyPromoCodeToBackend(item.cartItemId, code);
-        // Refresh cart from backend to get the applied discount
-        const updatedCart = await this.getCartFromBackend();
-        if (updatedCart) {
-          await this.saveCartState(updatedCart);
-          this.notifyListeners(updatedCart);
-        }
-      } catch (error) {
-        console.error('Failed to apply promo code:', error);
-        throw error;
+    try {
+      await this.applyPromoCodeToBackend(item.cartItemId, code);
+      // Refresh cart from backend to get the applied discount
+      const updatedCart = await this.getCartFromBackend();
+      if (updatedCart) {
+        await this.saveCartState(updatedCart);
+        this.notifyListeners(updatedCart);
       }
-    } else {
-      console.warn('Identifying local item for promo not supported yet without backend');
+    } catch (error) {
+      console.error('Failed to apply promo code:', error);
+      throw error;
     }
   }
 
@@ -810,21 +818,31 @@ class CartService {
     const currentState = await this.getCartState();
     const item = currentState.items.find(i => i.id === itemId);
 
-    if (!item) return;
+    if (!item) {
+      throw new Error('Item not found in cart');
+    }
 
-    if (this.isAuthenticated && item.cartItemId) {
-      try {
-        await this.removePromoCodeFromBackend(item.cartItemId);
-        // Refresh cart
-        const updatedCart = await this.getCartFromBackend();
-        if (updatedCart) {
-          await this.saveCartState(updatedCart);
-          this.notifyListeners(updatedCart);
-        }
-      } catch (error) {
-        console.error('Failed to remove promo code:', error);
-        throw error;
+    // Check if user is authenticated
+    if (!this.isAuthenticated) {
+      throw new Error('Please log in to remove promo codes');
+    }
+
+    // Check if item has cartItemId (backend sync required)
+    if (!item.cartItemId) {
+      throw new Error('Cart item needs to be synced with the server. Please refresh the page or try again.');
+    }
+
+    try {
+      await this.removePromoCodeFromBackend(item.cartItemId);
+      // Refresh cart
+      const updatedCart = await this.getCartFromBackend();
+      if (updatedCart) {
+        await this.saveCartState(updatedCart);
+        this.notifyListeners(updatedCart);
       }
+    } catch (error) {
+      console.error('Failed to remove promo code:', error);
+      throw error;
     }
   }
 

@@ -2,6 +2,7 @@
 import { describe, expect, it, beforeEach, jest } from '@jest/globals';
 import { adminDashboardService } from '../../services/adminDashboardService';
 import { db } from '../../db';
+import { FinancialMonitoringService } from '../../services/financialMonitoringService'; // Moved import to top
 
 // Mock DB
 jest.mock('../../db', () => ({
@@ -19,9 +20,22 @@ jest.mock('../../db', () => ({
     }
 }));
 
+// Mock FinancialMonitoringService
+jest.mock('../../services/financialMonitoringService');
+
 describe('AdminDashboardService', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        // Setup default mock for FinancialMonitoringService using 'as any' to avoid TS issues on loose mock
+        (FinancialMonitoringService as any).mockImplementation(() => ({
+            getFinancialMetrics: jest.fn<any>().mockResolvedValue({
+                totalRevenue: '1000',
+                escrowBalance: '500',
+                disputedFunds: '0',
+                platformFees: '25',
+                completedPayouts: '975'
+            })
+        }));
     });
 
     describe('getOrderMetrics', () => {
@@ -39,8 +53,8 @@ describe('AdminDashboardService', () => {
             // Mock delivery time
             const mockDeliveryTime = [{ avgTime: 7200 }]; // 2 hours
 
-            // Chain mock implementation
-            (db.select as any)
+            // Chain mock implementation using (db as any)
+            (db as any).select
                 .mockReturnValueOnce({ from: (jest.fn() as any).mockResolvedValue(mockTotals) }) // 1. totals
                 .mockReturnValueOnce({ from: (jest.fn() as any).mockReturnValue({ groupBy: (jest.fn() as any).mockResolvedValue(mockStatus) }) }) // 2. byStatus
                 .mockReturnValueOnce({ from: (jest.fn() as any).mockReturnValue({ where: (jest.fn() as any).mockResolvedValue(mockDeliveryTime) }) }); // 4. deliveryTimes
@@ -59,7 +73,7 @@ describe('AdminDashboardService', () => {
             const mockStatus: any[] = [];
             const mockDeliveryTime: any[] = [];
 
-            (db.select as any)
+            (db as any).select
                 .mockReturnValueOnce({ from: (jest.fn() as any).mockResolvedValue(mockTotals as any) })
                 .mockReturnValueOnce({ from: (jest.fn() as any).mockReturnValue({ groupBy: (jest.fn() as any).mockResolvedValue(mockStatus as any) }) })
                 .mockReturnValueOnce({ from: (jest.fn() as any).mockReturnValue({ where: (jest.fn() as any).mockResolvedValue(mockDeliveryTime as any) }) });
@@ -80,9 +94,9 @@ describe('AdminDashboardService', () => {
 
             // Chain mock implementation
             // 1. Count query
-            (db.select as any).mockReturnValueOnce({ from: (jest.fn() as any).mockReturnValue({ where: (jest.fn() as any).mockResolvedValue(mockCount as any) }) });
+            (db as any).select.mockReturnValueOnce({ from: (jest.fn() as any).mockReturnValue({ where: (jest.fn() as any).mockResolvedValue(mockCount as any) }) });
             // 2. Data query
-            (db.select as any).mockReturnValueOnce({
+            (db as any).select.mockReturnValueOnce({
                 from: (jest.fn() as any).mockReturnValue({
                     where: (jest.fn() as any).mockReturnValue({
                         limit: (jest.fn() as any).mockReturnValue({
@@ -111,13 +125,13 @@ describe('AdminDashboardService', () => {
             ];
 
             // 1. Order details
-            (db.select as any).mockReturnValueOnce({
+            (db as any).select.mockReturnValueOnce({
                 from: (jest.fn() as any).mockReturnValue({
                     where: (jest.fn() as any).mockResolvedValue([mockOrder])
                 })
             });
             // 2. Timeline
-            (db.select as any).mockReturnValueOnce({
+            (db as any).select.mockReturnValueOnce({
                 from: (jest.fn() as any).mockReturnValue({
                     where: (jest.fn() as any).mockReturnValue({
                         orderBy: (jest.fn() as any).mockResolvedValue(mockTimeline)
@@ -136,8 +150,8 @@ describe('AdminDashboardService', () => {
 
     describe('performAdminAction', () => {
         it('should update order status on cancel', async () => {
-            (db.insert as any).mockReturnValue({ values: (jest.fn() as any).mockResolvedValue({}) }); // Log event
-            (db.update as any).mockReturnValue({ set: (jest.fn() as any).mockReturnValue({ where: (jest.fn() as any).mockResolvedValue({}) }) }); // Update order
+            (db as any).insert.mockReturnValue({ values: (jest.fn() as any).mockResolvedValue({}) }); // Log event
+            (db as any).update.mockReturnValue({ set: (jest.fn() as any).mockReturnValue({ where: (jest.fn() as any).mockResolvedValue({}) }) }); // Update order
 
             await adminDashboardService.performAdminAction('order-1', 'cancel', 'admin-1', 'Fraud suspected');
 
