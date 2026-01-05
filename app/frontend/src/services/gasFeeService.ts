@@ -31,8 +31,10 @@ export class GasFeeService {
       
       // Check if chain supports EIP-1559
       if (gasPrices.maxFeePerGas && gasPrices.maxPriorityFeePerGas) {
-        const maxFeePerGas = BigInt(Math.floor(Number(gasPrices.maxFeePerGas) * multiplier));
-        const maxPriorityFeePerGas = BigInt(Math.floor(Number(gasPrices.maxPriorityFeePerGas) * multiplier));
+        // Use BigInt arithmetic to avoid floating-point precision errors
+        const multiplierBigInt = BigInt(Math.floor(multiplier * 100));
+        const maxFeePerGas = (gasPrices.maxFeePerGas * multiplierBigInt) / 100n;
+        const maxPriorityFeePerGas = (gasPrices.maxPriorityFeePerGas * multiplierBigInt) / 100n;
         
         estimate = {
           gasLimit,
@@ -42,7 +44,9 @@ export class GasFeeService {
           totalCost: gasLimit * maxFeePerGas
         };
       } else {
-        const gasPrice = BigInt(Math.floor(Number(gasPrices.gasPrice) * multiplier));
+        // Use BigInt arithmetic to avoid floating-point precision errors
+        const multiplierBigInt = BigInt(Math.floor(multiplier * 100));
+        const gasPrice = (gasPrices.gasPrice * multiplierBigInt) / 100n;
         
         estimate = {
           gasLimit,
@@ -79,8 +83,9 @@ export class GasFeeService {
         value
       });
 
-      // Add buffer to gas estimate but ensure it doesn't exceed the block gas limit
-      let gasLimitWithBuffer = BigInt(Math.floor(Number(gasEstimate) * PAYMENT_CONFIG.GAS_LIMIT_BUFFER));
+      // Add buffer to gas estimate using BigInt arithmetic to avoid floating-point precision errors
+      const bufferBigInt = BigInt(Math.floor(PAYMENT_CONFIG.GAS_LIMIT_BUFFER * 100));
+      let gasLimitWithBuffer = (gasEstimate * bufferBigInt) / 100n;
       
       // Ensure gas limit doesn't exceed security or network limits
       const securityMaxGasLimit = 500000n; // Security limit from token transaction security config
@@ -95,8 +100,9 @@ export class GasFeeService {
       return gasLimitWithBuffer;
     } catch (error) {
       console.error('Gas limit estimation failed:', error);
-      // Return a reasonable default for simple transfers
-      let defaultGasLimit = BigInt(21000 * PAYMENT_CONFIG.GAS_LIMIT_BUFFER);
+      // Return a reasonable default for simple transfers using BigInt arithmetic
+      const bufferBigInt = BigInt(Math.floor(PAYMENT_CONFIG.GAS_LIMIT_BUFFER * 100));
+      let defaultGasLimit = (21000n * bufferBigInt) / 100n;
       
       // Ensure default doesn't exceed security or network limits
       const securityMaxGasLimit = 500000n; // Security limit from token transaction security config

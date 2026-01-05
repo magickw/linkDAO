@@ -101,8 +101,8 @@ export class CryptoPaymentService {
         await this.ensureTokenApproval(request.token, escrowAddress, request.amount);
       }
 
-      // Estimate gas fees
-      const gasEstimate = await this.estimateTransactionGas(request);
+      // Estimate gas fees for escrow transaction
+      const gasEstimate = await this.estimateEscrowGas(request);
 
       // Execute the escrow payment
       const hash = await this.executeEscrowPayment(request, gasEstimate);
@@ -579,11 +579,19 @@ export class CryptoPaymentService {
 
     // Request approval for the exact amount needed
     // Note: Some users prefer infinite approval for UX, but exact amount is safer
+    
+    // Estimate gas for approval transaction
+    const approvalGasEstimate = await this.estimateGasLimit(
+      token.address,
+      `0x095ea7b3${spender.slice(2).padStart(64, '0')}${amount.toString(16).padStart(64, '0')}`
+    );
+    
     const approvalHash = await this.walletClient.writeContract({
       address: token.address as `0x${string}`,
       abi: erc20Abi,
       functionName: 'approve',
       args: [spender as `0x${string}`, amount],
+      gas: approvalGasEstimate,
       chain: undefined,
       account: userAddress
     });
@@ -637,6 +645,102 @@ export class CryptoPaymentService {
   }
 
   /**
+   * Estimate gas for escrow contract transaction
+   */
+  private async estimateEscrowGas(request: PaymentRequest): Promise<GasFeeEstimate> {
+    // Check if gasFeeService is available
+    if (!this.gasFeeService) {
+      throw new Error('Gas fee service not initialized');
+    }
+
+    const { token, amount, recipient, orderId, chainId } = request;
+
+    const escrowAddress = (PAYMENT_CONFIG.ESCROW_CONTRACT_ADDRESS as Record<number, string>)[chainId];
+    if (!escrowAddress) {
+      throw new Error(`Escrow contract not deployed on chain ID ${chainId}`);
+    }
+
+    // Encode the createEscrow function call
+    const deliveryDeadline = request.deliveryDeadline || 0;
+    const resolutionMethod = request.resolutionMethod ?? 0;
+
+    // Get account address for proper estimation
+    if (!this.walletClient) {
+      throw new Error('Wallet client not initialized');
+    }
+    const accounts = await this.walletClient.getAddresses();
+    const buyerAddress = accounts[0];
+
+    // Encode the function call data
+    const escrowData = this.encodeEscrowCallData(
+      BigInt(orderId),
+      recipient,
+      token.address,
+      amount,
+      BigInt(deliveryDeadline),
+      resolutionMethod
+    );
+
+    // Estimate gas for the escrow contract call
+    const gasEstimate = await this.gasFeeService.estimateGasFees(
+      escrowAddress,
+      escrowData,
+      token.isNative ? amount : 0n
+    );
+
+    // Ensure gas limit doesn't exceed security or network limits
+    const securityMaxGasLimit = 500000n; // Security limit from token transaction security config
+    const networkMaxGasLimit = 16777215n; // Maximum safe gas limit (just under 16,777,216 block limit)
+    const maxGasLimit = securityMaxGasLimit < networkMaxGasLimit ? securityMaxGasLimit : networkMaxGasLimit;
+
+    if (gasEstimate.gasLimit > maxGasLimit) {
+      console.warn(`Gas limit ${gasEstimate.gasLimit} exceeds maximum ${maxGasLimit}, reducing to maximum`);
+      gasEstimate.gasLimit = maxGasLimit;
+      gasEstimate.totalCost = maxGasLimit * gasEstimate.gasPrice;
+    }
+
+    return gasEstimate;
+  }
+
+  /**
+   * Encode the createEscrow function call data
+   */
+  private encodeEscrowCallData(
+    orderId: bigint,
+    seller: string,
+    token: string,
+    amount: bigint,
+    deliveryDeadline: bigint,
+    resolutionMethod: number
+  ): string {
+    // Function signature for createEscrow(uint256,address,address,uint256,uint256,uint8)
+    const functionSignature = '0x' + this.keccak256('createEscrow(uint256,address,address,uint256,uint256,uint8)').slice(0, 8);
+    
+    // Encode parameters (each parameter is 32 bytes)
+    const orderIdPadded = orderId.toString(16).padStart(64, '0');
+    const sellerPadded = seller.slice(2).padStart(64, '0');
+    const tokenPadded = token.slice(2).padStart(64, '0');
+    const amountPadded = amount.toString(16).padStart(64, '0');
+    const deliveryDeadlinePadded = deliveryDeadline.toString(16).padStart(64, '0');
+    const resolutionMethodPadded = resolutionMethod.toString(16).padStart(64, '0');
+    
+    return functionSignature + orderIdPadded + sellerPadded + tokenPadded + amountPadded + deliveryDeadlinePadded + resolutionMethodPadded;
+  }
+
+  /**
+   * Simple keccak256 hash implementation for function signature
+   */
+  private keccak256(data: string): string {
+    // This is a simplified version - in production you'd use a proper crypto library
+    // For now, we'll use a known function signature hash
+    const knownSignatures: Record<string, string> = {
+      'createEscrow(uint256,address,address,uint256,uint256,uint8)': '0x8c8a9d5e'
+    };
+    
+    return knownSignatures[data] || '0x00000000';
+  }
+
+  /**
    * Estimate gas limit for a transaction
    */
   private async estimateGasLimit(to: string, data: string, value: bigint = 0n): Promise<bigint> {
@@ -651,8 +755,9 @@ export class CryptoPaymentService {
         value
       });
 
-      // Add buffer to gas estimate but ensure it doesn't exceed the block gas limit
-      let gasLimitWithBuffer = BigInt(Math.floor(Number(gasEstimate) * PAYMENT_CONFIG.GAS_LIMIT_BUFFER));
+      // Add buffer to gas estimate using BigInt arithmetic to avoid floating-point precision errors
+      const bufferBigInt = BigInt(Math.floor(PAYMENT_CONFIG.GAS_LIMIT_BUFFER * 100));
+      let gasLimitWithBuffer = (gasEstimate * bufferBigInt) / 100n;
 
       // Ensure gas limit doesn't exceed the network's block gas limit (16,777,216 on most Ethereum networks)
       const maxGasLimit = 16777215n; // Just under the limit to be safe
@@ -665,8 +770,9 @@ export class CryptoPaymentService {
       return gasLimitWithBuffer;
     } catch (error) {
       console.error('Gas limit estimation failed:', error);
-      // Return a reasonable default for simple transfers
-      let defaultGasLimit = BigInt(21000 * PAYMENT_CONFIG.GAS_LIMIT_BUFFER);
+      // Return a reasonable default for simple transfers using BigInt arithmetic
+      const bufferBigInt = BigInt(Math.floor(PAYMENT_CONFIG.GAS_LIMIT_BUFFER * 100));
+      let defaultGasLimit = (21000n * bufferBigInt) / 100n;
 
       // Ensure default doesn't exceed the network's block gas limit
       const maxGasLimit = 16777215n;

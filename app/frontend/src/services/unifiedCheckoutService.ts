@@ -100,6 +100,39 @@ export class UnifiedCheckoutService {
     this.apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   }
 
+  /**
+   * Get authentication token from various storage locations
+   * This matches the pattern used in cartService and WalletLoginBridge
+   */
+  private getAuthToken(): string {
+    let token = '';
+    
+    // Try to get from linkdao_session_data first (WalletLoginBridge pattern)
+    try {
+      const sessionDataStr = localStorage.getItem('linkdao_session_data');
+      if (sessionDataStr) {
+        const sessionData = JSON.parse(sessionDataStr);
+        token = sessionData.token || sessionData.accessToken || '';
+      }
+    } catch (error) {
+      console.warn('Failed to parse session data, trying fallback token retrieval');
+    }
+
+    // Fallback to other possible token locations (cartService pattern)
+    if (!token) {
+      token = localStorage.getItem('token') ||
+        localStorage.getItem('authToken') ||
+        localStorage.getItem('auth_token') ||
+        localStorage.getItem('user_session') ||
+        sessionStorage.getItem('auth_token') ||
+        sessionStorage.getItem('token') ||
+        sessionStorage.getItem('authToken') ||
+        '';
+    }
+
+    return token;
+  }
+
   private async shouldAttemptRequest(): Promise<boolean> {
     const now = Date.now();
 
@@ -463,10 +496,14 @@ export class UnifiedCheckoutService {
       // Convert BigInt values to strings before serialization
       const serializedRequest = convertBigIntToStrings(request);
 
+      // Get auth token
+      const token = this.getAuthToken();
+
       const response = await fetch(`${this.apiBaseUrl}/api/hybrid-payment/checkout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
         },
         body: JSON.stringify(serializedRequest)
       });
@@ -838,18 +875,20 @@ export class UnifiedCheckoutService {
     };
 
     // Convert BigInt values to strings before serialization
-    const serializedBody = convertBigIntToStrings(requestBody);
-
-    // Call existing crypto payment processing
-    const response = await fetch(`${this.apiBaseUrl}/api/hybrid-payment/checkout`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(serializedBody)
-    });
-
-    if (!response.ok) {
+          const serializedBody = convertBigIntToStrings(requestBody);
+    
+          // Get auth token
+          const token = this.getAuthToken();
+    
+          // Call existing crypto payment processing
+          const response = await fetch(`${this.apiBaseUrl}/api/hybrid-payment/checkout`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token && { 'Authorization': `Bearer ${token}` })
+            },
+            body: JSON.stringify(serializedBody)
+          });    if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.message || 'Crypto payment failed');
     }
@@ -880,42 +919,20 @@ export class UnifiedCheckoutService {
     };
 
     // Convert BigInt values to strings before serialization
-    const serializedBody = convertBigIntToStrings(requestBody);
-
-    // Get auth token from session data (matching WalletLoginBridge pattern)
-    let token = '';
-    try {
-      const sessionDataStr = localStorage.getItem('linkdao_session_data');
-      if (sessionDataStr) {
-        const sessionData = JSON.parse(sessionDataStr);
-        token = sessionData.token || sessionData.accessToken || '';
-      }
-    } catch (error) {
-      console.warn('Failed to parse session data, trying fallback token retrieval');
-    }
-
-    // Fallback to other possible token locations (matching cartService pattern)
-    if (!token) {
-      token = localStorage.getItem('token') ||
-        localStorage.getItem('authToken') ||
-        localStorage.getItem('auth_token') ||
-        localStorage.getItem('user_session') ||
-        sessionStorage.getItem('auth_token') ||
-        sessionStorage.getItem('token') ||
-        sessionStorage.getItem('authToken') ||
-        '';
-    }
-
-    // Call existing fiat payment processing
-    const response = await fetch(`${this.apiBaseUrl}/api/hybrid-payment/checkout`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` })
-      },
-      body: JSON.stringify(serializedBody)
-    });
-
+          const serializedBody = convertBigIntToStrings(requestBody);
+    
+          // Get auth token
+          const token = this.getAuthToken();
+    
+          // Call existing fiat payment processing
+          const response = await fetch(`${this.apiBaseUrl}/api/hybrid-payment/checkout`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token && { 'Authorization': `Bearer ${token}` })
+            },
+            body: JSON.stringify(serializedBody)
+          });
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.message || 'Fiat payment failed');
