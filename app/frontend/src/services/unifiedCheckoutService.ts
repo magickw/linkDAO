@@ -924,6 +924,14 @@ export class UnifiedCheckoutService {
           // Get auth token
           const token = this.getAuthToken();
     
+          console.log('🔍 [processFiatPayment] Sending request to backend:', {
+            url: `${this.apiBaseUrl}/api/hybrid-payment/checkout`,
+            hasToken: !!token,
+            tokenLength: token?.length,
+            requestBodyKeys: Object.keys(serializedBody),
+            requestBody: serializedBody
+          });
+    
           // Call existing fiat payment processing
           const response = await fetch(`${this.apiBaseUrl}/api/hybrid-payment/checkout`, {
             method: 'POST',
@@ -933,12 +941,27 @@ export class UnifiedCheckoutService {
             },
             body: JSON.stringify(serializedBody)
           });
+    
+    console.log('📡 [processFiatPayment] Backend response:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok
+    });
+    
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorText = await response.text();
+      console.error('❌ [processFiatPayment] Backend error response:', errorText);
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch (e) {
+        errorData = { message: errorText || 'Fiat payment failed' };
+      }
       throw new Error(errorData.message || 'Fiat payment failed');
     }
 
     const { data } = await response.json();
+    console.log('✅ [processFiatPayment] Backend success response:', data);
     return this.transformBackendResponse(data);
   }
 
