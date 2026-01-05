@@ -17,11 +17,11 @@ import { gasFeeEstimationService } from './gasFeeEstimationService';
 
 // Platform fee configuration
 const PLATFORM_FEES = {
-  [PaymentMethodType.STABLECOIN_USDC]: 0.025, // 2.5%
-  [PaymentMethodType.STABLECOIN_USDT]: 0.025, // 2.5%
-  [PaymentMethodType.FIAT_STRIPE]: 0.029, // 2.9% + $0.30
-  [PaymentMethodType.NATIVE_ETH]: 0.025, // 2.5%
-  [PaymentMethodType.X402]: 0.01 // 1% for x402 (reduced fees)
+  [PaymentMethodType.STABLECOIN_USDC]: 0.15, // 15%
+  [PaymentMethodType.STABLECOIN_USDT]: 0.15, // 15%
+  [PaymentMethodType.FIAT_STRIPE]: 0.15, // 15%
+  [PaymentMethodType.NATIVE_ETH]: 0.15, // 15%
+  [PaymentMethodType.X402]: 0.15 // 15%
 };
 
 const STRIPE_FIXED_FEE = 0.30; // $0.30 fixed fee for Stripe

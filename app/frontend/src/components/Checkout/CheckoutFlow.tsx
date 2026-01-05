@@ -164,6 +164,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       const subtotal = parseFloat(cartState.totals.subtotal.fiat);
       const shipping = parseFloat(cartState.totals.shipping?.fiat || '0');
       const tax = taxCalculation?.taxAmount || 0;
+      // Platform fee is calculated dynamically by the cost calculator based on this total
       const totalAmount = subtotal + shipping + tax;
 
       // Create prioritization context WITHOUT wallet balance detection
@@ -381,7 +382,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
       // Get seller address - prioritize walletAddress, fall back to id (for compatibility)
       const sellerAddress = cartState.items[0]?.seller?.walletAddress || cartState.items[0]?.seller?.id || '';
-      
+
       if (!sellerAddress) {
         throw new Error('Seller information not available. Please refresh the page and try again.');
       }

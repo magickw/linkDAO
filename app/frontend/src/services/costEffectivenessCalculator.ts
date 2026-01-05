@@ -17,7 +17,7 @@ import { transactionCostCalculator } from './transactionCostCalculator';
 import { exchangeRateService } from './exchangeRateService';
 
 export class CostEffectivenessCalculator implements ICostEffectivenessCalculator {
-  private readonly PLATFORM_FEE_RATE = 0.025; // 2.5%
+  private readonly PLATFORM_FEE_RATE = 0.15; // 15%
   private readonly STRIPE_FEE_RATE = 0.029; // 2.9% + $0.30
   private readonly STRIPE_FIXED_FEE = 0.30;
 
@@ -73,7 +73,7 @@ export class CostEffectivenessCalculator implements ICostEffectivenessCalculator
         // X402 has minimal fees - most gas costs are covered by the protocol
         gasFee = 0.05; // Minimal network fee
         networkFee = 0;
-        platformFee = baseCost * 0.01; // 1% platform fee for x402
+        platformFee = baseCost * 0.15; // 15% platform fee for x402
         estimatedTime = 1; // ~1 minute with x402
         confidence = 0.95; // High confidence
         break;
@@ -194,7 +194,7 @@ export class CostEffectivenessCalculator implements ICostEffectivenessCalculator
         savings: savings > 0 ? savings : undefined,
         costDifference: costDifference > 0 ? costDifference : undefined,
         isRecommended,
-        reasonForRecommendation: isRecommended 
+        reasonForRecommendation: isRecommended
           ? this.getRecommendationReason(method, costEstimate, cheapestCost)
           : undefined
       };
@@ -213,15 +213,15 @@ export class CostEffectivenessCalculator implements ICostEffectivenessCalculator
 
     try {
       // Use the integrated gas fee estimation service
-      const transactionType = paymentMethod.type === PaymentMethodType.NATIVE_ETH 
-        ? 'ethTransfer' 
+      const transactionType = paymentMethod.type === PaymentMethodType.NATIVE_ETH
+        ? 'ethTransfer'
         : 'erc20Transfer';
-      
+
       const gasEstimate = await gasFeeEstimationService.getGasEstimate(
         paymentMethod.chainId,
         transactionType
       );
-      
+
       return gasEstimate.totalCostUSD;
     } catch (error) {
       console.warn('Gas fee estimation failed, using fallback calculation:', error);
@@ -376,7 +376,7 @@ export class CostEffectivenessCalculator implements ICostEffectivenessCalculator
   private async getNetworkConditionsFallback(chainId: number): Promise<NetworkConditions> {
     // Use realistic gas prices and fees
     const gasFeeUSD = this.getRealisticGasFee(chainId);
-    
+
     // Estimate gas price based on realistic fee
     const gasPrice = BigInt(Math.round(gasFeeUSD * 1e9)); // Simplified conversion
 

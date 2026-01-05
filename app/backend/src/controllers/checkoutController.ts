@@ -130,7 +130,7 @@ export class CheckoutController {
                 tax = await this.calculateTax(items, shipping);
             }
 
-            const platformFee = subtotal * 0.025; // 2.5% platform fee
+            const platformFee = subtotal * 0.15; // 15% platform fee
             const total = subtotal + shipping + tax + platformFee;
 
             // Create session
@@ -225,7 +225,7 @@ export class CheckoutController {
             const subtotal = cart.items.reduce((sum, item) => sum + (parseFloat(item.product?.priceAmount || item.priceAtTime) * item.quantity), 0);
             const shipping = this.calculateShipping(cart.items);
             const tax = await this.calculateTax(cart.items, shipping);
-            const platformFee = subtotal * 0.025;
+            const platformFee = subtotal * 0.15; // 15% platform fee
             const total = subtotal + shipping + tax + platformFee;
 
             safeLogger.info(`Processing checkout for user ${req.user.address}, total: ${total}, method: ${paymentMethod}`);

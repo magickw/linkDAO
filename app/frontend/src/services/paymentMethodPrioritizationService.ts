@@ -345,7 +345,7 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
           const fallbackNetworkFee = isFiatPayment ? (amount * 0.029 + 0.30) : 5; // Stripe fee for fiat
 
           const fallbackCostEstimate: CostEstimate = {
-            totalCost: amount + fallbackGasFee + fallbackNetworkFee + (amount * 0.025),
+            totalCost: amount + fallbackGasFee + fallbackNetworkFee + (amount * 0.15),
             baseCost: amount,
             gasFee: fallbackGasFee,
             exchangeRate: 1,
@@ -355,7 +355,7 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
             breakdown: {
               amount,
               networkFee: fallbackNetworkFee,
-              platformFee: amount * 0.025 // 2.5% platform fee
+              platformFee: amount * 0.15 // 2.5% platform fee
             }
           };
           return { method, costEstimate: fallbackCostEstimate };
