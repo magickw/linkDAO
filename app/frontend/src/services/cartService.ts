@@ -131,7 +131,7 @@ class CartService {
   // Check authentication status from localStorage or other sources
   private checkAuthStatus(): void {
     if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token') || sessionStorage.getItem('token') || sessionStorage.getItem('authToken');
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || localStorage.getItem('user_session') || sessionStorage.getItem('auth_token') || sessionStorage.getItem('token') || sessionStorage.getItem('authToken');
       this.isAuthenticated = !!token;
       this.authToken = token;
     }

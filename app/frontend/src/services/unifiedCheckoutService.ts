@@ -27,7 +27,7 @@ export interface PrioritizedCheckoutRequest extends UnifiedCheckoutRequest {
     walletAddress?: string;
     tokenSymbol?: string;
     networkId?: number;
-    
+
     // For fiat payments
     cardToken?: string;
     billingAddress?: any;
@@ -102,25 +102,25 @@ export class UnifiedCheckoutService {
 
   private async shouldAttemptRequest(): Promise<boolean> {
     const now = Date.now();
-    
+
     // Reset failure count if enough time has passed
     if (this.lastFailureTime && (now - this.lastFailureTime) > this.FAILURE_RESET_TIME) {
       this.failureCount = 0;
       this.lastFailureTime = null;
     }
-    
+
     // Prevent requests if too many failures recently
     if (this.failureCount >= this.MAX_FAILURES) {
       console.warn('Circuit breaker open: Too many recent failures');
       return false;
     }
-    
+
     return true;
   }
 
   private async withRetry<T>(operation: () => Promise<T>, maxRetries = 3): Promise<T> {
     let lastError: Error;
-    
+
     for (let i = 0; i < maxRetries; i++) {
       try {
         return await operation();
@@ -128,7 +128,7 @@ export class UnifiedCheckoutService {
         lastError = error as Error;
         this.failureCount++;
         this.lastFailureTime = Date.now();
-        
+
         if (i < maxRetries - 1) {
           // Exponential backoff: 1s, 2s, 4s, etc.
           const delay = Math.pow(2, i) * 1000;
@@ -136,7 +136,7 @@ export class UnifiedCheckoutService {
         }
       }
     }
-    
+
     throw lastError!;
   }
 
@@ -153,7 +153,7 @@ export class UnifiedCheckoutService {
       // Convert BigInt values to strings before serialization
       const serializedRequest = convertBigIntToStrings(request);
 
-      const response = await this.withRetry(() => 
+      const response = await this.withRetry(() =>
         fetch(`${this.apiBaseUrl}/api/hybrid-payment/recommend-path`, {
           method: 'POST',
           headers: {
@@ -211,7 +211,7 @@ export class UnifiedCheckoutService {
       console.error('Error getting checkout recommendation:', error);
       this.failureCount++;
       this.lastFailureTime = Date.now();
-      
+
       // Return default recommendation on error
       return {
         recommendedPath: 'fiat',
@@ -310,7 +310,7 @@ export class UnifiedCheckoutService {
       const decimals = selectedPaymentMethod.method.token.decimals || 18;
       const cryptoRequest = {
         orderId: request.orderId,
-        amount: BigInt(Math.floor(request.amount * 10**decimals)),
+        amount: BigInt(Math.floor(request.amount * 10 ** decimals)),
         token: selectedPaymentMethod.method.token,
         recipient: request.sellerAddress,
         chainId: selectedPaymentMethod.method.chainId,
@@ -366,15 +366,15 @@ export class UnifiedCheckoutService {
       }
 
       const inventoryData = await response.json();
-      
+
       return {
         available: inventoryData.available > 0,
         availableQuantity: inventoryData.available,
         heldQuantity: inventoryData.held,
         totalQuantity: inventoryData.total,
         canProceed: inventoryData.available > 0,
-        message: inventoryData.available > 0 
-          ? `${inventoryData.available} items available` 
+        message: inventoryData.available > 0
+          ? `${inventoryData.available} items available`
           : 'Item is currently out of stock'
       };
     } catch (error) {
@@ -397,7 +397,7 @@ export class UnifiedCheckoutService {
   async processPrioritizedCheckout(request: PrioritizedCheckoutRequest): Promise<UnifiedCheckoutResult> {
     try {
       const { selectedPaymentMethod, paymentDetails } = request;
-      
+
       // 1. Check inventory availability first
       const inventoryCheck = await this.checkInventoryAvailability(request.listingId);
       if (!inventoryCheck.canProceed) {
@@ -406,13 +406,13 @@ export class UnifiedCheckoutService {
 
       // 2. Determine payment path based on selected method
       const paymentPath = this.getPaymentPathFromMethod(selectedPaymentMethod.method.type);
-      
+
       // 3. Validate payment method availability
       await this.validatePaymentMethodAvailability(selectedPaymentMethod);
-      
+
       // 4. Process payment based on method type
       let result: UnifiedCheckoutResult;
-      
+
       if (selectedPaymentMethod.method.type === PaymentMethodType.X402) {
         result = await this.processX402Payment(request);
       } else if (paymentPath === 'crypto') {
@@ -420,10 +420,10 @@ export class UnifiedCheckoutService {
       } else {
         result = await this.processFiatPayment(request);
       }
-      
+
       // 5. Add inventory information to result
       result.nextSteps.unshift(inventoryCheck.message || 'Inventory reserved');
-      
+
       // 6. Add prioritization metadata to result
       result.prioritizationMetadata = {
         selectedMethod: selectedPaymentMethod.method,
@@ -436,11 +436,11 @@ export class UnifiedCheckoutService {
           remainingQuantity: inventoryCheck.availableQuantity - 1 // Assuming 1 item purchased
         }
       };
-      
+
       return result;
     } catch (error) {
       console.error('Prioritized checkout failed:', error);
-      
+
       // Enhanced error handling for inventory issues
       if (error instanceof Error) {
         if (error.message.includes('inventory') || error.message.includes('stock')) {
@@ -450,7 +450,7 @@ export class UnifiedCheckoutService {
           throw new Error(`Payment failed: ${error.message}`);
         }
       }
-      
+
       throw error;
     }
   }
@@ -624,7 +624,7 @@ export class UnifiedCheckoutService {
    * Poll for order status updates with exponential backoff
    */
   async pollOrderStatus(
-    orderId: string, 
+    orderId: string,
     onStatusUpdate: (status: any) => void,
     maxAttempts = 20
   ): Promise<void> {
@@ -777,11 +777,11 @@ export class UnifiedCheckoutService {
       }
 
       const { data } = await response.json();
-      
+
       return {
         ...data,
-        recommendation: data.crypto.fees < data.fiat.fees ? 
-          'Crypto recommended for lower fees' : 
+        recommendation: data.crypto.fees < data.fiat.fees ?
+          'Crypto recommended for lower fees' :
           'Fiat recommended for convenience'
       };
     } catch (error) {
@@ -882,15 +882,36 @@ export class UnifiedCheckoutService {
     // Convert BigInt values to strings before serialization
     const serializedBody = convertBigIntToStrings(requestBody);
 
-    // Get auth token
-    const token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || '';
+    // Get auth token from session data (matching WalletLoginBridge pattern)
+    let token = '';
+    try {
+      const sessionDataStr = localStorage.getItem('linkdao_session_data');
+      if (sessionDataStr) {
+        const sessionData = JSON.parse(sessionDataStr);
+        token = sessionData.token || sessionData.accessToken || '';
+      }
+    } catch (error) {
+      console.warn('Failed to parse session data, trying fallback token retrieval');
+    }
+
+    // Fallback to other possible token locations (matching cartService pattern)
+    if (!token) {
+      token = localStorage.getItem('token') ||
+        localStorage.getItem('authToken') ||
+        localStorage.getItem('auth_token') ||
+        localStorage.getItem('user_session') ||
+        sessionStorage.getItem('auth_token') ||
+        sessionStorage.getItem('token') ||
+        sessionStorage.getItem('authToken') ||
+        '';
+    }
 
     // Call existing fiat payment processing
     const response = await fetch(`${this.apiBaseUrl}/api/hybrid-payment/checkout`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        ...(token && { 'Authorization': `Bearer ${token}` })
       },
       body: JSON.stringify(serializedBody)
     });
@@ -999,13 +1020,13 @@ export class UnifiedCheckoutService {
       description: string;
       status: 'completed' | 'pending' | 'failed';
     }> = [
-      {
-        timestamp: new Date(),
-        event: 'Order Created',
-        description: `Order created with ${orderData.paymentPath} payment`,
-        status: 'completed'
-      }
-    ];
+        {
+          timestamp: new Date(),
+          event: 'Order Created',
+          description: `Order created with ${orderData.paymentPath} payment`,
+          status: 'completed'
+        }
+      ];
 
     if (orderData.paymentPath === 'crypto' && orderData.escrowStatus) {
       if (orderData.escrowStatus.fundsLocked) {
@@ -1048,8 +1069,8 @@ export class UnifiedCheckoutService {
    */
   private isValidX402Request(request: X402PaymentRequest): boolean {
     // Validate required fields exist
-    if (!request.orderId || !request.amount || !request.currency || 
-        !request.buyerAddress || !request.sellerAddress || !request.listingId) {
+    if (!request.orderId || !request.amount || !request.currency ||
+      !request.buyerAddress || !request.sellerAddress || !request.listingId) {
       return false;
     }
 
@@ -1061,8 +1082,8 @@ export class UnifiedCheckoutService {
 
     // Validate Ethereum addresses (basic format check)
     const ethereumAddressRegex = /^0x[a-fA-F0-9]{40}$/;
-    if (!ethereumAddressRegex.test(request.buyerAddress) || 
-        !ethereumAddressRegex.test(request.sellerAddress)) {
+    if (!ethereumAddressRegex.test(request.buyerAddress) ||
+      !ethereumAddressRegex.test(request.sellerAddress)) {
       return false;
     }
 
