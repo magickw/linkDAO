@@ -799,15 +799,9 @@ class CartService {
       throw new Error('Item not found in cart');
     }
 
-    // Check if user is authenticated OR has a valid wallet address
-    const hasWalletAddress = typeof window !== 'undefined' && (
-      localStorage.getItem('walletAddress') ||
-      localStorage.getItem('user_wallet_address') ||
-      sessionStorage.getItem('walletAddress')
-    );
-
-    if (!this.isAuthenticated && !hasWalletAddress) {
-      throw new Error('Please connect your wallet to apply promo codes');
+    // Check if user is authenticated
+    if (!this.isAuthenticated) {
+      throw new Error('Please log in to apply promo codes');
     }
 
     // Check if item has cartItemId (backend sync required)
