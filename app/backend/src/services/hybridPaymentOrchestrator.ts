@@ -473,28 +473,39 @@ export class HybridPaymentOrchestrator {
     request: HybridCheckoutRequest,
     pathDecision: PaymentPathDecision
   ): Promise<any> {
+    // Get user profiles
+    const buyer = await this.databaseService.getUserByAddress?.(request.buyerAddress);
+    const seller = await this.databaseService.getUserByAddress?.(request.sellerAddress);
+
+    if (!buyer?.id || !seller?.id) {
+      const error = new Error(`Failed to find user records - buyer: ${buyer?.id}, seller: ${seller?.id}`);
+      safeLogger.error('Cannot create order - missing user records:', {
+        buyerAddress: request.buyerAddress,
+        sellerAddress: request.sellerAddress,
+        buyerId: buyer?.id,
+        sellerId: seller?.id
+      });
+      throw error;
+    }
+
+    // Create order in database
+    const orderData = {
+      listingId: request.listingId, // Keep as string since frontend now sends UUIDs
+      buyerId: buyer.id,
+      sellerId: seller.id,
+      amount: request.amount.toString(),
+      paymentToken: pathDecision.method.tokenSymbol || request.currency,
+      status: 'created',
+      paymentMethod: pathDecision.selectedPath,
+      metadata: JSON.stringify({
+        ...request.metadata,
+        paymentPath: pathDecision.selectedPath,
+        fees: pathDecision.fees
+      })
+    };
+
     try {
-      // Get user profiles
-      const buyer = await this.databaseService.getUserByAddress?.(request.buyerAddress);
-      const seller = await this.databaseService.getUserByAddress?.(request.sellerAddress);
-
-      // Create order in database
-      const orderData = {
-        listingId: request.listingId, // Keep as string since frontend now sends UUIDs
-        buyerId: buyer?.id || 'unknown',
-        sellerId: seller?.id || 'unknown',
-        amount: request.amount.toString(),
-        paymentToken: pathDecision.method.tokenSymbol || request.currency,
-        status: 'created',
-        paymentMethod: pathDecision.selectedPath,
-        metadata: JSON.stringify({
-          ...request.metadata,
-          paymentPath: pathDecision.selectedPath,
-          fees: pathDecision.fees
-        })
-      };
-
-      return await this.databaseService.createOrder(
+      const order = await this.databaseService.createOrder(
         orderData.listingId,
         orderData.buyerId,
         orderData.sellerId,
@@ -504,9 +515,24 @@ export class HybridPaymentOrchestrator {
         undefined, // variantId
         request.orderId // Pass the orderId from the request
       );
+
+      safeLogger.info(`Successfully created order ${request.orderId}`, {
+        orderId: request.orderId,
+        buyerId: orderData.buyerId,
+        sellerId: orderData.sellerId,
+        amount: orderData.amount
+      });
+
+      return order;
     } catch (error) {
-      safeLogger.error('Error creating order record:', error);
-      return null;
+      safeLogger.error('Error creating order record:', {
+        error,
+        orderId: request.orderId,
+        listingId: orderData.listingId,
+        buyerId: orderData.buyerId,
+        sellerId: orderData.sellerId
+      });
+      throw error; // Re-throw instead of returning null
     }
   }
 

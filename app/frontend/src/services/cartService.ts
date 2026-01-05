@@ -131,7 +131,21 @@ class CartService {
   // Check authentication status from localStorage or other sources
   private checkAuthStatus(): void {
     if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || localStorage.getItem('user_session') || sessionStorage.getItem('auth_token') || sessionStorage.getItem('token') || sessionStorage.getItem('authToken');
+      let token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || localStorage.getItem('user_session') || sessionStorage.getItem('auth_token') || sessionStorage.getItem('token') || sessionStorage.getItem('authToken');
+
+      // Also check for linkdao_session_data (wallet authentication)
+      if (!token) {
+        try {
+          const sessionDataStr = localStorage.getItem('linkdao_session_data');
+          if (sessionDataStr) {
+            const sessionData = JSON.parse(sessionDataStr);
+            token = sessionData.token || sessionData.accessToken || '';
+          }
+        } catch (error) {
+          console.warn('Failed to parse linkdao_session_data, trying fallback token retrieval');
+        }
+      }
+
       this.isAuthenticated = !!token;
       this.authToken = token;
     }
@@ -1103,17 +1117,36 @@ class CartService {
     // If we're in a browser environment, set up a storage listener
     if (typeof window !== 'undefined') {
       const handleStorageChange = (e: StorageEvent) => {
-        if (e.key === 'auth_token') {
+        if (e.key === 'auth_token' || e.key === 'linkdao_session_data') {
           this.checkAuthStatus();
         }
       };
 
       window.addEventListener('storage', handleStorageChange);
 
+      // Helper function to get current token
+      const getCurrentToken = (): string => {
+        let token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || localStorage.getItem('user_session') || sessionStorage.getItem('auth_token') || sessionStorage.getItem('token') || sessionStorage.getItem('authToken');
+
+        if (!token) {
+          try {
+            const sessionDataStr = localStorage.getItem('linkdao_session_data');
+            if (sessionDataStr) {
+              const sessionData = JSON.parse(sessionDataStr);
+              token = sessionData.token || sessionData.accessToken || '';
+            }
+          } catch (error) {
+            console.warn('Failed to parse linkdao_session_data');
+          }
+        }
+
+        return token;
+      };
+
       // Check less frequently and only if auth status might have changed
       let lastKnownToken = this.authToken;
       setInterval(() => {
-        const currentToken = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token') || sessionStorage.getItem('token') || sessionStorage.getItem('authToken');
+        const currentToken = getCurrentToken();
 
         // Only check auth status if token actually changed
         if (currentToken !== lastKnownToken) {
