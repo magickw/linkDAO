@@ -13,6 +13,7 @@ import {
   AvailabilityStatus
 } from '../types/paymentPrioritization';
 import { intelligentCacheService } from './intelligentCacheService';
+import { transactionCostCalculator } from './transactionCostCalculator';
 
 interface PrioritizationTask {
   id: string;
@@ -304,33 +305,43 @@ export class PrioritizationPerformanceOptimizer {
     userContext: UserContext,
     transactionAmount: number
   ): Promise<CostEstimate> {
-    // This would integrate with actual cost calculation services
-    // For now, return a mock estimate
-    const baseCost = transactionAmount;
-    let gasFee = 5; // Default fallback
+    try {
+      // Use the real transaction cost calculator for accurate estimates
+      return await transactionCostCalculator.calculateTransactionCost(
+        method,
+        transactionAmount,
+        'USD'
+      );
+    } catch (error) {
+      console.warn('Real cost calculation failed in optimizer, using simplified fallback:', error);
 
-    if (method.type === PaymentMethodType.NATIVE_ETH) {
-      gasFee = 25;
-    } else if (method.type === PaymentMethodType.FIAT_STRIPE) {
-      gasFee = 0;
-    } else if (method.type === PaymentMethodType.X402) {
-      gasFee = 0.1;
-    }
+      // Minimal fallback logic only if the calculator completely fails
+      const baseCost = transactionAmount;
+      let gasFee = 1; // Conservative default
 
-    return {
-      totalCost: baseCost + gasFee,
-      baseCost,
-      gasFee,
-      exchangeRate: 1,
-      estimatedTime: this.getEstimatedTransactionTime(method.type),
-      confidence: 0.9,
-      currency: 'USD',
-      breakdown: {
-        amount: baseCost,
-        networkFee: gasFee,
-        platformFee: 0
+      if (method.type === PaymentMethodType.NATIVE_ETH) {
+        gasFee = 2.5; // Mainnet estimate
+      } else if (method.type === PaymentMethodType.FIAT_STRIPE) {
+        gasFee = 0;
+      } else if (method.type === PaymentMethodType.X402) {
+        gasFee = 0.1;
       }
-    };
+
+      return {
+        totalCost: baseCost + gasFee,
+        baseCost,
+        gasFee,
+        exchangeRate: 1,
+        estimatedTime: this.getEstimatedTransactionTime(method.type),
+        confidence: 0.3,
+        currency: 'USD',
+        breakdown: {
+          amount: baseCost,
+          networkFee: gasFee,
+          platformFee: 0
+        }
+      };
+    }
   }
 
   private generateCostCacheKey(

@@ -1102,6 +1102,8 @@ class CartService {
           safetyScore: product.trust?.safetyScore || 0,
         },
         addedAt: new Date(item.addedAt || item.createdAt || Date.now()),
+        appliedPromoCodeId: item.appliedPromoCodeId,
+        appliedDiscount: item.appliedDiscount,
       };
     }) || [];
 
