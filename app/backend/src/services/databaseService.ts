@@ -962,7 +962,7 @@ export class DatabaseService {
   }
 
   async createOrder(listingId: string, buyerId: string, sellerId: string, amount: string,
-    paymentToken: string, escrowId?: string, variantId?: string) {
+    paymentToken: string, escrowId?: string, variantId?: string, orderId?: string) {
     try {
       return await this.db.transaction(async (tx: any) => {
         // 1a. Handle variant inventory if variant is specified
@@ -1062,7 +1062,7 @@ export class DatabaseService {
         }
 
         // 2. Create Order
-        const result = await tx.insert(schema.orders).values({
+        const orderValues: any = {
           listingId,
           buyerId,
           sellerId,
@@ -1072,21 +1072,28 @@ export class DatabaseService {
           status: 'pending',
           createdAt: new Date(),
           inventoryHoldId: null // Will be updated in the next step
-        }).returning();
+        };
+
+        // Use provided orderId if available, otherwise let DB generate it
+        if (orderId) {
+          orderValues.id = orderId;
+        }
+
+        const result = await tx.insert(schema.orders).values(orderValues).returning();
 
         // 3. Update inventory hold with order ID
-        const orderId = result[0].id;
+        const createdOrderId = result[0].id;
         await tx.update(schema.inventoryHolds)
           .set({
-            orderId: orderId.toString(),
+            orderId: createdOrderId.toString(),
             status: 'order_created'
           })
           .where(eq(schema.inventoryHolds.heldBy, buyerId));
 
         // 4. Update order with inventory hold ID
         await tx.update(schema.orders)
-          .set({ inventoryHoldId: orderId.toString() })
-          .where(eq(schema.orders.id, orderId));
+          .set({ inventoryHoldId: createdOrderId.toString() })
+          .where(eq(schema.orders.id, createdOrderId));
 
         return result[0];
       });

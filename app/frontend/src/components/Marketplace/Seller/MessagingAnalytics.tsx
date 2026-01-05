@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  TrendingUp, 
-  MessageCircle, 
-  Clock, 
-  CheckCircle, 
+import {
+  TrendingUp,
+  MessageCircle,
+  Clock,
+  CheckCircle,
   AlertCircle,
   BarChart3
 } from 'lucide-react';
@@ -96,7 +96,7 @@ const LineChart: React.FC<{ data: Array<{ date: Date; responseTime: number }> }>
           fill="none"
           stroke="#3b82f6"
           strokeWidth="2"
-          points={data.map((point, i) => 
+          points={data.map((point, i) =>
             `${i * 50},${200 - ((point.responseTime - minValue) / range) * 160 - 20}`
           ).join(' ')}
         />
@@ -124,9 +124,9 @@ export const MessagingAnalytics: React.FC = () => {
     const fetchAnalytics = async () => {
       try {
         // Get seller address from auth context or wallet
-        const sellerAddress = localStorage.getItem('linkdao_wallet_address') || 
-                           localStorage.getItem('wallet_address') || '';
-        
+        const sellerAddress = localStorage.getItem('linkdao_wallet_address') ||
+          localStorage.getItem('wallet_address') || '';
+
         if (!sellerAddress) {
           console.warn('No seller address found for analytics');
           setLoading(false);
@@ -185,25 +185,25 @@ export const MessagingAnalytics: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard
           title="Avg Response Time"
-          value={marketplaceMessagingAnalyticsService.formatDuration(analytics.avgResponseTime)}
+          value={marketplaceMessagingAnalyticsService.formatDuration(analytics.avgResponseTime ?? 0)}
           trend={analytics.responseTimeTrend}
           icon={<Clock className="text-blue-500" size={24} />}
         />
         <StatCard
           title="Inquiry → Sale Conversion"
-          value={`${analytics.conversionRate}%`}
+          value={`${analytics.conversionRate ?? 0}%`}
           trend={analytics.conversionTrend}
           icon={<TrendingUp className="text-green-500" size={24} />}
         />
         <StatCard
           title="Active Conversations"
-          value={analytics.activeConversations.toString()}
+          value={(analytics.activeConversations ?? 0).toString()}
           icon={<MessageCircle className="text-purple-500" size={24} />}
         />
         <StatCard
           title="Unread Messages"
-          value={analytics.unreadCount.toString()}
-          alert={analytics.unreadCount > 5}
+          value={(analytics.unreadCount ?? 0).toString()}
+          alert={(analytics.unreadCount ?? 0) > 5}
           icon={<AlertCircle className="text-yellow-500" size={24} />}
         />
       </div>
@@ -211,13 +211,13 @@ export const MessagingAnalytics: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Response Time Trend (7 days)</h3>
-          <LineChart data={analytics.responseTimeHistory} />
+          <LineChart data={analytics.responseTimeHistory ?? []} />
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Most Common Questions</h3>
           <div className="space-y-4">
-            {analytics.commonQuestions.map((question: CommonQuestion, index: number) => (
+            {(analytics.commonQuestions ?? []).map((question: CommonQuestion, index: number) => (
               <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                 <span className="font-medium text-gray-900 dark:text-white">{question.keyword}</span>
                 <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-sm font-medium rounded-full">

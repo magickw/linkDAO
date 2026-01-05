@@ -354,7 +354,7 @@ export class HybridPaymentOrchestrator {
       // Check if amount is already in cents (>= 100) or in dollars (< 100)
       const amountInDollars = request.amount >= 100 ? request.amount / 100 : request.amount;
       const feesInDollars = pathDecision.fees.totalFees >= 100 ? pathDecision.fees.totalFees / 100 : pathDecision.fees.totalFees;
-      
+
       const totalAmount = Math.round((amountInDollars + feesInDollars) * 100); // Convert to cents
       const platformFee = Math.round(pathDecision.fees.platformFee * 100);
 
@@ -486,7 +486,10 @@ export class HybridPaymentOrchestrator {
         orderData.buyerId,
         orderData.sellerId,
         orderData.amount,
-        orderData.paymentToken
+        orderData.paymentToken,
+        undefined, // escrowId
+        undefined, // variantId
+        request.orderId // Pass the orderId from the request
       );
     } catch (error) {
       safeLogger.error('Error creating order record:', error);
