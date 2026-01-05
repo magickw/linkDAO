@@ -379,11 +379,18 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
         throw new Error('Invalid product information: Listing ID is missing');
       }
 
+      // Get seller address - prioritize walletAddress, fall back to id (for compatibility)
+      const sellerAddress = cartState.items[0]?.seller?.walletAddress || cartState.items[0]?.seller?.id || '';
+      
+      if (!sellerAddress) {
+        throw new Error('Seller information not available. Please refresh the page and try again.');
+      }
+
       const request: PrioritizedCheckoutRequest = {
         orderId: `order_${Date.now()}`,
         listingId: listingId,
         buyerAddress: address,
-        sellerAddress: cartState.items[0]?.seller.id || '',
+        sellerAddress: sellerAddress,
         amount: totalAmount,
         currency: 'USD',
         selectedPaymentMethod,

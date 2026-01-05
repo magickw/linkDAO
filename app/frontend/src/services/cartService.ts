@@ -18,6 +18,7 @@ export interface CartItem {
   };
   seller: {
     id: string;
+    walletAddress?: string;
     name: string;
     avatar: string;
     verified: boolean;
@@ -1079,6 +1080,7 @@ class CartService {
         },
         seller: {
           id: product.seller?.id || product.sellerId || item.sellerId || '',
+          walletAddress: product.seller?.walletAddress || product.sellerAddress || item.sellerWalletAddress || '',
           name: product.seller?.displayName || product.seller?.storeName || item.sellerName || 'Unknown Seller',
           avatar: product.seller?.profileImageUrl || product.seller?.avatar || item.sellerAvatar || '',
           verified: product.seller?.verified || false,
