@@ -479,7 +479,8 @@ export class CartService {
       // 2. Verify the promo code using the service
       // We need to import promoCodeService dynamically or checking imports
       const { promoCodeService } = require('./promoCodeService');
-      const promoResult = await promoCodeService.verifyPromoCode(promoCodeStr, {
+      const promoResult = await promoCodeService.verifyPromoCode({
+        code: promoCodeStr,
         sellerId: product.sellerId,
         productId: product.id,
         orderAmount: parseFloat(cartItem.priceAtTime) * cartItem.quantity
@@ -490,12 +491,12 @@ export class CartService {
       }
 
       // 3. Update the cart item with the promo code and applied discount
-      const discountAmount = promoResult.discountAmount || 0;
+      const discountAmount = promoResult.promoCode.calculatedDiscount || 0;
 
       await db
         .update(cartItems)
         .set({
-          appliedPromoCodeId: promoResult.promoCode.id,
+          appliedPromoCodeId: promoResult.promoCode.code,
           appliedDiscount: discountAmount.toString(),
           updatedAt: new Date()
         })
