@@ -150,20 +150,26 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
   const debouncedAddress = useDebounce(address, 1000);
   const debouncedChainId = useDebounce(chainId, 1000);
 
-  // Load payment prioritization when debounced values change
+  // Load payment prioritization when debounced values or tax calculation change
   useEffect(() => {
     loadPaymentPrioritization();
-  }, [debouncedCartItemsLength, debouncedAddress, debouncedChainId]);
+  }, [debouncedCartItemsLength, debouncedAddress, debouncedChainId, taxCalculation]);
 
   const loadPaymentPrioritization = async () => {
     if (cartState.items.length === 0) return;
 
     setLoading(true);
     try {
+      // Calculate total amount including shipping and tax
+      const subtotal = parseFloat(cartState.totals.subtotal.fiat);
+      const shipping = parseFloat(cartState.totals.shipping?.fiat || '0');
+      const tax = taxCalculation?.taxAmount || 0;
+      const totalAmount = subtotal + shipping + tax;
+
       // Create prioritization context WITHOUT wallet balance detection
       // Balance will only be checked when user selects a crypto payment method
       const context: PrioritizationContext = {
-        transactionAmount: parseFloat(cartState.totals.subtotal.fiat), // Use subtotal, not total
+        transactionAmount: totalAmount,
         transactionCurrency: 'USD',
         userContext: {
           userAddress: address || undefined,
