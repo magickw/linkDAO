@@ -226,6 +226,7 @@ export class PromoCodeService {
             return {
                 isValid: true,
                 promoCode: {
+                    id: validCode.id,
                     code: validCode.code,
                     discountType: validCode.discountType,
                     discountValue: parseFloat(validCode.discountValue),

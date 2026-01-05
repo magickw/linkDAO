@@ -496,7 +496,7 @@ export class CartService {
       await db
         .update(cartItems)
         .set({
-          appliedPromoCodeId: promoResult.promoCode.code,
+          appliedPromoCodeId: promoResult.promoCode.id,
           appliedDiscount: discountAmount.toString(),
           updatedAt: new Date()
         })
