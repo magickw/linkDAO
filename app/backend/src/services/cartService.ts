@@ -568,6 +568,108 @@ export class CartService {
       throw error;
     }
   }
+
+  /**
+   * Set gift options for a cart item
+   */
+  async setGiftOptions(
+    user: AuthenticatedUser,
+    itemId: string,
+    options: {
+      isGift: boolean;
+      giftMessage?: string;
+      giftWrapOption?: string;
+    }
+  ): Promise<Cart> {
+    try {
+      if (!db) {
+        throw new Error('Database connection not available');
+      }
+
+      // Update cart item with gift options
+      await db
+        .update(cartItems)
+        .set({
+          isGift: options.isGift,
+          giftMessage: options.giftMessage || null,
+          giftWrapOption: options.giftWrapOption || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(cartItems.id, itemId));
+
+      safeLogger.info(`[CartService] Set gift options for item ${itemId}`);
+
+      return this.getOrCreateCart(user);
+    } catch (error) {
+      safeLogger.error('Error setting gift options:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Toggle selection status for a cart item
+   */
+  async toggleItemSelection(user: AuthenticatedUser, itemId: string): Promise<Cart> {
+    try {
+      if (!db) {
+        throw new Error('Database connection not available');
+      }
+
+      // Get current selection status
+      const item = await db
+        .select()
+        .from(cartItems)
+        .where(eq(cartItems.id, itemId))
+        .limit(1);
+
+      if (item.length === 0) {
+        throw new Error('Cart item not found');
+      }
+
+      // Toggle selection
+      await db
+        .update(cartItems)
+        .set({
+          selected: !item[0].selected,
+          updatedAt: new Date(),
+        })
+        .where(eq(cartItems.id, itemId));
+
+      return this.getOrCreateCart(user);
+    } catch (error) {
+      safeLogger.error('Error toggling item selection:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Select or deselect all cart items
+   */
+  async setAllItemsSelection(user: AuthenticatedUser, selected: boolean): Promise<Cart> {
+    try {
+      if (!db) {
+        throw new Error('Database connection not available');
+      }
+
+      const cart = await this.getOrCreateCart(user);
+
+      // Update all items in the cart
+      await db
+        .update(cartItems)
+        .set({
+          selected,
+          updatedAt: new Date(),
+        })
+        .where(eq(cartItems.cartId, cart.id));
+
+      safeLogger.info(`[CartService] Set all items selection to ${selected}`);
+
+      return this.getOrCreateCart(user);
+    } catch (error) {
+      safeLogger.error('Error setting all items selection:', error);
+      throw error;
+    }
+  }
 }
 
 export const cartService = new CartService();

@@ -843,6 +843,24 @@ export const promoCodes = pgTable("promo_codes", {
   })
 }));
 
+// Saved For Later - items users want to purchase later
+export const savedForLater = pgTable("saved_for_later", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  productId: uuid("product_id").references(() => products.id, { onDelete: "cascade" }).notNull(),
+  quantity: integer("quantity").notNull().default(1),
+  savedAt: timestamp("saved_at").defaultNow().notNull(),
+  notes: text("notes"),
+  priceAtSave: numeric("price_at_save", { precision: 20, scale: 2 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  userProductUnique: unique("saved_for_later_user_product_unique").on(t.userId, t.productId),
+  userIdIdx: index("idx_saved_for_later_user_id").on(t.userId),
+  productIdIdx: index("idx_saved_for_later_product_id").on(t.productId),
+  savedAtIdx: index("idx_saved_for_later_saved_at").on(t.savedAt),
+}));
+
 
 // Inventory Holds - for temporary inventory reservations during checkout
 export const inventoryHolds = pgTable("inventory_holds", {
@@ -4191,6 +4209,12 @@ export const cartItems = pgTable("cart_items", {
   currency: varchar("currency", { length: 10 }).notNull(),
   appliedPromoCodeId: uuid("applied_promo_code_id").references(() => promoCodes.id),
   appliedDiscount: numeric("applied_discount", { precision: 20, scale: 8 }).default("0"),
+  // Gift options
+  isGift: boolean("is_gift").default(false),
+  giftMessage: text("gift_message"),
+  giftWrapOption: varchar("gift_wrap_option", { length: 50 }),
+  // Selection for bulk actions
+  selected: boolean("selected").default(true),
   metadata: text("metadata"), // JSON additional data
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -4198,6 +4222,7 @@ export const cartItems = pgTable("cart_items", {
   cartIdIdx: index("idx_cart_items_cart_id").on(t.cartId),
   productIdIdx: index("idx_cart_items_product_id").on(t.productId),
   uniqueCartProduct: index("idx_cart_items_unique_cart_product").on(t.cartId, t.productId),
+  selectedIdx: index("idx_cart_items_selected").on(t.selected),
 }));
 
 // Enhanced Payment Method Preferences System
