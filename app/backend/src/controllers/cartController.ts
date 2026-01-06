@@ -320,6 +320,78 @@ export class CartController {
       errorResponse(res, 'CART_ERROR', 'Failed to remove promo code', 500);
     }
   }
+
+  /**
+   * Bulk delete selected items
+   * DELETE /api/cart/bulk-delete
+   */
+  async bulkDeleteSelected(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        errorResponse(res, 'UNAUTHORIZED', 'Authentication required', 401);
+        return;
+      }
+
+      const result = await cartService.bulkDeleteSelected(req.user);
+      successResponse(res, {
+        deletedCount: result.deletedCount,
+        cart: result.cart
+      });
+    } catch (error) {
+      safeLogger.error('Error bulk deleting items:', error);
+      errorResponse(res, 'CART_ERROR', 'Failed to bulk delete items', 500);
+    }
+  }
+
+  /**
+   * Bulk save selected items for later
+   * POST /api/cart/bulk-save-later
+   */
+  async bulkSaveForLater(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        errorResponse(res, 'UNAUTHORIZED', 'Authentication required', 401);
+        return;
+      }
+
+      const result = await cartService.bulkSaveForLater(req.user);
+      successResponse(res, {
+        savedCount: result.savedCount,
+        cart: result.cart
+      });
+    } catch (error) {
+      safeLogger.error('Error bulk saving items for later:', error);
+      errorResponse(res, 'CART_ERROR', 'Failed to bulk save items for later', 500);
+    }
+  }
+
+  /**
+   * Select/deselect all items
+   * PUT /api/cart/select-all
+   */
+  async selectAllItems(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        errorResponse(res, 'UNAUTHORIZED', 'Authentication required', 401);
+        return;
+      }
+
+      const { selected } = req.body;
+
+      if (typeof selected !== 'boolean') {
+        validationErrorResponse(res, [
+          { field: 'selected', message: 'Selected must be a boolean' }
+        ]);
+        return;
+      }
+
+      const cart = await cartService.setAllItemsSelection(req.user, selected);
+      successResponse(res, cart);
+    } catch (error) {
+      safeLogger.error('Error selecting all items:', error);
+      errorResponse(res, 'CART_ERROR', 'Failed to select all items', 500);
+    }
+  }
 }
 
 export const cartController = new CartController();

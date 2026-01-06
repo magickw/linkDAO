@@ -670,6 +670,134 @@ export class CartService {
       throw error;
     }
   }
+
+  /**
+   * Bulk delete selected items
+   */
+  async bulkDeleteSelected(user: AuthenticatedUser): Promise<{ deletedCount: number; cart: Cart }> {
+    try {
+      if (!db) {
+        throw new Error('Database connection not available');
+      }
+
+      const cart = await this.getOrCreateCart(user);
+
+      // Get selected items
+      const selectedItems = await db
+        .select()
+        .from(cartItems)
+        .where(
+          and(
+            eq(cartItems.cartId, cart.id),
+            eq(cartItems.selected, true)
+          )
+        );
+
+      if (selectedItems.length === 0) {
+        return { deletedCount: 0, cart };
+      }
+
+      // Delete selected items
+      await db
+        .delete(cartItems)
+        .where(
+          and(
+            eq(cartItems.cartId, cart.id),
+            eq(cartItems.selected, true)
+          )
+        );
+
+      safeLogger.info(`[CartService] Bulk deleted ${selectedItems.length} items`);
+
+      const updatedCart = await this.getOrCreateCart(user);
+      return { deletedCount: selectedItems.length, cart: updatedCart };
+    } catch (error) {
+      safeLogger.error('Error bulk deleting items:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Bulk save selected items for later
+   */
+  async bulkSaveForLater(user: AuthenticatedUser): Promise<{ savedCount: number; cart: Cart }> {
+    try {
+      if (!db) {
+        throw new Error('Database connection not available');
+      }
+
+      const cart = await this.getOrCreateCart(user);
+
+      // Get selected items with product details
+      const selectedItems = await db
+        .select()
+        .from(cartItems)
+        .leftJoin(products, eq(cartItems.productId, products.id))
+        .where(
+          and(
+            eq(cartItems.cartId, cart.id),
+            eq(cartItems.selected, true)
+          )
+        );
+
+      if (selectedItems.length === 0) {
+        return { savedCount: 0, cart };
+      }
+
+      let savedCount = 0;
+
+      // Save each item for later
+      for (const row of selectedItems) {
+        const item = row.cart_items;
+        const product = row.products;
+
+        if (!product) continue;
+
+        try {
+          // Check if already saved
+          const existing = await db
+            .select()
+            .from(savedForLater)
+            .where(
+              and(
+                eq(savedForLater.userId, user.id),
+                eq(savedForLater.productId, item.productId)
+              )
+            )
+            .limit(1);
+
+          if (existing.length === 0) {
+            // Save for later
+            await db.insert(savedForLater).values({
+              id: crypto.randomUUID(),
+              userId: user.id,
+              productId: item.productId,
+              quantity: item.quantity,
+              priceAtSave: product.price,
+              savedAt: new Date(),
+            });
+          }
+
+          // Remove from cart
+          await db
+            .delete(cartItems)
+            .where(eq(cartItems.id, item.id));
+
+          savedCount++;
+        } catch (error) {
+          safeLogger.error(`Failed to save item ${item.id} for later:`, error);
+        }
+      }
+
+      safeLogger.info(`[CartService] Bulk saved ${savedCount} items for later`);
+
+      const updatedCart = await this.getOrCreateCart(user);
+      return { savedCount, cart: updatedCart };
+    } catch (error) {
+      safeLogger.error('Error bulk saving items for later:', error);
+      throw error;
+    }
+  }
 }
 
 export const cartService = new CartService();
