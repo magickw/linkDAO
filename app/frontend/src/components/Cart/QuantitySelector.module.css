@@ -1,0 +1,87 @@
+.quantitySelectorContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.quantitySelector {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid #d5d9d9;
+    border-radius: 8px;
+    overflow: hidden;
+    background: white;
+    width: fit-content;
+}
+
+.quantityButton {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: #f0f2f2;
+    color: #0f1111;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.quantityButton:hover:not(:disabled) {
+    background: #e3e6e6;
+}
+
+.quantityButton:active:not(:disabled) {
+    background: #d5d9d9;
+}
+
+.quantityButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.quantityInput {
+    width: 50px;
+    height: 36px;
+    border: none;
+    border-left: 1px solid #d5d9d9;
+    border-right: 1px solid #d5d9d9;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: #0f1111;
+    -moz-appearance: textfield;
+}
+
+.quantityInput::-webkit-outer-spin-button,
+.quantityInput::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.quantityInput:focus {
+    outline: 2px solid #ff9900;
+    outline-offset: 2px;
+}
+
+.stockInfo {
+    font-size: 13px;
+    margin-top: 4px;
+}
+
+.inStock {
+    color: #007600;
+    font-weight: 600;
+}
+
+.lowStock {
+    color: #ff9900;
+    font-weight: 600;
+}
+
+.outOfStock {
+    color: #cc0c39;
+    font-weight: 600;
+}

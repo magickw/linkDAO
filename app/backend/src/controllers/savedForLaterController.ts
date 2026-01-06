@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
-import { savedForLaterService } from './savedForLaterService';
+import { savedForLaterService } from '../services/savedForLaterService';
 import { cartService, Cart } from './cartService';
 import { AuthenticatedUser } from '../middleware/authMiddleware';
 import { Request, Response } from 'express';

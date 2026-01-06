@@ -1,0 +1,161 @@
+.cartItemCard {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 20px;
+    padding: 20px;
+    background: white;
+    border-bottom: 1px solid #d5d9d9;
+    position: relative;
+}
+
+.cartItemCard:hover {
+    background: #f7f8f8;
+}
+
+.selectionCheckbox {
+    display: flex;
+    align-items: flex-start;
+    padding-top: 8px;
+}
+
+.selectionCheckbox input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.productImage {
+    width: 180px;
+    height: 180px;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.productImage img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 4px;
+}
+
+.stockBadge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: #ff9900;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.productDetails {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+.productTitle {
+    font-size: 16px;
+    font-weight: 600;
+    color: #0f1111;
+    line-height: 1.5;
+    margin: 0;
+    cursor: pointer;
+}
+
+.productTitle:hover {
+    color: #c45500;
+}
+
+.seller {
+    font-size: 13px;
+    color: #565959;
+}
+
+.attributes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 13px;
+    color: #565959;
+}
+
+.attribute strong {
+    color: #0f1111;
+}
+
+.giftBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #007600;
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+.giftBadge svg {
+    width: 16px;
+    height: 16px;
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e7e7e7;
+}
+
+.actionButton {
+    background: none;
+    border: none;
+    color: #007185;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: none;
+    font-weight: 400;
+}
+
+.actionButton:hover {
+    color: #c45500;
+    text-decoration: underline;
+}
+
+.pricingSection {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: flex-start;
+    min-width: 120px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .cartItemCard {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .productImage {
+        width: 100%;
+        max-width: 200px;
+        margin: 0 auto;
+    }
+
+    .pricingSection {
+        align-items: flex-start;
+    }
+
+    .actions {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+}

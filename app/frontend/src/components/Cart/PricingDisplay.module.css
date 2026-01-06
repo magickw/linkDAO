@@ -1,0 +1,41 @@
+.pricingDisplay {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.currentPrice {
+    font-size: 24px;
+    font-weight: 700;
+    color: #b12704;
+    line-height: 1.2;
+}
+
+.discountInfo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.listPrice {
+    font-size: 13px;
+    color: #565959;
+    text-decoration: line-through;
+}
+
+.discountBadge {
+    display: inline-block;
+    background-color: #cc0c39;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.savings {
+    font-size: 13px;
+    color: #007600;
+    font-weight: 600;
+}

@@ -1,0 +1,47 @@
+.deliveryInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 14px;
+    margin-top: 8px;
+}
+
+.primeBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #00a8e1;
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+
+.primeBadge svg {
+    width: 16px;
+    height: 16px;
+}
+
+.deliveryText {
+    color: #0f1111;
+    line-height: 1.4;
+}
+
+.freeShipping {
+    color: #007600;
+    font-weight: 600;
+}
+
+.deliveryDate {
+    color: #0f1111;
+}
+
+.freeReturns {
+    color: #007600;
+    font-size: 13px;
+}
+
+.deliveryLocation {
+    color: #565959;
+    font-size: 12px;
+    margin-top: 2px;
+}
