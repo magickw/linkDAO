@@ -15,6 +15,7 @@ export interface CreatePromoCodeInput {
     startDate?: Date;
     endDate?: Date;
     usageLimit?: number;
+    isActive?: boolean;
 }
 
 export interface VerifyPromoCodeInput {
@@ -273,6 +274,97 @@ export class PromoCodeService {
             return codes;
         } catch (error) {
             safeLogger.error('[PromoCodeService] Error fetching promo codes:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Update an existing promo code
+     */
+    async updatePromoCode(promoCodeId: string, sellerId: string, updates: Partial<CreatePromoCodeInput>) {
+        try {
+            safeLogger.info(`[PromoCodeService] Updating promo code ${promoCodeId} for sellerId: ${sellerId}`);
+            const resolvedSellerId = await this.resolveSellerId(sellerId);
+
+            // Verify the promo code belongs to this seller
+            const existing = await db
+                .select()
+                .from(promoCodes)
+                .where(and(eq(promoCodes.id, promoCodeId), eq(promoCodes.sellerId, resolvedSellerId)))
+                .limit(1);
+
+            if (existing.length === 0) {
+                throw new Error('Promo code not found or you do not have permission to edit it');
+            }
+
+            // If updating code, check for uniqueness
+            if (updates.code && updates.code !== existing[0].code) {
+                const codeExists = await db
+                    .select()
+                    .from(promoCodes)
+                    .where(and(eq(promoCodes.code, updates.code), eq(promoCodes.sellerId, resolvedSellerId)))
+                    .limit(1);
+
+                if (codeExists.length > 0) {
+                    throw new Error('Promo code already exists for this seller');
+                }
+            }
+
+            // Prepare update data
+            const updateData: any = {};
+
+            if (updates.code !== undefined) updateData.code = updates.code;
+            if (updates.productId !== undefined) updateData.productId = updates.productId;
+            if (updates.discountType !== undefined) updateData.discountType = updates.discountType;
+            if (updates.discountValue !== undefined) updateData.discountValue = updates.discountValue.toString();
+            if (updates.minOrderAmount !== undefined) updateData.minOrderAmount = updates.minOrderAmount?.toString();
+            if (updates.maxDiscountAmount !== undefined) updateData.maxDiscountAmount = updates.maxDiscountAmount?.toString();
+            if (updates.startDate !== undefined) updateData.startDate = updates.startDate;
+            if (updates.endDate !== undefined) updateData.endDate = updates.endDate;
+            if (updates.usageLimit !== undefined) updateData.usageLimit = updates.usageLimit;
+            if (updates.isActive !== undefined) updateData.isActive = updates.isActive;
+
+            const [updatedPromo] = await db
+                .update(promoCodes)
+                .set(updateData)
+                .where(eq(promoCodes.id, promoCodeId))
+                .returning();
+
+            safeLogger.info(`[PromoCodeService] Updated promo code ${promoCodeId}`);
+            return updatedPromo;
+        } catch (error) {
+            safeLogger.error('[PromoCodeService] Error updating promo code:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Delete a promo code
+     */
+    async deletePromoCode(promoCodeId: string, sellerId: string) {
+        try {
+            safeLogger.info(`[PromoCodeService] Deleting promo code ${promoCodeId} for sellerId: ${sellerId}`);
+            const resolvedSellerId = await this.resolveSellerId(sellerId);
+
+            // Verify the promo code belongs to this seller
+            const existing = await db
+                .select()
+                .from(promoCodes)
+                .where(and(eq(promoCodes.id, promoCodeId), eq(promoCodes.sellerId, resolvedSellerId)))
+                .limit(1);
+
+            if (existing.length === 0) {
+                throw new Error('Promo code not found or you do not have permission to delete it');
+            }
+
+            await db
+                .delete(promoCodes)
+                .where(eq(promoCodes.id, promoCodeId));
+
+            safeLogger.info(`[PromoCodeService] Deleted promo code ${promoCodeId}`);
+            return { success: true };
+        } catch (error) {
+            safeLogger.error('[PromoCodeService] Error deleting promo code:', error);
             throw error;
         }
     }

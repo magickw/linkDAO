@@ -63,6 +63,7 @@ export const PromoCodesManager: React.FC<PromoCodesManagerProps> = ({ walletAddr
                     promoCodes={promoCodes}
                     loading={loading}
                     onRefresh={fetchPromoCodes}
+                    walletAddress={walletAddress}
                 />
             )}
         </GlassPanel>

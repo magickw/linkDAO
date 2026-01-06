@@ -32,4 +32,14 @@ router.get('/',
     promoCodeController.list
 );
 
+// Update a promo code
+router.put('/:id',
+    promoCodeController.update
+);
+
+// Delete a promo code
+router.delete('/:id',
+    promoCodeController.delete
+);
+
 export default router;

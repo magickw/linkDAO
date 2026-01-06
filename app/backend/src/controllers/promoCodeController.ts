@@ -125,4 +125,91 @@ export class PromoCodeController {
             });
         }
     }
+
+    /**
+     * Update a promo code
+     * PUT /api/marketplace/promo-codes/:id
+     */
+    async update(req: Request, res: Response) {
+        try {
+            const { id } = req.params;
+            const {
+                sellerId,
+                code,
+                productId,
+                discountType,
+                discountValue,
+                minOrderAmount,
+                maxDiscountAmount,
+                startDate,
+                endDate,
+                usageLimit,
+                isActive
+            } = req.body;
+
+            if (!sellerId) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Seller ID is required'
+                });
+            }
+
+            const promoCode = await promoCodeService.updatePromoCode(id, sellerId, {
+                code,
+                productId,
+                discountType,
+                discountValue,
+                minOrderAmount,
+                maxDiscountAmount,
+                startDate: startDate ? new Date(startDate) : undefined,
+                endDate: endDate ? new Date(endDate) : undefined,
+                usageLimit,
+                isActive
+            });
+
+            return res.json({
+                success: true,
+                data: promoCode
+            });
+
+        } catch (error: any) {
+            safeLogger.error('Error updating promo code:', error);
+            return res.status(500).json({
+                success: false,
+                error: error.message || 'Failed to update promo code'
+            });
+        }
+    }
+
+    /**
+     * Delete a promo code
+     * DELETE /api/marketplace/promo-codes/:id
+     */
+    async delete(req: Request, res: Response) {
+        try {
+            const { id } = req.params;
+            const { sellerId } = req.body;
+
+            if (!sellerId) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Seller ID is required'
+                });
+            }
+
+            await promoCodeService.deletePromoCode(id, sellerId);
+
+            return res.json({
+                success: true,
+                message: 'Promo code deleted successfully'
+            });
+
+        } catch (error: any) {
+            safeLogger.error('Error deleting promo code:', error);
+            return res.status(500).json({
+                success: false,
+                error: error.message || 'Failed to delete promo code'
+            });
+        }
+    }
 }

@@ -11,6 +11,7 @@ export interface CreatePromoCodeInput {
     startDate?: string;
     endDate?: string;
     usageLimit?: number;
+    isActive?: boolean;
 }
 
 export interface PromoCode {
@@ -78,6 +79,42 @@ class FrontendPromoCodeService {
         const result = await response.json();
         console.log('[promoCodeService] Success response:', result);
         return result.data;
+    }
+
+    async updatePromoCode(promoCodeId: string, sellerId: string, updates: Partial<CreatePromoCodeInput>): Promise<PromoCode> {
+        const response = await fetch(`${this.baseUrl}/api/marketplace/promo-codes/${promoCodeId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                sellerId,
+                ...updates
+            }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to update promo code');
+        }
+
+        const result = await response.json();
+        return result.data;
+    }
+
+    async deletePromoCode(promoCodeId: string, sellerId: string): Promise<void> {
+        const response = await fetch(`${this.baseUrl}/api/marketplace/promo-codes/${promoCodeId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ sellerId }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to delete promo code');
+        }
     }
 }
 
