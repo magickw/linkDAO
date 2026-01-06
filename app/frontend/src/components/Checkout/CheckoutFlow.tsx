@@ -61,10 +61,9 @@ import { TransactionSummary } from './TransactionSummary';
 
 import { ShippingStep } from './Steps/ShippingStep';
 import { useProfile } from '@/hooks/useProfile';
-import { useProfile } from '@/hooks/useProfile';
 import { ShippingAddress } from '@/hooks/useCheckoutFlow';
 import { useX402 } from '@/hooks/useX402';
-import checkoutService from '@/services/checkoutService'; // Ensure import exists or is consistent
+import HelperCheckoutService from '@/services/checkoutService'; // Import Class as Helper
 // Assuming checkoutService is the singleton instance usually exported as default or named.
 // If not, we might need to verify import.
 // Based on usage 'cryptoPaymentService' was imported in unifiedCheckoutService.
@@ -97,9 +96,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
   const { switchChain } = useSwitchChain();
   const publicClient = usePublicClient();
   const { data: walletClientData } = useWalletClient();
-  const { addToast } = useToast();
   const { fetchWithAuth } = useX402();
-  const { addToast } = useToast();
 
   // Fetch user profile for auto-filling address
   const { profile } = useProfile(address);
@@ -142,6 +139,9 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
     const stripeService = new StripePaymentService();
     return new UnifiedCheckoutService(cryptoService, stripeService);
   }, [publicClient, walletClientData]);
+
+  // Instantiate the wrapper service for API calls like createCheckoutSession
+  const apiService = React.useMemo(() => new HelperCheckoutService(), []);
 
   const [prioritizationService] = useState(() => {
     const costCalculator = new CostEffectivenessCalculator();
@@ -414,8 +414,6 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
       console.log('🚀 Processing checkout request:', request);
 
-      console.log('🚀 Processing checkout request:', request);
-
       // Determine payment path
       const isCrypto = selectedPaymentMethod.method.type !== PaymentMethodType.FIAT_STRIPE;
 
@@ -424,7 +422,8 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       if (isCrypto) {
         // x402 Protocol Flow
         // 1. Create Checkout Session to get Order ID and finalize totals
-        const session = await checkoutService.createCheckoutSession(cartState.items, address);
+        // Use apiService (Wrapper) instead of checkoutService (Unified)
+        const session = await apiService.createCheckoutSession(cartState.items, address);
 
         // 2. Pay via x402 Protocol (Signature Handshake)
         // This will prompt signature and retry if 402 is returned
