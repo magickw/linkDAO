@@ -10,7 +10,7 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    color: #00a8e1;
+    color: #60a5fa;
     font-weight: 600;
     font-size: 13px;
     margin-bottom: 4px;
@@ -22,26 +22,26 @@
 }
 
 .deliveryText {
-    color: #0f1111;
+    color: rgba(255, 255, 255, 0.9);
     line-height: 1.4;
 }
 
 .freeShipping {
-    color: #007600;
+    color: #34d399;
     font-weight: 600;
 }
 
 .deliveryDate {
-    color: #0f1111;
+    color: rgba(255, 255, 255, 0.9);
 }
 
 .freeReturns {
-    color: #007600;
+    color: #34d399;
     font-size: 13px;
 }
 
 .deliveryLocation {
-    color: #565959;
+    color: rgba(255, 255, 255, 0.6);
     font-size: 12px;
     margin-top: 2px;
 }

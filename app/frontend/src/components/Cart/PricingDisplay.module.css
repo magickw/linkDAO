@@ -7,7 +7,7 @@
 .currentPrice {
     font-size: 24px;
     font-weight: 700;
-    color: #b12704;
+    color: white;
     line-height: 1.2;
 }
 
@@ -20,22 +20,22 @@
 
 .listPrice {
     font-size: 13px;
-    color: #565959;
+    color: rgba(255, 255, 255, 0.6);
     text-decoration: line-through;
 }
 
 .discountBadge {
     display: inline-block;
-    background-color: #cc0c39;
+    background: linear-gradient(135deg, #ef4444, #dc2626);
     color: white;
     padding: 2px 6px;
-    border-radius: 3px;
+    border-radius: 4px;
     font-size: 12px;
     font-weight: 600;
 }
 
 .savings {
     font-size: 13px;
-    color: #007600;
+    color: #34d399;
     font-weight: 600;
 }

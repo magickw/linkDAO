@@ -7,10 +7,11 @@
 .quantitySelector {
     display: inline-flex;
     align-items: center;
-    border: 1px solid #d5d9d9;
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 8px;
     overflow: hidden;
-    background: white;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(8px);
     width: fit-content;
 }
 
@@ -18,8 +19,8 @@
     width: 36px;
     height: 36px;
     border: none;
-    background: #f0f2f2;
-    color: #0f1111;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
     font-size: 18px;
     font-weight: 600;
     cursor: pointer;
@@ -30,15 +31,15 @@
 }
 
 .quantityButton:hover:not(:disabled) {
-    background: #e3e6e6;
+    background: rgba(255, 255, 255, 0.2);
 }
 
 .quantityButton:active:not(:disabled) {
-    background: #d5d9d9;
+    background: rgba(255, 255, 255, 0.15);
 }
 
 .quantityButton:disabled {
-    opacity: 0.5;
+    opacity: 0.3;
     cursor: not-allowed;
 }
 
@@ -46,12 +47,13 @@
     width: 50px;
     height: 36px;
     border: none;
-    border-left: 1px solid #d5d9d9;
-    border-right: 1px solid #d5d9d9;
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+    border-right: 1px solid rgba(255, 255, 255, 0.2);
     text-align: center;
     font-size: 14px;
     font-weight: 600;
-    color: #0f1111;
+    color: white;
+    background: transparent;
     -moz-appearance: textfield;
 }
 
@@ -62,7 +64,7 @@
 }
 
 .quantityInput:focus {
-    outline: 2px solid #ff9900;
+    outline: 2px solid #3b82f6;
     outline-offset: 2px;
 }
 
@@ -72,16 +74,16 @@
 }
 
 .inStock {
-    color: #007600;
+    color: #34d399;
     font-weight: 600;
 }
 
 .lowStock {
-    color: #ff9900;
+    color: #fbbf24;
     font-weight: 600;
 }
 
 .outOfStock {
-    color: #cc0c39;
+    color: #ef4444;
     font-weight: 600;
 }

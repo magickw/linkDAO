@@ -8,7 +8,10 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Layout from '@/components/Layout';
 import { cartService, CartState } from '@/services/cartService';
+import { savedForLaterService, SavedForLaterItem } from '@/services/savedForLaterService';
 import ProductThumbnail from '@/components/Checkout/ProductThumbnail';
+import { CartItemCard } from '@/components/Cart/CartItemCard';
+import { SavedForLaterSection } from '@/components/Cart/SavedForLaterSection';
 import { X, Plus, Minus, ShoppingCart, Info, Tag, Percent, CheckCircle } from 'lucide-react';
 
 import { useAccount } from 'wagmi';
@@ -52,6 +55,7 @@ const CartPage: React.FC = () => {
     error: string;
   }>>({});
 
+  const [savedItems, setSavedItems] = useState<SavedForLaterItem[]>([]);
   const [gasFee, setGasFee] = useState(0);
   const [estimatedTax, setEstimatedTax] = useState(0);
   const [showFeeBreakdown, setShowFeeBreakdown] = useState(false);
@@ -161,6 +165,24 @@ const CartPage: React.FC = () => {
     };
   }, []);
 
+  // Load saved items
+  useEffect(() => {
+    const loadSavedItems = async () => {
+      const items = await savedForLaterService.getSavedItems();
+      setSavedItems(items);
+    };
+
+    loadSavedItems();
+
+    const unsubscribe = savedForLaterService.subscribe((items) => {
+      setSavedItems(items);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
   const handleRemoveItem = (itemId: string) => {
     cartService.removeItem(itemId);
   };
@@ -244,6 +266,32 @@ const CartPage: React.FC = () => {
     router.push('/marketplace');
   };
 
+  const handleSaveForLater = async (itemId: string) => {
+    try {
+      await savedForLaterService.saveCartItemForLater(itemId);
+      // Cart will auto-refresh via subscription
+    } catch (error) {
+      console.error('Failed to save item for later:', error);
+    }
+  };
+
+  const handleMoveToCart = async (savedItemId: string) => {
+    try {
+      await savedForLaterService.moveToCart(savedItemId);
+      // Both cart and saved items will auto-refresh via subscriptions
+    } catch (error) {
+      console.error('Failed to move item to cart:', error);
+    }
+  };
+
+  const handleRemoveSaved = async (savedItemId: string) => {
+    try {
+      await savedForLaterService.removeSavedItem(savedItemId);
+    } catch (error) {
+      console.error('Failed to remove saved item:', error);
+    }
+  };
+
   return (
     <Layout title="Shopping Cart | Marketplace" fullWidth={true}>
       <Head>
@@ -298,93 +346,38 @@ const CartPage: React.FC = () => {
                   <div className="divide-y divide-white/10">
                     {cartState.items.map((item) => {
                       const inputState = promoCodeInputs[item.id] || { code: '', loading: false, error: '' };
-                      const itemTotal = parseFloat(item.price.fiat) * item.quantity;
-                      const itemDiscount = parseFloat(item.appliedDiscount || '0');
-                      const itemFinalPrice = itemTotal - itemDiscount;
                       const isPromoApplied = !!item.appliedPromoCodeId;
 
                       return (
-                        <div key={item.id} className="p-6 flex flex-col gap-4">
-                          <div className="flex flex-col sm:flex-row gap-4">
-                            <Link href={`/marketplace/product/${item.id}`}>
-                              <a className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity">
-                                <ProductThumbnail
-                                  item={{
-                                    id: item.id,
-                                    title: item.title,
-                                    image: item.image,
-                                    category: item.category
-                                  }}
-                                  size="large"
-                                  fallbackType="letter"
-                                />
-                              </a>
-                            </Link>
-
-                            <div className="flex-grow">
-                              <div className="flex justify-between">
-                                <Link href={`/marketplace/product/${item.id}`}>
-                                  <a className="hover:text-blue-400 transition-colors">
-                                    <h3 className="font-semibold text-white">{item.title}</h3>
-                                  </a>
-                                </Link>
-                                <button
-                                  onClick={() => handleRemoveItem(item.id)}
-                                  className="text-white/50 hover:text-white"
-                                  aria-label="Remove item"
-                                >
-                                  <X size={20} />
-                                </button>
-                              </div>
-
-                              <p className="text-white/70 text-sm mb-2">{item.seller.name}</p>
-
-                              <div className="flex flex-wrap items-center gap-4 mt-4">
-                                <div className="flex items-center border border-white/20 rounded-lg bg-white/10">
-                                  <button
-                                    onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
-                                    disabled={item.quantity <= 1}
-                                    className="p-2 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed"
-                                    aria-label="Decrease quantity"
-                                  >
-                                    <Minus size={16} />
-                                  </button>
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    value={item.quantity}
-                                    onChange={(e) => handleQuantityInputChange(item.id, e.target.value)}
-                                    className="w-16 px-2 py-2 text-white bg-transparent text-center border-x border-white/20 focus:outline-none"
-                                    aria-label="Quantity"
-                                  />
-                                  <button
-                                    onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
-                                    className="p-2 hover:bg-white/20"
-                                    aria-label="Increase quantity"
-                                  >
-                                    <Plus size={16} />
-                                  </button>
-                                </div>
-
-                                <div className="flex flex-col items-end">
-                                  <div className="text-lg font-semibold text-white">
-                                    {item.price.fiatSymbol}{itemFinalPrice.toFixed(2)}
-                                  </div>
-                                  <div className="text-sm text-white/60">
-                                    {item.price.fiatSymbol}{parseFloat(item.price.fiat).toFixed(2)} × {item.quantity}
-                                    {isPromoApplied && (
-                                      <span className="text-green-400 ml-2">
-                                        (-{item.price.fiatSymbol}{itemDiscount.toFixed(2)})
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
+                        <div key={item.id} className="p-6">
+                          <CartItemCard
+                            item={{
+                              id: item.id,
+                              productId: item.id,
+                              title: item.title,
+                              description: item.description,
+                              image: item.image,
+                              currentPrice: parseFloat(item.price.fiat),
+                              listPrice: undefined, // Add if available from backend
+                              currency: item.price.fiatSymbol,
+                              quantity: item.quantity,
+                              inventory: item.inventory,
+                              seller: item.seller.name,
+                              appliedDiscount: item.appliedDiscount,
+                              selected: true
+                            }}
+                            onQuantityChange={(qty) => handleUpdateQuantity(item.id, qty)}
+                            onRemove={() => handleRemoveItem(item.id)}
+                            onSaveForLater={() => handleSaveForLater(item.cartItemId || item.id)}
+                            showSelection={false}
+                            isPrime={false}
+                            estimatedDeliveryDays={typeof item.shipping.estimatedDays === 'number'
+                              ? item.shipping.estimatedDays
+                              : parseInt(item.shipping.estimatedDays) || 3}
+                          />
 
                           {/* Promo Code Field for This Item */}
-                          <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                          <div className="bg-white/5 rounded-lg p-4 border border-white/10 mt-4">
                             <div className="flex items-center gap-2 mb-2">
                               <Tag size={16} className="text-blue-400" />
                               <span className="text-sm font-medium text-white">Promo Code</span>
@@ -421,7 +414,7 @@ const CartPage: React.FC = () => {
                             {isPromoApplied && (
                               <p className="text-green-400 text-xs mt-2 flex items-center gap-1">
                                 <CheckCircle size={12} />
-                                Promo code applied! You save {item.price.fiatSymbol}{itemDiscount.toFixed(2)}
+                                Promo code applied! You save {item.price.fiatSymbol}{parseFloat(item.appliedDiscount || '0').toFixed(2)}
                               </p>
                             )}
                           </div>
@@ -430,6 +423,17 @@ const CartPage: React.FC = () => {
                     })}
                   </div>
                 </div>
+
+                {/* Saved For Later Section */}
+                {savedItems.length > 0 && (
+                  <div className="mt-8">
+                    <SavedForLaterSection
+                      items={savedItems}
+                      onMoveToCart={handleMoveToCart}
+                      onRemove={handleRemoveSaved}
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="lg:col-span-1">
