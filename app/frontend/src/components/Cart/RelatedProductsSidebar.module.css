@@ -1,0 +1,101 @@
+.sidebar {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    padding: 20px;
+    margin-top: 24px;
+}
+
+.title {
+    font-size: 18px;
+    font-weight: 700;
+    color: white;
+    margin: 0 0 16px 0;
+}
+
+.loading {
+    color: rgba(255, 255, 255, 0.7);
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.scrollContainer {
+    position: relative;
+}
+
+.productsGrid {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    padding: 8px 0;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+.productsGrid::-webkit-scrollbar {
+    height: 6px;
+}
+
+.productsGrid::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+.productsGrid::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+}
+
+.productsGrid::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.4);
+}
+
+.scrollButton {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.scrollButton:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.scrollButton:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.scrollLeft {
+    left: -12px;
+}
+
+.scrollRight {
+    right: -12px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .scrollButton {
+        display: none;
+    }
+
+    .productsGrid {
+        padding-bottom: 16px;
+    }
+}

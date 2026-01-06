@@ -14,6 +14,7 @@ import { CartItemCard } from '@/components/Cart/CartItemCard';
 import { SavedForLaterSection } from '@/components/Cart/SavedForLaterSection';
 import { EnhancedOrderSummary } from '@/components/Cart/EnhancedOrderSummary';
 import { BulkActionBar } from '@/components/Cart/BulkActionBar';
+import { RelatedProductsSidebar } from '@/components/Cart/RelatedProductsSidebar';
 import { X, Plus, Minus, ShoppingCart, Info, Tag, Percent, CheckCircle } from 'lucide-react';
 
 import { useAccount } from 'wagmi';
@@ -340,6 +341,15 @@ const CartPage: React.FC = () => {
     return cartState.items.filter(item => item.selected).length;
   }, [cartState.items]);
 
+  const handleQuickAdd = async (productId: string) => {
+    try {
+      await cartService.addItem(productId, 1);
+      console.log(`Added product ${productId} to cart`);
+    } catch (error) {
+      console.error('Failed to quick add product:', error);
+    }
+  };
+
   return (
     <Layout title="Shopping Cart | Marketplace" fullWidth={true}>
       <Head>
@@ -491,6 +501,9 @@ const CartPage: React.FC = () => {
                   onDeselectAll={handleDeselectAll}
                   isLoading={bulkActionLoading}
                 />
+
+                {/* Related Products */}
+                <RelatedProductsSidebar onQuickAdd={handleQuickAdd} />
               </div>
 
               <div className="lg:col-span-1">
