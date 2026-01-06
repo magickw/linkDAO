@@ -342,7 +342,15 @@ export class HybridPaymentOrchestrator {
       // Look up seller's Stripe Connect account ID
       let sellerAccountId: string | undefined;
       try {
-        const seller = await this.databaseService.getUserByAddress?.(request.sellerAddress);
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(request.sellerAddress);
+        let seller;
+
+        if (isUuid) {
+          seller = await this.databaseService.getUserById(request.sellerAddress);
+        } else {
+          seller = await this.databaseService.getUserByAddress?.(request.sellerAddress);
+        }
+
         if (seller?.stripeAccountId) {
           sellerAccountId = seller.stripeAccountId;
         }
@@ -474,8 +482,16 @@ export class HybridPaymentOrchestrator {
     pathDecision: PaymentPathDecision
   ): Promise<any> {
     // Get user profiles
-    const buyer = await this.databaseService.getUserByAddress?.(request.buyerAddress);
-    const seller = await this.databaseService.getUserByAddress?.(request.sellerAddress);
+    const isBuyerUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(request.buyerAddress);
+    const isSellerUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(request.sellerAddress);
+
+    const buyer = isBuyerUuid
+      ? await this.databaseService.getUserById(request.buyerAddress)
+      : await this.databaseService.getUserByAddress?.(request.buyerAddress);
+
+    const seller = isSellerUuid
+      ? await this.databaseService.getUserById(request.sellerAddress)
+      : await this.databaseService.getUserByAddress?.(request.sellerAddress);
 
     if (!buyer?.id || !seller?.id) {
       const error = new Error(`Failed to find user records - buyer: ${buyer?.id}, seller: ${seller?.id}`);

@@ -3,13 +3,14 @@
  * Integrates with multiple gas price APIs and provides real-time gas fee monitoring
  */
 
-import { 
-  GasEstimate, 
-  GasFeeThreshold, 
+import {
+  GasEstimate,
+  GasFeeThreshold,
   NetworkConditions,
-  PaymentMethodType 
+  PaymentMethodType
 } from '../types/paymentPrioritization';
 import { intelligentCacheService } from './intelligentCacheService';
+import { CircuitBreaker, MetricsCollector, CacheManager } from './gasFeeEstimationUtils';
 
 // Gas price API endpoints
 const GAS_PRICE_APIS = {
@@ -21,7 +22,7 @@ const GAS_PRICE_APIS = {
     mainnet: 'https://eth-mainnet.g.alchemy.com/v2',
     polygon: 'https://polygon-mainnet.g.alchemy.com/v2',
     arbitrum: 'https://arb-mainnet.g.alchemy.com/v2',
-    sepolia: 'https://eth-sepolia.g.alchemy.com/v2'
+    sepolia: process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || 'https://sepolia.drpc.org'
   },
   infura: {
     mainnet: 'https://mainnet.infura.io/v3',
@@ -60,7 +61,7 @@ interface CachedGasData {
 }
 
 export class GasFeeEstimationService {
-  private cache = new Map<string, CachedGasData>();
+  private cache: CacheManager<GasPriceResponse[]>;
   private apiKeys: {
     etherscan?: string;
     alchemy?: string;
@@ -68,15 +69,55 @@ export class GasFeeEstimationService {
   };
   private isDevelopment: boolean;
   private pendingRequests = new Map<string, Promise<GasPriceResponse[]>>(); // Track pending requests
-  private requestTimestamps = new Map<string, number>(); // Track request timestamps
+  private requestTimestamps = new Map<string, number>(); // Track request timestamps for rate limiting
+
+  // Circuit breakers for each API
+  private etherscanCircuitBreaker = new CircuitBreaker(5, 60000);
+  private alchemyCircuitBreaker = new CircuitBreaker(5, 60000);
+  private infuraCircuitBreaker = new CircuitBreaker(5, 60000);
+
+  // Metrics collector
+  private metrics = new MetricsCollector();
+
+  // Cleanup interval
+  private cleanupInterval?: NodeJS.Timeout;
 
   constructor(apiKeys: { etherscan?: string; alchemy?: string; infura?: string } = {}) {
     this.apiKeys = {
-      etherscan: apiKeys.etherscan || process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY,
-      alchemy: apiKeys.alchemy || process.env.NEXT_PUBLIC_ALCHEMY_API_KEY,
-      infura: apiKeys.infura || process.env.NEXT_PUBLIC_INFURA_API_KEY
+      etherscan: apiKeys.etherscan,
+      alchemy: apiKeys.alchemy,
+      infura: apiKeys.infura
     };
     this.isDevelopment = process.env.NODE_ENV === 'development';
+
+    // Initialize cache with 100 max entries and 5 minute TTL
+    this.cache = new CacheManager<GasPriceResponse[]>(100, 300000);
+
+    // Set up periodic cleanup (every 5 minutes)
+    if (typeof window !== 'undefined') {
+      this.cleanupInterval = setInterval(() => {
+        this.cache.forceCleanup();
+      }, 300000);
+    }
+  }
+
+  /**
+   * Get metrics for monitoring
+   */
+  getMetrics() {
+    return this.metrics.getMetrics();
+  }
+
+  /**
+   * Clean up resources
+   */
+  destroy(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+    }
+    this.cache.clear();
+    this.pendingRequests.clear();
+    this.requestTimestamps.clear();
   }
 
   /**
@@ -88,7 +129,7 @@ export class GasFeeEstimationService {
     customGasLimit?: bigint
   ): Promise<GasEstimate> {
     const cacheKey = `${chainId}_${transactionType}_${customGasLimit?.toString() || 'default'}`;
-    
+
     // Try to get from intelligent cache first
     const cached = await intelligentCacheService.getCachedGasEstimate(cacheKey);
     if (cached) {
@@ -117,7 +158,7 @@ export class GasFeeEstimationService {
       // Use the most reliable gas price (highest confidence)
       const bestGasPrice = gasPrices.reduce((best, current) =>
         current.confidence > best.confidence ? current : best
-      , gasPrices[0]); // Provide initial value to prevent reduce error
+        , gasPrices[0]); // Provide initial value to prevent reduce error
 
       const totalCost = gasLimit * bestGasPrice.gasPrice;
       const totalCostUSD = await this.convertToUSD(totalCost, chainId);
@@ -210,8 +251,8 @@ export class GasFeeEstimationService {
         return this.getFallbackNetworkConditions(chainId);
       }
 
-      const averageGasPrice = gasPrices.reduce((sum, price) => sum + Number(price.gasPrice), 0) / gasPrices.length;
-      const gasPriceUSD = await this.convertToUSD(BigInt(Math.round(averageGasPrice)), chainId);
+      const averageGasPrice = gasPrices.reduce((sum, price) => sum + price.gasPrice, 0n) / BigInt(gasPrices.length);
+      const gasPriceUSD = await this.convertToUSD(averageGasPrice, chainId);
 
       // Determine network congestion based on gas price
       let networkCongestion: 'low' | 'medium' | 'high';
@@ -221,7 +262,7 @@ export class GasFeeEstimationService {
 
       const conditions: NetworkConditions = {
         chainId,
-        gasPrice: BigInt(Math.round(averageGasPrice)),
+        gasPrice: averageGasPrice,
         gasPriceUSD,
         networkCongestion,
         blockTime: this.getAverageBlockTime(chainId),
@@ -263,67 +304,66 @@ export class GasFeeEstimationService {
    */
   private async getGasPrices(chainId: number): Promise<GasPriceResponse[]> {
     const cacheKey = `${CACHE_KEY_PREFIX}${chainId}`;
-    const cached = this.cache.get(cacheKey);
+    const startTime = Date.now();
 
-    // Check if we have fresh cached data (less than 30 seconds old)
-    if (cached && Date.now() - cached.timestamp.getTime() < CACHE_DURATION) {
-      return cached.data;
+    // Try to get from cache (CacheManager handles TTL automatically)
+    const cached = this.cache.get(cacheKey);
+    if (cached) {
+      this.metrics.recordRequest('cache', Date.now() - startTime, true);
+      return cached;
     }
 
     // Check if there's already a pending request for this chain
-    if (this.pendingRequests.has(cacheKey)) {
+    let pendingPromise = this.pendingRequests.get(cacheKey);
+
+    if (pendingPromise) {
       console.log(`Request already pending, waiting for result: ${cacheKey}`);
-      return this.pendingRequests.get(cacheKey)!;
+      return pendingPromise;
     }
 
     // In development mode or when no API keys are configured, use fallback immediately
     if (this.isDevelopment || (!this.apiKeys.etherscan && !this.apiKeys.alchemy && !this.apiKeys.infura)) {
       console.warn('No gas price API keys configured, using fallback gas prices');
       const fallbackPrices = this.getFallbackGasPrices(chainId);
-      
-      // Cache the fallback results
-      this.cache.set(cacheKey, {
-        data: fallbackPrices,
-        timestamp: new Date(),
-        chainId
-      });
-      
+      this.cache.set(cacheKey, fallbackPrices);
+      this.metrics.recordRequest('fallback', Date.now() - startTime, false);
       return fallbackPrices;
     }
 
-    // Create a new request promise
-    const requestPromise = this.fetchGasPricesFromAPIs(chainId);
-    this.pendingRequests.set(cacheKey, requestPromise);
+    // Create a new request promise with proper cleanup
+    pendingPromise = this.fetchGasPricesFromAPIs(chainId)
+      .then(gasPrices => {
+        if (gasPrices.length === 0) {
+          console.warn('No gas price APIs available, using fallback gas prices');
+          const fallbackPrices = this.getFallbackGasPrices(chainId);
+          this.cache.set(cacheKey, fallbackPrices);
+          this.metrics.recordRequest('fallback', Date.now() - startTime, false);
+          return fallbackPrices;
+        }
 
-    try {
-      const gasPrices = await requestPromise;
-      
-      if (gasPrices.length === 0) {
-        console.warn('No gas price APIs available, using fallback gas prices');
+        // Cache the results
+        this.cache.set(cacheKey, gasPrices);
+
+        // Determine primary source for metrics
+        const primarySource = gasPrices[0]?.source || 'unknown';
+        this.metrics.recordRequest(primarySource, Date.now() - startTime, false);
+
+        return gasPrices;
+      })
+      .catch(error => {
+        console.error('Error fetching gas prices:', error);
         const fallbackPrices = this.getFallbackGasPrices(chainId);
-        
-        // Cache the fallback results
-        this.cache.set(cacheKey, {
-          data: fallbackPrices,
-          timestamp: new Date(),
-          chainId
-        });
-        
+        this.cache.set(cacheKey, fallbackPrices);
+        this.metrics.recordRequest('fallback', Date.now() - startTime, false, true);
         return fallbackPrices;
-      }
-
-      // Cache the results
-      this.cache.set(cacheKey, {
-        data: gasPrices,
-        timestamp: new Date(),
-        chainId
+      })
+      .finally(() => {
+        // Clean up pending request
+        this.pendingRequests.delete(cacheKey);
       });
 
-      return gasPrices;
-    } finally {
-      // Clean up pending request
-      this.pendingRequests.delete(cacheKey);
-    }
+    this.pendingRequests.set(cacheKey, pendingPromise);
+    return pendingPromise;
   }
 
   /**
@@ -332,26 +372,26 @@ export class GasFeeEstimationService {
   private async fetchGasPricesFromAPIs(chainId: number): Promise<GasPriceResponse[]> {
     // Check if we've made a request too recently (rate limiting)
     const now = Date.now();
-    
+
     // Rate limit to 1 request per API per 5 seconds per chain
     const rateLimitKeys = [
       `etherscan_${chainId}`,
       `alchemy_${chainId}`,
       `infura_${chainId}`
     ];
-    
+
     const shouldSkipRequest = rateLimitKeys.some(key => {
       const lastRequestTime = this.requestTimestamps.get(key) || 0;
       return (now - lastRequestTime) < 5000; // 5 second rate limit
     });
-    
+
     if (shouldSkipRequest) {
       console.log(`Rate limit exceeded for chain ${chainId}, using cached or fallback data`);
       // Return cached data if available, otherwise fallback
       const cacheKey = `${CACHE_KEY_PREFIX}${chainId}`;
       const cached = this.cache.get(cacheKey);
-      if (cached && Date.now() - cached.timestamp.getTime() < CACHE_DURATION * 2) {
-        return cached.data;
+      if (cached) {
+        return cached;
       }
       // Return fallback data
       return this.getFallbackGasPrices(chainId);
@@ -382,7 +422,7 @@ export class GasFeeEstimationService {
 
     const results = await Promise.allSettled(promises);
     const gasPrices = results
-      .filter((result): result is PromiseFulfilledResult<GasPriceResponse> => 
+      .filter((result): result is PromiseFulfilledResult<GasPriceResponse> =>
         result.status === 'fulfilled' && result.value !== null
       )
       .map(result => result.value);
@@ -419,37 +459,61 @@ export class GasFeeEstimationService {
    * Fetch gas price from Etherscan API with rate limiting
    */
   private async fetchEtherscanGasPrice(chainId: number): Promise<GasPriceResponse | null> {
+    // Check circuit breaker first
+    if (this.etherscanCircuitBreaker.isOpen()) {
+      console.warn('Etherscan circuit breaker is open, skipping request');
+      return null;
+    }
+
     try {
       // Check if we've made a request too recently
       const requestKey = `etherscan_${chainId}`;
       const lastRequestTime = this.requestTimestamps.get(requestKey) || 0;
       const now = Date.now();
-      
+
       // Rate limit to 1 request per 5 seconds
       if (now - lastRequestTime < 5000) {
         console.log(`Rate limit exceeded for: Etherscan chain ${chainId}, skipping request`);
         return null;
       }
-      
+
       // Update request timestamp
       this.requestTimestamps.set(requestKey, now);
 
       const apiUrl = chainId === 1 ? GAS_PRICE_APIS.etherscan.mainnet : GAS_PRICE_APIS.etherscan.sepolia;
-      const response = await fetch(`${apiUrl}&apikey=${this.apiKeys.etherscan}`);
-      const data = await response.json();
 
-      if (data.status === '1' && data.result) {
-        return {
-          source: 'etherscan',
-          gasPrice: BigInt(Math.round(parseFloat(data.result.ProposeGasPrice) * 1e9)),
-          maxFeePerGas: BigInt(Math.round(parseFloat(data.result.FastGasPrice) * 1e9)),
-          maxPriorityFeePerGas: BigInt(Math.round(parseFloat(data.result.SafeGasPrice) * 1e9)),
-          confidence: 0.9,
-          timestamp: new Date()
-        };
+      // Add timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      try {
+        const response = await fetch(`${apiUrl}&apikey=${this.apiKeys.etherscan}`, {
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        const data = await response.json();
+
+        if (data.status === '1' && data.result) {
+          // Record success
+          this.etherscanCircuitBreaker.recordSuccess();
+
+          return {
+            source: 'etherscan',
+            gasPrice: BigInt(Math.round(parseFloat(data.result.ProposeGasPrice) * 1e9)),
+            maxFeePerGas: BigInt(Math.round(parseFloat(data.result.FastGasPrice) * 1e9)),
+            maxPriorityFeePerGas: BigInt(Math.round(parseFloat(data.result.SafeGasPrice) * 1e9)),
+            confidence: 0.9,
+            timestamp: new Date()
+          };
+        }
+        return null;
+      } finally {
+        clearTimeout(timeoutId);
       }
-      return null;
     } catch (error) {
+      // Record failure
+      this.etherscanCircuitBreaker.recordFailure();
       console.error('Etherscan gas price fetch failed:', error);
       return null;
     }
@@ -459,18 +523,24 @@ export class GasFeeEstimationService {
    * Fetch gas price from Alchemy API with rate limiting
    */
   private async fetchAlchemyGasPrice(chainId: number): Promise<GasPriceResponse | null> {
+    // Check circuit breaker first
+    if (this.alchemyCircuitBreaker.isOpen()) {
+      console.warn('Alchemy circuit breaker is open, skipping request');
+      return null;
+    }
+
     try {
       // Check if we've made a request too recently
       const requestKey = `alchemy_${chainId}`;
       const lastRequestTime = this.requestTimestamps.get(requestKey) || 0;
       const now = Date.now();
-      
+
       // Rate limit to 1 request per 5 seconds
       if (now - lastRequestTime < 5000) {
         console.log(`Rate limit exceeded for: Alchemy chain ${chainId}, skipping request`);
         return null;
       }
-      
+
       // Update request timestamp
       this.requestTimestamps.set(requestKey, now);
 
@@ -484,28 +554,43 @@ export class GasFeeEstimationService {
       const network = networkMap[chainId];
       if (!network) return null;
 
-      const response = await fetch(`${GAS_PRICE_APIS.alchemy[network]}/${this.apiKeys.alchemy}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          method: 'eth_gasPrice',
-          params: [],
-          id: 1
-        })
-      });
+      // Add timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-      const data = await response.json();
-      if (data.result) {
-        return {
-          source: 'alchemy',
-          gasPrice: BigInt(data.result),
-          confidence: 0.85,
-          timestamp: new Date()
-        };
+      try {
+        const response = await fetch(`${GAS_PRICE_APIS.alchemy[network]}/${this.apiKeys.alchemy}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            method: 'eth_gasPrice',
+            params: [],
+            id: 1
+          }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        const data = await response.json();
+        if (data.result) {
+          // Record success
+          this.alchemyCircuitBreaker.recordSuccess();
+
+          return {
+            source: 'alchemy',
+            gasPrice: BigInt(data.result),
+            confidence: 0.85,
+            timestamp: new Date()
+          };
+        }
+        return null;
+      } finally {
+        clearTimeout(timeoutId);
       }
-      return null;
     } catch (error) {
+      // Record failure
+      this.alchemyCircuitBreaker.recordFailure();
       console.error('Alchemy gas price fetch failed:', error);
       return null;
     }
@@ -515,18 +600,24 @@ export class GasFeeEstimationService {
    * Fetch gas price from Infura API with rate limiting
    */
   private async fetchInfuraGasPrice(chainId: number): Promise<GasPriceResponse | null> {
+    // Check circuit breaker first
+    if (this.infuraCircuitBreaker.isOpen()) {
+      console.warn('Infura circuit breaker is open, skipping request');
+      return null;
+    }
+
     try {
       // Check if we've made a request too recently
       const requestKey = `infura_${chainId}`;
       const lastRequestTime = this.requestTimestamps.get(requestKey) || 0;
       const now = Date.now();
-      
+
       // Rate limit to 1 request per 5 seconds
       if (now - lastRequestTime < 5000) {
         console.log(`Rate limit exceeded for: Infura chain ${chainId}, skipping request`);
         return null;
       }
-      
+
       // Update request timestamp
       this.requestTimestamps.set(requestKey, now);
 
@@ -540,28 +631,43 @@ export class GasFeeEstimationService {
       const network = networkMap[chainId];
       if (!network) return null;
 
-      const response = await fetch(`${GAS_PRICE_APIS.infura[network]}/${this.apiKeys.infura}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          method: 'eth_gasPrice',
-          params: [],
-          id: 1
-        })
-      });
+      // Add timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-      const data = await response.json();
-      if (data.result) {
-        return {
-          source: 'infura',
-          gasPrice: BigInt(data.result),
-          confidence: 0.8,
-          timestamp: new Date()
-        };
+      try {
+        const response = await fetch(`${GAS_PRICE_APIS.infura[network]}/${this.apiKeys.infura}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            method: 'eth_gasPrice',
+            params: [],
+            id: 1
+          }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        const data = await response.json();
+        if (data.result) {
+          // Record success
+          this.infuraCircuitBreaker.recordSuccess();
+
+          return {
+            source: 'infura',
+            gasPrice: BigInt(data.result),
+            confidence: 0.8,
+            timestamp: new Date()
+          };
+        }
+        return null;
+      } finally {
+        clearTimeout(timeoutId);
       }
-      return null;
     } catch (error) {
+      // Record failure
+      this.infuraCircuitBreaker.recordFailure();
       console.error('Infura gas price fetch failed:', error);
       return null;
     }
@@ -575,7 +681,7 @@ export class GasFeeEstimationService {
       // Create a cache key for the conversion
       const cacheKey = `usd_conversion_${chainId}_${this.getNativeTokenSymbol(chainId)}`;
       const cached = await intelligentCacheService.getCachedExchangeRate(cacheKey);
-      
+
       if (cached) {
         const tokenAmount = Number(gasCost) / 1e18;
         return tokenAmount * cached;
@@ -585,13 +691,13 @@ export class GasFeeEstimationService {
       const now = Date.now();
       const requestKey = `coingecko_${this.getNativeTokenSymbol(chainId)}`;
       const lastRequestTime = this.requestTimestamps.get(requestKey) || 0;
-      
+
       // Rate limit to 1 request per token per 10 seconds
       if ((now - lastRequestTime) < 10000) {
         console.log(`Rate limit exceeded for CoinGecko ${this.getNativeTokenSymbol(chainId)}, using fallback price`);
         return this.getFallbackUSDPrice(gasCost, chainId);
       }
-      
+
       // Update request timestamp
       this.requestTimestamps.set(requestKey, now);
 
@@ -602,10 +708,10 @@ export class GasFeeEstimationService {
       );
       const data = await response.json();
       const tokenPrice = data[this.getCoingeckoId(tokenSymbol)]?.usd || 0;
-      
+
       // Cache the exchange rate
       await intelligentCacheService.cacheExchangeRate(cacheKey, tokenPrice);
-      
+
       // Convert wei to token amount and multiply by USD price
       const tokenAmount = Number(gasCost) / 1e18;
       return tokenAmount * tokenPrice;
@@ -653,13 +759,13 @@ export class GasFeeEstimationService {
     return blockTimeMap[chainId] || 12;
   }
 
-/**
-   * Get fallback gas estimate when APIs fail
-   * NOTE: This should NOT be used in production. In production, we should:
-   * 1. Show an error message to the user
-   * 2. Disable the payment method temporarily
-   * 3. Allow users to retry later when APIs are available
-   */
+  /**
+     * Get fallback gas estimate when APIs fail
+     * NOTE: This should NOT be used in production. In production, we should:
+     * 1. Show an error message to the user
+     * 2. Disable the payment method temporarily
+     * 3. Allow users to retry later when APIs are available
+     */
   private getFallbackGasEstimate(
     chainId: number,
     transactionType: keyof typeof STANDARD_GAS_LIMITS,
@@ -671,7 +777,7 @@ export class GasFeeEstimationService {
     }
 
     const gasLimit = customGasLimit || STANDARD_GAS_LIMITS[transactionType];
-    
+
     // Ensure gas limit doesn't exceed security or network limits
     const securityMaxGasLimit = 500000n; // Security limit from token transaction security config
     const networkMaxGasLimit = 16777215n; // Maximum safe gas limit (just under 16,777,216 block limit)

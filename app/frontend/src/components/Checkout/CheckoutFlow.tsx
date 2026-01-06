@@ -97,6 +97,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
   const publicClient = usePublicClient();
   const { data: walletClientData } = useWalletClient();
   const { fetchWithAuth } = useX402();
+  const { addToast } = useToast();
 
   // Fetch user profile for auto-filling address
   const { profile } = useProfile(address);
