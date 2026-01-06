@@ -996,10 +996,30 @@ export class DatabaseService {
         // 1b. Check and hold inventory with pessimistic locking
         const product = await tx.select().from(schema.products).where(eq(schema.products.id, listingId));
 
+        safeLogger.info('[createOrder] Searching for listing:', {
+          listingId,
+          listingIdType: typeof listingId,
+          productFound: product.length > 0
+        });
+
         if (product.length === 0) {
           // Fallback to listings table check if not found in products (backward compatibility)
+          safeLogger.warn('[createOrder] Product not found in products table, checking listings table:', { listingId });
           const listing = await tx.select().from(schema.listings).where(eq(schema.listings.id, listingId));
-          if (listing.length === 0) throw new Error('Product not found');
+          safeLogger.info('[createOrder] Listings table search result:', {
+            listingId,
+            listingFound: listing.length > 0,
+            listingData: listing.length > 0 ? { id: listing[0].id, title: listing[0].title, status: listing[0].status } : null
+          });
+          if (listing.length === 0) {
+            safeLogger.error('[createOrder] Product not found in either products or listings table:', {
+              listingId,
+              listingIdType: typeof listingId,
+              buyerId,
+              sellerId
+            });
+            throw new Error('Product not found');
+          }
 
           if (listing[0].inventory < 1) {
             throw new Error('Insufficient inventory');
