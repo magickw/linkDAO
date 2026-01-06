@@ -12,3 +12,4 @@ export { EnhancedOrderSummary } from './EnhancedOrderSummary';
 export { BulkActionBar } from './BulkActionBar';
 export { RelatedProductsSidebar } from './RelatedProductsSidebar';
 export { RelatedProductCard } from './RelatedProductCard';
+export { ShareCartModal } from './ShareCartModal';

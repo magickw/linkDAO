@@ -1,6 +1,7 @@
 import express from 'express';
 import { csrfProtection } from '../middleware/csrfProtection';
 import { cartController } from '../controllers/cartController';
+import { shareCartController } from '../controllers/shareCartController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { validateRequest } from '../middleware/validation';
 
@@ -121,5 +122,26 @@ router.post('/sync', csrfProtection,
   }),
   cartController.syncCart.bind(cartController)
 );
+
+/**
+ * @route POST /api/cart/share
+ * @desc Create a shareable cart link
+ * @access Private
+ */
+router.post('/share', csrfProtection, shareCartController.createShareLink.bind(shareCartController));
+
+/**
+ * @route GET /api/cart/shared/:token
+ * @desc Get shared cart by token
+ * @access Public
+ */
+router.get('/shared/:token', shareCartController.getSharedCart.bind(shareCartController));
+
+/**
+ * @route POST /api/cart/import/:token
+ * @desc Import shared cart to user's cart
+ * @access Private
+ */
+router.post('/import/:token', csrfProtection, shareCartController.importSharedCart.bind(shareCartController));
 
 export default router;
