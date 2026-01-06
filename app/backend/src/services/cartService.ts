@@ -495,6 +495,15 @@ export class CartService {
       // 3. Update the cart item with the promo code and applied discount
       const discountAmount = promoResult.promoCode.calculatedDiscount || 0;
 
+      // Log the discount details for debugging
+      safeLogger.info(`[CartService] Applying promo code to cart item:`, {
+        code: promoCodeStr,
+        discountType: promoResult.promoCode.discountType,
+        discountValue: promoResult.promoCode.discountValue,
+        orderAmount: parseFloat(cartItem.priceAtTime) * cartItem.quantity,
+        calculatedDiscount: discountAmount
+      });
+
       await db
         .update(cartItems)
         .set({

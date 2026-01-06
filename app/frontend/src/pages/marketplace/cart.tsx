@@ -87,12 +87,16 @@ const CartPage: React.FC = () => {
       return sum + (parseFloat(item.appliedDiscount || '0'));
     }, 0);
 
-    const totalWithGas = subtotalVal + gasFee;
-    const grandTotalVal = totalWithGas + (typeof estimatedTax === 'number' ? estimatedTax : 0);
+    // Ensure discount doesn't exceed subtotal
+    const cappedDiscount = Math.min(totalDiscountVal, subtotalVal);
+
+    const subtotalAfterDiscount = Math.max(0, subtotalVal - cappedDiscount);
+    const totalWithGas = subtotalAfterDiscount + gasFee;
+    const grandTotalVal = Math.max(0, totalWithGas + (typeof estimatedTax === 'number' ? estimatedTax : 0));
 
     return {
-      subtotal: subtotalVal + totalDiscountVal, // Subtotal should be pre-discount
-      totalDiscount: totalDiscountVal,
+      subtotal: subtotalVal, // Pre-discount subtotal
+      totalDiscount: cappedDiscount,
       grandTotal: grandTotalVal
     };
   }, [cartState, gasFee, estimatedTax]);

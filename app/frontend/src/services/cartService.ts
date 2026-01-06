@@ -542,17 +542,51 @@ class CartService {
 
     if (itemIndex === -1) return;
 
+    // If authenticated, update backend first, then refresh from backend
+    if (this.isAuthenticated) {
+      try {
+        const item = currentState.items[itemIndex];
+
+        if (quantity <= 0) {
+          if (item?.cartItemId) {
+            await this.removeItemFromBackend(item.cartItemId);
+          }
+        } else if (item?.cartItemId) {
+          await this.updateItemQuantityInBackend(item.cartItemId, quantity);
+        } else {
+          // If no cartItemId, try to sync first
+          console.log('No cartItemId found, syncing cart with backend...');
+          await this.syncCartWithBackend();
+
+          // Retry with synced state
+          const syncedState = await this.getCartState();
+          const syncedItem = syncedState.items.find(i => i.id === itemId);
+
+          if (syncedItem?.cartItemId) {
+            await this.updateItemQuantityInBackend(syncedItem.cartItemId, quantity);
+          }
+        }
+
+        // Refresh cart from backend to get updated state
+        const updatedCart = await this.getCartFromBackend();
+        if (updatedCart) {
+          await this.saveCartState(updatedCart);
+          this.notifyListeners(updatedCart);
+          return; // Exit early, backend is source of truth
+        }
+      } catch (error) {
+        console.error('Failed to update quantity in backend, falling back to local update:', error);
+      }
+    }
+
+    // Fallback to local update if not authenticated or backend fails
     let newItems: CartItem[];
 
     if (quantity <= 0) {
-      // Remove item if quantity is 0 or negative
       newItems = currentState.items.filter(item => item.id !== itemId);
     } else {
-      // Update quantity
       newItems = [...currentState.items];
       const item = newItems[itemIndex];
-      // Allow user to adjust quantity even if inventory is lower than current quantity (e.g. if inventory changed externally)
-      // But don't allow increasing beyond inventory unless current quantity is already higher (legacy data)
       const maxAllowed = Math.max(item.inventory, item.quantity);
       newItems[itemIndex] = {
         ...item,
@@ -568,24 +602,6 @@ class CartService {
 
     await this.saveCartState(newState);
     this.notifyListeners(newState);
-
-    // If authenticated, also call backend API
-    if (this.isAuthenticated) {
-      try {
-        // Find the item to get its cartItemId for backend operations
-        const item = currentState.items.find(item => item.id === itemId);
-        if (quantity <= 0) {
-          await this.removeItemFromBackend(itemId);
-        } else if (item?.cartItemId) {
-          await this.updateItemQuantityInBackend(item.cartItemId, quantity);
-        } else {
-          // If no cartItemId, this might be a local-only item, skip backend update
-          console.warn('No cartItemId found for item, skipping backend update');
-        }
-      } catch (error) {
-        console.warn('Failed to update item quantity in backend cart:', error);
-      }
-    }
   }
 
   // Synchronous version for backward compatibility

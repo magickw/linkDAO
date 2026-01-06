@@ -209,18 +209,33 @@ export class PromoCodeService {
             // Calculate discount amount
             let discountAmount = 0;
             if (validCode.discountType === 'percentage') {
-                discountAmount = (input.orderAmount * parseFloat(validCode.discountValue)) / 100;
+                const percentageValue = parseFloat(validCode.discountValue);
+
+                // Log for debugging
+                safeLogger.info(`[PromoCode] Calculating percentage discount: ${percentageValue}% of $${input.orderAmount}`);
+
+                // Ensure percentage is between 0-100
+                if (percentageValue < 0 || percentageValue > 100) {
+                    safeLogger.error(`[PromoCode] Invalid percentage value: ${percentageValue}`);
+                    return { isValid: false, error: 'Invalid discount configuration' };
+                }
+
+                discountAmount = (input.orderAmount * percentageValue) / 100;
+                safeLogger.info(`[PromoCode] Calculated discount: $${discountAmount.toFixed(2)}`);
             } else {
                 discountAmount = parseFloat(validCode.discountValue);
+                safeLogger.info(`[PromoCode] Fixed amount discount: $${discountAmount.toFixed(2)}`);
             }
 
             // Apply max discount cap
             if (validCode.maxDiscountAmount && discountAmount > parseFloat(validCode.maxDiscountAmount)) {
+                safeLogger.info(`[PromoCode] Capping discount from $${discountAmount.toFixed(2)} to $${validCode.maxDiscountAmount}`);
                 discountAmount = parseFloat(validCode.maxDiscountAmount);
             }
 
             // Ensure discount doesn't exceed order amount
             if (discountAmount > input.orderAmount) {
+                safeLogger.info(`[PromoCode] Capping discount from $${discountAmount.toFixed(2)} to order amount $${input.orderAmount.toFixed(2)}`);
                 discountAmount = input.orderAmount;
             }
 
