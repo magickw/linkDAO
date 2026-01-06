@@ -12,6 +12,7 @@ import { savedForLaterService, SavedForLaterItem } from '@/services/savedForLate
 import ProductThumbnail from '@/components/Checkout/ProductThumbnail';
 import { CartItemCard } from '@/components/Cart/CartItemCard';
 import { SavedForLaterSection } from '@/components/Cart/SavedForLaterSection';
+import { EnhancedOrderSummary } from '@/components/Cart/EnhancedOrderSummary';
 import { X, Plus, Minus, ShoppingCart, Info, Tag, Percent, CheckCircle } from 'lucide-react';
 
 import { useAccount } from 'wagmi';
@@ -437,138 +438,20 @@ const CartPage: React.FC = () => {
               </div>
 
               <div className="lg:col-span-1">
-                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 sticky top-8 border border-white/20">
-                  <h2 className="text-xl font-semibold text-white mb-4">Order Summary</h2>
-
-                  <div className="space-y-3 mb-6">
-                    <div className="flex justify-between">
-                      <span className="text-white/70">Subtotal</span>
-                      <span className="font-medium text-white">
-                        ${subtotal.toFixed(2)}
-                      </span>
-                    </div>
-
-                    {totalDiscount > 0 && (
-                      <div className="flex justify-between text-green-400">
-                        <span className="flex items-center gap-1">
-                          <Percent size={14} />
-                          Total Discount
-                        </span>
-                        <span className="font-medium">
-                          -${totalDiscount.toFixed(2)}
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="flex justify-between">
-                      <span className="text-white/70">Shipping</span>
-                      <span className="font-medium text-white">
-                        {cartState.totals.shipping.fiatSymbol}{cartState.totals.shipping.fiat}
-                      </span>
-                    </div>
-
-                    {/* Tax Estimate */}
-                    <div className="flex justify-between">
-                      <span className="text-white/70">Estimated Tax</span>
-                      <span className="font-medium text-white">
-                        {estimatedTax > 0 ? `$${estimatedTax.toFixed(2)}` : 'Calculated at checkout'}
-                      </span>
-                    </div>
-                    {estimatedTax === 0 && (
-                      <div className="text-xs text-white/40 text-right mt-[-8px] mb-2">
-                        Log in or fill address to see tax
-                      </div>
-                    )}
-
-                    {/* Gas Fee Preview */}
-                    <div className="flex justify-between items-center group">
-                      <span className="text-white/70 flex items-center gap-2">
-                        Estimated Gas Fee
-                        <button
-                          onClick={() => setShowFeeBreakdown(!showFeeBreakdown)}
-                          className="text-white/50 hover:text-white transition-colors"
-                          aria-label="Show fee breakdown"
-                        >
-                          <Info size={16} />
-                        </button>
-                      </span>
-                      <span className="font-medium text-white">
-                        ${gasFee.toFixed(2)}
-                      </span>
-                    </div>
-
-                    {showFeeBreakdown && (
-                      <div className="bg-white/5 rounded-lg p-3 text-sm space-y-2">
-                        <div className="flex justify-between text-white/70">
-                          <span>Network Fee</span>
-                          <span>${(gasFee * 0.6).toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between text-white/70">
-                          <span>Protocol Fee</span>
-                          <span>${(gasFee * 0.3).toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between text-white/70">
-                          <span>Service Fee</span>
-                          <span>${(gasFee * 0.1).toFixed(2)}</span>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="flex justify-between pt-3 border-t border-white/20">
-                      <span className="text-lg font-semibold text-white">Total</span>
-                      <div className="text-right">
-                        <span className="text-lg font-semibold text-white">
-                          ${grandTotal.toFixed(2)}
-                        </span>
-                        <div className="text-xs text-white/50">incl. all fees</div>
-                      </div>
-                    </div>
-
-                    {totalDiscount > 0 && (
-                      <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 text-sm">
-                        <div className="flex items-center gap-2 text-green-400">
-                          <Tag size={16} />
-                          <span className="font-medium">You saved ${totalDiscount.toFixed(2)}!</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <button
-                    onClick={handleCheckout}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg transition-colors font-medium mb-3 flex items-center justify-center gap-2"
-                  >
-                    Proceed to Checkout
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-
-                  <button
-                    onClick={handleContinueShopping}
-                    className="w-full bg-white/20 hover:bg-white/30 text-white py-3 rounded-lg transition-colors font-medium border border-white/30"
-                  >
-                    Continue Shopping
-                  </button>
-
-                  {/* Security Badges */}
-                  <div className="mt-6 pt-6 border-t border-white/20">
-                    <div className="flex items-center justify-center gap-4 text-white/50 text-sm">
-                      <div className="flex items-center gap-1">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
-                        <span>Secure Payment</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                        </svg>
-                        <span>Buyer Protection</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <EnhancedOrderSummary
+                  subtotal={subtotal}
+                  discount={totalDiscount}
+                  shipping={parseFloat(cartState.totals.shipping.fiat)}
+                  tax={estimatedTax}
+                  total={grandTotal}
+                  itemCount={cartState.items.length}
+                  currency="USD"
+                  onCheckout={handleCheckout}
+                  onContinueShopping={handleContinueShopping}
+                  showFeeBreakdown={showFeeBreakdown}
+                  onToggleFeeBreakdown={() => setShowFeeBreakdown(!showFeeBreakdown)}
+                  gasFee={gasFee}
+                />
               </div>
             </div>
           )}
