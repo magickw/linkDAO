@@ -1094,6 +1094,10 @@ app.use('/api/marketplace', marketplaceRoutes);
 app.use('/api/v1/cart', cartRoutes);
 app.use('/api/cart', cartRoutes);
 
+// Saved for later routes
+import savedForLaterRoutes from './routes/savedForLaterRoutes';
+app.use('/api/saved-for-later', savedForLaterRoutes);
+
 // Checkout routes
 app.use('/api/checkout', checkoutRoutes);
 
