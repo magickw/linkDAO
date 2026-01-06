@@ -35,12 +35,12 @@ router.get('/protected', (req, res) => {
 /**
  * Checkout Payment Endpoint (Protected)
  * POST /api/x402/checkout
- * 
+ *
  * Protected by x402Middleware.
  * Used to finalize the checkout after payment signature is provided.
  */
 router.post('/checkout', async (req, res, next) => {
-    const { orderId } = req.body;
+    const { orderId, amount } = req.body;
 
     if (!orderId) {
         return res.status(400).json({ success: false, message: 'Order ID is required' });
@@ -50,34 +50,27 @@ router.post('/checkout', async (req, res, next) => {
         // 1. Fetch Order to Determine Price
         // In a real implementation: const order = await orderService.getOrder(orderId);
         // For prototype speed: we verify that the order exists and get amount.
-        // Assuming we accept the amount from client for Prototype, OR mock:
-        // const amount = order.totalAmount;
+        const orderAmount = amount || '0.01';
 
-        // Mock Implementation for Prototype:
-        // We will default to 1.00 if lookup fails, or assume req.body.amount if secure context
-        // But let's try to be somewhat secure.
-        // If orderId starts with "order_", we treat as ephemeral.
-        const amount = req.body.amount || '0.01';
-
-        safeLogger.info(`Initializing x402 Middleware for order ${orderId} with amount ${amount}`);
+        safeLogger.info(`Processing x402 checkout for order ${orderId} with amount ${orderAmount}`);
 
         // 2. Create Dynamic Middleware
         // The key MUST match the full request path as seen by Express
         // Since we mounted at /api/x402, and path is /checkout, req.originalUrl is /api/x402/checkout
         const dynamicMiddleware = paymentMiddleware(
             {
-                [`POST /api/x402/checkout`]: { // Uses exact match on method + path
+                [`POST /api/x402/checkout`]: {
                     accepts: [
                         {
                             scheme: 'exact',
-                            price: String(amount),
+                            price: String(orderAmount),
                             network: 'eip155:8453', // Base Mainnet
                             payTo: PAY_TO_ADDRESS,
                             token: 'USDC'
                         },
                         {
                             scheme: 'exact',
-                            price: String(amount), // ETH pricing logic would require conversion
+                            price: String(orderAmount),
                             network: 'eip155:8453',
                             payTo: PAY_TO_ADDRESS
                         }
@@ -105,7 +98,7 @@ router.post('/checkout', async (req, res, next) => {
                     orderId,
                     status: 'confirmed',
                     paymentVerified: true,
-                    amountPaid: amount
+                    amountPaid: orderAmount
                 }
             });
         });

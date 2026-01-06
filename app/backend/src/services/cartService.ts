@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
-import { carts, cartItems, products, users } from '../db/schema';
+import { carts, cartItems, products, users, savedForLater } from '../db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { AuthenticatedUser } from '../middleware/authMiddleware';
 
@@ -773,7 +773,7 @@ export class CartService {
               userId: user.id,
               productId: item.productId,
               quantity: item.quantity,
-              priceAtSave: product.price,
+              priceAtSave: product.priceAmount,
               savedAt: new Date(),
             });
           }

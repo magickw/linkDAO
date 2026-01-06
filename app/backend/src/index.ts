@@ -507,12 +507,9 @@ app.use('/marketplace/reputation', reputationRoutes);
 // Register hybrid payment routes
 app.use('/api/hybrid-payment', hybridPaymentRoutes);
 
-// Register x402 protected routes (Apply middleware ONLY to these routes)
-// Note: We use the middleware globally for these specific paths, or we could wrap the router.
-// Given x402Middleware uses route matching keys like "GET /api/x402/protected", 
-// we should probably app.use(x402Middleware) globally or scoped.
-// The @x402/express middleware checks URL matching internally.
-app.use(x402Middleware);
+// Register x402 protected routes
+// Note: The x402 middleware is applied within the x402ResourceRoutes itself
+// to handle the dynamic payment requirements for each checkout
 app.use('/api/x402', x402ResourceRoutes);
 
 // Add API reputation routes for frontend compatibility

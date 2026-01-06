@@ -13,6 +13,7 @@ import ProductThumbnail from '@/components/Checkout/ProductThumbnail';
 import { CartItemCard } from '@/components/Cart/CartItemCard';
 import { SavedForLaterSection } from '@/components/Cart/SavedForLaterSection';
 import { EnhancedOrderSummary } from '@/components/Cart/EnhancedOrderSummary';
+import { BulkActionBar } from '@/components/Cart/BulkActionBar';
 import { X, Plus, Minus, ShoppingCart, Info, Tag, Percent, CheckCircle } from 'lucide-react';
 
 import { useAccount } from 'wagmi';
@@ -60,6 +61,7 @@ const CartPage: React.FC = () => {
   const [gasFee, setGasFee] = useState(0);
   const [estimatedTax, setEstimatedTax] = useState(0);
   const [showFeeBreakdown, setShowFeeBreakdown] = useState(false);
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
 
   const router = useRouter();
 
@@ -293,6 +295,51 @@ const CartPage: React.FC = () => {
     }
   };
 
+  const handleToggleSelection = async (itemId: string, selected: boolean) => {
+    try {
+      await cartService.toggleItemSelection(itemId, selected);
+    } catch (error) {
+      console.error('Failed to toggle selection:', error);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      setBulkActionLoading(true);
+      const deletedCount = await cartService.bulkDeleteSelected();
+      console.log(`Deleted ${deletedCount} items`);
+    } catch (error) {
+      console.error('Failed to bulk delete:', error);
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkSaveForLater = async () => {
+    try {
+      setBulkActionLoading(true);
+      const savedCount = await cartService.bulkSaveForLater();
+      console.log(`Saved ${savedCount} items for later`);
+    } catch (error) {
+      console.error('Failed to bulk save for later:', error);
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleDeselectAll = async () => {
+    try {
+      await cartService.selectAllItems(false);
+    } catch (error) {
+      console.error('Failed to deselect all:', error);
+    }
+  };
+
+  // Calculate selected count
+  const selectedCount = useMemo(() => {
+    return cartState.items.filter(item => item.selected).length;
+  }, [cartState.items]);
+
   return (
     <Layout title="Shopping Cart | Marketplace" fullWidth={true}>
       <Head>
@@ -435,6 +482,15 @@ const CartPage: React.FC = () => {
                     />
                   </div>
                 )}
+
+                {/* Bulk Action Bar */}
+                <BulkActionBar
+                  selectedCount={selectedCount}
+                  onBulkDelete={handleBulkDelete}
+                  onBulkSaveForLater={handleBulkSaveForLater}
+                  onDeselectAll={handleDeselectAll}
+                  isLoading={bulkActionLoading}
+                />
               </div>
 
               <div className="lg:col-span-1">
