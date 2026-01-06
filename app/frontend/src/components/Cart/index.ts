@@ -9,3 +9,4 @@ export { SavedItemCard } from './SavedItemCard';
 export type { SavedItem } from './SavedItemCard';
 export { SavedForLaterSection } from './SavedForLaterSection';
 export { EnhancedOrderSummary } from './EnhancedOrderSummary';
+export { BulkActionBar } from './BulkActionBar';

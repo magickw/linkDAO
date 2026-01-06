@@ -203,11 +203,30 @@ export class HybridPaymentOrchestrator {
    */
   async processHybridCheckout(request: HybridCheckoutRequest): Promise<HybridPaymentResult> {
     try {
+      safeLogger.info('[processHybridCheckout] Starting checkout process:', {
+        orderId: request.orderId,
+        listingId: request.listingId,
+        buyerAddress: request.buyerAddress,
+        sellerAddress: request.sellerAddress,
+        amount: request.amount,
+        currency: request.currency,
+        preferredMethod: request.preferredMethod
+      });
+
       // Determine optimal payment path
       const pathDecision = await this.determineOptimalPaymentPath(request);
 
+      safeLogger.info('[processHybridCheckout] Payment path determined:', {
+        selectedPath: pathDecision.selectedPath,
+        reason: pathDecision.reason
+      });
+
       // Create order record immediately for visibility
       const orderRecord = await this.createOrderRecord(request, pathDecision);
+
+      safeLogger.info('[processHybridCheckout] Order record created:', {
+        orderId: orderRecord?.id
+      });
 
       let result: HybridPaymentResult;
 
@@ -222,16 +241,23 @@ export class HybridPaymentOrchestrator {
 
       return result;
     } catch (error) {
-      safeLogger.error('Hybrid checkout failed:', error);
+      safeLogger.error('[processHybridCheckout] Checkout failed:', {
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined,
+        request: {
+          orderId: request.orderId,
+          listingId: request.listingId,
+          buyerAddress: request.buyerAddress,
+          sellerAddress: request.sellerAddress,
+          amount: request.amount
+        }
+      });
 
-      // Try fallback path if available
-      const pathDecision = await this.determineOptimalPaymentPath(request);
-      if (pathDecision.fallbackOptions.length > 0) {
-        safeLogger.info('Attempting fallback payment path...');
-        return await this.processFiatEscrowPath(request, pathDecision.fallbackOptions[0], null);
+      // Re-throw the error with original message preserved
+      if (error instanceof Error) {
+        throw error;
       }
-
-      throw error;
+      throw new Error('Checkout processing failed');
     }
   }
 

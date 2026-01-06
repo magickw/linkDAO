@@ -202,22 +202,36 @@ router.post('/checkout', authMiddleware, async (req, res) => {
     });
   } catch (error) {
     safeLogger.error('Error processing checkout:', error);
-    
+
     // Provide specific error messages for common issues
     let errorMessage = 'Checkout processing failed';
+    let errorDetails: any = {};
+
     if (error instanceof Error) {
+      errorDetails.message = error.message;
+      errorDetails.name = error.name;
+
       if (error.message.includes('insufficient')) {
         errorMessage = 'Insufficient inventory or balance';
       } else if (error.message.includes('Stripe')) {
         errorMessage = 'Payment processing error. Please try another payment method';
       } else if (error.message.includes('network')) {
         errorMessage = 'Network error. Please try again';
+      } else if (error.message.includes('user records') || error.message.includes('Failed to find user')) {
+        errorMessage = 'User account not found. Please ensure you are logged in.';
+      } else if (error.message.includes('Product not found') || error.message.includes('listing')) {
+        errorMessage = 'Product not found or no longer available';
+      } else if (error.message.includes('inventory')) {
+        errorMessage = 'Product is out of stock';
+      } else if (error.message.includes('minimum amount')) {
+        errorMessage = error.message; // Return the specific minimum amount error
       }
     }
 
     res.status(500).json({
       success: false,
-      error: errorMessage
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? errorDetails : undefined
     });
   }
 });
