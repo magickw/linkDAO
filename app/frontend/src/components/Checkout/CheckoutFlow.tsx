@@ -61,7 +61,14 @@ import { TransactionSummary } from './TransactionSummary';
 
 import { ShippingStep } from './Steps/ShippingStep';
 import { useProfile } from '@/hooks/useProfile';
+import { useProfile } from '@/hooks/useProfile';
 import { ShippingAddress } from '@/hooks/useCheckoutFlow';
+import { useX402 } from '@/hooks/useX402';
+import checkoutService from '@/services/checkoutService'; // Ensure import exists or is consistent
+// Assuming checkoutService is the singleton instance usually exported as default or named.
+// If not, we might need to verify import.
+// Based on usage 'cryptoPaymentService' was imported in unifiedCheckoutService.
+// Let's assume standard singleton pattern for services in frontend.
 
 interface CheckoutFlowProps {
   onBack: () => void;
@@ -90,6 +97,8 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
   const { switchChain } = useSwitchChain();
   const publicClient = usePublicClient();
   const { data: walletClientData } = useWalletClient();
+  const { addToast } = useToast();
+  const { fetchWithAuth } = useX402();
   const { addToast } = useToast();
 
   // Fetch user profile for auto-filling address
@@ -405,9 +414,46 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
       console.log('🚀 Processing checkout request:', request);
 
-      const result = useEscrow && selectedPaymentMethod.method.type !== PaymentMethodType.FIAT_STRIPE
-        ? await checkoutService.processEscrowPayment(request)
-        : await checkoutService.processPrioritizedCheckout(request);
+      console.log('🚀 Processing checkout request:', request);
+
+      // Determine payment path
+      const isCrypto = selectedPaymentMethod.method.type !== PaymentMethodType.FIAT_STRIPE;
+
+      let result;
+
+      if (isCrypto) {
+        // x402 Protocol Flow
+        // 1. Create Checkout Session to get Order ID and finalize totals
+        const session = await checkoutService.createCheckoutSession(cartState.items, address);
+
+        // 2. Pay via x402 Protocol (Signature Handshake)
+        // This will prompt signature and retry if 402 is returned
+        const x402Response = await fetchWithAuth('/api/x402/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId: session.orderId,
+            amount: session.totals.total
+          })
+        });
+
+        const paymentData = await x402Response.json();
+
+        if (!paymentData.success) {
+          throw new Error(paymentData.message || 'x402 Payment Failed');
+        }
+
+        // Construct successful result
+        result = {
+          orderId: session.orderId,
+          status: 'completed',
+          paymentPath: 'crypto',
+          transactionId: paymentData.data.paymentVerified ? 'x402-signed' : 'pending' // Simplified
+        };
+      } else {
+        // Legacy Fiat Flow
+        result = await checkoutService.processPrioritizedCheckout(request);
+      }
 
       if (result.status === 'completed' || result.status === 'processing') {
         setOrderData(result);

@@ -487,6 +487,8 @@ import securityRoutes from './routes/security';
 import emailRoutes from './routes/email';
 import adminAnalyticsRoutes from './routes/adminAnalytics';
 import searchRoutes from './routes/searchRoutes';
+import x402ResourceRoutes from './routes/x402ResourceRoutes';
+import { x402Middleware } from './middleware/x402Middleware';
 import { StripePaymentService } from './services/stripePaymentService';
 import { createFiatPaymentRoutes } from './routes/fiatPaymentRoutes';
 // Import reputation routes
@@ -504,6 +506,14 @@ app.use('/marketplace/reputation', reputationRoutes);
 
 // Register hybrid payment routes
 app.use('/api/hybrid-payment', hybridPaymentRoutes);
+
+// Register x402 protected routes (Apply middleware ONLY to these routes)
+// Note: We use the middleware globally for these specific paths, or we could wrap the router.
+// Given x402Middleware uses route matching keys like "GET /api/x402/protected", 
+// we should probably app.use(x402Middleware) globally or scoped.
+// The @x402/express middleware checks URL matching internally.
+app.use(x402Middleware);
+app.use('/api/x402', x402ResourceRoutes);
 
 // Add API reputation routes for frontend compatibility
 app.use('/api/reputation', reputationRoutes);

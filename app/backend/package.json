@@ -91,7 +91,7 @@
   "dependencies": {
     "@aws-sdk/client-cloudfront": "^3.922.0",
     "@aws-sdk/client-s3": "^3.922.0",
-    "@coinbase/cdp-sdk": "^1.38.5",
+    "@coinbase/cdp-sdk": "^1.40.1",
     "@coinbase/onchainkit": "^1.1.2",
     "@nestjs/common": "^11.1.8",
     "@swc/cli": "^0.7.9",
@@ -112,6 +112,8 @@
     "@uniswap/smart-order-router": "^4.22.24",
     "@uniswap/v3-periphery": "^1.4.4",
     "@uniswap/v3-sdk": "^3.26.0",
+    "@x402/evm": "^2.1.0",
+    "@x402/express": "^2.1.0",
     "archiver": "^7.0.1",
     "aws-sdk": "^2.1692.0",
     "axios": "^1.7.0",
