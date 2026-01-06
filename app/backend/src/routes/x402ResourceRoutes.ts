@@ -64,14 +64,14 @@ router.post('/checkout', async (req, res, next) => {
                         {
                             scheme: 'exact',
                             price: String(orderAmount),
-                            network: 'eip155:8453', // Base Mainnet
+                            network: 'eip155:84532', // Base Sepolia (compatible with public facilitator)
                             payTo: PAY_TO_ADDRESS,
                             token: 'USDC'
                         },
                         {
                             scheme: 'exact',
                             price: String(orderAmount),
-                            network: 'eip155:8453',
+                            network: 'eip155:84532', // Base Sepolia
                             payTo: PAY_TO_ADDRESS
                         }
                     ],

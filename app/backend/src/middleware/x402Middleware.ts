@@ -38,29 +38,9 @@ export const x402Middleware = paymentMiddleware(
             ],
             description: 'Protected Test Resource',
             mimeType: 'application/json'
-        },
-
-        // Checkout route - Note: This is a placeholder configuration
-        // The actual checkout route handler will create dynamic middleware based on order amount
-        'POST /api/x402/checkout': {
-            accepts: [
-                {
-                    scheme: 'exact',
-                    price: '0.01', // Default minimum price
-                    network: 'eip155:8453', // Base Mainnet
-                    payTo: PAY_TO_ADDRESS,
-                    token: 'USDC'
-                },
-                {
-                    scheme: 'exact',
-                    price: '0.01', // Default minimum price
-                    network: 'eip155:8453', // Base Mainnet
-                    payTo: PAY_TO_ADDRESS
-                }
-            ],
-            description: 'Checkout Payment',
-            mimeType: 'application/json'
         }
+        // Note: POST /api/x402/checkout is handled dynamically in the route handler
+        // to support dynamic order amounts and avoid facilitator compatibility issues
     },
     resourceServer
 );
