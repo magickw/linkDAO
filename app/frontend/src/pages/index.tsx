@@ -1185,8 +1185,8 @@ export default function Home() {
                         <FacebookStylePostComposer
                           onSubmit={handlePostSubmit}
                           isLoading={isCreatingPost}
-                          userAvatar={(profile as any)?.avatar}
-                          userName={(profile as any)?.handle || `${address?.slice(0, 6)}...${address?.slice(-4)}`}
+                          userAvatar={profile?.avatarCid ? `https://ipfs.io/ipfs/${profile.avatarCid}` : undefined}
+                          userName={profile?.handle || `${address?.slice(0, 6)}...${address?.slice(-4)}`}
                         />
                       </Suspense>
                     </div>

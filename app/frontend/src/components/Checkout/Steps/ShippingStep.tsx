@@ -16,6 +16,8 @@ export interface ShippingStepProps {
   userProfile?: any; // User profile for saved addresses
   variant?: 'desktop' | 'mobile';
   title?: string;
+  saveToProfile?: boolean;
+  onSaveAddressChange?: (shouldSave: boolean) => void;
 }
 
 export const ShippingStep: React.FC<ShippingStepProps> = ({
@@ -24,7 +26,9 @@ export const ShippingStep: React.FC<ShippingStepProps> = ({
   onAddressChange,
   userProfile,
   variant = 'desktop',
-  title = 'Shipping Information'
+  title = 'Shipping Information',
+  saveToProfile = false,
+  onSaveAddressChange
 }) => {
   const [showSavedAddresses, setShowSavedAddresses] = useState(false);
 
@@ -302,6 +306,23 @@ export const ShippingStep: React.FC<ShippingStepProps> = ({
           style={isMobile ? { fontSize: '16px' } : {}}
         />
       </div>
+
+      {/* Save Address Option */}
+      {onSaveAddressChange && (
+        <div className="mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={saveToProfile}
+              onChange={(e) => onSaveAddressChange(e.target.checked)}
+              className="form-checkbox h-4 w-4 text-green-600 bg-white/10 border-white/20 rounded focus:ring-green-500"
+            />
+            <span className="text-sm text-white">
+              💾 Save this address to my profile for future orders
+            </span>
+          </label>
+        </div>
+      )}
     </div>
   );
 };

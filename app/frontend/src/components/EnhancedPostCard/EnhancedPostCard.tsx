@@ -492,9 +492,9 @@ const EnhancedPostCard = React.memo(({
                       className="block w-12 h-12 rounded-xl overflow-hidden bg-gradient-to-br from-primary-400 to-secondary-500 border-2 border-white dark:border-gray-800 shadow-md hover:ring-2 hover:ring-primary-400 transition-all duration-200"
                       aria-label={`${post.authorProfile.handle}'s avatar`}
                     >
-                      {post.authorProfile.avatar ? (
+                      {post.authorProfile.avatarCid ? (
                         <img
-                          src={post.authorProfile.avatar}
+                          src={`https://ipfs.io/ipfs/${post.authorProfile.avatarCid}`}
                           alt={post.authorProfile.handle}
                           className="w-full h-full object-cover"
                         />

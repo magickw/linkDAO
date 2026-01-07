@@ -36,7 +36,7 @@ export interface AuthorProfile {
   handle: string;
   verified: boolean;
   reputationTier?: string;
-  avatar?: string;
+  avatarCid?: string;
   ensName?: string;
   reputationScore?: number;
   votingPower?: number;

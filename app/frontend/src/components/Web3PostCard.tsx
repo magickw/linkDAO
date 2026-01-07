@@ -45,7 +45,13 @@ export default function Web3PostCard({ post, profile, className = '' }: Web3Post
           {/* Avatar */}
           <Link href={`/profile/${post.author?.walletAddress || profile.walletAddress}`}>
             <img
-              src={post.author?.avatar || profile.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author?.walletAddress || profile.walletAddress}`}
+              src={
+                post.author?.avatarCid ? `https://ipfs.io/ipfs/${post.author.avatarCid}` :
+                post.author?.avatar ||
+                profile.avatarCid ? `https://ipfs.io/ipfs/${profile.avatarCid}` :
+                profile.avatar ||
+                `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author?.walletAddress || profile.walletAddress}`
+              }
               alt="Avatar"
               className="w-10 h-10 rounded-full ring-2 ring-gray-200 dark:ring-gray-700 hover:ring-4 hover:ring-gray-300 dark:hover:ring-gray-600 transition-all cursor-pointer"
             />

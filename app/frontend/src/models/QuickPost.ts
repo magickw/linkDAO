@@ -44,6 +44,31 @@ function getAvatarUrl(profileCid: string | undefined): string | undefined {
   }
 }
 
+/**
+ * Format author display name consistently
+ * Returns user's handle if available, otherwise returns shortened wallet address
+ * @param handle - User's custom handle (may be null/undefined)
+ * @param walletAddress - User's wallet address
+ * @returns Formatted display name (handle or "0xABCD...1234" format)
+ */
+function formatAuthorDisplay(handle: string | null | undefined, walletAddress: string | null | undefined): string {
+  // If handle exists and is not empty, use it
+  if (handle && handle.trim() !== '') {
+    return handle;
+  }
+
+  // Otherwise, format wallet address as "0xABCD...1234"
+  if (walletAddress && walletAddress.length >= 10) {
+    const prefix = walletAddress.slice(0, 6);  // "0xABCD"
+    const suffix = walletAddress.slice(-4);     // "1234"
+    return `${prefix}...${suffix}`;
+  }
+
+  // Fallback if both are missing
+  return 'Unknown';
+}
+
+
 export function convertBackendQuickPostToQuickPost(backendPost: any): QuickPost {
   // Parse content if it's stored as JSON string
   let content = '';
@@ -121,7 +146,7 @@ export function convertBackendQuickPostToQuickPost(backendPost: any): QuickPost 
 
     // Add author profile information including avatar
     authorProfile: {
-      handle: backendPost.displayName || backendPost.handle || backendPost.walletAddress?.slice(0, 8) || 'Unknown',
+      handle: formatAuthorDisplay(backendPost.handle, backendPost.walletAddress),
       verified: false,
       avatar: getAvatarUrl(backendPost.avatarCid) || getAvatarUrl(backendPost.profileCid),  // Prefer avatarCid, fallback to profileCid
       reputationTier: undefined

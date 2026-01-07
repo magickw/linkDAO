@@ -40,7 +40,7 @@ interface SharePostModalProps {
     communityId?: string;
     communityName?: string;
     authorProfile?: {
-      avatar?: string;
+      avatarCid?: string;
       handle?: string;
     };
   };
@@ -278,9 +278,9 @@ export default function SharePostModal({
           <div className="flex items-start space-x-3">
             {/* Avatar */}
             <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
-              {post.authorProfile?.avatar ? (
+              {post.authorProfile?.avatarCid ? (
                 <img
-                  src={post.authorProfile.avatar}
+                  src={`https://ipfs.io/ipfs/${post.authorProfile.avatarCid}`}
                   alt={post.authorProfile.handle || post.author}
                   className="w-full h-full object-cover"
                   onError={(e) => {
@@ -294,7 +294,7 @@ export default function SharePostModal({
               ) : null}
               <div
                 className="bg-gradient-to-br from-primary-400 to-secondary-500 w-full h-full flex items-center justify-center"
-                style={{ display: post.authorProfile?.avatar ? 'none' : 'flex' }}
+                style={{ display: post.authorProfile?.avatarCid ? 'none' : 'flex' }}
               >
                 <span className="text-white font-bold text-sm">
                   {getDefaultAvatar(getDisplayName(post))}

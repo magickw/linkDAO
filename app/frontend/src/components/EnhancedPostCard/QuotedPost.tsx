@@ -52,9 +52,9 @@ export default function QuotedPost({ post, className = '' }: QuotedPostProps) {
                         <div className="flex items-center min-w-0">
                             {/* Avatar with fallback */}
                             <div className="w-5 h-5 rounded-full overflow-hidden mr-2 flex-shrink-0 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600">
-                                {post.authorProfile?.avatar ? (
+                                {post.authorProfile?.avatarCid ? (
                                     <img
-                                        src={post.authorProfile.avatar}
+                                        src={`https://ipfs.io/ipfs/${post.authorProfile.avatarCid}`}
                                         alt={post.authorProfile.handle}
                                         className="w-full h-full object-cover"
                                     />

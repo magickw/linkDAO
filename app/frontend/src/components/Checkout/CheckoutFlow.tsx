@@ -64,6 +64,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { ShippingAddress } from '@/hooks/useCheckoutFlow';
 import { useX402 } from '@/hooks/useX402';
 import HelperCheckoutService from '@/services/checkoutService'; // Import Class as Helper
+import { ProfileService } from '@/services/profileService';
 // Assuming checkoutService is the singleton instance usually exported as default or named.
 // If not, we might need to verify import.
 // Based on usage 'cryptoPaymentService' was imported in unifiedCheckoutService.
@@ -134,6 +135,10 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
   const [shippingErrors, setShippingErrors] = useState<Record<string, string>>({});
   const [billingErrors, setBillingErrors] = useState<Record<string, string>>({});
+
+  // State for saving addresses to profile
+  const [saveShippingAddress, setSaveShippingAddress] = useState(false);
+  const [saveBillingAddress, setSaveBillingAddress] = useState(false);
 
   const checkoutService = React.useMemo(() => {
     const cryptoService = new CryptoPaymentService(publicClient, walletClientData);
@@ -458,6 +463,58 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       if (result.status === 'completed' || result.status === 'processing') {
         setOrderData(result);
         setCurrentStep('confirmation');
+
+        // Save addresses to profile if requested
+        if ((saveShippingAddress || saveBillingAddress) && address) {
+          try {
+            const addressUpdates: any = {};
+
+            if (saveShippingAddress) {
+              addressUpdates.shippingFirstName = shippingAddress.firstName;
+              addressUpdates.shippingLastName = shippingAddress.lastName;
+              addressUpdates.shippingAddress1 = shippingAddress.address1;
+              addressUpdates.shippingAddress2 = shippingAddress.address2 || '';
+              addressUpdates.shippingCity = shippingAddress.city;
+              addressUpdates.shippingState = shippingAddress.state;
+              addressUpdates.shippingZipCode = shippingAddress.zipCode;
+              addressUpdates.shippingCountry = shippingAddress.country;
+              addressUpdates.shippingPhone = shippingAddress.phone || '';
+            }
+
+            if (saveBillingAddress && !sameAsShipping) {
+              addressUpdates.billingFirstName = billingAddress.firstName;
+              addressUpdates.billingLastName = billingAddress.lastName;
+              addressUpdates.billingAddress1 = billingAddress.address1;
+              addressUpdates.billingAddress2 = billingAddress.address2 || '';
+              addressUpdates.billingCity = billingAddress.city;
+              addressUpdates.billingState = billingAddress.state;
+              addressUpdates.billingZipCode = billingAddress.zipCode;
+              addressUpdates.billingCountry = billingAddress.country;
+              addressUpdates.billingPhone = billingAddress.phone || '';
+            } else if (saveBillingAddress && sameAsShipping) {
+              // If billing is same as shipping, save shipping address as billing too
+              addressUpdates.billingFirstName = shippingAddress.firstName;
+              addressUpdates.billingLastName = shippingAddress.lastName;
+              addressUpdates.billingAddress1 = shippingAddress.address1;
+              addressUpdates.billingAddress2 = shippingAddress.address2 || '';
+              addressUpdates.billingCity = shippingAddress.city;
+              addressUpdates.billingState = shippingAddress.state;
+              addressUpdates.billingZipCode = shippingAddress.zipCode;
+              addressUpdates.billingCountry = shippingAddress.country;
+              addressUpdates.billingPhone = shippingAddress.phone || '';
+            }
+
+            // Update profile with saved addresses
+            await ProfileService.updateProfile(address, addressUpdates);
+            console.log('✅ Address saved to profile successfully');
+            addToast('Address saved to your profile!', 'success');
+          } catch (error) {
+            console.error('Failed to save address:', error);
+            // Don't fail checkout if address save fails
+            addToast('Order completed, but failed to save address to profile', 'warning');
+          }
+        }
+
         onComplete(result.orderId);
       } else {
         throw new Error('Payment processing failed');
@@ -1219,6 +1276,8 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
           onAddressChange={(updates) => setShippingAddress(prev => ({ ...prev, ...updates }))}
           userProfile={profile}
           title="Shipping Address"
+          saveToProfile={saveShippingAddress}
+          onSaveAddressChange={setSaveShippingAddress}
         />
 
         <div className="pt-4 border-t border-white/10">
@@ -1240,6 +1299,8 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
                 onAddressChange={(updates) => setBillingAddress(prev => ({ ...prev, ...updates }))}
                 userProfile={profile}
                 title="Billing Address"
+                saveToProfile={saveBillingAddress}
+                onSaveAddressChange={setSaveBillingAddress}
               />
             </div>
           )}

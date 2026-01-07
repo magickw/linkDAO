@@ -43,7 +43,7 @@ interface RepostModalProps {
         communityName?: string;
         media?: string[];
         authorProfile?: {
-            avatar?: string;
+            avatarCid?: string;
             handle?: string;
         };
     };
@@ -385,8 +385,8 @@ export default function RepostModal({
                                 <div className="p-3">
                                     <div className="flex items-center space-x-2 mb-2">
                                         <div className="w-5 h-5 rounded-full overflow-hidden">
-                                            {post.authorProfile?.avatar ? (
-                                                <img src={post.authorProfile.avatar} alt="" className="w-full h-full object-cover" />
+                                            {post.authorProfile?.avatarCid ? (
+                                                <img src={`https://ipfs.io/ipfs/${post.authorProfile.avatarCid}`} alt="" className="w-full h-full object-cover" />
                                             ) : (
                                                 <div className="w-full h-full bg-gray-200 flex items-center justify-center text-[10px]">{post.author.charAt(0)}</div>
                                             )}
