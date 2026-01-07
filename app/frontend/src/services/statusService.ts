@@ -1,4 +1,4 @@
-import { Status, CreateStatusInput, UpdateStatusInput } from '../models/Status';
+import { Status, CreateStatusInput, UpdateStatusInput, convertBackendStatusToStatus } from '../models/Status';
 import { ENV_CONFIG } from '@/config/environment';
 import { enhancedAuthService } from './enhancedAuthService';
 
@@ -120,7 +120,28 @@ export class StatusService {
       }
 
       const result = await response.json();
-      return result.data || result;
+      const statusData = result.data || result;
+      
+      // Convert string dates to Date objects
+      if (statusData) {
+        if (statusData.createdAt && typeof statusData.createdAt === 'string') {
+          statusData.createdAt = new Date(statusData.createdAt);
+        }
+        if (statusData.updatedAt && typeof statusData.updatedAt === 'string') {
+          statusData.updatedAt = new Date(statusData.updatedAt);
+        }
+        if (statusData.pinnedUntil && typeof statusData.pinnedUntil === 'string') {
+          statusData.pinnedUntil = new Date(statusData.pinnedUntil);
+        }
+        if (statusData.authorProfile?.memberSince && typeof statusData.authorProfile.memberSince === 'string') {
+          statusData.authorProfile.memberSince = new Date(statusData.authorProfile.memberSince);
+        }
+        
+        // Convert backend status to frontend status using the conversion function
+        return convertBackendStatusToStatus(statusData);
+      }
+      
+      return null;
     } catch (error) {
       console.error('Error fetching status:', error);
       throw error;
