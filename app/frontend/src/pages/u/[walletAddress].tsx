@@ -27,7 +27,7 @@ function getAvatarUrl(profileCid: string | undefined): string | undefined {
     if (profileCid.startsWith('Qm') || profileCid.startsWith('bafy')) {
       return `https://ipfs.io/ipfs/${profileCid}`;
     }
-    
+
     // If it's neither a valid URL nor an IPFS CID, return undefined
     return undefined;
   }
@@ -652,7 +652,7 @@ export default function PublicProfile() {
                             <span>🔄 {post.shares || 0}</span>
                           </div>
                           <Link
-                            href={`/post/${post.id}`}
+                            href={`/${profile.handle || walletAddress?.toString().slice(0, 8)}/statuses/${post.id}`}
                             className="text-primary-500 hover:text-primary-600 text-sm font-medium"
                           >
                             View Post →

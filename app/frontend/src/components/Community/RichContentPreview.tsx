@@ -41,10 +41,13 @@ export const RichContentPreview: React.FC<RichContentPreviewProps> = ({
         return null;
     }
 
-    const shouldTruncate = shouldTruncateContent(content, maxLength, isExpanded);
+    // Check if content exceeds max length irrelevant of expansion state
+    const requiresTruncation = shouldTruncateContent(content, maxLength, false);
+
+    // Get content to display: full if expanded, truncated if not
     const displayContent = isExpanded
         ? content
-        : getTruncatedContent(content, maxLength, true);
+        : getTruncatedContent(content, maxLength, false);
 
     return (
         <div className={`rich-content-preview ${className}`}>
@@ -60,7 +63,7 @@ export const RichContentPreview: React.FC<RichContentPreviewProps> = ({
             </div>
 
             {/* Show more/less button */}
-            {shouldTruncate && onToggleExpand && (
+            {requiresTruncation && onToggleExpand && (
                 <button
                     onClick={onToggleExpand}
                     className="

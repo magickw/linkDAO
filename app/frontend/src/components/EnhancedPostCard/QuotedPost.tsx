@@ -22,17 +22,16 @@ export default function QuotedPost({ post, className = '' }: QuotedPostProps) {
         );
     }
 
-    // Determine navigation URL
-    const postUrl = post.communityId
-        ? `/communities/${encodeURIComponent(post.communityName || post.communityId)}/posts/${post.shareId || post.id}`
-        : `/post/${post.id}`;
+    // Generate status URL - only statuses can be quoted
+    const handle = post.authorProfile?.handle || post.author?.slice(0, 8);
+    const postUrl = `/${handle}/statuses/${post.id}`;
 
     const videoEmbeds = useMemo(() => {
         if (!post.content) return [];
         return extractVideoUrls(post.content || '');
     }, [post.content]);
 
-    const hasMedia = post.media && post.media.length > 0;
+    const hasMedia = post.mediaCids && post.mediaCids.length > 0;
 
     // Format numbers for display
     const formatCount = (count: number | undefined) => {
@@ -116,14 +115,14 @@ export default function QuotedPost({ post, className = '' }: QuotedPostProps) {
                         {hasMedia && videoEmbeds.length === 0 && (
                             <div className="rounded-lg overflow-hidden h-40 w-full relative bg-gray-100 dark:bg-gray-800">
                                 <OptimizedImage
-                                    src={post.media![0]}
+                                    src={post.mediaCids![0]}
                                     alt="Post media"
                                     fill
                                     className="object-cover"
                                 />
-                                {post.media!.length > 1 && (
+                                {post.mediaCids!.length > 1 && (
                                     <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full">
-                                        +{post.media!.length - 1} more
+                                        +{post.mediaCids!.length - 1} more
                                     </div>
                                 )}
                             </div>

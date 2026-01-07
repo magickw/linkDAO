@@ -34,6 +34,7 @@ export interface FeedFilter {
 // Author profile interface
 export interface AuthorProfile {
   handle: string;
+  displayName?: string;
   verified: boolean;
   reputationTier?: string;
   avatarCid?: string;

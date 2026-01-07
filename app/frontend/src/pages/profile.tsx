@@ -7,11 +7,16 @@ import { config } from '@/lib/rainbowkit';
 // import { useReadProfileRegistryGetProfileByAddress, useWriteProfileRegistryCreateProfile, useWriteProfileRegistryUpdateProfile } from '@/generated';
 import { useWeb3 } from '@/context/Web3Context';
 import { useProfile } from '@/hooks/useProfile';
-import { useFollowCount } from '@/hooks/useFollow';
-import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/context/ToastContext';
-import { countries } from '@/utils/countries';
-import { UpdateUserProfileInput, CreateUserProfileInput } from '@/models/UserProfile';
+import { useAuth } from '@/context/AuthContext';
+import { ProfileService } from '@/services/profileService';
+import { PublicProfileService } from '@/services/publicProfileService';
+import { ReputationService } from '@/services/reputationService';
+import { WalletService } from '@/services/walletService';
+import { TipService } from '@/services/tipService';
+import { PostService } from '@/services/postService';
+import { getAvatarUrl } from '@/utils/userDisplay';
+import { getDefaultAvatar } from '@/utils/userDisplay';
 import FollowerList from '@/components/FollowerList';
 import FollowingList from '@/components/FollowingList';
 import TipBar from '@/components/TipBar';
@@ -1850,10 +1855,10 @@ export default function Profile() {
                   ) : (
                     <div className="space-y-4">
                       {posts.map((post) => (
-                        <Link key={post.id} href={post.communityId ? `/communities/${post.communityId}/posts/${post.id}` : `/post/${post.id}`}>
+                        <Link key={post.id} href={post.communityId ? `/communities/${post.communityId}/posts/${post.id}` : `/${profile.handle || currentUserAddress?.slice(0, 8)}/statuses/${post.id}`}>
                           <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                             <div className="flex justify-between items-start">
-                              <Link href={post.communityId ? `/communities/${post.communityId}/posts/${post.id}` : `/post/${post.id}`} className="flex-grow">
+                              <Link href={post.communityId ? `/communities/${post.communityId}/posts/${post.id}` : `/${profile.handle || currentUserAddress?.slice(0, 8)}/statuses/${post.id}`} className="flex-grow">
                                 <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 hover:text-blue-600 dark:hover:text-blue-400">
                                   {post.title || 'Untitled Post'}
                                 </h4>

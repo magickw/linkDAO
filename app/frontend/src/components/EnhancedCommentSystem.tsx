@@ -79,8 +79,32 @@ export default function EnhancedCommentSystem({
 
       console.log('[EnhancedCommentSystem] Response from API:', response);
 
-      // Handle response structure: { comments: [...], pagination: {...} } or just [...]
-      const commentsData = Array.isArray(response) ? response : ((response as any).comments || []);
+      // Handle various response structures:
+      // 1. Array directly: [...]
+      // 2. Standard API response: { data: [...] } or { data: { comments: [...] } }
+      // 3. Service response: { comments: [...] }
+
+      let commentsData: Comment[] = [];
+
+      if (Array.isArray(response)) {
+        commentsData = response;
+      } else if (response && typeof response === 'object') {
+        const anyResponse = response as any;
+
+        // Check for 'data' wrapper first (common in our API)
+        if (anyResponse.data) {
+          if (Array.isArray(anyResponse.data)) {
+            commentsData = anyResponse.data;
+          } else if (anyResponse.data.comments && Array.isArray(anyResponse.data.comments)) {
+            commentsData = anyResponse.data.comments;
+          }
+        }
+        // Check for direct 'comments' property (common in service returns)
+        else if (anyResponse.comments && Array.isArray(anyResponse.comments)) {
+          commentsData = anyResponse.comments;
+        }
+      }
+
       console.log('[EnhancedCommentSystem] Parsed comments data:', commentsData, 'count:', commentsData.length);
       setComments(commentsData);
 
@@ -88,7 +112,9 @@ export default function EnhancedCommentSystem({
       let commentCount;
       if (postType === 'feed' || postType === 'enhanced') {
         // For feed posts, get comment count from response or use length
-        commentCount = commentsData.length;
+        // Try to get total from pagination if available
+        const pagination = (response as any).pagination || (response as any).data?.pagination;
+        commentCount = pagination?.total || commentsData.length;
       } else {
         // For community posts, use the service method
         commentCount = await CommunityPostService.getPostCommentCount(postId);
@@ -190,7 +216,7 @@ export default function EnhancedCommentSystem({
       // If authentication failed, provide specific error message
       const errorMessage = authResult.error || 'Please authenticate to comment';
       addToast(errorMessage, 'error');
-      
+
       // If it's a wallet connection issue, suggest reconnecting
       if (errorMessage.includes('connect') || errorMessage.includes('wallet')) {
         addToast('Try disconnecting and reconnecting your wallet', 'info');
@@ -231,7 +257,7 @@ export default function EnhancedCommentSystem({
       };
 
       let newCommentObj;
-      
+
       // Use different service based on post type
       if (postType === 'feed' || postType === 'enhanced') {
         // For quick posts (feed posts), use FeedService
@@ -268,7 +294,7 @@ export default function EnhancedCommentSystem({
         // For community posts, use the service method
         commentCount = await CommunityPostService.getPostCommentCount(postId);
       }
-      
+
       if (onCommentCountChange) {
         onCommentCountChange(commentCount);
       }
