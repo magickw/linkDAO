@@ -28,7 +28,6 @@ import { usePostsByAuthor } from '@/hooks/usePosts';
 import { useFollow, useFollowStatus } from '@/hooks/useFollow';
 import { unifiedImageService } from '@/services/unifiedImageService';
 import Link from 'next/link';
-import { ProfileService } from '@/services/profileService';
 import { getTokenLogoWithFallback } from '@/utils/tokenLogoUtils';
 import { VerificationModal } from '@/components/Verification/VerificationModal';
 import { useVerification } from '@/hooks/useVerification';
