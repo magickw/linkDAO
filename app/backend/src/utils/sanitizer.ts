@@ -5,6 +5,7 @@ import { Request, Response, NextFunction } from 'express';
 export interface SanitizationConfig {
   allowedTags?: string[];
   allowedAttributes?: string[] | Record<string, string[]>;
+  allowedStyles?: Record<string, Record<string, RegExp[]>>;
   stripUnknown?: boolean;
   maxLength?: number;
   preserveWhitespace?: boolean;
@@ -46,7 +47,50 @@ export const SANITIZATION_CONFIGS: Record<string, SanitizationConfig> = {
       'div': ['class', 'style'],
       'span': ['class', 'style'],
       'p': ['class', 'style'],
-      '*': ['class', 'id']
+      'h1': ['class', 'style'],
+      'h2': ['class', 'style'],
+      'h3': ['class', 'style'],
+      'h4': ['class', 'style'],
+      'h5': ['class', 'style'],
+      'h6': ['class', 'style'],
+      'strong': ['class', 'style'],
+      'em': ['class', 'style'],
+      'u': ['class', 'style'],
+      's': ['class', 'style'],
+      'blockquote': ['class', 'style'],
+      'ul': ['class', 'style'],
+      'ol': ['class', 'style'],
+      'li': ['class', 'style'],
+      '*': ['class', 'id', 'dir', 'lang']
+    },
+    allowedStyles: {
+      '*': {
+        // Typography
+        'color': [/^#(0x)?[0-9a-f]+$/i, /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/, /^rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*[\d.]+\s*\)$/, /^hsl\([^)]+\)$/, /^hsla\([^)]+\)$/, /^[a-z]+$/i],
+        'background-color': [/^#(0x)?[0-9a-f]+$/i, /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/, /^rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*[\d.]+\s*\)$/, /^hsl\([^)]+\)$/, /^hsla\([^)]+\)$/, /^[a-z]+$/i],
+        'font-size': [/^\d+(?:px|em|rem|%)$/],
+        'font-weight': [/^\d+$/, /^(bold|bolder|lighter|normal)$/],
+        'font-style': [/^(italic|normal|oblique)$/],
+        'text-align': [/^(left|right|center|justify)$/],
+        'text-decoration': [/^(none|underline|line-through|overline)$/],
+        'line-height': [/^\d+(?:\.\d+)?(?:px|em|rem|%)?$/],
+
+        // Spacing & Layout
+        'margin': [/^-?\d+(?:px|em|rem|%|auto)$/, /^-?\d+(?:px|em|rem|%|auto)\s+-?\d+(?:px|em|rem|%|auto)$/, /^-?\d+(?:px|em|rem|%|auto)\s+-?\d+(?:px|em|rem|%|auto)\s+-?\d+(?:px|em|rem|%|auto)$/, /^-?\d+(?:px|em|rem|%|auto)\s+-?\d+(?:px|em|rem|%|auto)\s+-?\d+(?:px|em|rem|%|auto)\s+-?\d+(?:px|em|rem|%|auto)$/],
+        'margin-top': [/^-?\d+(?:px|em|rem|%|auto)$/],
+        'margin-right': [/^-?\d+(?:px|em|rem|%|auto)$/],
+        'margin-bottom': [/^-?\d+(?:px|em|rem|%|auto)$/],
+        'margin-left': [/^-?\d+(?:px|em|rem|%|auto)$/],
+        'padding': [/^\d+(?:px|em|rem|%)(?:\s+\d+(?:px|em|rem|%)){0,3}$/],
+        'padding-top': [/^\d+(?:px|em|rem|%)$/],
+        'padding-right': [/^\d+(?:px|em|rem|%)$/],
+        'padding-bottom': [/^\d+(?:px|em|rem|%)$/],
+        'padding-left': [/^\d+(?:px|em|rem|%)$/],
+
+        // Borders
+        'border': [/^\d+(?:px|em|rem)\s+(?:solid|dashed|dotted|double)\s+(?:#[0-9a-f]+|rgb\([^)]+\))$/i],
+        'border-radius': [/^\d+(?:px|em|rem|%)$/],
+      }
     },
     stripUnknown: true,
     maxLength: 50000, // Increased for longer posts
@@ -149,6 +193,7 @@ export class InputSanitizer {
             if (!acc['*'].includes(attr)) acc['*'].push(attr);
             return acc;
           }, {} as Record<string, string[]>) : {}),
+      allowedStyles: config.allowedStyles,
       allowProtocolRelative: false,
       disallowedTagsMode: 'discard',
     };

@@ -1006,12 +1006,25 @@ export class DatabaseService {
           // Fallback to listings table check if not found in products (backward compatibility)
           safeLogger.warn('[createOrder] Product not found in products table, checking listings table:', { listingId });
           const listing = await tx.select().from(schema.listings).where(eq(schema.listings.id, listingId));
+
           safeLogger.info('[createOrder] Listings table search result:', {
             listingId,
             listingFound: listing.length > 0,
-            listingData: listing.length > 0 ? { id: listing[0].id, title: listing[0].title, status: listing[0].status } : null
+            listingData: listing.length > 0 ? { id: listing[0].id, status: listing[0].status, itemType: listing[0].itemType } : null
           });
+
           if (listing.length === 0) {
+            // Debug: Check if it might be a status ID (common mistake)
+            try {
+              const statusCheck = await tx.select({ id: schema.statuses.id }).from(schema.statuses).where(eq(schema.statuses.id, listingId));
+              if (statusCheck.length > 0) {
+                safeLogger.error('[createOrder] listingId exists in statuses table but not products. Invalid checkout target.', { listingId });
+                throw new Error('Cannot checkout a Status post directly. Use tips or reactions.');
+              }
+            } catch (ignore) {
+              // Ignore UUID errors if listingId isn't a UUID
+            }
+
             safeLogger.error('[createOrder] Product not found in either products or listings table:', {
               listingId,
               listingIdType: typeof listingId,

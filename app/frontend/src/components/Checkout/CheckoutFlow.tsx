@@ -507,6 +507,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       };
 
       console.log('🚀 Processing checkout request:', request);
+      console.table(cartState.items.map(i => ({ id: i.id, title: i.title, price: i.price.fiat })));
 
       // Determine payment path
       const isCrypto = selectedPaymentMethod.method.type !== PaymentMethodType.FIAT_STRIPE;
@@ -514,6 +515,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       let result;
 
       if (isCrypto) {
+        // ... (existing code)
         // x402 Protocol Flow
         // 1. Create Checkout Session to get Order ID and finalize totals
         // Use apiService (Wrapper) instead of checkoutService (Unified)
@@ -549,56 +551,47 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       }
 
       if (result.status === 'completed' || result.status === 'processing') {
+        // ... (existing success handling)
         setOrderData(result);
         setCurrentStep('confirmation');
 
         // Save addresses to profile if requested
         if ((saveShippingAddress || saveBillingAddress) && address) {
+          // ... (existing address saving logic)
           try {
             const addressUpdates: any = {};
-
             if (saveShippingAddress) {
-              addressUpdates.shippingFirstName = shippingAddress.firstName;
-              addressUpdates.shippingLastName = shippingAddress.lastName;
-              addressUpdates.shippingAddress1 = shippingAddress.address1;
-              addressUpdates.shippingAddress2 = shippingAddress.address2 || '';
-              addressUpdates.shippingCity = shippingAddress.city;
-              addressUpdates.shippingState = shippingAddress.state;
-              addressUpdates.shippingZipCode = shippingAddress.zipCode;
-              addressUpdates.shippingCountry = shippingAddress.country;
-              addressUpdates.shippingPhone = shippingAddress.phone || '';
+              Object.assign(addressUpdates, {
+                shippingFirstName: shippingAddress.firstName,
+                shippingLastName: shippingAddress.lastName,
+                shippingAddress1: shippingAddress.address1,
+                shippingAddress2: shippingAddress.address2 || '',
+                shippingCity: shippingAddress.city,
+                shippingState: shippingAddress.state,
+                shippingZipCode: shippingAddress.zipCode,
+                shippingCountry: shippingAddress.country,
+                shippingPhone: shippingAddress.phone || ''
+              });
             }
-
-            if (saveBillingAddress && !sameAsShipping) {
-              addressUpdates.billingFirstName = billingAddress.firstName;
-              addressUpdates.billingLastName = billingAddress.lastName;
-              addressUpdates.billingAddress1 = billingAddress.address1;
-              addressUpdates.billingAddress2 = billingAddress.address2 || '';
-              addressUpdates.billingCity = billingAddress.city;
-              addressUpdates.billingState = billingAddress.state;
-              addressUpdates.billingZipCode = billingAddress.zipCode;
-              addressUpdates.billingCountry = billingAddress.country;
-              addressUpdates.billingPhone = billingAddress.phone || '';
-            } else if (saveBillingAddress && sameAsShipping) {
-              // If billing is same as shipping, save shipping address as billing too
-              addressUpdates.billingFirstName = shippingAddress.firstName;
-              addressUpdates.billingLastName = shippingAddress.lastName;
-              addressUpdates.billingAddress1 = shippingAddress.address1;
-              addressUpdates.billingAddress2 = shippingAddress.address2 || '';
-              addressUpdates.billingCity = shippingAddress.city;
-              addressUpdates.billingState = shippingAddress.state;
-              addressUpdates.billingZipCode = shippingAddress.zipCode;
-              addressUpdates.billingCountry = shippingAddress.country;
-              addressUpdates.billingPhone = shippingAddress.phone || '';
+            if (saveBillingAddress) {
+              const target = sameAsShipping ? shippingAddress : billingAddress;
+              Object.assign(addressUpdates, {
+                billingFirstName: target.firstName,
+                billingLastName: target.lastName,
+                billingAddress1: target.address1,
+                billingAddress2: target.address2 || '',
+                billingCity: target.city,
+                billingState: target.state,
+                billingZipCode: target.zipCode,
+                billingCountry: target.country,
+                billingPhone: target.phone || ''
+              });
             }
-
-            // Update profile with saved addresses
             await ProfileService.updateProfile(address, addressUpdates);
             console.log('✅ Address saved to profile successfully');
             addToast('Address saved to your profile!', 'success');
           } catch (error) {
             console.error('Failed to save address:', error);
-            // Don't fail checkout if address save fails
             addToast('Order completed, but failed to save address to profile', 'warning');
           }
         }
@@ -607,8 +600,31 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       } else {
         throw new Error('Payment processing failed');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Checkout failed:', err);
+
+      // Auto-handle missing product error
+      const errorMessage = err.message || '';
+      if (errorMessage.includes('Product not found') ||
+        errorMessage.includes('longer available') ||
+        errorMessage.includes('Invalid product') ||
+        errorMessage.includes('product information')) {
+
+        const listingId = cartState.items[0]?.id;
+        console.warn(`⚠️ Item ${listingId} appears invalid or missing. Auto-removing.`);
+
+        addToast('This item is no longer available and has been removed from your cart.', 'error');
+
+        if (listingId) {
+          await actions.removeItem(listingId);
+        }
+
+        // Wait a bit for toast to be seen? No, redirect is fast.
+        // Maybe redirect to marketplace
+        router.push('/marketplace');
+        return;
+      }
+
       const paymentErr = PaymentErrorType.fromError(err);
       setPaymentError(paymentErr);
       setShowErrorModal(true);

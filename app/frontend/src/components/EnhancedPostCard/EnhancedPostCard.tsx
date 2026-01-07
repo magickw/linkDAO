@@ -19,12 +19,25 @@ import { EnhancedPostCardGlass, RippleEffect, VisualPolishClasses } from '../Vis
 import EnhancedCommentSystem from '../EnhancedCommentSystem';
 import { analyticsService } from '@/services/analyticsService';
 import { EnhancedPost as SharedEnhancedPost, AuthorProfile, Reaction, Tip } from '@/types/feed';
-import OnChainIdentityBadge from '../Community/OnChainIdentityBadge';
+import OnChainIdentityBadge, { XPBadge } from '../Community/OnChainIdentityBadge';
 import VideoEmbed from '../VideoEmbed';
 import { extractVideoUrls, VideoInfo } from '@/utils/videoUtils';
 import ReactionPurchaseSystem from '../Community/ReactionPurchaseSystem';
 import QuotedPost from './QuotedPost';
 import { getAvatarUrl } from '@/utils/userDisplay';
+
+
+// Helper to map string badges to XPBadge objects
+const mapToXPBadges = (badges: string[] | undefined): XPBadge[] => {
+  if (!badges) return [];
+  return badges.map((name, i) => ({
+    id: `badge-${i}-${name}`,
+    name,
+    icon: 'engagement', // Default assignment
+    level: 1,
+    color: 'text-blue-500' // Default color
+  }));
+};
 
 // Use the shared EnhancedPost type with extended properties for component-specific needs
 export interface EnhancedPost extends Omit<SharedEnhancedPost, 'trendingStatus' | 'socialProof'> {
@@ -526,7 +539,7 @@ const EnhancedPostCard = React.memo(({
                         ensName: post.authorProfile?.ensName,
                         reputationScore: post.authorProfile?.reputationScore || 0,
                         votingPower: post.authorProfile?.votingPower || 0,
-                        xpBadges: post.authorProfile?.xpBadges || [],
+                        xpBadges: mapToXPBadges(post.authorProfile?.xpBadges),
                         totalContributions: post.authorProfile?.totalContributions || 0,
                         memberSince: post.authorProfile?.memberSince
                       }}

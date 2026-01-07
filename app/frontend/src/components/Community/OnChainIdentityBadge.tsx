@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Shield, Award, Vote, Star, TrendingUp, Zap } from 'lucide-react';
 
-interface XPBadge {
+export interface XPBadge {
     id: string;
     name: string;
     icon: 'staking' | 'governance' | 'contribution' | 'engagement';
@@ -15,7 +15,7 @@ interface XPBadge {
     color: string;
 }
 
-interface OnChainIdentityData {
+export interface OnChainIdentityData {
     address: string;
     ensName?: string;
     reputationScore: number;

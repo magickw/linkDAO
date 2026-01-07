@@ -1760,8 +1760,8 @@ export class CommunityService {
     const normalizedAuthorAddress = authorAddress.toLowerCase();
 
     try {
-      // Validate input
-      validateLength(content, 5000, 'Post content');
+      // Validate input - increased limit for rich text
+      validateLength(content, 50000, 'Post content');
 
       // Check if user is a member of the community
       const membershipResult = await db
@@ -1812,28 +1812,7 @@ export class CommunityService {
           communityId,
           authorId: userResult[0].id,
           title: title || null,
-          content: InputSanitizer.sanitizeString(content, {
-            allowedTags: [
-              'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-              'p', 'br', 'hr',
-              'strong', 'b', 'em', 'i', 'u', 's', 'strike', 'del',
-              'a', 'code', 'pre', 'blockquote',
-              'ul', 'ol', 'li',
-              'img', 'iframe', 'div', 'span'
-            ],
-            allowedAttributes: {
-              'a': ['href', 'title', 'target', 'rel', 'class'],
-              'img': ['src', 'alt', 'title', 'width', 'height', 'class'],
-              'iframe': ['src', 'width', 'height', 'allow', 'allowfullscreen', 'frameborder', 'class'],
-              'div': ['class', 'style'],
-              'span': ['class', 'style'],
-              'p': ['class', 'style'],
-              '*': ['class', 'id']
-            },
-            stripUnknown: true,
-            maxLength: 50000,
-            preserveWhitespace: true
-          }).sanitized,
+          content: InputSanitizer.sanitizeString(content, SANITIZATION_CONFIGS.RICH_TEXT).sanitized,
           contentCid: `local-${Date.now()}`, // Temporary CID for local content
           mediaCids: mediaUrls ? JSON.stringify(mediaUrls) : null,
           tags: tags ? JSON.stringify(tags) : null,

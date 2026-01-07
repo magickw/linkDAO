@@ -205,7 +205,7 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
 
   // Handle external URLs by using img tag with loading optimization
   try {
-    if (currentSrc.startsWith('http')) {
+    if (currentSrc.startsWith('http') || isIpfsCid || isAlreadyProxied) {
       return (
         <div className={className} style={{ position: 'relative', width: fill ? '100%' : width, height: fill ? '100%' : height }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
