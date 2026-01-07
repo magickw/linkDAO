@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { toast } from 'react-hot-toast';
 import { MapPin, Plus, Edit, Trash2, Star, Check } from 'lucide-react';
 
@@ -138,8 +138,8 @@ export default function AddressesPage() {
                         key={type}
                         onClick={() => setFilterType(type as any)}
                         className={`px-4 py-2 rounded-lg capitalize transition-colors ${filterType === type
-                                ? 'bg-blue-500 text-white'
-                                : 'bg-white/5 text-white/60 hover:bg-white/10'
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-white/5 text-white/60 hover:bg-white/10'
                             }`}
                     >
                         {type}

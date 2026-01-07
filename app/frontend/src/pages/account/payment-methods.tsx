@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { toast } from 'react-hot-toast';
 import { CreditCard, Wallet, Plus, Edit, Trash2, Star, Check, Shield } from 'lucide-react';
 
@@ -142,8 +142,8 @@ export default function PaymentMethodsPage() {
                         key={filter.key}
                         onClick={() => setFilterType(filter.key as any)}
                         className={`px-4 py-2 rounded-lg transition-colors ${filterType === filter.key
-                                ? 'bg-blue-500 text-white'
-                                : 'bg-white/5 text-white/60 hover:bg-white/10'
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-white/5 text-white/60 hover:bg-white/10'
                             }`}
                     >
                         {filter.label}
@@ -287,8 +287,8 @@ function PaymentMethodCard({ method, onEdit, onDelete, onSetDefault }: {
             {/* Status Badge */}
             <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between">
                 <span className={`inline-block px-2 py-1 text-xs rounded-full ${method.status === 'active'
-                        ? 'bg-green-500/20 text-green-400'
-                        : 'bg-red-500/20 text-red-400'
+                    ? 'bg-green-500/20 text-green-400'
+                    : 'bg-red-500/20 text-red-400'
                     }`}>
                     {method.status}
                 </span>
@@ -403,8 +403,8 @@ function PaymentMethodFormModal({ method, onClose, onSave }: {
                                     type="button"
                                     onClick={() => setMethodType('card')}
                                     className={`p-4 rounded-lg border-2 transition-all ${methodType === 'card'
-                                            ? 'border-blue-500 bg-blue-500/10'
-                                            : 'border-white/10 bg-white/5'
+                                        ? 'border-blue-500 bg-blue-500/10'
+                                        : 'border-white/10 bg-white/5'
                                         }`}
                                 >
                                     <CreditCard className="mx-auto mb-2" size={24} />
@@ -414,8 +414,8 @@ function PaymentMethodFormModal({ method, onClose, onSave }: {
                                     type="button"
                                     onClick={() => setMethodType('crypto')}
                                     className={`p-4 rounded-lg border-2 transition-all ${methodType === 'crypto'
-                                            ? 'border-purple-500 bg-purple-500/10'
-                                            : 'border-white/10 bg-white/5'
+                                        ? 'border-purple-500 bg-purple-500/10'
+                                        : 'border-white/10 bg-white/5'
                                         }`}
                                 >
                                     <Wallet className="mx-auto mb-2" size={24} />

@@ -59,22 +59,29 @@ export default function EnhancedCommentSystem({
   const loadComments = useCallback(async (sortOption: SortOption = sortBy) => {
     try {
       setCommentsLoading(true);
+      console.log('[EnhancedCommentSystem] Loading comments for postId:', postId, 'postType:', postType, 'sort:', sortOption);
+
       let response;
-      
+
       // Use different service based on post type
       if (postType === 'feed' || postType === 'enhanced') {
         // For quick posts (feed posts), use FeedService
+        console.log('[EnhancedCommentSystem] Using FeedService for feed post');
         response = await FeedService.getPostComments(postId, 1, 100, sortOption);
       } else {
         // For community posts, use CommunityPostService
+        console.log('[EnhancedCommentSystem] Using CommunityPostService for community post');
         response = await CommunityPostService.getPostComments(postId, {
           sortBy: sortOption,
           limit: 100
         });
       }
 
+      console.log('[EnhancedCommentSystem] Response from API:', response);
+
       // Handle response structure: { comments: [...], pagination: {...} } or just [...]
       const commentsData = Array.isArray(response) ? response : ((response as any).comments || []);
+      console.log('[EnhancedCommentSystem] Parsed comments data:', commentsData, 'count:', commentsData.length);
       setComments(commentsData);
 
       // Update comment count
@@ -86,12 +93,14 @@ export default function EnhancedCommentSystem({
         // For community posts, use the service method
         commentCount = await CommunityPostService.getPostCommentCount(postId);
       }
-      
+
+      console.log('[EnhancedCommentSystem] Final comment count:', commentCount);
+
       if (onCommentCountChange) {
         onCommentCountChange(commentCount);
       }
     } catch (err) {
-      console.error('Error loading comments:', err);
+      console.error('[EnhancedCommentSystem] Error loading comments:', err);
       addToast('Failed to load comments', 'error');
     } finally {
       setCommentsLoading(false);
@@ -120,7 +129,7 @@ export default function EnhancedCommentSystem({
   // Load comments on mount and when postId or sort changes
   useEffect(() => {
     loadComments();
-  }, [postId, sortBy]); // Remove loadComments dependency to prevent infinite loop
+  }, [postId, sortBy, postType]); // Add postType to ensure comments reload when post type changes
 
   // Handle image upload
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

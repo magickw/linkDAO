@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { toast } from 'react-hot-toast';
 import { Heart, Plus, Edit, Trash2, Share2, TrendingDown, ShoppingCart, Star, ArrowUpDown } from 'lucide-react';
 import Link from 'next/link';
@@ -209,8 +209,8 @@ export default function WishlistPage() {
                                         key={wishlist.id}
                                         onClick={() => setSelectedWishlist(wishlist)}
                                         className={`w-full text-left p-3 rounded-lg transition-all ${selectedWishlist?.id === wishlist.id
-                                                ? 'bg-blue-500/20 border border-blue-500/30'
-                                                : 'bg-white/5 border border-transparent hover:bg-white/10'
+                                            ? 'bg-blue-500/20 border border-blue-500/30'
+                                            : 'bg-white/5 border border-transparent hover:bg-white/10'
                                             }`}
                                     >
                                         <div className="flex items-center justify-between mb-1">
@@ -416,8 +416,8 @@ function WishlistItemCard({ item, onRemove }: {
                         )}
                         {item.priority && (
                             <span className={`px-2 py-0.5 rounded-full ${item.priority === 'high' ? 'bg-red-500/20 text-red-400' :
-                                    item.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
-                                        'bg-blue-500/20 text-blue-400'
+                                item.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                                    'bg-blue-500/20 text-blue-400'
                                 }`}>
                                 <Star size={10} className="inline mr-1" />
                                 {item.priority}

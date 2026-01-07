@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { toast } from 'react-hot-toast';
 import {
     Package,
@@ -175,8 +175,8 @@ export default function OrdersPage() {
                             key={filter.key}
                             onClick={() => setFilterStatus(filter.key)}
                             className={`px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${filterStatus === filter.key
-                                    ? 'bg-blue-500 text-white'
-                                    : 'bg-white/5 text-white/60 hover:bg-white/10'
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-white/5 text-white/60 hover:bg-white/10'
                                 }`}
                         >
                             {filter.label}
