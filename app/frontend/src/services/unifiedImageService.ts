@@ -18,7 +18,7 @@ export interface ImageUploadOptions {
   allowedTypes: string[];
   quality: number;
   generateThumbnails: boolean;
-  context: 'profile' | 'cover' | 'listing';
+  context: 'profile' | 'cover' | 'listing' | 'post';
   userId?: string;
 }
 
@@ -93,6 +93,13 @@ export class UnifiedImageService {
       generateThumbnails: true,
       context: 'listing',
     },
+    post: {
+      maxSize: 10 * 1024 * 1024, // 10MB
+      allowedTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+      quality: 0.85,
+      generateThumbnails: true,
+      context: 'post',
+    },
   };
 
   private apiBaseUrl: string;
@@ -108,11 +115,11 @@ export class UnifiedImageService {
    */
   async uploadImage(
     file: File,
-    context: 'profile' | 'cover' | 'listing',
+    context: 'profile' | 'cover' | 'listing' | 'post',
     options?: Partial<ImageUploadOptions>
   ): Promise<ImageUploadResult> {
     const config = { ...this.defaultOptions[context], ...options };
-    
+
     try {
       // Step 1: Validate file
       const validationResult = this.validateFile(file, config);
@@ -149,7 +156,7 @@ export class UnifiedImageService {
       if (error instanceof SellerError) {
         throw error;
       }
-      
+
       throw new SellerError(
         SellerErrorType.API_ERROR,
         `Image upload failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -165,7 +172,7 @@ export class UnifiedImageService {
    */
   async uploadMultipleImages(
     files: File[],
-    context: 'profile' | 'cover' | 'listing',
+    context: 'profile' | 'cover' | 'listing' | 'post',
     options?: Partial<ImageUploadOptions>
   ): Promise<ImageUploadResult[]> {
     const results: ImageUploadResult[] = [];
@@ -180,8 +187,8 @@ export class UnifiedImageService {
         try {
           return await this.uploadImage(file, context, options);
         } catch (error) {
-          errors.push({ 
-            file: file.name, 
+          errors.push({
+            file: file.name,
             error: error instanceof SellerError ? error : new SellerError(
               SellerErrorType.API_ERROR,
               `Failed to upload ${file.name}: ${error instanceof Error ? error.message : String(error)}`,
@@ -339,21 +346,21 @@ export class UnifiedImageService {
       const uint8Array = new Uint8Array(image.buffer);
       const blob = new Blob([uint8Array], { type: `image/${image.format}` });
       const file = new File([blob], `${context}-${Date.now()}.${image.format}`, { type: `image/${image.format}` });
-      
+
       // Get Cloudinary configuration from environment variables
       const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
       const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
-      
+
       if (!cloudName || !uploadPreset) {
         throw new Error('Cloudinary configuration is missing. Please set NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME and NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET environment variables.');
       }
-      
+
       // Create form data for Cloudinary upload
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', uploadPreset); // Cloudinary unsigned upload preset
       formData.append('folder', `linkdao/${context}`); // Organize images in folders by context
-      
+
       // Upload to Cloudinary using direct browser upload
       const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
         method: 'POST',
@@ -366,7 +373,7 @@ export class UnifiedImageService {
       }
 
       const result = await response.json();
-      
+
       return {
         id: result.public_id, // Cloudinary's public ID
         url: result.secure_url, // Cloudinary's secure URL
@@ -423,12 +430,13 @@ export class UnifiedImageService {
   private calculateOptimalDimensions(
     originalWidth: number,
     originalHeight: number,
-    context: 'profile' | 'cover' | 'listing'
+    context: 'profile' | 'cover' | 'listing' | 'post'
   ): { width: number; height: number } {
     const maxDimensions = {
       profile: { width: 400, height: 400 },
       cover: { width: 1200, height: 400 },
       listing: { width: 800, height: 800 },
+      post: { width: 1920, height: 1080 },
     };
 
     const max = maxDimensions[context];
@@ -514,11 +522,11 @@ export class UnifiedImageService {
         },
         body: JSON.stringify({ context }),
       });
-      
+
       if (!response.ok) {
         throw new Error(`Failed to delete image: ${response.status}`);
       }
-      
+
       return await response.json();
     } catch (error) {
       throw new SellerError(
@@ -537,7 +545,7 @@ export class UnifiedImageService {
   async getImageInfo(imageId: string): Promise<ImageUploadResult | null> {
     try {
       const response = await fetch(`${this.apiBaseUrl}/api/marketplace/seller/images/${imageId}`);
-      
+
       if (!response.ok) {
         if (response.status === 404) {
           return null;

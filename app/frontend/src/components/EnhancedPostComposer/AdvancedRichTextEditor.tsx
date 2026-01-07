@@ -5,6 +5,7 @@ import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import Youtube from '@tiptap/extension-youtube';
 import Placeholder from '@tiptap/extension-placeholder';
+import { marked } from 'marked';
 import {
   Bold,
   Italic,
@@ -16,7 +17,8 @@ import {
   ImageIcon,
   Link2,
   Video,
-  Code
+  Code,
+  FileText
 } from 'lucide-react';
 
 // Import the unified image service for Cloudinary uploads
@@ -42,6 +44,7 @@ const AdvancedRichTextEditor: React.FC<AdvancedRichTextEditorProps> = ({
   const [showImageDialog, setShowImageDialog] = useState(false);
   const [showLinkDialog, setShowLinkDialog] = useState(false);
   const [showVideoDialog, setShowVideoDialog] = useState(false);
+  const [isMarkdownMode, setIsMarkdownMode] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [linkText, setLinkText] = useState('');
@@ -106,10 +109,33 @@ const AdvancedRichTextEditor: React.FC<AdvancedRichTextEditorProps> = ({
 
   // Sync external value changes to editor
   React.useEffect(() => {
-    if (editor && value !== editor.getHTML()) {
+    if (editor && value !== editor.getHTML() && !isMarkdownMode) {
       editor.commands.setContent(value);
     }
-  }, [value, editor]);
+  }, [value, editor, isMarkdownMode]);
+
+  const toggleMarkdownMode = useCallback(async () => {
+    if (isMarkdownMode) {
+      // Switching from Markdown (Raw) to Visual
+      // Convert Markdown to HTML for the editor
+      try {
+        // marked.parse can be sync or async depending on version/options
+        // forcing string output
+        const html = await marked.parse(value, { async: true });
+        if (editor) {
+          editor.commands.setContent(html);
+        }
+      } catch (error) {
+        console.error('Error parsing markdown:', error);
+        // Fallback to raw value
+        if (editor) {
+          editor.commands.setContent(value);
+        }
+      }
+    }
+    // Switching from Visual to Markdown does nothing special (value is already HTML)
+    setIsMarkdownMode(!isMarkdownMode);
+  }, [isMarkdownMode, value, editor]);
 
   const addImage = useCallback(() => {
     if (imageUrl && editor) {
@@ -159,11 +185,11 @@ const AdvancedRichTextEditor: React.FC<AdvancedRichTextEditorProps> = ({
     try {
       // Use unifiedImageService for Cloudinary upload instead of IPFS
       const result = await unifiedImageService.uploadImage(selectedFile, 'post');
-      
+
       console.log('[RichTextEditor] Cloudinary upload result:', result);
 
       // Insert image into editor using the Cloudinary URL
-      editor.chain().focus().setImage({ src: result.url }).run();
+      editor.chain().focus().setImage({ src: result.cdnUrl }).run();
 
       // Close dialog and reset
       setShowImageDialog(false);
@@ -347,13 +373,36 @@ const AdvancedRichTextEditor: React.FC<AdvancedRichTextEditorProps> = ({
         >
           <Redo size={18} />
         </button>
+
+        <div className="w-px bg-gray-300 mx-1" />
+
+        <button
+          type="button"
+          onClick={toggleMarkdownMode}
+          disabled={disabled}
+          className={`p-2 rounded hover:bg-gray-200 ${isMarkdownMode ? 'bg-gray-300' : ''
+            } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          title={isMarkdownMode ? "Switch to Visual Editor (converts Markdown)" : "Switch to Markdown/Raw View"}
+        >
+          <FileText size={18} />
+        </button>
       </div>
 
       {/* Editor Content */}
-      <EditorContent
-        editor={editor}
-        className="prose max-w-none p-3 min-h-[150px] focus:outline-none"
-      />
+      {isMarkdownMode ? (
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full p-3 min-h-[150px] focus:outline-none font-mono text-sm resize-y bg-transparent dark:text-gray-200"
+          placeholder={placeholder}
+          disabled={disabled}
+        />
+      ) : (
+        <EditorContent
+          editor={editor}
+          className="prose max-w-none p-3 min-h-[150px] focus:outline-none"
+        />
+      )}
 
       {/* Video Embeds */}
       {videoEmbeds}

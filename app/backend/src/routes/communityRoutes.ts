@@ -207,7 +207,7 @@ router.put('/:id/posts/:postId', csrfProtection,
     },
     body: {
       title: { type: 'string', optional: true, maxLength: 200 },
-      content: { type: 'string', optional: true, minLength: 1, maxLength: 5000 },
+      content: { type: 'string', optional: true, minLength: 1, maxLength: 50000 },
       mediaUrls: { type: 'array', optional: true },
       tags: { type: 'array', optional: true }
     }
@@ -224,7 +224,7 @@ router.post('/:id/posts', csrfProtection,
     },
     body: {
       title: { type: 'string', optional: true, maxLength: 200 },
-      content: { type: 'string', required: true, minLength: 1, maxLength: 5000 },
+      content: { type: 'string', required: true, minLength: 1, maxLength: 50000 },
       mediaUrls: { type: 'array', optional: true },
       tags: { type: 'array', optional: true },
       pollData: { type: 'object', optional: true }

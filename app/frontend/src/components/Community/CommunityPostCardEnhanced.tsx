@@ -24,6 +24,7 @@ import { ldaoTokenService } from '@/services/web3/ldaoTokenService';
 import { processContent, shouldTruncateContent, getTruncatedContent } from '@/utils/contentParser';
 import { createPropsComparatorIgnoring } from '@/utils/performanceUtils';
 import RichContentPreview from './RichContentPreview';
+import RichTextEditor from '@/components/EnhancedPostComposer/RichTextEditor';
 
 // Helper function to check if post is a community post
 const isCommunityPost = (post: EnhancedPost): boolean => {
@@ -73,7 +74,7 @@ function CommunityPostCardEnhanced({
   const { ensureAuthenticated } = useAuth();
   const { addToast } = useToast();
 
-  // Check if the post is a CommunityPost or a QuickPost
+  // Check if the post is a CommunityPost or a Status
   const isCommunityPostType = isCommunityPost(post);
 
   // Type guard to safely access CommunityPost properties
@@ -824,12 +825,11 @@ function CommunityPostCardEnhanced({
                   placeholder="Post Title"
                   className="w-full px-3 py-2 text-lg font-semibold border rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 />
-                <textarea
+                <RichTextEditor
                   value={editContent}
-                  onChange={(e) => setEditContent(e.target.value)}
+                  onChange={setEditContent}
                   placeholder="Post Content"
-                  rows={4}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  className="w-full min-h-[200px] border rounded-lg dark:border-gray-600 bg-white dark:bg-gray-700"
                 />
                 <div className="flex justify-end space-x-2">
                   <button
