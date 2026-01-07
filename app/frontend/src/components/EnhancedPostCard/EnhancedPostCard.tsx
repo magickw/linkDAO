@@ -297,7 +297,7 @@ const EnhancedPostCard = React.memo(({
     return calculateTrendingLevel(
       post.engagementScore,
       post.createdAt,
-      post.reactions.reduce((sum, r) => sum + r.totalAmount, 0),
+      (post.reactions || []).reduce((sum, r) => sum + r.totalAmount, 0),
       post.comments,
       post.shares
     );
