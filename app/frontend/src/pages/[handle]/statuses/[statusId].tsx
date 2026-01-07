@@ -8,19 +8,26 @@ import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { StatusService } from '@/services/statusService';
+import { PostService } from '@/services/postService';
 import { Status } from '@/models/Status';
 import { useToast } from '@/context/ToastContext';
+import { useWeb3 } from '@/context/Web3Context';
+import { useAuth } from '@/context/AuthContext';
 import { X, Loader2 } from 'lucide-react';
 import EnhancedPostCard from '@/components/EnhancedPostCard/EnhancedPostCard';
+import EnhancedCommentSystem from '@/components/EnhancedCommentSystem';
 
 export default function StatusPage() {
     const router = useRouter();
     const { handle, statusId } = router.query;
     const { addToast } = useToast();
+    const { address, isConnected } = useWeb3();
+    const { isAuthenticated } = useAuth();
 
     const [status, setStatus] = useState<Status | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [commentCount, setCommentCount] = useState(0);
 
     useEffect(() => {
         if (!statusId || typeof statusId !== 'string') return;
@@ -69,6 +76,95 @@ export default function StatusPage() {
         if (e.target === e.currentTarget) {
             handleClose();
         }
+    };
+
+    // Interaction handlers
+    const handleUpvote = async (postId: string) => {
+        if (!isConnected || !address) {
+            addToast('Please connect your wallet to upvote', 'error');
+            return;
+        }
+
+        if (!isAuthenticated) {
+            addToast('Please authenticate to upvote', 'error');
+            return;
+        }
+
+        try {
+            await StatusService.reactToStatus(postId, address, 'upvote', '1');
+            addToast('Upvoted!', 'success');
+            // Optionally refresh status to get updated counts
+        } catch (error) {
+            console.error('Error upvoting:', error);
+            addToast('Failed to upvote', 'error');
+        }
+    };
+
+    const handleDownvote = async (postId: string) => {
+        if (!isConnected || !address) {
+            addToast('Please connect your wallet to downvote', 'error');
+            return;
+        }
+
+        if (!isAuthenticated) {
+            addToast('Please authenticate to downvote', 'error');
+            return;
+        }
+
+        try {
+            await StatusService.reactToStatus(postId, address, 'downvote', '1');
+            addToast('Downvoted!', 'success');
+            // Optionally refresh status to get updated counts
+        } catch (error) {
+            console.error('Error downvoting:', error);
+            addToast('Failed to downvote', 'error');
+        }
+    };
+
+    const handleReaction = async (postId: string, reactionType: string, amount?: number) => {
+        if (!isConnected || !address) {
+            addToast('Please connect your wallet to react', 'error');
+            return;
+        }
+
+        if (!isAuthenticated) {
+            addToast('Please authenticate to react', 'error');
+            return;
+        }
+
+        try {
+            await StatusService.reactToStatus(postId, address, reactionType, String(amount || 1));
+            addToast(`Reacted with ${reactionType}!`, 'success');
+        } catch (error) {
+            console.error('Error reacting:', error);
+            addToast('Failed to add reaction', 'error');
+        }
+    };
+
+    const handleTip = async (postId: string, amount: string, token: string) => {
+        if (!isConnected || !address) {
+            addToast('Please connect your wallet to tip', 'error');
+            return;
+        }
+
+        if (!isAuthenticated) {
+            addToast('Please authenticate to tip', 'error');
+            return;
+        }
+
+        if (!status) return;
+
+        try {
+            await StatusService.tipStatus(postId, address, status.author, token, amount);
+            addToast(`Tipped ${amount} ${token}!`, 'success');
+        } catch (error) {
+            console.error('Error tipping:', error);
+            addToast('Failed to send tip', 'error');
+        }
+    };
+
+    const handleCommentAdded = () => {
+        setCommentCount(prev => prev + 1);
     };
 
     // Generate meta tags for social sharing
@@ -159,14 +255,25 @@ export default function StatusPage() {
                                     </p>
                                 </div>
                             ) : (
-                                <EnhancedPostCard
-                                    post={status}
-                                    onUpvote={async () => { }}
-                                    onDownvote={async () => { }}
-                                    onReaction={async () => { }}
-                                    onTip={async () => { }}
-                                    onExpand={() => { }}
-                                />
+                                <>
+                                    <EnhancedPostCard
+                                        post={status}
+                                        onUpvote={handleUpvote}
+                                        onDownvote={handleDownvote}
+                                        onReaction={handleReaction}
+                                        onTip={handleTip}
+                                        onExpand={() => { }}
+                                    />
+
+                                    {/* Comment System */}
+                                    <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
+                                        <EnhancedCommentSystem
+                                            postId={status.id}
+                                            postType="feed"
+                                            onCommentAdded={handleCommentAdded}
+                                        />
+                                    </div>
+                                </>
                             )}
                         </div>
                     </div>

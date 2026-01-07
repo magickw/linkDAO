@@ -185,7 +185,19 @@ export class StatusService {
         .where(eq(statuses.id, id))
         .limit(1);
 
-      return posts[0] || null;
+      const rawPost = posts[0];
+      if (!rawPost) return null;
+
+      // Transform to match frontend expectations
+      const { handle, walletAddress, ...rest } = rawPost;
+      return {
+        ...rest,
+        author: walletAddress || rawPost.authorId,
+        authorProfile: {
+          handle: handle || undefined,
+          walletAddress: walletAddress || undefined
+        }
+      };
     } catch (error) {
       safeLogger.error('Error getting quick post:', error);
       throw new Error('Failed to retrieve quick post');
@@ -200,6 +212,7 @@ export class StatusService {
           shareId: statuses.shareId,
           authorId: statuses.authorId,
           contentCid: statuses.contentCid,
+          content: statuses.content,
           parentId: statuses.parentId,
           mediaCids: statuses.mediaCids,
           tags: statuses.tags,
@@ -221,7 +234,19 @@ export class StatusService {
         .where(eq(statuses.shareId, shareId))
         .limit(1);
 
-      return posts[0] || null;
+      const rawPost = posts[0];
+      if (!rawPost) return null;
+
+      // Transform to match frontend expectations
+      const { handle, walletAddress, ...rest } = rawPost;
+      return {
+        ...rest,
+        author: walletAddress || rawPost.authorId,
+        authorProfile: {
+          handle: handle || undefined,
+          walletAddress: walletAddress || undefined
+        }
+      };
     } catch (error) {
       safeLogger.error('Error getting quick post by share ID:', error);
       throw new Error('Failed to retrieve quick post by share ID');
