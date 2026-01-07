@@ -500,6 +500,11 @@ import onboardingRoutes from './routes/onboardingRoutes';
 import { docsRoutes } from './routes/docsRoutes';
 import trackingRoutes from './routes/trackingRoutes';
 import hybridPaymentRoutes from './routes/hybridPaymentRoutes';
+// Import buyer data management routes
+import addressRoutes from './routes/addressRoutes';
+import paymentMethodRoutes from './routes/paymentMethodRoutes';
+import wishlistRoutes from './routes/wishlistRoutes';
+import buyerProfileRoutes from './routes/buyerProfileRoutes';
 
 // Reputation routes
 app.use('/marketplace/reputation', reputationRoutes);
@@ -542,6 +547,11 @@ app.use('/api/posts', postRoutes);
 app.use('/api/quick-posts', quickPostRoutes);
 app.use('/api/feed', feedRoutes);
 app.use('/api/users', userRoutes);
+// Buyer data management routes
+app.use('/api/user/addresses', addressRoutes);
+app.use('/api/user/payment-methods', paymentMethodRoutes);
+app.use('/api/user/wishlists', wishlistRoutes);
+app.use('/api/user/buyer-profile', buyerProfileRoutes);
 app.use('/api/communities', communityRoutes);
 app.use('/api', commentRoutes);
 app.use('/api/notifications', notificationRoutes);

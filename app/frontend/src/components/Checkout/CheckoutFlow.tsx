@@ -140,6 +140,13 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
   const [saveShippingAddress, setSaveShippingAddress] = useState(false);
   const [saveBillingAddress, setSaveBillingAddress] = useState(false);
 
+  // State for saved addresses and payment methods
+  const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
+  const [savedPaymentMethods, setSavedPaymentMethods] = useState<any[]>([]);
+  const [selectedSavedAddress, setSelectedSavedAddress] = useState<string>('');
+  const [selectedSavedPayment, setSelectedSavedPayment] = useState<string>('');
+  const [loadingSavedData, setLoadingSavedData] = useState(true);
+
   const checkoutService = React.useMemo(() => {
     const cryptoService = new CryptoPaymentService(publicClient, walletClientData);
     const stripeService = new StripePaymentService();
@@ -159,6 +166,87 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       preferenceManager
     );
   });
+
+  // Fetch saved addresses and payment methods on mount
+  useEffect(() => {
+    const fetchSavedData = async () => {
+      if (!address) {
+        setLoadingSavedData(false);
+        return;
+      }
+
+      try {
+        setLoadingSavedData(true);
+
+        // Fetch saved addresses
+        const addressResponse = await fetch('/api/user/addresses', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+
+        if (addressResponse.ok) {
+          const addressData = await addressResponse.json();
+          setSavedAddresses(addressData.data || []);
+
+          // Auto-select default shipping address
+          const defaultShipping = addressData.data?.find((addr: any) =>
+            addr.isDefault && (addr.addressType === 'shipping' || addr.addressType === 'both')
+          );
+          if (defaultShipping) {
+            setSelectedSavedAddress(defaultShipping.id);
+            loadAddressIntoForm(defaultShipping, 'shipping');
+          }
+        }
+
+        // Fetch saved payment methods
+        const paymentResponse = await fetch('/api/user/payment-methods', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+
+        if (paymentResponse.ok) {
+          const paymentData = await paymentResponse.json();
+          setSavedPaymentMethods(paymentData.data || []);
+
+          // Auto-select default payment method
+          const defaultPayment = paymentData.data?.find((pm: any) => pm.isDefault);
+          if (defaultPayment) {
+            setSelectedSavedPayment(defaultPayment.id);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching saved data:', error);
+      } finally {
+        setLoadingSavedData(false);
+      }
+    };
+
+    fetchSavedData();
+  }, [address]);
+
+  // Helper function to load address into form
+  const loadAddressIntoForm = (address: any, type: 'shipping' | 'billing') => {
+    const formattedAddress = {
+      firstName: address.firstName || '',
+      lastName: address.lastName || '',
+      email: address.email || '',
+      address1: address.addressLine1 || '',
+      address2: address.addressLine2 || '',
+      city: address.city || '',
+      state: address.state || '',
+      zipCode: address.postalCode || '',
+      country: address.country || 'US',
+      phone: address.phone || '',
+    };
+
+    if (type === 'shipping') {
+      setShippingAddress(formattedAddress);
+    } else {
+      setBillingAddress(formattedAddress);
+    }
+  };
 
   // Debounce cart, address, and chainId changes
   const debouncedCartItemsLength = useDebounce(cartState.items.length, 1000);
@@ -1270,6 +1358,58 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       </div>
 
       <GlassPanel variant="secondary" className="p-6">
+        {/* Saved Addresses Dropdown */}
+        {savedAddresses.length > 0 && (
+          <div className="mb-6 pb-6 border-b border-white/10">
+            <label className="block text-sm font-medium text-white/80 mb-2">
+              Use Saved Address
+            </label>
+            <select
+              value={selectedSavedAddress}
+              onChange={(e) => {
+                const addressId = e.target.value;
+                setSelectedSavedAddress(addressId);
+
+                if (addressId) {
+                  const address = savedAddresses.find(a => a.id === addressId);
+                  if (address) {
+                    loadAddressIntoForm(address, 'shipping');
+                  }
+                } else {
+                  // Clear form for new address
+                  setShippingAddress({
+                    firstName: '',
+                    lastName: '',
+                    email: '',
+                    address1: '',
+                    address2: '',
+                    city: '',
+                    state: '',
+                    zipCode: '',
+                    country: 'US',
+                    phone: '',
+                  });
+                }
+              }}
+              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">Enter new address</option>
+              {savedAddresses.map(addr => (
+                <option key={addr.id} value={addr.id}>
+                  {addr.label || addr.addressType} - {addr.addressLine1}, {addr.city}
+                  {addr.isDefault && ' ⭐'}
+                </option>
+              ))}
+            </select>
+
+            {selectedSavedAddress && (
+              <p className="text-xs text-white/60 mt-2">
+                You can edit the address below if needed
+              </p>
+            )}
+          </div>
+        )}
+
         <ShippingStep
           shippingAddress={shippingAddress}
           errors={shippingErrors}

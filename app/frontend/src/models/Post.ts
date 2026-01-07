@@ -102,7 +102,7 @@ export function convertBackendPostToPost(backendPost: any): Post {
     authorProfile: {
       handle: backendPost.displayName || backendPost.handle || backendPost.walletAddress?.slice(0, 8) || 'Unknown',
       verified: false,
-      avatar: getAvatarUrl(backendPost.avatarCid) || getAvatarUrl(backendPost.profileCid),  // Prefer avatarCid, fallback to profileCid
+      avatarCid: backendPost.avatarCid || backendPost.profileCid,  // Prefer avatarCid, fallback to profileCid
       reputationTier: undefined
     },
 

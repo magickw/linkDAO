@@ -148,7 +148,7 @@ export function convertBackendQuickPostToQuickPost(backendPost: any): QuickPost 
     authorProfile: {
       handle: formatAuthorDisplay(backendPost.handle, backendPost.walletAddress),
       verified: false,
-      avatar: getAvatarUrl(backendPost.avatarCid) || getAvatarUrl(backendPost.profileCid),  // Prefer avatarCid, fallback to profileCid
+      avatarCid: backendPost.avatarCid || backendPost.profileCid,  // Prefer avatarCid, fallback to profileCid
       reputationTier: undefined
     },
 

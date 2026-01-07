@@ -22,8 +22,8 @@ const Header = () => {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center">
-            <Link 
-              href="/marketplace" 
+            <Link
+              href="/marketplace"
               onClick={() => {
                 // Force navigation to ensure page refresh on first visit
                 if (typeof window !== 'undefined') {
@@ -91,8 +91,8 @@ const Header = () => {
                   <User size={24} className="text-gray-700" />
                 </button>
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                  <Link 
-                    href="/marketplace/profile" 
+                  <Link
+                    href="/marketplace/profile"
                     onClick={(e) => {
                       e.preventDefault();
                       if (typeof window !== 'undefined') {
@@ -103,20 +103,66 @@ const Header = () => {
                   >
                     My Profile
                   </Link>
-                  <Link 
-                    href="/marketplace/orders" 
+
+                  {/* Account Section Divider */}
+                  <div className="border-t border-gray-200 my-1"></div>
+                  <div className="px-4 py-1 text-xs font-semibold text-gray-500 uppercase">Account</div>
+
+                  <Link
+                    href="/account/addresses"
                     onClick={(e) => {
                       e.preventDefault();
                       if (typeof window !== 'undefined') {
-                        window.location.href = '/marketplace/orders';
+                        window.location.href = '/account/addresses';
+                      }
+                    }}
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    Addresses
+                  </Link>
+                  <Link
+                    href="/account/payment-methods"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (typeof window !== 'undefined') {
+                        window.location.href = '/account/payment-methods';
+                      }
+                    }}
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    Payment Methods
+                  </Link>
+                  <Link
+                    href="/account/wishlist"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (typeof window !== 'undefined') {
+                        window.location.href = '/account/wishlist';
+                      }
+                    }}
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    Wishlist
+                  </Link>
+
+                  {/* Marketplace Section Divider */}
+                  <div className="border-t border-gray-200 my-1"></div>
+                  <div className="px-4 py-1 text-xs font-semibold text-gray-500 uppercase">Marketplace</div>
+
+                  <Link
+                    href="/account/orders"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (typeof window !== 'undefined') {
+                        window.location.href = '/account/orders';
                       }
                     }}
                     className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                   >
                     My Orders
                   </Link>
-                  <Link 
-                    href="/marketplace/listings" 
+                  <Link
+                    href="/marketplace/listings"
                     onClick={(e) => {
                       e.preventDefault();
                       if (typeof window !== 'undefined') {
@@ -127,8 +173,8 @@ const Header = () => {
                   >
                     My Listings
                   </Link>
-                  <Link 
-                    href="/marketplace/settings" 
+                  <Link
+                    href="/marketplace/settings"
                     onClick={(e) => {
                       e.preventDefault();
                       if (typeof window !== 'undefined') {
