@@ -9,7 +9,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { useToast } from '@/context/ToastContext';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { CreatePostInput } from '@/models/Post';
-import { QuickPost } from '@/models/QuickPost';
+import { Status } from '@/models/Status';
 import Link from 'next/link';
 import { Send, Vote, TrendingUp, Users, MessageCircle, RefreshCw, Award, Video, Mail, Shield, Zap } from 'lucide-react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
@@ -375,11 +375,10 @@ export default function Home() {
 
       if (!postData.communityId) {
 
-        // Import QuickPostService dynamically to avoid circular dependencies
+        // Import StatusService dynamically to avoid circular dependencies
+        const { StatusService } = await import('@/services/statusService');
 
-        const { QuickPostService } = await import('@/services/quickPostService');
-
-        newPost = await QuickPostService.createQuickPost({ ...postData, author: address.toLowerCase() });
+        newPost = await StatusService.createStatus({ ...postData, author: address.toLowerCase() });
 
       } else {
 

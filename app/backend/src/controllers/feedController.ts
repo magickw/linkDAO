@@ -7,7 +7,7 @@ import { feedService } from '../services/feedService';
 import { apiResponse } from '../utils/apiResponse';
 import { MetadataService } from '../services/metadataService';
 import { db } from '../db';
-import { posts, quickPosts } from '../db/schema';
+import { posts, statuses } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
 export class FeedController {
@@ -124,7 +124,7 @@ export class FeedController {
           feedSource: feedSource as 'following' | 'all',
           preferredCategories,
           preferredTags,
-          postTypeFilter: postTypeFilter as 'quickPosts' | 'posts' | 'all'
+          postTypeFilter: postTypeFilter as 'statuses' | 'posts' | 'all'
         });
 
         // DEBUG: Log repost data before sending to frontend
@@ -707,16 +707,16 @@ export class FeedController {
             return;
           }
 
-          // Check quick_posts table
-          const quickPostResult = await db
-            .select({ content: quickPosts.content })
-            .from(quickPosts)
-            .where(eq(quickPosts.contentCid, cid))
+          // Check statuses table
+          const statusResult = await db
+            .select({ content: statuses.content })
+            .from(statuses)
+            .where(eq(statuses.contentCid, cid))
             .limit(1);
 
-          if (quickPostResult.length > 0 && quickPostResult[0].content) {
-            safeLogger.info(`Content retrieved from quick_posts table for CID: ${cid}`);
-            res.json(apiResponse.success({ content: quickPostResult[0].content, cid }, 'Content retrieved successfully from database'));
+          if (statusResult.length > 0 && statusResult[0].content) {
+            safeLogger.info(`Content retrieved from statuses table for CID: ${cid}`);
+            res.json(apiResponse.success({ content: statusResult[0].content, cid }, 'Content retrieved successfully from database'));
             return;
           }
 

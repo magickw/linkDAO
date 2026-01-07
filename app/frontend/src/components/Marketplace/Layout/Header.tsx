@@ -77,7 +77,6 @@ const Header = () => {
               <ConnectButton
                 showBalance={false}
                 chainStatus="none"
-                showChain={false}
               />
             </div>
 

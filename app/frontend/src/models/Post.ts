@@ -110,7 +110,7 @@ export function convertBackendPostToPost(backendPost: any): Post {
     media: backendPost.mediaCids ? JSON.parse(backendPost.mediaCids) : [],
 
     // All posts now belong to a community
-    isQuickPost: backendPost.isQuickPost || false,
+    isStatus: backendPost.isStatus || false,
 
     // Repost info
     isRepost: backendPost.isRepost || false,

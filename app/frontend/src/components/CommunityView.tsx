@@ -525,7 +525,7 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
                   isLocked: post.isLocked,
                   upvotes: post.upvotes || 0,
                   downvotes: post.downvotes || 0,
-                  isQuickPost: false
+                  isStatus: false
                 }}
                 community={communityData}
                 userMembership={isJoined ? {
@@ -672,8 +672,8 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
               />
             </div>
             <div className="mt-3 text-center">
-              <button 
-                onClick={() => router.push('/governance')} 
+              <button
+                onClick={() => router.push('/governance')}
                 className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
               >
                 View all proposals

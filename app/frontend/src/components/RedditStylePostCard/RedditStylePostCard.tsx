@@ -26,13 +26,13 @@ interface NormalizedPost {
   flair?: string;
   isPinned: boolean;
   isLocked: boolean;
-  isQuickPost: boolean;
+  isStatus: boolean;
 }
 
 const normalizePost = (post: EnhancedPost): NormalizedPost => {
-  // Check if it's a quickPost based on the isQuickPost flag
-  const isQuickPost = post.isQuickPost === true;
-  
+  // Check if it's a status based on the isStatus flag
+  const isStatus = post.isStatus === true;
+
   return {
     id: post.id,
     author: post.author,
@@ -40,18 +40,18 @@ const normalizePost = (post: EnhancedPost): NormalizedPost => {
     mediaCids: post.mediaCids,
     tags: post.tags,
     createdAt: post.createdAt,
-    upvotes: 0, // QuickPosts don't have upvotes/downvotes, default to 0
+    upvotes: 0, // Statuses don't have upvotes/downvotes, default to 0
     downvotes: 0,
     comments: post.comments || 0,
-    flair: undefined, // QuickPosts don't have flair
-    isPinned: false, // QuickPosts aren't pinned
-    isLocked: false, // QuickPosts aren't locked
-    isQuickPost
+    flair: undefined, // Statuses don't have flair
+    isPinned: false, // Statuses aren't pinned
+    isLocked: false, // Statuses aren't locked
+    isStatus
   };
 };
 
 interface RedditStylePostCardProps {
-  post: EnhancedPost; // Changed from CommunityPost to EnhancedPost to handle both regular posts and quickPosts
+  post: EnhancedPost; // Changed from CommunityPost to EnhancedPost to handle both regular posts and statuses
   community?: Community;
   viewMode?: 'card' | 'compact';
   showThumbnail?: boolean;
@@ -99,15 +99,15 @@ export default function RedditStylePostCard({
   const postCardRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const id = useId();
-  
+
   // Generate IDs for accessibility
   const postId = `${id}-post`;
   const voteGroupId = `${id}-vote`;
   const menuId = `${id}-menu`;
-  
+
   // Accessibility hook
   const { announceToScreenReader } = useAccessibility();
-  
+
   // Normalize the post data for consistent access
   const normalizedPost = useMemo(() => normalizePost(post), [post]);
 
@@ -134,20 +134,20 @@ export default function RedditStylePostCard({
     if (isVoting) return;
 
     setIsVoting(true);
-    
+
     // Determine final vote (toggle if same direction)
     const finalVote = userVote === direction ? null : direction;
     const wasToggled = userVote === direction;
-    
+
     // Optimistic update
     setUserVote(finalVote);
-    
+
     // Announce to screen readers
-    const voteAction = wasToggled 
-      ? `Removed ${direction}vote` 
+    const voteAction = wasToggled
+      ? `Removed ${direction}vote`
       : `${direction === 'up' ? 'Upvoted' : 'Downvoted'} post`;
     announceToScreenReader(`${voteAction}. Current score: ${voteScore + (finalVote === 'up' ? 1 : finalVote === 'down' ? -1 : 0)}`);
-    
+
     try {
       await onVote(normalizedPost.id, direction);
     } catch (error) {
@@ -164,7 +164,7 @@ export default function RedditStylePostCard({
   const getVoteButtonStyle = (direction: 'up' | 'down') => {
     const isActive = userVote === direction;
     const baseClasses = "p-1 rounded-md transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-700";
-    
+
     if (direction === 'up') {
       return `${baseClasses} ${isActive ? 'text-orange-500 bg-orange-50 dark:bg-orange-900/20' : 'text-gray-400 hover:text-orange-500'}`;
     } else {
@@ -182,18 +182,18 @@ export default function RedditStylePostCard({
   // Handle save action with visual confirmation and accessibility announcements
   const handleSave = useCallback(async () => {
     if (isProcessingAction || !onSave) return;
-    
+
     setIsProcessingAction(true);
     const newSavedState = !isSaved;
-    
+
     try {
       await onSave(normalizedPost.id);
       setIsSaved(newSavedState);
       setShowSaveConfirmation(true);
-      
+
       // Announce to screen readers
       announceToScreenReader(newSavedState ? 'Post saved' : 'Post unsaved');
-      
+
       // Hide confirmation after 2 seconds
       setTimeout(() => {
         setShowSaveConfirmation(false);
@@ -209,16 +209,16 @@ export default function RedditStylePostCard({
   // Handle hide action with undo option and accessibility announcements
   const handleHide = useCallback(async () => {
     if (isProcessingAction || !onHide) return;
-    
+
     setIsProcessingAction(true);
     try {
       await onHide(normalizedPost.id);
       setIsHidden(true);
       setShowHideUndo(true);
-      
+
       // Announce to screen readers
       announceToScreenReader('Post hidden. Undo option available for 5 seconds.');
-      
+
       // Auto-hide undo option after 5 seconds
       setTimeout(() => {
         setShowHideUndo(false);
@@ -241,7 +241,7 @@ export default function RedditStylePostCard({
   // Handle report submission
   const handleReport = useCallback(async (reason: string, details?: string) => {
     if (isProcessingAction || !onReport) return;
-    
+
     setIsProcessingAction(true);
     try {
       await onReport(post.id, reason, details);
@@ -256,7 +256,7 @@ export default function RedditStylePostCard({
   // Handle share action
   const handleShare = useCallback(async () => {
     if (isProcessingAction) return;
-    
+
     setIsProcessingAction(true);
     try {
       if (onShare) {
@@ -329,7 +329,7 @@ export default function RedditStylePostCard({
       >
         <div className={viewModeClasses.content}>
           {/* Compact Voting Section */}
-          <div 
+          <div
             className={viewModeClasses.voting}
             role="group"
             aria-labelledby={`${voteGroupId}-label`}
@@ -349,7 +349,7 @@ export default function RedditStylePostCard({
             >
               <ChevronUp className="w-3 h-3" aria-hidden="true" />
             </motion.button>
-            <div 
+            <div
               id={`${voteGroupId}-score`}
               className={`text-xs font-bold text-center ${getVoteScoreStyle()}`}
               aria-label={`Current score: ${voteScore > 0 ? '+' : ''}${voteScore} points`}
@@ -385,13 +385,13 @@ export default function RedditStylePostCard({
           <div className={viewModeClasses.main}>
             {/* Title and Metadata */}
             <div className="mb-1">
-              <h3 
+              <h3
                 id={`${postId}-title`}
                 className={viewModeClasses.title}
               >
                 {normalizedPost.contentCid}
               </h3>
-              <div 
+              <div
                 id={`${postId}-metadata`}
                 className={viewModeClasses.metadata}
               >
@@ -409,7 +409,7 @@ export default function RedditStylePostCard({
             </div>
 
             {/* Compact Actions */}
-            <div 
+            <div
               id={`${postId}-actions`}
               className={viewModeClasses.actions}
               role="group"
@@ -438,11 +438,10 @@ export default function RedditStylePostCard({
                 <button
                   onClick={handleSave}
                   disabled={isProcessingAction}
-                  className={`transition-colors disabled:opacity-50 ${
-                    isSaved 
-                      ? 'text-yellow-600 hover:text-yellow-700' 
-                      : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-                  }`}
+                  className={`transition-colors disabled:opacity-50 ${isSaved
+                    ? 'text-yellow-600 hover:text-yellow-700'
+                    : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                    }`}
                   aria-label={isSaved ? 'Unsave post' : 'Save post'}
                   aria-pressed={isSaved}
                   title={`${isSaved ? 'Unsave' : 'Save'} post (S key)`}
@@ -497,7 +496,7 @@ export default function RedditStylePostCard({
     >
       <div className={viewModeClasses.content}>
         {/* Left Voting Section */}
-        <div 
+        <div
           className={viewModeClasses.voting}
           role="group"
           aria-labelledby={`${voteGroupId}-label`}
@@ -506,7 +505,7 @@ export default function RedditStylePostCard({
           <span id={`${voteGroupId}-label`} className="sr-only">
             Post voting controls
           </span>
-          
+
           {/* Upvote Button */}
           <motion.button
             whileTap={settings.reducedMotion ? {} : { scale: 0.9 }}
@@ -549,7 +548,7 @@ export default function RedditStylePostCard({
         </div>
 
         {/* Main Content */}
-        <div 
+        <div
           className={`${viewModeClasses.main} relative`}
           onMouseEnter={() => setShowQuickActions(true)}
           onMouseLeave={() => setShowQuickActions(false)}
@@ -584,11 +583,10 @@ export default function RedditStylePostCard({
                       whileTap={settings.reducedMotion ? {} : { scale: 0.9 }}
                       onClick={handleSave}
                       disabled={isProcessingAction}
-                      className={`p-2 rounded-md transition-all duration-200 ${
-                        isSaved 
-                          ? 'text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20' 
-                          : 'text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'
-                      }`}
+                      className={`p-2 rounded-md transition-all duration-200 ${isSaved
+                        ? 'text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20'
+                        : 'text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'
+                        }`}
                       aria-label={isSaved ? 'Unsave post' : 'Save post'}
                       aria-pressed={isSaved}
                       title={`${isSaved ? 'Unsave' : 'Save'} post (S key)`}
@@ -735,7 +733,7 @@ export default function RedditStylePostCard({
 
           {/* Post Content */}
           <div id={`${postId}-content`} className="mb-3">
-            <h2 
+            <h2
               id={`${postId}-title`}
               className="text-lg font-semibold text-gray-900 dark:text-white mb-2"
             >
@@ -784,7 +782,7 @@ export default function RedditStylePostCard({
           </div>
 
           {/* Action Bar */}
-          <div 
+          <div
             id={`${postId}-actions`}
             className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400"
             role="group"
@@ -802,7 +800,7 @@ export default function RedditStylePostCard({
             </button>
 
             {/* Share */}
-            <button 
+            <button
               onClick={handleShare}
               disabled={isProcessingAction}
               className="flex items-center space-x-1 hover:text-gray-700 dark:hover:text-gray-300 transition-colors disabled:opacity-50"
@@ -814,7 +812,7 @@ export default function RedditStylePostCard({
             </button>
 
             {/* Award (placeholder) */}
-            <button 
+            <button
               className="flex items-center space-x-1 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
               aria-label="Give award to post"
               title="Give award"

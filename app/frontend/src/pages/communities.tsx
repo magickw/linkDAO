@@ -59,7 +59,7 @@ const AnnouncementManager = lazy(() => import('@/components/Community/Announceme
 const CommunityPostCardEnhanced = lazy(() => import('@/components/Community/CommunityPostCardEnhanced'));
 
 import PostModal from '@/components/PostModal'; // Import PostModal
-import { QuickPost } from '@/models/QuickPost'; // Import Post type
+import { Status } from '@/models/Status'; // Import Post type
 import MyCommunitiesCard from '@/components/Community/MyCommunitiesCard';
 import CommunityCardEnhanced from '@/components/Community/CommunityCardEnhanced';
 import { postManagementService } from '@/services/postManagementService';
@@ -110,7 +110,7 @@ interface Post {
   createdAt: string;
   tags: string[];
   stakedTokens: number;
-  isQuickPost?: boolean;
+  isStatus?: boolean;
   community?: {
     id: string;
     name: string;
@@ -425,12 +425,12 @@ const CommunitiesPage: React.FC = () => {
         id: post.id,
         title: post.title,
         content: post.content,
-        author: post.authorName || post.author || 'Unknown',
-        authorName: post.authorName || post.author || 'Unknown',
-        authorId: post.authorId || post.authorName,
-        handle: post.authorName || post.author || 'Unknown',
-        authorProfile: {
-          handle: post.authorName || post.author || 'Unknown',
+        author: post.handle || post.author || 'Unknown',
+        authorName: post.handle || post.author || 'Unknown',
+        authorId: post.authorId || post.author,
+        handle: post.handle || post.author || 'Unknown',
+        authorProfile: post.authorProfile || {
+          handle: post.handle || post.author || 'Unknown',
           verified: false,
         },
         communityId: post.communityId,
@@ -439,15 +439,15 @@ const CommunitiesPage: React.FC = () => {
         commentCount: post.commentCount,
         viewCount: post.viewCount || post.views || 0,
         // Don't include comments array - let CommunityPostCardEnhanced load from API for consistency
-        createdAt: post.createdAt,
+        createdAt: post.createdAt instanceof Date ? post.createdAt.toISOString() : post.createdAt,
         tags: post.tags,
-        isQuickPost: post.isQuickPost,
-        ...(post.community && {
+        stakedTokens: post.stakedValue || 0,
+        isStatus: post.isStatus,
+        ...(post.communityId && {
           community: {
-            id: post.community.id,
-            name: post.community.name,
-            displayName: post.community.displayName,
-            avatar: post.community.avatar,
+            id: post.communityId,
+            name: post.communityName || 'Community',
+            displayName: post.communityName,
           }
         })
       })) || [];
@@ -730,7 +730,7 @@ const CommunitiesPage: React.FC = () => {
 
     const communityPosts = posts.filter(post => {
       if (!post || typeof post !== 'object') return false;
-      return post.isQuickPost === false;
+      return post.isStatus === false;
     });
 
     console.log('[CommunitiesPage] community posts count:', communityPosts.length);

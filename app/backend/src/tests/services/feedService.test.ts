@@ -1,6 +1,6 @@
 import { FeedService } from '../../services/feedService';
 import { db } from '../../db';
-import { posts, communities, users, quickPosts } from '../../db/schema';
+import { posts, communities, users, statuses } from '../../db/schema';
 import { eq, or, and, sql, inArray, isNull } from 'drizzle-orm';
 
 // Mock the database
@@ -14,7 +14,7 @@ jest.mock('../../db', () => ({
 // Mock the schema
 jest.mock('../../db/schema', () => ({
   posts: 'posts',
-  quickPosts: 'quickPosts',
+  statuses: 'statuses',
   communities: 'communities',
   users: 'users',
   eq: jest.fn(),
@@ -32,7 +32,7 @@ describe('FeedService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Mock db.select chain
     const mockSelect = {
       from: jest.fn().mockReturnThis(),
@@ -51,7 +51,7 @@ describe('FeedService', () => {
         limit: jest.fn().mockResolvedValue([]),
       });
     });
-    
+
     // Mock SQL template literals
     (sql as jest.Mock).mockImplementation((strings, ...values) => {
       return {
@@ -59,7 +59,7 @@ describe('FeedService', () => {
         values,
       };
     });
-    
+
     // Mock eq
     (eq as jest.Mock).mockReturnValue('eq-condition');
     (or as jest.Mock).mockReturnValue('or-condition');
@@ -96,9 +96,9 @@ describe('FeedService', () => {
           category: 'development',
         },
       ];
-      
+
       (db.select as jest.Mock)().where.mockResolvedValueOnce(mockPosts);
-      (db.select as jest.Mock)().where.mockResolvedValueOnce([]); // Quick posts
+      (db.select as jest.Mock)().where.mockResolvedValueOnce([]); // Statuses
 
       const result = await FeedService.getEnhancedFeed(options);
 
@@ -125,9 +125,9 @@ describe('FeedService', () => {
           tags: ['react', 'javascript'],
         },
       ];
-      
+
       (db.select as jest.Mock)().where.mockResolvedValueOnce(mockPosts);
-      (db.select as jest.Mock)().where.mockResolvedValueOnce([]); // Quick posts
+      (db.select as jest.Mock)().where.mockResolvedValueOnce([]); // Statuses
 
       const result = await FeedService.getEnhancedFeed(options);
 
@@ -163,9 +163,9 @@ describe('FeedService', () => {
           tags: ['react'],
         },
       ];
-      
+
       (db.select as jest.Mock)().where.mockResolvedValueOnce(mockPosts);
-      (db.select as jest.Mock)().where.mockResolvedValueOnce([]); // Quick posts
+      (db.select as jest.Mock)().where.mockResolvedValueOnce([]); // Statuses
 
       const result = await FeedService.getEnhancedFeed(options);
 
@@ -191,9 +191,9 @@ describe('FeedService', () => {
           content: 'Test post 1',
         },
       ];
-      
+
       (db.select as jest.Mock)().where.mockResolvedValueOnce(mockPosts);
-      (db.select as jest.Mock)().where.mockResolvedValueOnce([]); // Quick posts
+      (db.select as jest.Mock)().where.mockResolvedValueOnce([]); // Statuses
 
       const result = await FeedService.getEnhancedFeed(options);
 
@@ -225,9 +225,9 @@ describe('FeedService', () => {
           communityId: 'community-2',
         },
       ];
-      
+
       (db.select as jest.Mock)().where.mockResolvedValueOnce(mockPosts);
-      (db.select as jest.Mock)().where.mockResolvedValueOnce([]); // Quick posts
+      (db.select as jest.Mock)().where.mockResolvedValueOnce([]); // Statuses
 
       const result = await FeedService.getEnhancedFeed(options);
 
@@ -260,9 +260,9 @@ describe('FeedService', () => {
           tags: ['ethereum', 'solidity'],
         },
       ];
-      
+
       (db.select as jest.Mock)().where.mockResolvedValueOnce(mockPosts);
-      (db.select as jest.Mock)().where.mockResolvedValueOnce([]); // Quick posts
+      (db.select as jest.Mock)().where.mockResolvedValueOnce([]); // Statuses
 
       const result = await FeedService.getEnhancedFeed(options);
 
@@ -292,9 +292,9 @@ describe('FeedService', () => {
           dao: null, // Community post
         },
       ];
-      
+
       (db.select as jest.Mock)().where.mockResolvedValueOnce(mockPosts);
-      (db.select as jest.Mock)().where.mockResolvedValueOnce([]); // Quick posts
+      (db.select as jest.Mock)().where.mockResolvedValueOnce([]); // Statuses
 
       const result = await FeedService.getEnhancedFeed(options);
 
@@ -310,7 +310,7 @@ describe('FeedService', () => {
   describe('buildTimeFilter', () => {
     it('should return correct filter for different time ranges', () => {
       const service = new FeedService();
-      
+
       // Test that buildTimeFilter exists and works
       expect(() => {
         // @ts-ignore - accessing private method for testing
@@ -323,7 +323,7 @@ describe('FeedService', () => {
   describe('buildSortOrder', () => {
     it('should return correct sort order for different sort types', () => {
       const service = new FeedService();
-      
+
       // Test that buildSortOrder exists and works
       expect(() => {
         // @ts-ignore - accessing private method for testing

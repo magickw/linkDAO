@@ -1,14 +1,14 @@
 import { EnhancedPost, Reaction, Tip, ContentPreview } from '@/types/feed';
 
-// QuickPost interface for home/feed posts (no title or community required)
-export interface QuickPost extends EnhancedPost {
+// Status interface for home/feed posts (no title or community required)
+export interface Status extends EnhancedPost {
   // Inherit all properties from EnhancedPost
-  // QuickPosts don't have titles or community associations
-  // The isQuickPost flag will be set to true
-  media?: string[]; // Additional property specific to frontend QuickPost
+  // Statuses don't have titles or community associations
+  // The isStatus flag will be set to true
+  media?: string[]; // Additional property specific to frontend Status
 }
 
-export interface CreateQuickPostInput {
+export interface CreateStatusInput {
   author: string;
   parentId?: string;
   content: string; // This would be uploaded to IPFS and the CID stored
@@ -19,13 +19,13 @@ export interface CreateQuickPostInput {
   proposal?: any; // Proposal data for governance posts
 }
 
-export interface UpdateQuickPostInput {
+export interface UpdateStatusInput {
   content?: string;
   tags?: string[];
   media?: string[];
 }
 
-// Utility function to convert backend quick post to frontend quick post
+// Utility function to convert backend status to frontend status
 // Helper function to validate IPFS CID and construct proper URL
 function getAvatarUrl(profileCid: string | undefined): string | undefined {
   if (!profileCid) return undefined;
@@ -69,7 +69,7 @@ function formatAuthorDisplay(handle: string | null | undefined, walletAddress: s
 }
 
 
-export function convertBackendQuickPostToQuickPost(backendPost: any): QuickPost {
+export function convertBackendStatusToStatus(backendPost: any): Status {
   // Parse content if it's stored as JSON string
   let content = '';
   if (backendPost.content) {
@@ -112,7 +112,7 @@ export function convertBackendQuickPostToQuickPost(backendPost: any): QuickPost 
     id: backendPost.id?.toString() || '',
     author: backendPost.walletAddress || backendPost.authorId || '',
     parentId: backendPost.parentId ? backendPost.parentId.toString() : null,
-    title: backendPost.title || '', // Optional for quickPosts
+    title: backendPost.title || '', // Optional for statuses
     content: content, // Use parsed content
     contentCid: backendPost.contentCid || '',
     shareId: backendPost.shareId || '', // Include shareId for share URLs
@@ -152,19 +152,19 @@ export function convertBackendQuickPostToQuickPost(backendPost: any): QuickPost 
       reputationTier: undefined
     },
 
-    // Add media property for frontend QuickPost interface
+    // Add media property for frontend Status interface
     media: safeJsonParse(backendPost.mediaCids, []),
 
     // CRITICAL: Preserve originalPost for reposts
     // Recursively convert the original post if this is a repost
-    originalPost: backendPost.originalPost ? convertBackendQuickPostToQuickPost(backendPost.originalPost) : undefined,
+    originalPost: backendPost.originalPost ? convertBackendStatusToStatus(backendPost.originalPost) : undefined,
 
     // Repost flags
     isRepost: backendPost.isRepost || false,
     isRepostedByMe: backendPost.isRepostedByMe || false,
 
-    // Flag to distinguish quickPosts from regular posts
-    isQuickPost: true
+    // Flag to distinguish statuses from regular posts
+    isStatus: true
   };
 }
 

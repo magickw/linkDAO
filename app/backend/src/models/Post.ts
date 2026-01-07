@@ -16,7 +16,7 @@ export interface Post {
   moderationCategories?: string[];
   isRepost?: boolean;
   isRepostedByMe?: boolean;
-  isQuickPost?: boolean;
+  isStatus?: boolean;
   shares?: number;
   mediaUrls?: string[];
   location?: {

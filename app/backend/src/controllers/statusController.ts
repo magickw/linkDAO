@@ -1,29 +1,29 @@
 import { Response } from 'express';
 import crypto from 'crypto';
-import { QuickPostService } from '../services/quickPostService';
+import { StatusService } from '../services/statusService';
 import { MetadataService } from '../services/metadataService';
 import { safeLogger } from '../utils/safeLogger';
 import { apiResponse } from '../utils/apiResponse';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
 
-export class QuickPostController {
-  private quickPostService: QuickPostService;
+export class StatusController {
+  private statusService: StatusService;
 
   constructor() {
     try {
-      this.quickPostService = new QuickPostService();
+      this.statusService = new StatusService();
     } catch (error) {
-      console.error('Failed to initialize QuickPostService:', error);
-      throw new Error(`QuickPostController initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Failed to initialize StatusService:', error);
+      throw new Error(`StatusController initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
-  async createQuickPost(req: AuthenticatedRequest, res: Response): Promise<Response> {
+  async createStatus(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
-      console.log('POST /api/quick-posts - Creating quick post');
+      console.log('POST /api/statuses - Creating status');
 
       const { content, authorId, parentId, isRepost, media, tags, onchainRef, isTokenGated, gatedContentPreview } = req.body;
-      console.log('🔍 [DEBUG-CREATE] QuickPost body:', JSON.stringify({ content, parentId, isRepost }));
+      console.log('🔍 [DEBUG-CREATE] Status body:', JSON.stringify({ content, parentId, isRepost }));
 
       if ((!content || content.trim() === '') && !isRepost) {
         return res.status(400).json(apiResponse.error('Content is required', 400));
@@ -48,8 +48,8 @@ export class QuickPostController {
         contentCid = `Qm${hash}`;
       }
 
-      // Prepare input for QuickPostService
-      const quickPostInput = {
+      // Prepare input for StatusService
+      const statusInput = {
         authorId: authenticatedUser.id,
         contentCid,
         content,  // Store the actual content in the database
@@ -62,53 +62,53 @@ export class QuickPostController {
         gatedContentPreview
       };
 
-      // Create quick post using QuickPostService
-      const quickPost = await this.quickPostService.createQuickPost(quickPostInput);
+      // Create status using StatusService
+      const status = await this.statusService.createStatus(statusInput);
 
-      console.log('Quick post created:', quickPost.id);
+      console.log('Status created:', status.id);
 
-      return res.status(201).json(apiResponse.success(quickPost, 'Quick post created successfully'));
+      return res.status(201).json(apiResponse.success(status, 'Status created successfully'));
     } catch (error: any) {
-      console.error('Error creating quick post:', error);
-      return res.status(500).json(apiResponse.error(error.message || 'Failed to create quick post', 500));
+      console.error('Error creating status:', error);
+      return res.status(500).json(apiResponse.error(error.message || 'Failed to create status', 500));
     }
   }
 
-  async getQuickPost(req: AuthenticatedRequest, res: Response): Promise<Response> {
+  async getStatus(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
 
-      const quickPost = await this.quickPostService.getQuickPost(id);
+      const status = await this.statusService.getStatus(id);
 
-      if (!quickPost) {
-        return res.status(404).json(apiResponse.error('Quick post not found', 404));
+      if (!status) {
+        return res.status(404).json(apiResponse.error('Status not found', 404));
       }
 
-      return res.json(apiResponse.success(quickPost, 'Quick post retrieved successfully'));
+      return res.json(apiResponse.success(status, 'Status retrieved successfully'));
     } catch (error: any) {
-      console.error('Error getting quick post:', error);
-      return res.status(500).json(apiResponse.error(error.message || 'Failed to retrieve quick post', 500));
+      console.error('Error getting status:', error);
+      return res.status(500).json(apiResponse.error(error.message || 'Failed to retrieve status', 500));
     }
   }
 
-  async getQuickPostByShareId(req: AuthenticatedRequest, res: Response): Promise<Response> {
+  async getStatusByShareId(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { shareId } = req.params;
 
-      const quickPost = await this.quickPostService.getQuickPostByShareId(shareId);
+      const status = await this.statusService.getStatusByShareId(shareId);
 
-      if (!quickPost) {
-        return res.status(404).json(apiResponse.error('Quick post not found', 404));
+      if (!status) {
+        return res.status(404).json(apiResponse.error('Status not found', 404));
       }
 
-      return res.json(apiResponse.success(quickPost, 'Quick post retrieved successfully'));
+      return res.json(apiResponse.success(status, 'Status retrieved successfully'));
     } catch (error: any) {
-      console.error('Error getting quick post by share ID:', error);
-      return res.status(500).json(apiResponse.error(error.message || 'Failed to retrieve quick post', 500));
+      console.error('Error getting status by share ID:', error);
+      return res.status(500).json(apiResponse.error(error.message || 'Failed to retrieve status', 500));
     }
   }
 
-  async updateQuickPost(req: AuthenticatedRequest, res: Response): Promise<Response> {
+  async updateStatus(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
       const { content, tags } = req.body;
@@ -134,136 +134,136 @@ export class QuickPostController {
         tags: tags ? JSON.stringify(tags) : undefined
       };
 
-      const quickPost = await this.quickPostService.updateQuickPost(id, updateData);
+      const status = await this.statusService.updateStatus(id, updateData);
 
-      if (!quickPost) {
-        return res.status(404).json(apiResponse.error('Quick post not found', 404));
+      if (!status) {
+        return res.status(404).json(apiResponse.error('Status not found', 404));
       }
 
-      return res.json(apiResponse.success(quickPost, 'Quick post updated successfully'));
+      return res.json(apiResponse.success(status, 'Status updated successfully'));
     } catch (error: any) {
-      console.error('Error updating quick post:', error);
-      return res.status(500).json(apiResponse.error(error.message || 'Failed to update quick post', 500));
+      console.error('Error updating status:', error);
+      return res.status(500).json(apiResponse.error(error.message || 'Failed to update status', 500));
     }
   }
 
-  async deleteQuickPost(req: AuthenticatedRequest, res: Response): Promise<Response> {
+  async deleteStatus(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
       const userId = req.user?.id;
 
-      const deleted = await this.quickPostService.deleteQuickPost(id, userId);
+      const deleted = await this.statusService.deleteStatus(id, userId);
 
       if (!deleted) {
         // Idempotent delete: if it's already gone, consider it a success
-        return res.json(apiResponse.success(null, 'Quick post already deleted'));
+        return res.json(apiResponse.success(null, 'Status already deleted'));
       }
 
-      return res.json(apiResponse.success(null, 'Quick post deleted successfully'));
+      return res.json(apiResponse.success(null, 'Status deleted successfully'));
     } catch (error: any) {
-      console.error('Error deleting quick post:', error);
+      console.error('Error deleting status:', error);
 
       // Handle authorization errors
       if (error.message?.includes('Unauthorized')) {
         return res.status(403).json(apiResponse.error(error.message, 403));
       }
 
-      return res.status(500).json(apiResponse.error(error.message || 'Failed to delete quick post', 500));
+      return res.status(500).json(apiResponse.error(error.message || 'Failed to delete status', 500));
     }
   }
 
-  async getQuickPostsByAuthor(req: AuthenticatedRequest, res: Response): Promise<Response> {
+  async getStatusesByAuthor(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { authorId } = req.params;
       const { page = 1, limit = 20 } = req.query;
 
-      const quickPosts = await this.quickPostService.getQuickPostsByAuthor(
+      const statuses = await this.statusService.getStatusesByAuthor(
         authorId,
         parseInt(page as string),
         parseInt(limit as string)
       );
 
-      return res.json(apiResponse.success(quickPosts, 'Quick posts retrieved successfully'));
+      return res.json(apiResponse.success(statuses, 'Statuses retrieved successfully'));
     } catch (error: any) {
-      console.error('Error getting quick posts by author:', error);
-      return res.status(500).json(apiResponse.error(error.message || 'Failed to retrieve quick posts', 500));
+      console.error('Error getting statuses by author:', error);
+      return res.status(500).json(apiResponse.error(error.message || 'Failed to retrieve statuses', 500));
     }
   }
 
-  async addQuickPostReaction(req: AuthenticatedRequest, res: Response): Promise<Response> {
+  async addStatusReaction(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
       const { userId, type, amount } = req.body;
 
-      const reaction = await this.quickPostService.addReaction(id, userId, type, amount);
+      const reaction = await this.statusService.addReaction(id, userId, type, amount);
 
       return res.status(201).json(apiResponse.success(reaction, 'Reaction added successfully'));
     } catch (error: any) {
-      console.error('Error adding quick post reaction:', error);
+      console.error('Error adding status reaction:', error);
       return res.status(500).json(apiResponse.error(error.message || 'Failed to add reaction', 500));
     }
   }
 
-  async addQuickPostTip(req: AuthenticatedRequest, res: Response): Promise<Response> {
+  async addStatusTip(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
       const { fromUserId, toUserId, token, amount, message } = req.body;
 
-      const tip = await this.quickPostService.addTip(id, fromUserId, toUserId, token, amount, message);
+      const tip = await this.statusService.addTip(id, fromUserId, toUserId, token, amount, message);
 
       return res.status(201).json(apiResponse.success(tip, 'Tip added successfully'));
     } catch (error: any) {
-      console.error('Error adding quick post tip:', error);
+      console.error('Error adding status tip:', error);
       return res.status(500).json(apiResponse.error(error.message || 'Failed to add tip', 500));
     }
   }
 
   // Additional methods to match route expectations
-  async getAllQuickPosts(req: AuthenticatedRequest, res: Response): Promise<Response> {
+  async getAllStatuses(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { page = 1, limit = 20, sort = 'new' } = req.query;
 
       // Use the feed method as a fallback for all posts
-      const quickPosts = await this.quickPostService.getQuickPostFeed({
+      const statuses = await this.statusService.getStatusFeed({
         page: parseInt(page as string),
         limit: parseInt(limit as string),
         sort: sort as 'new' | 'hot' | 'top',
         timeRange: 'all'
       });
 
-      return res.json(apiResponse.success(quickPosts, 'Quick posts retrieved successfully'));
+      return res.json(apiResponse.success(statuses, 'Statuses retrieved successfully'));
     } catch (error: any) {
-      console.error('Error getting all quick posts:', error);
-      return res.status(500).json(apiResponse.error(error.message || 'Failed to retrieve quick posts', 500));
+      console.error('Error getting all statuses:', error);
+      return res.status(500).json(apiResponse.error(error.message || 'Failed to retrieve statuses', 500));
     }
   }
 
-  async getQuickPostFeed(req: AuthenticatedRequest, res: Response): Promise<Response> {
+  async getStatusFeed(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { page = 1, limit = 20, sort = 'new', timeRange = 'day' } = req.query;
 
-      const quickPosts = await this.quickPostService.getQuickPostFeed({
+      const statuses = await this.statusService.getStatusFeed({
         page: parseInt(page as string),
         limit: parseInt(limit as string),
         sort: sort as 'new' | 'hot' | 'top',
         timeRange: timeRange as 'hour' | 'day' | 'week' | 'month' | 'year' | 'all'
       });
 
-      return res.json(apiResponse.success(quickPosts, 'Quick post feed retrieved successfully'));
+      return res.json(apiResponse.success(statuses, 'Status feed retrieved successfully'));
     } catch (error: any) {
-      console.error('Error getting quick post feed:', error);
-      return res.status(500).json(apiResponse.error(error.message || 'Failed to retrieve quick post feed', 500));
+      console.error('Error getting status feed:', error);
+      return res.status(500).json(apiResponse.error(error.message || 'Failed to retrieve status feed', 500));
     }
   }
 
-  async getQuickPostsByTag(req: AuthenticatedRequest, res: Response): Promise<Response> {
+  async getStatusesByTag(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { tag } = req.params;
       const { page = 1, limit = 20 } = req.query;
 
       // For now, return empty array since tag filtering is not implemented
       // This is a placeholder until proper tag filtering is added to the service
-      const quickPosts = {
+      const statuses = {
         posts: [],
         total: 0,
         page: parseInt(page as string),
@@ -271,10 +271,10 @@ export class QuickPostController {
         totalPages: 0
       };
 
-      return res.json(apiResponse.success(quickPosts, `Quick posts with tag ${tag} retrieved successfully (placeholder)`));
+      return res.json(apiResponse.success(statuses, `Statuses with tag ${tag} retrieved successfully (placeholder)`));
     } catch (error: any) {
-      console.error('Error getting quick posts by tag:', error);
-      return res.status(500).json(apiResponse.error(error.message || 'Failed to retrieve quick posts by tag', 500));
+      console.error('Error getting statuses by tag:', error);
+      return res.status(500).json(apiResponse.error(error.message || 'Failed to retrieve statuses by tag', 500));
     }
   }
 

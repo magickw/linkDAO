@@ -462,7 +462,7 @@ app.use(fileUploadSecurity);
 
 // Import routes
 import postRoutes from './routes/postRoutes';
-import quickPostRoutes from './routes/quickPostRoutes';
+import statusRoutes from './routes/statusRoutes';
 import postShareRoutes from './routes/postShareRoutes';
 import communityPostShareRoutes from './routes/communityPostShareRoutes';
 import feedRoutes from './routes/feedRoutes';
@@ -544,7 +544,7 @@ console.log('Finished registering share routes');
 // app.use('/api/posts', postManagementRoutes);
 
 app.use('/api/posts', postRoutes);
-app.use('/api/quick-posts', quickPostRoutes);
+app.use('/api/statuses', statusRoutes);
 app.use('/api/feed', feedRoutes);
 app.use('/api/users', userRoutes);
 // Buyer data management routes

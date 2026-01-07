@@ -1,11 +1,11 @@
 import { db } from '../db';
-import { comments, users, posts, quickPosts } from '../db/schema';
+import { comments, users, posts } from '../db/schema';
 import { eq, and, desc, asc, isNull, sql } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 
 interface CreateCommentInput {
   postId?: string;
-  quickPostId?: string;
+  statusId?: string;
   authorAddress: string;
   content: string;
   parentCommentId?: string;
@@ -41,16 +41,16 @@ export class CommentService {
 
       const authorId = user[0].id;
 
-      // Validate that either postId or quickPostId is provided, but not both
-      if ((!input.postId && !input.quickPostId) || (input.postId && input.quickPostId)) {
-        throw new Error('Either postId or quickPostId must be provided, but not both');
+      // Validate that either postId or statusId is provided, but not both
+      if ((!input.postId && !input.statusId) || (input.postId && input.statusId)) {
+        throw new Error('Either postId or statusId must be provided, but not both');
       }
 
       // Create the comment
       const [newComment] = await db.insert(comments)
         .values({
           postId: input.postId,
-          quickPostId: input.quickPostId,
+          statusId: input.statusId,
           authorId,
           content: input.content,
           parentCommentId: input.parentCommentId || null, // Explicitly set to null for top-level comments
@@ -78,7 +78,7 @@ export class CommentService {
         .select({
           id: comments.id,
           postId: comments.postId,
-          quickPostId: comments.quickPostId,
+          statusId: comments.statusId,
           content: comments.content,
           parentCommentId: comments.parentCommentId,
           media: comments.media,
@@ -113,11 +113,11 @@ export class CommentService {
   }
 
   /**
-   * Get all comments for a post (regular or quick post)
+   * Get all comments for a post (regular or status)
    */
-  async getCommentsByPost(postId?: string, quickPostId?: string, sortBy: 'best' | 'new' | 'top' | 'controversial' = 'best', limit: number = 100) {
+  async getCommentsByPost(postId?: string, statusId?: string, sortBy: 'best' | 'new' | 'top' | 'controversial' = 'best', limit: number = 100) {
     try {
-      safeLogger.info(`[CommentService] getCommentsByPost called with postId=${postId}, quickPostId=${quickPostId}, sortBy=${sortBy}, limit=${limit}`);
+      safeLogger.info(`[CommentService] getCommentsByPost called with postId=${postId}, statusId=${statusId}, sortBy=${sortBy}, limit=${limit}`);
 
       // Build the where clause
       let whereClause;
@@ -127,14 +127,14 @@ export class CommentService {
           isNull(comments.parentCommentId) // Only get top-level comments
         );
         safeLogger.info(`[CommentService] Using postId filter: ${postId}, filtering for NULL parentCommentId`);
-      } else if (quickPostId) {
+      } else if (statusId) {
         whereClause = and(
-          eq(comments.quickPostId, quickPostId),
+          eq(comments.statusId, statusId),
           isNull(comments.parentCommentId)
         );
-        safeLogger.info(`[CommentService] Using quickPostId filter: ${quickPostId}, filtering for NULL parentCommentId`);
+        safeLogger.info(`[CommentService] Using statusId filter: ${statusId}, filtering for NULL parentCommentId`);
       } else {
-        throw new Error('Either postId or quickPostId must be provided');
+        throw new Error('Either postId or statusId must be provided');
       }
 
       // Determine sort order
@@ -161,7 +161,7 @@ export class CommentService {
         .select({
           id: comments.id,
           postId: comments.postId,
-          quickPostId: comments.quickPostId,
+          statusId: comments.statusId,
           content: comments.content,
           parentCommentId: comments.parentCommentId,
           media: comments.media,
@@ -188,7 +188,7 @@ export class CommentService {
 
       safeLogger.info(`[CommentService] Query returned ${result.length} comments`);
       if (result.length > 0) {
-        safeLogger.info(`[CommentService] First comment: id=${result[0].id}, postId=${result[0].postId}, quickPostId=${result[0].quickPostId}, parentCommentId=${result[0].parentCommentId}`);
+        safeLogger.info(`[CommentService] First comment: id=${result[0].id}, postId=${result[0].postId}, statusId=${result[0].statusId}, parentCommentId=${result[0].parentCommentId}`);
       }
 
       return result;
@@ -207,7 +207,7 @@ export class CommentService {
         .select({
           id: comments.id,
           postId: comments.postId,
-          quickPostId: comments.quickPostId,
+          statusId: comments.statusId,
           content: comments.content,
           parentCommentId: comments.parentCommentId,
           media: comments.media,

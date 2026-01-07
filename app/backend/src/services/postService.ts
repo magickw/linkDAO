@@ -262,9 +262,9 @@ export class PostService {
       // Fetch the post from database using the new dedicated method
       let dbPost = await databaseService.getPostById(postId);
 
-      // Fallback to quick posts if not found in regular posts
+      // Fallback to statuses if not found in regular posts
       if (!dbPost) {
-        dbPost = await (databaseService as any).getQuickPostById(postId);
+        dbPost = await databaseService.getStatusById(postId);
       }
 
       if (!dbPost) {
@@ -316,9 +316,9 @@ export class PostService {
       // Fetch the post from database by share_id
       let dbPost = await databaseService.getPostByShareId(shareId);
 
-      // Fallback to quick posts if not found in regular posts
+      // Fallback to statuses if not found in regular posts
       if (!dbPost) {
-        dbPost = await (databaseService as any).getQuickPostByShareId(shareId);
+        dbPost = await databaseService.getStatusByShareId(shareId);
       }
 
       if (!dbPost) {
@@ -673,22 +673,22 @@ export class PostService {
       // - Staking/boosted posts that should be prioritized
 
       // Get posts from followed users (including self)
-      // Get posts and quick posts from followed users (including self)
+      // Get posts and statuses from followed users (including self)
       const postsPromises = followingIds.map((userId: any) => databaseService.getPostsByAuthor(userId));
-      const quickPostsPromises = followingIds.map((userId: any) => databaseService.getQuickPostsByAuthor(userId));
+      const statusPromises = followingIds.map((userId: any) => databaseService.getStatusesByAuthor(userId));
 
-      const [postsArrays, quickPostsArrays] = await Promise.all([
+      const [postsArrays, statusArrays] = await Promise.all([
         Promise.all(postsPromises),
-        Promise.all(quickPostsPromises)
+        Promise.all(statusPromises)
       ]);
 
       const allPosts = postsArrays.flat();
-      const allQuickPosts = quickPostsArrays.flat();
+      const allStatuses = statusArrays.flat();
 
       // Collect all post IDs for efficient querying
       const allPostIds = new Set<string>();
       allPosts.forEach((p: any) => allPostIds.add(p.id.toString()));
-      allQuickPosts.forEach((p: any) => allPostIds.add(p.id.toString()));
+      allStatuses.forEach((p: any) => allPostIds.add(p.id.toString()));
 
       // Fetch user reposts and repost counts in parallel
       let userReposts = new Set<string>();
@@ -726,7 +726,7 @@ export class PostService {
           createdAt,
           onchainRef: dbPost.onchainRef || '',
           isRepostedByMe: userReposts.has(dbPost.id.toString()),
-          isQuickPost: false,
+          isStatus: false,
           isRepost: dbPost.isRepost,
           shares: repostCounts.get(dbPost.id.toString()) || 0,
           mediaUrls: dbPost.mediaUrls ? JSON.parse(dbPost.mediaUrls) : [],
@@ -734,8 +734,8 @@ export class PostService {
         };
       }));
 
-      // Map quick posts
-      const mappedQuickPosts: Post[] = await Promise.all(allQuickPosts.map(async (dbPost: any) => {
+      // Map statuses
+      const mappedStatuses: Post[] = await Promise.all(allStatuses.map(async (dbPost: any) => {
         // Get the author's address
         const author = await databaseService.getUserById(dbPost.authorId);
         const authorAddress = author ? author.walletAddress : 'unknown';
@@ -754,9 +754,9 @@ export class PostService {
           createdAt,
           onchainRef: dbPost.onchainRef || '',
           isRepostedByMe: userReposts.has(dbPost.id.toString()),
-          isQuickPost: true, // Mark as quick post
+          isStatus: true, // Mark as status
           isRepost: dbPost.isRepost,
-          title: null, // Quick posts don't have titles
+          title: null, // Statuses don't have titles
           shares: repostCounts.get(dbPost.id.toString()) || 0,
           mediaUrls: dbPost.mediaUrls ? JSON.parse(dbPost.mediaUrls) : [],
           location: dbPost.location || undefined
@@ -764,7 +764,7 @@ export class PostService {
       }));
 
       // Combine and sort by creation date (newest first)
-      const combinedPosts = [...mappedPosts, ...mappedQuickPosts];
+      const combinedPosts = [...mappedPosts, ...mappedStatuses];
       combinedPosts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
       // Remove duplicates by ID

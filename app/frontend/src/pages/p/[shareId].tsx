@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Layout from '@/components/Layout';
 import { EnhancedPostCard } from '@/components/Feed/EnhancedPostCard';
-import { QuickPost } from '@/models/QuickPost';
+import { Status } from '@/models/Status';
 import { useToast } from '@/context/ToastContext';
 import { ArrowLeft, Loader2, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
@@ -19,7 +19,7 @@ export default function SharePostPage() {
     const { shareId } = router.query;
     const { addToast } = useToast();
 
-    const [post, setPost] = useState<QuickPost | null>(null);
+    const [post, setPost] = useState<Status | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [canonicalUrl, setCanonicalUrl] = useState<string>('');
@@ -48,8 +48,7 @@ export default function SharePostPage() {
                 const result = await response.json();
 
                 if (result.success && result.data) {
-                    // 后端返回的数据格式不同，需要从 result.data.post 获取实际帖子数据
-                    const postData = result.data.post as QuickPost;
+                    const postData = result.data.post as Status;
                     const canonicalUrl = result.data.canonicalUrl;
 
                     setPost(postData);

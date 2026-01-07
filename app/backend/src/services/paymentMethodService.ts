@@ -10,12 +10,12 @@ export interface PaymentMethod {
     label?: string;
     cardLast4?: string;
     cardBrand?: string;
-    cardExpMonth?: number;
-    cardExpYear?: number;
+    cardExpMonth?: number | string;
+    cardExpYear?: number | string;
     cardFingerprint?: string;
     walletAddress?: string;
     walletType?: string;
-    chainId?: number;
+    chainId?: number | string;
     stripePaymentMethodId?: string;
     stripeCustomerId?: string;
     externalId?: string;
@@ -124,6 +124,9 @@ export class PaymentMethodService {
             .insert(paymentMethodsV2)
             .values({
                 ...input,
+                cardExpMonth: input.cardExpMonth?.toString(),
+                cardExpYear: input.cardExpYear?.toString(),
+                chainId: input.chainId?.toString(),
                 isDefault: input.isDefault || false,
                 isVerified: false,
                 requiresCvv: true,
@@ -245,11 +248,11 @@ export class PaymentMethodService {
                 eq(paymentMethodsV2.status, 'active'),
                 or(
                     // Year is less than current year
-                    eq(paymentMethodsV2.cardExpYear, currentYear - 1),
+                    eq(paymentMethodsV2.cardExpYear, (currentYear - 1).toString()),
                     // Year is current year but month has passed
                     and(
-                        eq(paymentMethodsV2.cardExpYear, currentYear),
-                        eq(paymentMethodsV2.cardExpMonth, currentMonth - 1)
+                        eq(paymentMethodsV2.cardExpYear, currentYear.toString()),
+                        eq(paymentMethodsV2.cardExpMonth, (currentMonth - 1).toString())
                     )
                 )
             ))

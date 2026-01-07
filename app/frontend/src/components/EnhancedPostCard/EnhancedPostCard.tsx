@@ -6,7 +6,7 @@ import { useToast } from '@/context/ToastContext';
 import PostActionsMenu from '../PostActionsMenu';
 import { getPostActionPermissions } from '@/utils/postPermissions';
 import { CommunityPostService } from '@/services/communityPostService';
-import { QuickPostService } from '@/services/quickPostService';
+import { StatusService } from '@/services/statusService';
 import { PostService } from '@/services/postService';
 import { InlinePreviewRenderer } from '../InlinePreviews/InlinePreviewRenderer';
 import { ContentPreview } from '../../types/contentPreview';
@@ -131,10 +131,10 @@ const EnhancedPostCard = React.memo(({
 
   const handleDelete = useCallback(async () => {
     try {
-      // Determine if this is a quick post or regular post using the isQuickPost flag
-      if (post.isQuickPost) {
-        // Quick post (feed post)
-        await QuickPostService.deleteQuickPost(post.id);
+      // Determine if this is a status or regular post using the isStatus flag
+      if (post.isStatus) {
+        // Status (feed post)
+        await StatusService.deleteStatus(post.id);
       } else {
         // Regular post or community post
         if (post.communityId) {
@@ -155,7 +155,7 @@ const EnhancedPostCard = React.memo(({
       console.error('Error deleting post:', error);
       addToast('Failed to delete post', 'error');
     }
-  }, [post.id, post.communityId, post.isQuickPost, addToast]);
+  }, [post.id, post.communityId, post.isStatus, addToast]);
 
   const handlePin = useCallback(async () => {
     try {

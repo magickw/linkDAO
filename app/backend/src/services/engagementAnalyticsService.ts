@@ -1,7 +1,7 @@
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
 import { eq, and, gte, lte, desc, sql, count, sum, avg, gt } from 'drizzle-orm';
-import { posts, users, reactions, tips, views, comments, shares, bookmarks, quickPosts, quickPostReactions, quickPostViews, communityMembers } from '../db/schema';
+import { posts, users, reactions, tips, views, comments, shares, bookmarks, statuses, statusReactions, statusViews, communityMembers } from '../db/schema';
 import type {
   EngagementAnalytics,
   EngagementTrend,

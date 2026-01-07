@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { quickPosts, quickPostReactions, quickPostTips, users, quickPostTags } from '../db/schema';
+import { statuses, statusReactions, statusTips, users, statusTags } from '../db/schema';
 import { eq, and, sql, desc, asc, isNull, aliasedTable, or } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 import { trendingCacheService } from './trendingCacheService';
@@ -7,7 +7,8 @@ import { getWebSocketService } from './webSocketService';
 import { generateShareId } from '../utils/shareIdGenerator';
 
 // Define interfaces for input data
-interface QuickPostInput {
+// Define interfaces for input data
+interface StatusInput {
   authorId: string;
   contentCid: string; // This is now the CID, not the actual content
   content?: string;   // Actual content as fallback
@@ -22,21 +23,21 @@ interface QuickPostInput {
   location?: any;
 }
 
-interface UpdateQuickPostInput {
+interface UpdateStatusInput {
   contentCid?: string; // This is now the CID, not the actual content
   content?: string;    // Actual content as fallback
   tags?: string;
 }
 
-interface QuickPostReactionInput {
-  quickPostId: string;
+interface StatusReactionInput {
+  statusId: string;
   userId: string;
   type: string;
   amount: string;
 }
 
-interface QuickPostTipInput {
-  quickPostId: string;
+interface StatusTipInput {
+  statusId: string;
   fromUserId: string;
   toUserId: string;
   token: string;
@@ -44,8 +45,8 @@ interface QuickPostTipInput {
   message?: string;
 }
 
-export class QuickPostService {
-  async createQuickPost(postData: QuickPostInput) {
+export class StatusService {
+  async createStatus(postData: StatusInput) {
     try {
       // Build insert object dynamically to handle missing columns
       const insertData: any = {
@@ -136,7 +137,7 @@ export class QuickPostService {
 
       console.log('🔍 [DEBUG-CREATE-SERVICE] Inserting quick post data:', JSON.stringify(insertData));
 
-      const [newPost] = await db.insert(quickPosts).values(insertData).returning();
+      const [newPost] = await db.insert(statuses).values(insertData).returning();
 
       // Update cache with error handling
       try {
@@ -152,36 +153,36 @@ export class QuickPostService {
     }
   }
 
-  async getQuickPost(id: string) {
+  async getStatus(id: string) {
     try {
       const posts = await db
         .select({
-          id: quickPosts.id,
-          shareId: quickPosts.shareId,
-          authorId: quickPosts.authorId,
-          contentCid: quickPosts.contentCid,
-          content: quickPosts.content,
-          parentId: quickPosts.parentId,
-          mediaCids: quickPosts.mediaCids,
-          tags: quickPosts.tags,
-          stakedValue: quickPosts.stakedValue,
-          reputationScore: quickPosts.reputationScore,
-          isTokenGated: quickPosts.isTokenGated,
-          gatedContentPreview: quickPosts.gatedContentPreview,
-          moderationStatus: quickPosts.moderationStatus,
-          moderationWarning: quickPosts.moderationWarning,
-          riskScore: quickPosts.riskScore,
-          upvotes: quickPosts.upvotes,
-          downvotes: quickPosts.downvotes,
-          createdAt: quickPosts.createdAt,
-          updatedAt: quickPosts.updatedAt,
+          id: statuses.id,
+          shareId: statuses.shareId,
+          authorId: statuses.authorId,
+          contentCid: statuses.contentCid,
+          content: statuses.content,
+          parentId: statuses.parentId,
+          mediaCids: statuses.mediaCids,
+          tags: statuses.tags,
+          stakedValue: statuses.stakedValue,
+          reputationScore: statuses.reputationScore,
+          isTokenGated: statuses.isTokenGated,
+          gatedContentPreview: statuses.gatedContentPreview,
+          moderationStatus: statuses.moderationStatus,
+          moderationWarning: statuses.moderationWarning,
+          riskScore: statuses.riskScore,
+          upvotes: statuses.upvotes,
+          downvotes: statuses.downvotes,
+          createdAt: statuses.createdAt,
+          updatedAt: statuses.updatedAt,
           walletAddress: users.walletAddress,
           handle: users.handle,
-          isRepost: quickPosts.isRepost
+          isRepost: statuses.isRepost
         })
-        .from(quickPosts)
-        .leftJoin(users, eq(quickPosts.authorId, users.id))
-        .where(eq(quickPosts.id, id))
+        .from(statuses)
+        .leftJoin(users, eq(statuses.authorId, users.id))
+        .where(eq(statuses.id, id))
         .limit(1);
 
       return posts[0] || null;
@@ -191,33 +192,33 @@ export class QuickPostService {
     }
   }
 
-  async getQuickPostByShareId(shareId: string) {
+  async getStatusByShareId(shareId: string) {
     try {
       const posts = await db
         .select({
-          id: quickPosts.id,
-          shareId: quickPosts.shareId,
-          authorId: quickPosts.authorId,
-          contentCid: quickPosts.contentCid,
-          parentId: quickPosts.parentId,
-          mediaCids: quickPosts.mediaCids,
-          tags: quickPosts.tags,
-          stakedValue: quickPosts.stakedValue,
-          reputationScore: quickPosts.reputationScore,
-          isTokenGated: quickPosts.isTokenGated,
-          gatedContentPreview: quickPosts.gatedContentPreview,
-          moderationStatus: quickPosts.moderationStatus,
-          moderationWarning: quickPosts.moderationWarning,
-          riskScore: quickPosts.riskScore,
-          createdAt: quickPosts.createdAt,
-          updatedAt: quickPosts.updatedAt,
+          id: statuses.id,
+          shareId: statuses.shareId,
+          authorId: statuses.authorId,
+          contentCid: statuses.contentCid,
+          parentId: statuses.parentId,
+          mediaCids: statuses.mediaCids,
+          tags: statuses.tags,
+          stakedValue: statuses.stakedValue,
+          reputationScore: statuses.reputationScore,
+          isTokenGated: statuses.isTokenGated,
+          gatedContentPreview: statuses.gatedContentPreview,
+          moderationStatus: statuses.moderationStatus,
+          moderationWarning: statuses.moderationWarning,
+          riskScore: statuses.riskScore,
+          createdAt: statuses.createdAt,
+          updatedAt: statuses.updatedAt,
           walletAddress: users.walletAddress,
           handle: users.handle,
-          isRepost: quickPosts.isRepost
+          isRepost: statuses.isRepost
         })
-        .from(quickPosts)
-        .leftJoin(users, eq(quickPosts.authorId, users.id))
-        .where(eq(quickPosts.shareId, shareId))
+        .from(statuses)
+        .leftJoin(users, eq(statuses.authorId, users.id))
+        .where(eq(statuses.shareId, shareId))
         .limit(1);
 
       return posts[0] || null;
@@ -227,7 +228,7 @@ export class QuickPostService {
     }
   }
 
-  async updateQuickPost(id: string, updateData: UpdateQuickPostInput) {
+  async updateStatus(id: string, updateData: UpdateStatusInput) {
     try {
       const updateFields: any = {};
       if (updateData.contentCid !== undefined) {
@@ -242,9 +243,9 @@ export class QuickPostService {
       updateFields.updatedAt = new Date();
 
       const [updatedPost] = await db
-        .update(quickPosts)
+        .update(statuses)
         .set(updateFields)
-        .where(eq(quickPosts.id, id))
+        .where(eq(statuses.id, id))
         .returning();
 
       return updatedPost || null;
@@ -254,16 +255,16 @@ export class QuickPostService {
     }
   }
 
-  async deleteQuickPost(id: string, userId?: string) {
+  async deleteStatus(id: string, userId?: string) {
     try {
       // First, check if the post exists and get its author
       const [existingPost] = await db
         .select({
-          id: quickPosts.id,
-          authorId: quickPosts.authorId
+          id: statuses.id,
+          authorId: statuses.authorId
         })
-        .from(quickPosts)
-        .where(eq(quickPosts.id, id))
+        .from(statuses)
+        .where(eq(statuses.id, id))
         .limit(1);
 
       if (!existingPost) {
@@ -279,8 +280,8 @@ export class QuickPostService {
 
       // Delete the post (CASCADE should handle related records)
       const result = await db
-        .delete(quickPosts)
-        .where(eq(quickPosts.id, id));
+        .delete(statuses)
+        .where(eq(statuses.id, id));
 
       if (result && result.length > 0) {
         safeLogger.info(`Quick post deleted successfully: ${id}`);
@@ -303,45 +304,45 @@ export class QuickPostService {
     }
   }
 
-  async getQuickPostsByAuthor(authorId: string, page: number = 1, limit: number = 20) {
+  async getStatusesByAuthor(authorId: string, page: number = 1, limit: number = 20) {
     try {
       const offset = (page - 1) * limit;
 
       const posts = await db
         .select({
-          id: quickPosts.id,
-          authorId: quickPosts.authorId,
-          contentCid: quickPosts.contentCid,
-          parentId: quickPosts.parentId,
-          mediaCids: quickPosts.mediaCids,
-          tags: quickPosts.tags,
-          stakedValue: quickPosts.stakedValue,
-          reputationScore: quickPosts.reputationScore,
-          isTokenGated: quickPosts.isTokenGated,
-          gatedContentPreview: quickPosts.gatedContentPreview,
-          moderationStatus: quickPosts.moderationStatus,
-          moderationWarning: quickPosts.moderationWarning,
-          riskScore: quickPosts.riskScore,
-          createdAt: quickPosts.createdAt,
-          updatedAt: quickPosts.updatedAt,
-          isRepost: quickPosts.isRepost
+          id: statuses.id,
+          authorId: statuses.authorId,
+          contentCid: statuses.contentCid,
+          parentId: statuses.parentId,
+          mediaCids: statuses.mediaCids,
+          tags: statuses.tags,
+          stakedValue: statuses.stakedValue,
+          reputationScore: statuses.reputationScore,
+          isTokenGated: statuses.isTokenGated,
+          gatedContentPreview: statuses.gatedContentPreview,
+          moderationStatus: statuses.moderationStatus,
+          moderationWarning: statuses.moderationWarning,
+          riskScore: statuses.riskScore,
+          createdAt: statuses.createdAt,
+          updatedAt: statuses.updatedAt,
+          isRepost: statuses.isRepost
         })
-        .from(quickPosts)
+        .from(statuses)
         .where(and(
-          eq(quickPosts.authorId, authorId),
-          sql`${quickPosts.moderationStatus} IS NULL OR ${quickPosts.moderationStatus} != 'blocked'`
+          eq(statuses.authorId, authorId),
+          sql`${statuses.moderationStatus} IS NULL OR ${statuses.moderationStatus} != 'blocked'`
         ))
-        .orderBy(desc(quickPosts.createdAt))
+        .orderBy(desc(statuses.createdAt))
         .limit(limit)
         .offset(offset);
 
       // Get total count for pagination
       const [{ count }] = await db
         .select({ count: sql<number>`COUNT(*)` })
-        .from(quickPosts)
+        .from(statuses)
         .where(and(
-          eq(quickPosts.authorId, authorId),
-          sql`${quickPosts.moderationStatus} IS NULL OR ${quickPosts.moderationStatus} != 'blocked'`
+          eq(statuses.authorId, authorId),
+          sql`${statuses.moderationStatus} IS NULL OR ${statuses.moderationStatus} != 'blocked'`
         ));
 
       return {
@@ -359,15 +360,15 @@ export class QuickPostService {
     }
   }
 
-  async addReaction(quickPostId: string, userId: string, type: string, amount: string) {
+  async addReaction(statusId: string, userId: string, type: string, amount: string) {
     try {
       // Check if reaction already exists
       const existingReactions = await db
         .select()
-        .from(quickPostReactions)
+        .from(statusReactions)
         .where(and(
-          eq(quickPostReactions.quickPostId, quickPostId),
-          eq(quickPostReactions.userId, userId)
+          eq(statusReactions.statusId, statusId),
+          eq(statusReactions.userId, userId)
         ))
         .limit(1);
 
@@ -375,23 +376,23 @@ export class QuickPostService {
       if (existingReactions.length > 0) {
         // Update existing reaction
         [reaction] = await db
-          .update(quickPostReactions)
+          .update(statusReactions)
           .set({
             type,
             amount,
             createdAt: new Date()
           })
           .where(and(
-            eq(quickPostReactions.quickPostId, quickPostId),
-            eq(quickPostReactions.userId, userId)
+            eq(statusReactions.statusId, statusId),
+            eq(statusReactions.userId, userId)
           ))
           .returning();
       } else {
         // Create new reaction
         [reaction] = await db
-          .insert(quickPostReactions)
+          .insert(statusReactions)
           .values({
-            quickPostId,
+            statusId,
             userId,
             type,
             amount,
@@ -401,14 +402,14 @@ export class QuickPostService {
       }
 
       // Update trending cache
-      trendingCacheService.updatePost(quickPostId);
+      trendingCacheService.updatePost(statusId);
 
       // Broadcast via WebSocket
       const wsService = getWebSocketService();
       if (wsService && typeof (wsService as any).broadcast === 'function') {
-        (wsService as any).broadcast('quick_post_update', {
+        (wsService as any).broadcast('status_update', {
           type: 'reaction',
-          quickPostId,
+          statusId,
           userId,
           reaction
         });
@@ -421,12 +422,12 @@ export class QuickPostService {
     }
   }
 
-  async addTip(quickPostId: string, fromUserId: string, toUserId: string, token: string, amount: string, message?: string) {
+  async addTip(statusId: string, fromUserId: string, toUserId: string, token: string, amount: string, message?: string) {
     try {
       const [tip] = await db
-        .insert(quickPostTips)
+        .insert(statusTips)
         .values({
-          quickPostId,
+          statusId,
           fromUserId,
           toUserId,
           token,
@@ -437,14 +438,14 @@ export class QuickPostService {
         .returning();
 
       // Update trending cache
-      trendingCacheService.updatePost(quickPostId);
+      trendingCacheService.updatePost(statusId);
 
       // Broadcast via WebSocket
       const wsService = getWebSocketService();
       if (wsService && typeof (wsService as any).broadcast === 'function') {
-        (wsService as any).broadcast('quick_post_update', {
+        (wsService as any).broadcast('status_update', {
           type: 'tip',
-          quickPostId,
+          statusId,
           fromUserId,
           tip
         });
@@ -457,7 +458,7 @@ export class QuickPostService {
     }
   }
 
-  async getQuickPostFeed(options: {
+  async getStatusFeed(options: {
     page?: number;
     limit?: number;
     sort?: 'new' | 'hot' | 'top';
@@ -479,56 +480,56 @@ export class QuickPostService {
       let timeFilter = sql`1=1`;
       if (timeRange !== 'all') {
         const interval = this.getTimeInterval(timeRange);
-        timeFilter = sql`${quickPosts.createdAt} > NOW() - INTERVAL '${sql.raw(interval)}'`;
+        timeFilter = sql`${statuses.createdAt} > NOW() - INTERVAL '${sql.raw(interval)}'`;
       }
 
       // Build author filter
       let authorFilter = sql`1=1`;
       if (authorId) {
-        authorFilter = eq(quickPosts.authorId, authorId);
+        authorFilter = eq(statuses.authorId, authorId);
       }
 
       // Build sort order
       let orderByClause;
       switch (sort) {
         case 'hot':
-          orderByClause = desc(quickPosts.stakedValue);
+          orderByClause = desc(statuses.stakedValue);
           break;
         case 'top':
-          orderByClause = desc(quickPosts.stakedValue);
+          orderByClause = desc(statuses.stakedValue);
           break;
         default: // 'new'
-          orderByClause = desc(quickPosts.createdAt);
+          orderByClause = desc(statuses.createdAt);
       }
 
       // Aliases for original post/author (for reposts)
-      const originalPosts = aliasedTable(quickPosts, 'original_posts');
+      const originalPosts = aliasedTable(statuses, 'original_posts');
       const originalAuthors = aliasedTable(users, 'original_authors');
 
       const rawPosts = await db
         .select({
-          id: quickPosts.id,
-          shareId: quickPosts.shareId,
-          authorId: quickPosts.authorId,
-          contentCid: quickPosts.contentCid,
-          content: quickPosts.content,
-          parentId: quickPosts.parentId,
-          mediaCids: quickPosts.mediaCids,
-          tags: quickPosts.tags,
-          stakedValue: quickPosts.stakedValue,
-          reputationScore: quickPosts.reputationScore,
-          isTokenGated: quickPosts.isTokenGated,
-          gatedContentPreview: quickPosts.gatedContentPreview,
-          moderationStatus: quickPosts.moderationStatus,
-          moderationWarning: quickPosts.moderationWarning,
-          riskScore: quickPosts.riskScore,
-          createdAt: quickPosts.createdAt,
-          updatedAt: quickPosts.updatedAt,
+          id: statuses.id,
+          shareId: statuses.shareId,
+          authorId: statuses.authorId,
+          contentCid: statuses.contentCid,
+          content: statuses.content,
+          parentId: statuses.parentId,
+          mediaCids: statuses.mediaCids,
+          tags: statuses.tags,
+          stakedValue: statuses.stakedValue,
+          reputationScore: statuses.reputationScore,
+          isTokenGated: statuses.isTokenGated,
+          gatedContentPreview: statuses.gatedContentPreview,
+          moderationStatus: statuses.moderationStatus,
+          moderationWarning: statuses.moderationWarning,
+          riskScore: statuses.riskScore,
+          createdAt: statuses.createdAt,
+          updatedAt: statuses.updatedAt,
           walletAddress: users.walletAddress,
           handle: users.handle,
-          isRepost: quickPosts.isRepost,
-          mediaUrls: quickPosts.mediaUrls,
-          location: quickPosts.location,
+          isRepost: statuses.isRepost,
+          mediaUrls: statuses.mediaUrls,
+          location: statuses.location,
 
           // Original Post Fields (prefixed)
           original_id: originalPosts.id,
@@ -541,18 +542,18 @@ export class QuickPostService {
           original_author_walletAddress: originalAuthors.walletAddress,
           original_author_avatar: originalAuthors.avatarCid
         })
-        .from(quickPosts)
-        .leftJoin(users, eq(quickPosts.authorId, users.id))
+        .from(statuses)
+        .leftJoin(users, eq(statuses.authorId, users.id))
         // Join original post if it's a repost (parentId -> id)
-        .leftJoin(originalPosts, eq(quickPosts.parentId, originalPosts.id))
+        .leftJoin(originalPosts, eq(statuses.parentId, originalPosts.id))
         // Join original author
         .leftJoin(originalAuthors, eq(originalPosts.authorId, originalAuthors.id))
         .where(and(
           timeFilter,
           authorFilter,
-          sql`${quickPosts.moderationStatus} IS NULL OR ${quickPosts.moderationStatus} != 'blocked'`,
+          sql`${statuses.moderationStatus} IS NULL OR ${statuses.moderationStatus} != 'blocked'`,
           // Show if it's a root post OR a repost
-          or(isNull(quickPosts.parentId), eq(quickPosts.isRepost, true))
+          or(isNull(statuses.parentId), eq(statuses.isRepost, true))
         ))
         .orderBy(orderByClause)
         .limit(limit)
@@ -595,12 +596,12 @@ export class QuickPostService {
       // Get total count for pagination
       const [{ count }] = await db
         .select({ count: sql<number>`COUNT(*)` })
-        .from(quickPosts)
+        .from(statuses)
         .where(and(
           timeFilter,
           authorFilter,
-          sql`${quickPosts.moderationStatus} IS NULL OR ${quickPosts.moderationStatus} != 'blocked'`,
-          or(isNull(quickPosts.parentId), eq(quickPosts.isRepost, true))
+          sql`${statuses.moderationStatus} IS NULL OR ${statuses.moderationStatus} != 'blocked'`,
+          or(isNull(statuses.parentId), eq(statuses.isRepost, true))
         ));
 
       return {
@@ -618,40 +619,40 @@ export class QuickPostService {
     }
   }
 
-  async getQuickPostReplies(quickPostId: string, options: { page?: number; limit?: number; sort?: 'new' | 'old' }) {
+  async getStatusReplies(statusId: string, options: { page?: number; limit?: number; sort?: 'new' | 'old' }) {
     const { page = 1, limit = 20, sort = 'new' } = options;
     const offset = (page - 1) * limit;
 
     try {
       // Build sort order
-      const orderByClause = sort === 'new' ? desc(quickPosts.createdAt) : asc(quickPosts.createdAt);
+      const orderByClause = sort === 'new' ? desc(statuses.createdAt) : asc(statuses.createdAt);
 
       const replies = await db
         .select({
-          id: quickPosts.id,
-          authorId: quickPosts.authorId,
-          contentCid: quickPosts.contentCid,
-          parentId: quickPosts.parentId,
-          mediaCids: quickPosts.mediaCids,
-          tags: quickPosts.tags,
-          stakedValue: quickPosts.stakedValue,
-          reputationScore: quickPosts.reputationScore,
-          isTokenGated: quickPosts.isTokenGated,
-          gatedContentPreview: quickPosts.gatedContentPreview,
-          moderationStatus: quickPosts.moderationStatus,
-          moderationWarning: quickPosts.moderationWarning,
-          riskScore: quickPosts.riskScore,
-          createdAt: quickPosts.createdAt,
-          updatedAt: quickPosts.updatedAt,
+          id: statuses.id,
+          authorId: statuses.authorId,
+          contentCid: statuses.contentCid,
+          parentId: statuses.parentId,
+          mediaCids: statuses.mediaCids,
+          tags: statuses.tags,
+          stakedValue: statuses.stakedValue,
+          reputationScore: statuses.reputationScore,
+          isTokenGated: statuses.isTokenGated,
+          gatedContentPreview: statuses.gatedContentPreview,
+          moderationStatus: statuses.moderationStatus,
+          moderationWarning: statuses.moderationWarning,
+          riskScore: statuses.riskScore,
+          createdAt: statuses.createdAt,
+          updatedAt: statuses.updatedAt,
           walletAddress: users.walletAddress,
           handle: users.handle,
-          isRepost: quickPosts.isRepost
+          isRepost: statuses.isRepost
         })
-        .from(quickPosts)
-        .leftJoin(users, eq(quickPosts.authorId, users.id))
+        .from(statuses)
+        .leftJoin(users, eq(statuses.authorId, users.id))
         .where(and(
-          eq(quickPosts.parentId, quickPostId),
-          sql`${quickPosts.moderationStatus} IS NULL OR ${quickPosts.moderationStatus} != 'blocked'`
+          eq(statuses.parentId, statusId),
+          sql`${statuses.moderationStatus} IS NULL OR ${statuses.moderationStatus} != 'blocked'`
         ))
         .orderBy(orderByClause)
         .limit(limit)
@@ -660,10 +661,10 @@ export class QuickPostService {
       // Get total count for pagination
       const [{ count }] = await db
         .select({ count: sql<number>`COUNT(*)` })
-        .from(quickPosts)
+        .from(statuses)
         .where(and(
-          eq(quickPosts.parentId, quickPostId),
-          sql`${quickPosts.moderationStatus} IS NULL OR ${quickPosts.moderationStatus} != 'blocked'`
+          eq(statuses.parentId, statusId),
+          sql`${statuses.moderationStatus} IS NULL OR ${statuses.moderationStatus} != 'blocked'`
         ));
 
       return {
@@ -681,23 +682,23 @@ export class QuickPostService {
     }
   }
 
-  async getQuickPostReactions(quickPostId: string) {
+  async getStatusReactions(statusId: string) {
     try {
       const reactions = await db
         .select({
-          id: quickPostReactions.id,
-          quickPostId: quickPostReactions.quickPostId,
-          userId: quickPostReactions.userId,
-          type: quickPostReactions.type,
-          amount: quickPostReactions.amount,
-          createdAt: quickPostReactions.createdAt,
+          id: statusReactions.id,
+          statusId: statusReactions.statusId,
+          userId: statusReactions.userId,
+          type: statusReactions.type,
+          amount: statusReactions.amount,
+          createdAt: statusReactions.createdAt,
           walletAddress: users.walletAddress,
           handle: users.handle
         })
-        .from(quickPostReactions)
-        .leftJoin(users, eq(quickPostReactions.userId, users.id))
-        .where(eq(quickPostReactions.quickPostId, quickPostId))
-        .orderBy(desc(quickPostReactions.createdAt));
+        .from(statusReactions)
+        .leftJoin(users, eq(statusReactions.userId, users.id))
+        .where(eq(statusReactions.statusId, statusId))
+        .orderBy(desc(statusReactions.createdAt));
 
       return reactions;
     } catch (error) {
@@ -706,26 +707,26 @@ export class QuickPostService {
     }
   }
 
-  async getQuickPostTips(quickPostId: string) {
+  async getStatusTips(statusId: string) {
     try {
       const tips = await db
         .select({
-          id: quickPostTips.id,
-          quickPostId: quickPostTips.quickPostId,
-          fromUserId: quickPostTips.fromUserId,
-          toUserId: quickPostTips.toUserId,
-          token: quickPostTips.token,
-          amount: quickPostTips.amount,
-          message: quickPostTips.message,
-          txHash: quickPostTips.txHash,
-          createdAt: quickPostTips.createdAt,
+          id: statusTips.id,
+          statusId: statusTips.statusId,
+          fromUserId: statusTips.fromUserId,
+          toUserId: statusTips.toUserId,
+          token: statusTips.token,
+          amount: statusTips.amount,
+          message: statusTips.message,
+          txHash: statusTips.txHash,
+          createdAt: statusTips.createdAt,
           fromWalletAddress: users.walletAddress,
           fromHandle: users.handle
         })
-        .from(quickPostTips)
-        .leftJoin(users, eq(quickPostTips.fromUserId, users.id))
-        .where(eq(quickPostTips.quickPostId, quickPostId))
-        .orderBy(desc(quickPostTips.createdAt));
+        .from(statusTips)
+        .leftJoin(users, eq(statusTips.fromUserId, users.id))
+        .where(eq(statusTips.statusId, statusId))
+        .orderBy(desc(statusTips.createdAt));
 
       return tips;
     } catch (error) {

@@ -164,14 +164,15 @@ export const posts = pgTable("posts", {
   tokenGatedIdx: index("idx_posts_token_gated").on(t.isTokenGated),
 }));
 
-// Quick Posts - for home/feed posts (no title or community required)
-export const quickPosts = pgTable("quick_posts", {
+// Statuses - Twitter/Facebook style status updates
+// (Formerly quick_posts)
+export const statuses = pgTable("statuses", {
   id: uuid("id").defaultRandom().primaryKey(),
   shareId: varchar("share_id", { length: 16 }).notNull().unique(), // Short, shareable ID for URLs
   authorId: uuid("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   content: text("content"), // Actual post content (fallback when IPFS unavailable)
   contentCid: text("content_cid").notNull(),
-  parentId: uuid("parent_id").references(() => quickPosts.id, { onDelete: "cascade" }), // For replies
+  parentId: uuid("parent_id").references(() => statuses.id, { onDelete: "cascade" }), // For replies
   isRepost: boolean("is_repost").default(false),
   mediaCids: text("media_cids"), // JSON array of media IPFS CIDs
   mediaUrls: text("media_urls"), // JSON array of media URLs (HTTP/HTTPS)
@@ -195,33 +196,33 @@ export const quickPosts = pgTable("quick_posts", {
   }),
   parentFk: foreignKey({
     columns: [t.parentId],
-    foreignColumns: [quickPosts.id]
+    foreignColumns: [statuses.id]
   }),
-  shareIdIdx: index("idx_quick_posts_share_id").on(t.shareId),
-  moderationStatusIdx: index("idx_quick_posts_moderation_status").on(t.moderationStatus),
-  authorIdIdx: index("idx_quick_posts_author_id").on(t.authorId),
-  createdAtIdx: index("idx_quick_posts_created_at").on(t.createdAt),
+  shareIdIdx: index("idx_statuses_share_id").on(t.shareId),
+  moderationStatusIdx: index("idx_statuses_moderation_status").on(t.moderationStatus),
+  authorIdIdx: index("idx_statuses_author_id").on(t.authorId),
+  createdAtIdx: index("idx_statuses_created_at").on(t.createdAt),
 }));
 
-// Quick Post Tags - for efficient querying of quick posts by tags
-export const quickPostTags = pgTable("quick_post_tags", {
+// Status Tags - for efficient querying of statuses by tags
+export const statusTags = pgTable("status_tags", {
   id: serial("id").primaryKey(),
-  quickPostId: uuid("quick_post_id").notNull().references(() => quickPosts.id, { onDelete: "cascade" }),
+  statusId: uuid("status_id").notNull().references(() => statuses.id, { onDelete: "cascade" }),
   tag: varchar("tag", { length: 64 }).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
-  idx: index("idx_quick_post_tag").on(t.quickPostId, t.tag),
-  quickPostFk: foreignKey({
-    columns: [t.quickPostId],
-    foreignColumns: [quickPosts.id]
+  idx: index("idx_status_tag").on(t.statusId, t.tag),
+  statusFk: foreignKey({
+    columns: [t.statusId],
+    foreignColumns: [statuses.id]
   })
 }));
 
-// Comments - for both regular posts and quick posts
+// Comments - for both regular posts and statuses
 export const comments = pgTable("comments", {
   id: uuid("id").defaultRandom().primaryKey(),
   postId: uuid("post_id").references(() => posts.id, { onDelete: "cascade" }),
-  quickPostId: uuid("quick_post_id").references(() => quickPosts.id, { onDelete: "cascade" }),
+  statusId: uuid("status_id").references(() => statuses.id, { onDelete: "cascade" }), // Can be null if comment is on a regular post
   authorId: uuid("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   content: text("content").notNull(),
   parentCommentId: uuid("parent_comment_id"), // For nested comments/replies
@@ -236,9 +237,9 @@ export const comments = pgTable("comments", {
     columns: [t.postId],
     foreignColumns: [posts.id]
   }),
-  quickPostFk: foreignKey({
-    columns: [t.quickPostId],
-    foreignColumns: [quickPosts.id]
+  statusFk: foreignKey({
+    columns: [t.statusId],
+    foreignColumns: [statuses.id]
   }),
   authorFk: foreignKey({
     columns: [t.authorId],
@@ -249,25 +250,25 @@ export const comments = pgTable("comments", {
     foreignColumns: [comments.id]
   }),
   postIdIdx: index("idx_comments_post_id").on(t.postId),
-  quickPostIdIdx: index("idx_comments_quick_post_id").on(t.quickPostId),
+  statusIdIdx: index("idx_comments_status_id").on(t.statusId),
   authorIdIdx: index("idx_comments_author_id").on(t.authorId),
   createdAtIdx: index("idx_comments_created_at").on(t.createdAt),
 }));
 
-// Quick Post Reactions - token-based reactions to quick posts
-export const quickPostReactions = pgTable("quick_post_reactions", {
+// Status Reactions - token-based reactions to statuses
+export const statusReactions = pgTable("status_reactions", {
   id: serial("id").primaryKey(),
-  quickPostId: uuid("quick_post_id").notNull().references(() => quickPosts.id, { onDelete: "cascade" }),
+  statusId: uuid("status_id").notNull().references(() => statuses.id, { onDelete: "cascade" }),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   type: varchar("type", { length: 32 }).notNull(), // 'hot', 'diamond', 'bullish', 'governance', 'art'
   amount: numeric("amount").notNull(), // Amount of tokens staked
   rewardsEarned: numeric("rewards_earned").default('0'), // Rewards earned by the post author
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
-  idx: index("idx_quick_post_reaction_user").on(t.quickPostId, t.userId),
-  quickPostFk: foreignKey({
-    columns: [t.quickPostId],
-    foreignColumns: [quickPosts.id]
+  idx: index("idx_status_reaction_user").on(t.statusId, t.userId),
+  statusFk: foreignKey({
+    columns: [t.statusId],
+    foreignColumns: [statuses.id]
   }),
   userFk: foreignKey({
     columns: [t.userId],
@@ -275,10 +276,10 @@ export const quickPostReactions = pgTable("quick_post_reactions", {
   })
 }));
 
-// Quick Post Tips - direct token transfers to quick post authors
-export const quickPostTips = pgTable("quick_post_tips", {
+// Status Tips - direct token transfers to status authors
+export const statusTips = pgTable("status_tips", {
   id: serial("id").primaryKey(),
-  quickPostId: uuid("quick_post_id").notNull().references(() => quickPosts.id, { onDelete: "cascade" }),
+  statusId: uuid("status_id").notNull().references(() => statuses.id, { onDelete: "cascade" }),
   fromUserId: uuid("from_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   toUserId: uuid("to_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   token: varchar("token", { length: 64 }).notNull(), // e.g. USDC, LNK
@@ -287,10 +288,10 @@ export const quickPostTips = pgTable("quick_post_tips", {
   txHash: varchar("tx_hash", { length: 66 }), // Blockchain transaction hash
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
-  idx: index("idx_quick_post_tip").on(t.quickPostId),
-  quickPostFk: foreignKey({
-    columns: [t.quickPostId],
-    foreignColumns: [quickPosts.id]
+  idx: index("idx_status_tip").on(t.statusId),
+  statusFk: foreignKey({
+    columns: [t.statusId],
+    foreignColumns: [statuses.id]
   }),
   fromUserFk: foreignKey({
     columns: [t.fromUserId],
@@ -302,20 +303,20 @@ export const quickPostTips = pgTable("quick_post_tips", {
   })
 }));
 
-// Quick Post Views - track quick post views with deduplication
-export const quickPostViews = pgTable("quick_post_views", {
+// Status Views - track status views with deduplication
+export const statusViews = pgTable("status_views", {
   id: serial("id").primaryKey(),
-  quickPostId: uuid("quick_post_id").notNull().references(() => quickPosts.id, { onDelete: "cascade" }),
+  statusId: uuid("status_id").notNull().references(() => statuses.id, { onDelete: "cascade" }),
   userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }), // Nullable for anonymous views
   ipAddress: varchar("ip_address", { length: 45 }), // IPv4 or IPv6
   userAgent: text("user_agent"),
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
-  idx: index("idx_quick_post_view_post_user").on(t.quickPostId, t.userId),
-  createdAtIdx: index("idx_quick_post_view_created_at").on(t.createdAt),
-  quickPostFk: foreignKey({
-    columns: [t.quickPostId],
-    foreignColumns: [quickPosts.id]
+  idx: index("idx_status_view_post_user").on(t.statusId, t.userId),
+  createdAtIdx: index("idx_status_view_created_at").on(t.createdAt),
+  statusFk: foreignKey({
+    columns: [t.statusId],
+    foreignColumns: [statuses.id]
   }),
   userFk: foreignKey({
     columns: [t.userId],
@@ -323,40 +324,40 @@ export const quickPostViews = pgTable("quick_post_views", {
   })
 }));
 
-// Quick Post Bookmarks - user bookmarks for quick posts
-export const quickPostBookmarks = pgTable("quick_post_bookmarks", {
+// Status Bookmarks - user bookmarks for statuses
+export const statusBookmarks = pgTable("status_bookmarks", {
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  quickPostId: uuid("quick_post_id").notNull().references(() => quickPosts.id, { onDelete: "cascade" }),
+  statusId: uuid("status_id").notNull().references(() => statuses.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
-  pk: primaryKey(t.userId, t.quickPostId),
-  userIdx: index("idx_quick_post_bookmark_user").on(t.userId),
-  postIdx: index("idx_quick_post_bookmark_post").on(t.quickPostId),
+  pk: primaryKey(t.userId, t.statusId),
+  userIdx: index("idx_status_bookmark_user").on(t.userId),
+  postIdx: index("idx_status_bookmark_post").on(t.statusId),
   userFk: foreignKey({
     columns: [t.userId],
     foreignColumns: [users.id]
   }),
-  quickPostFk: foreignKey({
-    columns: [t.quickPostId],
-    foreignColumns: [quickPosts.id]
+  statusFk: foreignKey({
+    columns: [t.statusId],
+    foreignColumns: [statuses.id]
   })
 }));
 
-// Quick Post Shares - track sharing of quick posts
-export const quickPostShares = pgTable("quick_post_shares", {
+// Status Shares - track sharing of statuses
+export const statusShares = pgTable("status_shares", {
   id: serial("id").primaryKey(),
-  quickPostId: uuid("quick_post_id").notNull().references(() => quickPosts.id, { onDelete: "cascade" }),
+  statusId: uuid("status_id").notNull().references(() => statuses.id, { onDelete: "cascade" }),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   targetType: varchar("target_type", { length: 32 }).notNull(), // 'community', 'dm', 'external'
   targetId: uuid("target_id"), // Community ID or User ID for DMs
   message: text("message"),
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
-  idx: index("idx_quick_post_share_post_user").on(t.quickPostId, t.userId),
-  createdAtIdx: index("idx_quick_post_share_created_at").on(t.createdAt),
-  quickPostFk: foreignKey({
-    columns: [t.quickPostId],
-    foreignColumns: [quickPosts.id]
+  idx: index("idx_status_share_post_user").on(t.statusId, t.userId),
+  createdAtIdx: index("idx_status_share_created_at").on(t.createdAt),
+  statusFk: foreignKey({
+    columns: [t.statusId],
+    foreignColumns: [statuses.id]
   }),
   userFk: foreignKey({
     columns: [t.userId],

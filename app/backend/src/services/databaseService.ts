@@ -208,35 +208,35 @@ export class DatabaseService {
     }
   }
 
-  async getQuickPostById(id: string) {
+  async getStatusById(id: string) {
     try {
       const result = await this.db
         .select({
-          id: schema.quickPosts.id,
-          shareId: schema.quickPosts.shareId,
-          authorId: schema.quickPosts.authorId,
-          content: schema.quickPosts.content,
-          contentCid: schema.quickPosts.contentCid,
-          parentId: schema.quickPosts.parentId,
-          mediaCids: schema.quickPosts.mediaCids,
-          tags: schema.quickPosts.tags,
-          stakedValue: schema.quickPosts.stakedValue,
-          reputationScore: schema.quickPosts.reputationScore,
-          isTokenGated: schema.quickPosts.isTokenGated,
-          gatedContentPreview: schema.quickPosts.gatedContentPreview,
-          moderationStatus: schema.quickPosts.moderationStatus,
-          moderationWarning: schema.quickPosts.moderationWarning,
-          riskScore: schema.quickPosts.riskScore,
-          upvotes: schema.quickPosts.upvotes,
-          downvotes: schema.quickPosts.downvotes,
-          createdAt: schema.quickPosts.createdAt,
-          updatedAt: schema.quickPosts.updatedAt,
+          id: schema.statuses.id,
+          shareId: schema.statuses.shareId,
+          authorId: schema.statuses.authorId,
+          content: schema.statuses.content,
+          contentCid: schema.statuses.contentCid,
+          parentId: schema.statuses.parentId,
+          mediaCids: schema.statuses.mediaCids,
+          tags: schema.statuses.tags,
+          stakedValue: schema.statuses.stakedValue,
+          reputationScore: schema.statuses.reputationScore,
+          isTokenGated: schema.statuses.isTokenGated,
+          gatedContentPreview: schema.statuses.gatedContentPreview,
+          moderationStatus: schema.statuses.moderationStatus,
+          moderationWarning: schema.statuses.moderationWarning,
+          riskScore: schema.statuses.riskScore,
+          upvotes: schema.statuses.upvotes,
+          downvotes: schema.statuses.downvotes,
+          createdAt: schema.statuses.createdAt,
+          updatedAt: schema.statuses.updatedAt,
         })
-        .from(schema.quickPosts)
-        .where(eq(schema.quickPosts.id, id));
+        .from(schema.statuses)
+        .where(eq(schema.statuses.id, id));
       return result[0] || null;
     } catch (error) {
-      safeLogger.error("Error getting quick post by ID:", error);
+      safeLogger.error("Error getting status by ID:", error);
       throw error;
     }
   }
@@ -248,14 +248,14 @@ export class DatabaseService {
         .from(schema.posts)
         .where(and(eq(schema.posts.authorId, userId), eq(schema.posts.isRepost, true)));
 
-      const quickReposts = await this.db
-        .select({ parentId: schema.quickPosts.parentId })
-        .from(schema.quickPosts)
-        .where(and(eq(schema.quickPosts.authorId, userId), eq(schema.quickPosts.isRepost, true)));
+      const statusReposts = await this.db
+        .select({ parentId: schema.statuses.parentId })
+        .from(schema.statuses)
+        .where(and(eq(schema.statuses.authorId, userId), eq(schema.statuses.isRepost, true)));
 
       const ids = new Set<string>();
       regularReposts.forEach((r: any) => { if (r.parentId) ids.add(r.parentId.toString()); });
-      quickReposts.forEach((r: any) => { if (r.parentId) ids.add(r.parentId.toString()); });
+      statusReposts.forEach((r: any) => { if (r.parentId) ids.add(r.parentId.toString()); });
 
       return ids;
     } catch (error) {
@@ -264,36 +264,36 @@ export class DatabaseService {
     }
   }
 
-  async getQuickPostsByAuthor(authorId: string) {
+  async getStatusesByAuthor(authorId: string) {
     try {
       return await this.db
         .select({
-          id: schema.quickPosts.id,
-          authorId: schema.quickPosts.authorId,
-          content: schema.quickPosts.content,
-          contentCid: schema.quickPosts.contentCid,
-          parentId: schema.quickPosts.parentId,
-          mediaCids: schema.quickPosts.mediaCids,
-          tags: schema.quickPosts.tags,
-          stakedValue: schema.quickPosts.stakedValue,
-          reputationScore: schema.quickPosts.reputationScore,
-          isTokenGated: schema.quickPosts.isTokenGated,
-          gatedContentPreview: schema.quickPosts.gatedContentPreview,
-          moderationStatus: schema.quickPosts.moderationStatus,
-          moderationWarning: schema.quickPosts.moderationWarning,
-          riskScore: schema.quickPosts.riskScore,
-          upvotes: schema.quickPosts.upvotes,
-          downvotes: schema.quickPosts.downvotes,
-          createdAt: schema.quickPosts.createdAt,
-          updatedAt: schema.quickPosts.updatedAt,
-          onchainRef: schema.quickPosts.onchainRef,
-          isRepost: schema.quickPosts.isRepost
+          id: schema.statuses.id,
+          authorId: schema.statuses.authorId,
+          content: schema.statuses.content,
+          contentCid: schema.statuses.contentCid,
+          parentId: schema.statuses.parentId,
+          mediaCids: schema.statuses.mediaCids,
+          tags: schema.statuses.tags,
+          stakedValue: schema.statuses.stakedValue,
+          reputationScore: schema.statuses.reputationScore,
+          isTokenGated: schema.statuses.isTokenGated,
+          gatedContentPreview: schema.statuses.gatedContentPreview,
+          moderationStatus: schema.statuses.moderationStatus,
+          moderationWarning: schema.statuses.moderationWarning,
+          riskScore: schema.statuses.riskScore,
+          upvotes: schema.statuses.upvotes,
+          downvotes: schema.statuses.downvotes,
+          createdAt: schema.statuses.createdAt,
+          updatedAt: schema.statuses.updatedAt,
+          onchainRef: schema.statuses.onchainRef,
+          isRepost: schema.statuses.isRepost
         })
-        .from(schema.quickPosts)
-        .where(eq(schema.quickPosts.authorId, authorId))
-        .orderBy(desc(schema.quickPosts.createdAt));
+        .from(schema.statuses)
+        .where(eq(schema.statuses.authorId, authorId))
+        .orderBy(desc(schema.statuses.createdAt));
     } catch (error) {
-      safeLogger.error("Error getting quick posts by author:", error);
+      safeLogger.error("Error getting statuses by author:", error);
       throw error;
     }
   }
@@ -318,26 +318,26 @@ export class DatabaseService {
         )
         .groupBy(schema.posts.parentId);
 
-      // Count in quick_posts table
-      const quickCounts = await this.db
+      // Count in statuses table
+      const statusCounts = await this.db
         .select({
-          parentId: schema.quickPosts.parentId,
+          parentId: schema.statuses.parentId,
           count: sql`count(*)`.mapWith(Number)
         })
-        .from(schema.quickPosts)
+        .from(schema.statuses)
         .where(
           and(
-            inArray(schema.quickPosts.parentId, postIds),
-            eq(schema.quickPosts.isRepost, true)
+            inArray(schema.statuses.parentId, postIds),
+            eq(schema.statuses.isRepost, true)
           )
         )
-        .groupBy(schema.quickPosts.parentId);
+        .groupBy(schema.statuses.parentId);
 
       // Aggregate
       regularCounts.forEach((r: any) => {
         if (r.parentId) counts.set(r.parentId.toString(), (counts.get(r.parentId.toString()) || 0) + r.count);
       });
-      quickCounts.forEach((r: any) => {
+      statusCounts.forEach((r: any) => {
         if (r.parentId) counts.set(r.parentId.toString(), (counts.get(r.parentId.toString()) || 0) + r.count);
       });
 
@@ -383,35 +383,35 @@ export class DatabaseService {
     }
   }
 
-  async getQuickPostByShareId(shareId: string) {
+  async getStatusByShareId(shareId: string) {
     try {
       const result = await this.db
         .select({
-          id: schema.quickPosts.id,
-          shareId: schema.quickPosts.shareId,
-          authorId: schema.quickPosts.authorId,
-          content: schema.quickPosts.content,
-          contentCid: schema.quickPosts.contentCid,
-          parentId: schema.quickPosts.parentId,
-          mediaCids: schema.quickPosts.mediaCids,
-          tags: schema.quickPosts.tags,
-          stakedValue: schema.quickPosts.stakedValue,
-          reputationScore: schema.quickPosts.reputationScore,
-          isTokenGated: schema.quickPosts.isTokenGated,
-          gatedContentPreview: schema.quickPosts.gatedContentPreview,
-          moderationStatus: schema.quickPosts.moderationStatus,
-          moderationWarning: schema.quickPosts.moderationWarning,
-          riskScore: schema.quickPosts.riskScore,
-          upvotes: schema.quickPosts.upvotes,
-          downvotes: schema.quickPosts.downvotes,
-          createdAt: schema.quickPosts.createdAt,
-          updatedAt: schema.quickPosts.updatedAt,
+          id: schema.statuses.id,
+          shareId: schema.statuses.shareId,
+          authorId: schema.statuses.authorId,
+          content: schema.statuses.content,
+          contentCid: schema.statuses.contentCid,
+          parentId: schema.statuses.parentId,
+          mediaCids: schema.statuses.mediaCids,
+          tags: schema.statuses.tags,
+          stakedValue: schema.statuses.stakedValue,
+          reputationScore: schema.statuses.reputationScore,
+          isTokenGated: schema.statuses.isTokenGated,
+          gatedContentPreview: schema.statuses.gatedContentPreview,
+          moderationStatus: schema.statuses.moderationStatus,
+          moderationWarning: schema.statuses.moderationWarning,
+          riskScore: schema.statuses.riskScore,
+          upvotes: schema.statuses.upvotes,
+          downvotes: schema.statuses.downvotes,
+          createdAt: schema.statuses.createdAt,
+          updatedAt: schema.statuses.updatedAt,
         })
-        .from(schema.quickPosts)
-        .where(eq(schema.quickPosts.shareId, shareId));
+        .from(schema.statuses)
+        .where(eq(schema.statuses.shareId, shareId));
       return result[0] || null;
     } catch (error) {
-      safeLogger.error("Error getting quick post by share ID:", error);
+      safeLogger.error("Error getting status by share ID:", error);
       throw error;
     }
   }

@@ -1,12 +1,12 @@
-import { QuickPost, CreateQuickPostInput, UpdateQuickPostInput } from '../models/QuickPost';
+import { Status, CreateStatusInput, UpdateStatusInput } from '../models/Status';
 import { ENV_CONFIG } from '@/config/environment';
 import { enhancedAuthService } from './enhancedAuthService';
 
 // Use centralized environment config to ensure consistent backend URL
 const BACKEND_API_BASE_URL = ENV_CONFIG.BACKEND_URL;
 
-export class QuickPostService {
-  static async createQuickPost(data: CreateQuickPostInput): Promise<QuickPost> {
+export class StatusService {
+  static async createStatus(data: CreateStatusInput): Promise<Status> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout (allows for IPFS uploads)
 
@@ -24,7 +24,7 @@ export class QuickPostService {
         const csrfController = new AbortController();
         const csrfTimeoutId = setTimeout(() => csrfController.abort(), 5000); // 5 second timeout for CSRF
 
-        const tokenResponse = await fetch(`${BACKEND_API_BASE_URL}/api/quick-posts/csrf-token`, {
+        const tokenResponse = await fetch(`${BACKEND_API_BASE_URL}/api/statuses/csrf-token`, {
           headers: { 'x-session-id': sessionId },
           signal: csrfController.signal
         });
@@ -45,7 +45,7 @@ export class QuickPostService {
     try {
       // Get auth headers from enhancedAuthService to include JWT token
       let authHeaders = await enhancedAuthService.getAuthHeaders();
-      
+
       // Check if we have a valid token
       if (!authHeaders['Authorization']) {
         // For development mode, create a development token
@@ -56,20 +56,20 @@ export class QuickPostService {
           throw new Error('Authentication required. Please log in again.');
         }
       }
-      
+
       // Add session ID and CSRF token to headers
       const headers = {
         ...authHeaders,
         'x-session-id': sessionId
       };
-      
+
       if (csrfToken) {
         headers['x-csrf-token'] = csrfToken;
       }
 
       // Use global fetch wrapper which handles token refresh automatically
       const { post } = await import('./globalFetchWrapper');
-      const response = await post(`${BACKEND_API_BASE_URL}/api/quick-posts`, {
+      const response = await post(`${BACKEND_API_BASE_URL}/api/statuses`, {
         content: data.content,
         parentId: data.parentId,
         media: data.media,
@@ -80,7 +80,7 @@ export class QuickPostService {
       }, { headers });
 
       if (!response.success) {
-        throw new Error(response.error || 'Failed to create quick post');
+        throw new Error(response.error || 'Failed to create status');
       }
 
       return response.data;
@@ -93,7 +93,7 @@ export class QuickPostService {
 
       // If backend is unavailable, throw error instead of returning mock data
       if (error instanceof Error && (error.message.includes('fetch') || error.message.includes('Failed to fetch'))) {
-        console.log('Backend unavailable for quick post creation');
+        console.log('Backend unavailable for status creation');
         throw new Error('Service temporarily unavailable. Please try again later.');
       }
 
@@ -101,10 +101,10 @@ export class QuickPostService {
     }
   }
 
-  static async getQuickPost(id: string): Promise<QuickPost | null> {
+  static async getStatus(id: string): Promise<Status | null> {
     try {
       const authHeaders = await enhancedAuthService.getAuthHeaders();
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/quick-posts/${id}`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/statuses/${id}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -116,21 +116,21 @@ export class QuickPostService {
         if (response.status === 404) {
           return null;
         }
-        throw new Error(`Failed to fetch quick post: ${response.statusText}`);
+        throw new Error(`Failed to fetch status: ${response.statusText}`);
       }
 
       const result = await response.json();
       return result.data || result;
     } catch (error) {
-      console.error('Error fetching quick post:', error);
+      console.error('Error fetching status:', error);
       throw error;
     }
   }
 
-  static async updateQuickPost(id: string, data: UpdateQuickPostInput): Promise<QuickPost> {
+  static async updateStatus(id: string, data: UpdateStatusInput): Promise<Status> {
     try {
       const authHeaders = await enhancedAuthService.getAuthHeaders();
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/quick-posts/${id}`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/statuses/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -141,27 +141,27 @@ export class QuickPostService {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || `Failed to update quick post: ${response.statusText}`);
+        throw new Error(error.error || `Failed to update status: ${response.statusText}`);
       }
 
       const result = await response.json();
       return result.data || result;
     } catch (error) {
-      console.error('Error updating quick post:', error);
+      console.error('Error updating status:', error);
       throw error;
     }
   }
 
-  static async deleteQuickPost(id: string): Promise<boolean> {
+  static async deleteStatus(id: string): Promise<boolean> {
     try {
       const authHeaders = await enhancedAuthService.getAuthHeaders();
-      
+
       // Check if we have a valid token
       if (!authHeaders['Authorization']) {
         throw new Error('Authentication required. Please log in again.');
       }
-      
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/quick-posts/${id}`, {
+
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/statuses/${id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -173,32 +173,32 @@ export class QuickPostService {
       if (response.status === 404) {
         throw new Error('Post not found. It may have already been deleted or does not exist.');
       }
-      
+
       if (response.status === 401) {
         throw new Error('Authentication required. Please log in again.');
       }
-      
+
       if (response.status === 403) {
         throw new Error('You do not have permission to delete this post.');
       }
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
-        throw new Error(error.error || `Failed to delete quick post: ${response.statusText}`);
+        throw new Error(error.error || `Failed to delete status: ${response.statusText}`);
       }
 
       return true;
     } catch (error) {
-      console.error('Error deleting quick post:', error);
+      console.error('Error deleting status:', error);
       throw error;
     }
   }
 
-  static async getQuickPostsByAuthor(
+  static async getStatusesByAuthor(
     authorId: string,
     page: number = 1,
     limit: number = 20
-  ): Promise<{ posts: QuickPost[]; pagination: any }> {
+  ): Promise<{ posts: Status[]; pagination: any }> {
     try {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -206,7 +206,7 @@ export class QuickPostService {
       });
 
       const authHeaders = await enhancedAuthService.getAuthHeaders();
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/quick-posts/author/${authorId}?${params}`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/statuses/author/${authorId}?${params}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -216,25 +216,25 @@ export class QuickPostService {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || `Failed to fetch quick posts: ${response.statusText}`);
+        throw new Error(error.error || `Failed to fetch statuses: ${response.statusText}`);
       }
 
       const result = await response.json();
       return result.data || result;
     } catch (error) {
-      console.error('Error fetching quick posts by author:', error);
+      console.error('Error fetching statuses by author:', error);
       throw error;
     }
   }
 
   static async addReaction(
-    quickPostId: string,
+    statusId: string,
     type: string,
     tokenAmount: number = 0
   ): Promise<any> {
     try {
       const authHeaders = await enhancedAuthService.getAuthHeaders();
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/quick-posts/${quickPostId}/react`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/statuses/${statusId}/react`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -254,7 +254,7 @@ export class QuickPostService {
           try {
             await enhancedAuthService.refreshToken();
             const retryAuthHeaders = await enhancedAuthService.getAuthHeaders();
-            const retryResponse = await fetch(`${BACKEND_API_BASE_URL}/api/quick-posts/${quickPostId}/react`, {
+            const retryResponse = await fetch(`${BACKEND_API_BASE_URL}/api/statuses/${statusId}/react`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -273,10 +273,10 @@ export class QuickPostService {
           } catch (retryError) {
             console.error('Retry after token refresh failed:', retryError);
           }
-          
+
           throw new Error('Your session has expired. Please refresh the page and sign in again.');
         }
-        
+
         const error = await response.json();
         throw new Error(error.error || `Failed to add reaction: ${response.statusText}`);
       }
@@ -290,14 +290,14 @@ export class QuickPostService {
   }
 
   static async sendTip(
-    quickPostId: string,
+    statusId: string,
     amount: number,
     tokenType: string,
     message?: string
   ): Promise<any> {
     try {
       const authHeaders = await enhancedAuthService.getAuthHeaders();
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/quick-posts/${quickPostId}/tip`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/statuses/${statusId}/tip`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -318,7 +318,7 @@ export class QuickPostService {
       const result = await response.json();
       return result.data || result;
     } catch (error) {
-      console.error('Error sending tip to quick post:', error);
+      console.error('Error sending tip to status:', error);
       throw error;
     }
   }

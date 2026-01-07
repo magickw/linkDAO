@@ -5,12 +5,12 @@
  */
 
 import { db } from '../db';
-import { quickPosts, posts, users, communities } from '../db/schema';
+import { statuses, posts, users, communities } from '../db/schema';
 import { eq, or } from 'drizzle-orm';
 import { isValidShareId } from '../utils/shareIdGenerator';
 import { safeLogger } from '../utils/safeLogger';
 
-export type ContentType = 'quick_post' | 'community_post' | 'proposal' | 'marketplace_item' | 'comment';
+export type ContentType = 'status' | 'community_post' | 'proposal' | 'marketplace_item' | 'comment';
 
 export interface ShareResolution {
   type: ContentType;
@@ -39,9 +39,9 @@ export class UnifiedShareResolver {
     }
 
     try {
-      // Try quick posts first (most common)
-      const quickPost = await this.resolveQuickPost(shareId);
-      if (quickPost) return quickPost;
+      // Try statuses first (most common)
+      const status = await this.resolveStatus(shareId);
+      if (status) return status;
 
       // Try community posts
       const communityPost = await this.resolveCommunityPost(shareId);
@@ -62,49 +62,49 @@ export class UnifiedShareResolver {
   }
 
   /**
-   * Resolve quick post by share ID
+   * Resolve status by share ID
    */
-  private async resolveQuickPost(shareId: string): Promise<ShareResolution | null> {
-    const posts = await db
+  private async resolveStatus(shareId: string): Promise<ShareResolution | null> {
+    const statusResult = await db
       .select({
-        id: quickPosts.id,
-        shareId: quickPosts.shareId,
-        authorId: quickPosts.authorId,
-        content: quickPosts.content,
-        contentCid: quickPosts.contentCid,
-        mediaCids: quickPosts.mediaCids,
-        tags: quickPosts.tags,
-        createdAt: quickPosts.createdAt,
+        id: statuses.id,
+        shareId: statuses.shareId,
+        authorId: statuses.authorId,
+        content: statuses.content,
+        contentCid: statuses.contentCid,
+        mediaCids: statuses.mediaCids,
+        tags: statuses.tags,
+        createdAt: statuses.createdAt,
         handle: users.handle,
         walletAddress: users.walletAddress,
         displayName: users.displayName,
       })
-      .from(quickPosts)
-      .leftJoin(users, eq(quickPosts.authorId, users.id))
-      .where(eq(quickPosts.shareId, shareId))
+      .from(statuses)
+      .leftJoin(users, eq(statuses.authorId, users.id))
+      .where(eq(statuses.shareId, shareId))
       .limit(1);
 
-    if (!posts || posts.length === 0) {
+    if (!statusResult || statusResult.length === 0) {
       return null;
     }
 
-    const post = posts[0];
-    const handle = post.handle || post.walletAddress?.slice(0, 8) || 'unknown';
-    const name = post.displayName || handle;
+    const item = statusResult[0];
+    const handle = item.handle || item.walletAddress?.slice(0, 8) || 'unknown';
+    const name = item.displayName || handle;
 
     return {
-      type: 'quick_post',
-      id: post.id,
-      shareId: post.shareId,
+      type: 'status',
+      id: item.id,
+      shareId: item.shareId,
       owner: {
         type: 'user',
-        id: post.authorId,
+        id: item.authorId,
         handle,
         name,
       },
-      canonicalUrl: `/${handle}/posts/${post.id}`,
-      shareUrl: `/p/${shareId}`,
-      data: post,
+      canonicalUrl: `/${handle}/status/${item.id}`,
+      shareUrl: `/s/${shareId}`,
+      data: item,
     };
   }
 
@@ -202,8 +202,8 @@ export class UnifiedShareResolver {
 
     // TODO: Add permission checks based on content type
     switch (resolution.type) {
-      case 'quick_post':
-        // Quick posts are public for now
+      case 'status':
+        // Statuses are public for now
         return true;
 
       case 'community_post':

@@ -144,7 +144,7 @@ class ProductionServerManager {
       // Import feed and post API routes
       const { default: feedRoutes } = await import('../routes/feedRoutes');
       const { default: postRoutes } = await import('../routes/postRoutes');
-      const { default: quickPostRoutes } = await import('../routes/quickPostRoutes');
+      const { default: statusRoutes } = await import('../routes/statusRoutes');
 
       // Import other essential API routes
       const { default: userRoutes } = await import('../routes/userRoutes');
@@ -197,7 +197,7 @@ class ProductionServerManager {
       // Mount feed and post routes
       this.app.use('/api/feed', feedRoutes);
       this.app.use('/api/posts', postRoutes);
-      this.app.use('/api/quick-posts', quickPostRoutes);
+      this.app.use('/api/statuses', statusRoutes);
 
       // Mount other essential routes
       this.app.use('/api/users', userRoutes);

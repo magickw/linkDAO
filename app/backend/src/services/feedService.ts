@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
-import { posts, quickPosts, reactions, quickPostReactions, tips, quickPostTips, users, postTags, quickPostTags, views, quickPostViews, bookmarks, quickPostBookmarks, shares, quickPostShares, follows, comments, communityMembers, communities } from '../db/schema';
+import { posts, statuses, reactions, statusReactions, tips, statusTips, users, postTags, statusTags, views, statusViews, bookmarks, statusBookmarks, shares, statusShares, follows, comments, communityMembers, communities } from '../db/schema';
 import { eq, desc, and, or, inArray, sql, gt, isNull, isNotNull, asc } from 'drizzle-orm';
 import { trendingCacheService } from './trendingCacheService';
 import { getWebSocketService } from './webSocketService';
@@ -17,7 +17,7 @@ interface FeedOptions {
   feedSource?: 'following' | 'all'; // New field for following feed
   preferredCategories?: string[]; // User's preferred categories from onboarding
   preferredTags?: string[]; // User's preferred tags from onboarding
-  postTypeFilter?: 'quickPosts' | 'posts' | 'all'; // Filter by post table: quickPosts for quick posts, posts for community posts
+  postTypeFilter?: 'statuses' | 'posts' | 'all'; // Filter by post table: statuses for status updates, posts for community posts
 }
 
 interface CreatePostData {
@@ -81,7 +81,7 @@ export class FeedService {
       feedSource = 'all', // Default to all feed to ensure users see their own posts
       preferredCategories = [],
       preferredTags = [],
-      postTypeFilter = 'all' // Default to both quick posts and community posts
+      postTypeFilter = 'all' // Default to both statuses and community posts
     } = options;
 
     console.log('[FEED SERVICE] Parsed options:', { userAddress, page, limit, sort, filterCommunities, timeRange, feedSource });
@@ -90,7 +90,7 @@ export class FeedService {
 
     // Build time range filters for both tables
     const timeFilter = this.buildTimeFilter(timeRange, posts);
-    const quickPostTimeFilter = this.buildTimeFilter(timeRange, quickPosts);
+    const statusTimeFilter = this.buildTimeFilter(timeRange, statuses);
 
     // Build community filter - check both dao and communityId fields
     let communityFilter = sql`1=1`;
@@ -129,7 +129,7 @@ export class FeedService {
 
     // Build following filter if feedSource is 'following'
     let followingFilter = sql`1=1`;
-    let quickPostFollowingFilter = sql`1=1`; // Separate filter for quick posts
+    let statusFollowingFilter = sql`1=1`; // Separate filter for statuses
     if (feedSource === 'following' && userAddress) {
       // FIXED: Use transaction to prevent connection leaks
       const normalizedAddress = userAddress.toLowerCase();
@@ -182,16 +182,16 @@ export class FeedService {
         if (followingIds.length === 1 && followingIds[0] === userId) {
           console.log('📋 [BACKEND FEED] User follows nobody - showing all posts for better onboarding experience');
           followingFilter = sql`1=1`;
-          quickPostFollowingFilter = sql`1=1`;
+          statusFollowingFilter = sql`1=1`;
         } else {
           // Filter posts to show from followed users AND ensure user's own posts are included
           followingFilter = or(
             inArray(posts.authorId, followingIds),
             eq(posts.authorId, userId)  // Always include user's own posts
           );
-          quickPostFollowingFilter = or(
-            inArray(quickPosts.authorId, followingIds),
-            eq(quickPosts.authorId, userId)  // Always include user's own quick posts
+          statusFollowingFilter = or(
+            inArray(statuses.authorId, followingIds),
+            eq(statuses.authorId, userId)  // Always include user's own statuses
           );
         }
 
@@ -209,7 +209,7 @@ export class FeedService {
         // For new users, default to showing all posts until they follow someone
         // This ensures they see the platform content while onboarding
         followingFilter = sql`1=1`;
-        quickPostFollowingFilter = sql`1=1`;
+        statusFollowingFilter = sql`1=1`;
         console.log('📋 [BACKEND FEED] New user - showing all posts until they follow someone');
       }
     } else if (feedSource === 'all' && userAddress) {
@@ -259,7 +259,7 @@ export class FeedService {
 
       // Initialize arrays for different post types
       let regularPosts: any[] = [];
-      let quickPostsResults: any[] = [];
+      let statusResults: any[] = [];
 
       // Only fetch regular posts (community posts) if postTypeFilter is 'posts' or 'all'
       if (postTypeFilter === 'posts' || postTypeFilter === 'all') {
@@ -286,7 +286,7 @@ export class FeedService {
             moderationStatus: posts.moderationStatus,
             moderationWarning: posts.moderationWarning,
             riskScore: posts.riskScore,
-            isQuickPost: sql`false`, // Mark as regular post
+            isStatus: sql`false`, // Mark as regular post
             isRepost: posts.isRepost,
             parentId: posts.parentId
           })
@@ -315,79 +315,79 @@ export class FeedService {
         });
       }
 
-      // Only fetch quick posts if postTypeFilter is 'quickPosts' or 'all'
-      if (postTypeFilter === 'quickPosts' || postTypeFilter === 'all') {
-        console.log('🔍 [BACKEND FEED] Executing quick posts query with filters:', {
+      // Only fetch statuses if postTypeFilter is 'statuses' or 'all'
+      if (postTypeFilter === 'statuses' || postTypeFilter === 'all') {
+        console.log('🔍 [BACKEND FEED] Executing status query with filters:', {
           timeFilter: timeFilter.toString(),
-          quickPostFollowingFilter: quickPostFollowingFilter.toString()
+          statusFollowingFilter: statusFollowingFilter.toString()
         });
 
-        // Use the quick post following filter as-is since it already includes user's own quick posts
-        const finalQuickPostFollowingFilter = quickPostFollowingFilter;
+        // Use the status following filter as-is since it already includes user's own statuses
+        const finalStatusFollowingFilter = statusFollowingFilter;
 
-        quickPostsResults = await db
+        statusResults = await db
           .select({
-            id: quickPosts.id,
-            authorId: quickPosts.authorId,
-            dao: sql<string>`NULL`, // Quick posts don't have DAO
-            content: sql<string>`COALESCE(${quickPosts.content}, '')`, // Ensure content is always a string
-            contentCid: quickPosts.contentCid,
-            shareId: quickPosts.shareId, // Include shareId for share URLs
-            mediaCids: quickPosts.mediaCids,
-            tags: quickPosts.tags,
-            createdAt: quickPosts.createdAt,
-            stakedValue: quickPosts.stakedValue,
+            id: statuses.id,
+            authorId: statuses.authorId,
+            dao: sql<string>`NULL`, // Statuses don't have DAO
+            content: sql<string>`COALESCE(${statuses.content}, '')`, // Ensure content is always a string
+            contentCid: statuses.contentCid,
+            shareId: statuses.shareId, // Include shareId for share URLs
+            mediaCids: statuses.mediaCids,
+            tags: statuses.tags,
+            createdAt: statuses.createdAt,
+            stakedValue: statuses.stakedValue,
             walletAddress: users.walletAddress,
             handle: users.handle,
             displayName: users.displayName,
             profileCid: users.profileCid,
             avatarCid: users.avatarCid,
             // Moderation fields
-            moderationStatus: quickPosts.moderationStatus,
-            moderationWarning: quickPosts.moderationWarning,
-            riskScore: quickPosts.riskScore,
-            isQuickPost: sql`true`, // Mark as quick post
-            isRepost: quickPosts.isRepost,
-            parentId: quickPosts.parentId
+            moderationStatus: statuses.moderationStatus,
+            moderationWarning: statuses.moderationWarning,
+            riskScore: statuses.riskScore,
+            isStatus: sql`true`, // Mark as status
+            isRepost: statuses.isRepost,
+            parentId: statuses.parentId
           })
-          .from(quickPosts)
-          .leftJoin(users, eq(quickPosts.authorId, users.id))
+          .from(statuses)
+          .leftJoin(users, eq(statuses.authorId, users.id))
           .where(and(
-            quickPostTimeFilter, // Use quickPostTimeFilter instead of timeFilter
-            finalQuickPostFollowingFilter, // Use the correct filter for quick posts
-            sql`${quickPosts.moderationStatus} IS NULL OR ${quickPosts.moderationStatus} != 'blocked'`, // Quick post moderation filter
-            or(isNull(quickPosts.parentId), eq(quickPosts.isRepost, true)) // Show top-level quick posts OR reposts
+            statusTimeFilter, // Use statusTimeFilter instead of timeFilter
+            finalStatusFollowingFilter, // Use the correct filter for statuses
+            sql`${statuses.moderationStatus} IS NULL OR ${statuses.moderationStatus} != 'blocked'`, // Status moderation filter
+            or(isNull(statuses.parentId), eq(statuses.isRepost, true)) // Show top-level statuses OR reposts
           ))
 
-        console.log('📊 [BACKEND FEED] Quick posts query result:', {
-          count: quickPostsResults.length,
-          repostsCount: quickPostsResults.filter(p => p.isRepost).length,
-          samplePost: quickPostsResults[0] ? {
-            id: quickPostsResults[0].id,
-            authorId: quickPostsResults[0].authorId,
-            walletAddress: quickPostsResults[0].walletAddress,
-            contentCid: quickPostsResults[0].contentCid,
-            isRepost: quickPostsResults[0].isRepost,
-            parentId: quickPostsResults[0].parentId
+        console.log('📊 [BACKEND FEED] Status query result:', {
+          count: statusResults.length,
+          repostsCount: statusResults.filter(p => p.isRepost).length,
+          samplePost: statusResults[0] ? {
+            id: statusResults[0].id,
+            authorId: statusResults[0].authorId,
+            walletAddress: statusResults[0].walletAddress,
+            contentCid: statusResults[0].contentCid,
+            isRepost: statusResults[0].isRepost,
+            parentId: statusResults[0].parentId
           } : null,
-          sampleRepost: quickPostsResults.find(p => p.isRepost) ? {
-            id: quickPostsResults.find(p => p.isRepost)!.id,
-            isRepost: quickPostsResults.find(p => p.isRepost)!.isRepost,
-            parentId: quickPostsResults.find(p => p.isRepost)!.parentId,
-            content: quickPostsResults.find(p => p.isRepost)!.content
+          sampleRepost: statusResults.find(p => p.isRepost) ? {
+            id: statusResults.find(p => p.isRepost)!.id,
+            isRepost: statusResults.find(p => p.isRepost)!.isRepost,
+            parentId: statusResults.find(p => p.isRepost)!.parentId,
+            content: statusResults.find(p => p.isRepost)!.content
           } : null
         });
       }
 
       // Combine posts based on postTypeFilter
-      let allPosts = postTypeFilter === 'quickPosts' ? quickPostsResults :
+      let allPosts = postTypeFilter === 'statuses' ? statusResults :
         postTypeFilter === 'posts' ? regularPosts :
-          [...regularPosts, ...quickPostsResults];
+          [...regularPosts, ...statusResults];
 
       console.log('📊 [BACKEND FEED] Combined posts before sorting:', {
         totalPosts: allPosts.length,
         regularPosts: regularPosts.length,
-        quickPosts: quickPostsResults.length,
+        statusResults: statusResults.length,
         uniqueAuthors: [...new Set(allPosts.map(p => p.authorId))].length
       });
 
@@ -420,8 +420,8 @@ export class FeedService {
       // Instead of 5 queries per post, we do 10 total queries (5 for regular, 5 for quick posts)
 
       // 1. Separate posts by type AND collect originalPost IDs for canonical engagement
-      const regularPostIds = paginatedPosts.filter(p => typeof p.id === 'string').map(p => p.id);
-      const quickPostIds = paginatedPosts.filter(p => typeof p.id === 'string').map(p => p.id as string);
+      const regularPostIds = paginatedPosts.filter(p => typeof p.id === 'string' && !p.isStatus).map(p => p.id as string);
+      const statusIds = paginatedPosts.filter(p => typeof p.id === 'string' && p.isStatus).map(p => p.id as string);
 
       // CANONICAL ENGAGEMENT: Collect originalPost IDs from reposts
       // This ensures we fetch engagement stats for quoted posts in the same bulk query
@@ -432,32 +432,32 @@ export class FeedService {
       // Add originalPost IDs to the appropriate arrays (they could be either regular or quick posts)
       // We'll add them to both arrays and let the queries filter appropriately
       const allRegularPostIds = [...new Set([...regularPostIds, ...originalPostIdsFromReposts])];
-      const allQuickPostIds = [...new Set([...quickPostIds, ...originalPostIdsFromReposts])];
+      const allStatusIds = [...new Set([...statusIds, ...originalPostIdsFromReposts])];
 
       console.log('🔍 [BACKEND FEED] Batching engagement queries for:', {
         regularPosts: regularPostIds.length,
-        quickPosts: quickPostIds.length,
+        statusIds: statusIds.length,
         originalPostsFromReposts: originalPostIdsFromReposts.length,
         totalRegularWithOriginals: allRegularPostIds.length,
-        totalQuickWithOriginals: allQuickPostIds.length,
+        totalStatusWithOriginals: allStatusIds.length,
         total: paginatedPosts.length
       });
 
       // 2. Batch fetch all metrics with GROUP BY (11 queries total instead of 5*N)
       const [
         regularReactionsData,
-        quickReactionsData,
+        statusReactionsData,
         regularTipsCountData,
-        quickTipsCountData,
+        statusTipsCountData,
         regularTipsTotalData,
-        quickTipsTotalData,
+        statusTipsTotalData,
         regularCommentsData,
-        quickCommentsData,
+        statusCommentsData,
         regularViewsData,
-        quickViewsData,
+        statusViewsData,
         userRepostsData,
         originalPostsData,
-        originalQuickPostsData
+        originalStatusesData
       ] = await Promise.all([
         // Regular post reactions
         allRegularPostIds.length > 0
@@ -470,15 +470,15 @@ export class FeedService {
             .groupBy(reactions.postId)
           : Promise.resolve([]),
 
-        // Quick post reactions
-        allQuickPostIds.length > 0
+        // Status reactions
+        allStatusIds.length > 0
           ? db.select({
-            postId: quickPostReactions.quickPostId,
+            postId: statusReactions.statusId,
             count: sql<number>`COUNT(*)::int`
           })
-            .from(quickPostReactions)
-            .where(inArray(quickPostReactions.quickPostId, allQuickPostIds))
-            .groupBy(quickPostReactions.quickPostId)
+            .from(statusReactions)
+            .where(inArray(statusReactions.statusId, allStatusIds))
+            .groupBy(statusReactions.statusId)
           : Promise.resolve([]),
 
         // Regular post tips count
@@ -492,15 +492,15 @@ export class FeedService {
             .groupBy(tips.postId)
           : Promise.resolve([]),
 
-        // Quick post tips count
-        allQuickPostIds.length > 0
+        // Status tips count
+        allStatusIds.length > 0
           ? db.select({
-            postId: quickPostTips.quickPostId,
+            postId: statusTips.statusId,
             count: sql<number>`COUNT(*)::int`
           })
-            .from(quickPostTips)
-            .where(inArray(quickPostTips.quickPostId, allQuickPostIds))
-            .groupBy(quickPostTips.quickPostId)
+            .from(statusTips)
+            .where(inArray(statusTips.statusId, allStatusIds))
+            .groupBy(statusTips.statusId)
           : Promise.resolve([]),
 
         // Regular post tips total
@@ -514,15 +514,15 @@ export class FeedService {
             .groupBy(tips.postId)
           : Promise.resolve([]),
 
-        // Quick post tips total
-        quickPostIds.length > 0
+        // Status tips total
+        statusIds.length > 0
           ? db.select({
-            postId: quickPostTips.quickPostId,
+            postId: statusTips.statusId,
             total: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL)), 0)`
           })
-            .from(quickPostTips)
-            .where(inArray(quickPostTips.quickPostId, allQuickPostIds))
-            .groupBy(quickPostTips.quickPostId)
+            .from(statusTips)
+            .where(inArray(statusTips.statusId, allStatusIds))
+            .groupBy(statusTips.statusId)
           : Promise.resolve([]),
 
         // Regular post comments
@@ -539,18 +539,18 @@ export class FeedService {
             .groupBy(comments.postId)
           : Promise.resolve([]),
 
-        // Quick post comments
-        allQuickPostIds.length > 0
+        // Status comments
+        allStatusIds.length > 0
           ? db.select({
-            postId: comments.quickPostId,
+            postId: comments.statusId,
             count: sql<number>`COUNT(*)::int`
           })
             .from(comments)
             .where(and(
-              inArray(comments.quickPostId, allQuickPostIds),
+              inArray(comments.statusId, allStatusIds),
               sql`(${comments.moderationStatus} IS NULL OR ${comments.moderationStatus} != 'blocked')`
             ))
-            .groupBy(comments.quickPostId)
+            .groupBy(comments.statusId)
           : Promise.resolve([]),
 
         // Regular post views
@@ -564,30 +564,30 @@ export class FeedService {
             .groupBy(views.postId)
           : Promise.resolve([]),
 
-        // Quick post views
-        quickPostIds.length > 0
+        // Status views
+        statusIds.length > 0
           ? db.select({
-            postId: quickPostViews.quickPostId,
+            postId: statusViews.statusId,
             count: sql<number>`COUNT(*)::int`
           })
-            .from(quickPostViews)
-            .where(inArray(quickPostViews.quickPostId, allQuickPostIds))
-            .groupBy(quickPostViews.quickPostId)
+            .from(statusViews)
+            .where(inArray(statusViews.statusId, allStatusIds))
+            .groupBy(statusViews.statusId)
           : Promise.resolve([]),
 
         // User Reposts Check
-        userAddress && (regularPostIds.length > 0 || quickPostIds.length > 0)
+        userAddress && (regularPostIds.length > 0 || statusIds.length > 0)
           ? db.select({
-            parentId: quickPosts.parentId
+            parentId: statuses.parentId
           })
-            .from(quickPosts)
+            .from(statuses)
             .where(and(
-              eq(quickPosts.authorId, sql`(SELECT id FROM users WHERE LOWER(wallet_address) = LOWER(${userAddress}) LIMIT 1)`),
-              isNotNull(quickPosts.parentId),
-              eq(quickPosts.isRepost, true),
+              eq(statuses.authorId, sql`(SELECT id FROM users WHERE LOWER(wallet_address) = LOWER(${userAddress}) LIMIT 1)`),
+              isNotNull(statuses.parentId),
+              eq(statuses.isRepost, true),
               or(
-                regularPostIds.length > 0 ? inArray(quickPosts.parentId, regularPostIds) : sql`1=0`,
-                quickPostIds.length > 0 ? inArray(quickPosts.parentId, quickPostIds) : sql`1=0`
+                regularPostIds.length > 0 ? inArray(statuses.parentId, regularPostIds) : sql`1=0`,
+                statusIds.length > 0 ? inArray(statuses.parentId, statusIds) : sql`1=0`
               )
             ))
           : Promise.resolve([]),
@@ -612,37 +612,37 @@ export class FeedService {
             displayName: users.displayName,
             profileCid: users.profileCid,
             avatarCid: users.avatarCid,
-            isQuickPost: sql`false`
+            isStatus: sql`false`
           })
             .from(posts)
             .leftJoin(users, eq(posts.authorId, users.id))
             .where(inArray(posts.id, paginatedPosts.filter(p => p.parentId && p.isRepost).map(p => p.parentId as string)))
           : Promise.resolve([]),
 
-        // 13. Fetch original quick posts
+        // 13. Fetch original statuses
         paginatedPosts.filter(p => p.parentId && p.isRepost).length > 0
           ? db.select({
-            id: quickPosts.id,
-            authorId: quickPosts.authorId,
-            content: quickPosts.content,
-            contentCid: quickPosts.contentCid,
-            mediaCids: quickPosts.mediaCids,
-            tags: quickPosts.tags,
-            createdAt: quickPosts.createdAt,
-            upvotes: quickPosts.upvotes,
-            downvotes: quickPosts.downvotes,
+            id: statuses.id,
+            authorId: statuses.authorId,
+            content: statuses.content,
+            contentCid: statuses.contentCid,
+            mediaCids: statuses.mediaCids,
+            tags: statuses.tags,
+            createdAt: statuses.createdAt,
+            upvotes: statuses.upvotes,
+            downvotes: statuses.downvotes,
 
-            shareId: quickPosts.shareId, // Include shareId
+            shareId: statuses.shareId, // Include shareId
             walletAddress: users.walletAddress,
             handle: users.handle,
             displayName: users.displayName,
             profileCid: users.profileCid,
             avatarCid: users.avatarCid,
-            isQuickPost: sql`true`
+            isStatus: sql`true`
           })
-            .from(quickPosts)
-            .leftJoin(users, eq(quickPosts.authorId, users.id))
-            .where(inArray(quickPosts.id, paginatedPosts.filter(p => p.parentId && p.isRepost).map(p => p.parentId as string)))
+            .from(statuses)
+            .leftJoin(users, eq(statuses.authorId, users.id))
+            .where(inArray(statuses.id, paginatedPosts.filter(p => p.parentId && p.isRepost).map(p => p.parentId as string)))
           : Promise.resolve([])
       ]);
 
@@ -661,12 +661,12 @@ export class FeedService {
       regularCommentsData.forEach(c => commentMap.set(c.postId, Number(c.count)));
       regularViewsData.forEach(v => viewMap.set(v.postId, Number(v.count)));
 
-      // Populate maps with quick post data
-      quickReactionsData.forEach(r => reactionMap.set(r.postId, Number(r.count)));
-      quickTipsCountData.forEach(t => tipCountMap.set(t.postId, Number(t.count)));
-      quickTipsTotalData.forEach(t => tipTotalMap.set(t.postId, Number(t.total)));
-      quickCommentsData.forEach(c => commentMap.set(c.postId, Number(c.count)));
-      quickViewsData.forEach(v => viewMap.set(v.postId, Number(v.count)));
+      // Populate maps with status data
+      statusReactionsData.forEach(r => reactionMap.set(r.postId, Number(r.count)));
+      statusTipsCountData.forEach(t => tipCountMap.set(t.postId, Number(t.count)));
+      statusTipsTotalData.forEach(t => tipTotalMap.set(t.postId, Number(t.total)));
+      statusCommentsData.forEach(c => commentMap.set(c.postId, Number(c.count)));
+      statusViewsData.forEach(v => viewMap.set(v.postId, Number(v.count)));
 
       // Populate reposted set
       (userRepostsData as any[]).forEach(r => {
@@ -676,7 +676,7 @@ export class FeedService {
       // Populate original posts map
       const originalPostsMap = new Map<string, any>();
       (originalPostsData as any[]).forEach(p => originalPostsMap.set(p.id, p));
-      (originalQuickPostsData as any[]).forEach(p => originalPostsMap.set(p.id, p));
+      (originalStatusesData as any[]).forEach(p => originalPostsMap.set(p.id, p));
 
       console.log('📊 [BACKEND FEED] Engagement metrics fetched:', {
         reactions: reactionMap.size,
@@ -692,7 +692,7 @@ export class FeedService {
         if (!shareId) {
           shareId = generateShareId();
           // Determine table based on post type
-          const table = post.isQuickPost ? quickPosts : posts;
+          const table = post.isStatus ? statuses : posts;
           await db.update(table).set({ shareId }).where(eq(table.id, post.id));
         }
 
@@ -715,7 +715,7 @@ export class FeedService {
 
           console.log('🔍 [BACKEND FEED] Original post engagement lookup:', {
             originalPostId: rawOriginalPost.id,
-            isQuickPost: rawOriginalPost.isQuickPost,
+            isStatus: rawOriginalPost.isStatus,
             commentMapSize: commentMap.size,
             reactionMapSize: reactionMap.size,
             viewMapSize: viewMap.size,
@@ -728,19 +728,19 @@ export class FeedService {
 
           // Count reposts of the original post (shares)
           // Note: This counts how many times THIS post has been reposted
-          // Check both posts and quickPosts tables for reposts
+          // Check both posts and statuses tables for reposts
           let originalShareCount = 0;
 
-          if (rawOriginalPost.isQuickPost) {
-            // Original is a quick post, check quickPosts for reposts
-            const [quickPostReposts] = await db
+          if (rawOriginalPost.isStatus) {
+            // Original is a status, check statuses for reposts
+            const [statusReposts] = await db
               .select({ count: sql<number>`count(*)` })
-              .from(quickPosts)
+              .from(statuses)
               .where(and(
-                eq(quickPosts.parentId, rawOriginalPost.id),
-                eq(quickPosts.isRepost, true)
+                eq(statuses.parentId, rawOriginalPost.id),
+                eq(statuses.isRepost, true)
               ));
-            originalShareCount = Number(quickPostReposts?.count) || 0;
+            originalShareCount = Number(statusReposts?.count) || 0;
           } else {
             // Original is a regular post, check posts for reposts
             const [postReposts] = await db
@@ -755,7 +755,7 @@ export class FeedService {
 
           console.log('🔍 [BACKEND FEED] Original post repost count:', {
             originalPostId: rawOriginalPost.id,
-            isQuickPost: rawOriginalPost.isQuickPost,
+            isStatus: rawOriginalPost.isStatus,
             shareCount: originalShareCount
           });
 
@@ -798,7 +798,7 @@ export class FeedService {
           if (!originalPost.shareId) {
             const newShareId = generateShareId();
             // Determine table based on rawOriginalPost flag, defaulting to posts if undefined
-            const table = rawOriginalPost.isQuickPost ? quickPosts : posts;
+            const table = rawOriginalPost.isStatus ? statuses : posts;
             await db.update(table).set({ shareId: newShareId }).where(eq(table.id, rawOriginalPost.id));
             originalPost.shareId = newShareId;
           }
@@ -843,26 +843,23 @@ export class FeedService {
         totalCount += (totalRegularCount[0]?.count || 0);
       }
 
-      if (postTypeFilter === 'quickPosts' || postTypeFilter === 'all') {
-        // Use the quick post following filter as-is since it already includes user's own quick posts
-        const finalQuickPostFollowingFilter = quickPostFollowingFilter;
-
-        const totalQuickCount = await db
+      if (postTypeFilter === 'statuses' || postTypeFilter === 'all') {
+        const totalStatusCount = await db
           .select({ count: sql<number>`COUNT(*)` })
-          .from(quickPosts)
+          .from(statuses)
           .where(and(
-            quickPostTimeFilter,
-            finalQuickPostFollowingFilter, // Use the correct filter for quick posts
-            sql`${quickPosts.moderationStatus} IS NULL OR ${quickPosts.moderationStatus} != 'blocked'`, // Quick post moderation filter
-            or(isNull(quickPosts.parentId), eq(quickPosts.isRepost, true)) // Count top-level posts OR reposts
+            statusTimeFilter,
+            statusFollowingFilter, // Use the correct filter for statuses
+            sql`${statuses.moderationStatus} IS NULL OR ${statuses.moderationStatus} != 'blocked'`, // Status moderation filter
+            or(isNull(statuses.parentId), eq(statuses.isRepost, true)) // Count top-level statuses OR reposts
           ));
-        totalCount += (totalQuickCount[0]?.count || 0);
+        totalCount += (totalStatusCount[0]?.count || 0);
       }
 
       console.log('📊 [BACKEND FEED] Returning posts:', {
         postsCount: postsWithMetrics.length,
         regularPostsCount: regularPosts.length,
-        quickPostsCount: quickPostsResults.length,
+        statusResultsCount: statusResults.length,
         totalInDB: totalCount,
         page,
         limit
@@ -1282,52 +1279,52 @@ export class FeedService {
         throw new Error('User not found');
       }
 
-      // Check if post exists in posts table (regular post) or quickPosts table
+      // Check if post exists in posts table (regular post) or statuses table
       // Both tables now use UUID, so we need to check which table contains the post
       let postExists = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
-      let isQuickPost = false;
+      let isStatus = false;
 
       if (postExists.length === 0) {
-        // Check if it's a quick post
-        const quickPostExists = await db.select().from(quickPosts).where(eq(quickPosts.id, postId)).limit(1);
-        if (quickPostExists.length === 0) {
+        // Check if it's a status
+        const statusExists = await db.select().from(statuses).where(eq(statuses.id, postId)).limit(1);
+        if (statusExists.length === 0) {
           throw new Error('Post not found');
         }
-        isQuickPost = true;
+        isStatus = true;
       }
 
       let reaction;
 
-      if (isQuickPost) {
-        // Handle quick post reaction
+      if (isStatus) {
+        // Handle status reaction
         const existingReaction = await db
           .select()
-          .from(quickPostReactions)
+          .from(statusReactions)
           .where(and(
-            eq(quickPostReactions.quickPostId, postId),
-            eq(quickPostReactions.userId, user[0].id)
+            eq(statusReactions.statusId, postId),
+            eq(statusReactions.userId, user[0].id)
           ))
           .limit(1);
 
         if (existingReaction.length > 0) {
           // Update existing reaction
           reaction = await db
-            .update(quickPostReactions)
+            .update(statusReactions)
             .set({
               type,
               amount: tokenAmount.toString()
             })
             .where(and(
-              eq(quickPostReactions.quickPostId, postId),
-              eq(quickPostReactions.userId, user[0].id)
+              eq(statusReactions.statusId, postId),
+              eq(statusReactions.userId, user[0].id)
             ))
             .returning();
         } else {
           // Create new reaction
           reaction = await db
-            .insert(quickPostReactions)
+            .insert(statusReactions)
             .values({
-              quickPostId: postId,
+              statusId: postId,
               userId: user[0].id,
               type,
               amount: tokenAmount.toString(),
@@ -1476,19 +1473,19 @@ export class FeedService {
           } : null
         };
       } else {
-        // Quick post
+        // Status
         const post = await db
           .select({
-            id: quickPosts.id,
-            authorId: quickPosts.authorId,
-            content: quickPosts.content,
-            createdAt: quickPosts.createdAt,
-            updatedAt: quickPosts.updatedAt,
-            mediaCids: quickPosts.mediaCids,
-            tags: quickPosts.tags
+            id: statuses.id,
+            authorId: statuses.authorId,
+            content: statuses.content,
+            createdAt: statuses.createdAt,
+            updatedAt: statuses.updatedAt,
+            mediaCids: statuses.mediaCids,
+            tags: statuses.tags
           })
-          .from(quickPosts)
-          .where(eq(quickPosts.id, postId))
+          .from(statuses)
+          .where(eq(statuses.id, postId))
           .limit(1);
 
         if (post.length === 0) {
@@ -1662,7 +1659,7 @@ export class FeedService {
       if (isIntegerId) {
         conditions.push(eq(comments.postId, postId));
       } else {
-        conditions.push(eq(comments.quickPostId, postId));
+        conditions.push(eq(comments.statusId, postId));
       }
 
       // Build sort order
@@ -1679,7 +1676,7 @@ export class FeedService {
         .select({
           id: comments.id,
           postId: comments.postId,
-          quickPostId: comments.quickPostId,
+          statusId: comments.statusId,
           authorId: comments.authorId,
           content: comments.content,
           upvotes: comments.upvotes,
@@ -1769,14 +1766,14 @@ export class FeedService {
           throw new Error('Post not found');
         }
         commentValues.postId = postId;
-        commentValues.quickPostId = null;
+        commentValues.statusId = null;
         postFound = true;
       } else if (isUUID) {
-        // Check if it's a quick post ID or a shareId
-        // First try quick posts
-        const quickPost = await db.select().from(quickPosts).where(eq(quickPosts.id, postId)).limit(1);
-        if (quickPost.length > 0) {
-          commentValues.quickPostId = postId;
+        // Check if it's a status ID or a shareId
+        // First try statuses
+        const status = await db.select().from(statuses).where(eq(statuses.id, postId)).limit(1);
+        if (status.length > 0) {
+          commentValues.statusId = postId;
           commentValues.postId = null;
           postFound = true;
         } else {
@@ -1784,7 +1781,7 @@ export class FeedService {
           const post = await db.select().from(posts).where(eq(posts.shareId, postId)).limit(1);
           if (post.length > 0) {
             commentValues.postId = post[0].id;
-            commentValues.quickPostId = null;
+            commentValues.statusId = null;
             postFound = true;
           }
         }
@@ -1798,7 +1795,7 @@ export class FeedService {
         const post = await db.select().from(posts).where(eq(posts.shareId, postId)).limit(1);
         if (post.length > 0) {
           commentValues.postId = post[0].id;
-          commentValues.quickPostId = null;
+          commentValues.statusId = null;
           postFound = true;
         } else {
           safeLogger.error('Post not found for shareId:', postId);
@@ -1826,12 +1823,12 @@ export class FeedService {
             content: commentValues.content,
           };
 
-          // Add postId or quickPostId if they exist
+          // Add postId or statusId if they exist
           if ('postId' in commentValues && commentValues.postId !== null) {
             (minimalCommentValues as any).postId = commentValues.postId;
           }
-          if ('quickPostId' in commentValues && commentValues.quickPostId !== null) {
-            (minimalCommentValues as any).quickPostId = commentValues.quickPostId;
+          if ('statusId' in commentValues && commentValues.statusId !== null) {
+            (minimalCommentValues as any).statusId = commentValues.statusId;
           }
 
           comment = await db
@@ -2229,7 +2226,7 @@ export class FeedService {
         .select({
           id: comments.id,
           postId: comments.postId,
-          quickPostId: comments.quickPostId,
+          statusId: comments.statusId,
           authorId: comments.authorId,
           content: comments.content,
           upvotes: comments.upvotes,
@@ -2433,28 +2430,28 @@ export class FeedService {
           result = { bookmarked: true };
         }
       } else {
-        // Quick post bookmark logic
+        // Status bookmark logic
         // Check if bookmark already exists
         const existingBookmark = await db
           .select()
-          .from(quickPostBookmarks)
+          .from(statusBookmarks)
           .where(and(
-            eq(quickPostBookmarks.quickPostId, postId),
-            eq(quickPostBookmarks.userId, user[0].id)
+            eq(statusBookmarks.statusId, postId),
+            eq(statusBookmarks.userId, user[0].id)
           ))
           .limit(1);
 
         if (existingBookmark.length > 0) {
           // Remove bookmark
-          await db.delete(quickPostBookmarks).where(and(
-            eq(quickPostBookmarks.quickPostId, postId),
-            eq(quickPostBookmarks.userId, user[0].id)
+          await db.delete(statusBookmarks).where(and(
+            eq(statusBookmarks.statusId, postId),
+            eq(statusBookmarks.userId, user[0].id)
           ));
           result = { bookmarked: false };
         } else {
           // Add bookmark
-          await db.insert(quickPostBookmarks).values({
-            quickPostId: postId,
+          await db.insert(statusBookmarks).values({
+            statusId: postId,
             userId: user[0].id,
             createdAt: new Date()
           });
@@ -2582,24 +2579,24 @@ export class FeedService {
           downvotes: updatedPost.downvotes
         };
       } else {
-        // It's a quick post
-        const quickPost = await db.select().from(quickPosts).where(eq(quickPosts.id, postId)).limit(1);
+        // It's a status
+        const status = await db.select().from(statuses).where(eq(statuses.id, postId)).limit(1);
 
-        if (quickPost.length === 0) {
+        if (status.length === 0) {
           throw new Error('Post not found');
         }
 
-        // Get current quick post data and increment upvotes
-        const [updatedQuickPost] = await db.update(quickPosts)
-          .set({ upvotes: sql`${quickPosts.upvotes} + 1` })
-          .where(eq(quickPosts.id, postId))
+        // Get current status data and increment upvotes
+        const [updatedStatus] = await db.update(statuses)
+          .set({ upvotes: sql`${statuses.upvotes} + 1` })
+          .where(eq(statuses.id, postId))
           .returning();
 
         return {
           success: true,
-          message: 'Quick post upvoted successfully',
-          upvotes: updatedQuickPost.upvotes,
-          downvotes: updatedQuickPost.downvotes
+          message: 'Status upvoted successfully',
+          upvotes: updatedStatus.upvotes,
+          downvotes: updatedStatus.downvotes
         };
       }
     } catch (error) {
@@ -2637,24 +2634,24 @@ export class FeedService {
           downvotes: updatedPost.downvotes
         };
       } else {
-        // It's a quick post
-        const quickPost = await db.select().from(quickPosts).where(eq(quickPosts.id, postId)).limit(1);
+        // It's a status
+        const status = await db.select().from(statuses).where(eq(statuses.id, postId)).limit(1);
 
-        if (quickPost.length === 0) {
+        if (status.length === 0) {
           throw new Error('Post not found');
         }
 
-        // Get current quick post data and increment downvotes
-        const [updatedQuickPost] = await db.update(quickPosts)
-          .set({ downvotes: sql`${quickPosts.downvotes} + 1` })
-          .where(eq(quickPosts.id, postId))
+        // Get current status data and increment downvotes
+        const [updatedStatus] = await db.update(statuses)
+          .set({ downvotes: sql`${statuses.downvotes} + 1` })
+          .where(eq(statuses.id, postId))
           .returning();
 
         return {
           success: true,
-          message: 'Quick post downvoted successfully',
-          upvotes: updatedQuickPost.upvotes,
-          downvotes: updatedQuickPost.downvotes
+          message: 'Status downvoted successfully',
+          upvotes: updatedStatus.upvotes,
+          downvotes: updatedStatus.downvotes
         };
       }
     } catch (error) {
@@ -2666,36 +2663,36 @@ export class FeedService {
   // Get reaction summaries for a post
   async getReactionSummaries(postId: string) {
     try {
-      // Check if post exists in posts table (regular post) or quickPosts table
+      // Check if post exists in posts table (regular post) or statuss table
       // Both tables now use UUID, so we need to check which table contains the post
       let postExists = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
-      let isQuickPost = false;
+      let isStatus = false;
 
       if (postExists.length === 0) {
         // Check if it's a quick post
-        const quickPostExists = await db.select().from(quickPosts).where(eq(quickPosts.id, postId)).limit(1);
-        if (quickPostExists.length === 0) {
+        const statusExists = await db.select().from(statuses).where(eq(statuses.id, postId)).limit(1);
+        if (statusExists.length === 0) {
           return [];
         }
-        isQuickPost = true;
+        isStatus = true;
       }
 
       let summaries;
 
-      if (isQuickPost) {
-        // Handle quick post reactions
+      if (isStatus) {
+        // Handle status reactions
         summaries = await db
           .select({
-            type: quickPostReactions.type,
-            totalAmount: sql<number>`SUM(CAST(${quickPostReactions.amount} AS INTEGER))`.mapWith(Number),
+            type: statusReactions.type,
+            totalAmount: sql<number>`SUM(CAST(${statusReactions.amount} AS INTEGER))`.mapWith(Number),
             totalCount: sql<number>`COUNT(*)`.mapWith(Number),
-            userAmount: sql<number>`SUM(CASE WHEN ${quickPostReactions.userId} IN (SELECT id FROM ${users} WHERE LOWER(${users.walletAddress}) = LOWER(${sql.placeholder('userAddress')})) THEN CAST(${quickPostReactions.amount} AS INTEGER) ELSE 0 END)`.mapWith(Number),
-            topContributors: sql<any>`ARRAY_AGG(DISTINCT ${users.walletAddress} ORDER BY CAST(${quickPostReactions.amount} AS INTEGER) DESC LIMIT 5)`
+            userAmount: sql<number>`SUM(CASE WHEN ${statusReactions.userId} IN (SELECT id FROM ${users} WHERE LOWER(${users.walletAddress}) = LOWER(${sql.placeholder('userAddress')})) THEN CAST(${statusReactions.amount} AS INTEGER) ELSE 0 END)`.mapWith(Number),
+            topContributors: sql<any>`ARRAY_AGG(DISTINCT ${users.walletAddress} ORDER BY CAST(${statusReactions.amount} AS INTEGER) DESC LIMIT 5)`
           })
-          .from(quickPostReactions)
-          .leftJoin(users, eq(quickPostReactions.userId, users.id))
-          .where(eq(quickPostReactions.quickPostId, postId))
-          .groupBy(quickPostReactions.type);
+          .from(statusReactions)
+          .leftJoin(users, eq(statusReactions.userId, users.id))
+          .where(eq(statusReactions.statusId, postId))
+          .groupBy(statusReactions.type);
       } else {
         // Handle regular post reactions
         summaries = await db

@@ -1,7 +1,7 @@
 import { EnhancedPost, FeedFilter, CommunityEngagementMetrics, LeaderboardEntry, LikedByData, FeedSortType, FeedError, FeedAnalyticsEvent } from '../types/feed';
 import { requestManager } from './requestManager';
 import { convertBackendPostToPost } from '../models/Post';
-import { convertBackendQuickPostToQuickPost } from '../models/QuickPost';
+import { convertBackendStatusToStatus } from '../models/Status';
 import { analyticsService } from './analyticsService';
 import { enhancedAuthService } from './enhancedAuthService';
 import { csrfService } from './csrfService'; // Add csrfService import
@@ -53,17 +53,17 @@ const CACHE_CONFIG = {
 // Analytics service integration
 class FeedAnalytics {
   private events: FeedAnalyticsEvent[] = [];
-  
+
   trackEvent(event: FeedAnalyticsEvent) {
     this.events.push(event);
     // In a real implementation, this would send to an analytics service
     console.log('Feed Analytics Event:', event);
   }
-  
+
   getEvents(): FeedAnalyticsEvent[] {
     return this.events;
   }
-  
+
   clearEvents() {
     this.events = [];
   }
@@ -76,29 +76,29 @@ const cacheUtils = {
   set: (key: string, data: any, ttl: number = CACHE_CONFIG.FEED.TTL) => {
     // Clean up expired entries
     cacheUtils.cleanup();
-    
+
     // Remove oldest entries if we're at max capacity
     if (feedCache.size >= CACHE_CONFIG.FEED.MAX_ENTRIES) {
       const firstKey = feedCache.keys().next().value;
       if (firstKey) feedCache.delete(firstKey);
     }
-    
+
     const expiresAt = Date.now() + ttl;
     feedCache.set(key, { data, timestamp: Date.now(), expiresAt });
   },
-  
+
   get: (key: string) => {
     const entry = feedCache.get(key);
     if (!entry) return null;
-    
+
     if (Date.now() > entry.expiresAt) {
       feedCache.delete(key);
       return null;
     }
-    
+
     return entry.data;
   },
-  
+
   cleanup: () => {
     const now = Date.now();
     for (const [key, entry] of feedCache.entries()) {
@@ -107,11 +107,11 @@ const cacheUtils = {
       }
     }
   },
-  
+
   clear: () => {
     feedCache.clear();
   },
-  
+
   invalidate: (pattern: RegExp) => {
     for (const [key] of feedCache.entries()) {
       if (pattern.test(key)) {
@@ -122,7 +122,7 @@ const cacheUtils = {
 };
 
 export class FeedService {
-//   // Helper method to clear invalid community from cache/storage
+  //   // Helper method to clear invalid community from cache/storage
   // private static clearInvalidCommunityFromCache(invalidCommunityId: string): void {
   //   try {
   //     // Clear from localStorage if present
@@ -135,7 +135,7 @@ export class FeedService {
   //       }
   //     }
   //     keysToRemove.forEach(key => localStorage.removeItem(key));
-      
+
   //     // Clear from sessionStorage if present
   //     for (let i = 0; i < sessionStorage.length; i++) {
   //       const key = sessionStorage.key(i);
@@ -144,7 +144,7 @@ export class FeedService {
   //         sessionStorage.removeItem(key);
   //       }
   //     }
-      
+
   //     console.log(`[FEED] Cleared invalid community ${invalidCommunityId} from storage`);
   //   } catch (error) {
   //     console.warn('[FEED] Failed to clear invalid community from storage:', error);
@@ -159,7 +159,7 @@ export class FeedService {
     try {
       // Create cache key
       const cacheKey = `feed_${JSON.stringify(filter)}_${page}_${limit}`;
-      
+
       // Check cache first
       const cachedData = cacheUtils.get(cacheKey);
       if (cachedData) {
@@ -169,10 +169,10 @@ export class FeedService {
           timestamp: new Date(),
           metadata: { filter, page, limit }
         });
-        
+
         return cachedData;
       }
-      
+
       const params = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
@@ -295,13 +295,13 @@ export class FeedService {
       }
 
       // Transform backend posts to frontend posts
-      // The enhanced feed API now returns both regular posts and quickPosts
+      // The enhanced feed API now returns both regular posts and statuses
       const posts = response_data.data.posts.map((post: any) => {
-        // Check if this is a quickPost using the isQuickPost flag from backend
-        if (post.isQuickPost === true) {
-          // This is a quickPost (home/feed post)
-          console.log('🔍 [FEED DEBUG] Converting quickPost:', { id: post.id, contentCid: post.contentCid, contentLength: post.content?.length });
-          return convertBackendQuickPostToQuickPost(post);
+        // Check if this is a status using the isStatus flag from backend
+        if (post.isStatus === true) {
+          // This is a status (home/feed post)
+          console.log('🔍 [FEED DEBUG] Converting status:', { id: post.id, contentCid: post.contentCid, contentLength: post.content?.length });
+          return convertBackendStatusToStatus(post);
         } else {
           // This is a regular post (community post)
           console.log('🔍 [FEED DEBUG] Converting regular post:', { id: post.id, contentCid: post.contentCid, contentLength: post.content?.length });
@@ -314,10 +314,10 @@ export class FeedService {
         hasMore: response_data.data.pagination?.page < response_data.data.pagination?.totalPages || false,
         totalPages: response_data.data.pagination?.totalPages || 0
       };
-      
+
       // Cache the result
       cacheUtils.set(cacheKey, result, CACHE_CONFIG.FEED.TTL);
-      
+
       // Track success event with more detailed analytics
       feedAnalytics.trackEvent({
         eventType: 'feed_load_success',
@@ -331,7 +331,7 @@ export class FeedService {
           totalPages: response_data.data.pagination.totalPages
         }
       });
-      
+
       // Also track with the main analytics service
       analyticsService.trackUserEvent('feed_load', {
         filter,
@@ -344,14 +344,14 @@ export class FeedService {
       return result;
     } catch (error: any) {
       console.error('Error fetching enhanced feed:', error);
-      
+
       // Track error event
       feedAnalytics.trackEvent({
         eventType: 'feed_error',
         timestamp: new Date(),
         metadata: { error: error.message || 'Unknown error' }
       });
-      
+
       // Track error with main analytics service
       analyticsService.trackUserEvent('feed_load_error', {
         filter,
@@ -360,7 +360,7 @@ export class FeedService {
         error: error.message || 'Unknown error',
         timestamp: new Date()
       });
-      
+
       // Return empty feed on error instead of mock data
       return {
         posts: [],
@@ -396,41 +396,41 @@ export class FeedService {
           timestamp: new Date(),
           retryable: response.status >= 500 || response.status === 429
         };
-        
+
         throw error;
       }
 
       const metrics = await response.json();
-      
+
       // Track success event
       feedAnalytics.trackEvent({
         eventType: 'community_metrics_load',
         timestamp: new Date(),
         metadata: { communityId, timeRange }
       });
-      
+
       // Track with main analytics service
       analyticsService.trackUserEvent('community_metrics_load', {
         communityId,
         timeRange,
         success: true
       });
-      
+
       return metrics;
     } catch (error: any) {
       console.error('Error fetching community engagement metrics:', error);
-      
+
       // Track error event
       feedAnalytics.trackEvent({
         eventType: 'community_metrics_error',
         timestamp: new Date(),
-        metadata: { 
-          communityId, 
-          timeRange, 
-          error: error.message || 'Unknown error' 
+        metadata: {
+          communityId,
+          timeRange,
+          error: error.message || 'Unknown error'
         }
       });
-      
+
       // Track error with main analytics service
       analyticsService.trackUserEvent('community_metrics_error', {
         communityId,
@@ -438,7 +438,7 @@ export class FeedService {
         error: error.message || 'Unknown error',
         timestamp: new Date()
       });
-      
+
       // Return empty metrics on error
       return {
         communityId,
@@ -479,35 +479,35 @@ export class FeedService {
           timestamp: new Date(),
           retryable: response.status >= 500 || response.status === 429
         };
-        
+
         throw error;
       }
 
       const leaderboard = await response.json();
-      
+
       // Track success event
       feedAnalytics.trackEvent({
         eventType: 'leaderboard_load',
         timestamp: new Date(),
         metadata: { communityId, metric, limit }
       });
-      
+
       return leaderboard;
     } catch (error: any) {
       console.error('Error fetching community leaderboard:', error);
-      
+
       // Track error event
       feedAnalytics.trackEvent({
         eventType: 'leaderboard_error',
         timestamp: new Date(),
-        metadata: { 
-          communityId, 
-          metric, 
+        metadata: {
+          communityId,
+          metric,
           limit,
-          error: error.message || 'Unknown error' 
+          error: error.message || 'Unknown error'
         }
       });
-      
+
       return [];
     }
   }
@@ -531,23 +531,23 @@ export class FeedService {
           timestamp: new Date(),
           retryable: response.status >= 500 || response.status === 429
         };
-        
+
         throw error;
       }
 
       const data = await response.json();
-      
+
       // Track success event
       feedAnalytics.trackEvent({
         eventType: 'liked_by_load',
         postId,
         timestamp: new Date()
       });
-      
+
       return data;
     } catch (error: any) {
       console.error('Error fetching liked by data:', error);
-      
+
       // Track error event
       feedAnalytics.trackEvent({
         eventType: 'liked_by_error',
@@ -555,7 +555,7 @@ export class FeedService {
         timestamp: new Date(),
         metadata: { error: error.message || 'Unknown error' }
       });
-      
+
       return {
         reactions: [],
         tips: [],
@@ -592,7 +592,7 @@ export class FeedService {
           timestamp: new Date(),
           retryable: response.status >= 500 || response.status === 429
         };
-        
+
         throw error;
       }
 
@@ -605,29 +605,29 @@ export class FeedService {
       }
 
       const posts = response_data.data.posts.map(convertBackendPostToPost);
-      
+
       // Track success event
       feedAnalytics.trackEvent({
         eventType: 'trending_posts_load',
         timestamp: new Date(),
         metadata: { timeRange, limit }
       });
-      
+
       return posts;
     } catch (error: any) {
       console.error('Error fetching trending posts:', error);
-      
+
       // Track error event
       feedAnalytics.trackEvent({
         eventType: 'trending_posts_error',
         timestamp: new Date(),
-        metadata: { 
-          timeRange, 
+        metadata: {
+          timeRange,
           limit,
-          error: error.message || 'Unknown error' 
+          error: error.message || 'Unknown error'
         }
       });
-      
+
       return [];
     }
   }
@@ -636,7 +636,7 @@ export class FeedService {
   static async getTrendingHashtags(
     timeRange: string = 'day',
     limit: number = 10
-  ): Promise<Array<{tag: string; postCount: number; totalEngagement: number; trendingScore: number}>> {
+  ): Promise<Array<{ tag: string; postCount: number; totalEngagement: number; trendingScore: number }>> {
     try {
       const params = new URLSearchParams({
         timeRange,
@@ -660,34 +660,34 @@ export class FeedService {
           timestamp: new Date(),
           retryable: response.status >= 500 || response.status === 429
         };
-        
+
         throw error;
       }
 
       const hashtags = await response.json();
-      
+
       // Track success event
       feedAnalytics.trackEvent({
         eventType: 'trending_hashtags_load',
         timestamp: new Date(),
         metadata: { timeRange, limit }
       });
-      
+
       return hashtags;
     } catch (error: any) {
       console.error('Error fetching trending hashtags:', error);
-      
+
       // Track error event
       feedAnalytics.trackEvent({
         eventType: 'trending_hashtags_error',
         timestamp: new Date(),
-        metadata: { 
-          timeRange, 
+        metadata: {
+          timeRange,
           limit,
-          error: error.message || 'Unknown error' 
+          error: error.message || 'Unknown error'
         }
       });
-      
+
       return [];
     }
   }
@@ -712,23 +712,23 @@ export class FeedService {
           timestamp: new Date(),
           retryable: response.status >= 500 || response.status === 429
         };
-        
+
         throw error;
       }
 
       const metrics = await response.json();
-      
+
       // Track success event
       feedAnalytics.trackEvent({
         eventType: 'popularity_metrics_load',
         postId,
         timestamp: new Date()
       });
-      
+
       return metrics;
     } catch (error: any) {
       console.error('Error fetching content popularity metrics:', error);
-      
+
       // Track error event
       feedAnalytics.trackEvent({
         eventType: 'popularity_metrics_error',
@@ -736,7 +736,7 @@ export class FeedService {
         timestamp: new Date(),
         metadata: { error: error.message || 'Unknown error' }
       });
-      
+
       return null;
     }
   }
@@ -746,7 +746,7 @@ export class FeedService {
     try {
       // Get base auth headers from enhancedAuthService
       const authHeaders = await enhancedAuthService.getAuthHeaders();
-      
+
       // Add CSRF headers for authenticated requests
       let headers = { ...authHeaders };
       try {
@@ -755,7 +755,7 @@ export class FeedService {
       } catch (error) {
         console.warn('Failed to get CSRF headers:', error);
       }
-      
+
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/comments`, {
         method: 'POST',
         headers: {
@@ -776,12 +776,12 @@ export class FeedService {
           timestamp: new Date(),
           retryable: response.status >= 500 || response.status === 429
         };
-        
+
         throw error;
       }
 
       const comment = await response.json();
-      
+
       // Track success event
       feedAnalytics.trackEvent({
         eventType: 'comment_add',
@@ -789,25 +789,25 @@ export class FeedService {
         timestamp: new Date(),
         metadata: { hasParent: !!parentCommentId }
       });
-      
+
       // Invalidate feed cache to ensure updated comment counts appear
       cacheUtils.invalidate(/^feed_/); // Clear all feed cache entries to ensure fresh data
-      
+
       return comment;
     } catch (error: any) {
       console.error('Error adding comment:', error);
-      
+
       // Track error event
       feedAnalytics.trackEvent({
         eventType: 'comment_add_error',
         postId,
         timestamp: new Date(),
-        metadata: { 
+        metadata: {
           hasParent: !!parentCommentId,
-          error: error.message || 'Unknown error' 
+          error: error.message || 'Unknown error'
         }
       });
-      
+
       throw error;
     }
   }
@@ -843,12 +843,12 @@ export class FeedService {
           timestamp: new Date(),
           retryable: response.status >= 500 || response.status === 429
         };
-        
+
         throw error;
       }
 
       const comments = await response.json();
-      
+
       // Track success event
       feedAnalytics.trackEvent({
         eventType: 'comments_load',
@@ -856,24 +856,24 @@ export class FeedService {
         timestamp: new Date(),
         metadata: { page, limit, sort }
       });
-      
+
       return comments;
     } catch (error: any) {
       console.error('Error fetching comments:', error);
-      
+
       // Track error event
       feedAnalytics.trackEvent({
         eventType: 'comments_load_error',
         postId,
         timestamp: new Date(),
-        metadata: { 
-          page, 
-          limit, 
+        metadata: {
+          page,
+          limit,
           sort,
-          error: error.message || 'Unknown error' 
+          error: error.message || 'Unknown error'
         }
       });
-      
+
       return { comments: [], pagination: { page, limit, total: 0, totalPages: 0 } };
     }
   }
@@ -909,36 +909,36 @@ export class FeedService {
           timestamp: new Date(),
           retryable: response.status >= 500 || response.status === 429
         };
-        
+
         throw error;
       }
 
       const replies = await response.json();
-      
+
       // Track success event
       feedAnalytics.trackEvent({
         eventType: 'replies_load',
         timestamp: new Date(),
         metadata: { commentId, page, limit, sort }
       });
-      
+
       return replies;
     } catch (error: any) {
       console.error('Error fetching comment replies:', error);
-      
+
       // Track error event
       feedAnalytics.trackEvent({
         eventType: 'replies_load_error',
         timestamp: new Date(),
-        metadata: { 
-          commentId, 
-          page, 
-          limit, 
+        metadata: {
+          commentId,
+          page,
+          limit,
           sort,
-          error: error.message || 'Unknown error' 
+          error: error.message || 'Unknown error'
         }
       });
-      
+
       return { replies: [], pagination: { page, limit, total: 0, totalPages: 0 } };
     }
   }
@@ -961,7 +961,7 @@ export class FeedService {
 
       // Get base auth headers from enhancedAuthService
       const authHeaders = await enhancedAuthService.getAuthHeaders();
-      
+
       // Verify auth headers were properly set
       if (!authHeaders.Authorization || authHeaders.Authorization === 'Bearer null') {
         console.error('❌ Auth headers missing or invalid for reaction');
@@ -1005,18 +1005,18 @@ export class FeedService {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        
+
         // Provide specific error messages for authentication issues
         if (response.status === 401) {
           const errorCode = errorData.error?.code || errorData.code;
           let message = 'Authentication required. Please sign in to react to posts.';
-          
+
           if (errorCode === 'INVALID_TOKEN') {
             message = 'Your session has expired. Please refresh the page and sign in again.';
           } else if (errorCode === 'MISSING_TOKEN') {
             message = 'Please sign in to react to posts. Click the wallet icon to connect.';
           }
-          
+
           const error: FeedError = {
             code: errorCode || 'AUTH_REQUIRED',
             message,
@@ -1025,19 +1025,19 @@ export class FeedService {
           };
           throw error;
         }
-        
+
         const error: FeedError = {
           code: `HTTP_${response.status}`,
           message: errorData.error?.message || errorData.message || `Failed to add reaction: ${response.statusText}`,
           timestamp: new Date(),
           retryable: response.status >= 500 || response.status === 429
         };
-        
+
         throw error;
       }
 
       const reaction = await response.json();
-      
+
       // Track success event
       feedAnalytics.trackEvent({
         eventType: 'reaction_add',
@@ -1045,26 +1045,26 @@ export class FeedService {
         timestamp: new Date(),
         metadata: { type, tokenAmount }
       });
-      
+
       // Invalidate feed cache to ensure updated reaction counts appear
       cacheUtils.invalidate(/^feed_/); // Clear all feed cache entries to ensure fresh data
-      
+
       return reaction;
     } catch (error: any) {
       console.error('Error adding reaction:', error);
-      
+
       // Track error event
       feedAnalytics.trackEvent({
         eventType: 'reaction_add_error',
         postId,
         timestamp: new Date(),
-        metadata: { 
-          type, 
+        metadata: {
+          type,
           tokenAmount,
-          error: error.message || 'Unknown error' 
+          error: error.message || 'Unknown error'
         }
       });
-      
+
       throw error;
     }
   }
@@ -1089,23 +1089,23 @@ export class FeedService {
           timestamp: new Date(),
           retryable: response.status >= 500 || response.status === 429
         };
-        
+
         throw error;
       }
 
       const reactions = await response.json();
-      
+
       // Track success event
       feedAnalytics.trackEvent({
         eventType: 'reactions_load',
         postId,
         timestamp: new Date()
       });
-      
+
       return reactions;
     } catch (error: any) {
       console.error('Error fetching post reactions:', error);
-      
+
       // Track error event
       feedAnalytics.trackEvent({
         eventType: 'reactions_load_error',
@@ -1113,7 +1113,7 @@ export class FeedService {
         timestamp: new Date(),
         metadata: { error: error.message || 'Unknown error' }
       });
-      
+
       return { postId, totalReactions: 0, reactionsByType: [], recentReactions: [] };
     }
   }
@@ -1125,7 +1125,7 @@ export class FeedService {
       if (tokenType === 'LDAO') {
         // Dynamically import web3 services to avoid circular dependencies
         const { communityWeb3Service } = await import('@/services/communityWeb3Service');
-        
+
         // First, get the post details to get the author address
         const postResponse = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}`, {
           method: 'GET',
@@ -1133,18 +1133,18 @@ export class FeedService {
             'Content-Type': 'application/json',
           },
         });
-        
+
         if (!postResponse.ok) {
           throw new Error('Failed to fetch post details');
         }
-        
+
         const postData = await postResponse.json();
         const authorAddress = postData.data?.post?.author?.address || postData.data?.post?.authorAddress;
-        
+
         if (!authorAddress) {
           throw new Error('Could not determine post author address');
         }
-        
+
         // Send tip through blockchain (the service will check the sender's balance)
         const txHash = await communityWeb3Service.tipCommunityPost({
           postId,
@@ -1153,7 +1153,7 @@ export class FeedService {
           token: tokenType,
           message: message || ''
         });
-        
+
         // Record the tip in the database for tracking
         const authHeaders = await enhancedAuthService.getAuthHeaders();
         const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/tip`, {
@@ -1169,7 +1169,7 @@ export class FeedService {
             txHash // Include transaction hash for reference
           }),
         });
-        
+
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           const error: FeedError = {
@@ -1178,12 +1178,12 @@ export class FeedService {
             timestamp: new Date(),
             retryable: response.status >= 500 || response.status === 429
           };
-          
+
           throw error;
         }
-        
+
         const tip = await response.json();
-        
+
         // Track success event
         feedAnalytics.trackEvent({
           eventType: 'tip_send',
@@ -1191,10 +1191,10 @@ export class FeedService {
           timestamp: new Date(),
           metadata: { amount, tokenType, hasMessage: !!message, txHash }
         });
-        
+
         // Invalidate feed cache to ensure updated tip counts appear
         cacheUtils.invalidate(/^feed_/); // Clear all feed cache entries to ensure fresh data
-        
+
         return { ...tip, txHash };
       } else {
         // For other token types, use the existing backend-only approach
@@ -1220,12 +1220,12 @@ export class FeedService {
             timestamp: new Date(),
             retryable: response.status >= 500 || response.status === 429
           };
-          
+
           throw error;
         }
 
         const tip = await response.json();
-        
+
         // Track success event
         feedAnalytics.trackEvent({
           eventType: 'tip_send',
@@ -1233,28 +1233,28 @@ export class FeedService {
           timestamp: new Date(),
           metadata: { amount, tokenType, hasMessage: !!message }
         });
-        
+
         // Invalidate feed cache to ensure updated tip counts appear
         cacheUtils.invalidate(/^feed_/); // Clear all feed cache entries to ensure fresh data
-        
+
         return tip;
       }
     } catch (error: any) {
       console.error('Error sending tip:', error);
-      
+
       // Track error event
       feedAnalytics.trackEvent({
         eventType: 'tip_send_error',
         postId,
         timestamp: new Date(),
-        metadata: { 
-          amount, 
-          tokenType, 
+        metadata: {
+          amount,
+          tokenType,
           hasMessage: !!message,
-          error: error.message || 'Unknown error' 
+          error: error.message || 'Unknown error'
         }
       });
-      
+
       throw error;
     }
   }
@@ -1283,12 +1283,12 @@ export class FeedService {
           timestamp: new Date(),
           retryable: response.status >= 500 || response.status === 429
         };
-        
+
         throw error;
       }
 
       const share = await response.json();
-      
+
       // Track success event
       feedAnalytics.trackEvent({
         eventType: 'post_share',
@@ -1296,23 +1296,23 @@ export class FeedService {
         timestamp: new Date(),
         metadata: { platform, hasMessage: !!message }
       });
-      
+
       return share;
     } catch (error: any) {
       console.error('Error sharing post:', error);
-      
+
       // Track error event
       feedAnalytics.trackEvent({
         eventType: 'post_share_error',
         postId,
         timestamp: new Date(),
-        metadata: { 
-          platform, 
+        metadata: {
+          platform,
           hasMessage: !!message,
-          error: error.message || 'Unknown error' 
+          error: error.message || 'Unknown error'
         }
       });
-      
+
       throw error;
     }
   }
@@ -1337,23 +1337,23 @@ export class FeedService {
           timestamp: new Date(),
           retryable: response.status >= 500 || response.status === 429
         };
-        
+
         throw error;
       }
 
       const bookmark = await response.json();
-      
+
       // Track success event
       feedAnalytics.trackEvent({
         eventType: 'bookmark_toggle',
         postId,
         timestamp: new Date()
       });
-      
+
       return bookmark;
     } catch (error: any) {
       console.error('Error toggling bookmark:', error);
-      
+
       // Track error event
       feedAnalytics.trackEvent({
         eventType: 'bookmark_toggle_error',
@@ -1361,7 +1361,7 @@ export class FeedService {
         timestamp: new Date(),
         metadata: { error: error.message || 'Unknown error' }
       });
-      
+
       throw error;
     }
   }
@@ -1376,7 +1376,7 @@ export class FeedService {
       const wsBaseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
         ? 'ws://localhost:3004'
         : (process.env.NEXT_PUBLIC_BACKEND_URL?.replace('http', 'ws') || 'ws://localhost:10000');
-      
+
       const wsUrl = `${wsBaseUrl}/ws/feed`;
       const ws = new WebSocket(wsUrl);
 
@@ -1388,7 +1388,7 @@ export class FeedService {
             const postData = data.data.post || data.data;
             const transformedPost = convertBackendPostToPost(postData);
             callback(transformedPost);
-            
+
             // Track success event
             feedAnalytics.trackEvent({
               eventType: 'realtime_post_received',
@@ -1398,7 +1398,7 @@ export class FeedService {
           }
         } catch (error) {
           console.error('Error processing WebSocket message:', error);
-          
+
           // Track error event
           feedAnalytics.trackEvent({
             eventType: 'realtime_message_error',
@@ -1410,7 +1410,7 @@ export class FeedService {
 
       ws.onerror = (error) => {
         console.error('WebSocket error:', error);
-        
+
         // Track error event
         feedAnalytics.trackEvent({
           eventType: 'websocket_error',
@@ -1425,19 +1425,19 @@ export class FeedService {
       };
     } catch (error: any) {
       console.error('Error setting up feed updates subscription:', error);
-      
+
       // Track error event
       feedAnalytics.trackEvent({
         eventType: 'subscription_setup_error',
         timestamp: new Date(),
-        metadata: { 
+        metadata: {
           filter: filter ? JSON.stringify(filter) : 'none',
-          error: error.message || 'Unknown error' 
+          error: error.message || 'Unknown error'
         }
       });
-      
+
       // Return no-op cleanup function
-      return () => {};
+      return () => { };
     }
   }
 
@@ -1471,23 +1471,23 @@ export class FeedService {
           timestamp: new Date(),
           retryable: response.status >= 500 || response.status === 429
         };
-        
+
         throw error;
       }
 
       const result = await response.json();
-      
+
       // Track success event
       feedAnalytics.trackEvent({
         eventType: 'post_upvote',
         postId,
         timestamp: new Date()
       });
-      
+
       return result;
     } catch (error: any) {
       console.error('Error upvoting post:', error);
-      
+
       // Track error event
       feedAnalytics.trackEvent({
         eventType: 'post_upvote_error',
@@ -1495,7 +1495,7 @@ export class FeedService {
         timestamp: new Date(),
         metadata: { error: error.message || 'Unknown error' }
       });
-      
+
       throw error;
     }
   }
@@ -1520,23 +1520,23 @@ export class FeedService {
           timestamp: new Date(),
           retryable: response.status >= 500 || response.status === 429
         };
-        
+
         throw error;
       }
 
       const result = await response.json();
-      
+
       // Track success event
       feedAnalytics.trackEvent({
         eventType: 'post_downvote',
         postId,
         timestamp: new Date()
       });
-      
+
       return result;
     } catch (error: any) {
       console.error('Error downvoting post:', error);
-      
+
       // Track error event
       feedAnalytics.trackEvent({
         eventType: 'post_downvote_error',
@@ -1544,7 +1544,7 @@ export class FeedService {
         timestamp: new Date(),
         metadata: { error: error.message || 'Unknown error' }
       });
-      
+
       throw error;
     }
   }

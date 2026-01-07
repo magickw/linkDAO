@@ -1,6 +1,6 @@
 // Existing models
 export * from './Post';
-export * from './QuickPost';
+export * from './Status';
 export * from './UserProfile';
 
 // Community models

@@ -1,4 +1,4 @@
-import { QuickPostService } from '../quickPostService';
+import { StatusService } from '../statusService';
 import { enhancedAuthService } from '../enhancedAuthService';
 import { webcrypto } from 'crypto';
 
@@ -19,7 +19,7 @@ jest.mock('../enhancedAuthService', () => ({
     }
 }));
 
-describe('QuickPostService', () => {
+describe('StatusService', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         // Mock localStorage
@@ -34,7 +34,7 @@ describe('QuickPostService', () => {
         jest.restoreAllMocks();
     });
 
-    describe('createQuickPost', () => {
+    describe('createStatus', () => {
         it('should send authorId instead of author in request body', async () => {
             const mockPost = {
                 id: '1',
@@ -62,7 +62,7 @@ describe('QuickPostService', () => {
                 content: 'Test post content'
             };
 
-            await QuickPostService.createQuickPost(postData);
+            await StatusService.createStatus(postData);
 
             // Get the POST request (second call, first is CSRF token)
             const fetchCalls = (global.fetch as jest.Mock).mock.calls;
@@ -100,7 +100,7 @@ describe('QuickPostService', () => {
 
             (enhancedAuthService.getAuthHeaders as jest.Mock).mockReturnValue(mockAuthHeaders);
 
-            await QuickPostService.createQuickPost({
+            await StatusService.createStatus({
                 author: '0x1234567890abcdef',
                 content: 'Test post'
             });
@@ -127,7 +127,7 @@ describe('QuickPostService', () => {
             (enhancedAuthService.getAuthHeaders as jest.Mock).mockReturnValue({});
 
             await expect(
-                QuickPostService.createQuickPost({
+                StatusService.createStatus({
                     author: '',
                     content: 'Test post'
                 })
@@ -143,17 +143,17 @@ describe('QuickPostService', () => {
                 .mockResolvedValueOnce({
                     ok: false,
                     status: 401,
-                    json: async () => ({ error: 'Unauthorized to create quick post' })
+                    json: async () => ({ error: 'Unauthorized to create status' })
                 });
 
             (enhancedAuthService.getAuthHeaders as jest.Mock).mockReturnValue({});
 
             await expect(
-                QuickPostService.createQuickPost({
+                StatusService.createStatus({
                     author: '0x1234567890abcdef',
                     content: 'Test post'
                 })
-            ).rejects.toThrow('Unauthorized to create quick post');
+            ).rejects.toThrow('Unauthorized to create status');
         });
 
         it('should handle network errors gracefully', async () => {
@@ -170,7 +170,7 @@ describe('QuickPostService', () => {
             (enhancedAuthService.getAuthHeaders as jest.Mock).mockReturnValue({});
 
             await expect(
-                QuickPostService.createQuickPost({
+                StatusService.createStatus({
                     author: '0x1234567890abcdef',
                     content: 'Test post'
                 })
@@ -205,7 +205,7 @@ describe('QuickPostService', () => {
                 parentId: 'parent-post-id'
             };
 
-            await QuickPostService.createQuickPost(postData);
+            await StatusService.createStatus(postData);
 
             const fetchCalls = (global.fetch as jest.Mock).mock.calls;
             const postCall = fetchCalls.find(call => call[1]?.method === 'POST');
@@ -217,8 +217,8 @@ describe('QuickPostService', () => {
         });
     });
 
-    describe('getQuickPost', () => {
-        it('should fetch a quick post by id', async () => {
+    describe('getStatus', () => {
+        it('should fetch a status by id', async () => {
             const mockPost = {
                 id: '123',
                 author: '0x1234567890abcdef',
@@ -233,11 +233,11 @@ describe('QuickPostService', () => {
 
             (enhancedAuthService.getAuthHeaders as jest.Mock).mockReturnValue({});
 
-            const result = await QuickPostService.getQuickPost('123');
+            const result = await StatusService.getStatus('123');
 
             expect(result).toEqual(mockPost);
             expect(global.fetch).toHaveBeenCalledWith(
-                expect.stringContaining('/api/quick-posts/123'),
+                expect.stringContaining('/api/statuses/123'),
                 expect.any(Object)
             );
         });
@@ -251,7 +251,7 @@ describe('QuickPostService', () => {
 
             (enhancedAuthService.getAuthHeaders as jest.Mock).mockReturnValue({});
 
-            const result = await QuickPostService.getQuickPost('nonexistent');
+            const result = await StatusService.getStatus('nonexistent');
 
             expect(result).toBeNull();
         });

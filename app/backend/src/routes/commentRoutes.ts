@@ -14,10 +14,10 @@ router.post('/community-posts/:postId/comments', csrfProtection, authMiddleware,
   try {
     const { postId } = req.params;
     const { content, parentCommentId } = req.body;
-    
+
     // Extract user address from authenticated request
     const userAddress = (req as any).user?.address || (req as any).user?.walletAddress;
-    
+
     if (!userAddress) {
       return res.status(401).json({
         success: false,
@@ -35,7 +35,7 @@ router.post('/community-posts/:postId/comments', csrfProtection, authMiddleware,
     // For /community-posts/:postId/comments endpoint, always use the posts table
     const comment = await commentService.createComment({
       postId: postId,
-      quickPostId: undefined,
+      statusId: undefined,
       authorAddress: userAddress,
       content,
       // Explicitly set to undefined (not null) for top-level comments
@@ -151,10 +151,10 @@ router.put('/comments/:commentId', csrfProtection, authMiddleware, async (req: R
   try {
     const { commentId } = req.params;
     const { content } = req.body;
-    
+
     // Extract user address from authenticated request
     const userAddress = (req as any).user?.address || (req as any).user?.walletAddress;
-    
+
     if (!userAddress) {
       return res.status(401).json({
         success: false,
@@ -195,10 +195,10 @@ router.put('/comments/:commentId', csrfProtection, authMiddleware, async (req: R
 router.delete('/comments/:commentId', csrfProtection, authMiddleware, async (req: Request, res: Response) => {
   try {
     const { commentId } = req.params;
-    
+
     // Extract user address from authenticated request
     const userAddress = (req as any).user?.address || (req as any).user?.walletAddress;
-    
+
     if (!userAddress) {
       return res.status(401).json({
         success: false,

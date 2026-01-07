@@ -1,6 +1,6 @@
 
 import { db } from '../db';
-import { users, posts, quickPosts, comments } from '../db/schema';
+import { users, posts, statuses, comments } from '../db/schema';
 import { feedService } from '../services/feedService';
 import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
@@ -11,7 +11,7 @@ async function verifyComments() {
     const testWallet = `0x${uuidv4().replace(/-/g, '').substring(0, 40)}`;
     let userId: string;
     let regularPostId: string;
-    let quickPostId: string;
+    let statusId: string;
 
     try {
         // 1. Create test user
@@ -36,17 +36,18 @@ async function verifyComments() {
         regularPostId = regularPost[0].id;
         console.log('✅ Regular post created:', regularPostId);
 
-        // 3. Create quick post
-        console.log('Creating quick post...');
-        const quickPost = await db.insert(quickPosts).values({
+        // 3. Create status
+        console.log('Creating status...');
+        const status = await db.insert(statuses).values({
             authorId: userId,
-            content: 'Test quick post content',
-            contentCid: 'QmTestQuick',
+            content: 'Test status content',
+            contentCid: 'QmTestStatus',
+            shareId: Math.random().toString(36).substring(7),
             createdAt: new Date(),
             stakedValue: '0'
         }).returning();
-        quickPostId = quickPost[0].id;
-        console.log('✅ Quick post created:', quickPostId);
+        statusId = status[0].id;
+        console.log('✅ Status created:', statusId);
 
         // 4. Add comment to regular post
         console.log('Adding comment to regular post...');
@@ -57,19 +58,19 @@ async function verifyComments() {
         });
         console.log('✅ Comment added to regular post');
 
-        // 5. Add comment to quick post
-        console.log('Adding comment to quick post...');
+        // 5. Add comment to status
+        console.log('Adding comment to status...');
         await feedService.addComment({
-            postId: quickPostId,
+            statusId: statusId,
             userAddress: testWallet,
-            content: 'Test comment on quick post'
+            content: 'Test comment on status'
         });
-        console.log('✅ Comment added to quick post');
+        console.log('✅ Comment added to status');
 
         // 6. Verify comments in DB
         console.log('Verifying comments in DB...');
         const regularComments = await db.select().from(comments).where(eq(comments.postId, regularPostId));
-        const quickComments = await db.select().from(comments).where(eq(comments.quickPostId, quickPostId));
+        const statusComments = await db.select().from(comments).where(eq(comments.statusId, statusId));
 
         if (regularComments.length === 1 && regularComments[0].content === 'Test comment on regular post') {
             console.log('✅ Regular post comment persisted correctly');
@@ -77,10 +78,10 @@ async function verifyComments() {
             console.error('❌ Regular post comment failed persistence check', regularComments);
         }
 
-        if (quickComments.length === 1 && quickComments[0].content === 'Test comment on quick post') {
-            console.log('✅ Quick post comment persisted correctly');
+        if (statusComments.length === 1 && statusComments[0].content === 'Test comment on status') {
+            console.log('✅ Status comment persisted correctly');
         } else {
-            console.error('❌ Quick post comment failed persistence check', quickComments);
+            console.error('❌ Status comment failed persistence check', statusComments);
         }
 
         // 7. Verify comment counts in feed
@@ -96,7 +97,7 @@ async function verifyComments() {
         });
 
         const feedRegularPost = feed.posts.find((p: any) => p.id === regularPostId);
-        const feedQuickPost = feed.posts.find((p: any) => p.id === quickPostId);
+        const feedStatus = feed.posts.find((p: any) => p.id === statusId);
 
         if (feedRegularPost && feedRegularPost.commentCount === 1) {
             console.log('✅ Regular post comment count correct in feed');
@@ -104,10 +105,10 @@ async function verifyComments() {
             console.error('❌ Regular post comment count incorrect in feed:', feedRegularPost?.commentCount);
         }
 
-        if (feedQuickPost && feedQuickPost.commentCount === 1) {
-            console.log('✅ Quick post comment count correct in feed');
+        if (feedStatus && feedStatus.commentCount === 1) {
+            console.log('✅ Status comment count correct in feed');
         } else {
-            console.error('❌ Quick post comment count incorrect in feed:', feedQuickPost?.commentCount);
+            console.error('❌ Status comment count incorrect in feed:', feedStatus?.commentCount);
         }
 
     } catch (error) {
@@ -118,7 +119,7 @@ async function verifyComments() {
         if (userId) {
             // Delete posts first to avoid FK constraint violations
             if (regularPostId) await db.delete(posts).where(eq(posts.id, regularPostId));
-            if (quickPostId) await db.delete(quickPosts).where(eq(quickPosts.id, quickPostId));
+            if (statusId) await db.delete(statuses).where(eq(statuses.id, statusId));
             await db.delete(users).where(eq(users.id, userId));
         }
         console.log('✅ Cleanup complete');

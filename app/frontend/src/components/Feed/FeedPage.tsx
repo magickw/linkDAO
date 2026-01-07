@@ -50,10 +50,10 @@ export const FeedPage: React.FC<FeedPageProps> = ({
           totalPages: 1
         };
       } else {
-        // For home/feed page, get the enhanced feed that includes both regular posts and quickPosts
+        // For home/feed page, get the enhanced feed that includes both regular posts and statuses
         // AND posts from communities the user has joined
         let userCommunities: string[] = [];
-        
+
         // Fetch user's community memberships if they're connected
         if (address) {
           try {

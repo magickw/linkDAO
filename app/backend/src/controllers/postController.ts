@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
 import { PostService } from '../services/postService';
-import { QuickPostService } from '../services/quickPostService';
+import { StatusService } from '../services/statusService';
 import { MetadataService } from '../services/metadataService';
 import { UserProfileService } from '../services/userProfileService';
 import { CreatePostInput } from '../models/Post';
 import { db } from '../db';
-import { posts, users, quickPosts } from '../db/schema';
+import { posts, users, statuses } from '../db/schema';
 import { eq, and, sql, isNotNull } from 'drizzle-orm';
 
 // Remove in-memory storage
@@ -14,13 +14,13 @@ import { eq, and, sql, isNotNull } from 'drizzle-orm';
 
 export class PostController {
   private postService: PostService;
-  private quickPostService: QuickPostService;
+  private statusService: StatusService;
   private metadataService: MetadataService;
   private userProfileService: UserProfileService;
 
   constructor() {
     this.postService = new PostService();
-    this.quickPostService = new QuickPostService();
+    this.statusService = new StatusService();
     this.metadataService = new MetadataService();
     this.userProfileService = new UserProfileService();
   }
@@ -283,23 +283,23 @@ export class PostController {
       // Log initial request
       console.log('📝 [REPOST] Request:', { originalPostId, author });
 
-      // Check if original post is a Quick Post
-      const originalQuickPost = await this.quickPostService.getQuickPost(originalPostId);
+      // Check if original post is a Status
+      const originalStatus = await this.statusService.getStatus(originalPostId);
 
       // FLATTEN REPOSTS: If the target is itself a repost, find the original source
       let targetPostId = originalPostId;
-      if (originalQuickPost && originalQuickPost.isRepost && originalQuickPost.parentId) {
-        console.log('🔄 [REPOST] Target is already a repost. Flattening chain to point to original:', originalQuickPost.parentId);
-        targetPostId = originalQuickPost.parentId;
+      if (originalStatus && originalStatus.isRepost && originalStatus.parentId) {
+        console.log('🔄 [REPOST] Target is already a repost. Flattening chain to point to original:', originalStatus.parentId);
+        targetPostId = originalStatus.parentId;
       }
 
       // DUPLICATE CHECK: Check if user has already reposted this specific content
       const existingRepost = await db.select()
-        .from(quickPosts) // We only care about quick_posts table for feed reposts
+        .from(statuses) // We only care about statuses table for feed reposts
         .where(and(
-          eq(quickPosts.authorId, user.id),
-          eq(quickPosts.parentId, targetPostId),
-          eq(quickPosts.isRepost, true)
+          eq(statuses.authorId, user.id),
+          eq(statuses.parentId, targetPostId),
+          eq(statuses.isRepost, true)
         ))
         .limit(1);
 
@@ -311,14 +311,14 @@ export class PostController {
         });
       }
 
-      if (!originalQuickPost) {
-        // If not found in Quick Posts, check if it's a Community Post (to give specific error)
+      if (!originalStatus) {
+        // If not found in Statuses, check if it's a Community Post (to give specific error)
         const originalCommunityPost = await this.postService.getPostById(originalPostId);
 
         if (originalCommunityPost) {
           return res.status(400).json({
             success: false,
-            error: 'Community posts cannot be reposted. Only Quick Posts can be reposted.'
+            error: 'Community posts cannot be reposted. Only Statuses can be reposted.'
           });
         }
 
@@ -328,7 +328,7 @@ export class PostController {
         });
       }
 
-      // Create repost using QuickPostService (store in quick_posts table)
+      // Create repost using StatusService (store in statuses table)
       // This ensures it shows up in Home Feed / User Profile correctly, and NOT in Community Feed
 
       // Calculate content CID
@@ -343,34 +343,14 @@ export class PostController {
         contentCid = `fallback-${Date.now()}-${Math.random().toString(36).substring(7)}`;
       }
 
-      const newRepost = await this.quickPostService.createQuickPost({
+      const newRepost = await this.statusService.createStatus({
         authorId: user.id, // Use the resolved UUID, not the wallet address
         content: repostContent,
         contentCid: contentCid,
         parentId: targetPostId, // Use the flattened target ID
-        tags: JSON.stringify(originalQuickPost.tags || []),
-        // onchainRef: originalQuickPost.onchainRef, // Not available in type
-        isTokenGated: originalQuickPost.isTokenGated,
-        gatedContentPreview: originalQuickPost.gatedContentPreview,
+        tags: originalStatus.tags || [],
         isRepost: true
       });
-
-      // QuickPostService.createQuickPost signature:
-      // authorId, contentCid (required), shareId (generated internal), ...
-
-      // If QuickPostService doesn't handle IPFS, I might need to reuse MetadataService here or in QuickPostService.
-      // However, PostService.createPost did the upload.
-
-      // Let's check if I can just pass a placeholder for now to unblock, or if I should properly upload.
-      // The user wants to fix the "reposted quick posts are shown on the community feed" issue.
-      // Storing in quick_posts fixes that.
-
-      // For now, I will use a simple placeholder CID or re-use logic if I catch it. 
-      // Ideally I should upload.
-
-      // But wait! properties references:
-      // quickPostService.createQuickPost(postData: QuickPostInput)
-      // QuickPostInput: { authorId, contentCid, ... }
 
       console.log('Repost created:', newRepost.id);
 
@@ -378,7 +358,7 @@ export class PostController {
         success: true,
         data: {
           ...newRepost,
-          originalPost: originalQuickPost,
+          originalPost: originalStatus,
           isRepost: true
         }
       });
@@ -398,9 +378,9 @@ export class PostController {
       // Try deleting from standard posts first
       let deleted = await this.postService.deletePost(id);
 
-      // If not found in standard posts, try deleting from quick posts
+      // If not found in standard posts, try deleting from statuses
       if (!deleted) {
-        deleted = await this.quickPostService.deleteQuickPost(id);
+        deleted = await this.statusService.deleteStatus(id, ''); // Note: userAddress needed? Logic likely requires ID only for admin or uses context
       }
 
       if (!deleted) {
@@ -442,21 +422,21 @@ export class PostController {
       // FLATTEN REPOSTS: Check if the target is itself a repost, find the original source
       // This mirrors the logic in repostPost ensures we delete the correct row
       let targetPostId = originalPostId;
-      const targetQuickPost = await this.quickPostService.getQuickPost(originalPostId);
-      if (targetQuickPost && targetQuickPost.isRepost && targetQuickPost.parentId) {
-        console.log('🔄 [UNREPOST] Target is a repost. Flattening chain to point to original:', targetQuickPost.parentId);
-        targetPostId = targetQuickPost.parentId;
+      const targetStatus = await this.statusService.getStatus(originalPostId);
+      if (targetStatus && targetStatus.isRepost && targetStatus.parentId) {
+        console.log('🔄 [UNREPOST] Target is a repost. Flattening chain to point to original:', targetStatus.parentId);
+        targetPostId = targetStatus.parentId;
       }
 
       // Direct DB deletion logic for both tables to be safe (handle legacy and new)
 
 
-      // 1. Try deleting from quick_posts
-      const deletedQuick = await db.delete(quickPosts)
+      // 1. Try deleting from statuses
+      const deletedStatus = await db.delete(statuses)
         .where(and(
-          eq(quickPosts.parentId, targetPostId),
-          eq(quickPosts.authorId, user[0].id),
-          eq(quickPosts.isRepost, true)
+          eq(statuses.parentId, targetPostId),
+          eq(statuses.authorId, user[0].id),
+          eq(statuses.isRepost, true)
         ))
         .returning();
 
@@ -469,7 +449,7 @@ export class PostController {
         ))
         .returning();
 
-      if (deletedQuick.length === 0 && deletedRegular.length === 0) {
+      if (deletedStatus.length === 0 && deletedRegular.length === 0) {
         return res.status(404).json({
           success: false,
           error: 'Repost not found'

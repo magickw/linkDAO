@@ -26,7 +26,7 @@ export interface FeedFilter {
   author?: string;
   feedSource?: 'following' | 'all';
   userAddress?: string;
-  postTypes?: string[]; // Can be used to filter by ['quickPosts'] or ['posts']
+  postTypes?: string[]; // Can be used to filter by ['statuses'] or ['posts']
   web3Sort?: Web3SortType;
   web3SortDirection?: 'asc' | 'desc';
 }
@@ -46,7 +46,7 @@ export interface AuthorProfile {
 }
 
 // Standardized post interface that matches backend schema
-// This can be either a regular Post (with title/community) or QuickPost (without title/community)
+// This can be either a regular Post (with title/community) or Status (without title/community)
 export interface EnhancedPost {
   id: string;
   shareId?: string; // Share ID for generating share URLs
@@ -55,7 +55,7 @@ export interface EnhancedPost {
   handle?: string; // User handle from backend
   authorProfile: AuthorProfile; // Author profile information - required
   parentId: string | null;
-  title?: string; // Optional for quickPosts
+  title?: string; // Optional for statuses
   content: string; // Required - content text
   contentCid: string;
   mediaCids: string[];
@@ -86,8 +86,8 @@ export interface EnhancedPost {
   trendingStatus?: string | null;
   trendingScore?: number;
   isBookmarked?: boolean;
-  communityId?: string; // Optional for quickPosts
-  communityName?: string; // Optional for quickPosts
+  communityId?: string; // Optional for statuses
+  communityName?: string; // Optional for statuses
   contentType?: 'text' | 'media' | 'link' | 'poll' | 'proposal';
 
   // Additional fields from backend
@@ -102,8 +102,8 @@ export interface EnhancedPost {
   commentCount?: number;
   viewCount?: number;
 
-  // Flag to distinguish quickPosts from regular posts
-  isQuickPost?: boolean;
+  // Flag to distinguish statuses from regular posts
+  isStatus?: boolean;
 
   // Repost features
   isRepost?: boolean;

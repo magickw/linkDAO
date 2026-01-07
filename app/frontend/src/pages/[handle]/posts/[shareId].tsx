@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Layout from '@/components/Layout';
 import { EnhancedPostCard } from '@/components/Feed/EnhancedPostCard';
-import { QuickPost } from '@/models/QuickPost';
+import { Status } from '@/models/Status';
 import { useToast } from '@/context/ToastContext';
 import Link from 'next/link';
 import { ArrowLeft, Loader2, Share2 } from 'lucide-react';
@@ -19,7 +19,7 @@ export default function UserPostPage() {
     const { handle, shareId } = router.query;
     const { addToast } = useToast();
 
-    const [post, setPost] = useState<QuickPost | null>(null);
+    const [post, setPost] = useState<Status | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [shareUrl, setShareUrl] = useState<string>('');
@@ -53,7 +53,7 @@ export default function UserPostPage() {
                 const data = await response.json();
 
                 if (data.success && data.data) {
-                    const postData = data.data as QuickPost;
+                    const postData = data.data as Status;
 
                     // Verify the handle matches the post author
                     const postHandle = postData.authorProfile?.handle || postData.author?.slice(0, 8);

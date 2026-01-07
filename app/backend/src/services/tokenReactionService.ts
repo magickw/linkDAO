@@ -5,7 +5,7 @@
 
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
-import { reactions, quickPostReactions, posts, quickPosts, users, reactionPurchases } from '../db/schema';
+import { reactions, statusReactions, posts, statuses, users, reactionPurchases } from '../db/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 
 export type ReactionType = '🔥' | '🚀' | '💎';
@@ -131,9 +131,9 @@ class TokenReactionService {
     // Get post author
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(postId);
     let postAuthor: string;
-    
+
     if (isUUID) {
-      const [post] = await db.select({ author: quickPosts.authorId }).from(quickPosts).where(eq(quickPosts.id, postId)).limit(1);
+      const [post] = await db.select({ author: statuses.authorId }).from(statuses).where(eq(statuses.id, postId)).limit(1);
       if (!post) throw new Error('Post not found');
       postAuthor = post.author;
     } else {
@@ -158,8 +158,8 @@ class TokenReactionService {
 
     // Also update the existing reaction tables for backward compatibility
     if (isUUID) {
-      await db.insert(quickPostReactions).values({
-        quickPostId: postId,
+      await db.insert(statusReactions).values({
+        statusId: postId,
         userId,
         type: reactionType,
         amount: '1', // Count as 1 purchase
@@ -205,13 +205,13 @@ class TokenReactionService {
 
     // Determine if postId is UUID or integer
     const isUUID = typeof postId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(postId);
-    
+
     // Verify post exists - check appropriate table
     let postExists = false;
     if (isUUID) {
-      // Query quickPosts table for UUID
-      const quickPost = await db.select().from(quickPosts).where(eq(quickPosts.id, postId)).limit(1);
-      if (quickPost.length > 0) {
+      // Query statuses table for UUID
+      const status = await db.select().from(statuses).where(eq(statuses.id, postId)).limit(1);
+      if (status.length > 0) {
         postExists = true;
       }
     } else {
@@ -221,7 +221,7 @@ class TokenReactionService {
         postExists = true;
       }
     }
-    
+
     if (!postExists) {
       throw new Error('Post not found');
     }
@@ -232,20 +232,20 @@ class TokenReactionService {
 
     try {
       let newReaction: any;
-      
+
       if (isUUID) {
-        // Insert into quickPostReactions table for UUID posts
-        const [insertedReaction] = await db.insert(quickPostReactions).values({
-          quickPostId: postId,
+        // Insert into statusReactions table for UUID posts
+        const [insertedReaction] = await db.insert(statusReactions).values({
+          statusId: postId,
           userId,
           type,
           amount: amount.toString(),
           rewardsEarned: rewardsEarned.toString(),
         }).returning();
-        
+
         newReaction = insertedReaction;
-        // For UUID-based reactions, postId is the quickPostId
-        newReaction.postId = insertedReaction.quickPostId;
+        // For UUID-based reactions, postId is the statusId
+        newReaction.postId = insertedReaction.statusId;
       } else {
         // Insert into reactions table for posts
         const [insertedReaction] = await db.insert(reactions).values({
@@ -255,7 +255,7 @@ class TokenReactionService {
           amount: amount.toString(),
           rewardsEarned: rewardsEarned.toString(),
         }).returning();
-        
+
         newReaction = insertedReaction;
       }
 
@@ -268,7 +268,7 @@ class TokenReactionService {
 
       const reaction: TokenReaction = {
         id: newReaction.id,
-        postId: newReaction.postId!, // This will be either postId or quickPostId depending on the table
+        postId: newReaction.postId!, // This will be either postId or statusId depending on the table
         userId: newReaction.userId!,
         type: newReaction.type as ReactionType,
         amount: parseFloat(newReaction.amount),
@@ -313,25 +313,25 @@ class TokenReactionService {
       let totals: any, userAmount = 0, topContributors: any;
 
       if (isUUID) {
-        // Query from quickPostReactions table for UUID posts
+        // Query from statusReactions table for UUID posts
         // Get total amount and count
         [totals] = await db
           .select({
-            totalAmount: sql<string>`SUM(${quickPostReactions.amount})`,
-            totalCount: sql<number>`COUNT(${quickPostReactions.id})`,
+            totalAmount: sql<string>`SUM(${statusReactions.amount})`,
+            totalCount: sql<number>`COUNT(${statusReactions.id})`,
           })
-          .from(quickPostReactions)
-          .where(and(eq(quickPostReactions.quickPostId, postId), eq(quickPostReactions.type, type)));
+          .from(statusReactions)
+          .where(and(eq(statusReactions.statusId, postId), eq(statusReactions.type, type)));
 
         // Get user amount if userId provided
         if (userId) {
           const [userReaction] = await db
-            .select({ amount: sql<string>`SUM(${quickPostReactions.amount})` })
-            .from(quickPostReactions)
+            .select({ amount: sql<string>`SUM(${statusReactions.amount})` })
+            .from(statusReactions)
             .where(and(
-              eq(quickPostReactions.quickPostId, postId),
-              eq(quickPostReactions.type, type),
-              eq(quickPostReactions.userId, userId)
+              eq(statusReactions.statusId, postId),
+              eq(statusReactions.type, type),
+              eq(statusReactions.userId, userId)
             ));
           userAmount = parseFloat(userReaction?.amount || '0');
         }
@@ -339,16 +339,16 @@ class TokenReactionService {
         // Get top contributors
         topContributors = await db
           .select({
-            userId: quickPostReactions.userId,
+            userId: statusReactions.userId,
             walletAddress: users.walletAddress,
             handle: users.handle,
-            amount: sql<string>`SUM(${quickPostReactions.amount})`,
+            amount: sql<string>`SUM(${statusReactions.amount})`,
           })
-          .from(quickPostReactions)
-          .innerJoin(users, eq(quickPostReactions.userId, users.id))
-          .where(and(eq(quickPostReactions.quickPostId, postId), eq(quickPostReactions.type, type)))
-          .groupBy(quickPostReactions.userId, users.walletAddress, users.handle)
-          .orderBy(desc(sql<string>`SUM(${quickPostReactions.amount})`))
+          .from(statusReactions)
+          .innerJoin(users, eq(statusReactions.userId, users.id))
+          .where(and(eq(statusReactions.statusId, postId), eq(statusReactions.type, type)))
+          .groupBy(statusReactions.userId, users.walletAddress, users.handle)
+          .orderBy(desc(sql<string>`SUM(${statusReactions.amount})`))
           .limit(5);
       } else {
         // postId is a UUID string
@@ -425,7 +425,7 @@ class TokenReactionService {
    */
   async getReactionSummaries(postId: string, userId?: string): Promise<ReactionSummary[]> {
     const summaries: ReactionSummary[] = [];
-    
+
     for (const type of Object.keys(REACTION_TYPES) as ReactionType[]) {
       const summary = await this.getReactionSummary(postId, type, userId);
       // Always include all reaction types, even if they have no reactions
@@ -450,27 +450,27 @@ class TokenReactionService {
       const isUUID = typeof postId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(postId);
 
       let reactionData: any[];
-      
+
       if (isUUID) {
-        // Query quickPostReactions table for UUID posts
-        const whereConditions = [eq(quickPostReactions.quickPostId, postId)];
+        // Query statusReactions table for UUID posts
+        const whereConditions = [eq(statusReactions.statusId, postId)];
         if (reactionType) {
-          whereConditions.push(eq(quickPostReactions.type, reactionType));
+          whereConditions.push(eq(statusReactions.type, reactionType));
         }
 
         reactionData = await db
           .select({
-            id: quickPostReactions.id,
-            postId: quickPostReactions.quickPostId,  // Map quickPostId to postId field
-            userId: quickPostReactions.userId,
-            type: quickPostReactions.type,
-            amount: quickPostReactions.amount,
-            rewardsEarned: quickPostReactions.rewardsEarned,
-            createdAt: quickPostReactions.createdAt,
+            id: statusReactions.id,
+            postId: statusReactions.statusId,  // Map statusId to postId field
+            userId: statusReactions.userId,
+            type: statusReactions.type,
+            amount: statusReactions.amount,
+            rewardsEarned: statusReactions.rewardsEarned,
+            createdAt: statusReactions.createdAt,
           })
-          .from(quickPostReactions)
+          .from(statusReactions)
           .where(and(...whereConditions))
-          .orderBy(desc(quickPostReactions.createdAt))
+          .orderBy(desc(statusReactions.createdAt))
           .limit(limit + 1) // Get one more to check if there are more results
           .offset(offset);
       } else {
@@ -529,20 +529,20 @@ class TokenReactionService {
       let userReactions: any[];
 
       if (isUUID) {
-        // Query quickPostReactions table for UUID posts
+        // Query statusReactions table for UUID posts
         userReactions = await db
           .select({
-            id: quickPostReactions.id,
-            postId: quickPostReactions.quickPostId,  // Map quickPostId to postId field
-            userId: quickPostReactions.userId,
-            type: quickPostReactions.type,
-            amount: quickPostReactions.amount,
-            rewardsEarned: quickPostReactions.rewardsEarned,
-            createdAt: quickPostReactions.createdAt,
+            id: statusReactions.id,
+            postId: statusReactions.statusId,  // Map statusId to postId field
+            userId: statusReactions.userId,
+            type: statusReactions.type,
+            amount: statusReactions.amount,
+            rewardsEarned: statusReactions.rewardsEarned,
+            createdAt: statusReactions.createdAt,
           })
-          .from(quickPostReactions)
-          .where(and(eq(quickPostReactions.quickPostId, postId), eq(quickPostReactions.userId, userId)))
-          .orderBy(desc(quickPostReactions.createdAt));
+          .from(statusReactions)
+          .where(and(eq(statusReactions.statusId, postId), eq(statusReactions.userId, userId)))
+          .orderBy(desc(statusReactions.createdAt));
       } else {
         // Query reactions table for integer posts
         userReactions = await db
@@ -562,7 +562,7 @@ class TokenReactionService {
 
       return userReactions.map(r => ({
         id: r.id,
-        postId: (r as any).postId || (r as any).quickPostId, // Handle both postId and quickPostId
+        postId: (r as any).postId || (r as any).statusId, // Handle both postId and statusId
         userId: r.userId!,
         type: r.type as ReactionType,
         amount: parseFloat(r.amount),
@@ -600,19 +600,19 @@ class TokenReactionService {
           refundAmount,
         };
       } else {
-        // Check in quickPostReactions table (for UUID posts)
-        const quickReaction = await db
+        // Check in statusReactions table (for UUID posts)
+        const statusReaction = await db
           .select()
-          .from(quickPostReactions)
-          .where(and(eq(quickPostReactions.id, reactionId), eq(quickPostReactions.userId, userId)))
+          .from(statusReactions)
+          .where(and(eq(statusReactions.id, reactionId), eq(statusReactions.userId, userId)))
           .limit(1);
 
-        if (quickReaction.length > 0) {
-          // This is a reaction from the quickPostReactions table (UUID post IDs)
-          const refundAmount = parseFloat(quickReaction[0].amount);
+        if (statusReaction.length > 0) {
+          // This is a reaction from the statusReactions table (UUID post IDs)
+          const refundAmount = parseFloat(statusReaction[0].amount);
 
           // Delete the reaction
-          await db.delete(quickPostReactions).where(eq(quickPostReactions.id, reactionId));
+          await db.delete(statusReactions).where(eq(statusReactions.id, reactionId));
 
           return {
             success: true,
@@ -639,11 +639,11 @@ class TokenReactionService {
       let allReactions: any[];
 
       if (isUUID) {
-        // Query quickPostReactions table for UUID posts
+        // Query statusReactions table for UUID posts
         allReactions = await db
           .select()
-          .from(quickPostReactions)
-          .where(eq(quickPostReactions.quickPostId, postId));
+          .from(statusReactions)
+          .where(eq(statusReactions.statusId, postId));
       } else {
         // Query reactions table for integer posts
         allReactions = await db
@@ -663,8 +663,8 @@ class TokenReactionService {
         reactionBreakdown[type] = {
           count: typeReactions.length,
           totalAmount: typeReactions.reduce((sum, r) => sum + parseFloat(r.amount), 0),
-          averageAmount: typeReactions.length > 0 
-            ? typeReactions.reduce((sum, r) => sum + parseFloat(r.amount), 0) / typeReactions.length 
+          averageAmount: typeReactions.length > 0
+            ? typeReactions.reduce((sum, r) => sum + parseFloat(r.amount), 0) / typeReactions.length
             : 0,
         };
       }
@@ -688,7 +688,7 @@ class TokenReactionService {
   private checkMilestone(totalAmount: number, type: ReactionType) {
     const config = REACTION_TYPES[type];
     const milestones = [10, 25, 50, 100, 250, 500, 1000];
-    
+
     for (const milestone of milestones) {
       const threshold = milestone * config.tokenCost;
       if (totalAmount >= threshold && totalAmount - config.tokenCost < threshold) {
@@ -699,7 +699,7 @@ class TokenReactionService {
         };
       }
     }
-    
+
     return null;
   }
 
@@ -708,23 +708,23 @@ class TokenReactionService {
    */
   validateReactionInput(type: ReactionType, amount: number): { isValid: boolean; errors: string[] } {
     const errors: string[] = [];
-    
+
     if (!REACTION_TYPES[type]) {
       errors.push('Invalid reaction type');
     }
-    
+
     if (amount <= 0) {
       errors.push('Amount must be greater than 0');
     }
-    
+
     if (type && amount < REACTION_TYPES[type].tokenCost) {
       errors.push(`Minimum amount for ${REACTION_TYPES[type].name} is ${REACTION_TYPES[type].tokenCost} tokens`);
     }
-    
+
     if (amount > 10000) {
       errors.push('Maximum amount is 10,000 tokens per reaction');
     }
-    
+
     return {
       isValid: errors.length === 0,
       errors,

@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { comments, posts, quickPosts } from '../db/schema';
+import { comments, posts, statuses } from '../db/schema';
 import { eq, and, sql, isNull } from 'drizzle-orm';
 
 /**
@@ -10,7 +10,7 @@ import { eq, and, sql, isNull } from 'drizzle-orm';
  * 2. The actual comments returned when fetching
  *
  * Common causes:
- * - Comments with wrong postId/quickPostId mapping
+ * - Comments with wrong postId/statusId mapping
  * - Comments with moderation status that filters them out
  * - Comments in deleted/hidden state
  */
@@ -77,7 +77,7 @@ async function analyzeCommentMismatch() {
               content: comments.content,
               moderationStatus: comments.moderationStatus,
               postId: comments.postId,
-              quickPostId: comments.quickPostId,
+              statusId: comments.statusId,
             })
             .from(comments)
             .where(eq(comments.postId, post.id))
@@ -85,30 +85,30 @@ async function analyzeCommentMismatch() {
 
           console.log(`   Sample comments:`);
           sampleComments.forEach(c => {
-            console.log(`     - ID: ${c.id}, Status: ${c.moderationStatus || 'NULL'}, PostId: ${c.postId}, QuickPostId: ${c.quickPostId}`);
+            console.log(`     - ID: ${c.id}, Status: ${c.moderationStatus || 'NULL'}, PostId: ${c.postId}, StatusId: ${c.statusId}`);
           });
         }
       }
     }
 
-    console.log('\n\n🔍 Checking quick posts...\n');
+    console.log('\n\n🔍 Checking statuses...\n');
 
-    // Check quick posts
-    const allQuickPosts = await db
+    // Check statuses
+    const allStatuses = await db
       .select({
-        id: quickPosts.id,
-        content: quickPosts.content,
-        author: quickPosts.author,
+        id: statuses.id,
+        content: statuses.content,
+        author: statuses.authorId,
       })
-      .from(quickPosts)
+      .from(statuses)
       .limit(100);
 
-    for (const qPost of allQuickPosts) {
-      // Count all comments for this quick post
+    for (const status of allStatuses) {
+      // Count all comments for this status
       const totalComments = await db
         .select({ count: sql<number>`COUNT(*)` })
         .from(comments)
-        .where(eq(comments.quickPostId, qPost.id));
+        .where(eq(comments.statusId, status.id));
 
       // Count visible comments (not blocked)
       const visibleComments = await db
@@ -116,7 +116,7 @@ async function analyzeCommentMismatch() {
         .from(comments)
         .where(
           and(
-            eq(comments.quickPostId, qPost.id),
+            eq(comments.statusId, status.id),
             sql`(${comments.moderationStatus} IS NULL OR ${comments.moderationStatus} != 'blocked')`
           )
         );
@@ -125,8 +125,8 @@ async function analyzeCommentMismatch() {
       const visible = Number(visibleComments[0]?.count || 0);
 
       if (total !== visible && total > 0) {
-        console.log(`\n📊 Quick Post ID ${qPost.id}:`);
-        console.log(`   Content: ${qPost.content?.substring(0, 50)}...`);
+        console.log(`\n📊 Status ID ${status.id}:`);
+        console.log(`   Content: ${status.content?.substring(0, 50)}...`);
         console.log(`   Total comments: ${total}`);
         console.log(`   Visible comments: ${visible}`);
       }

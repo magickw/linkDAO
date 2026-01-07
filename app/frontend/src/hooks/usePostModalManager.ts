@@ -6,13 +6,13 @@
 
 import { useRouter } from 'next/router';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { QuickPost } from '@/models/QuickPost';
+import { Status } from '@/models/Status';
 import { useToast } from '@/context/ToastContext';
 
 interface PostModalState {
   isOpen: boolean;
-  post: QuickPost | null;
-  type: 'quick_post' | 'community_post' | null;
+  post: Status | null;
+  type: 'status' | 'community_post' | null;
   isLoading: boolean;
 }
 
@@ -40,7 +40,7 @@ export function usePostModalManager() {
       // Handle different URL patterns
       if (p && typeof p === 'string') {
         // Quick post share URL: /p/:shareId
-        await openPostByShareId(p, 'quick_post');
+        await openPostByShareId(p, 'status');
       } else if (cp && typeof cp === 'string') {
         // Community post share URL: /cp/:shareId
         await openPostByShareId(cp, 'community_post');
@@ -54,7 +54,7 @@ export function usePostModalManager() {
   }, [router.query]);
 
   // Open post by share ID
-  const openPostByShareId = useCallback(async (shareId: string, type?: 'quick_post' | 'community_post') => {
+  const openPostByShareId = useCallback(async (shareId: string, type?: 'status' | 'community_post') => {
     try {
       setModalState(prev => ({ ...prev, isOpen: true, isLoading: true }));
 
@@ -74,14 +74,14 @@ export function usePostModalManager() {
       if (data.success && data.data) {
         const postData = {
           ...data.data.post,
-          isQuickPost: type === 'quick_post',
+          isStatus: type === 'status',
           communityId: data.data.post.communityId || undefined,
         };
 
         setModalState({
           isOpen: true,
           post: postData,
-          type: type || (data.data.post.communityId ? 'community_post' : 'quick_post'),
+          type: type || (data.data.post.communityId ? 'community_post' : 'status'),
           isLoading: false,
         });
 
@@ -98,7 +98,7 @@ export function usePostModalManager() {
             window.history.replaceState({}, '', canonicalUrl);
             lastOpenedWithPushRef.current = false;
           }
-        } else if (type === 'quick_post') {
+        } else if (type === 'status') {
           const canonicalUrl = data.data.canonicalUrl || `/${encodeURIComponent(data.data.owner?.handle ?? '')}/posts/${shareId}`;
           if (router.asPath !== canonicalUrl) {
             window.history.replaceState({}, '', canonicalUrl);
@@ -116,7 +116,7 @@ export function usePostModalManager() {
   }, [router, addToast]);
 
   // Open modal with post data (for in-app navigation)
-  const openModal = useCallback((post: QuickPost, type: 'quick_post' | 'community_post') => {
+  const openModal = useCallback((post: Status, type: 'status' | 'community_post') => {
     setModalState({
       isOpen: true,
       post,

@@ -96,7 +96,7 @@ function CommunityPostCardEnhanced({
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [reactions, setReactions] = useState<Reaction[]>([]);
 
-  // Calculate vote score (community posts have upvotes/downvotes, quickPosts don't)
+  // Calculate vote score (statuses have upvotes/downvotes, posts also do)
   const voteScore = isCommunityPostType && 'upvotes' in post && typeof (post as any).upvotes === 'number' && 'downvotes' in post && typeof (post as any).downvotes === 'number' ? ((post as any).upvotes - (post as any).downvotes) : 0;
 
   // Loading skeleton
@@ -590,9 +590,9 @@ function CommunityPostCardEnhanced({
     }
 
     try {
-      if (post.isQuickPost) {
-        const { QuickPostService } = await import('@/services/quickPostService');
-        await QuickPostService.deleteQuickPost(post.id);
+      if (post.isStatus) {
+        const { StatusService } = await import('@/services/statusService');
+        await StatusService.deleteStatus(post.id);
       } else if (isCommunityPostType && community?.id && community.id !== 'unknown') {
         await CommunityPostService.deletePost(community.id, post.id, address);
       } else {
