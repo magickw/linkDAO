@@ -17,6 +17,7 @@ import SupportWidget from '@/components/SupportWidget';
 import { newsletterService } from '@/services/newsletterService';
 import { usePostModalManager } from '@/hooks/usePostModalManager';
 import PostModal from '@/components/PostModal';
+import { getAvatarUrl } from '@/utils/userDisplay';
 
 
 // Lazy load heavy components
@@ -1184,7 +1185,7 @@ export default function Home() {
                         <FacebookStylePostComposer
                           onSubmit={handlePostSubmit}
                           isLoading={isCreatingPost}
-                          userAvatar={profile?.avatarCid ? `https://ipfs.io/ipfs/${profile.avatarCid}` : undefined}
+                          userAvatar={profile ? (getAvatarUrl(profile) || undefined) : undefined}
                           userName={profile?.handle || `${address?.slice(0, 6)}...${address?.slice(-4)}`}
                         />
                       </Suspense>

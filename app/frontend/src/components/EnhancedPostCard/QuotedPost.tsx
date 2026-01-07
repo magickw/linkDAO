@@ -5,6 +5,7 @@ import OptimizedImage from '../OptimizedImage';
 import VideoEmbed from '../VideoEmbed';
 import { extractVideoUrls } from '@/utils/videoUtils';
 import { formatRelativeTime } from '@/utils/formatters';
+import { getAvatarUrl } from '@/utils/userDisplay';
 
 interface QuotedPostProps {
     post: EnhancedPost;
@@ -52,10 +53,10 @@ export default function QuotedPost({ post, className = '' }: QuotedPostProps) {
                         <div className="flex items-center min-w-0">
                             {/* Avatar with fallback */}
                             <div className="w-5 h-5 rounded-full overflow-hidden mr-2 flex-shrink-0 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600">
-                                {post.authorProfile?.avatarCid ? (
+                                {getAvatarUrl(post) ? (
                                     <img
-                                        src={`https://ipfs.io/ipfs/${post.authorProfile.avatarCid}`}
-                                        alt={post.authorProfile.handle}
+                                        src={getAvatarUrl(post)!}
+                                        alt={post.authorProfile?.handle || post.author}
                                         className="w-full h-full object-cover"
                                     />
                                 ) : (

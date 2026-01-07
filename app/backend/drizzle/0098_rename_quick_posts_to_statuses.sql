@@ -333,6 +333,14 @@ BEGIN
     RAISE NOTICE 'Migration successful: quick_posts and all related tables/columns renamed to statuses';
 END $$;
 
+-- Create migration_log table if it doesn't exist
+CREATE TABLE IF NOT EXISTS migration_log (
+    id SERIAL PRIMARY KEY,
+    migration_name VARCHAR(255) NOT NULL UNIQUE,
+    executed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    status VARCHAR(50) DEFAULT 'pending'
+);
+
 -- Log migration
 INSERT INTO migration_log (migration_name, executed_at, status)
 VALUES ('0098_rename_quick_posts_to_statuses', NOW(), 'completed')

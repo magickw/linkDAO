@@ -24,6 +24,7 @@ import VideoEmbed from '../VideoEmbed';
 import { extractVideoUrls, VideoInfo } from '@/utils/videoUtils';
 import ReactionPurchaseSystem from '../Community/ReactionPurchaseSystem';
 import QuotedPost from './QuotedPost';
+import { getAvatarUrl } from '@/utils/userDisplay';
 
 // Use the shared EnhancedPost type with extended properties for component-specific needs
 export interface EnhancedPost extends Omit<SharedEnhancedPost, 'trendingStatus' | 'socialProof'> {
@@ -492,9 +493,9 @@ const EnhancedPostCard = React.memo(({
                       className="block w-12 h-12 rounded-xl overflow-hidden bg-gradient-to-br from-primary-400 to-secondary-500 border-2 border-white dark:border-gray-800 shadow-md hover:ring-2 hover:ring-primary-400 transition-all duration-200"
                       aria-label={`${post.authorProfile.handle}'s avatar`}
                     >
-                      {post.authorProfile.avatarCid ? (
+                      {getAvatarUrl(post) ? (
                         <img
-                          src={`https://ipfs.io/ipfs/${post.authorProfile.avatarCid}`}
+                          src={getAvatarUrl(post)!}
                           alt={post.authorProfile.handle}
                           className="w-full h-full object-cover"
                         />

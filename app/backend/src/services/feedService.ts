@@ -1648,19 +1648,16 @@ export class FeedService {
     const offset = (page - 1) * limit;
 
     try {
-      // Check if postId is an integer (regular post) or UUID (quick post)
-      const isIntegerId = /^\d+$/.test(postId);
-
       const conditions = [
         isNull(comments.parentCommentId),
         sql`${comments.moderationStatus} IS NULL OR ${comments.moderationStatus} != 'blocked'`
       ];
 
-      if (isIntegerId) {
-        conditions.push(eq(comments.postId, postId));
-      } else {
-        conditions.push(eq(comments.statusId, postId));
-      }
+      // Check both postId and statusId since both can be UUIDs
+      conditions.push(or(
+        eq(comments.postId, postId),
+        eq(comments.statusId, postId)
+      ));
 
       // Build sort order
       let orderByClause;

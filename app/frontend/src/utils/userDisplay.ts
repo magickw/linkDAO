@@ -33,12 +33,31 @@ export const getDisplayName = (author: any): string => {
     return 'Unknown User';
 };
 
+import { getProxiedIPFSUrl } from './ipfsProxy';
+
 /**
  * Get the avatar URL for a user/author
  * Returns null if no avatar is available
  */
 export const getAvatarUrl = (author: any): string | null => {
-    return author?.authorProfile?.avatar || author?.avatar || null;
+    const avatarSource = author?.authorProfile?.avatarCid ||
+        author?.authorProfile?.avatar ||
+        author?.avatar ||
+        author?.avatarCid ||
+        author?.profile?.avatarCid;
+
+    if (!avatarSource) return null;
+
+    // If it's already a URL (not IPFS specific), return it
+    if ((avatarSource.startsWith('http') || avatarSource.startsWith('blob:')) &&
+        !avatarSource.includes('/ipfs/') &&
+        !avatarSource.includes('ipfs.io') &&
+        !avatarSource.includes('pinata')) {
+        return avatarSource;
+    }
+
+    // Use proxy for CIDs or IPFS URLs
+    return getProxiedIPFSUrl(avatarSource);
 };
 
 /**
