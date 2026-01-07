@@ -82,10 +82,25 @@ export class CommunityService {
 
       if (!response.ok) {
         const error = await safeJson(response);
+        // Handle backend's error structure: { success: false, error: { code, message, details } }
+        if (error && error.error) {
+          const errorObj = error.error;
+          let errorMessage = errorObj.message || 'Failed to create community';
+          // Include details if available (validation errors)
+          if (errorObj.details && Array.isArray(errorObj.details)) {
+            errorMessage = errorObj.details.join(', ');
+          }
+          const err = new Error(errorMessage) as any;
+          err.details = errorObj.details;
+          err.code = errorObj.code;
+          throw err;
+        }
         throw new Error((error && (error.error || error.message)) || 'Failed to create community');
       }
 
-      return response.json();
+      const result = await response.json();
+      // Handle backend's success structure: { success: true, data: {...} }
+      return result.data || result;
     } catch (error) {
       clearTimeout(timeoutId);
 

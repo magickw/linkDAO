@@ -52,7 +52,6 @@ export const ShippingStep: React.FC<ShippingStepProps> = ({
         ? {
           firstName: userProfile.billingFirstName || '',
           lastName: userProfile.billingLastName || '',
-          email: userProfile.email || '',
           address1: userProfile.billingAddress1 || '',
           address2: userProfile.billingAddress2 || '',
           city: userProfile.billingCity || '',
@@ -64,7 +63,6 @@ export const ShippingStep: React.FC<ShippingStepProps> = ({
         : {
           firstName: userProfile.shippingFirstName || '',
           lastName: userProfile.shippingLastName || '',
-          email: userProfile.email || '',
           address1: userProfile.shippingAddress1 || '',
           address2: userProfile.shippingAddress2 || '',
           city: userProfile.shippingCity || '',
@@ -181,22 +179,6 @@ export const ShippingStep: React.FC<ShippingStepProps> = ({
           />
           {errors.lastName && <p className="text-red-400 text-sm mt-1">{errors.lastName}</p>}
         </div>
-      </div>
-
-      {/* Email */}
-      <div>
-        <label className={labelClassName}>
-          Email Address <span className="text-red-400">*</span>
-        </label>
-        <input
-          type="email"
-          value={shippingAddress.email}
-          onChange={(e) => onAddressChange({ email: e.target.value })}
-          className={`${inputClassName} ${errors.email ? 'border-red-400' : ''}`}
-          placeholder="Enter email address"
-          style={isMobile ? { fontSize: '16px' } : {}}
-        />
-        {errors.email && <p className="text-red-400 text-sm mt-1">{errors.email}</p>}
       </div>
 
       {/* Address Lines */}

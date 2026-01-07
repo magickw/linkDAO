@@ -208,10 +208,71 @@ export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
   const handleSubmit = useCallback(async () => {
     if (validateStep(currentStep)) {
       try {
-        await onSubmit(formData);
+        // Upload files to IPFS if provided
+        let iconUrl: string | undefined;
+        let bannerUrl: string | undefined;
+
+        if (formData.icon) {
+          const iconFormData = new FormData();
+          iconFormData.append('file', formData.icon);
+          const iconResponse = await fetch('/api/support/upload', {
+            method: 'POST',
+            body: iconFormData,
+          });
+          const iconResult = await iconResponse.json();
+          if (iconResult.success) {
+            iconUrl = iconResult.data.url;
+          }
+        }
+
+        if (formData.banner) {
+          const bannerFormData = new FormData();
+          bannerFormData.append('file', formData.banner);
+          const bannerResponse = await fetch('/api/support/upload', {
+            method: 'POST',
+            body: bannerFormData,
+          });
+          const bannerResult = await bannerResponse.json();
+          if (bannerResult.success) {
+            bannerUrl = bannerResult.data.url;
+          }
+        }
+
+        // Transform formData to match backend's expected format
+        const transformedData = {
+          name: formData.name,
+          slug: formData.slug || formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
+          displayName: formData.name, // Use name as displayName
+          description: formData.description,
+          category: formData.category,
+          tags: [],
+          isPublic: !formData.isPrivate,
+          iconUrl,
+          bannerUrl,
+          rules: [],
+          governanceEnabled: formData.governanceSettings?.enableGovernance || false,
+          stakingRequired: !!formData.tokenRequirement,
+          minimumStake: formData.tokenRequirement?.minimumBalance || 0
+        };
+
+        await onSubmit(transformedData);
         onClose();
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to create community:', error);
+
+        // Extract validation errors from the response
+        let errorMessage = 'Failed to create community';
+        if (error.message) {
+          errorMessage = error.message;
+        }
+
+        // Check if it's a validation error with details
+        if (error.details && Array.isArray(error.details)) {
+          errorMessage = error.details.join(', ');
+        }
+
+        // Show error to user
+        alert(`Error: ${errorMessage}`);
       }
     }
   }, [currentStep, validateStep, formData, onSubmit, onClose]);

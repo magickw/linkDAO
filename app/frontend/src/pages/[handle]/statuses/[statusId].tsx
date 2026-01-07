@@ -265,14 +265,16 @@ export default function StatusPage() {
                                         onExpand={() => { }}
                                     />
 
-                                    {/* Comment System */}
-                                    <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
-                                        <EnhancedCommentSystem
-                                            postId={status.id}
-                                            postType="feed"
-                                            onCommentAdded={handleCommentAdded}
-                                        />
-                                    </div>
+                                    {/* Comment System - only render when status is fully loaded */}
+                                    {status && status.id && (
+                                        <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
+                                            <EnhancedCommentSystem
+                                                postId={status.id}
+                                                postType="feed"
+                                                onCommentAdded={handleCommentAdded}
+                                            />
+                                        </div>
+                                    )}
                                 </>
                             )}
                         </div>
