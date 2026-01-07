@@ -849,6 +849,13 @@ export class CommunityService {
       };
     } catch (error) {
       safeLogger.error('Error creating community:', error);
+
+      // Provide more detailed error information
+      if (error.code === '42703') {
+        // PostgreSQL error: undefined_column
+        throw new Error(`Database schema error: A required column is missing from the communities table. Please run database migrations.`);
+      }
+
       throw new Error('Failed to create community');
     }
   }

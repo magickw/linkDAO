@@ -271,6 +271,11 @@ export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
           errorMessage = error.details.join(', ');
         }
 
+        // Check if error has code property
+        if (error.code) {
+          errorMessage = `${error.code}: ${errorMessage}`;
+        }
+
         // Show error to user
         alert(`Error: ${errorMessage}`);
       }

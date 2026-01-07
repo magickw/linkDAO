@@ -89,10 +89,13 @@ export class CommunityService {
           // Include details if available (validation errors)
           if (errorObj.details && Array.isArray(errorObj.details)) {
             errorMessage = errorObj.details.join(', ');
+          } else if (errorObj.details && typeof errorObj.details === 'string') {
+            errorMessage += `: ${errorObj.details}`;
           }
           const err = new Error(errorMessage) as any;
           err.details = errorObj.details;
           err.code = errorObj.code;
+          err.statusCode = response.status;
           throw err;
         }
         throw new Error((error && (error.error || error.message)) || 'Failed to create community');

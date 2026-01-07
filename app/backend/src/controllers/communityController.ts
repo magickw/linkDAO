@@ -218,6 +218,12 @@ export class CommunityController {
           retryable: false,
           suggestion: 'Please choose a different community name'
         }));
+      } else if (error.message.includes('Database schema error')) {
+        res.status(500).json(createErrorResponse('DATABASE_SCHEMA_ERROR', error.message, {
+          retryable: false,
+          errorCode: 'DATABASE_SCHEMA_ERROR',
+          details: 'The database schema is out of sync. Please contact support.'
+        }));
       } else if (isServiceUnavailable) {
         res.status(503).json(createErrorResponse('SERVICE_UNAVAILABLE', 'Service temporarily unavailable. Please try again in a moment.', {
           retryable: true,
@@ -233,7 +239,8 @@ export class CommunityController {
       } else {
         res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create community', {
           retryable: true,
-          errorCode: 'INTERNAL_ERROR'
+          errorCode: 'INTERNAL_ERROR',
+          details: error.message || 'Unknown error'
         }));
       }
     }

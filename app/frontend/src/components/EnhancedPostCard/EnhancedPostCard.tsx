@@ -786,9 +786,14 @@ const EnhancedPostCard = React.memo(({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
                     </svg>
                   </button>
-                  <span className={`text-sm font-bold min-w-[1.5rem] text-center ${(post.upvotes || 0) > 0 ? 'text-green-600' : 'text-gray-500'}`}>
-                    {(post.upvotes || 0) - (post.downvotes || 0)}
-                  </span>
+                  <div className="flex flex-col items-center min-w-[2rem]">
+                    <span className="text-xs font-medium text-green-600">
+                      {post.upvotes || 0}
+                    </span>
+                    <span className="text-xs font-medium text-red-600">
+                      {post.downvotes || 0}
+                    </span>
+                  </div>
                   <button
                     onClick={(e) => { e.stopPropagation(); handleDownvote(); }}
                     disabled={!onDownvote}

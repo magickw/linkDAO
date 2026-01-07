@@ -212,7 +212,7 @@ export default function PostInteractionBar({
                 <span className="hidden sm:inline">
                   {post.shareCount && post.shareCount > 0 ? (
                     <>
-                      {post.shareCount}
+                      {post.shareCount} Repost{post.shareCount !== 1 ? 's' : ''}
                     </>
                   ) : (
                     'Repost'
