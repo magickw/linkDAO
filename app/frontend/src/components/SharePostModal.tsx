@@ -93,7 +93,7 @@ export default function SharePostModal({
     }
 
     // Use new status URL pattern for non-community posts
-    const handle = post.authorProfile?.handle || post.author?.slice(0, 8);
+    const handle = post.authorProfile?.handle || (post.author ? post.author.slice(0, 8) : 'unknown');
     return `${baseUrl}/${handle}/statuses/${post.id}`;
   };
 

@@ -392,7 +392,7 @@ export default function RepostModal({
                                             )}
                                         </div>
                                         <span className="font-bold text-sm text-gray-900 dark:text-white truncate">{getDisplayName(post)}</span>
-                                        <span className="text-gray-500 text-sm truncate">@{post.authorProfile?.handle || post.author.slice(0, 6)}</span>
+                                        <span className="text-gray-500 text-sm truncate">@{post.authorProfile?.handle || (post.author ? post.author.slice(0, 6) : 'unknown')}</span>
                                         <span className="text-gray-500 text-sm flex-shrink-0">· {new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                                     </div>
 

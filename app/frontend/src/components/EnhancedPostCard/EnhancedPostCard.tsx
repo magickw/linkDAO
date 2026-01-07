@@ -230,7 +230,7 @@ const EnhancedPostCard = React.memo(({
   }, [address, addToast]);
 
   const handleShare = useCallback(async () => {
-    const handle = post.authorProfile?.handle || post.author?.slice(0, 8);
+    const handle = post.authorProfile?.handle || (post.author ? post.author.slice(0, 8) : 'unknown');
     const url = `${window.location.origin}/${handle}/statuses/${post.id}`;
     try {
       if (navigator.share) {

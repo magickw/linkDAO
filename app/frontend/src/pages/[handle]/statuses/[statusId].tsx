@@ -39,7 +39,7 @@ export default function StatusPage() {
                 }
 
                 // Verify the handle matches the status author
-                const statusHandle = statusData.authorProfile?.handle || statusData.author?.slice(0, 8);
+                const statusHandle = statusData.authorProfile?.handle || (statusData.author ? statusData.author.slice(0, 8) : 'unknown');
                 if (handle && statusHandle !== handle) {
                     // Redirect to correct canonical URL
                     router.replace(`/${statusHandle}/statuses/${statusId}`);
@@ -75,8 +75,8 @@ export default function StatusPage() {
     const getMetaTags = () => {
         if (!status) return null;
 
-        const title = `${status.authorProfile?.handle || handle}'s Post`;
-        const description = status.content?.substring(0, 200) || 'Check out this post on LinkDAO';
+        const title = `${status.authorProfile?.handle || handle}'s Status`;
+        const description = status.content?.substring(0, 200) || 'Check out this status on LinkDAO';
         const url = `https://linkdao.io/${handle}/statuses/${statusId}`;
 
         return (

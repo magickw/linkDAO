@@ -56,7 +56,7 @@ export default function UserPostPage() {
                     const postData = data.data as Status;
 
                     // Verify the handle matches the post author
-                    const postHandle = postData.authorProfile?.handle || postData.author?.slice(0, 8);
+                    const postHandle = postData.authorProfile?.handle || (postData.author ? postData.author.slice(0, 8) : 'unknown');
                     if (handle && postHandle !== handle) {
                         // Redirect to correct canonical URL
                         router.replace(`/${postHandle}/posts/${shareId}`);

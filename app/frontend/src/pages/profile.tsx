@@ -11,7 +11,7 @@ import { useToast } from '@/context/ToastContext';
 import { useAuth } from '@/context/AuthContext';
 import { ProfileService } from '@/services/profileService';
 import { PublicProfileService } from '@/services/publicProfileService';
-import { ReputationService } from '@/services/reputationService';
+import { reputationService } from '@/services/reputationService';
 import { WalletService } from '@/services/walletService';
 import { TipService } from '@/services/tipService';
 import { PostService } from '@/services/postService';

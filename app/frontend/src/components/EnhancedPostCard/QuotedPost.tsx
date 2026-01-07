@@ -23,7 +23,7 @@ export default function QuotedPost({ post, className = '' }: QuotedPostProps) {
     }
 
     // Generate status URL - only statuses can be quoted
-    const handle = post.authorProfile?.handle || post.author?.slice(0, 8);
+    const handle = post.authorProfile?.handle || (post.author ? post.author.slice(0, 8) : 'unknown');
     const postUrl = `/${handle}/statuses/${post.id}`;
 
     const videoEmbeds = useMemo(() => {
