@@ -305,6 +305,11 @@ const EnhancedPostCard = React.memo(({
 
   // Format timestamp - memoized
   const formatTimestamp = useCallback((dateInput: Date | string) => {
+    // Handle null/undefined input
+    if (!dateInput) {
+      return 'recently';
+    }
+
     const now = new Date();
     const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
 
