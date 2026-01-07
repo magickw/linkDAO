@@ -32,25 +32,6 @@ import { getTokenLogoWithFallback } from '@/utils/tokenLogoUtils';
 import { VerificationModal } from '@/components/Verification/VerificationModal';
 import { useVerification } from '@/hooks/useVerification';
 
-// Helper function to validate IPFS CID and construct proper URL
-function getAvatarUrl(profileCid: string | undefined): string | undefined {
-  if (!profileCid || profileCid.length === 0) return undefined;
-
-  // Check if it's already a full URL
-  try {
-    new URL(profileCid);
-    return profileCid;
-  } catch {
-    // Not a valid URL, check if it's an IPFS CID
-    if (profileCid.startsWith('Qm') || profileCid.startsWith('bafy')) {
-      return `https://ipfs.io/ipfs/${profileCid}`;
-    }
-
-    // If it's neither a valid URL nor an IPFS CID, return undefined
-    return undefined;
-  }
-}
-
 export default function Profile() {
   const router = useRouter();
   const { address: currentUserAddress, isConnected } = useWeb3();
@@ -187,7 +168,7 @@ export default function Profile() {
         displayName: backendProfile.displayName || '', // Use actual displayName field
         ens: backendProfile.ens,
         bio: backendProfile.bioCid, // In a real app, we'd fetch the actual bio content from IPFS
-        avatar: getAvatarUrl(backendProfile.avatarCid || backendProfile.profileCid), // Fallback to profileCid for backend compatibility
+        avatar: getAvatarUrl(backendProfile) || backendProfile.avatarCid || backendProfile.profileCid || '', // Use getAvatarUrl with the profile object
         bannerCid: backendProfile.bannerCid || '',
         website: backendProfile.website || '',
         socialLinks: backendProfile.socialLinks || [],
@@ -228,7 +209,7 @@ export default function Profile() {
         displayName: contractProfileData.displayName || '', // Use actual displayName field
         ens: contractProfileData.ens,
         bio: contractProfileData.bioCid, // In a real app, we'd fetch the actual bio content from IPFS
-        avatar: getAvatarUrl(contractProfileData.avatarCid || contractProfileData.profileCid), // Validate avatar URL
+        avatar: getAvatarUrl(contractProfileData) || contractProfileData.avatarCid || contractProfileData.profileCid || '', // Use getAvatarUrl with the profile object
         bannerCid: '',
         website: '',
         socialLinks: [],
@@ -1058,7 +1039,7 @@ export default function Profile() {
               {(profile.bannerCid && profile.bannerCid.length > 0) && (
                 <div className="w-full h-48 md:h-64 overflow-hidden relative">
                   <img
-                    src={getAvatarUrl(profile.bannerCid) || ''}
+                    src={profile.bannerCid || ''}
                     alt="Profile Banner"
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -1575,7 +1556,7 @@ export default function Profile() {
                       {(profile.bannerCid && profile.bannerCid.length > 0) && (
                         <div className="mb-3">
                           <img
-                            src={getAvatarUrl(profile.bannerCid) || ''}
+                            src={profile.bannerCid || ''}
                             alt="Banner"
                             className="w-full h-32 object-cover rounded-lg"
                             onError={(e) => {
