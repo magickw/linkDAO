@@ -41,10 +41,6 @@ export const RichContentPreview: React.FC<RichContentPreviewProps> = ({
     const contentRef = useRef<HTMLDivElement>(null);
     const [isTruncated, setIsTruncated] = useState(false);
 
-    if (!content) {
-        return null;
-    }
-
     // Check if content is visually truncated using DOM measurements
     useEffect(() => {
         if (!contentRef.current) {
@@ -106,6 +102,10 @@ export const RichContentPreview: React.FC<RichContentPreviewProps> = ({
             window.removeEventListener('resize', handleResize);
         };
     }, [content, maxLines]); // Removed isExpanded from dependencies!
+
+    if (!content) {
+        return null;
+    }
 
     return (
         <div className={`rich-content-preview ${className}`}>

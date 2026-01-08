@@ -23,7 +23,7 @@ const getRpcUrl = (chainId: number): string => {
     case arbitrum.id:
       return process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL || 'https://arb1.arbitrum.io/rpc';
     case sepolia.id:
-      return process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || 'https://sepolia.drpc.org';
+      return process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com';
     default:
       return 'https://eth.llamarpc.com';
   }

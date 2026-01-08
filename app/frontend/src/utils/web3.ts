@@ -1,4 +1,4 @@
-import { getPublicClient, getWalletClient } from '@wagmi/core'
+import { getPublicClient, getWalletClient, getChainId } from '@wagmi/core'
 import { config } from '@/lib/wagmi'
 import { ethers } from 'ethers'
 import { getChainRpcUrl } from '@/lib/wagmi'
@@ -127,9 +127,12 @@ export async function getSigner() {
 
     if (client) {
       // Check if the client has the necessary methods before accessing them
-      // Note: Use client.chain.id instead of client.getChainId() to avoid connector issues
-      if (client.chain && typeof client.chain.id !== 'undefined') {
-        console.log('Wallet client chain ID:', client.chain.id);
+      // Use getChainId helper from wagmi core instead of accessing properties directly
+      try {
+        const chainId = getChainId(config);
+        console.log('Wallet client chain ID:', chainId);
+      } catch (e) {
+        console.warn('Could not get chain ID:', e);
       }
 
       const injectedProvider = (client as any).transport?.provider;
