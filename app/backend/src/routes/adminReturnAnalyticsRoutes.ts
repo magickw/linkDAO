@@ -33,21 +33,8 @@ router.use(adminRateLimit());
  */
 router.get(
     '/metrics',
+    requirePermission('returns.view'),
     async (req: AuthenticatedRequest, res: Response) => {
-        // Check permission but return empty data instead of 403 for GET requests
-        const user = req.user;
-        if (!user || (!user.permissions?.includes('returns.view') && 
-                      !user.permissions?.includes('returns.analytics') &&
-                      !user.permissions?.includes('system.analytics') &&
-                      !user.permissions?.includes('*') &&
-                      user.role !== 'super_admin' && 
-                      user.role !== 'admin')) {
-            return res.json({
-                success: true,
-                data: {},
-                message: 'No permission for returns metrics'
-            });
-        }
         try {
             const metrics = await returnAnalyticsService.getRealtimeMetrics();
 
@@ -84,21 +71,9 @@ router.get(
  */
 router.get(
     '/analytics',
+    requirePermission('returns.analytics'),
     adminRateLimit(50, 15 * 60 * 1000),
     async (req: AuthenticatedRequest, res: Response) => {
-        // Check permission but return empty data instead of 403 for GET requests
-        const user = req.user;
-        if (!user || (!user.permissions?.includes('returns.analytics') && 
-                      !user.permissions?.includes('system.analytics') &&
-                      !user.permissions?.includes('*') &&
-                      user.role !== 'super_admin' && 
-                      user.role !== 'admin')) {
-            return res.json({
-                success: true,
-                data: {},
-                message: 'No permission for returns analytics'
-            });
-        }
         try {
             const { sellerId, start, end } = req.query;
 
@@ -173,21 +148,8 @@ router.get(
  */
 router.get(
     '/events/:returnId',
+    requirePermission('returns.view'),
     async (req: AuthenticatedRequest, res: Response) => {
-        // Check permission but return empty data instead of 403 for GET requests
-        const user = req.user;
-        if (!user || (!user.permissions?.includes('returns.view') && 
-                      !user.permissions?.includes('returns.analytics') &&
-                      !user.permissions?.includes('system.analytics') &&
-                      !user.permissions?.includes('*') &&
-                      user.role !== 'super_admin' && 
-                      user.role !== 'admin')) {
-            return res.json({
-                success: true,
-                data: [],
-                message: 'No permission for return events'
-            });
-        }
         try {
             const { returnId } = req.params;
 
@@ -245,20 +207,8 @@ router.get(
  */
 router.get(
     '/status-distribution',
+    requirePermission('returns.analytics'),
     async (req: AuthenticatedRequest, res: Response) => {
-        // Check permission but return empty data instead of 403 for GET requests
-        const user = req.user;
-        if (!user || (!user.permissions?.includes('returns.analytics') && 
-                      !user.permissions?.includes('system.analytics') &&
-                      !user.permissions?.includes('*') &&
-                      user.role !== 'super_admin' && 
-                      user.role !== 'admin')) {
-            return res.json({
-                success: true,
-                data: {},
-                message: 'No permission for status distribution'
-            });
-        }
         try {
             const { start, end } = req.query;
 
@@ -322,21 +272,9 @@ router.get(
  */
 router.get(
     '/processing-metrics',
+    requirePermission('returns.analytics'),
     adminRateLimit(50, 15 * 60 * 1000),
     async (req: AuthenticatedRequest, res: Response) => {
-        // Check permission but return empty data instead of 403 for GET requests
-        const user = req.user;
-        if (!user || (!user.permissions?.includes('returns.analytics') && 
-                      !user.permissions?.includes('system.analytics') &&
-                      !user.permissions?.includes('*') &&
-                      user.role !== 'super_admin' && 
-                      user.role !== 'admin')) {
-            return res.json({
-                success: true,
-                data: {},
-                message: 'No permission for processing metrics'
-            });
-        }
         try {
             const { sellerId, start, end } = req.query;
 
@@ -404,7 +342,7 @@ router.get(
  */
 router.post(
     '/cache/warm',
-    requirePermission('system.settings'), // Keep permission check for POST requests
+    requirePermission('system.settings'),
     adminRateLimit(10, 15 * 60 * 1000),
     async (req: AuthenticatedRequest, res: Response) => {
         try {

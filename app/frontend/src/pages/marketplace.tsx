@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAccount } from 'wagmi';
 import { useRouter } from 'next/router';
 import { useToast } from '@/context/ToastContext';
@@ -101,9 +101,9 @@ const MarketplaceContent: React.FC = () => {
         action: undefined as string | undefined,
       },
       {
-        label: 'Orders & tracking',
-        description: 'View your purchase history',
-        href: '/orders' as const,
+        label: 'My Orders',
+        description: 'View your purchase history and track orders',
+        href: '/marketplace/orders' as const,
         action: undefined as string | undefined,
       },
       {
@@ -116,6 +116,25 @@ const MarketplaceContent: React.FC = () => {
         label: 'Support & disputes',
         description: 'Escalate issues with sellers',
         href: '/marketplace/disputes' as const,
+        action: undefined as string | undefined,
+      },
+      // Account Section
+      {
+        label: 'Addresses',
+        description: 'Manage shipping and billing addresses',
+        href: '/account/addresses' as const,
+        action: undefined as string | undefined,
+      },
+      {
+        label: 'Payment Methods',
+        description: 'Manage cards and crypto wallets',
+        href: '/account/payment-methods' as const,
+        action: undefined as string | undefined,
+      },
+      {
+        label: 'Wishlist',
+        description: 'View and manage your saved items',
+        href: '/account/wishlist' as const,
         action: undefined as string | undefined,
       },
     ];
@@ -554,25 +573,41 @@ const MarketplaceContent: React.FC = () => {
                     {actionsMenuOpen && (
                       <div className="absolute right-0 mt-3 w-72 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl z-50">
                         <ul className="py-2">
-                          {marketplaceActions.map((action, index) => (
-                            <li key={action.href || action.action || index}>
-                              <button
-                                type="button"
-                                className="w-full px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                                onClick={() => {
-                                  setActionsMenuOpen(false);
-                                  if (action.action === 'open-return-refund-modal') {
-                                    setShowReturnRefundModal(true);
-                                  } else if (action.href) {
-                                    router.push(action.href);
-                                  }
-                                }}
-                              >
-                                <p className="text-sm font-semibold text-gray-900 dark:text-white">{action.label}</p>
-                                <p className="text-xs text-gray-600 dark:text-gray-400">{action.description}</p>
-                              </button>
-                            </li>
-                          ))}
+                          {marketplaceActions.map((action, index) => {
+                            // Add separator before Account Section (Addresses, Payment Methods, Wishlist)
+                            const isAccountSection = action.label === 'Addresses';
+                            const showSeparator = isAccountSection && index > 0;
+                            
+                            return (
+                              <React.Fragment key={action.href || action.action || index}>
+                                {showSeparator && (
+                                  <li className="px-4 py-2">
+                                    <div className="border-t border-gray-200 dark:border-gray-700"></div>
+                                    <div className="px-2 pt-2 pb-1">
+                                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Account</p>
+                                    </div>
+                                  </li>
+                                )}
+                                <li>
+                                  <button
+                                    type="button"
+                                    className="w-full px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                                    onClick={() => {
+                                      setActionsMenuOpen(false);
+                                      if (action.action === 'open-return-refund-modal') {
+                                        setShowReturnRefundModal(true);
+                                      } else if (action.href) {
+                                        router.push(action.href);
+                                      }
+                                    }}
+                                  >
+                                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{action.label}</p>
+                                    <p className="text-xs text-gray-600 dark:text-gray-400">{action.description}</p>
+                                  </button>
+                                </li>
+                              </React.Fragment>
+                            );
+                          })}
                         </ul>
                       </div>
                     )}

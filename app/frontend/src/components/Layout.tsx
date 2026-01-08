@@ -355,7 +355,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
 
                   <Link
 
-                    href="/account/orders"
+                    href="/marketplace/orders"
 
                     className="p-2 rounded-full bg-blue-500 hover:bg-blue-600 transition-colors shadow-md"
 
