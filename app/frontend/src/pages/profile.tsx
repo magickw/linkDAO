@@ -25,7 +25,7 @@ import { useWalletDataReal } from '@/hooks/useWalletDataReal';
 import { useReputationData } from '@/hooks/useReputationData';
 import { useTipsData } from '@/hooks/useTipsData';
 import { usePostsByAuthor } from '@/hooks/usePosts';
-import { useFollow, useFollowStatus } from '@/hooks/useFollow';
+import { useFollow, useFollowStatus, useFollowCount } from '@/hooks/useFollow';
 import { unifiedImageService } from '@/services/unifiedImageService';
 import Link from 'next/link';
 import { getTokenLogoWithFallback } from '@/utils/tokenLogoUtils';

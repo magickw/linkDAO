@@ -268,6 +268,17 @@ router.get('/:id/members',
   communityController.getCommunityMembers
 );
 
+// Get specific community membership (public/auth)
+router.get('/:id/members/:userId',
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true },
+      userId: { type: 'string', required: true }
+    }
+  }),
+  communityController.getMembership
+);
+
 // Get community statistics (public)
 router.get('/:id/stats',
   validateRequest({

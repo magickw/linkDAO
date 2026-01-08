@@ -1078,6 +1078,42 @@ export class CommunityService {
     }
   }
 
+  // Get detailed membership info for a user in a specific community
+  async getMembership(communityId: string, userAddress: string) {
+    try {
+      const normalizedUserAddress = userAddress.toLowerCase();
+
+      const membership = await db
+        .select({
+          id: communityMembers.id,
+          communityId: communityMembers.communityId,
+          userAddress: communityMembers.userAddress,
+          role: communityMembers.role,
+          reputation: communityMembers.reputation,
+          contributions: communityMembers.contributions,
+          joinedAt: communityMembers.joinedAt,
+          isActive: communityMembers.isActive,
+        })
+        .from(communityMembers)
+        .where(
+          and(
+            eq(communityMembers.communityId, communityId),
+            eq(communityMembers.userAddress, normalizedUserAddress)
+          )
+        )
+        .limit(1);
+
+      if (membership.length === 0) {
+        return null; // Not a member or not found
+      }
+
+      return membership[0];
+    } catch (error) {
+      safeLogger.error('Error getting membership:', error);
+      throw new Error('Failed to get membership');
+    }
+  }
+
   // Join community with real membership tracking
   async joinCommunity(data: JoinCommunityData) {
     // Normalize user address to lowercase for consistent comparisons

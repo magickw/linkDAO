@@ -1,5 +1,5 @@
-import { 
-  CommunityMembership, 
+import {
+  CommunityMembership,
   CreateCommunityMembershipInput,
   UpdateCommunityMembershipInput,
   CommunityMembershipStats
@@ -31,33 +31,33 @@ export class CommunityMembershipService {
   static async joinCommunity(data: CreateCommunityMembershipInput): Promise<CommunityMembership> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
     try {
       // Get authentication headers
       const authHeaders = await enhancedAuthService.getAuthHeaders();
-      
+
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${data.communityId}/members`, {
         method: 'POST',
         headers: authHeaders,
         body: JSON.stringify(data),
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to join community');
       }
-      
+
       return response.json();
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
-      
+
       throw error;
     }
   }
@@ -71,19 +71,19 @@ export class CommunityMembershipService {
   static async leaveCommunity(communityId: string, userId: string): Promise<boolean> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
     try {
       // Get authentication headers
       const authHeaders = await enhancedAuthService.getAuthHeaders();
-      
+
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/members/${userId}`, {
         method: 'DELETE',
         headers: authHeaders,
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       if (!response.ok) {
         if (response.status === 404) {
           return false;
@@ -91,15 +91,15 @@ export class CommunityMembershipService {
         const error = await response.json();
         throw new Error(error.error || 'Failed to leave community');
       }
-      
+
       return true;
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
-      
+
       throw error;
     }
   }
@@ -113,7 +113,7 @@ export class CommunityMembershipService {
   static async getMembership(communityId: string, userId: string): Promise<CommunityMembership | null> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
     try {
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/members/${userId}`, {
         method: 'GET',
@@ -122,9 +122,9 @@ export class CommunityMembershipService {
         },
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       if (!response.ok) {
         if (response.status === 404) {
           return null;
@@ -132,15 +132,16 @@ export class CommunityMembershipService {
         const error = await response.json();
         throw new Error(error.error || 'Failed to fetch membership');
       }
-      
-      return response.json();
+
+      const json = await response.json();
+      return (json && json.data) || json;
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
-      
+
       throw error;
     }
   }
@@ -152,7 +153,7 @@ export class CommunityMembershipService {
    * @returns Array of memberships
    */
   static async getCommunityMembers(
-    communityId: string, 
+    communityId: string,
     params?: {
       role?: string;
       isActive?: boolean;
@@ -162,22 +163,22 @@ export class CommunityMembershipService {
   ): Promise<CommunityMembership[]> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
     try {
       let url = `${BACKEND_API_BASE_URL}/api/communities/${communityId}/members`;
       const searchParams = new URLSearchParams();
-      
+
       if (params) {
         if (params.role) searchParams.append('role', params.role);
         if (params.isActive !== undefined) searchParams.append('isActive', params.isActive.toString());
         if (params.limit) searchParams.append('limit', params.limit.toString());
         if (params.offset) searchParams.append('offset', params.offset.toString());
       }
-      
+
       if (searchParams.toString()) {
         url += `?${searchParams.toString()}`;
       }
-      
+
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -185,22 +186,22 @@ export class CommunityMembershipService {
         },
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to fetch community members');
       }
-      
+
       return response.json();
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
-      
+
       throw error;
     }
   }
@@ -222,22 +223,22 @@ export class CommunityMembershipService {
   ): Promise<CommunityMembership[]> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
     try {
       let url = `${BACKEND_API_BASE_URL}/api/users/${userId}/memberships`;
       const searchParams = new URLSearchParams();
-      
+
       if (params) {
         if (params.role) searchParams.append('role', params.role);
         if (params.isActive !== undefined) searchParams.append('isActive', params.isActive.toString());
         if (params.limit) searchParams.append('limit', params.limit.toString());
         if (params.offset) searchParams.append('offset', params.offset.toString());
       }
-      
+
       if (searchParams.toString()) {
         url += `?${searchParams.toString()}`;
       }
-      
+
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -246,9 +247,9 @@ export class CommunityMembershipService {
         },
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       // Gracefully handle common non-success statuses
       if (!response.ok) {
         if (response.status === 404) {
@@ -273,16 +274,16 @@ export class CommunityMembershipService {
         const message = (error && (error.error || error.message)) || `Failed to fetch user memberships (HTTP ${response.status})`;
         throw new Error(message);
       }
-      
+
       const json = await safeJson(response);
       return (json && (json.data || json.memberships)) || json || [];
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
-      
+
       throw error;
     }
   }
@@ -295,39 +296,39 @@ export class CommunityMembershipService {
    * @returns The updated membership
    */
   static async updateMembership(
-    communityId: string, 
-    userId: string, 
+    communityId: string,
+    userId: string,
     data: UpdateCommunityMembershipInput
   ): Promise<CommunityMembership> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
     try {
       // Get authentication headers
       const authHeaders = await enhancedAuthService.getAuthHeaders();
-      
+
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/members/${userId}`, {
         method: 'PUT',
         headers: authHeaders,
         body: JSON.stringify(data),
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to update membership');
       }
-      
+
       return response.json();
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
-      
+
       throw error;
     }
   }
@@ -340,7 +341,7 @@ export class CommunityMembershipService {
   static async getCommunityMembershipStats(communityId: string): Promise<CommunityMembershipStats> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
     try {
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/members/stats`, {
         method: 'GET',
@@ -349,22 +350,22 @@ export class CommunityMembershipService {
         },
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to fetch membership stats');
       }
-      
+
       return response.json();
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
-      
+
       throw error;
     }
   }
@@ -393,9 +394,9 @@ export class CommunityMembershipService {
   static async isModerator(communityId: string, userId: string): Promise<boolean> {
     try {
       const membership = await this.getMembership(communityId, userId);
-      return membership !== null && 
-             membership.isActive && 
-             ['moderator', 'admin', 'owner'].includes(membership.role);
+      return membership !== null &&
+        membership.isActive &&
+        ['moderator', 'admin', 'owner'].includes(membership.role);
     } catch (error) {
       return false;
     }

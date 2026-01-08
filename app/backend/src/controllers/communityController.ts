@@ -276,6 +276,25 @@ export class CommunityController {
     }
   }
 
+  // Get specific membership
+  async getMembership(req: Request, res: Response): Promise<void> {
+    try {
+      const { id, userId } = req.params;
+
+      const membership = await communityService.getMembership(id, userId);
+
+      if (!membership) {
+        res.status(404).json(createErrorResponse('NOT_FOUND', 'Membership not found', 404));
+        return;
+      }
+
+      res.json(createSuccessResponse(membership, {}));
+    } catch (error) {
+      safeLogger.error('Error getting membership:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve membership'));
+    }
+  }
+
   // Join community
   async joinCommunity(req: Request, res: Response): Promise<void> {
     try {
