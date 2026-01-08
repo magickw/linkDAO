@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'react-hot-toast';
 import { CreditCard, Wallet, Plus, Edit, Trash2, Star, Check, Shield } from 'lucide-react';
+import { GlassPanel } from '@/design-system/components/GlassPanel';
+import { Button } from '@/design-system/components/Button';
+import Layout from '@/components/Layout';
 
 interface PaymentMethod {
     id: string;
@@ -105,111 +108,121 @@ export default function PaymentMethodsPage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-            </div>
+            <Layout fullWidth={true}>
+                <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+                </div>
+            </Layout>
         );
     }
 
     return (
-        <div className="max-w-6xl mx-auto p-6">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-8">
-                <div>
-                    <h1 className="text-3xl font-bold text-white">Payment Methods</h1>
-                    <p className="text-white/60 mt-1">Manage your cards and crypto wallets</p>
-                </div>
-                <button
-                    onClick={() => {
-                        setEditingMethod(null);
-                        setShowForm(true);
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-                >
-                    <Plus size={20} />
-                    Add Payment Method
-                </button>
-            </div>
+        <Layout fullWidth={true}>
+            <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    {/* Header */}
+                    <GlassPanel variant="secondary" className="mb-6">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <h1 className="text-3xl font-bold text-white">Payment Methods</h1>
+                                <p className="text-white/60 mt-1">Manage your cards and crypto wallets</p>
+                            </div>
+                            <Button
+                                variant="primary"
+                                icon={<Plus size={20} />}
+                                iconPosition="left"
+                                onClick={() => {
+                                    setEditingMethod(null);
+                                    setShowForm(true);
+                                }}
+                            >
+                                Add Payment Method
+                            </Button>
+                        </div>
+                    </GlassPanel>
 
-            {/* Filter Tabs */}
-            <div className="flex gap-2 mb-6">
-                {[
-                    { key: 'all', label: 'All' },
-                    { key: 'cards', label: 'Cards' },
-                    { key: 'crypto', label: 'Crypto' }
-                ].map((filter) => (
-                    <button
-                        key={filter.key}
-                        onClick={() => setFilterType(filter.key as any)}
-                        className={`px-4 py-2 rounded-lg transition-colors ${filterType === filter.key
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-white/5 text-white/60 hover:bg-white/10'
-                            }`}
-                    >
-                        {filter.label}
-                    </button>
-                ))}
-            </div>
+                    {/* Filter Tabs */}
+                    <GlassPanel variant="secondary" className="mb-6">
+                        <div className="flex gap-2">
+                            {[
+                                { key: 'all', label: 'All' },
+                                { key: 'cards', label: 'Cards' },
+                                { key: 'crypto', label: 'Crypto' }
+                            ].map((filter) => (
+                                <Button
+                                    key={filter.key}
+                                    variant={filterType === filter.key ? 'primary' : 'outline'}
+                                    size="sm"
+                                    onClick={() => setFilterType(filter.key as any)}
+                                >
+                                    {filter.label}
+                                </Button>
+                            ))}
+                        </div>
+                    </GlassPanel>
 
-            {/* Security Notice */}
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mb-6 flex items-start gap-3">
-                <Shield className="text-blue-400 flex-shrink-0 mt-0.5" size={20} />
-                <div className="text-sm text-white/80">
-                    <p className="font-semibold mb-1">Your payment information is secure</p>
-                    <p className="text-white/60">
-                        Card details are encrypted and tokenized. We never store your full card number.
-                    </p>
-                </div>
-            </div>
+                    {/* Security Notice */}
+                    <GlassPanel variant="secondary" className="mb-6 border-blue-500/20">
+                        <div className="flex items-start gap-3">
+                            <Shield className="text-blue-400 flex-shrink-0 mt-0.5" size={20} />
+                            <div className="text-sm text-white/80">
+                                <p className="font-semibold mb-1">Your payment information is secure</p>
+                                <p className="text-white/60">
+                                    Card details are encrypted and tokenized. We never store your full card number.
+                                </p>
+                            </div>
+                        </div>
+                    </GlassPanel>
 
-            {/* Payment Methods Grid */}
-            {filteredMethods.length === 0 ? (
-                <div className="text-center py-12 bg-white/5 rounded-xl">
-                    <CreditCard size={48} className="mx-auto text-white/40 mb-4" />
-                    <h3 className="text-xl font-semibold text-white mb-2">No payment methods yet</h3>
-                    <p className="text-white/60 mb-4">Add a payment method for faster checkout</p>
-                    <button
-                        onClick={() => setShowForm(true)}
-                        className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-                    >
-                        Add Payment Method
-                    </button>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredMethods.map((method) => (
-                        <PaymentMethodCard
-                            key={method.id}
-                            method={method}
-                            onEdit={() => {
-                                setEditingMethod(method);
-                                setShowForm(true);
+                    {/* Payment Methods Grid */}
+                    {filteredMethods.length === 0 ? (
+                        <GlassPanel variant="primary" className="text-center py-12">
+                            <CreditCard size={48} className="mx-auto text-white/40 mb-4" />
+                            <h3 className="text-xl font-semibold text-white mb-2">No payment methods yet</h3>
+                            <p className="text-white/60 mb-4">Add a payment method for faster checkout</p>
+                            <Button
+                                variant="primary"
+                                onClick={() => setShowForm(true)}
+                            >
+                                Add Payment Method
+                            </Button>
+                        </GlassPanel>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {filteredMethods.map((method) => (
+                                <PaymentMethodCard
+                                    key={method.id}
+                                    method={method}
+                                    onEdit={() => {
+                                        setEditingMethod(method);
+                                        setShowForm(true);
+                                    }}
+                                    onDelete={() => handleDelete(method.id)}
+                                    onSetDefault={() => handleSetDefault(method.id)}
+                                />
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Payment Method Form Modal */}
+                    {showForm && (
+                        <PaymentMethodFormModal
+                            method={editingMethod}
+                            onClose={() => {
+                                setShowForm(false);
+                                setEditingMethod(null);
                             }}
-                            onDelete={() => handleDelete(method.id)}
-                            onSetDefault={() => handleSetDefault(method.id)}
+                            onSave={() => {
+                                setShowForm(false);
+                                setEditingMethod(null);
+                                fetchPaymentMethods();
+                            }}
                         />
-                    ))}
+                    )}
                 </div>
-            )}
-
-            {/* Payment Method Form Modal */}
-            {showForm && (
-                <PaymentMethodFormModal
-                    method={editingMethod}
-                    onClose={() => {
-                        setShowForm(false);
-                        setEditingMethod(null);
-                    }}
-                    onSave={() => {
-                        setShowForm(false);
-                        setEditingMethod(null);
-                        fetchPaymentMethods();
-                    }}
-                />
-            )}
-        </div>
-    );
-}
+            </Layout>
+        );
+    }
 
 // Payment Method Card Component
 function PaymentMethodCard({ method, onEdit, onDelete, onSetDefault }: {
@@ -222,7 +235,7 @@ function PaymentMethodCard({ method, onEdit, onDelete, onSetDefault }: {
     const isCrypto = method.methodType === 'crypto_wallet';
 
     return (
-        <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 hover:border-white/20 transition-all">
+        <GlassPanel variant="secondary" hoverable className="p-6">
             {/* Header */}
             <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-2">
@@ -299,15 +312,19 @@ function PaymentMethodCard({ method, onEdit, onDelete, onSetDefault }: {
 
             {/* Set as Default Button */}
             {!method.isDefault && method.status === 'active' && (
-                <button
+                <Button
+                    variant="outline"
+                    size="sm"
+                    fullWidth
+                    icon={<Check size={16} />}
+                    iconPosition="left"
                     onClick={onSetDefault}
-                    className="mt-3 w-full py-2 bg-white/5 hover:bg-white/10 text-white/80 text-sm rounded-lg transition-colors flex items-center justify-center gap-2"
+                    className="mt-3"
                 >
-                    <Check size={16} />
                     Set as Default
-                </button>
+                </Button>
             )}
-        </div>
+        </GlassPanel>
     );
 }
 
@@ -389,7 +406,7 @@ function PaymentMethodFormModal({ method, onClose, onSave }: {
 
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-900 rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <GlassPanel variant="modal" className="max-w-md w-full max-h-[90vh] overflow-y-auto">
                 <div className="p-6">
                     <h2 className="text-2xl font-bold text-white mb-6">
                         {method ? 'Edit Payment Method' : 'Add Payment Method'}
@@ -590,24 +607,26 @@ function PaymentMethodFormModal({ method, onClose, onSave }: {
 
                         {/* Buttons */}
                         <div className="flex gap-3 pt-4">
-                            <button
-                                type="button"
+                            <Button
+                                variant="outline"
+                                fullWidth
                                 onClick={onClose}
-                                className="flex-1 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-colors"
                             >
                                 Cancel
-                            </button>
-                            <button
+                            </Button>
+                            <Button
+                                variant="primary"
+                                fullWidth
                                 type="submit"
                                 disabled={saving}
-                                className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors disabled:opacity-50"
+                                loading={saving}
                             >
-                                {saving ? 'Saving...' : method ? 'Update' : 'Add Method'}
-                            </button>
+                                {method ? 'Update' : 'Add Method'}
+                            </Button>
                         </div>
                     </form>
                 </div>
-            </div>
+            </GlassPanel>
         </div>
     );
 }

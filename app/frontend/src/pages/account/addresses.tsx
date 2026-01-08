@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'react-hot-toast';
 import { MapPin, Plus, Edit, Trash2, Star, Check } from 'lucide-react';
+import { GlassPanel } from '@/design-system/components/GlassPanel';
+import { Button } from '@/design-system/components/Button';
+import Layout from '@/components/Layout';
 
 interface Address {
     id: string;
@@ -105,96 +108,105 @@ export default function AddressesPage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-            </div>
+            <Layout fullWidth={true}>
+                <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+                </div>
+            </Layout>
         );
     }
 
     return (
-        <div className="max-w-6xl mx-auto p-6">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-8">
-                <div>
-                    <h1 className="text-3xl font-bold text-white">My Addresses</h1>
-                    <p className="text-white/60 mt-1">Manage your shipping and billing addresses</p>
-                </div>
-                <button
-                    onClick={() => {
-                        setEditingAddress(null);
-                        setShowForm(true);
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-                >
-                    <Plus size={20} />
-                    Add New Address
-                </button>
-            </div>
+        <Layout fullWidth={true}>
+            <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    {/* Header */}
+                    <GlassPanel variant="secondary" className="mb-6">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <h1 className="text-3xl font-bold text-white">My Addresses</h1>
+                                <p className="text-white/60 mt-1">Manage your shipping and billing addresses</p>
+                            </div>
+                            <Button
+                                variant="primary"
+                                icon={<Plus size={20} />}
+                                iconPosition="left"
+                                onClick={() => {
+                                    setEditingAddress(null);
+                                    setShowForm(true);
+                                }}
+                            >
+                                Add New Address
+                            </Button>
+                        </div>
+                    </GlassPanel>
 
-            {/* Filter Tabs */}
-            <div className="flex gap-2 mb-6">
-                {['all', 'shipping', 'billing'].map((type) => (
-                    <button
-                        key={type}
-                        onClick={() => setFilterType(type as any)}
-                        className={`px-4 py-2 rounded-lg capitalize transition-colors ${filterType === type
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-white/5 text-white/60 hover:bg-white/10'
-                            }`}
-                    >
-                        {type}
-                    </button>
-                ))}
-            </div>
+                    {/* Filter Tabs */}
+                    <GlassPanel variant="secondary" className="mb-6">
+                        <div className="flex gap-2">
+                            {['all', 'shipping', 'billing'].map((type) => (
+                                <Button
+                                    key={type}
+                                    variant={filterType === type ? 'primary' : 'outline'}
+                                    size="sm"
+                                    onClick={() => setFilterType(type as any)}
+                                    className="capitalize"
+                                >
+                                    {type}
+                                </Button>
+                            ))}
+                        </div>
+                    </GlassPanel>
 
-            {/* Address Grid */}
-            {filteredAddresses.length === 0 ? (
-                <div className="text-center py-12 bg-white/5 rounded-xl">
-                    <MapPin size={48} className="mx-auto text-white/40 mb-4" />
-                    <h3 className="text-xl font-semibold text-white mb-2">No addresses yet</h3>
-                    <p className="text-white/60 mb-4">Add your first address to get started</p>
-                    <button
-                        onClick={() => setShowForm(true)}
-                        className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-                    >
-                        Add Address
-                    </button>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredAddresses.map((address) => (
-                        <AddressCard
-                            key={address.id}
-                            address={address}
-                            onEdit={() => {
-                                setEditingAddress(address);
-                                setShowForm(true);
+                    {/* Address Grid */}
+                    {filteredAddresses.length === 0 ? (
+                        <GlassPanel variant="primary" className="text-center py-12">
+                            <MapPin size={48} className="mx-auto text-white/40 mb-4" />
+                            <h3 className="text-xl font-semibold text-white mb-2">No addresses yet</h3>
+                            <p className="text-white/60 mb-4">Add your first address to get started</p>
+                            <Button
+                                variant="primary"
+                                onClick={() => setShowForm(true)}
+                            >
+                                Add Address
+                            </Button>
+                        </GlassPanel>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {filteredAddresses.map((address) => (
+                                <AddressCard
+                                    key={address.id}
+                                    address={address}
+                                    onEdit={() => {
+                                        setEditingAddress(address);
+                                        setShowForm(true);
+                                    }}
+                                    onDelete={() => handleDelete(address.id)}
+                                    onSetDefault={() => handleSetDefault(address.id)}
+                                />
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Address Form Modal */}
+                    {showForm && (
+                        <AddressFormModal
+                            address={editingAddress}
+                            onClose={() => {
+                                setShowForm(false);
+                                setEditingAddress(null);
                             }}
-                            onDelete={() => handleDelete(address.id)}
-                            onSetDefault={() => handleSetDefault(address.id)}
+                            onSave={() => {
+                                setShowForm(false);
+                                setEditingAddress(null);
+                                fetchAddresses();
+                            }}
                         />
-                    ))}
+                    )}
                 </div>
-            )}
-
-            {/* Address Form Modal */}
-            {showForm && (
-                <AddressFormModal
-                    address={editingAddress}
-                    onClose={() => {
-                        setShowForm(false);
-                        setEditingAddress(null);
-                    }}
-                    onSave={() => {
-                        setShowForm(false);
-                        setEditingAddress(null);
-                        fetchAddresses();
-                    }}
-                />
-            )}
-        </div>
-    );
-}
+            </Layout>
+        );
+    }
 
 // Address Card Component
 function AddressCard({ address, onEdit, onDelete, onSetDefault }: {
@@ -204,7 +216,7 @@ function AddressCard({ address, onEdit, onDelete, onSetDefault }: {
     onSetDefault: () => void;
 }) {
     return (
-        <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 hover:border-white/20 transition-all">
+        <GlassPanel variant="secondary" hoverable className="p-6">
             {/* Header */}
             <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-2">
@@ -258,15 +270,19 @@ function AddressCard({ address, onEdit, onDelete, onSetDefault }: {
 
             {/* Set as Default Button */}
             {!address.isDefault && (
-                <button
+                <Button
+                    variant="outline"
+                    size="sm"
+                    fullWidth
+                    icon={<Check size={16} />}
+                    iconPosition="left"
                     onClick={onSetDefault}
-                    className="mt-3 w-full py-2 bg-white/5 hover:bg-white/10 text-white/80 text-sm rounded-lg transition-colors flex items-center justify-center gap-2"
+                    className="mt-3"
                 >
-                    <Check size={16} />
                     Set as Default
-                </button>
+                </Button>
             )}
-        </div>
+        </GlassPanel>
     );
 }
 
@@ -327,7 +343,7 @@ function AddressFormModal({ address, onClose, onSave }: {
 
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-900 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <GlassPanel variant="modal" className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                 <div className="p-6">
                     <h2 className="text-2xl font-bold text-white mb-6">
                         {address ? 'Edit Address' : 'Add New Address'}
@@ -533,24 +549,26 @@ function AddressFormModal({ address, onClose, onSave }: {
 
                         {/* Buttons */}
                         <div className="flex gap-3 pt-4">
-                            <button
-                                type="button"
+                            <Button
+                                variant="outline"
+                                fullWidth
                                 onClick={onClose}
-                                className="flex-1 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-colors"
                             >
                                 Cancel
-                            </button>
-                            <button
+                            </Button>
+                            <Button
+                                variant="primary"
+                                fullWidth
                                 type="submit"
                                 disabled={saving}
-                                className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors disabled:opacity-50"
+                                loading={saving}
                             >
-                                {saving ? 'Saving...' : address ? 'Update Address' : 'Add Address'}
-                            </button>
+                                {address ? 'Update Address' : 'Add Address'}
+                            </Button>
                         </div>
                     </form>
                 </div>
-            </div>
+            </GlassPanel>
         </div>
     );
 }

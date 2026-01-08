@@ -18,6 +18,9 @@ import {
     Search
 } from 'lucide-react';
 import Link from 'next/link';
+import { GlassPanel } from '@/design-system/components/GlassPanel';
+import { Button } from '@/design-system/components/Button';
+import Layout from '@/components/Layout';
 
 interface Order {
     id: string;
@@ -158,65 +161,70 @@ export default function OrdersPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-900">
-            <div className="max-w-7xl mx-auto p-6">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-8">
-                <div>
-                    <h1 className="text-3xl font-bold text-white">My Orders</h1>
-                    <p className="text-white/60 mt-1">Track and manage your purchases</p>
-                </div>
-                <button
-                    onClick={fetchOrders}
-                    className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-colors"
-                >
-                    <RefreshCw size={20} />
-                    Refresh
-                </button>
-            </div>
+        <Layout fullWidth={true}>
+            <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    {/* Header */}
+                    <GlassPanel variant="secondary" className="mb-6">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <h1 className="text-3xl font-bold text-white">My Orders</h1>
+                                <p className="text-white/60 mt-1">Track and manage your purchases</p>
+                            </div>
+                            <Button
+                                variant="outline"
+                                icon={<RefreshCw size={20} />}
+                                iconPosition="left"
+                                onClick={fetchOrders}
+                            >
+                                Refresh
+                            </Button>
+                        </div>
+                    </GlassPanel>
 
-            {/* Search and Filters */}
-            <div className="mb-6 space-y-4">
-                {/* Search */}
-                <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={20} />
-                    <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search by order number or product name..."
-                        className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/40 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                </div>
+                    {/* Search and Filters */}
+                    <GlassPanel variant="secondary" className="mb-6">
+                        <div className="space-y-4">
+                            {/* Search */}
+                            <div className="relative">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={20} />
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="Search by order number or product name..."
+                                    className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/40 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                            </div>
 
-                {/* Status Filters */}
-                <div className="flex gap-2 overflow-x-auto pb-2">
-                    {[
-                        { key: 'all', label: 'All Orders' },
-                        { key: 'pending', label: 'Pending' },
-                        { key: 'processing', label: 'Processing' },
-                        { key: 'shipped', label: 'Shipped' },
-                        { key: 'delivered', label: 'Delivered' },
-                        { key: 'cancelled', label: 'Cancelled' }
-                    ].map((filter) => (
-                        <button
-                            key={filter.key}
-                            onClick={() => setFilterStatus(filter.key)}
-                            className={`px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${filterStatus === filter.key
-                                ? 'bg-blue-500 text-white'
-                                : 'bg-white/5 text-white/60 hover:bg-white/10'
-                                }`}
-                        >
-                            {filter.label}
-                            {filter.key !== 'all' && (
-                                <span className="ml-2 text-xs">
-                                    ({orders.filter(o => o.status === filter.key).length})
-                                </span>
-                            )}
-                        </button>
-                    ))}
-                </div>
-            </div>
+                            {/* Status Filters */}
+                            <div className="flex gap-2 overflow-x-auto pb-2">
+                                {[
+                                    { key: 'all', label: 'All Orders' },
+                                    { key: 'pending', label: 'Pending' },
+                                    { key: 'processing', label: 'Processing' },
+                                    { key: 'shipped', label: 'Shipped' },
+                                    { key: 'delivered', label: 'Delivered' },
+                                    { key: 'cancelled', label: 'Cancelled' }
+                                ].map((filter) => (
+                                    <Button
+                                        key={filter.key}
+                                        variant={filterStatus === filter.key ? 'primary' : 'outline'}
+                                        size="sm"
+                                        onClick={() => setFilterStatus(filter.key)}
+                                        className="whitespace-nowrap"
+                                    >
+                                        {filter.label}
+                                        {filter.key !== 'all' && (
+                                            <span className="ml-2 text-xs">
+                                                ({orders.filter(o => o.status === filter.key).length})
+                                            </span>
+                                        )}
+                                    </Button>
+                                ))}
+                            </div>
+                        </div>
+                    </GlassPanel>
 
             {/* Orders List */}
             {filteredOrders.length === 0 ? (
@@ -252,15 +260,16 @@ export default function OrdersPage() {
                 </div>
             )}
 
-            {/* Order Details Modal */}
-            {selectedOrder && (
-                <OrderDetailsModal
-                    order={selectedOrder}
-                    onClose={() => setSelectedOrder(null)}
-                />
-            )}
+                    {/* Order Details Modal */}
+                    {selectedOrder && (
+                        <OrderDetailsModal
+                            order={selectedOrder}
+                            onClose={() => setSelectedOrder(null)}
+                        />
+                    )}
+                </div>
             </div>
-        </div>
+        </Layout>
     );
 }
 
@@ -304,7 +313,7 @@ function OrderCard({ order, onViewDetails }: {
     };
 
     return (
-        <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 hover:border-white/20 transition-all">
+        <GlassPanel variant="secondary" hoverable className="p-6">
             {/* Header */}
             <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
@@ -388,15 +397,16 @@ function OrderCard({ order, onViewDetails }: {
                     </span>
                     <span className="text-sm text-white/60 ml-2">{order.currency}</span>
                 </div>
-                <button
+                <Button
+                    variant="primary"
+                    icon={<Eye size={16} />}
+                    iconPosition="left"
                     onClick={onViewDetails}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
                 >
-                    <Eye size={16} />
                     View Details
-                </button>
+                </Button>
             </div>
-        </div>
+        </GlassPanel>
     );
 }
 
@@ -407,7 +417,7 @@ function OrderDetailsModal({ order, onClose }: {
 }) {
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-900 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <GlassPanel variant="modal" className="max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                 <div className="p-6">
                     {/* Header */}
                     <div className="flex justify-between items-start mb-6">
@@ -555,19 +565,24 @@ function OrderDetailsModal({ order, onClose }: {
 
                     {/* Actions */}
                     <div className="flex gap-3">
-                        <button
+                        <Button
+                            variant="outline"
+                            fullWidth
                             onClick={onClose}
-                            className="flex-1 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-colors"
                         >
                             Close
-                        </button>
-                        <button className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex items-center justify-center gap-2">
-                            <Download size={16} />
+                        </Button>
+                        <Button
+                            variant="primary"
+                            fullWidth
+                            icon={<Download size={16} />}
+                            iconPosition="left"
+                        >
                             Download Invoice
-                        </button>
+                        </Button>
                     </div>
                 </div>
-            </div>
+            </GlassPanel>
         </div>
     );
 }
