@@ -1,255 +1,223 @@
 import { db } from '../db';
-import { userAddresses } from '../db/buyerDataSchema';
+import * as schema from '../db/schema';
 import { eq, and, desc } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 
-export interface UserAddress {
-    id: string;
-    userId: string;
-    addressType: 'shipping' | 'billing' | 'both';
-    label?: string;
-    firstName: string;
-    lastName: string;
-    company?: string;
-    phone?: string;
-    email?: string;
-    addressLine1: string;
-    addressLine2?: string;
-    city: string;
-    state: string;
-    postalCode: string;
-    country: string;
-    isDefault: boolean;
-    isVerified: boolean;
-    verifiedAt?: Date;
-    deliveryInstructions?: string;
-    createdAt: Date;
-    updatedAt: Date;
-    lastUsedAt?: Date;
-}
-
+// Input matches the new schema fields
 export interface CreateAddressInput {
-    userId: string;
-    addressType: 'shipping' | 'billing' | 'both';
+    type: 'billing' | 'shipping';
     label?: string;
     firstName: string;
     lastName: string;
     company?: string;
-    phone?: string;
-    email?: string;
     addressLine1: string;
     addressLine2?: string;
     city: string;
     state: string;
     postalCode: string;
     country: string;
-    isDefault?: boolean;
-    deliveryInstructions?: string;
-}
-
-export interface UpdateAddressInput {
-    label?: string;
-    firstName?: string;
-    lastName?: string;
-    company?: string;
     phone?: string;
     email?: string;
-    addressLine1?: string;
-    addressLine2?: string;
-    city?: string;
-    state?: string;
-    postalCode?: string;
-    country?: string;
     isDefault?: boolean;
-    deliveryInstructions?: string;
 }
+
+export interface UpdateAddressInput extends Partial<CreateAddressInput> { }
 
 export class AddressService {
     /**
      * Get all addresses for a user
      */
-    static async getUserAddresses(userId: string, addressType?: 'shipping' | 'billing' | 'both'): Promise<UserAddress[]> {
-        const conditions = [eq(userAddresses.userId, userId)];
-
-        if (addressType) {
-            conditions.push(eq(userAddresses.addressType, addressType));
+    static async getAddresses(userId: string) {
+        try {
+            // Using userAddresses from buyerDataSchema via main schema export
+            return await db
+                .select()
+                .from(schema.buyerDataSchema.userAddresses)
+                .where(eq(schema.buyerDataSchema.userAddresses.userId, userId))
+                .orderBy(desc(schema.buyerDataSchema.userAddresses.isDefault), desc(schema.buyerDataSchema.userAddresses.createdAt));
+        } catch (error) {
+            safeLogger.error('Error fetching addresses:', error);
+            throw error;
         }
-
-        const addresses = await db
-            .select()
-            .from(userAddresses)
-            .where(and(...conditions))
-            .orderBy(desc(userAddresses.isDefault), desc(userAddresses.lastUsedAt));
-
-        return addresses as UserAddress[];
     }
 
     /**
-     * Get a specific address by ID
+     * Get a specific address
      */
-    static async getAddressById(addressId: string, userId: string): Promise<UserAddress | null> {
-        const [address] = await db
-            .select()
-            .from(userAddresses)
-            .where(and(
-                eq(userAddresses.id, addressId),
-                eq(userAddresses.userId, userId)
-            ))
-            .limit(1);
-
-        return (address as UserAddress) || null;
-    }
-
-    /**
-     * Get default address for a user
-     */
-    static async getDefaultAddress(userId: string, addressType: 'shipping' | 'billing'): Promise<UserAddress | null> {
-        const [address] = await db
-            .select()
-            .from(userAddresses)
-            .where(and(
-                eq(userAddresses.userId, userId),
-                eq(userAddresses.isDefault, true),
-                // Address type can be specific type or 'both'
-                addressType === 'shipping'
-                    ? or(eq(userAddresses.addressType, 'shipping'), eq(userAddresses.addressType, 'both'))
-                    : or(eq(userAddresses.addressType, 'billing'), eq(userAddresses.addressType, 'both'))
-            ))
-            .limit(1);
-
-        return (address as UserAddress) || null;
+    static async getAddressById(id: string, userId: string) {
+        try {
+            const result = await db
+                .select()
+                .from(schema.buyerDataSchema.userAddresses)
+                .where(and(
+                    eq(schema.buyerDataSchema.userAddresses.id, id),
+                    eq(schema.buyerDataSchema.userAddresses.userId, userId)
+                ));
+            return result[0] || null;
+        } catch (error) {
+            safeLogger.error('Error fetching address:', error);
+            throw error;
+        }
     }
 
     /**
      * Create a new address
      */
-    static async createAddress(input: CreateAddressInput): Promise<UserAddress> {
-        // If this is set as default, unset other defaults of the same type
-        if (input.isDefault) {
-            await this.unsetDefaultAddresses(input.userId, input.addressType);
+    static async createAddress(userId: string, data: CreateAddressInput) {
+        try {
+            const addressType = data.type; // 'billing' or 'shipping'
+
+            // If setting as default, unset other defaults of same type
+            if (data.isDefault) {
+                await this.unsetDefaultAddresses(userId, addressType);
+            }
+
+            const result = await db.insert(schema.buyerDataSchema.userAddresses).values({
+                userId,
+                addressType, // Map type to addressType
+                label: data.label || (addressType === 'billing' ? 'Billing Address' : 'Shipping Address'),
+                firstName: data.firstName,
+                lastName: data.lastName,
+                company: data.company,
+                phone: data.phone,
+                email: data.email,
+                addressLine1: data.addressLine1,
+                addressLine2: data.addressLine2,
+                city: data.city,
+                state: data.state,
+                postalCode: data.postalCode,
+                country: data.country,
+                isDefault: data.isDefault
+            }).returning();
+
+            return result[0];
+        } catch (error) {
+            safeLogger.error('Error creating address:', error);
+            throw error;
         }
-
-        const [newAddress] = await db
-            .insert(userAddresses)
-            .values({
-                ...input,
-                isDefault: input.isDefault || false,
-            })
-            .returning();
-
-        return newAddress as UserAddress;
     }
 
     /**
-     * Update an existing address
+     * Update an address
      */
-    static async updateAddress(addressId: string, userId: string, input: UpdateAddressInput): Promise<UserAddress | null> {
-        // If setting as default, unset other defaults
-        if (input.isDefault) {
-            const address = await this.getAddressById(addressId, userId);
-            if (address) {
-                await this.unsetDefaultAddresses(userId, address.addressType);
+    static async updateAddress(id: string, userId: string, data: UpdateAddressInput) {
+        try {
+            // If setting as default, unset other defaults
+            if (data.isDefault) {
+                let typeToUnset = data.type;
+                if (!typeToUnset) {
+                    const current = await this.getAddressById(id, userId);
+                    if (current) typeToUnset = current.addressType as 'billing' | 'shipping';
+                }
+
+                if (typeToUnset) {
+                    await this.unsetDefaultAddresses(userId, typeToUnset);
+                }
             }
-        }
 
-        const [updatedAddress] = await db
-            .update(userAddresses)
-            .set({
-                ...input,
+            // Map input fields to schema fields
+            const updateData: any = {
                 updatedAt: new Date(),
-            })
-            .where(and(
-                eq(userAddresses.id, addressId),
-                eq(userAddresses.userId, userId)
-            ))
-            .returning();
+                ...data
+            };
 
-        return (updatedAddress as UserAddress) || null;
+            // Handle field mapping for update
+            if (data.type) updateData.addressType = data.type;
+            if (data.addressLine1) updateData.addressLine1 = data.addressLine1;
+            if (data.addressLine2) updateData.addressLine2 = data.addressLine2;
+            if (data.postalCode) updateData.postalCode = data.postalCode;
+
+            // Remove mapped/unused logical fields from direct spread if needed, but extra fields usually ignored or we should be precise.
+            // Cleaner to construct the object explicitly.
+            const cleanUpdateData: any = { updatedAt: new Date() };
+            if (data.type !== undefined) cleanUpdateData.addressType = data.type;
+            if (data.label !== undefined) cleanUpdateData.label = data.label;
+            if (data.firstName !== undefined) cleanUpdateData.firstName = data.firstName;
+            if (data.lastName !== undefined) cleanUpdateData.lastName = data.lastName;
+            if (data.company !== undefined) cleanUpdateData.company = data.company;
+            if (data.phone !== undefined) cleanUpdateData.phone = data.phone;
+            if (data.email !== undefined) cleanUpdateData.email = data.email;
+            if (data.addressLine1 !== undefined) cleanUpdateData.addressLine1 = data.addressLine1;
+            if (data.addressLine2 !== undefined) cleanUpdateData.addressLine2 = data.addressLine2;
+            if (data.city !== undefined) cleanUpdateData.city = data.city;
+            if (data.state !== undefined) cleanUpdateData.state = data.state;
+            if (data.postalCode !== undefined) cleanUpdateData.postalCode = data.postalCode;
+            if (data.country !== undefined) cleanUpdateData.country = data.country;
+            if (data.isDefault !== undefined) cleanUpdateData.isDefault = data.isDefault;
+
+            const result = await db
+                .update(schema.buyerDataSchema.userAddresses)
+                .set(cleanUpdateData)
+                .where(and(
+                    eq(schema.buyerDataSchema.userAddresses.id, id),
+                    eq(schema.buyerDataSchema.userAddresses.userId, userId)
+                ))
+                .returning();
+
+            return result[0];
+        } catch (error) {
+            safeLogger.error('Error updating address:', error);
+            throw error;
+        }
     }
 
     /**
      * Delete an address
      */
-    static async deleteAddress(addressId: string, userId: string): Promise<boolean> {
-        const result = await db
-            .delete(userAddresses)
-            .where(and(
-                eq(userAddresses.id, addressId),
-                eq(userAddresses.userId, userId)
-            ))
-            .returning();
+    static async deleteAddress(id: string, userId: string) {
+        try {
+            const result = await db
+                .delete(schema.buyerDataSchema.userAddresses)
+                .where(and(
+                    eq(schema.buyerDataSchema.userAddresses.id, id),
+                    eq(schema.buyerDataSchema.userAddresses.userId, userId)
+                ))
+                .returning();
 
-        return result.length > 0;
+            return result.length > 0;
+        } catch (error) {
+            safeLogger.error('Error deleting address:', error);
+            throw error;
+        }
     }
 
     /**
      * Set an address as default
      */
-    static async setDefaultAddress(addressId: string, userId: string): Promise<UserAddress | null> {
-        const address = await this.getAddressById(addressId, userId);
-        if (!address) return null;
+    static async setDefaultAddress(id: string, userId: string) {
+        try {
+            const address = await this.getAddressById(id, userId);
+            if (!address) throw new Error('Address not found');
 
-        // Unset other defaults of the same type
-        await this.unsetDefaultAddresses(userId, address.addressType);
+            await this.unsetDefaultAddresses(userId, address.addressType as 'billing' | 'shipping');
 
-        // Set this one as default
-        const [updatedAddress] = await db
-            .update(userAddresses)
-            .set({
-                isDefault: true,
-                updatedAt: new Date(),
-            })
-            .where(eq(userAddresses.id, addressId))
-            .returning();
+            const result = await db
+                .update(schema.buyerDataSchema.userAddresses)
+                .set({
+                    isDefault: true,
+                    updatedAt: new Date()
+                })
+                .where(eq(schema.buyerDataSchema.userAddresses.id, id))
+                .returning();
 
-        return (updatedAddress as UserAddress) || null;
+            return result[0];
+        } catch (error) {
+            safeLogger.error('Error setting default address:', error);
+            throw error;
+        }
     }
 
     /**
-     * Update last used timestamp
+     * Helper: Unset default addresses for a user and type
      */
-    static async updateLastUsed(addressId: string): Promise<void> {
+    private static async unsetDefaultAddresses(userId: string, type: 'billing' | 'shipping') {
         await db
-            .update(userAddresses)
-            .set({
-                lastUsedAt: new Date(),
-            })
-            .where(eq(userAddresses.id, addressId));
-    }
-
-    /**
-     * Verify an address
-     */
-    static async verifyAddress(addressId: string, userId: string): Promise<UserAddress | null> {
-        const [verifiedAddress] = await db
-            .update(userAddresses)
-            .set({
-                isVerified: true,
-                verifiedAt: new Date(),
-                updatedAt: new Date(),
-            })
+            .update(schema.buyerDataSchema.userAddresses)
+            .set({ isDefault: false })
             .where(and(
-                eq(userAddresses.id, addressId),
-                eq(userAddresses.userId, userId)
-            ))
-            .returning();
-
-        return (verifiedAddress as UserAddress) || null;
-    }
-
-    /**
-     * Helper: Unset default addresses of a specific type for a user
-     */
-    private static async unsetDefaultAddresses(userId: string, addressType: 'shipping' | 'billing' | 'both'): Promise<void> {
-        await db
-            .update(userAddresses)
-            .set({
-                isDefault: false,
-                updatedAt: new Date(),
-            })
-            .where(and(
-                eq(userAddresses.userId, userId),
-                eq(userAddresses.addressType, addressType),
-                eq(userAddresses.isDefault, true)
+                eq(schema.buyerDataSchema.userAddresses.userId, userId),
+                eq(schema.buyerDataSchema.userAddresses.addressType, type),
+                eq(schema.buyerDataSchema.userAddresses.isDefault, true)
             ));
     }
 }

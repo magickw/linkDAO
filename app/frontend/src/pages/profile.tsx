@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { UserProfile, CreateUserProfileInput, UpdateUserProfileInput } from '@/models/UserProfile';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
@@ -20,7 +21,7 @@ import { getDefaultAvatar } from '@/utils/userDisplay';
 import FollowerList from '@/components/FollowerList';
 import FollowingList from '@/components/FollowingList';
 import TipBar from '@/components/TipBar';
-import { PaymentMethodsTab } from '@/components/PaymentMethodsTab';
+
 import { useWalletDataReal } from '@/hooks/useWalletDataReal';
 import { useReputationData } from '@/hooks/useReputationData';
 import { useTipsData } from '@/hooks/useTipsData';
@@ -121,35 +122,9 @@ export default function Profile() {
     website: '',
     socialLinks: [] as { platform: string; url: string; username?: string }[],
   });
-  const [activeTab, setActiveTab] = useState<'posts' | 'proposals' | 'activity' | 'wallet' | 'reputation' | 'tips' | 'followers' | 'following' | 'addresses' | 'payments' | 'edit' | 'social'>('posts');
+  const [activeTab, setActiveTab] = useState<'posts' | 'proposals' | 'activity' | 'wallet' | 'reputation' | 'tips' | 'followers' | 'following' | 'edit' | 'social'>('posts');
   const [isEditing, setIsEditing] = useState(false);
-  const [addresses, setAddresses] = useState({
-    billing: {
-      firstName: '',
-      lastName: '',
-      company: '',
-      address1: '',
-      address2: '',
-      city: '',
-      state: '',
-      zipCode: '',
-      country: '',
-      phone: ''
-    },
-    shipping: {
-      firstName: '',
-      lastName: '',
-      company: '',
-      address1: '',
-      address2: '',
-      city: '',
-      state: '',
-      zipCode: '',
-      country: '',
-      phone: '',
-      sameAsBilling: true
-    }
-  });
+
 
 
 
@@ -175,34 +150,7 @@ export default function Profile() {
       });
       setAvatarError(false); // Reset avatar error when loading new profile
 
-      // Load addresses from backend profile
-      setAddresses({
-        billing: {
-          firstName: backendProfile.billingFirstName || '',
-          lastName: backendProfile.billingLastName || '',
-          company: backendProfile.billingCompany || '',
-          address1: backendProfile.billingAddress1 || '',
-          address2: backendProfile.billingAddress2 || '',
-          city: backendProfile.billingCity || '',
-          state: backendProfile.billingState || '',
-          zipCode: backendProfile.billingZipCode || '',
-          country: backendProfile.billingCountry || '',
-          phone: backendProfile.billingPhone || ''
-        },
-        shipping: {
-          firstName: backendProfile.shippingFirstName || '',
-          lastName: backendProfile.shippingLastName || '',
-          company: backendProfile.shippingCompany || '',
-          address1: backendProfile.shippingAddress1 || '',
-          address2: backendProfile.shippingAddress2 || '',
-          city: backendProfile.shippingCity || '',
-          state: backendProfile.shippingState || '',
-          zipCode: backendProfile.shippingZipCode || '',
-          country: backendProfile.shippingCountry || '',
-          phone: backendProfile.shippingPhone || '',
-          sameAsBilling: backendProfile.shippingSameAsBilling ?? true // Use actual value from backend, default to true
-        }
-      });
+
     } else if (contractProfileData && contractProfileData.handle) {
       setProfile({
         handle: contractProfileData.handle,
@@ -361,42 +309,7 @@ export default function Profile() {
     setProfile(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    const [section, field] = name.split('.');
 
-    if (section === 'billing' || section === 'shipping') {
-      setAddresses(prev => ({
-        ...prev,
-        [section]: {
-          ...prev[section as keyof typeof prev],
-          [field]: value
-        }
-      }));
-    }
-  };
-
-  const handleSameAsBillingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const checked = e.target.checked;
-    setAddresses(prev => ({
-      ...prev,
-      shipping: {
-        ...prev.shipping,
-        sameAsBilling: checked
-      }
-    }));
-
-    if (checked) {
-      // Copy billing address to shipping when same as billing is checked
-      setAddresses(prev => ({
-        ...prev,
-        shipping: {
-          ...prev.billing,
-          sameAsBilling: true
-        }
-      }));
-    }
-  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -620,28 +533,7 @@ export default function Profile() {
         bannerCid: profile.bannerCid,
         website: profile.website,
         socialLinks: profile.socialLinks,
-        // Billing address
-        billingFirstName: addresses.billing.firstName,
-        billingLastName: addresses.billing.lastName,
-        billingCompany: addresses.billing.company,
-        billingAddress1: addresses.billing.address1,
-        billingAddress2: addresses.billing.address2,
-        billingCity: addresses.billing.city,
-        billingState: addresses.billing.state,
-        billingZipCode: addresses.billing.zipCode,
-        billingCountry: addresses.billing.country,
-        billingPhone: addresses.billing.phone,
-        // Shipping address
-        shippingFirstName: addresses.shipping.firstName,
-        shippingLastName: addresses.shipping.lastName,
-        shippingCompany: addresses.shipping.company,
-        shippingAddress1: addresses.shipping.address1,
-        shippingAddress2: addresses.shipping.address2,
-        shippingCity: addresses.shipping.city,
-        shippingState: addresses.shipping.state,
-        shippingZipCode: addresses.shipping.zipCode,
-        shippingCountry: addresses.shipping.country,
-        shippingPhone: addresses.shipping.phone,
+
       };
 
       await updateBackendProfile(updateData);
@@ -689,163 +581,7 @@ export default function Profile() {
     window.location.reload();
   };
 
-  const handleAddressSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
 
-    // Validation
-    if (!isConnected || !currentUserAddress) {
-      addToast('Please connect your wallet first', 'error');
-      return;
-    }
-
-    // Check authentication and trigger login if needed
-    const authResult = await ensureAuthenticated();
-    if (!authResult.success) {
-      addToast(authResult.error || 'Authentication failed', 'error');
-      return;
-    }
-
-    // Validate required fields for billing address
-    if (!addresses.billing.firstName.trim() || !addresses.billing.lastName.trim() ||
-      !addresses.billing.address1.trim() || !addresses.billing.city.trim() ||
-      !addresses.billing.state.trim() || !addresses.billing.zipCode.trim() ||
-      !addresses.billing.country.trim()) {
-      addToast('Please fill in all required billing address fields', 'error');
-      return;
-    }
-
-    // Validate shipping address if it's different from billing
-    if (!addresses.shipping.sameAsBilling) {
-      if (!addresses.shipping.firstName.trim() || !addresses.shipping.lastName.trim() ||
-        !addresses.shipping.address1.trim() || !addresses.shipping.city.trim() ||
-        !addresses.shipping.state.trim() || !addresses.shipping.zipCode.trim() ||
-        !addresses.shipping.country.trim()) {
-        addToast('Please fill in all required shipping address fields', 'error');
-        return;
-      }
-    }
-
-    try {
-      setIsUpdating(true);
-      setUpdateError(null);
-
-      // Save addresses to backend database
-      if (backendProfile) {
-        // If shipping address is same as billing, copy the billing address to shipping
-        let shippingData = {
-          shippingFirstName: addresses.shipping.firstName,
-          shippingLastName: addresses.shipping.lastName,
-          shippingCompany: addresses.shipping.company,
-          shippingAddress1: addresses.shipping.address1,
-          shippingAddress2: addresses.shipping.address2,
-          shippingCity: addresses.shipping.city,
-          shippingState: addresses.shipping.state,
-          shippingZipCode: addresses.shipping.zipCode,
-          shippingCountry: addresses.shipping.country,
-          shippingPhone: addresses.shipping.phone,
-        };
-
-        // If same as billing is checked, copy billing address to shipping
-        if (addresses.shipping.sameAsBilling) {
-          shippingData = {
-            shippingFirstName: addresses.billing.firstName,
-            shippingLastName: addresses.billing.lastName,
-            shippingCompany: addresses.billing.company,
-            shippingAddress1: addresses.billing.address1,
-            shippingAddress2: addresses.billing.address2,
-            shippingCity: addresses.billing.city,
-            shippingState: addresses.billing.state,
-            shippingZipCode: addresses.billing.zipCode,
-            shippingCountry: addresses.billing.country,
-            shippingPhone: addresses.billing.phone,
-          };
-        }
-
-        // Update existing profile with address information
-        const updateData: UpdateUserProfileInput = {
-          // Billing Address
-          billingFirstName: addresses.billing.firstName,
-          billingLastName: addresses.billing.lastName,
-          billingCompany: addresses.billing.company,
-          billingAddress1: addresses.billing.address1,
-          billingAddress2: addresses.billing.address2,
-          billingCity: addresses.billing.city,
-          billingState: addresses.billing.state,
-          billingZipCode: addresses.billing.zipCode,
-          billingCountry: addresses.billing.country,
-          billingPhone: addresses.billing.phone,
-          // Shipping Address
-          ...shippingData,
-          shippingSameAsBilling: addresses.shipping.sameAsBilling,
-        };
-
-        await updateBackendProfile(updateData);
-        setIsEditing(false);
-        addToast('Profile updated successfully', 'success');
-      } else {
-        // If no backend profile exists, create one
-        const createData: CreateUserProfileInput = {
-          walletAddress: currentUserAddress,
-          handle: profile.handle,
-          displayName: profile.displayName,
-          ens: profile.ens,
-          avatarCid: profile.avatar,
-          bannerCid: profile.bannerCid,
-          bioCid: profile.bio,
-          // Billing Address
-          billingFirstName: addresses.billing.firstName,
-          billingLastName: addresses.billing.lastName,
-          billingCompany: addresses.billing.company,
-          billingAddress1: addresses.billing.address1,
-          billingAddress2: addresses.billing.address2,
-          billingCity: addresses.billing.city,
-          billingState: addresses.billing.state,
-          billingZipCode: addresses.billing.zipCode,
-          billingCountry: addresses.billing.country,
-          billingPhone: addresses.billing.phone,
-          // Shipping Address
-          shippingFirstName: addresses.shipping.firstName,
-          shippingLastName: addresses.shipping.lastName,
-          shippingCompany: addresses.shipping.company,
-          shippingAddress1: addresses.shipping.address1,
-          shippingAddress2: addresses.shipping.address2,
-          shippingCity: addresses.shipping.city,
-          shippingState: addresses.shipping.state,
-          shippingZipCode: addresses.shipping.zipCode,
-          shippingCountry: addresses.shipping.country,
-          shippingPhone: addresses.shipping.phone,
-          shippingSameAsBilling: addresses.shipping.sameAsBilling,
-        };
-
-        // Create profile
-        await ProfileService.createProfile(createData);
-        setIsEditing(false);
-        addToast('Profile created successfully', 'success');
-
-        // Refresh the page to load the new profile
-        router.reload();
-      }
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      let errorMessage = 'Failed to update profile';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (typeof error === 'object' && error !== null) {
-        if ('message' in error && typeof (error as any).message === 'string') {
-          errorMessage = (error as any).message;
-        } else if ('error' in error && typeof (error as any).error === 'string') {
-          errorMessage = (error as any).error;
-        } else {
-          errorMessage = JSON.stringify(error);
-        }
-      } else if (typeof error === 'string') {
-        errorMessage = error;
-      }
-      addToast(errorMessage, 'error');
-    } finally {
-      setIsUpdating(false);
-    }
-  };
 
   if (!isConnected) {
     return (
@@ -1331,41 +1067,7 @@ export default function Profile() {
                   </button>
                 )}
 
-                {(activeTab === 'edit' || isEditing) && (
-                  <button
-                    onClick={() => setActiveTab('addresses')}
-                    className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${activeTab === 'addresses'
-                      ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                      }`}
-                  >
-                    <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    Addresses
-                    <svg className="ml-1 h-3 w-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                  </button>
-                )}
-                {(activeTab === 'edit' || isEditing) && (
-                  <button
-                    onClick={() => setActiveTab('payments')}
-                    className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${activeTab === 'payments'
-                      ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                      }`}
-                  >
-                    <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                    </svg>
-                    Payment Methods
-                    <svg className="ml-1 h-3 w-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                  </button>
-                )}
+
               </nav>
             </div>
           )}
@@ -1989,353 +1691,7 @@ export default function Profile() {
                 </div>
               )}
 
-              {activeTab === 'addresses' && isEditing && currentUserAddress && targetUserAddress === currentUserAddress && (
-                <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6">Address Information</h3>
 
-                  <form onSubmit={handleAddressSubmit} className="space-y-8">
-                    {/* Billing Address Section */}
-                    <div>
-                      <h4 className="text-md font-medium text-gray-900 dark:text-white mb-4">Billing Address</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label htmlFor="billing.firstName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            First Name
-                          </label>
-                          <input
-                            type="text"
-                            id="billing.firstName"
-                            name="billing.firstName"
-                            value={addresses.billing.firstName}
-                            onChange={handleAddressChange}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                          />
-                        </div>
-
-                        <div>
-                          <label htmlFor="billing.lastName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Last Name
-                          </label>
-                          <input
-                            type="text"
-                            id="billing.lastName"
-                            name="billing.lastName"
-                            value={addresses.billing.lastName}
-                            onChange={handleAddressChange}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                          />
-                        </div>
-
-                        <div className="md:col-span-2">
-                          <label htmlFor="billing.company" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Company (Optional)
-                          </label>
-                          <input
-                            type="text"
-                            id="billing.company"
-                            name="billing.company"
-                            value={addresses.billing.company}
-                            onChange={handleAddressChange}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                          />
-                        </div>
-
-                        <div className="md:col-span-2">
-                          <label htmlFor="billing.address1" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Address Line 1
-                          </label>
-                          <input
-                            type="text"
-                            id="billing.address1"
-                            name="billing.address1"
-                            value={addresses.billing.address1}
-                            onChange={handleAddressChange}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                          />
-                        </div>
-
-                        <div className="md:col-span-2">
-                          <label htmlFor="billing.address2" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Address Line 2 (Optional)
-                          </label>
-                          <input
-                            type="text"
-                            id="billing.address2"
-                            name="billing.address2"
-                            value={addresses.billing.address2}
-                            onChange={handleAddressChange}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                          />
-                        </div>
-
-                        <div>
-                          <label htmlFor="billing.city" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            City
-                          </label>
-                          <input
-                            type="text"
-                            id="billing.city"
-                            name="billing.city"
-                            value={addresses.billing.city}
-                            onChange={handleAddressChange}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                          />
-                        </div>
-
-                        <div>
-                          <label htmlFor="billing.state" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            State/Province
-                          </label>
-                          <input
-                            type="text"
-                            id="billing.state"
-                            name="billing.state"
-                            value={addresses.billing.state}
-                            onChange={handleAddressChange}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                          />
-                        </div>
-
-                        <div>
-                          <label htmlFor="billing.zipCode" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            ZIP/Postal Code
-                          </label>
-                          <input
-                            type="text"
-                            id="billing.zipCode"
-                            name="billing.zipCode"
-                            value={addresses.billing.zipCode}
-                            onChange={handleAddressChange}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                          />
-                        </div>
-
-                        <div>
-                          <label htmlFor="billing.country" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Country
-                          </label>
-                          <select
-                            id="billing.country"
-                            name="billing.country"
-                            value={addresses.billing.country}
-                            onChange={handleAddressChange}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                          >
-                            <option value="">Select a country</option>
-                            {countries.map((country) => (
-                              <option key={country.code} value={country.code}>
-                                {country.flag} {country.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="md:col-span-2">
-                          <label htmlFor="billing.phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Phone Number
-                          </label>
-                          <input
-                            type="tel"
-                            id="billing.phone"
-                            name="billing.phone"
-                            value={addresses.billing.phone}
-                            onChange={handleAddressChange}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Shipping Address Section */}
-                    <div>
-                      <div className="flex items-center mb-4">
-                        <input
-                          id="shipping.sameAsBilling"
-                          name="shipping.sameAsBilling"
-                          type="checkbox"
-                          checked={addresses.shipping.sameAsBilling}
-                          onChange={handleSameAsBillingChange}
-                          className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                        />
-                        <label htmlFor="shipping.sameAsBilling" className="ml-2 block text-sm text-gray-900 dark:text-white">
-                          Shipping address same as billing
-                        </label>
-                      </div>
-
-                      {!addresses.shipping.sameAsBilling && (
-                        <>
-                          <h4 className="text-md font-medium text-gray-900 dark:text-white mb-4">Shipping Address</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <label htmlFor="shipping.firstName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                First Name
-                              </label>
-                              <input
-                                type="text"
-                                id="shipping.firstName"
-                                name="shipping.firstName"
-                                value={addresses.shipping.firstName}
-                                onChange={handleAddressChange}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                              />
-                            </div>
-
-                            <div>
-                              <label htmlFor="shipping.lastName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Last Name
-                              </label>
-                              <input
-                                type="text"
-                                id="shipping.lastName"
-                                name="shipping.lastName"
-                                value={addresses.shipping.lastName}
-                                onChange={handleAddressChange}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                              />
-                            </div>
-
-                            <div className="md:col-span-2">
-                              <label htmlFor="shipping.company" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Company (Optional)
-                              </label>
-                              <input
-                                type="text"
-                                id="shipping.company"
-                                name="shipping.company"
-                                value={addresses.shipping.company}
-                                onChange={handleAddressChange}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                              />
-                            </div>
-
-                            <div className="md:col-span-2">
-                              <label htmlFor="shipping.address1" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Address Line 1
-                              </label>
-                              <input
-                                type="text"
-                                id="shipping.address1"
-                                name="shipping.address1"
-                                value={addresses.shipping.address1}
-                                onChange={handleAddressChange}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                              />
-                            </div>
-
-                            <div className="md:col-span-2">
-                              <label htmlFor="shipping.address2" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Address Line 2 (Optional)
-                              </label>
-                              <input
-                                type="text"
-                                id="shipping.address2"
-                                name="shipping.address2"
-                                value={addresses.shipping.address2}
-                                onChange={handleAddressChange}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                              />
-                            </div>
-
-                            <div>
-                              <label htmlFor="shipping.city" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                City
-                              </label>
-                              <input
-                                type="text"
-                                id="shipping.city"
-                                name="shipping.city"
-                                value={addresses.shipping.city}
-                                onChange={handleAddressChange}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                              />
-                            </div>
-
-                            <div>
-                              <label htmlFor="shipping.state" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                State/Province
-                              </label>
-                              <input
-                                type="text"
-                                id="shipping.state"
-                                name="shipping.state"
-                                value={addresses.shipping.state}
-                                onChange={handleAddressChange}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                              />
-                            </div>
-
-                            <div>
-                              <label htmlFor="shipping.zipCode" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                ZIP/Postal Code
-                              </label>
-                              <input
-                                type="text"
-                                id="shipping.zipCode"
-                                name="shipping.zipCode"
-                                value={addresses.shipping.zipCode}
-                                onChange={handleAddressChange}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                              />
-                            </div>
-
-                            <div>
-                              <label htmlFor="shipping.country" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Country
-                              </label>
-                              <select
-                                id="shipping.country"
-                                name="shipping.country"
-                                value={addresses.shipping.country}
-                                onChange={handleAddressChange}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                              >
-                                <option value="">Select a country</option>
-                                {countries.map((country) => (
-                                  <option key={country.code} value={country.code}>
-                                    {country.flag} {country.name}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-
-                            <div className="md:col-span-2">
-                              <label htmlFor="shipping.phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Phone Number
-                              </label>
-                              <input
-                                type="tel"
-                                id="shipping.phone"
-                                name="shipping.phone"
-                                value={addresses.shipping.phone}
-                                onChange={handleAddressChange}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                              />
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    <div className="flex justify-end">
-                      <button
-                        type="submit"
-                        disabled={isUpdating}
-                        className="ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 dark:focus:ring-offset-gray-800 transition-all"
-                      >
-                        {isUpdating ? (
-                          <>
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Saving...
-                          </>
-                        ) : 'Save Addresses'}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              )}
 
               {activeTab === 'followers' && (
                 <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
@@ -2351,12 +1707,7 @@ export default function Profile() {
                 </div>
               )}
 
-              {activeTab === 'payments' && isEditing && currentUserAddress && targetUserAddress === currentUserAddress && (
-                <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Payment Methods</h3>
-                  <PaymentMethodsTab />
-                </div>
-              )}
+
 
             </div>
           )}

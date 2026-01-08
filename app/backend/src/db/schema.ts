@@ -1,7 +1,37 @@
 import { pgTable, serial, varchar, text, timestamp, integer, uuid, primaryKey, index, boolean, numeric, foreignKey, jsonb, interval, unique, date, decimal } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import * as marketplaceSchema from "./marketplaceSchema";
-export { marketplaceSchema };
+import * as buyerDataSchema from "./buyerDataSchema";
+export { marketplaceSchema, buyerDataSchema };
+
+// Users / Profiles
+export const addresses = pgTable("addresses", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  type: varchar("type", { length: 20 }).notNull(), // 'billing' or 'shipping'
+  isDefault: boolean("is_default").default(false),
+
+  firstName: varchar("first_name", { length: 100 }),
+  lastName: varchar("last_name", { length: 100 }),
+  company: varchar("company", { length: 200 }),
+  address1: varchar("address1", { length: 255 }).notNull(),
+  address2: varchar("address2", { length: 255 }),
+  city: varchar("city", { length: 100 }).notNull(),
+  state: varchar("state", { length: 100 }).notNull(),
+  zipCode: varchar("zip_code", { length: 20 }).notNull(),
+  country: varchar("country", { length: 2 }).notNull(),
+  phone: varchar("phone", { length: 20 }),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+}, (t) => ({
+  userTypeIdx: index("idx_addresses_user_type").on(t.userId, t.type),
+  userIdIdx: index("idx_addresses_user_id").on(t.userId),
+  userFk: foreignKey({
+    columns: [t.userId],
+    foreignColumns: [users.id]
+  })
+}));
 
 // Users / Profiles
 export const users = pgTable("users", {

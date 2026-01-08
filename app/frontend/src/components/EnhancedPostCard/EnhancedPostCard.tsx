@@ -139,9 +139,7 @@ const EnhancedPostCard = React.memo(({
   };
 
   // Action handlers
-  const handleEdit = useCallback(() => {
-    router.push(`/edit-post/${post.id}`);
-  }, [router, post.id]);
+
 
   const handleDelete = useCallback(async () => {
     try {
@@ -595,7 +593,7 @@ const EnhancedPostCard = React.memo(({
                     postId={post.id}
                     isPinned={isPinned}
                     permissions={permissions}
-                    onEdit={handleEdit}
+
                     onDelete={handleDelete}
                     onPin={handlePin}
                     onUnpin={handleUnpin}

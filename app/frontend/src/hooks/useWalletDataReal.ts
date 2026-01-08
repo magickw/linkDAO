@@ -20,6 +20,7 @@ interface UseWalletDataRealReturn {
     balanceFormatted: string;
     valueUSD: number;
     change24h: number;
+    logoUrl?: string;
   }>;
   isLoading: boolean;
   isRefreshing: boolean;
@@ -171,7 +172,8 @@ export function useWalletDataReal({
     symbol: balance.symbol,
     balanceFormatted: `${balance.balance.toFixed(4)} ${balance.symbol}`,
     valueUSD: balance.valueUSD,
-    change24h: balance.change24h
+    change24h: balance.change24h,
+    logoUrl: balance.logoUrl
   })) || [];
 
   const clearError = useCallback(() => {
