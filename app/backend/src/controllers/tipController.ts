@@ -105,12 +105,25 @@ export class TipController {
    */
   async getUserEarnings(req: Request, res: Response): Promise<Response> {
     try {
-      const { id: userId } = req.params;
-      safeLogger.info('Getting earnings for user:', userId);
+      const { id: userIdOrAddress } = req.params;
+      let targetUserId = userIdOrAddress;
+
+      safeLogger.info('Getting earnings for user identifier:', userIdOrAddress);
+
+      // Check if the identifier is a wallet address
+      if (userIdOrAddress.toLowerCase().startsWith('0x')) {
+        const user = await tipService.getUserByWalletAddress(userIdOrAddress);
+        if (!user) {
+          safeLogger.warn('User not found for address:', userIdOrAddress);
+          return res.status(404).json({ error: 'User not found' });
+        }
+        targetUserId = user.id;
+        safeLogger.info(`Resolved wallet ${userIdOrAddress} to user ID ${targetUserId}`);
+      }
 
       // Query the database for tips received by this user
-      const totalEarned = await tipService.getTotalTipsReceived(userId);
-      const totalGiven = await tipService.getTotalTipsSent(userId);
+      const totalEarned = await tipService.getTotalTipsReceived(targetUserId);
+      const totalGiven = await tipService.getTotalTipsSent(targetUserId);
 
       const earnings = {
         totalEarned: totalEarned.toString(),
