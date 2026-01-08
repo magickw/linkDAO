@@ -12,8 +12,7 @@ import type { CommunityMembership } from '@/models/CommunityMembership';
 import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 import SEOHead from '@/components/SEO/SEOHead';
 import { newsletterService } from '@/services/newsletterService';
-import { CartBadge } from '@/components/Marketplace/Cart/CartBadge';
-import { User } from 'lucide-react';
+
 
 import { ENV_CONFIG } from '@/config/environment';
 
@@ -344,28 +343,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
 
                 <ConnectButton showBalance={false} chainStatus="none" showChain={false} />
 
-                {/* Cart */}
-                <Link href="/marketplace/cart" className="relative">
-                  <CartBadge size="md" />
-                </Link>
-
-                {/* User Profile */}
-
-                {isConnected && (
-
-                  <Link
-
-                    href="/marketplace/orders"
-
-                    className="p-2 rounded-full bg-blue-500 hover:bg-blue-600 transition-colors shadow-md"
-
-                  >
-
-                    <User size={20} className="text-white" />
-
-                  </Link>
-
-                )}
+                {/* Cart and User Profile removed */}
 
               </div>
 

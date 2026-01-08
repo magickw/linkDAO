@@ -129,7 +129,7 @@ export async function getSigner() {
       // Check if the client has the necessary methods before accessing them
       // Use getChainId helper from wagmi core instead of accessing properties directly
       try {
-        const chainId = getChainId(config);
+        const chainId = await getChainId(config);
         console.log('Wallet client chain ID:', chainId);
       } catch (e) {
         console.warn('Could not get chain ID:', e);

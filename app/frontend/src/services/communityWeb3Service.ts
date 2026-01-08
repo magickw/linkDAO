@@ -270,7 +270,7 @@ export class CommunityWeb3Service {
       // Get current chain ID
       let chainId: number;
       try {
-        chainId = getChainId(config);
+        chainId = await getChainId(config);
       } catch (e) {
         // Fallback: try to get from provider
         const provider = await getProvider();

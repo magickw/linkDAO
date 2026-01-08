@@ -220,9 +220,10 @@ export default function PaymentMethodsPage() {
                         />
                     )}
                 </div>
-            </Layout>
-        );
-    }
+            </div>
+        </Layout>
+    );
+}
 
 // Payment Method Card Component
 function PaymentMethodCard({ method, onEdit, onDelete, onSetDefault }: {
@@ -306,7 +307,9 @@ function PaymentMethodCard({ method, onEdit, onDelete, onSetDefault }: {
                     {method.status}
                 </span>
                 {method.isVerified && (
-                    <Shield size={14} className="text-green-400" title="Verified" />
+                    <span title="Verified" className="flex items-center">
+                        <Shield size={14} className="text-green-400" />
+                    </span>
                 )}
             </div>
 

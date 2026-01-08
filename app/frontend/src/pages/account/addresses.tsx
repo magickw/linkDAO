@@ -204,9 +204,10 @@ export default function AddressesPage() {
                         />
                     )}
                 </div>
-            </Layout>
-        );
-    }
+            </div>
+        </Layout>
+    );
+}
 
 // Address Card Component
 function AddressCard({ address, onEdit, onDelete, onSetDefault }: {
