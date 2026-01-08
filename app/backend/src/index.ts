@@ -506,6 +506,12 @@ import paymentMethodRoutes from './routes/paymentMethodRoutes';
 import wishlistRoutes from './routes/wishlistRoutes';
 import buyerProfileRoutes from './routes/buyerProfileRoutes';
 
+// Import Gold Purchase Routes
+import goldPurchaseRoutes from './routes/goldPurchaseRoutes';
+
+// Mount Gold Purchase Routes
+app.use('/api/gold', goldPurchaseRoutes);
+
 // Reputation routes
 app.use('/marketplace/reputation', reputationRoutes);
 

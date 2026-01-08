@@ -350,16 +350,26 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
                 </Link>
 
                 {/* User Profile */}
-                {isConnected && (
-                  <Link 
-                    href="/account/orders"
-                    className="p-2 rounded-full bg-blue-500 hover:bg-blue-600 transition-colors shadow-md"
-                  >
-                    <User size={20} className="text-white" />
-                  </Link>
-                )}
-              </div>
-            </div>
+
+                                {isConnected && (
+
+                                  <Link 
+
+                                    href="/account/orders"
+
+                                    className="p-2 rounded-full bg-blue-500 hover:bg-blue-600 transition-colors shadow-md"
+
+                                  >
+
+                                    <User size={20} className="text-white" />
+
+                                  </Link>
+
+                                )}
+
+                              </div>
+
+                            </div>
 
             {/* Mobile Navigation */}
             <div className="md:hidden flex items-center space-x-2">

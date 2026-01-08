@@ -830,7 +830,8 @@ const EnhancedPostCard = React.memo(({
                       isRepostedByMe: isRepostedByMe,
                       shareCount: repostCount,
                       authorProfile: post.authorProfile,
-                      media: post.media
+                      media: post.media,
+                      viewCount: post.views // Add views mapping
                     }}
                     postType={post.communityId ? 'community' : 'feed'}
                     onComment={() => {

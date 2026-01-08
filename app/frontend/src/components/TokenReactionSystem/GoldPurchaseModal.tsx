@@ -199,19 +199,20 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
       // Process actual payment based on selected method
       if (selectedPaymentMethod.method.type === 'FIAT_STRIPE') {
         // Create Stripe checkout session for fiat payment
+        // Create Stripe checkout session for fiat payment
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.linkdao.io';
-        const response = await fetch(`${apiUrl}/api/stripe/create-payment-intent`, {
+
+        // Use the dedicated gold purchase endpoint
+        const response = await fetch(`${apiUrl}/api/gold/payment-intent`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            // Add authorization header if available from context/hook
+            // 'Authorization': `Bearer ${token}` 
           },
           body: JSON.stringify({
-            amount: Math.round(selectedPaymentMethod.costEstimate?.totalCost || selectedPackageData.price * 100), // Convert to cents
-            currency: 'usd',
-            metadata: {
-              goldPackage: selectedPackage,
-              userId: address,
-            }
+            packageId: selectedPackage,
+            paymentMethod: 'stripe'
           }),
         });
 
@@ -395,8 +396,8 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* USDC with Network Selector */}
               <div className={`p-4 rounded-lg border-2 transition-all ${selectedPaymentMethod?.method.type === 'STABLECOIN_USDC'
-                  ? 'border-green-500 bg-green-50'
-                  : 'border-gray-200'
+                ? 'border-green-500 bg-green-50'
+                : 'border-gray-200'
                 }`}>
                 <div className="flex items-center space-x-3 mb-3">
                   <div className="p-2 bg-green-100 rounded-lg">
@@ -526,8 +527,8 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
                   } as any);
                 }}
                 className={`p-4 rounded-lg border-2 transition-all ${selectedPaymentMethod?.method.type === 'FIAT_STRIPE'
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-200 hover:border-gray-300'
                   }`}
               >
                 <div className="flex items-center space-x-3">
@@ -550,10 +551,10 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
               <div className="p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center space-x-3">
                   <div className={`p-2 rounded-lg ${selectedPaymentMethod.method.type === 'FIAT_STRIPE'
-                      ? 'bg-blue-100'
-                      : selectedPaymentMethod.method.id === 'usdc-base'
-                        ? 'bg-green-100'
-                        : 'bg-orange-100'
+                    ? 'bg-blue-100'
+                    : selectedPaymentMethod.method.id === 'usdc-base'
+                      ? 'bg-green-100'
+                      : 'bg-orange-100'
                     }`}>
                     {selectedPaymentMethod.method.type === 'FIAT_STRIPE' ? (
                       <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
