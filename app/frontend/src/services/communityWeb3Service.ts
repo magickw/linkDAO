@@ -235,28 +235,97 @@ export class CommunityWeb3Service {
     message?: string;
   }): Promise<string> {
     try {
-      const signer = await getSigner();
-      if (!signer) throw new Error('No signer available');
+      // Try to get signer with better error handling
+      let signer;
+      try {
+        signer = await getSigner();
+      } catch (signerError: any) {
+        console.error('Error getting signer:', signerError);
+        // If getSigner fails, try alternative approach using wagmi directly
+        try {
+          const { getWalletClient } = await import('@wagmi/core');
+          const { config } = await import('@/lib/wagmi');
+          const walletClient = await getWalletClient(config);
+          if (walletClient && walletClient.transport?.provider) {
+            const { ethers } = await import('ethers');
+            const provider = new ethers.BrowserProvider(walletClient.transport.provider as any);
+            signer = await provider.getSigner();
+          }
+        } catch (fallbackError) {
+          console.error('Fallback signer retrieval also failed:', fallbackError);
+          throw new Error('No signer available. Please ensure your wallet is connected.');
+        }
+      }
+      
+      if (!signer) throw new Error('No signer available. Please ensure your wallet is connected.');
 
       // Use environment configuration for contract addresses
       const { ENV_CONFIG } = await import('@/config/environment');
+      const { getChainId } = await import('@wagmi/core');
+      const { config } = await import('@/lib/wagmi');
+      
       const TIP_ROUTER_ADDRESS = ENV_CONFIG.TIP_ROUTER_ADDRESS;
       const LDAO_TOKEN_ADDRESS = ENV_CONFIG.LDAO_TOKEN_ADDRESS;
+      
+      // Get current chain ID
+      let chainId: number;
+      try {
+        chainId = getChainId(config);
+      } catch (e) {
+        // Fallback: try to get from provider
+        const provider = await getProvider();
+        if (provider) {
+          const network = await provider.getNetwork();
+          chainId = Number(network.chainId);
+        } else {
+          // Default to Sepolia (11155111) if we can't detect
+          chainId = 11155111;
+        }
+      }
+
+      // Get token address based on token type and chain
+      let tokenAddress: string;
+      let tokenDecimals: number;
+      
+      if (input.token === 'LDAO') {
+        tokenAddress = LDAO_TOKEN_ADDRESS;
+        tokenDecimals = 18;
+      } else if (input.token === 'USDC') {
+        // Get USDC address from environment or use chain-specific addresses
+        tokenAddress = process.env.NEXT_PUBLIC_USDC_ADDRESS || '';
+        if (!tokenAddress) {
+          // Fallback to known Sepolia USDC address
+          if (chainId === 11155111) {
+            tokenAddress = '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238';
+          } else {
+            throw new Error('USDC address not configured for this network');
+          }
+        }
+        tokenDecimals = 6;
+      } else if (input.token === 'USDT') {
+        tokenAddress = process.env.NEXT_PUBLIC_USDT_TOKEN_ADDRESS || '';
+        if (!tokenAddress) {
+          // Fallback to known Sepolia USDT address
+          if (chainId === 11155111) {
+            tokenAddress = '0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0';
+          } else {
+            throw new Error('USDT address not configured for this network');
+          }
+        }
+        tokenDecimals = 6;
+      } else {
+        throw new Error(`Unsupported token: ${input.token}. Supported tokens: LDAO, USDC, USDT`);
+      }
 
       // Validate contract addresses
-      if (!TIP_ROUTER_ADDRESS || !LDAO_TOKEN_ADDRESS) {
+      if (!TIP_ROUTER_ADDRESS || !tokenAddress) {
         throw new Error('Contract addresses not configured');
       }
 
-      // For now, we only support LDAO token
-      if (input.token !== 'LDAO') {
-        throw new Error('Only LDAO token is currently supported for tipping');
-      }
-
-      // TipRouter ABI - only the functions we need
+      // TipRouter ABI - includes paymentMethod parameter
       const TIP_ROUTER_ABI = [
-        'function tip(bytes32 postId, address creator, uint256 amount)',
-        'function tipWithComment(bytes32 postId, address creator, uint256 amount, string comment)',
+        'function tip(bytes32 postId, address creator, uint256 amount, uint8 paymentMethod)',
+        'function tipWithComment(bytes32 postId, address creator, uint256 amount, uint8 paymentMethod, string comment)',
         'function calculateFee(uint256 amount) view returns (uint256)'
       ];
 
@@ -264,31 +333,33 @@ export class CommunityWeb3Service {
       const ERC20_ABI = [
         'function approve(address spender, uint256 amount) returns (bool)',
         'function allowance(address owner, address spender) view returns (uint256)',
-        'function balanceOf(address account) view returns (uint256)'
+        'function balanceOf(address account) view returns (uint256)',
+        'function decimals() view returns (uint8)'
       ];
 
       // Create contract instances
       const tipRouterContract = new ethers.Contract(TIP_ROUTER_ADDRESS, TIP_ROUTER_ABI, signer);
-      const ldaoTokenContract = new ethers.Contract(LDAO_TOKEN_ADDRESS, ERC20_ABI, signer);
+      const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
 
-      // Convert amount to wei (LDAO has 18 decimals)
-      const amountWei = ethers.parseUnits(input.amount, 18);
+      // Convert amount to proper units based on token decimals
+      const amountInUnits = ethers.parseUnits(input.amount, tokenDecimals);
 
-      // Check user's LDAO balance
+      // Check user's token balance
       const userAddress = await signer.getAddress();
-      const balance = await ldaoTokenContract.balanceOf(userAddress);
+      const balance = await tokenContract.balanceOf(userAddress);
 
-      if (balance < amountWei) {
-        throw new Error(`Insufficient LDAO balance. You have ${ethers.formatUnits(balance, 18)} LDAO but need ${input.amount} LDAO`);
+      if (balance < amountInUnits) {
+        const formattedBalance = ethers.formatUnits(balance, tokenDecimals);
+        throw new Error(`Insufficient ${input.token} balance. You have ${formattedBalance} ${input.token} but need ${input.amount} ${input.token}`);
       }
 
       // Check current allowance
-      const currentAllowance = await ldaoTokenContract.allowance(userAddress, TIP_ROUTER_ADDRESS);
+      const currentAllowance = await tokenContract.allowance(userAddress, TIP_ROUTER_ADDRESS);
 
-      // Approve TipRouter to spend LDAO if needed
-      if (currentAllowance < amountWei) {
-        console.log('Approving TipRouter to spend LDAO...');
-        const approveTx = await ldaoTokenContract.approve(TIP_ROUTER_ADDRESS, amountWei);
+      // Approve TipRouter to spend tokens if needed
+      if (currentAllowance < amountInUnits) {
+        console.log(`Approving TipRouter to spend ${input.token}...`);
+        const approveTx = await tokenContract.approve(TIP_ROUTER_ADDRESS, amountInUnits);
         await approveTx.wait();
         console.log('Approval confirmed');
       }
@@ -296,22 +367,32 @@ export class CommunityWeb3Service {
       // Convert postId to bytes32
       const postIdBytes32 = ethers.id(input.postId);
 
+      // Convert token to paymentMethod enum (0 = LDAO, 1 = USDC, 2 = USDT)
+      let paymentMethod = 0;
+      if (input.token === 'USDC') {
+        paymentMethod = 1;
+      } else if (input.token === 'USDT') {
+        paymentMethod = 2;
+      }
+
       // Send tip (with or without comment)
       let tx;
       if (input.message && input.message.trim()) {
-        console.log(`Tipping ${input.amount} LDAO with comment to ${input.recipientAddress}`);
+        console.log(`Tipping ${input.amount} ${input.token} with comment to ${input.recipientAddress}`);
         tx = await tipRouterContract.tipWithComment(
           postIdBytes32,
           input.recipientAddress,
-          amountWei,
+          amountInUnits,
+          paymentMethod,
           input.message.trim()
         );
       } else {
-        console.log(`Tipping ${input.amount} LDAO to ${input.recipientAddress}`);
+        console.log(`Tipping ${input.amount} ${input.token} to ${input.recipientAddress}`);
         tx = await tipRouterContract.tip(
           postIdBytes32,
           input.recipientAddress,
-          amountWei
+          amountInUnits,
+          paymentMethod
         );
       }
 
