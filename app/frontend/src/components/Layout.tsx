@@ -342,7 +342,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
                   )}
                 </button>
 
-                <ConnectButton showBalance={false} chainStatus="none} showChain={false} />
+                <ConnectButton showBalance={false} chainStatus="none" showChain={false} />
 
                 {/* Cart */}
                 <Link href="/marketplace/cart" className="relative">
@@ -351,25 +351,25 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
 
                 {/* User Profile */}
 
-                                {isConnected && (
+                {isConnected && (
 
-                                  <Link 
+                  <Link
 
-                                    href="/account/orders"
+                    href="/account/orders"
 
-                                    className="p-2 rounded-full bg-blue-500 hover:bg-blue-600 transition-colors shadow-md"
+                    className="p-2 rounded-full bg-blue-500 hover:bg-blue-600 transition-colors shadow-md"
 
-                                  >
+                  >
 
-                                    <User size={20} className="text-white" />
+                    <User size={20} className="text-white" />
 
-                                  </Link>
+                  </Link>
 
-                                )}
+                )}
 
-                              </div>
+              </div>
 
-                            </div>
+            </div>
 
             {/* Mobile Navigation */}
             <div className="md:hidden flex items-center space-x-2">
