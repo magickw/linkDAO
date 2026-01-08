@@ -224,20 +224,18 @@ export default function StatusPage() {
                         className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto relative"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {/* Close Button */}
-                        <button
-                            onClick={handleClose}
-                            className="absolute top-4 right-4 z-10 p-2 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                            aria-label="Close"
-                        >
-                            <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-                        </button>
-
                         {/* Modal Header */}
-                        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 rounded-t-2xl z-10">
+                        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 rounded-t-2xl z-20 flex justify-between items-center">
                             <h1 className="text-xl font-bold text-gray-900 dark:text-white">
                                 {status?.authorProfile?.displayName || status?.authorProfile?.handle || 'Unknown'}'s Post
                             </h1>
+                            <button
+                                onClick={handleClose}
+                                className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                                aria-label="Close"
+                            >
+                                <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                            </button>
                         </div>
 
                         {/* Modal Content */}

@@ -280,14 +280,14 @@ export class HybridPaymentOrchestrator {
       );
 
       // Update order with escrow details
-      await this.databaseService.updateOrder(request.orderId, {
+      await this.databaseService.updateOrder(orderRecord.id, {
         escrowId: escrowId.toString(),
         paymentMethod: 'crypto',
         status: 'pending'
       });
 
       return {
-        orderId: request.orderId,
+        orderId: orderRecord.id,
         paymentPath: 'crypto',
         escrowType: 'smart_contract',
         escrowId,
@@ -316,7 +316,7 @@ export class HybridPaymentOrchestrator {
 
       // Update order with Stripe details
       if (orderRecord) {
-        await this.databaseService.updateOrder(request.orderId, {
+        await this.databaseService.updateOrder(orderRecord.id, {
           paymentMethod: 'fiat',
           stripePaymentIntentId: stripeResult.paymentIntentId,
           stripeTransferGroup: stripeResult.transferGroup,
@@ -325,7 +325,7 @@ export class HybridPaymentOrchestrator {
       }
 
       return {
-        orderId: request.orderId,
+        orderId: orderRecord.id,
         paymentPath: 'fiat',
         escrowType: 'stripe_connect',
         stripePaymentIntentId: stripeResult.paymentIntentId,
@@ -717,7 +717,7 @@ export class HybridPaymentOrchestrator {
         this.notificationService.sendOrderNotification(
           request.buyerAddress,
           'ORDER_CREATED',
-          request.orderId,
+          result.orderId,
           {
             paymentPath: result.paymentPath,
             escrowType: result.escrowType,
@@ -727,7 +727,7 @@ export class HybridPaymentOrchestrator {
         this.notificationService.sendOrderNotification(
           request.sellerAddress,
           'ORDER_RECEIVED',
-          request.orderId,
+          result.orderId,
           {
             paymentPath: result.paymentPath,
             amount: request.amount,
