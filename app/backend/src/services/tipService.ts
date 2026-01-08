@@ -3,13 +3,13 @@ import { safeLogger } from '../utils/safeLogger';
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../db/schema";
-import { eq, and, gte, lte } from 'drizzle-orm';
+import { eq, and, gte, lte, desc } from 'drizzle-orm';
 import dotenv from "dotenv";
 
 dotenv.config();
 
 // Create a postgres client with connection pooling
-const client = postgres(process.env.DATABASE_URL || "", { 
+const client = postgres(process.env.DATABASE_URL || "", {
   prepare: false,
   max: 10,
   idle_timeout: 20,
@@ -42,7 +42,7 @@ export class TipService {
         message,
         txHash
       }).returning();
-      
+
       return result[0];
     } catch (error) {
       safeLogger.error('Error recording tip:', error);
@@ -55,7 +55,24 @@ export class TipService {
    */
   async getTipsForPost(postId: string) {
     try {
-      return await db.select().from(schema.tips).where(eq(schema.tips.postId, postId));
+      const tips = await db.select({
+        id: schema.tips.id,
+        amount: schema.tips.amount,
+        token: schema.tips.token,
+        message: schema.tips.message,
+        timestamp: schema.tips.createdAt,
+        txHash: schema.tips.txHash,
+        tipperWallet: schema.users.walletAddress,
+        tipperName: schema.users.displayName,
+        tipperHandle: schema.users.handle,
+        fromUserId: schema.tips.fromUserId
+      })
+        .from(schema.tips)
+        .leftJoin(schema.users, eq(schema.tips.fromUserId, schema.users.id))
+        .where(eq(schema.tips.postId, postId))
+        .orderBy(desc(schema.tips.createdAt));
+
+      return tips;
     } catch (error) {
       safeLogger.error('Error getting tips for post:', error);
       throw error;
@@ -70,7 +87,7 @@ export class TipService {
       const result = await db.select({ total: schema.tips.amount })
         .from(schema.tips)
         .where(eq(schema.tips.toUserId, userId));
-      
+
       // Sum up all the tips
       return result.reduce((sum, tip) => {
         return sum + parseFloat(tip.total);
@@ -89,13 +106,47 @@ export class TipService {
       const result = await db.select({ total: schema.tips.amount })
         .from(schema.tips)
         .where(eq(schema.tips.fromUserId, userId));
-      
+
       // Sum up all the tips
       return result.reduce((sum, tip) => {
         return sum + parseFloat(tip.total);
       }, 0);
     } catch (error) {
       safeLogger.error('Error getting total tips sent:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get tips received by a user
+   */
+  async getReceivedTips(userId: string, limit: number = 50, offset: number = 0) {
+    try {
+      return await db.select()
+        .from(schema.tips)
+        .where(eq(schema.tips.toUserId, userId))
+        .limit(limit)
+        .offset(offset)
+        .orderBy(desc(schema.tips.createdAt));
+    } catch (error) {
+      safeLogger.error('Error getting received tips:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get tips sent by a user
+   */
+  async getSentTips(userId: string, limit: number = 50, offset: number = 0) {
+    try {
+      return await db.select()
+        .from(schema.tips)
+        .where(eq(schema.tips.fromUserId, userId))
+        .limit(limit)
+        .offset(offset)
+        .orderBy(desc(schema.tips.createdAt));
+    } catch (error) {
+      safeLogger.error('Error getting sent tips:', error);
       throw error;
     }
   }
@@ -204,4 +255,20 @@ export class TipService {
     }
   }
   */
+  /**
+   * Get user by wallet address
+   */
+  async getUserByWalletAddress(walletAddress: string) {
+    try {
+      const result = await db.select()
+        .from(schema.users)
+        .where(eq(schema.users.walletAddress, walletAddress))
+        .limit(1);
+
+      return result[0];
+    } catch (error) {
+      safeLogger.error('Error getting user by wallet address:', error);
+      throw error;
+    }
+  }
 }

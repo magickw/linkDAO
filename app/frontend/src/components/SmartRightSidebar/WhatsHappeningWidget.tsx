@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, Hash } from 'lucide-react';
 import { FeedService } from '@/services/feedService';
+import { FeedSortType } from '@/types/feed';
 
 interface TrendingTopic {
   id: string;
@@ -21,14 +22,17 @@ export default function WhatsHappeningWidget({ className = '' }: WhatsHappeningW
     const fetchTrendingTopics = async () => {
       try {
         setIsLoading(true);
-        
+
         // Fetch recent posts from the feed
-        const feedResponse = await FeedService.getEnhancedFeed({
-          limit: 100,
-          sortBy: FeedSortType.NEW,
-          timeRange: 'all',
-          feedSource: 'all'
-        });
+        const feedResponse = await FeedService.getEnhancedFeed(
+          {
+            sortBy: FeedSortType.NEW,
+            timeRange: 'all',
+            feedSource: 'all'
+          },
+          1,
+          100
+        );
 
         // Extract hashtags and calculate trending score
         const hashtagCounts = new Map<string, { count: number; category: string }>();
@@ -58,7 +62,7 @@ export default function WhatsHappeningWidget({ className = '' }: WhatsHappeningW
           // Extract hashtags from content
           const content = post.content || '';
           const hashtags = content.match(/#(\w+)/g) || [];
-          
+
           hashtags.forEach(tag => {
             const tagLower = tag.slice(1).toLowerCase();
             hashtagCounts.set(tagLower, {
@@ -72,7 +76,7 @@ export default function WhatsHappeningWidget({ className = '' }: WhatsHappeningW
             post.tags.forEach(tag => {
               const tagLower = tag.toLowerCase();
               hashtagCounts.set(tagLower, {
-                count: (hashtagCounts.get(tagLower)?.count ||count || 0) + 1,
+                count: (hashtagCounts.get(tagLower)?.count || 0) + 1,
                 category: categoryMap[tagLower] || 'General'
               });
             });

@@ -40,31 +40,44 @@ const TOKEN_COLORS = {
 const EnhancedTippingSystem: React.FC<EnhancedTippingSystemProps> = ({
   postId,
   authorId,
-  tips,
+  tips = [],
   onTip,
   showTipButton = true,
   showTipHistory = true,
   showLeaderboard = false,
   className = '',
 }) => {
+  // Deduplicate tips based on ID to prevent rendering errors
+  const uniqueTips = React.useMemo(() => {
+    if (!tips || !Array.isArray(tips)) return [];
+
+    const seen = new Set();
+    return tips.filter(tip => {
+      if (!tip || !tip.id) return false;
+      const duplicate = seen.has(tip.id);
+      seen.add(tip.id);
+      return !duplicate;
+    });
+  }, [tips]);
+
   const [showTipModal, setShowTipModal] = useState(false);
   const [selectedToken, setSelectedToken] = useState<string>('USDC');
   const [tipAmount, setTipAmount] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [recentTips, setRecentTips] = useState<TipData[]>([]);
-  
+
   const containerRef = useRef<HTMLDivElement>(null);
   const { triggerAnimation } = useAnimation();
 
   // Calculate tip statistics
   const tipStats = React.useMemo(() => {
-    const totalTips = tips.length;
-    const totalValue = tips.reduce((sum, tip) => {
+    const totalTips = uniqueTips.length;
+    const totalValue = uniqueTips.reduce((sum, tip) => {
       // For simplicity, we're treating all tokens as having the same value
       return sum + tip.amount;
     }, 0);
-    
-    const tokenBreakdown = tips.reduce((acc, tip) => {
+
+    const tokenBreakdown = uniqueTips.reduce((acc, tip) => {
       if (!acc[tip.token]) {
         acc[tip.token] = { count: 0, total: 0 };
       }
@@ -73,12 +86,12 @@ const EnhancedTippingSystem: React.FC<EnhancedTippingSystemProps> = ({
       return acc;
     }, {} as Record<string, { count: number; total: number }>);
 
-    const topTippers = tips
+    const topTippers = uniqueTips
       .reduce((acc, tip) => {
         if (!acc[tip.tipper]) {
-          acc[tip.tipper] = { 
-            name: tip.tipperName || tip.tipper, 
-            total: 0, 
+          acc[tip.tipper] = {
+            name: tip.tipperName || tip.tipper,
+            total: 0,
             count: 0,
             tokens: {} as Record<string, number>
           };
@@ -97,40 +110,40 @@ const EnhancedTippingSystem: React.FC<EnhancedTippingSystemProps> = ({
         .sort(([, a], [, b]) => b.total - a.total)
         .slice(0, 5),
     };
-  }, [tips]);
+  }, [uniqueTips]);
 
   // Handle new tips (real-time updates)
   useEffect(() => {
-    const newTips = tips.filter(tip => 
+    const newTips = uniqueTips.filter(tip =>
       Date.now() - tip.timestamp.getTime() < 10000 // Last 10 seconds
     );
-    
+
     if (newTips.length > 0) {
       setRecentTips(newTips);
-      
+
       // Trigger celebration animation
       if (containerRef.current) {
         triggerAnimation(containerRef.current, 'celebrate');
       }
-      
+
       // Clear recent tips after animation
       setTimeout(() => setRecentTips([]), 3000);
     }
-  }, [tips, triggerAnimation]);
+  }, [uniqueTips, triggerAnimation]);
 
   // Handle tip submission
   const handleTipSubmit = async () => {
     if (!onTip || !tipAmount || isNaN(Number(tipAmount))) return;
-    
+
     setIsProcessing(true);
-    
+
     try {
       await onTip(Number(tipAmount), selectedToken);
-      
+
       // Reset form
       setTipAmount('');
       setShowTipModal(false);
-      
+
       // Show success animation
       if (containerRef.current) {
         triggerAnimation(containerRef.current, 'success');
@@ -167,13 +180,13 @@ const EnhancedTippingSystem: React.FC<EnhancedTippingSystemProps> = ({
   return (
     <div className={`ce-enhanced-tipping-system ${className}`} ref={containerRef}>
       {/* Tip Summary */}
-      {tips.length > 0 && (
+      {uniqueTips.length > 0 && (
         <div className="ce-tip-summary">
           <div className="ce-tip-stats">
             <span className="ce-tip-count">{tipStats.totalTips} tips</span>
             {Object.entries(tipStats.tokenBreakdown).map(([token, data]) => (
               <div key={token} className="ce-token-stat">
-                <span 
+                <span
                   className="ce-token-icon"
                   style={{ color: getTokenColor(token) }}
                 >
@@ -185,9 +198,9 @@ const EnhancedTippingSystem: React.FC<EnhancedTippingSystemProps> = ({
               </div>
             ))}
           </div>
-          
+
           {showTipHistory && (
-            <button 
+            <button
               className="ce-tip-history-toggle"
               onClick={() => setShowTipModal(true)}
             >
@@ -199,7 +212,7 @@ const EnhancedTippingSystem: React.FC<EnhancedTippingSystemProps> = ({
 
       {/* Tip Button */}
       {showTipButton && onTip && (
-        <button 
+        <button
           className="ce-tip-button"
           onClick={() => setShowTipModal(true)}
           disabled={isProcessing}
@@ -214,7 +227,7 @@ const EnhancedTippingSystem: React.FC<EnhancedTippingSystemProps> = ({
         <div className="ce-recent-tips-overlay">
           {recentTips.map((tip) => (
             <div key={tip.id} className="ce-floating-tip">
-              <span 
+              <span
                 className="ce-floating-tip-icon"
                 style={{ color: getTokenColor(tip.token) }}
               >
@@ -234,14 +247,14 @@ const EnhancedTippingSystem: React.FC<EnhancedTippingSystemProps> = ({
           <div className="ce-tip-modal" onClick={(e) => e.stopPropagation()}>
             <div className="ce-tip-modal-header">
               <h3>Send Tip</h3>
-              <button 
+              <button
                 className="ce-modal-close"
                 onClick={() => setShowTipModal(false)}
               >
                 ×
               </button>
             </div>
-            
+
             <div className="ce-tip-modal-content">
               {/* Token Selection */}
               <div className="ce-token-selection">
@@ -253,7 +266,7 @@ const EnhancedTippingSystem: React.FC<EnhancedTippingSystemProps> = ({
                       className={`ce-token-option ${selectedToken === token ? 'selected' : ''}`}
                       onClick={() => setSelectedToken(token)}
                     >
-                      <span 
+                      <span
                         className="ce-token-icon"
                         style={{ color: getTokenColor(token) }}
                       >
@@ -305,14 +318,14 @@ const EnhancedTippingSystem: React.FC<EnhancedTippingSystemProps> = ({
             </div>
 
             {/* Tip History */}
-            {showTipHistory && tips.length > 0 && (
+            {showTipHistory && uniqueTips.length > 0 && (
               <div className="ce-tip-history">
                 <h4>Recent Tips</h4>
                 <div className="ce-tip-list">
-                  {tips.slice(0, 10).map((tip) => (
+                  {uniqueTips.slice(0, 10).map((tip) => (
                     <div key={tip.id} className="ce-tip-item">
                       <div className="ce-tip-item-info">
-                        <span 
+                        <span
                           className="ce-token-icon"
                           style={{ color: getTokenColor(tip.token) }}
                         >
@@ -346,7 +359,7 @@ const EnhancedTippingSystem: React.FC<EnhancedTippingSystemProps> = ({
                       <div className="ce-tipper-tokens">
                         {Object.entries(data.tokens).map(([token, amount]) => (
                           <span key={token} className="ce-token-badge">
-                            <span 
+                            <span
                               className="ce-token-icon"
                               style={{ color: getTokenColor(token) }}
                             >

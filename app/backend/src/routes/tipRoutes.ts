@@ -32,15 +32,24 @@ const router = Router();
 const tipController = new TipController();
 
 // POST /tips - Create a new tip
-router.post('/', tipCreationRateLimit, csrfProtection,  tipController.createTip);
+router.post('/', tipCreationRateLimit, csrfProtection, tipController.createTip);
 
 // GET /users/:id/earnings - Get earnings for a user
 router.get('/users/:id/earnings', tipRateLimit, tipController.getUserEarnings);
 
 // POST /rewards/claim - Claim rewards
-router.post('/rewards/claim', tipCreationRateLimit, csrfProtection,  tipController.claimRewards);
+router.post('/rewards/claim', tipCreationRateLimit, csrfProtection, tipController.claimRewards);
 
 // GET /posts/:id/tips - Get tips for a post
 router.get('/posts/:id/tips', tipRateLimit, tipController.getPostTips);
+
+// POST /received - Get tips received by a user
+router.post('/received', tipRateLimit, tipController.getReceivedTips);
+
+// POST /sent - Get tips sent by a user
+router.post('/sent', tipRateLimit, tipController.getSentTips);
+
+// GET /total/:address - Get total tips for a user
+router.get('/total/:address', tipRateLimit, tipController.getUserTotalTips);
 
 export default router;
