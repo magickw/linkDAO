@@ -67,7 +67,7 @@ class OrderService {
    */
   async getOrderById(orderId: string): Promise<MarketplaceOrder | null> {
     try {
-      const response = await fetch(`${this.apiBaseUrl}/api/orders/${orderId}`, {
+      const response = await fetch(`${this.apiBaseUrl}/api/order-management/${orderId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

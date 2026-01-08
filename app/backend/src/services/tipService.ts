@@ -3,7 +3,7 @@ import { safeLogger } from '../utils/safeLogger';
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../db/schema";
-import { eq, and, gte, lte, desc } from 'drizzle-orm';
+import { eq, and, gte, lte, desc, sql } from 'drizzle-orm';
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -262,7 +262,7 @@ export class TipService {
     try {
       const result = await db.select()
         .from(schema.users)
-        .where(eq(schema.users.walletAddress, walletAddress))
+        .where(sql`lower(${schema.users.walletAddress}) = lower(${walletAddress})`)
         .limit(1);
 
       return result[0];

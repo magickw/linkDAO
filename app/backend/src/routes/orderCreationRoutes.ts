@@ -3,6 +3,7 @@ import { csrfProtection } from '../middleware/csrfProtection';
 import { OrderCreationController } from '../controllers/orderCreationController';
 import { apiLimiter } from '../middleware/rateLimiter';
 import { authenticateToken } from '../middleware/auth';
+import { orderManagementController } from '../controllers/orderManagementController';
 
 const router = Router();
 const orderCreationController = new OrderCreationController();
@@ -12,5 +13,6 @@ router.post('/create', csrfProtection,  authenticateToken, apiLimiter, orderCrea
 router.get('/summary/:orderId', authenticateToken, apiLimiter, orderCreationController.getOrderSummary.bind(orderCreationController));
 router.post('/cancel/:orderId', csrfProtection,  authenticateToken, apiLimiter, orderCreationController.cancelOrder.bind(orderCreationController));
 router.get('/stats', authenticateToken, apiLimiter, orderCreationController.getOrderStats.bind(orderCreationController));
+router.get('/:orderId', authenticateToken, apiLimiter, orderManagementController.getOrderDetails.bind(orderManagementController));
 
 export default router;

@@ -13,6 +13,7 @@ export class TipController {
    */
   async createTip(req: Request, res: Response): Promise<Response> {
     try {
+      safeLogger.info('Creating tip request:', { body: req.body, user: req.user });
       const { postId, creatorAddress, amount, message } = req.body;
       const { walletAddress: fromAddress } = req.user as { walletAddress: string };
 
@@ -30,12 +31,11 @@ export class TipController {
       const toUser = await tipService.getUserByWalletAddress(creatorAddress);
 
       if (!fromUser || !toUser) {
+        safeLogger.warn('User lookup failed:', { fromAddress, creatorAddress, fromUserFound: !!fromUser, toUserFound: !!toUser });
         return res.status(404).json({ error: 'User not found. Ensure both sender and recipient have profiles.' });
       }
 
       // Save the tip to the database
-      // Note: In a full implementation, we might want to wait for on-chain confirmation 
-      // or use a webhook, but for now we record it immediately or after EIP-712 signature verification (skipped here).
       const newTip = await tipService.recordTip(
         postId,
         fromUser.id,
@@ -45,12 +45,7 @@ export class TipController {
         message
       );
 
-      // In a real implementation, this would:
-      // 1. Validate the post exists (done effectively by foreign key if we checked)
-      // 2. Validate the creator address (done above)
-      // 3. Generate EIP-712 permit data for gasless tipping
-      // 4. Save the tip to the database (done above)
-      // 5. Return the permit data for the client to sign
+      safeLogger.info('Tip recorded:', newTip);
 
       // Generate EIP-712 data for client signing (simplified)
       const permitData = {
@@ -72,9 +67,8 @@ export class TipController {
         domain: {
           name: 'LinkDAO Token',
           version: '1',
-          // chainId: 8453, // Base Mainnet
           chainId: 11155111, // ETH Sepolia
-          verifyingContract: process.env.TIP_ROUTER_ADDRESS || '0x4200000000000000000000000000000000000006', // Example
+          verifyingContract: process.env.TIP_ROUTER_ADDRESS || '0x4200000000000000000000000000000000000006',
         },
         primaryType: 'Permit',
         message: {
@@ -90,7 +84,7 @@ export class TipController {
         success: true,
         permitData,
         tip: {
-          id: newTip.id,
+          id: newTip.id.toString(), // Convert number to string for frontend
           postId,
           from: fromAddress,
           to: creatorAddress,
@@ -112,14 +106,12 @@ export class TipController {
   async getUserEarnings(req: Request, res: Response): Promise<Response> {
     try {
       const { id: userId } = req.params;
+      safeLogger.info('Getting earnings for user:', userId);
 
       // Query the database for tips received by this user
       const totalEarned = await tipService.getTotalTipsReceived(userId);
       const totalGiven = await tipService.getTotalTipsSent(userId);
 
-      // In a real implementation, claimable would be calculated based on what hasn't been paid out
-      // For now, we'll assume everything is claimed or handle it via on-chain state
-      // This is a simplification to remove the hardcoded mock values
       const earnings = {
         totalEarned: totalEarned.toString(),
         claimable: '0', // TODO: Implement claimable logic with tracking
@@ -139,22 +131,6 @@ export class TipController {
    */
   async claimRewards(req: Request, res: Response): Promise<Response> {
     try {
-      const { walletAddress: userAddress } = req.user as { walletAddress: string };
-
-      // In a full implementation, this needs to interact with the RewardPool contract
-      // Since we don't have the ABI or address here yet, we will return a 501 Not Implemented
-      // or a placeholder that indicates this feature requires contract integration.
-
-      // For now, we'll return a placeholder that doesn't pretend to be real transaction data
-      // preventing the frontend from trying to sign invalid data.
-      /*
-      const transactionData = {
-        to: process.env.REWARD_POOL_ADDRESS || '0x...',
-        data: '0x...', // ABI-encoded claim() function call
-        value: '0',
-      };
-      */
-
       return res.status(501).json({
         error: 'Claiming rewards is not yet fully implemented on chain.',
         success: false
@@ -171,17 +147,14 @@ export class TipController {
   async getPostTips(req: Request, res: Response): Promise<Response> {
     try {
       const { id: postId } = req.params;
+      safeLogger.info('Fetching tips for post:', postId);
 
-      // In a real implementation, this would:
-      // 1. Query the database for tips on this post
-      // 2. Return the data with user information
-
-      // For now, we'll just return mock data
       const rawTips = await tipService.getTipsForPost(postId);
+      safeLogger.info(`Found ${rawTips.length} tips for post ${postId}`);
 
       const tips = rawTips.map(tip => ({
         id: tip.id.toString(),
-        from: tip.tipperWallet || 'Unknown', // Fallback if user deleted
+        from: tip.tipperWallet || 'Unknown',
         amount: tip.amount,
         message: tip.message || '',
         timestamp: tip.timestamp,
@@ -195,13 +168,23 @@ export class TipController {
       return res.status(500).json({ error: 'Internal server error' });
     }
   }
+
   /**
    * Get tips received by a user
    */
   async getReceivedTips(req: Request, res: Response): Promise<Response> {
     try {
       const { address, limit, offset } = req.body;
-      const tips = await tipService.getReceivedTips(address, limit, offset);
+      if (!address) {
+        return res.status(400).json({ error: 'Address is required' });
+      }
+
+      const user = await tipService.getUserByWalletAddress(address);
+      if (!user) {
+        return res.json({ success: true, tips: [] });
+      }
+
+      const tips = await tipService.getReceivedTips(user.id, limit, offset);
       return res.json({ success: true, tips });
     } catch (error) {
       safeLogger.error('Error fetching received tips:', error);
@@ -215,7 +198,16 @@ export class TipController {
   async getSentTips(req: Request, res: Response): Promise<Response> {
     try {
       const { address, limit, offset } = req.body;
-      const tips = await tipService.getSentTips(address, limit, offset);
+      if (!address) {
+        return res.status(400).json({ error: 'Address is required' });
+      }
+
+      const user = await tipService.getUserByWalletAddress(address);
+      if (!user) {
+        return res.json({ success: true, tips: [] });
+      }
+
+      const tips = await tipService.getSentTips(user.id, limit, offset);
       return res.json({ success: true, tips });
     } catch (error) {
       safeLogger.error('Error fetching sent tips:', error);
@@ -229,7 +221,18 @@ export class TipController {
   async getUserTotalTips(req: Request, res: Response): Promise<Response> {
     try {
       const { address } = req.params;
-      const totalReceived = await tipService.getTotalTipsReceived(address);
+      safeLogger.info('Getting total tips for address:', address);
+
+      const user = await tipService.getUserByWalletAddress(address);
+      if (!user) {
+        safeLogger.warn('User not found for address:', address);
+        return res.json({
+          success: true,
+          totals: { LDAO: '0', USDC: '0', USDT: '0' }
+        });
+      }
+
+      const totalReceived = await tipService.getTotalTipsReceived(user.id);
 
       return res.json({
         success: true,
