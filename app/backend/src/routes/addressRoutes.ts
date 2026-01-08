@@ -1,11 +1,11 @@
 import express from 'express';
 import { AddressController } from '../controllers/addressController';
-import { authenticate } from '../middleware/auth';
+import { authenticateToken } from '../middleware/auth';
 
 const router = express.Router();
 
 // Apply authentication middleware to all routes
-router.use(authenticate);
+router.use(authenticateToken);
 
 // Get all addresses
 router.get('/', AddressController.getAddresses);
