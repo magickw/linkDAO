@@ -17,6 +17,7 @@ export interface XPBadge {
 
 export interface OnChainIdentityData {
     address: string;
+    handle?: string;
     ensName?: string;
     reputationScore: number;
     votingPower: number;
@@ -99,7 +100,7 @@ export const OnChainIdentityBadge: React.FC<OnChainIdentityBadgeProps> = ({
         <div className={`inline-flex items-center gap-2 ${className}`}>
             {/* ENS Name or Address */}
             <Link href={`/u/${data.address}`} className={`font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors ${sizeClasses[size]}`}>
-                {data.ensName || shortenAddress(data.address)}
+                {data.handle || data.ensName || shortenAddress(data.address)}
             </Link>
 
             {/* Reputation Badge */}

@@ -542,6 +542,7 @@ const EnhancedPostCard = React.memo(({
                       address={post.author}
                       identityData={{
                         address: post.author,
+                        handle: post.authorProfile?.handle,
                         ensName: post.authorProfile?.ensName,
                         reputationScore: post.authorProfile?.reputationScore || 0,
                         votingPower: post.authorProfile?.votingPower || 0,

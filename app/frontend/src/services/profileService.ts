@@ -1,5 +1,6 @@
 import { UserProfile, CreateUserProfileInput, UpdateUserProfileInput } from '../models/UserProfile';
 import { deduplicatedFetch } from '../utils/requestDeduplication';
+import { csrfService } from './csrfService';
 
 // Get the backend API base URL from environment variables
 const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
@@ -30,6 +31,14 @@ export class ProfileService {
 
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      // Add CSRF headers for authenticated requests
+      try {
+        const csrfHeaders = await csrfService.getCSRFHeaders();
+        Object.assign(headers, csrfHeaders);
+      } catch (error) {
+        console.warn('Failed to get CSRF headers:', error);
       }
 
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/profiles`, {
@@ -246,6 +255,14 @@ export class ProfileService {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
+      // Add CSRF headers for authenticated requests
+      try {
+        const csrfHeaders = await csrfService.getCSRFHeaders();
+        Object.assign(headers, csrfHeaders);
+      } catch (error) {
+        console.warn('Failed to get CSRF headers:', error);
+      }
+
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/profiles/${id}`, {
         method: 'PUT',
         headers,
@@ -325,6 +342,14 @@ export class ProfileService {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
+      // Add CSRF headers for authenticated requests
+      try {
+        const csrfHeaders = await csrfService.getCSRFHeaders();
+        Object.assign(headers, csrfHeaders);
+      } catch (error) {
+        console.warn('Failed to get CSRF headers:', error);
+      }
+
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/profiles/address/${address}`, {
         method: 'PUT',
         headers,
@@ -390,6 +415,14 @@ export class ProfileService {
 
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      // Add CSRF headers for authenticated requests
+      try {
+        const csrfHeaders = await csrfService.getCSRFHeaders();
+        Object.assign(headers, csrfHeaders);
+      } catch (error) {
+        console.warn('Failed to get CSRF headers:', error);
       }
 
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/profiles/${id}`, {

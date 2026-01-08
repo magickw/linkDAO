@@ -12,13 +12,13 @@ export async function getProvider() {
     console.log('Getting provider...');
     const client = getPublicClient(config);
     console.log('Public client:', client);
-    
+
     // Check if client is available before accessing transport
     if (client) {
       // If wagmi transport exposes an injected provider, use it.
       const injectedProvider = (client as any).transport?.provider;
       console.log('Injected provider:', injectedProvider);
-      
+
       if (injectedProvider) {
         // Create BrowserProvider with proper network configuration to prevent detection issues
         const provider = new ethers.BrowserProvider(injectedProvider as any);
@@ -60,7 +60,7 @@ export async function getProvider() {
     const envRpc = process.env.NEXT_PUBLIC_RPC_URL;
     const envChainId = process.env.NEXT_PUBLIC_CHAIN_ID;
     console.log('Environment RPC:', envRpc, 'Chain ID:', envChainId);
-    
+
     if (envRpc) {
       try {
         const chainId = envChainId ? parseInt(envChainId, 10) : undefined;
@@ -76,18 +76,18 @@ export async function getProvider() {
     try {
       const chainId = envChainId ? parseInt(envChainId, 10) : 1;
       let rpcUrl = getChainRpcUrl(chainId);
-      
+
       if (!rpcUrl) {
         console.warn(`No RPC URL found for chain ID ${chainId}, using fallback public RPC.`);
         rpcUrl = 'https://ethereum-sepolia-rpc.publicnode.com';
       }
-      
+
       if (rpcUrl) {
         // Use staticNetwork: true to prevent network detection issues
         const provider = new ethers.JsonRpcProvider(rpcUrl, chainId, {
           staticNetwork: true
         });
-        
+
         // Don't wait for network detection - just return the provider
         return provider;
       }
@@ -124,14 +124,14 @@ export async function getSigner() {
   try {
     // Try wagmi wallet client first
     const client = await getWalletClient(config);
-    
+
     if (client) {
       // Check if the client has the necessary methods before accessing them
       // Note: Use client.chain.id instead of client.getChainId() to avoid connector issues
       if (client.chain && typeof client.chain.id !== 'undefined') {
         console.log('Wallet client chain ID:', client.chain.id);
       }
-      
+
       const injectedProvider = (client as any).transport?.provider;
       if (injectedProvider) {
         try {
@@ -165,15 +165,15 @@ export async function getSigner() {
         try {
           // Create provider with explicit network configuration to avoid detection issues
           const provider = new ethers.BrowserProvider(injectedProvider as any);
-          
+
           // Try to get signer with timeout to prevent hanging
           const signerPromise = provider.getSigner();
-          const timeoutPromise = new Promise((_, reject) => 
+          const timeoutPromise = new Promise((_, reject) =>
             setTimeout(() => reject(new Error('Signer timeout')), 5000)
           );
-          
+
           const signer = await Promise.race([signerPromise, timeoutPromise]) as any;
-          
+
           // Verify that the signer has the necessary methods
           try {
             const address = await signer.getAddress();
