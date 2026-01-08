@@ -1103,13 +1103,19 @@ export class DatabaseService {
           paymentToken,
           escrowId: escrowId || null,
           status: 'pending',
-          createdAt: new Date(),
-          inventoryHoldId: null // Will be updated in the next step
+          createdAt: new Date()
         };
 
-        // Use provided orderId if available, otherwise let DB generate it
-        if (orderId) {
+        // Use provided orderId if available and is valid UUID, otherwise let DB generate it
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (orderId && uuidRegex.test(orderId)) {
           orderValues.id = orderId;
+        } else if (orderId) {
+          safeLogger.warn('[createOrder] Ignored invalid UUID for orderId, letting DB generate one:', { orderId });
+          // Store the original orderId in checkoutSessionId as a fallback if not already set
+          if (!orderValues.checkoutSessionId) {
+            orderValues.checkoutSessionId = orderId;
+          }
         }
 
         const result = await tx.insert(schema.orders).values(orderValues).returning();
@@ -1122,11 +1128,6 @@ export class DatabaseService {
             status: 'order_created'
           })
           .where(eq(schema.inventoryHolds.heldBy, buyerId));
-
-        // 4. Update order with inventory hold ID
-        await tx.update(schema.orders)
-          .set({ inventoryHoldId: createdOrderId.toString() })
-          .where(eq(schema.orders.id, createdOrderId));
 
         return result[0];
       });

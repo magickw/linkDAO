@@ -68,7 +68,13 @@ export default function StatusPage() {
 
     // Close modal and go back
     const handleClose = () => {
-        router.back();
+        // Try to go back in history
+        if (typeof window !== 'undefined' && window.history.length > 1) {
+            router.back();
+        } else {
+            // Fallback to home page if no history
+            router.push('/');
+        }
     };
 
     // Handle backdrop click
@@ -230,7 +236,7 @@ export default function StatusPage() {
                         {/* Modal Header */}
                         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 rounded-t-2xl z-10">
                             <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-                                {status?.authorProfile?.handle || handle}'s Post
+                                {status?.authorProfile?.handle || 'Unknown'}'s Post
                             </h1>
                         </div>
 

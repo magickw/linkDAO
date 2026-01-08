@@ -998,43 +998,30 @@ class CartService {
   }
 
   private mergeCartItems(localItems: CartItem[], backendItems: CartItem[]): CartItem[] {
-    const merged = [...localItems];
-    const processedIds = new Set<string>();
+    // ENFORCE BACKEND SOURCE OF TRUTH
+    // We interpret "real data" as what is returned by the backend.
+    // We iterate through backend items and merge local data only if the item matches.
+    // Local items that are NOT in the backend are considered stale/ghosts and are discarded.
 
-    // First, add all local items and mark their IDs
-    merged.forEach(item => processedIds.add(item.id));
+    return backendItems.map(backendItem => {
+      const localItem = localItems.find(i => i.id === backendItem.id);
 
-    // Then add backend items that don't exist locally
-    backendItems.forEach(backendItem => {
-      const existingIndex = merged.findIndex(item => item.id === backendItem.id);
-      if (existingIndex >= 0) {
-        // Item exists in both - use the most recent one based on addedAt timestamp
-        const localItem = merged[existingIndex];
+      if (localItem) {
+        // Item exists locally too, check timestamp to determine precedence for quantity
         const localTime = new Date(localItem.addedAt).getTime();
         const backendTime = new Date(backendItem.addedAt).getTime();
 
-        if (backendTime > localTime) {
-          // Backend item is more recent, use its data but keep local quantity if higher
-          merged[existingIndex] = {
-            ...backendItem,
-            quantity: Math.max(localItem.quantity, backendItem.quantity)
-          };
-        } else {
-          // Local item is more recent, keep it but update with backend price if different
-          merged[existingIndex] = {
-            ...localItem,
-            price: backendItem.price // Always use latest price from backend
+        // If local item is significantly newer (e.g. user updated it recently), respect local quantity
+        if (localTime > backendTime) {
+          return {
+            ...backendItem, // Keep backend details (price, inventory check)
+            quantity: localItem.quantity // Use local quantity
           };
         }
-        processedIds.add(backendItem.id);
-      } else {
-        // Item only exists in backend, add it
-        merged.push(backendItem);
-        processedIds.add(backendItem.id);
       }
-    });
 
-    return merged;
+      return backendItem;
+    });
   }
 
   private transformBackendCartToState(backendCart: any): CartState {

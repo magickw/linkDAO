@@ -1485,6 +1485,7 @@ export class CommunityService {
           dao: posts.dao,
           communityId: posts.communityId,
           createdAt: posts.createdAt,
+          views: posts.views, // Include view count
           // Author info
           authorAddress: users.walletAddress,
           authorHandle: users.handle,
@@ -1531,6 +1532,7 @@ export class CommunityService {
           dao: post.dao,
           communityId: post.communityId,
           createdAt: post.createdAt,
+          views: post.views || 0, // Include view count
           // Include community metadata for frontend display
           community: communityResult[0] ? {
             id: communityId,
