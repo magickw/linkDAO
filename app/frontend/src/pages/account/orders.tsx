@@ -62,7 +62,7 @@ export default function OrdersPage() {
     const fetchOrders = async () => {
         try {
             setLoading(true);
-            const response = await fetch('/api/orders', {
+            const response = await fetch(`/api/orders/user/${user?.walletAddress || ''}`, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 }

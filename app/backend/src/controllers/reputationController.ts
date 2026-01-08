@@ -9,25 +9,29 @@ export class ReputationController {
    * Get reputation data for a user (supports both wallet address and user ID)
    * GET /marketplace/reputation/:identifier
    */
+  /**
+   * Get reputation data for a user (supports both wallet address and user ID)
+   * GET /marketplace/reputation/:identifier
+   */
   async getReputation(req: Request, res: Response): Promise<void> {
     try {
-      const { identifier } = req.params;
+      // Route uses :walletAddress, but controller logic might expect generic :identifier
+      const { identifier, walletAddress: paramWalletAddress } = req.params;
+      const targetIdentifier = identifier || paramWalletAddress;
 
-      if (!identifier) {
-        res.status(400).json(createErrorResponse('MISSING_IDENTIFIER', 'Identifier (wallet address or user ID) is required'));
+      if (!targetIdentifier) {
+        res.status(400).json(createErrorResponse('MISSING_IDENTIFIER', 'Identifier (wallet address) is required'));
         return;
       }
 
       // Determine if identifier is a wallet address or user ID
-      let walletAddress = identifier;
-      if (!this.isValidWalletAddress(identifier)) {
+      let walletAddress = targetIdentifier;
+      if (!this.isValidWalletAddress(targetIdentifier)) {
         // If not a valid wallet address, treat as user ID and try to get wallet address
-        // In a real implementation, you would look up the wallet address for the user ID
-        // For now, we'll assume it's a wallet address for backward compatibility
-        walletAddress = identifier;
+        walletAddress = targetIdentifier;
       }
 
-      logger.info(`Getting reputation for identifier: ${identifier} (resolved to wallet: ${walletAddress})`);
+      logger.info(`Getting reputation for identifier: ${targetIdentifier} (resolved to wallet: ${walletAddress})`);
 
       const reputation = await reputationService.getReputation(walletAddress);
 
@@ -37,10 +41,10 @@ export class ReputationController {
 
     } catch (error) {
       logger.error('Error getting reputation:', error);
-      
+
       // Return default values instead of 500 error as per requirements
       const defaultReputation = {
-        walletAddress: req.params.identifier,
+        walletAddress: req.params.identifier || req.params.walletAddress,
         score: 50.0,
         totalTransactions: 0,
         positiveReviews: 0,
@@ -67,11 +71,12 @@ export class ReputationController {
    */
   async updateReputation(req: Request, res: Response): Promise<void> {
     try {
-      const { identifier } = req.params;
+      const { identifier, walletAddress: paramWalletAddress } = req.params;
+      const targetIdentifier = identifier || paramWalletAddress;
       const { eventType, transactionId, reviewId, metadata } = req.body;
 
-      if (!identifier) {
-        res.status(400).json(createErrorResponse('MISSING_IDENTIFIER', 'Identifier (wallet address or user ID) is required'));
+      if (!targetIdentifier) {
+        res.status(400).json(createErrorResponse('MISSING_IDENTIFIER', 'Identifier (wallet address) is required'));
         return;
       }
 
@@ -81,12 +86,9 @@ export class ReputationController {
       }
 
       // Determine if identifier is a wallet address or user ID
-      let walletAddress = identifier;
-      if (!this.isValidWalletAddress(identifier)) {
-        // If not a valid wallet address, treat as user ID and try to get wallet address
-        // In a real implementation, you would look up the wallet address for the user ID
-        // For now, we'll assume it's a wallet address for backward compatibility
-        walletAddress = identifier;
+      let walletAddress = targetIdentifier;
+      if (!this.isValidWalletAddress(targetIdentifier)) {
+        walletAddress = targetIdentifier;
       }
 
       // Validate event type
@@ -100,12 +102,12 @@ export class ReputationController {
       ];
 
       if (!validEventTypes.includes(eventType)) {
-        res.status(400).json(createErrorResponse('INVALID_EVENT_TYPE', 
+        res.status(400).json(createErrorResponse('INVALID_EVENT_TYPE',
           `Invalid event type. Must be one of: ${validEventTypes.join(', ')}`));
         return;
       }
 
-      logger.info(`Updating reputation for identifier: ${identifier} (resolved to wallet: ${walletAddress}), event: ${eventType}`);
+      logger.info(`Updating reputation for identifier: ${targetIdentifier} (resolved to wallet: ${walletAddress}), event: ${eventType}`);
 
       const transaction: ReputationTransaction = {
         eventType,
@@ -142,21 +144,19 @@ export class ReputationController {
    */
   async getReputationHistory(req: Request, res: Response): Promise<void> {
     try {
-      const { identifier } = req.params;
+      const { identifier, walletAddress: paramWalletAddress } = req.params;
+      const targetIdentifier = identifier || paramWalletAddress;
       const limit = parseInt(req.query.limit as string) || 50;
 
-      if (!identifier) {
-        res.status(400).json(createErrorResponse('MISSING_IDENTIFIER', 'Identifier (wallet address or user ID) is required'));
+      if (!targetIdentifier) {
+        res.status(400).json(createErrorResponse('MISSING_IDENTIFIER', 'Identifier (wallet address) is required'));
         return;
       }
 
       // Determine if identifier is a wallet address or user ID
-      let walletAddress = identifier;
-      if (!this.isValidWalletAddress(identifier)) {
-        // If not a valid wallet address, treat as user ID and try to get wallet address
-        // In a real implementation, you would look up the wallet address for the user ID
-        // For now, we'll assume it's a wallet address for backward compatibility
-        walletAddress = identifier;
+      let walletAddress = targetIdentifier;
+      if (!this.isValidWalletAddress(targetIdentifier)) {
+        walletAddress = targetIdentifier;
       }
 
       // Validate limit
@@ -165,7 +165,7 @@ export class ReputationController {
         return;
       }
 
-      logger.info(`Getting reputation history for identifier: ${identifier} (resolved to wallet: ${walletAddress}), limit: ${limit}`);
+      logger.info(`Getting reputation history for identifier: ${targetIdentifier} (resolved to wallet: ${walletAddress}), limit: ${limit}`);
 
       const history = await reputationService.getReputationHistory(walletAddress, limit);
 
@@ -180,10 +180,10 @@ export class ReputationController {
 
     } catch (error) {
       logger.error('Error getting reputation history:', error);
-      
+
       // Return empty history instead of error
       res.status(200).json(createSuccessResponse({
-        walletAddress: req.params.identifier,
+        walletAddress: req.params.identifier || req.params.walletAddress,
         history: [],
         count: 0,
         limit: parseInt(req.query.limit as string) || 50
@@ -219,7 +219,7 @@ export class ReputationController {
       // Validate all wallet addresses
       for (const address of walletAddresses) {
         if (!this.isValidWalletAddress(address)) {
-          res.status(400).json(createErrorResponse('INVALID_WALLET_ADDRESS', 
+          res.status(400).json(createErrorResponse('INVALID_WALLET_ADDRESS',
             `Invalid wallet address format: ${address}`));
           return;
         }
@@ -237,7 +237,7 @@ export class ReputationController {
 
     } catch (error) {
       logger.error('Error getting bulk reputation:', error);
-      
+
       // Return default values for all addresses
       const defaultReputations = req.body.walletAddresses.map((address: string) => ({
         walletAddress: address,

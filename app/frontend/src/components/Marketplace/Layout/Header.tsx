@@ -71,7 +71,7 @@ const Header = () => {
           </div>
 
           {/* Right Side Navigation */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3">
             {/* Wallet Connect */}
             <div className="flex items-center">
               <ConnectButton
@@ -83,13 +83,13 @@ const Header = () => {
             {/* Cart */}
             <CartBadge size="md" />
 
-            {/* Profile Menu */}
+            {/* Profile Menu - Show when connected */}
             {isConnected && (
               <div className="relative group">
-                <button className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
-                  <User size={24} className="text-gray-700" />
+                <button className="p-2 rounded-full bg-blue-500 hover:bg-blue-600 transition-colors shadow-md">
+                  <User size={20} className="text-white" />
                 </button>
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 border border-gray-200">
                   <Link
                     href="/marketplace/profile"
                     onClick={(e) => {
