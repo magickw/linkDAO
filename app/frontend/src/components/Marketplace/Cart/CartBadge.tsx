@@ -17,12 +17,28 @@ interface CartBadgeProps {
 export const CartBadge: React.FC<CartBadgeProps> = ({
   className = '',
   showText = false,
-  size = 'medium'
+  size = 'md'
 }) => {
   const { state } = useCart();
   const itemCount = state.totals.itemCount;
 
   const sizeClasses = {
+    sm: {
+      icon: 'w-4 h-4',
+      badge: 'w-4 h-4 text-xs',
+      container: 'p-1'
+    },
+    md: {
+      icon: 'w-6 h-6',
+      badge: 'w-5 h-5 text-xs',
+      container: 'p-2'
+    },
+    lg: {
+      icon: 'w-8 h-8',
+      badge: 'w-6 h-6 text-sm',
+      container: 'p-3'
+    },
+    // Fallbacks provided for safety
     small: {
       icon: 'w-4 h-4',
       badge: 'w-4 h-4 text-xs',
@@ -40,7 +56,8 @@ export const CartBadge: React.FC<CartBadgeProps> = ({
     }
   };
 
-  const classes = sizeClasses[size];
+  // Handle both short and long size names for compatibility
+  const classes = sizeClasses[size as keyof typeof sizeClasses] || sizeClasses.md;
 
   return (
     <Link href="/marketplace/cart" className={`relative inline-flex items-center gap-2 ${className}`}>
@@ -50,7 +67,7 @@ export const CartBadge: React.FC<CartBadgeProps> = ({
         whileTap={{ scale: 0.95 }}
       >
         <ShoppingCart className={`${classes.icon} text-gray-700 dark:text-gray-300`} />
-        
+
         <AnimatePresence>
           {itemCount > 0 && (
             <motion.div
