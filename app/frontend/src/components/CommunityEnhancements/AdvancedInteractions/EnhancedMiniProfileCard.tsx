@@ -270,6 +270,7 @@ const EnhancedMiniProfileCard: React.FC<EnhancedMiniProfileCardProps> = ({
                 </div>
                 <div className="ce-profile-info">
                   <h4 className="ce-profile-username">{userProfile.username}</h4>
+                  <p className="ce-profile-handle">@{userProfile.username}</p>
                   {userProfile.ensName && showENSInfo && (
                     <p className="ce-profile-ens">{userProfile.ensName}</p>
                   )}
@@ -470,6 +471,12 @@ const EnhancedMiniProfileCard: React.FC<EnhancedMiniProfileCardProps> = ({
           font-size: var(--ce-font-size-xs);
           margin-left: var(--ce-space-xs);
         }
+
+        .ce-profile-handle {
+          font-size: var(--ce-font-size-sm);
+          color: var(--ce-text-secondary);
+          margin-top: 2px;
+        }
         
         /* Inherit all other styles from base component */
         .ce-profile-loading,
@@ -482,6 +489,7 @@ const EnhancedMiniProfileCard: React.FC<EnhancedMiniProfileCardProps> = ({
         .ce-profile-avatar,
         .ce-profile-info,
         .ce-profile-username,
+        .ce-profile-handle,
         .ce-profile-ens,
         .ce-profile-stats,
         .ce-stat,

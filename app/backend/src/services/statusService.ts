@@ -178,6 +178,8 @@ export class StatusService {
           updatedAt: statuses.updatedAt,
           walletAddress: users.walletAddress,
           handle: users.handle,
+          displayName: users.displayName,
+          avatarCid: users.avatarCid,
           isRepost: statuses.isRepost
         })
         .from(statuses)
@@ -191,11 +193,13 @@ export class StatusService {
       // Transform to match frontend expectations
       const { handle, walletAddress, ...rest } = rawPost;
       return {
-        ...rest,
+        ...rawPost,
         author: walletAddress || rawPost.authorId,
         authorProfile: {
           handle: handle || undefined,
-          walletAddress: walletAddress || undefined
+          walletAddress: walletAddress || undefined,
+          displayName: (rawPost as any).displayName || undefined,
+          avatarCid: (rawPost as any).avatarCid || undefined
         }
       };
     } catch (error) {
@@ -227,6 +231,8 @@ export class StatusService {
           updatedAt: statuses.updatedAt,
           walletAddress: users.walletAddress,
           handle: users.handle,
+          displayName: users.displayName,
+          avatarCid: users.avatarCid,
           isRepost: statuses.isRepost
         })
         .from(statuses)
@@ -240,11 +246,13 @@ export class StatusService {
       // Transform to match frontend expectations
       const { handle, walletAddress, ...rest } = rawPost;
       return {
-        ...rest,
+        ...rawPost,
         author: walletAddress || rawPost.authorId,
         authorProfile: {
           handle: handle || undefined,
-          walletAddress: walletAddress || undefined
+          walletAddress: walletAddress || undefined,
+          displayName: (rawPost as any).displayName || undefined,
+          avatarCid: (rawPost as any).avatarCid || undefined
         }
       };
     } catch (error) {
@@ -552,6 +560,8 @@ export class StatusService {
           updatedAt: statuses.updatedAt,
           walletAddress: users.walletAddress,
           handle: users.handle,
+          displayName: users.displayName,
+          avatarCid: users.avatarCid,
           isRepost: statuses.isRepost,
           mediaUrls: statuses.mediaUrls,
           location: statuses.location,
@@ -565,7 +575,8 @@ export class StatusService {
           original_createdAt: originalPosts.createdAt,
           original_author_handle: originalAuthors.handle,
           original_author_walletAddress: originalAuthors.walletAddress,
-          original_author_avatar: originalAuthors.avatarCid
+          original_author_avatar: originalAuthors.avatarCid,
+          original_author_displayName: originalAuthors.displayName
         })
         .from(statuses)
         .leftJoin(users, eq(statuses.authorId, users.id))
@@ -607,6 +618,7 @@ export class StatusService {
             authorProfile: {
               handle: original_author_handle,
               avatar: original_author_avatar,
+              displayName: (post as any).original_author_displayName || undefined,
               verified: false // You might want to join isVerified if available
             }
           };

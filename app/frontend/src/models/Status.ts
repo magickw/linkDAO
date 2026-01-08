@@ -147,6 +147,7 @@ export function convertBackendStatusToStatus(backendPost: any): Status {
     // Add author profile information including avatar
     authorProfile: {
       handle: formatAuthorDisplay(backendPost.handle, backendPost.walletAddress),
+      displayName: backendPost.displayName || backendPost.handle || backendPost.author || '',
       verified: false,
       avatarCid: backendPost.avatarCid || backendPost.profileCid,  // Prefer avatarCid, fallback to profileCid
       reputationTier: undefined

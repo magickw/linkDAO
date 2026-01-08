@@ -31,6 +31,7 @@ import Link from 'next/link';
 import { getTokenLogoWithFallback } from '@/utils/tokenLogoUtils';
 import { VerificationModal } from '@/components/Verification/VerificationModal';
 import { useVerification } from '@/hooks/useVerification';
+import { ProfilePostItem } from '@/components/ProfilePostItem';
 
 export default function Profile() {
   const router = useRouter();
@@ -150,8 +151,7 @@ export default function Profile() {
     }
   });
 
-  // Cache for post content to avoid repeated fetches
-  const [postContentCache, setPostContentCache] = useState<Record<string, string>>({});
+
 
   // Follow/unfollow functionality
   const { follow, unfollow, isLoading: isFollowLoading } = useFollow();
@@ -245,66 +245,7 @@ export default function Profile() {
     }
   };
 
-  // Get post content preview by fetching from IPFS
-  const getPostContentPreview = useCallback((post: any) => {
-    // If we already have the content in cache, return it
-    if (postContentCache[post.id]) {
-      return postContentCache[post.id];
-    }
 
-    // If the post has direct content (not a CID), return it
-    if (post.content && typeof post.content === 'string' && !post.content.startsWith('Qm') && !post.content.startsWith('baf')) {
-      return post.content;
-    }
-
-    // If no content CID or CID is not valid IPFS format, use direct content
-    if (!post.contentCid || (!post.contentCid.startsWith('Qm') && !post.contentCid.startsWith('baf'))) {
-      // Try to use post.content if available
-      if (post.content) {
-        return post.content;
-      }
-      return '';
-    }
-
-    // If it looks like a valid IPFS CID, fetch the content
-    if (post.contentCid.startsWith('Qm') || post.contentCid.startsWith('baf')) {
-      // Fetch content from backend API that proxies IPFS
-      fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/feed/content/${post.contentCid}`)
-        .then(async response => {
-          if (response.ok) {
-            const contentType = response.headers.get('content-type');
-            if (contentType && contentType.includes('application/json')) {
-              return response.json();
-            } else {
-              // Handle text response
-              const text = await response.text();
-              return { content: text };
-            }
-          }
-          throw new Error('Failed to fetch content');
-        })
-        .then(data => {
-          const content = data.data?.content || data.content || 'Content not available';
-          // Cache the content
-          setPostContentCache(prev => ({ ...prev, [post.id]: content }));
-          // Force a re-render by updating state
-          setPostContentCache(currentCache => ({ ...currentCache }));
-          return content;
-        })
-        .catch(error => {
-          console.error('Error fetching post content:', error);
-          // Cache the error state to prevent repeated fetches
-          setPostContentCache(prev => ({ ...prev, [post.id]: 'Content not available' }));
-          return 'Content not available';
-        });
-
-      // Return loading state while fetching
-      return 'Loading content...';
-    }
-
-    // If it's already content (not a CID), return as is
-    return post.contentCid || post.content || '';
-  }, [postContentCache]);
 
   const handleUnfollow = async () => {
     if (!currentUserAddress || !targetUserAddress) {
@@ -1835,70 +1776,15 @@ export default function Profile() {
                   ) : (
                     <div className="space-y-4">
                       {posts.map((post) => (
-                        <Link key={post.id} href={post.communityId ? `/communities/${post.communityId}/posts/${post.id}` : `/${profile.handle || currentUserAddress?.slice(0, 8)}/statuses/${post.id}`}>
-                          <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                            <div className="flex justify-between items-start">
-                              <Link href={post.communityId ? `/communities/${post.communityId}/posts/${post.id}` : `/${profile.handle || currentUserAddress?.slice(0, 8)}/statuses/${post.id}`} className="flex-grow">
-                                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 hover:text-blue-600 dark:hover:text-blue-400">
-                                  {post.title || 'Untitled Post'}
-                                </h4>
-                                <p className="text-gray-600 dark:text-gray-300 mb-2 line-clamp-2">
-                                  {getPostContentPreview(post)}
-                                </p>
-                              </Link>
-                              {targetUserAddress === currentUserAddress && (
-                                <div className="flex space-x-2 ml-4">
-                                  <button
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      handleEditPost(post);
-                                    }}
-                                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                    title="Edit post"
-                                  >
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                    </svg>
-                                  </button>
-                                  <button
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      handleDeletePost(post.id);
-                                    }}
-                                    className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                                    title="Delete post"
-                                  >
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mt-2">
-                              {post.communityId && (
-                                <>
-                                  <span>
-                                    in{' '}
-                                    <Link
-                                      href={`/communities/${encodeURIComponent(post.communityId ?? '')}`}
-                                      className="text-blue-600 dark:text-blue-400 hover:underline"
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      {post.communityId}
-                                    </Link>
-                                  </span>
-                                  <span className="mx-2">•</span>
-                                </>
-                              )}
-                              <span>{new Date(post.createdAt).toLocaleDateString()}</span>
-                              <span className="mx-2">•</span>
-                              <span>{post.comments || 0} comments</span>
-                              <span className="mx-2">•</span>
-                              <span>{post.reactions?.length || 0} reactions</span>
-                            </div>
-                          </div>
-                        </Link>
+                        <ProfilePostItem
+                          key={post.id}
+                          post={post}
+                          currentUserAddress={currentUserAddress}
+                          targetUserAddress={targetUserAddress}
+                          profileHandle={profile.handle}
+                          handleEditPost={handleEditPost}
+                          handleDeletePost={handleDeletePost}
+                        />
                       ))}
                     </div>
                   )}

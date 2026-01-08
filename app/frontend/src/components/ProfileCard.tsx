@@ -26,12 +26,17 @@ export default function ProfileCard({ profile, currentUserAddress, className = '
         <div className="ml-4 flex-1">
           <div className="flex items-center justify-between">
             <div>
-              <Link href={`/u/${profile.walletAddress}`} className="text-sm font-medium text-gray-900 hover:text-primary-600 dark:text-white dark:hover:text-primary-400">
-                {profile.handle}
+              <Link href={`/u/${profile.walletAddress}`} className="text-base font-semibold text-gray-900 hover:text-primary-600 dark:text-white dark:hover:text-primary-400">
+                {profile.displayName || profile.handle}
               </Link>
-              {profile.ens && (
-                <div className="text-xs text-gray-500 dark:text-gray-400">{profile.ens}</div>
-              )}
+              <div className="flex items-center gap-1 mt-0.5">
+                <Link href={`/u/${profile.walletAddress}`} className="text-xs text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400">
+                  @{profile.handle}
+                </Link>
+                {profile.ens && (
+                  <span className="text-xs text-gray-500 dark:text-gray-400">• {profile.ens}</span>
+                )}
+              </div>
             </div>
             {showFollowButton && (
               <FollowButton
