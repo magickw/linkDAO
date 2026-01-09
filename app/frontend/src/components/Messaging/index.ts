@@ -9,7 +9,7 @@ export { KeyExchangeModal } from './KeyExchangeModal';
 export { ConversationSearchModal } from './ConversationSearchModal';
 export { ConversationSettingsModal } from './ConversationSettingsModal';
 export { OfflineIndicator } from './OfflineIndicator';
-export { default as DiscordStyleMessagingInterface } from './DiscordStyleMessagingInterface';
+export { default as MessagingInterface } from './MessagingInterface';
 export { OrderConversationHeader } from './OrderConversationHeader';
 export { QuickReplyPanel } from './QuickReplyPanel';
 export { OrderTimeline } from './OrderTimeline';

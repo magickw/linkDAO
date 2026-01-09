@@ -29,6 +29,23 @@ export class SellerWorkflowService {
     }
 
     /**
+     * Helper to format shipping address from raw DB row
+     */
+    private formatShippingAddress(dbOrder: any): any {
+        if (!dbOrder.shippingStreet && !dbOrder.shippingCity) return null;
+
+        return {
+            name: dbOrder.shippingName || '',
+            street: dbOrder.shippingStreet || '',
+            city: dbOrder.shippingCity || '',
+            state: dbOrder.shippingState || '',
+            postalCode: dbOrder.shippingPostalCode || '',
+            country: dbOrder.shippingCountry || '',
+            phone: dbOrder.shippingPhone || ''
+        };
+    }
+
+    /**
      * Get seller order dashboard
      */
     async getOrderDashboard(sellerId: string): Promise<any> {
@@ -161,25 +178,21 @@ export class SellerWorkflowService {
             const isSeller = order.sellerId === sellerId || order.sellerWalletAddress === sellerId;
             if (!isSeller) throw new Error('Unauthorized');
 
-            if (!order.shippingAddress) throw new Error('Shipping address missing');
+            // Check shipping address using helper (raw DB row has individual columns)
+            const shippingAddress = this.formatShippingAddress(order);
+            if (!shippingAddress) {
+                safeLogger.warn(`Order ${orderId} has no shipping address. Skipping shipping check for digital goods or pickup.`);
+            }
 
-            // 1. Generate Label (Mock or via ShippingService)
-            // If ShippingService has real implementation, use it. Here we explicitly use requirements 5.3 prompt.
-            // "Implement markReadyToShip() with shipping method prompt and label generation"
-
-            // For now, we simulate label generation
+            // Generate Label (Mock for now)
             const labelUrl = `https://mock-carrier.com/label/${uuidv4()}.pdf`;
             const trackingNumber = `TRACK-${uuidv4().substring(0, 8).toUpperCase()}`;
 
-            // Update with metadata but don't change status to SHIPPED yet, just READY_TO_SHIP via metadata or status?
-            // "ready to ship" is often a status or tag. 
-            // LinkDAO status list: CREATED, PAID, PROCESSING, SHIPPED... 
-            // We can keep it as PROCESSING but add 'readyToShip' flag in metadata/tracking.
-
+            // Update with metadata - keep as PROCESSING but add readyToShip flag
             await this.orderService.updateOrderStatus(orderId, OrderStatus.PROCESSING, {
                 labelUrl,
                 trackingNumber,
-                carrier: packageDetails.carrier || 'Generic',
+                carrier: packageDetails?.carrier || 'Generic',
                 readyToShip: true
             });
 
@@ -265,24 +278,45 @@ export class SellerWorkflowService {
             const isSeller = order.sellerId === sellerId || order.sellerWalletAddress === sellerId;
             if (!isSeller) throw new Error('Unauthorized');
 
-            // Items are not always joined in getOrderById. 
-            // Ideally assume they are part of metadata or we fetch them.
-            // Since we don't have getOrdersItems method shown, we might need to rely on what's available.
-            // Assuming `order.items` or `order.metadata.items` exists or we mock it for this task if schema is complex.
-            // Looking at previous schema, `order_items` table likely exists.
+            // Format shipping address from raw DB columns
+            const shippingAddress = this.formatShippingAddress(order);
 
-            // Let's fetch items if we can, or return placeholder.
-            // const items = await this.databaseService.getOrderItems(orderId);
-            const items = [
-                { description: 'Item A (Placeholder)', quantity: 1 }
-            ];
+            // Try to get product info for items
+            let items = [];
+            try {
+                if (order.listingId) {
+                    const product = await this.databaseService.getProductById(order.listingId);
+                    if (product) {
+                        items = [{
+                            description: product.title || 'Product',
+                            quantity: order.quantity || 1,
+                            price: parseFloat(order.amount) || 0
+                        }];
+                    }
+                }
+            } catch (err) {
+                safeLogger.warn(`Could not fetch product for packing slip: ${err}`);
+            }
+
+            // Fallback if no items found
+            if (items.length === 0) {
+                items = [{
+                    description: 'Order Item',
+                    quantity: order.quantity || 1,
+                    price: parseFloat(order.amount) || 0
+                }];
+            }
 
             return {
                 orderId: order.id,
-                date: new Date(),
-                buyerAddress: order.shippingAddress,
+                orderNumber: order.id.toString().slice(0, 8).toUpperCase(),
+                date: order.createdAt || new Date(),
+                buyerAddress: shippingAddress,
                 items,
-                sellerId
+                totalAmount: parseFloat(order.amount) || 0,
+                currency: order.paymentToken || 'USD',
+                sellerId,
+                notes: order.notes || ''
             };
         } catch (error) {
             safeLogger.error('Error generating packing slip:', error);

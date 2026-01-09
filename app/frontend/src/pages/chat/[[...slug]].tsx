@@ -1,7 +1,11 @@
 /**
- * Full Chat Page
+ * Full Chat Page with Route-Based URLs
  * Discord/Slack style messaging interface with all chat functionalities
- * Migrated from FloatingChatWidget for better user experience
+ *
+ * Routes:
+ * - /chat - Main chat page (no conversation selected)
+ * - /chat/dm/[conversationId] - Direct message conversation
+ * - /chat/channel/[channelId] - Channel chat (future)
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -27,7 +31,7 @@ import { useContacts } from '@/contexts/ContactContext';
 import ContactList from '@/components/Messaging/Contacts/ContactList';
 import AddContactModal from '@/components/Messaging/Contacts/AddContactModal';
 import EditContactModal from '@/components/Messaging/Contacts/EditContactModal';
-import DiscordStyleMessagingInterface from '@/components/Messaging/DiscordStyleMessagingInterface';
+import MessagingInterface from '@/components/Messaging/MessagingInterface';
 import { OnlineStatus } from '@/components/Messaging/MessageStatusComponents';
 import { useAuth } from '@/context/AuthContext';
 
@@ -38,8 +42,38 @@ interface ChannelCategory {
   isCollapsed: boolean;
 }
 
+// Route types
+type ChatRouteType = 'none' | 'dm' | 'channel';
+
+interface ParsedRoute {
+  type: ChatRouteType;
+  id: string | null;
+}
+
+// Parse the URL slug to determine chat type and ID
+function parseRoute(slug: string[] | undefined): ParsedRoute {
+  if (!slug || slug.length === 0) {
+    return { type: 'none', id: null };
+  }
+
+  const [routeType, id] = slug;
+
+  if (routeType === 'dm' && id) {
+    return { type: 'dm', id };
+  }
+
+  if (routeType === 'channel' && id) {
+    return { type: 'channel', id };
+  }
+
+  return { type: 'none', id: null };
+}
+
 export default function ChatPage() {
   const router = useRouter();
+  const { slug } = router.query;
+  const parsedRoute = parseRoute(slug as string[] | undefined);
+
   const { walletInfo } = useWalletAuth();
   const { address, isConnected } = useAccount();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -55,6 +89,7 @@ export default function ChatPage() {
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   const [pendingContact, setPendingContact] = useState<Contact | null>(null);
   const [showRightSidebar, setShowRightSidebar] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Channel categories state (matching screenshot design)
   const [channelCategories, setChannelCategories] = useState<ChannelCategory[]>([
@@ -86,12 +121,57 @@ export default function ChatPage() {
     isConnected: isWebSocketConnected,
     joinConversation,
     leaveConversation,
+    disconnect: disconnectWebSocket,
     on,
     off
   } = useWebSocket({
     walletAddress: address || '',
     autoConnect: true
   });
+
+  // Cleanup WebSocket connection when leaving the chat page
+  useEffect(() => {
+    return () => {
+      // Leave any active conversation when unmounting
+      if (selectedConversation?.id) {
+        leaveConversation(selectedConversation.id);
+      }
+    };
+  }, [selectedConversation, leaveConversation]);
+
+  // Handle URL-based conversation selection
+  useEffect(() => {
+    if (!router.isReady || !hookConversations || conversationsLoading) return;
+
+    // On initial load or route change, select conversation from URL
+    if (parsedRoute.type === 'dm' && parsedRoute.id) {
+      const conversation = hookConversations.find(c => c.id === parsedRoute.id);
+      if (conversation && conversation.id !== selectedConversation?.id) {
+        // Don't use handleConversationSelect to avoid URL update loop
+        if (isWebSocketConnected && selectedConversation?.id && selectedConversation.id !== conversation.id) {
+          leaveConversation(selectedConversation.id);
+        }
+        setSelectedConversation(conversation);
+        setActiveView('chat');
+        if (isWebSocketConnected && conversation.id) {
+          joinConversation(conversation.id);
+        }
+        // Mark as read
+        if (address && conversation.unreadCounts?.[address] > 0) {
+          markAsRead(conversation.id, []).catch(console.error);
+        }
+      }
+    } else if (parsedRoute.type === 'none' && selectedConversation && !isInitialLoad) {
+      // URL changed to /chat without conversation, deselect
+      if (isWebSocketConnected && selectedConversation.id) {
+        leaveConversation(selectedConversation.id);
+      }
+      setSelectedConversation(null);
+      setActiveView('list');
+    }
+
+    setIsInitialLoad(false);
+  }, [router.isReady, parsedRoute.type, parsedRoute.id, hookConversations, conversationsLoading]);
 
   // Calculate unread messages
   useEffect(() => {
@@ -122,8 +202,11 @@ export default function ChatPage() {
       setHasNewMessage(true);
       loadConversations();
 
-      // Show browser notification
-      if (document.hidden) {
+      // Show browser notification only when:
+      // 1. Document is hidden (user is not on the page)
+      // 2. The message is not in the currently selected conversation
+      const isInCurrentConversation = selectedConversation?.id === message.conversationId;
+      if (document.hidden && !isInCurrentConversation) {
         const conversation = hookConversations?.find(conv => conv.id === message.conversationId);
         const toAddress = conversation
           ? conversation.participants.find(p => p !== message.fromAddress) || ''
@@ -213,7 +296,7 @@ export default function ChatPage() {
       off('user_typing', handleUserTyping);
       off('user_stopped_typing', handleUserStoppedTyping);
     };
-  }, [isWebSocketConnected, hookConversations, address, loadConversations, on, off]);
+  }, [isWebSocketConnected, hookConversations, address, loadConversations, on, off, selectedConversation]);
 
   // Contact context integration
   const { setOnStartChat } = useContacts();
@@ -248,6 +331,7 @@ export default function ChatPage() {
     }
   }, [pendingContact, address, hookConversations]);
 
+  // Handle conversation selection with URL update
   const handleConversationSelect = async (conversation: Conversation) => {
     if (isWebSocketConnected && selectedConversation?.id && selectedConversation.id !== conversation.id) {
       leaveConversation(selectedConversation.id);
@@ -255,6 +339,9 @@ export default function ChatPage() {
 
     setSelectedConversation(conversation);
     setActiveView('chat');
+
+    // Update URL using shallow routing (no page reload)
+    router.push(`/chat/dm/${conversation.id}`, undefined, { shallow: true });
 
     if (isWebSocketConnected && conversation.id) {
       joinConversation(conversation.id);
@@ -269,12 +356,16 @@ export default function ChatPage() {
     }
   };
 
+  // Handle back to list with URL update
   const handleBackToList = () => {
     if (isWebSocketConnected && selectedConversation?.id) {
       leaveConversation(selectedConversation.id);
     }
     setSelectedConversation(null);
     setActiveView('list');
+
+    // Update URL to /chat
+    router.push('/chat', undefined, { shallow: true });
   };
 
   const startNewConversation = async (recipientAddress?: string) => {
@@ -322,6 +413,10 @@ export default function ChatPage() {
         setActiveView('chat');
         setShowNewConversationModal(false);
         setNewRecipientAddress('');
+
+        // Update URL to new conversation
+        router.push(`/chat/dm/${newConversation.id}`, undefined, { shallow: true });
+
         loadConversations();
       } else {
         if (response.status === 401) {
@@ -368,6 +463,11 @@ export default function ChatPage() {
     };
     return [...hookConversations].sort((a, b) => toTime(b.lastActivity) - toTime(a.lastActivity));
   }, [hookConversations]);
+
+  // Generate page title based on current conversation
+  const pageTitle = selectedConversation
+    ? `Chat with ${truncateAddress(getOtherParticipant(selectedConversation))} | LinkDAO`
+    : 'Chat | LinkDAO';
 
   // Show loading state
   if (authLoading) {
@@ -440,7 +540,7 @@ export default function ChatPage() {
   return (
     <>
       <Head>
-        <title>Chat | LinkDAO</title>
+        <title>{pageTitle}</title>
         <meta name="description" content="LinkDAO Chat - Connect and message with the community" />
       </Head>
 
@@ -469,7 +569,7 @@ export default function ChatPage() {
             <div className="relative">
               <input
                 type="text"
-                placeholder="Search channels..."
+                placeholder="Search conversations..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full px-3 py-2 text-sm bg-gray-700 text-white rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -614,9 +714,12 @@ export default function ChatPage() {
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col bg-gray-900">
           {selectedConversation ? (
-            <DiscordStyleMessagingInterface
+            <MessagingInterface
               className="h-full"
               onClose={handleBackToList}
+              conversationId={selectedConversation.id}
+              participantAddress={getOtherParticipant(selectedConversation)}
+              participantName={truncateAddress(getOtherParticipant(selectedConversation))}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center">
