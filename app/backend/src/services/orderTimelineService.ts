@@ -1,6 +1,6 @@
 import { DatabaseService } from './databaseService';
 import { safeLogger } from '../utils/safeLogger';
-import { OrderWebSocketService } from './orderWebSocketService';
+import { OrderWebSocketService, getOrderWebSocketService } from './orderWebSocketService';
 import { OrderStatus } from '../models/Order';
 
 export interface OrderMilestone {
@@ -16,11 +16,9 @@ export interface OrderMilestone {
 
 export class OrderTimelineService {
     private databaseService: DatabaseService;
-    private wsService: OrderWebSocketService;
 
     constructor() {
         this.databaseService = new DatabaseService();
-        this.wsService = new OrderWebSocketService();
     }
 
     /**
@@ -127,7 +125,10 @@ export class OrderTimelineService {
 
             const fullMilestone = { ...milestone, orderId };
 
-            this.wsService.emitOrderEvent(orderId, 'timeline_update', fullMilestone);
+            const wsService = getOrderWebSocketService();
+            if (wsService) {
+                wsService.emitOrderEvent(orderId, 'timeline_update', fullMilestone);
+            }
 
             safeLogger.info(`Added milestone for order ${orderId}: ${milestone.title}`);
         } catch (error) {
