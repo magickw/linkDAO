@@ -6,18 +6,27 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Layout from '@/components/Layout';
-import { wishlistService, WishlistItem } from '@/services/wishlistService';
+import { wishlistService, WishlistItem, WishlistState } from '@/services/wishlistService';
 import { ShoppingCart, X } from 'lucide-react';
 
 const WishlistPage: React.FC = () => {
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    // Load wishlist items
-    const loadWishlist = async () => {
-      const state = await wishlistService.getWishlistState();
-      setWishlistItems(state.items);
+    // Load wishlist items - use sync method for initial load to ensure consistency
+    const loadWishlist = () => {
+      try {
+        // Access the sync method from the service - it's a public method
+        const state = wishlistService.getWishlistStateSync();
+        setWishlistItems(state.items);
+      } catch (error) {
+        console.error('Error loading wishlist:', error);
+        setWishlistItems([]);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     loadWishlist();
@@ -56,7 +65,12 @@ const WishlistPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <h1 className="text-3xl font-bold text-white mb-8">My Wishlist</h1>
 
-          {wishlistItems.length === 0 ? (
+          {isLoading ? (
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 text-center border border-white/20">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white/50 mx-auto mb-4"></div>
+              <p className="text-white/70">Loading your wishlist...</p>
+            </div>
+          ) : wishlistItems.length === 0 ? (
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 text-center border border-white/20">
               <h2 className="text-2xl font-semibold text-white mb-2">Your wishlist is empty</h2>
               <p className="text-white/70 mb-6">Save items that you like to your wishlist</p>

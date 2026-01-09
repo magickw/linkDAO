@@ -1,29 +1,43 @@
 /**
  * Bookmark Service
  *
- * Handles user bookmarking of posts
+ * Handles user bookmarking of posts and statuses
  */
 
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
-import { bookmarks, posts } from '../db/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { bookmarks, posts, statuses } from '../db/schema';
+import { eq, and, sql, or } from 'drizzle-orm';
+
+type ContentType = 'post' | 'status';
 
 class BookmarkService {
   /**
    * Add a bookmark
    */
-  async addBookmark(userId: string, postId: string): Promise<boolean> {
+  async addBookmark(userId: string, contentId: string, contentType: ContentType = 'post'): Promise<boolean> {
     try {
-      // Check if post exists
-      const post = await db
-        .select({ id: posts.id })
-        .from(posts)
-        .where(eq(posts.id, postId))
-        .limit(1);
+      // Check if content exists based on type
+      if (contentType === 'post') {
+        const post = await db
+          .select({ id: posts.id })
+          .from(posts)
+          .where(eq(posts.id, contentId))
+          .limit(1);
 
-      if (post.length === 0) {
-        throw new Error('Post not found');
+        if (post.length === 0) {
+          throw new Error('Post not found');
+        }
+      } else if (contentType === 'status') {
+        const status = await db
+          .select({ id: statuses.id })
+          .from(statuses)
+          .where(eq(statuses.id, contentId))
+          .limit(1);
+
+        if (status.length === 0) {
+          throw new Error('Status not found');
+        }
       }
 
       // Check if already bookmarked
@@ -32,7 +46,9 @@ class BookmarkService {
         .from(bookmarks)
         .where(and(
           eq(bookmarks.userId, userId),
-          eq(bookmarks.postId, postId)
+          contentType === 'post'
+            ? eq(bookmarks.postId, contentId)
+            : eq(bookmarks.statusId, contentId)
         ))
         .limit(1);
 
@@ -40,11 +56,19 @@ class BookmarkService {
         return false; // Already bookmarked
       }
 
-      // Add bookmark
-      await db.insert(bookmarks).values({
+      // Add bookmark with appropriate content reference
+      const insertData: any = {
         userId,
-        postId
-      });
+        contentType
+      };
+
+      if (contentType === 'post') {
+        insertData.postId = contentId;
+      } else {
+        insertData.statusId = contentId;
+      }
+
+      await db.insert(bookmarks).values(insertData);
 
       return true;
     } catch (error) {
@@ -56,13 +80,15 @@ class BookmarkService {
   /**
    * Remove a bookmark
    */
-  async removeBookmark(userId: string, postId: string): Promise<boolean> {
+  async removeBookmark(userId: string, contentId: string, contentType: ContentType = 'post'): Promise<boolean> {
     try {
-      const result = await db
+      await db
         .delete(bookmarks)
         .where(and(
           eq(bookmarks.userId, userId),
-          eq(bookmarks.postId, postId)
+          contentType === 'post'
+            ? eq(bookmarks.postId, contentId)
+            : eq(bookmarks.statusId, contentId)
         ));
 
       return true;
@@ -74,23 +100,54 @@ class BookmarkService {
 
   /**
    * Toggle bookmark (add if not exists, remove if exists)
+   * Automatically detects content type by checking both tables
    */
-  async toggleBookmark(userId: string, postId: string): Promise<{ bookmarked: boolean }> {
+  async toggleBookmark(userId: string, contentId: string, providedContentType?: ContentType): Promise<{ bookmarked: boolean }> {
     try {
+      // Determine content type if not provided
+      let contentType: ContentType = providedContentType || 'post';
+
+      if (!providedContentType) {
+        // Auto-detect: first check posts table, then statuses
+        const postExists = await db
+          .select({ id: posts.id })
+          .from(posts)
+          .where(eq(posts.id, contentId))
+          .limit(1);
+
+        if (postExists.length === 0) {
+          // Not a post, check if it's a status
+          const statusExists = await db
+            .select({ id: statuses.id })
+            .from(statuses)
+            .where(eq(statuses.id, contentId))
+            .limit(1);
+
+          if (statusExists.length > 0) {
+            contentType = 'status';
+          } else {
+            throw new Error('Content not found');
+          }
+        }
+      }
+
+      // Check if already bookmarked
       const existing = await db
         .select()
         .from(bookmarks)
         .where(and(
           eq(bookmarks.userId, userId),
-          eq(bookmarks.postId, postId)
+          contentType === 'post'
+            ? eq(bookmarks.postId, contentId)
+            : eq(bookmarks.statusId, contentId)
         ))
         .limit(1);
 
       if (existing.length > 0) {
-        await this.removeBookmark(userId, postId);
+        await this.removeBookmark(userId, contentId, contentType);
         return { bookmarked: false };
       } else {
-        await this.addBookmark(userId, postId);
+        await this.addBookmark(userId, contentId, contentType);
         return { bookmarked: true };
       }
     } catch (error) {
@@ -100,16 +157,20 @@ class BookmarkService {
   }
 
   /**
-   * Check if a post is bookmarked by a user
+   * Check if a content is bookmarked by a user
    */
-  async isBookmarked(userId: string, postId: string): Promise<boolean> {
+  async isBookmarked(userId: string, contentId: string): Promise<boolean> {
     try {
+      // Check both post and status bookmarks
       const result = await db
         .select()
         .from(bookmarks)
         .where(and(
           eq(bookmarks.userId, userId),
-          eq(bookmarks.postId, postId)
+          or(
+            eq(bookmarks.postId, contentId),
+            eq(bookmarks.statusId, contentId)
+          )
         ))
         .limit(1);
 
@@ -127,18 +188,64 @@ class BookmarkService {
     try {
       const offset = (page - 1) * limit;
 
-      const userBookmarks = await db
+      // Get post bookmarks
+      const postBookmarks = await db
         .select({
           postId: bookmarks.postId,
           bookmarkedAt: bookmarks.createdAt,
+          contentType: bookmarks.contentType,
           post: posts
         })
         .from(bookmarks)
         .leftJoin(posts, eq(bookmarks.postId, posts.id))
-        .where(eq(bookmarks.userId, userId))
+        .where(and(
+          eq(bookmarks.userId, userId),
+          eq(bookmarks.contentType, 'post')
+        ))
         .orderBy(sql`${bookmarks.createdAt} DESC`)
         .limit(limit)
         .offset(offset);
+
+      // Get status bookmarks
+      const statusBookmarks = await db
+        .select({
+          postId: bookmarks.statusId,
+          bookmarkedAt: bookmarks.createdAt,
+          contentType: bookmarks.contentType,
+          post: {
+            id: statuses.id,
+            contentCid: statuses.contentCid,
+            authorAddress: statuses.authorId,
+            title: sql<string>`NULL`,
+            content: statuses.content,
+            media: statuses.mediaCids,
+            createdAt: statuses.createdAt,
+            updatedAt: statuses.updatedAt,
+            communityId: sql<string>`NULL`,
+            upvotes: statuses.upvotes,
+            downvotes: statuses.downvotes,
+            commentCount: sql<number>`0`,
+            viewCount: statuses.views
+          }
+        })
+        .from(bookmarks)
+        .leftJoin(statuses, eq(bookmarks.statusId, statuses.id))
+        .where(and(
+          eq(bookmarks.userId, userId),
+          eq(bookmarks.contentType, 'status')
+        ))
+        .orderBy(sql`${bookmarks.createdAt} DESC`)
+        .limit(limit)
+        .offset(offset);
+
+      // Combine and sort by bookmarkedAt
+      const allBookmarks = [...postBookmarks, ...statusBookmarks]
+        .sort((a, b) => {
+          const dateA = a.bookmarkedAt ? new Date(a.bookmarkedAt).getTime() : 0;
+          const dateB = b.bookmarkedAt ? new Date(b.bookmarkedAt).getTime() : 0;
+          return dateB - dateA;
+        })
+        .slice(0, limit);
 
       const totalCount = await db
         .select({ count: sql<number>`COUNT(*)` })
@@ -146,7 +253,7 @@ class BookmarkService {
         .where(eq(bookmarks.userId, userId));
 
       return {
-        bookmarks: userBookmarks,
+        bookmarks: allBookmarks,
         pagination: {
           page,
           limit,
@@ -161,14 +268,17 @@ class BookmarkService {
   }
 
   /**
-   * Get bookmark count for a post
+   * Get bookmark count for a content
    */
-  async getBookmarkCount(postId: string): Promise<number> {
+  async getBookmarkCount(contentId: string): Promise<number> {
     try {
       const result = await db
         .select({ count: sql<number>`COUNT(*)` })
         .from(bookmarks)
-        .where(eq(bookmarks.postId, postId));
+        .where(or(
+          eq(bookmarks.postId, contentId),
+          eq(bookmarks.statusId, contentId)
+        ));
 
       return result[0]?.count || 0;
     } catch (error) {

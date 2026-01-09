@@ -71,13 +71,39 @@ export default function OrdersPage() {
             setLoading(false);
             return;
         }
-        
+
         try {
             setLoading(true);
-            const response = await fetch(`${API_BASE_URL}/api/orders/user/${user.address}`, {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+
+            // Get auth token from various storage locations
+            let token = localStorage.getItem('token') ||
+                       localStorage.getItem('authToken') ||
+                       localStorage.getItem('auth_token');
+
+            // Also try to get from linkdao_session_data
+            if (!token) {
+                try {
+                    const sessionDataStr = localStorage.getItem('linkdao_session_data');
+                    if (sessionDataStr) {
+                        const sessionData = JSON.parse(sessionDataStr);
+                        token = sessionData.token || sessionData.accessToken;
+                    }
+                } catch (error) {
+                    console.warn('Failed to parse session data for orders auth');
                 }
+            }
+
+            const headers: HeadersInit = {
+                'Content-Type': 'application/json',
+            };
+
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(`${API_BASE_URL}/api/orders/user/${user.address}`, {
+                headers,
+                credentials: 'include'
             });
 
             if (!response.ok) throw new Error('Failed to fetch orders');

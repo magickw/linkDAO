@@ -385,13 +385,14 @@ class WishlistService {
   }
 
   // Add item to wishlist
-  async addItem(product: Omit<WishlistItem, 'addedAt'>): Promise<void> {
-    const currentState = await this.getWishlistState();
+  async addItem(product: Omit<WishlistItem, 'addedAt'>): Promise<boolean> {
+    // Use synchronous state for consistency with isInWishlist
+    const currentState = this.getWishlistStateSync();
     const existingItemIndex = currentState.items.findIndex(item => item.id === product.id);
 
     // Don't add if already in wishlist
     if (existingItemIndex >= 0) {
-      return;
+      return false;
     }
 
     // Add new item
@@ -417,6 +418,8 @@ class WishlistService {
         console.warn('Failed to add item to backend wishlist:', error);
       }
     }
+
+    return true;
   }
 
   // Synchronous version for backward compatibility
@@ -446,12 +449,15 @@ class WishlistService {
   }
 
   // Remove item from wishlist
-  async removeItem(itemId: string): Promise<void> {
-    const currentState = await this.getWishlistState();
+  async removeItem(itemId: string): Promise<boolean> {
+    // Use synchronous state first for consistency with isInWishlist
+    const currentState = this.getWishlistStateSync();
     const itemIndex = currentState.items.findIndex(item => item.id === itemId);
 
     if (itemIndex < 0) {
-      return;
+      // Item not found - still notify listeners to ensure UI stays in sync
+      this.notifyListeners(currentState);
+      return false;
     }
 
     const itemToRemove = currentState.items[itemIndex];
@@ -474,6 +480,8 @@ class WishlistService {
         console.warn('Failed to remove item from backend wishlist:', error);
       }
     }
+
+    return true;
   }
 
   // Synchronous version for backward compatibility

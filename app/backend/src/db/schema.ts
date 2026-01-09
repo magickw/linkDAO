@@ -511,22 +511,20 @@ export const views = pgTable("views", {
   })
 }));
 
-// Bookmarks - user-saved posts
+// Bookmarks - user-saved posts and statuses
 export const bookmarks = pgTable("bookmarks", {
   userId: uuid("user_id").notNull().references(() => users.id),
-  postId: uuid("post_id").notNull().references(() => posts.id),
+  postId: uuid("post_id").references(() => posts.id), // For community posts (nullable)
+  statusId: uuid("status_id").references(() => statuses.id), // For feed statuses (nullable)
+  contentType: varchar("content_type", { length: 16 }).default('post').notNull(), // 'post' or 'status'
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
-  pk: primaryKey(t.userId, t.postId),
   userIdx: index("bookmark_user_idx").on(t.userId),
   postIdx: index("bookmark_post_idx").on(t.postId),
+  statusIdx: index("bookmark_status_idx").on(t.statusId),
   userFk: foreignKey({
     columns: [t.userId],
     foreignColumns: [users.id]
-  }),
-  postFk: foreignKey({
-    columns: [t.postId],
-    foreignColumns: [posts.id]
   })
 }));
 

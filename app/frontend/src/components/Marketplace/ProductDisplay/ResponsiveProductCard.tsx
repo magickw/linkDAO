@@ -303,8 +303,15 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
     try {
       if (isWishlisted) {
         // Remove from wishlist
-        await wishlistService.removeItem(product.id);
-        addToast(`Removed "${product.title}" from wishlist`, 'info');
+        const removed = await wishlistService.removeItem(product.id);
+        if (removed) {
+          setIsWishlisted(false); // Optimistic update
+          addToast(`Removed "${product.title}" from wishlist`, 'info');
+        } else {
+          // Item wasn't in wishlist - sync state
+          setIsWishlisted(false);
+          addToast('Item was not in your wishlist', 'info');
+        }
       } else {
         // Add to wishlist
         const wishlistItem = {
@@ -329,8 +336,15 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
           inventory: product.inventory || 1
         };
 
-        await wishlistService.addItem(wishlistItem);
-        addToast(`Added "${product.title}" to wishlist! ❤️`, 'success');
+        const added = await wishlistService.addItem(wishlistItem);
+        if (added) {
+          setIsWishlisted(true); // Optimistic update
+          addToast(`Added "${product.title}" to wishlist!`, 'success');
+        } else {
+          // Item already in wishlist - sync state
+          setIsWishlisted(true);
+          addToast('Item is already in your wishlist', 'info');
+        }
       }
 
       // Call optional callback
