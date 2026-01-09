@@ -33,10 +33,10 @@ https://www.linkdao.io/p/abcD92Kx
 
 #### 2. Canonical URL (User-Scoped)
 ```
-https://www.linkdao.io/baofeng/status/abcD92Kx
+https://www.linkdao.io/baofeng/statuses/abcD92Kx
 ```
 - **Purpose**: Canonical, user-scoped post URL
-- **Format**: `/:handle/status/:shareId`
+- **Format**: `/:handle/statuses/:shareId`
 - **Behavior**: Displays post in full-page view
 - **Benefits**:
   - SEO context
@@ -46,10 +46,10 @@ https://www.linkdao.io/baofeng/status/abcD92Kx
 
 #### 3. Modal URL (Future Enhancement)
 ```
-https://www.linkdao.io/?post=abcD92Kx
+https://www.linkdao.io/?status=abcD92Kx
 ```
 - **Purpose**: Open post in modal overlay on timeline
-- **Format**: `/?post=:shareId`
+- **Format**: `/?status=:shareId`
 - **Behavior**: Opens modal without navigation
 - **Benefits**:
   - Maintains timeline context
@@ -62,12 +62,12 @@ https://www.linkdao.io/?post=abcD92Kx
 
 #### Migration: `0073_add_post_share_ids.sql`
 ```sql
--- Add share_id column to quick_posts table
-ALTER TABLE quick_posts 
+-- Add share_id column to statuses table
+ALTER TABLE statuses 
 ADD COLUMN IF NOT EXISTS share_id VARCHAR(16) UNIQUE;
 
 -- Create index for fast lookups
-CREATE INDEX IF NOT EXISTS idx_quick_posts_share_id ON quick_posts(share_id);
+CREATE INDEX IF NOT EXISTS idx_statuses_share_id ON statuses(share_id);
 
 -- Function to generate base62 share IDs
 CREATE OR REPLACE FUNCTION generate_share_id() RETURNS VARCHAR(16) AS $$
@@ -315,7 +315,7 @@ router.push(`/${handle}/posts/${shareId}`);
 
 2. **Verify Share IDs**
    ```sql
-   SELECT id, share_id FROM quick_posts LIMIT 10;
+   SELECT id, share_id FROM statuses LIMIT 10;
    ```
 
 3. **Update Application**

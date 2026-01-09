@@ -1,59 +1,115 @@
 /**
  * Enhanced Award Purchase Modal Component
  * Modal for purchasing gold/awards with integrated checkout system supporting USDC and fiat payments
+ * Refactored to use viem/wagmi for consistency with checkout flow
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { ethers } from 'ethers';
+import {
+  useAccount,
+  useChainId,
+  useSwitchChain,
+  usePublicClient,
+  useWalletClient,
+  useBalance
+} from 'wagmi';
+import { parseUnits, formatUnits, erc20Abi } from 'viem';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import { useWeb3 } from '../../context/Web3Context';
 import { useToast } from '../../context/ToastContext';
-import { useNetworkSwitch } from '@/hooks/useNetworkSwitch';
 import { StripeProvider } from '../Payment/StripeProvider';
 import { StripePaymentForm } from '../Payment/StripePaymentForm';
-
-// ERC-20 ABI for USDC transfers
-const ERC20_ABI = [
-  'function transfer(address to, uint256 amount) returns (bool)',
-  'function approve(address spender, uint256 amount) returns (bool)',
-  'function balanceOf(address owner) view returns (uint256)',
-  'function allowance(address owner, address spender) view returns (uint256)',
-  'function decimals() view returns (uint8)'
-];
+import { useX402 } from '@/hooks/useX402';
+import { GasFeeService } from '@/services/gasFeeService';
+import { PaymentError } from '@/services/paymentErrorHandler';
+import {
+  USDC_MAINNET,
+  USDC_POLYGON,
+  USDC_ARBITRUM,
+  USDC_BASE,
+  USDC_SEPOLIA,
+  USDC_BASE_SEPOLIA,
+  getChainConfig
+} from '@/config/payment';
+import { PaymentToken, GasFeeEstimate } from '@/types/payment';
+import { Loader2, AlertCircle, CheckCircle, Zap, CreditCard, Wallet, Info } from 'lucide-react';
 
 // Platform treasury address for receiving payments
 const TREASURY_ADDRESS = process.env.NEXT_PUBLIC_TREASURY_ADDRESS || '0xeF85C8CcC03320dA32371940b315D563be2585e5';
 
-// Simple types for now to avoid dependency issues
+// Payment method types
 const PaymentMethodType = {
   FIAT_STRIPE: 'FIAT_STRIPE',
-  STABLECOIN_USDC: 'STABLECOIN_USDC'
+  STABLECOIN_USDC: 'STABLECOIN_USDC',
+  X402_PROTOCOL: 'X402_PROTOCOL'
 } as const;
 
-type PaymentMethodType = typeof PaymentMethodType[keyof typeof PaymentMethodType];
+type PaymentMethodTypeValue = typeof PaymentMethodType[keyof typeof PaymentMethodType];
+
+// USDC tokens by chain ID
+const USDC_TOKENS: Record<number, PaymentToken> = {
+  1: USDC_MAINNET,
+  137: USDC_POLYGON,
+  42161: USDC_ARBITRUM,
+  8453: USDC_BASE,
+  11155111: USDC_SEPOLIA,
+  84532: USDC_BASE_SEPOLIA
+};
+
+// Network configurations with gas estimates
+const NETWORK_CONFIGS = {
+  'usdc-base': {
+    id: 'usdc-base',
+    name: 'Base',
+    chainId: 8453,
+    description: 'Lowest gas fees (~$0.01)',
+    avgGasUSD: 0.01
+  },
+  'usdc-polygon': {
+    id: 'usdc-polygon',
+    name: 'Polygon',
+    chainId: 137,
+    description: 'Low fees (~$0.05)',
+    avgGasUSD: 0.05
+  },
+  'usdc-arbitrum': {
+    id: 'usdc-arbitrum',
+    name: 'Arbitrum',
+    chainId: 42161,
+    description: 'Layer 2 (~$0.02)',
+    avgGasUSD: 0.02
+  },
+  'usdc-ethereum': {
+    id: 'usdc-ethereum',
+    name: 'Ethereum',
+    chainId: 1,
+    description: 'Mainnet (~$2-5)',
+    avgGasUSD: 3.00
+  }
+};
 
 interface PrioritizedPaymentMethod {
   method: {
     id: string;
-    type: string; // Use string to avoid enum issues
+    type: PaymentMethodTypeValue;
     name: string;
     description: string;
     chainId: number;
     enabled: boolean;
     supportedNetworks: number[];
-    token?: any;
+    token?: PaymentToken;
   };
-  availabilityStatus: string;
+  availabilityStatus: 'available' | 'unavailable' | 'checking';
   costEstimate: {
     totalCost: number;
-    fees: number;
+    baseCost: number;
     gasFees: number;
     processingFees: number;
-    exchangeRateFees: number;
+    platformFees: number;
   };
   confidence: number;
   recommendationReason: string;
+  isRecommended?: boolean;
 }
 
 interface GoldPackage {
@@ -66,7 +122,7 @@ interface GoldPackage {
 
 interface AwardPurchaseModalProps {
   isOpen: boolean;
-  awardCost: number; // Gold needed for this award
+  awardCost: number;
   currentGold: number;
   onPurchase: (packageId: string) => Promise<void>;
   onClose: () => void;
@@ -81,88 +137,226 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
   onClose,
   isLoading = false
 }) => {
-  const { address, isConnected, signer } = useWeb3();
+  // Wagmi hooks
+  const { address, isConnected } = useAccount();
+  const chainId = useChainId();
+  const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
+  const publicClient = usePublicClient();
+  const { data: walletClient } = useWalletClient();
+  const { fetchWithAuth } = useX402();
   const { addToast } = useToast();
-  const { currentChainId, currentChainName, ensureNetwork, isSwitching, getChainName } = useNetworkSwitch();
 
+  // State
   const [selectedPackage, setSelectedPackage] = useState<string>('100');
-  const [showCheckout, setShowCheckout] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PrioritizedPaymentMethod | null>(null);
+  const [selectedNetworkId, setSelectedNetworkId] = useState<string>('usdc-base');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState<PrioritizedPaymentMethod[]>([]);
+  const [isLoadingMethods, setIsLoadingMethods] = useState(true);
 
   // Stripe payment state
   const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
   const [showStripeForm, setShowStripeForm] = useState(false);
 
-  // Crypto payment state
+  // Gas estimation state
+  const [gasEstimate, setGasEstimate] = useState<GasFeeEstimate | null>(null);
+  const [isEstimatingGas, setIsEstimatingGas] = useState(false);
   const [usdcBalance, setUsdcBalance] = useState<string>('0');
-  const [isCheckingBalance, setIsCheckingBalance] = useState(false);
 
+  // Gold packages
   const goldPackages: GoldPackage[] = [
-    {
-      id: '100',
-      amount: 100,
-      price: 1.79,
-    },
-    {
-      id: '200',
-      amount: 200,
-      price: 3.59,
-      popular: true,
-    },
-    {
-      id: '300',
-      amount: 300,
-      price: 5.39,
-      bonus: 50,
-    },
-    {
-      id: '500',
-      amount: 500,
-      price: 8.99,
-      bonus: 100,
-    },
-    {
-      id: '1000',
-      amount: 1000,
-      price: 16.99,
-      bonus: 250,
-    }
+    { id: '100', amount: 100, price: 1.79 },
+    { id: '200', amount: 200, price: 3.59, popular: true },
+    { id: '300', amount: 300, price: 5.39, bonus: 50 },
+    { id: '500', amount: 500, price: 8.99, bonus: 100 },
+    { id: '1000', amount: 1000, price: 16.99, bonus: 250 }
   ];
 
   const selectedPackageData = goldPackages.find(pkg => pkg.id === selectedPackage);
   const goldNeeded = Math.max(0, awardCost - currentGold);
   const remainingGold = currentGold + (selectedPackageData?.amount || 0) - awardCost;
 
-  // Web3-themed package names and icons
-  const packageThemes: { [key: string]: { name: string; icon: string; description: string } } = {
-    '100': {
-      name: 'Starter Stack',
-      icon: '🚀',
-      description: 'Perfect for your first awards'
-    },
-    '200': {
-      name: 'DeFi Degen',
-      icon: '💎',
-      description: 'For the true degen in you'
-    },
-    '300': {
-      name: 'Whale Pack',
-      icon: '🐋',
-      description: 'Make a splash with big awards'
-    },
-    '500': {
-      name: 'Diamond Hands',
-      icon: '💎',
-      description: 'HODL strong, award stronger'
-    },
-    '1000': {
-      name: 'OG Collection',
-      icon: '👑',
-      description: 'Legendary status unlocked'
-    }
+  // Package themes
+  const packageThemes: Record<string, { name: string; icon: string; description: string }> = {
+    '100': { name: 'Starter Stack', icon: '🚀', description: 'Perfect for your first awards' },
+    '200': { name: 'DeFi Degen', icon: '💎', description: 'For the true degen in you' },
+    '300': { name: 'Whale Pack', icon: '🐋', description: 'Make a splash with big awards' },
+    '500': { name: 'Diamond Hands', icon: '💎', description: 'HODL strong, award stronger' },
+    '1000': { name: 'OG Collection', icon: '👑', description: 'Legendary status unlocked' }
   };
 
+  // Gas fee service
+  const gasFeeService = useMemo(() => {
+    if (publicClient) {
+      return new GasFeeService(publicClient);
+    }
+    return null;
+  }, [publicClient]);
+
+  // Get USDC token for current network selection
+  const getSelectedUSDCToken = useCallback(() => {
+    const networkConfig = NETWORK_CONFIGS[selectedNetworkId as keyof typeof NETWORK_CONFIGS];
+    if (!networkConfig) return null;
+    return USDC_TOKENS[networkConfig.chainId] || null;
+  }, [selectedNetworkId]);
+
+  // Fetch USDC balance for selected network
+  const fetchUSDCBalance = useCallback(async () => {
+    if (!address || !publicClient) return;
+
+    const token = getSelectedUSDCToken();
+    if (!token) return;
+
+    try {
+      const balance = await publicClient.readContract({
+        address: token.address as `0x${string}`,
+        abi: erc20Abi,
+        functionName: 'balanceOf',
+        args: [address]
+      });
+
+      setUsdcBalance(formatUnits(balance as bigint, token.decimals));
+    } catch (error) {
+      console.error('Error fetching USDC balance:', error);
+      setUsdcBalance('0');
+    }
+  }, [address, publicClient, getSelectedUSDCToken]);
+
+  // Estimate gas for USDC transfer
+  const estimateGas = useCallback(async () => {
+    if (!gasFeeService || !selectedPackageData || !address) return;
+
+    const token = getSelectedUSDCToken();
+    if (!token) return;
+
+    setIsEstimatingGas(true);
+    try {
+      const amount = parseUnits(selectedPackageData.price.toString(), token.decimals);
+
+      // Encode transfer function data
+      const transferData = `0xa9059cbb${TREASURY_ADDRESS.slice(2).padStart(64, '0')}${amount.toString(16).padStart(64, '0')}`;
+
+      const estimate = await gasFeeService.estimateGasFees(
+        token.address,
+        transferData,
+        0n,
+        'standard'
+      );
+
+      setGasEstimate(estimate);
+    } catch (error) {
+      console.error('Error estimating gas:', error);
+      // Use fallback estimate
+      const networkConfig = NETWORK_CONFIGS[selectedNetworkId as keyof typeof NETWORK_CONFIGS];
+      setGasEstimate({
+        gasLimit: 65000n,
+        gasPrice: 0n,
+        totalCost: 0n,
+        totalCostUSD: networkConfig?.avgGasUSD || 0.01
+      });
+    } finally {
+      setIsEstimatingGas(false);
+    }
+  }, [gasFeeService, selectedPackageData, address, getSelectedUSDCToken, selectedNetworkId]);
+
+  // Load payment methods with cost comparison
+  const loadPaymentMethods = useCallback(async () => {
+    if (!selectedPackageData) return;
+
+    setIsLoadingMethods(true);
+
+    const methods: PrioritizedPaymentMethod[] = [];
+
+    // x402 Protocol - Ultra low fees
+    methods.push({
+      method: {
+        id: 'x402-protocol',
+        type: PaymentMethodType.X402_PROTOCOL,
+        name: 'x402 Protocol',
+        description: 'Ultra-low fee payment (~$0.01)',
+        chainId: 8453, // Base
+        enabled: true,
+        supportedNetworks: [8453]
+      },
+      availabilityStatus: isConnected ? 'available' : 'unavailable',
+      costEstimate: {
+        totalCost: selectedPackageData.price + 0.01,
+        baseCost: selectedPackageData.price,
+        gasFees: 0.01,
+        processingFees: 0,
+        platformFees: 0
+      },
+      confidence: 0.95,
+      recommendationReason: 'Lowest fees available (~$0.01)',
+      isRecommended: true
+    });
+
+    // USDC on various networks
+    for (const [networkId, config] of Object.entries(NETWORK_CONFIGS)) {
+      const token = USDC_TOKENS[config.chainId];
+      if (!token) continue;
+
+      methods.push({
+        method: {
+          id: networkId,
+          type: PaymentMethodType.STABLECOIN_USDC,
+          name: `USDC on ${config.name}`,
+          description: config.description,
+          chainId: config.chainId,
+          enabled: true,
+          supportedNetworks: [config.chainId],
+          token
+        },
+        availabilityStatus: isConnected ? 'available' : 'unavailable',
+        costEstimate: {
+          totalCost: selectedPackageData.price + config.avgGasUSD,
+          baseCost: selectedPackageData.price,
+          gasFees: config.avgGasUSD,
+          processingFees: 0,
+          platformFees: 0
+        },
+        confidence: 0.90,
+        recommendationReason: config.description
+      });
+    }
+
+    // Credit/Debit Card (Stripe)
+    const stripeFee = selectedPackageData.price * 0.029 + 0.30;
+    methods.push({
+      method: {
+        id: 'stripe-fiat',
+        type: PaymentMethodType.FIAT_STRIPE,
+        name: 'Credit/Debit Card',
+        description: 'Pay with card (2.9% + $0.30 fee)',
+        chainId: 0,
+        enabled: true,
+        supportedNetworks: []
+      },
+      availabilityStatus: 'available',
+      costEstimate: {
+        totalCost: selectedPackageData.price + stripeFee,
+        baseCost: selectedPackageData.price,
+        gasFees: 0,
+        processingFees: stripeFee,
+        platformFees: 0
+      },
+      confidence: 0.99,
+      recommendationReason: 'No crypto wallet needed, instant'
+    });
+
+    // Sort by total cost
+    methods.sort((a, b) => a.costEstimate.totalCost - b.costEstimate.totalCost);
+
+    setPaymentMethods(methods);
+    setIsLoadingMethods(false);
+
+    // Select the cheapest method by default
+    if (methods.length > 0 && !selectedPaymentMethod) {
+      setSelectedPaymentMethod(methods[0]);
+    }
+  }, [selectedPackageData, isConnected, selectedPaymentMethod]);
+
+  // Effects
   useEffect(() => {
     if (isOpen) {
       // Auto-select package that covers the award cost
@@ -174,59 +368,176 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
     }
   }, [isOpen, goldNeeded]);
 
-  const loadPaymentMethods = () => {
-    // Set default payment method to USDC on Base (low gas fees)
-    setSelectedPaymentMethod({
-      method: {
-        id: 'usdc-base',
-        type: 'STABLECOIN_USDC',
-        name: 'USDC on Base',
-        description: 'USD Coin on Base network',
-        chainId: 8453,
-        enabled: true,
-        supportedNetworks: [8453],
-        token: {
-          address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bA029339',
-          symbol: 'USDC',
-          decimals: 6,
-          name: 'USD Coin',
-          chainId: 8453
-        }
-      },
-      availabilityStatus: 'available',
-      costEstimate: {
-        totalCost: (selectedPackageData?.price || 0) + 0.01, // Very low gas on Base
-        fees: 0.01,
-        gasFees: 0.01,
-        processingFees: 0,
-        exchangeRateFees: 0
-      },
-      confidence: 0.95,
-      recommendationReason: 'Low fees on Base network'
-    } as any);
-  };
+  useEffect(() => {
+    loadPaymentMethods();
+  }, [selectedPackage]);
 
+  useEffect(() => {
+    if (selectedPaymentMethod?.method.type === PaymentMethodType.STABLECOIN_USDC) {
+      fetchUSDCBalance();
+      estimateGas();
+    }
+  }, [selectedPaymentMethod, selectedNetworkId, fetchUSDCBalance, estimateGas]);
+
+  // Handle package selection
   const handlePackageSelect = (packageId: string) => {
     setSelectedPackage(packageId);
-    // Reload payment methods for new price
-    loadPaymentMethods();
+    setSelectedPaymentMethod(null); // Reset payment method to recalculate
   };
 
+  // Handle payment method selection
   const handlePaymentMethodSelect = (method: PrioritizedPaymentMethod) => {
     setSelectedPaymentMethod(method);
+    if (method.method.type === PaymentMethodType.STABLECOIN_USDC) {
+      setSelectedNetworkId(method.method.id);
+    }
   };
 
+  // Process x402 payment
+  const processX402Payment = async (): Promise<string> => {
+    if (!selectedPackageData) throw new Error('No package selected');
+
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.linkdao.io';
+
+    const response = await fetchWithAuth(`${apiUrl}/api/x402/gold-purchase`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        packageId: selectedPackage,
+        amount: selectedPackageData.price,
+        userId: address
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('x402 payment failed');
+    }
+
+    const result = await response.json();
+    return result.transactionId;
+  };
+
+  // Process USDC payment using viem
+  const processUSDCPayment = async (): Promise<string> => {
+    if (!walletClient || !address || !publicClient || !selectedPackageData) {
+      throw new Error('Wallet not connected');
+    }
+
+    const token = getSelectedUSDCToken();
+    if (!token) throw new Error('Token not found');
+
+    const networkConfig = NETWORK_CONFIGS[selectedNetworkId as keyof typeof NETWORK_CONFIGS];
+    if (!networkConfig) throw new Error('Network not found');
+
+    // Switch network if needed
+    if (chainId !== networkConfig.chainId) {
+      addToast(`Switching to ${networkConfig.name}...`, 'info');
+      try {
+        await switchChain({ chainId: networkConfig.chainId });
+      } catch (error: any) {
+        throw new Error(`Failed to switch network: ${error.message}`);
+      }
+    }
+
+    const amount = parseUnits(selectedPackageData.price.toString(), token.decimals);
+
+    // Check balance
+    const balance = await publicClient.readContract({
+      address: token.address as `0x${string}`,
+      abi: erc20Abi,
+      functionName: 'balanceOf',
+      args: [address]
+    }) as bigint;
+
+    if (balance < amount) {
+      const formattedBalance = formatUnits(balance, token.decimals);
+      throw new Error(`Insufficient USDC. You have ${parseFloat(formattedBalance).toFixed(2)} USDC but need ${selectedPackageData.price.toFixed(2)} USDC`);
+    }
+
+    addToast('Please confirm the USDC transfer in your wallet...', 'info');
+
+    // Execute transfer
+    const hash = await walletClient.writeContract({
+      address: token.address as `0x${string}`,
+      abi: erc20Abi,
+      functionName: 'transfer',
+      args: [TREASURY_ADDRESS as `0x${string}`, amount]
+    });
+
+    addToast('Transaction submitted. Waiting for confirmation...', 'info');
+
+    // Wait for confirmation
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+    if (receipt.status !== 'success') {
+      throw new Error('Transaction failed');
+    }
+
+    return hash;
+  };
+
+  // Complete gold purchase on backend
+  const completeGoldPurchase = async (
+    paymentId: string,
+    packageId: string,
+    paymentMethod: string,
+    network?: string,
+    transactionHash?: string
+  ) => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.linkdao.io';
+
+    let authToken = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
+    if (!authToken) {
+      try {
+        const sessionData = localStorage.getItem('linkdao_session_data');
+        if (sessionData) {
+          const parsed = JSON.parse(sessionData);
+          authToken = parsed.token || parsed.accessToken || '';
+        }
+      } catch (e) {
+        console.warn('Failed to parse session data');
+      }
+    }
+
+    const response = await fetch(`${apiUrl}/api/gold/complete`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+      },
+      body: JSON.stringify({
+        paymentIntentId: paymentId,
+        userId: address,
+        packageId,
+        goldAmount: selectedPackageData?.amount || 0,
+        paymentMethod,
+        network,
+        transactionHash
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to complete gold purchase on backend');
+    }
+
+    const result = await response.json();
+    if (result.success) {
+      addToast('Receipt sent to your email!', 'success');
+    }
+  };
+
+  // Main purchase handler
   const handlePurchase = async () => {
     if (!selectedPaymentMethod || !selectedPackageData) return;
 
     setIsProcessing(true);
     try {
-      // Process actual payment based on selected method
-      if (selectedPaymentMethod.method.type === 'FIAT_STRIPE') {
-        // Create Stripe checkout session for fiat payment
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.linkdao.io';
+      const methodType = selectedPaymentMethod.method.type;
 
-        // Get auth token
+      if (methodType === PaymentMethodType.FIAT_STRIPE) {
+        // Create Stripe payment intent
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.linkdao.io';
+
         let authToken = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
         if (!authToken) {
           try {
@@ -240,19 +551,18 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
           }
         }
 
-        // Create payment intent on backend
         const response = await fetch(`${apiUrl}/api/gold/payment-intent`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}),
+            ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
           },
           body: JSON.stringify({
             packageId: selectedPackage,
             paymentMethod: 'stripe',
-            amount: Math.round(selectedPackageData.price * 100), // Convert to cents
+            amount: Math.round(selectedPackageData.price * 100),
             currency: 'usd'
-          }),
+          })
         });
 
         if (!response.ok) {
@@ -266,79 +576,45 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
           throw new Error('No client secret received from server');
         }
 
-        // Show Stripe payment form
         setStripeClientSecret(paymentIntent.clientSecret);
         setShowStripeForm(true);
         setIsProcessing(false);
-        return; // Exit - StripePaymentForm will handle completion
-      } else {
-        // Handle crypto payment (USDC)
-        if (!isConnected || !signer || !address) {
+        return;
+
+      } else if (methodType === PaymentMethodType.X402_PROTOCOL) {
+        // x402 ultra-low fee payment
+        if (!isConnected) {
           addToast('Please connect your wallet first', 'error');
           setIsProcessing(false);
           return;
         }
 
-        const requiredChainId = selectedPaymentMethod.method.chainId;
+        addToast('Processing x402 payment...', 'info');
+        const transactionId = await processX402Payment();
 
-        // Auto-switch network if needed
-        if (requiredChainId && currentChainId !== requiredChainId) {
-          const targetNetworkName = getChainName(requiredChainId);
-          addToast(`Switching to ${targetNetworkName}...`, 'info');
+        await completeGoldPurchase(
+          `x402-${transactionId}`,
+          selectedPackage,
+          'x402',
+          'base',
+          transactionId
+        );
 
-          const switchResult = await ensureNetwork(requiredChainId);
+        addToast('Gold purchase successful!', 'success');
+        await onPurchase(selectedPackage);
+        onClose();
 
-          if (!switchResult.success) {
-            addToast(switchResult.error || `Please switch to ${targetNetworkName} to continue`, 'error');
-            setIsProcessing(false);
-            return;
-          }
-
-          addToast(`Switched to ${targetNetworkName}`, 'success');
-        }
-
-        // Get USDC contract for the selected network
-        const usdcAddress = selectedPaymentMethod.method.token?.address;
-        if (!usdcAddress) {
-          throw new Error('USDC contract address not found');
-        }
-
-        // Create contract instance
-        const usdcContract = new ethers.Contract(usdcAddress, ERC20_ABI, signer);
-
-        // Get decimals (USDC uses 6 decimals)
-        const decimals = await usdcContract.decimals();
-
-        // Calculate amount in smallest units (e.g., 1.79 USDC = 1790000 units)
-        const amountInUnits = ethers.parseUnits(selectedPackageData.price.toString(), decimals);
-
-        // Check user's USDC balance
-        const balance = await usdcContract.balanceOf(address);
-        if (balance < amountInUnits) {
-          const formattedBalance = ethers.formatUnits(balance, decimals);
-          addToast(`Insufficient USDC balance. You have ${parseFloat(formattedBalance).toFixed(2)} USDC but need ${selectedPackageData.price.toFixed(2)} USDC`, 'error');
+      } else if (methodType === PaymentMethodType.STABLECOIN_USDC) {
+        // USDC payment
+        if (!isConnected) {
+          addToast('Please connect your wallet first', 'error');
           setIsProcessing(false);
           return;
         }
 
-        addToast('Please confirm the USDC transfer in your wallet...', 'info');
+        const transactionHash = await processUSDCPayment();
+        const network = selectedNetworkId.replace('usdc-', '');
 
-        // Execute transfer to treasury
-        const tx = await usdcContract.transfer(TREASURY_ADDRESS, amountInUnits);
-
-        addToast('Transaction submitted. Waiting for confirmation...', 'info');
-
-        // Wait for transaction confirmation
-        const receipt = await tx.wait();
-
-        if (receipt.status !== 1) {
-          throw new Error('Transaction failed');
-        }
-
-        const transactionHash = receipt.hash;
-        const network = selectedPaymentMethod.method.id?.replace('usdc-', '') || 'unknown';
-
-        // Call backend endpoint to complete purchase and send receipt
         await completeGoldPurchase(
           `crypto-${transactionHash}`,
           selectedPackage,
@@ -347,32 +623,33 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
           transactionHash
         );
 
-        addToast('Gold purchase successful! Award will be given.', 'success');
+        addToast('Gold purchase successful!', 'success');
         await onPurchase(selectedPackage);
         onClose();
       }
+
     } catch (error: any) {
       console.error('Purchase failed:', error);
 
-      // Handle specific error types
+      // Handle specific error types using PaymentError
+      const paymentError = PaymentError.fromError(error);
+
       if (error.code === 'ACTION_REJECTED' || error.code === 4001) {
-        addToast('Transaction cancelled by user', 'info');
+        addToast('Transaction cancelled', 'info');
       } else if (error.code === 'INSUFFICIENT_FUNDS') {
         addToast('Insufficient funds for gas fees', 'error');
       } else {
-        addToast(`Purchase failed: ${error.message || 'Unknown error'}`, 'error');
+        addToast(paymentError.getUserFriendlyMessage(), 'error');
       }
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // Handle Stripe payment success
+  // Stripe handlers
   const handleStripeSuccess = async (paymentIntentId: string) => {
     try {
-      // Complete purchase on backend
       await completeGoldPurchase(paymentIntentId, selectedPackage, 'stripe');
-
       addToast('Gold purchase successful!', 'success');
       await onPurchase(selectedPackage);
       setShowStripeForm(false);
@@ -384,59 +661,24 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
     }
   };
 
-  // Handle Stripe payment error
   const handleStripeError = (error: Error) => {
     console.error('Stripe payment error:', error);
     addToast(`Payment failed: ${error.message}`, 'error');
   };
 
-  // Handle Stripe payment cancel
   const handleStripeCancel = () => {
     setShowStripeForm(false);
     setStripeClientSecret(null);
   };
 
-  const completeGoldPurchase = async (
-    paymentIntentId: string,
-    packageId: string,
-    paymentMethod: string,
-    network?: string,
-    transactionHash?: string
-  ) => {
-    try {
-      const response = await fetch('/api/gold/complete', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          paymentIntentId,
-          userId: address,
-          packageId,
-          goldAmount: selectedPackageData?.amount || 0,
-          paymentMethod,
-          network,
-          transactionHash
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to complete gold purchase on backend');
-      }
-
-      const result = await response.json();
-      if (result.success) {
-        addToast('Receipt sent to your email!', 'success');
-      }
-    } catch (error) {
-      console.error('Error completing gold purchase on backend:', error);
-      throw error;
-    }
+  // Get chain name helper
+  const getChainName = (targetChainId: number): string => {
+    const config = getChainConfig(targetChainId);
+    return config?.name || `Chain ${targetChainId}`;
   };
 
   if (!isOpen) return null;
 
-  // Check if document.body exists before creating portal
   if (typeof document === 'undefined' || !document.body) {
     return null;
   }
@@ -487,16 +729,13 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
           </div>
         )}
 
-        {/* Regular Purchase Flow (hidden when Stripe form is shown) */}
+        {/* Regular Purchase Flow */}
         {!showStripeForm && (
           <>
             {/* Gold Usage Info */}
             <div className="p-6 bg-blue-50 border-b border-gray-200">
               <div className="flex items-center space-x-2 mb-2">
-                <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                  <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-                </svg>
+                <Info className="w-5 h-5 text-blue-600" />
                 <span className="text-sm font-medium text-blue-900">How gold will be used</span>
               </div>
               <p className="text-sm text-blue-800">
@@ -544,269 +783,181 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
                 })}
               </div>
 
-              {/* Payment Method Selection */}
+              {/* Payment Method Selection with Cost Comparison */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Payment Method</h3>
 
-                {/* Wallet Connection Warning for USDC */}
-                {selectedPaymentMethod?.method.type === 'STABLECOIN_USDC' && !isConnected && (
+                {/* Wallet Connection Warning */}
+                {!isConnected && (
                   <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg mb-4">
-                    <p className="text-sm text-yellow-800">
-                      Please connect your wallet to pay with USDC
-                    </p>
+                    <div className="flex items-center space-x-2">
+                      <AlertCircle className="w-4 h-4 text-yellow-600" />
+                      <p className="text-sm text-yellow-800">
+                        Connect your wallet for crypto payments (lowest fees)
+                      </p>
+                    </div>
                   </div>
                 )}
 
-                {/* Simple Payment Method Selection */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* USDC with Network Selector */}
-                  <div className={`p-4 rounded-lg border-2 transition-all ${selectedPaymentMethod?.method.type === 'STABLECOIN_USDC'
-                    ? 'border-green-500 bg-green-50'
-                    : 'border-gray-200'
-                    }`}>
-                    <div className="flex items-center space-x-3 mb-3">
-                      <div className="p-2 bg-green-100 rounded-lg">
-                        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
-                      <div className="text-left">
-                        <div className="flex items-center space-x-2">
-                          <h4 className="font-medium text-gray-900">USDC</h4>
-                          <span className="bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">Recommended</span>
-                        </div>
-                        <p className="text-sm text-gray-600">No platform fees, you pay gas</p>
-                      </div>
-                    </div>
-                <select
-                  value={selectedPaymentMethod?.method.id || 'usdc-base'}
-                  onChange={(e) => {
-                    const networkId = e.target.value;
-                    const networks = {
-                      'usdc-base': {
-                        id: 'usdc-base',
-                        name: 'Base',
-                        chainId: 8453,
-                        address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bA029339',
-                        gasFees: 0.01,
-                        description: 'Lowest gas fees'
-                      },
-                      'usdc-ethereum': {
-                        id: 'usdc-ethereum',
-                        name: 'Ethereum',
-                        chainId: 1,
-                        address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-                        gasFees: 2.00,
-                        description: 'Mainnet'
-                      },
-                      'usdc-polygon': {
-                        id: 'usdc-polygon',
-                        name: 'Polygon',
-                        chainId: 137,
-                        address: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174',
-                        gasFees: 0.05,
-                        description: 'Low fees'
-                      },
-                      'usdc-arbitrum': {
-                        id: 'usdc-arbitrum',
-                        name: 'Arbitrum',
-                        chainId: 42161,
-                        address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
-                        gasFees: 0.02,
-                        description: 'Layer 2'
-                      },
-                      'usdc-optimism': {
-                        id: 'usdc-optimism',
-                        name: 'Optimism',
-                        chainId: 10,
-                        address: '0x7F5c764cBc14f9669B88837ca1490cCa17c31607',
-                        gasFees: 0.02,
-                        description: 'Layer 2'
-                      }
-                    };
-                    const network = networks[networkId as keyof typeof networks];
-                    if (network) {
-                      setSelectedPaymentMethod({
-                        method: {
-                          id: network.id,
-                          type: 'STABLECOIN_USDC',
-                          name: `USDC on ${network.name}`,
-                          description: `USD Coin on ${network.name} network`,
-                          chainId: network.chainId,
-                          enabled: true,
-                          supportedNetworks: [network.chainId],
-                          token: {
-                            address: network.address,
-                            symbol: 'USDC',
-                            decimals: 6,
-                            name: 'USD Coin',
-                            chainId: network.chainId
+                {isLoadingMethods ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                    <span className="ml-2 text-gray-600">Calculating best payment options...</span>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {paymentMethods.map((method) => (
+                      <button
+                        key={method.method.id}
+                        onClick={() => handlePaymentMethodSelect(method)}
+                        disabled={method.availabilityStatus === 'unavailable'}
+                        className={`
+                          w-full p-4 rounded-lg border-2 transition-all text-left
+                          ${selectedPaymentMethod?.method.id === method.method.id
+                            ? 'border-blue-500 bg-blue-50'
+                            : method.availabilityStatus === 'unavailable'
+                              ? 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
+                              : 'border-gray-200 hover:border-gray-300'
                           }
-                        },
-                        availabilityStatus: 'available',
-                        costEstimate: {
-                          totalCost: (selectedPackageData?.price || 0) + network.gasFees,
-                          fees: network.gasFees,
-                          gasFees: network.gasFees,
-                          processingFees: 0,
-                          exchangeRateFees: 0
-                        },
-                        confidence: 0.95,
-                        recommendationReason: network.description
-                      } as any);
-                    }
-                  }}
-                  className="w-full p-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                >
-                  <option value="usdc-base">Base (~$0.01 gas) - Recommended</option>
-                  <option value="usdc-polygon">Polygon (~$0.05 gas)</option>
-                  <option value="usdc-arbitrum">Arbitrum (~$0.02 gas)</option>
-                  <option value="usdc-optimism">Optimism (~$0.02 gas)</option>
-                  <option value="usdc-ethereum">Ethereum (~$2.00 gas)</option>
-                </select>
-              </div>
-
-              {/* Credit/Debit Card */}
-              <button
-                onClick={() => {
-                  setSelectedPaymentMethod({
-                    method: {
-                      id: 'stripe-fiat',
-                      type: 'FIAT_STRIPE',
-                      name: 'Credit/Debit Card',
-                      description: 'Pay with credit or debit card',
-                      chainId: 0,
-                      enabled: true,
-                      supportedNetworks: []
-                    },
-                    availabilityStatus: 'available',
-                    costEstimate: {
-                      totalCost: selectedPackageData?.price || 0,
-                      fees: 0,
-                      gasFees: 0,
-                      processingFees: (selectedPackageData?.price || 0) * 0.029, // 2.9% Stripe fee
-                      exchangeRateFees: 0
-                    },
-                    confidence: 0.95,
-                    recommendationReason: 'Fast and secure payment with no crypto wallet needed'
-                  } as any);
-                }}
-                className={`p-4 rounded-lg border-2 transition-all ${selectedPaymentMethod?.method.type === 'FIAT_STRIPE'
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-200 hover:border-gray-300'
-                  }`}
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                    </svg>
+                        `}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className={`p-2 rounded-lg ${
+                              method.method.type === PaymentMethodType.X402_PROTOCOL
+                                ? 'bg-purple-100'
+                                : method.method.type === PaymentMethodType.STABLECOIN_USDC
+                                  ? 'bg-green-100'
+                                  : 'bg-blue-100'
+                            }`}>
+                              {method.method.type === PaymentMethodType.X402_PROTOCOL ? (
+                                <Zap className="w-5 h-5 text-purple-600" />
+                              ) : method.method.type === PaymentMethodType.STABLECOIN_USDC ? (
+                                <Wallet className="w-5 h-5 text-green-600" />
+                              ) : (
+                                <CreditCard className="w-5 h-5 text-blue-600" />
+                              )}
+                            </div>
+                            <div>
+                              <div className="flex items-center space-x-2">
+                                <h4 className="font-medium text-gray-900">{method.method.name}</h4>
+                                {method.isRecommended && (
+                                  <span className="bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">
+                                    Best Value
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-600">{method.recommendationReason}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg font-semibold text-gray-900">
+                              ${method.costEstimate.totalCost.toFixed(2)}
+                            </div>
+                            {method.costEstimate.gasFees > 0 && (
+                              <div className="text-xs text-gray-500">
+                                incl. ~${method.costEstimate.gasFees.toFixed(2)} gas
+                              </div>
+                            )}
+                            {method.costEstimate.processingFees > 0 && (
+                              <div className="text-xs text-gray-500">
+                                incl. ${method.costEstimate.processingFees.toFixed(2)} fee
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
                   </div>
-                  <div className="text-left">
-                    <h4 className="font-medium text-gray-900">Credit/Debit Card</h4>
-                    <p className="text-sm text-gray-600">Fast and secure</p>
-                    <p className="text-xs text-green-600 mt-1">No wallet required</p>
-                  </div>
-                </div>
-              </button>
-            </div>
+                )}
 
-            {/* Payment Method Info */}
-            {selectedPaymentMethod && (
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className={`p-2 rounded-lg ${selectedPaymentMethod.method.type === 'FIAT_STRIPE'
-                    ? 'bg-blue-100'
-                    : selectedPaymentMethod.method.id === 'usdc-base'
-                      ? 'bg-green-100'
-                      : 'bg-orange-100'
-                    }`}>
-                    {selectedPaymentMethod.method.type === 'FIAT_STRIPE' ? (
-                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                      </svg>
-                    ) : (
-                      <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
+                {/* Real-time Gas Estimation for Selected USDC Method */}
+                {selectedPaymentMethod?.method.type === PaymentMethodType.STABLECOIN_USDC && (
+                  <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-700">Your USDC Balance:</span>
+                      <span className="text-sm text-gray-900">{parseFloat(usdcBalance).toFixed(2)} USDC</span>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">Estimated Gas:</span>
+                      {isEstimatingGas ? (
+                        <div className="flex items-center">
+                          <Loader2 className="w-4 h-4 animate-spin text-gray-400 mr-2" />
+                          <span className="text-sm text-gray-500">Calculating...</span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-gray-900">
+                          ~${gasEstimate?.totalCostUSD?.toFixed(4) || '0.01'}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Network Switch Notice */}
+                    {chainId !== selectedPaymentMethod.method.chainId && (
+                      <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded flex items-center space-x-2">
+                        <AlertCircle className="w-4 h-4 text-yellow-600 flex-shrink-0" />
+                        <span className="text-xs text-yellow-700">
+                          Will switch to {getChainName(selectedPaymentMethod.method.chainId)} when you click purchase
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Balance Warning */}
+                    {parseFloat(usdcBalance) < (selectedPackageData?.price || 0) && (
+                      <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded flex items-center space-x-2">
+                        <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                        <span className="text-xs text-red-700">
+                          Insufficient USDC balance. You need ${selectedPackageData?.price.toFixed(2)} USDC.
+                        </span>
+                      </div>
                     )}
                   </div>
-                  <div className="flex-1">
-                    <h4 className="font-medium text-gray-900">{selectedPaymentMethod.method.name}</h4>
-                    <p className="text-sm text-gray-600">{selectedPaymentMethod.method.description}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {selectedPaymentMethod.recommendationReason}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-lg font-semibold text-gray-900">
-                      ${(selectedPaymentMethod.costEstimate?.totalCost || selectedPackageData?.price || 0).toFixed(2)}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {selectedPaymentMethod.costEstimate?.gasFees > 0 &&
-                        `+ $${selectedPaymentMethod.costEstimate.gasFees.toFixed(2)} gas (you pay)`
-                      }
-                      {selectedPaymentMethod.costEstimate?.processingFees > 0 &&
-                        `+ $${selectedPaymentMethod.costEstimate.processingFees.toFixed(2)} processing fee`
-                      }
-                    </div>
-                  </div>
-                </div>
-
-                {/* Network Switch Notice */}
-                {selectedPaymentMethod.method.type !== 'FIAT_STRIPE' &&
-                  selectedPaymentMethod.method.chainId &&
-                  currentChainId !== selectedPaymentMethod.method.chainId && (
-                    <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center space-x-2">
-                      <svg className="w-4 h-4 text-yellow-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span className="text-xs text-yellow-700">
-                        You're on {currentChainName}. Will switch to {getChainName(selectedPaymentMethod.method.chainId)} when you click purchase.
-                      </span>
-                    </div>
-                  )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="p-6 border-t border-gray-200 bg-gray-50">
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-gray-600">
-              By continuing you agree to our <a href="#" className="text-blue-600 hover:underline">Terms of Service</a>.
-            </p>
-            <div className="text-right">
-              <div className="text-sm text-gray-600">Total</div>
-              <div className="text-xl font-bold text-gray-900">
-                ${(selectedPaymentMethod?.costEstimate?.totalCost || selectedPackageData?.price || 0).toFixed(2)}
+                )}
               </div>
             </div>
-          </div>
-          <div className="flex space-x-3">
-            <button
-              onClick={onClose}
-              className="px-6 py-3 text-gray-600 hover:text-gray-800 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handlePurchase}
-              disabled={!selectedPaymentMethod || isProcessing || isSwitching || (selectedPaymentMethod?.method.type === 'STABLECOIN_USDC' && !isConnected)}
-              className="flex-1 bg-blue-900 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isProcessing || isSwitching ? (
-                <div className="flex items-center justify-center space-x-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  <span>{isSwitching ? 'Switching Network...' : 'Processing...'}</span>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-gray-200 bg-gray-50">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm text-gray-600">
+                  By continuing you agree to our <a href="/terms" className="text-blue-600 hover:underline">Terms of Service</a>.
+                </p>
+                <div className="text-right">
+                  <div className="text-sm text-gray-600">Total</div>
+                  <div className="text-xl font-bold text-gray-900">
+                    ${(selectedPaymentMethod?.costEstimate.totalCost || selectedPackageData?.price || 0).toFixed(2)}
+                  </div>
                 </div>
-              ) : (
-                `Buy Gold and Give Award`
-              )}
-            </button>
-          </div>
-        </div>
+              </div>
+              <div className="flex space-x-3">
+                <button
+                  onClick={onClose}
+                  className="px-6 py-3 text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handlePurchase}
+                  disabled={
+                    !selectedPaymentMethod ||
+                    isProcessing ||
+                    isSwitchingChain ||
+                    (selectedPaymentMethod?.method.type !== PaymentMethodType.FIAT_STRIPE && !isConnected)
+                  }
+                  className="flex-1 bg-blue-900 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isProcessing || isSwitchingChain ? (
+                    <div className="flex items-center justify-center space-x-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>{isSwitchingChain ? 'Switching Network...' : 'Processing...'}</span>
+                    </div>
+                  ) : (
+                    'Buy Gold and Give Award'
+                  )}
+                </button>
+              </div>
+            </div>
           </>
         )}
       </div>
@@ -822,7 +973,6 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
     );
   } catch (error) {
     console.error('Error creating portal for GoldPurchaseModal:', error);
-    // Fallback to non-portal rendering with error boundary
     return (
       <ErrorBoundary>
         {modalContent}

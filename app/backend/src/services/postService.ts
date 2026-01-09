@@ -188,7 +188,8 @@ export class PostService {
           undefined, // title not in CreatePostInput for now
           input.isRepost,
           input.mediaUrls,
-          input.location
+          input.location,
+          input.communityId // Pass community ID if present
         );
 
         // Update post with moderation metadata

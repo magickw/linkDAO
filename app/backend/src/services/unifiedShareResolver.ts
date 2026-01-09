@@ -102,8 +102,8 @@ export class UnifiedShareResolver {
         handle,
         name,
       },
-      canonicalUrl: `/${handle}/status/${item.id}`,
-      shareUrl: `/s/${shareId}`,
+      canonicalUrl: `/${handle}/statuses/${item.id}`,
+      shareUrl: `/p/${shareId}`,
       data: item,
     };
   }

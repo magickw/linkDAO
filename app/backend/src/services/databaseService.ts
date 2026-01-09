@@ -6,6 +6,7 @@ import { ValidationHelper, ValidationError } from "../models/validation";
 import * as postgres from 'postgres';
 import * as dotenv from "dotenv";
 import { db as databaseInstance } from '../db/index';
+import { generateShareId } from '../utils/shareIdGenerator';
 
 dotenv.config();
 
@@ -112,7 +113,7 @@ export class DatabaseService {
 
 
   // Post operations
-  async createPost(authorId: string, contentCid: string, parentId?: string, mediaCids?: string[], tags?: string[], onchainRef?: string, content?: string, title?: string, isRepost: boolean = false, mediaUrls?: string[], location?: any) {
+  async createPost(authorId: string, contentCid: string, parentId?: string, mediaCids?: string[], tags?: string[], onchainRef?: string, content?: string, title?: string, isRepost: boolean = false, mediaUrls?: string[], location?: any, communityId?: string) {
     try {
       const result = await this.db.insert(schema.posts).values({
         authorId,
@@ -127,6 +128,8 @@ export class DatabaseService {
         mediaUrls: mediaUrls ? JSON.stringify(mediaUrls) : null,
         location: location || null,
         isTokenGated: false,
+        shareId: generateShareId(8), // Generate share ID for shareable URLs
+        communityId: communityId || null,
         updatedAt: new Date()
       }).returning();
 
