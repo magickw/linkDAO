@@ -134,7 +134,7 @@ const MarketplaceContent: React.FC = () => {
       {
         label: 'Wishlist',
         description: 'View and manage your saved items',
-        href: '/account/wishlist' as const,
+        href: '/marketplace/wishlist' as const,
         action: undefined as string | undefined,
       },
     ];

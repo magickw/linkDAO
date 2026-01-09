@@ -462,6 +462,7 @@ app.use(fileUploadSecurity);
 
 // Import routes
 import postRoutes from './routes/postRoutes';
+import postManagementRoutes from './routes/postManagementRoutes';
 import statusRoutes from './routes/statusRoutes';
 import postShareRoutes from './routes/postShareRoutes';
 import communityPostShareRoutes from './routes/communityPostShareRoutes';
@@ -546,8 +547,8 @@ console.log('Finished registering share routes');
 
 
 // Post Management routes (Must be before generic post routes)
-// DISABLED: Conflicts with postRoutes repost endpoint - causing 405 errors
-// app.use('/api/posts', postManagementRoutes);
+// Handles /api/posts/communities/:id/pinned-posts and /api/posts/:id/pin
+app.use('/api/posts', postManagementRoutes);
 
 app.use('/api/posts', postRoutes);
 app.use('/api/statuses', statusRoutes);
@@ -954,8 +955,7 @@ import communicationManagerRoutes from './routes/communicationManagerRoutes';
 // Import leaderboard and treasury routes
 import leaderboardRoutes from './routes/leaderboardRoutes';
 import treasuryRoutes from './routes/treasuryRoutes';
-// Import post management routes
-import postManagementRoutes from './routes/postManagementRoutes';
+
 // Import announcement routes
 import announcementRoutes from './routes/announcementRoutes';
 // Import monthly update routes
@@ -1114,9 +1114,7 @@ app.use('/api/saved-for-later', savedForLaterRoutes);
 // Checkout routes
 app.use('/api/checkout', checkoutRoutes);
 
-// Gold purchase routes
-import goldPurchaseRoutes from './routes/goldPurchaseRoutes';
-app.use('/api/gold', goldPurchaseRoutes);
+
 
 // Gold webhook routes
 import goldWebhookRoutes from './routes/goldWebhookRoutes';

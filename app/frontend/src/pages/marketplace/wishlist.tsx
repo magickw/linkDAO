@@ -15,8 +15,8 @@ const WishlistPage: React.FC = () => {
 
   useEffect(() => {
     // Load wishlist items
-    const loadWishlist = () => {
-      const state = wishlistService.getWishlistState();
+    const loadWishlist = async () => {
+      const state = await wishlistService.getWishlistState();
       setWishlistItems(state.items);
     };
 
@@ -32,8 +32,8 @@ const WishlistPage: React.FC = () => {
     };
   }, []);
 
-  const handleRemoveItem = (itemId: string) => {
-    wishlistService.removeItem(itemId);
+  const handleRemoveItem = async (itemId: string) => {
+    await wishlistService.removeItem(itemId);
   };
 
   const handleAddToCart = (item: WishlistItem) => {

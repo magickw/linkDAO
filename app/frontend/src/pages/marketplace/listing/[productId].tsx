@@ -547,7 +547,7 @@ const ProductDetailPageRoute: React.FC = () => {
                 setLoading(false);
               }
             }}
-            onAddToWishlist={(productId) => {
+            onAddToWishlist={async (productId) => {
               console.log('Add to wishlist:', productId);
 
               // Check if already in wishlist
@@ -577,7 +577,7 @@ const ProductDetailPageRoute: React.FC = () => {
               };
 
               // Add to wishlist
-              wishlistService.addItem(wishlistItem);
+              await wishlistService.addItem(wishlistItem);
 
               // Show confirmation
               if (typeof window !== 'undefined') {
