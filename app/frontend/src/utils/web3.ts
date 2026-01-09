@@ -5,6 +5,31 @@ import { getChainRpcUrl } from '@/lib/wagmi'
 import { hasInjectedProvider, getInjectedProvider } from '@/utils/walletConnector'
 
 /**
+ * Wrap an EIP-1193 provider to avoid "Cannot assign to read only property" errors.
+ * This happens when extensions like LastPass freeze request objects.
+ */
+function wrapProvider(provider: any): any {
+  if (!provider) return provider;
+
+  return {
+    ...provider,
+    request: async (args: { method: string; params?: any[] }) => {
+      // Create a mutable copy of the request args
+      const requestArgs = {
+        method: args.method,
+        params: args.params ? [...args.params] : []
+      };
+      return provider.request(requestArgs);
+    },
+    // Forward other common methods
+    on: provider.on?.bind(provider),
+    removeListener: provider.removeListener?.bind(provider),
+    send: provider.send?.bind(provider),
+    sendAsync: provider.sendAsync?.bind(provider),
+  };
+}
+
+/**
  * Get the public client for read operations
  */
 export async function getProvider() {
@@ -135,7 +160,9 @@ export async function getSigner() {
         const injectedProvider = (client as any).transport?.provider;
         if (injectedProvider) {
           try {
-            const provider = new ethers.BrowserProvider(injectedProvider as any);
+            // Wrap provider to avoid read-only property errors
+            const wrappedProvider = wrapProvider(injectedProvider);
+            const provider = new ethers.BrowserProvider(wrappedProvider as any);
             // Create provider with network detection disabled to prevent JsonRpcProvider issues
             try {
               // Disable network detection by setting polling: false and staticNetwork
@@ -166,8 +193,9 @@ export async function getSigner() {
       const injectedProvider = getInjectedProvider();
       if (injectedProvider) {
         try {
-          // Create provider with explicit network configuration to avoid detection issues
-          const provider = new ethers.BrowserProvider(injectedProvider as any);
+          // Wrap provider to avoid read-only property errors and create provider with explicit network configuration
+          const wrappedProvider = wrapProvider(injectedProvider);
+          const provider = new ethers.BrowserProvider(wrappedProvider as any);
 
           // Try to get signer with timeout to prevent hanging
           const signerPromise = provider.getSigner();
@@ -195,7 +223,9 @@ export async function getSigner() {
     // Last resort: try to create signer from window.ethereum directly
     if (typeof window !== 'undefined' && (window as any).ethereum) {
       try {
-        const provider = new ethers.BrowserProvider((window as any).ethereum);
+        // Wrap provider to avoid read-only property errors
+        const wrappedProvider = wrapProvider((window as any).ethereum);
+        const provider = new ethers.BrowserProvider(wrappedProvider);
         const signer = await provider.getSigner();
         const address = await signer.getAddress();
         console.log('Last resort signer created with address:', address);

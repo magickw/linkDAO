@@ -216,40 +216,35 @@ export default function PostInteractionBar({
             <button
               onClick={handleUpvoteClick}
               disabled={!onUpvote}
-              className={`p-1.5 rounded-md transition-colors ${userVote === 'upvote'
+              className={`flex items-center space-x-1 p-1.5 rounded-md transition-colors ${userVote === 'upvote'
                   ? 'text-green-600 bg-green-50 dark:bg-green-900/20'
                   : onUpvote
-                    ? 'text-gray-300 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'
-                    : 'text-gray-200 cursor-not-allowed'
+                    ? 'text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'
+                    : 'text-gray-300 cursor-not-allowed'
                 }`}
               aria-label="Upvote"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
               </svg>
+              <span className="text-sm font-medium">{post.upvotes || 0}</span>
             </button>
-            <div className="flex flex-col items-center min-w-[1.5rem] px-1">
-              <span className={`text-xs font-medium ${userVote === 'upvote' ? 'text-green-600' : 'text-gray-500'}`}>
-                {post.upvotes || 0}
-              </span>
-              <span className={`text-xs font-medium ${userVote === 'downvote' ? 'text-red-600' : 'text-gray-500'}`}>
-                {post.downvotes || 0}
-              </span>
-            </div>
+            <div className="w-px h-5 bg-gray-300 dark:bg-gray-600" />
             <button
               onClick={handleDownvoteClick}
               disabled={!onDownvote}
-              className={`p-1.5 rounded-md transition-colors ${userVote === 'downvote'
+              className={`flex items-center space-x-1 p-1.5 rounded-md transition-colors ${userVote === 'downvote'
                   ? 'text-red-600 bg-red-50 dark:bg-red-900/20'
                   : onDownvote
-                    ? 'text-gray-300 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20'
-                    : 'text-gray-200 cursor-not-allowed'
+                    ? 'text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20'
+                    : 'text-gray-300 cursor-not-allowed'
                 }`}
               aria-label="Downvote"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
+              <span className="text-sm font-medium">{post.downvotes || 0}</span>
             </button>
           </div>
 
@@ -360,7 +355,10 @@ export default function PostInteractionBar({
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
             </svg>
-            <span className="hidden sm:inline">Share</span>
+            <span className="hidden sm:inline">
+              {post.shareCount && post.shareCount > 0 ? `${post.shareCount} Shares` : 'Share'}
+            </span>
+            <span className="sm:hidden">{post.shareCount || 0}</span>
           </button>
 
           {/* View Count - moved to right side for balance or keep here? Let's keep it here but visible */}

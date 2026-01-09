@@ -235,6 +235,26 @@ export class CommunityWeb3Service {
     message?: string;
   }): Promise<string> {
     try {
+      // Helper to wrap provider and avoid "Cannot assign to read only property" errors
+      const wrapProvider = (provider: any): any => {
+        if (!provider) return provider;
+        return {
+          ...provider,
+          request: async (args: { method: string; params?: any[] }) => {
+            // Create a mutable copy of the request args
+            const requestArgs = {
+              method: args.method,
+              params: args.params ? [...args.params] : []
+            };
+            return provider.request(requestArgs);
+          },
+          on: provider.on?.bind(provider),
+          removeListener: provider.removeListener?.bind(provider),
+          send: provider.send?.bind(provider),
+          sendAsync: provider.sendAsync?.bind(provider),
+        };
+      };
+
       // Try to get signer with better error handling
       let signer;
       try {
@@ -248,12 +268,27 @@ export class CommunityWeb3Service {
           const walletClient = await getWalletClient(config);
           if (walletClient && walletClient.transport?.provider) {
             const { ethers } = await import('ethers');
-            const provider = new ethers.BrowserProvider(walletClient.transport.provider as any);
+            // Wrap provider to avoid read-only property errors
+            const wrappedProvider = wrapProvider(walletClient.transport.provider as any);
+            const provider = new ethers.BrowserProvider(wrappedProvider);
             signer = await provider.getSigner();
           }
         } catch (fallbackError) {
           console.error('Fallback signer retrieval also failed:', fallbackError);
-          throw new Error('No signer available. Please ensure your wallet is connected.');
+          // Try direct window.ethereum as last resort
+          if (typeof window !== 'undefined' && (window as any).ethereum) {
+            try {
+              const { ethers } = await import('ethers');
+              const wrappedProvider = wrapProvider((window as any).ethereum);
+              const provider = new ethers.BrowserProvider(wrappedProvider);
+              signer = await provider.getSigner();
+            } catch (lastResortError) {
+              console.error('Last resort signer creation failed:', lastResortError);
+              throw new Error('No signer available. Please ensure your wallet is connected.');
+            }
+          } else {
+            throw new Error('No signer available. Please ensure your wallet is connected.');
+          }
         }
       }
 

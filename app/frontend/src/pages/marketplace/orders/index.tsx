@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'react-hot-toast';
+import { API_BASE_URL } from '@/config/api';
 import {
     Package,
     Truck,
@@ -73,7 +74,7 @@ export default function OrdersPage() {
         
         try {
             setLoading(true);
-            const response = await fetch(`/api/orders/user/${user.address}`, {
+            const response = await fetch(`${API_BASE_URL}/api/orders/user/${user.address}`, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 }
