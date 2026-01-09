@@ -28,6 +28,8 @@ interface PostInteractionBarProps {
     stakedValue?: number;
     shareCount?: number;
     viewCount?: number;
+    upvotes?: number;
+    downvotes?: number;
   };
   postType: 'feed' | 'community' | 'enhanced';
   userMembership?: any;
@@ -37,6 +39,8 @@ interface PostInteractionBarProps {
   onShare?: (postId: string, shareType: string, message?: string, media?: string[], replyRestriction?: string) => Promise<void>;
   onUnrepost?: (postId: string) => Promise<void>;
   onAward?: (postId: string) => void;
+  onUpvote?: (postId: string) => Promise<void>;
+  onDownvote?: (postId: string) => Promise<void>;
   className?: string;
 }
 
@@ -50,6 +54,8 @@ export default function PostInteractionBar({
   onShare,
   onUnrepost,
   onAward,
+  onUpvote,
+  onDownvote,
   className = ''
 }: PostInteractionBarProps) {
   const { address, isConnected } = useWeb3();
@@ -175,18 +181,68 @@ export default function PostInteractionBar({
     }
   };
 
+  const handleUpvoteClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onUpvote) return;
+    try {
+      await onUpvote(post.id);
+    } catch (error) {
+      console.error('Error upvoting:', error);
+      addToast('Failed to upvote', 'error');
+    }
+  };
+
+  const handleDownvoteClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onDownvote) return;
+    try {
+      await onDownvote(post.id);
+    } catch (error) {
+      console.error('Error downvoting:', error);
+      addToast('Failed to downvote', 'error');
+    }
+  };
+
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Action Buttons */}
       <div className="flex items-center justify-between pt-4 border-t border-gray-200/50 dark:border-gray-700/50">
-        <div className="flex items-center space-x-4">
-          {/* View Count */}
-          <div className="flex items-center space-x-2 text-gray-500 dark:text-gray-400 text-sm font-medium mr-2" title={`${post.viewCount || 0} Views`}>
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-            <span className="hidden sm:inline">{post.viewCount || 0}</span>
+        <div className="flex items-center space-x-1 sm:space-x-4">
+
+          {/* Voting Buttons - Integrated */}
+          <div className="flex items-center space-x-1 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-1 mr-2">
+            <button
+              onClick={handleUpvoteClick}
+              disabled={!onUpvote}
+              className={`p-1.5 rounded-md transition-colors ${onUpvote
+                ? 'text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'
+                : 'text-gray-300 cursor-not-allowed'}`}
+              aria-label="Upvote"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+              </svg>
+            </button>
+            <div className="flex flex-col items-center min-w-[1.5rem] px-1">
+              <span className="text-xs font-medium text-green-600">
+                {post.upvotes || 0}
+              </span>
+              <span className="text-xs font-medium text-red-600">
+                {post.downvotes || 0}
+              </span>
+            </div>
+            <button
+              onClick={handleDownvoteClick}
+              disabled={!onDownvote}
+              className={`p-1.5 rounded-md transition-colors ${onDownvote
+                ? 'text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20'
+                : 'text-gray-300 cursor-not-allowed'}`}
+              aria-label="Downvote"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
           </div>
 
           {/* Comment Button */}
@@ -298,6 +354,16 @@ export default function PostInteractionBar({
             </svg>
             <span className="hidden sm:inline">Share</span>
           </button>
+
+          {/* View Count - moved to right side for balance or keep here? Let's keep it here but visible */}
+          <div className="flex items-center space-x-2 text-gray-500 dark:text-gray-400 text-sm font-medium" title={`${post.viewCount || 0} Views`}>
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            <span className="hidden sm:inline">{post.viewCount || 0}</span>
+            <span className="sm:hidden text-xs">{post.viewCount || 0}</span>
+          </div>
 
           {/* Tip Button */}
           {postType === 'community' && userMembership ? (

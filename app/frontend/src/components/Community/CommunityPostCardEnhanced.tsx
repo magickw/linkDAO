@@ -10,7 +10,6 @@ import { useWeb3 } from '@/context/Web3Context';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import CommentThread from '../CommentThread';
-import StakingVoteButton from '../StakingVoteButton';
 import CommunityTipButton from '../CommunityTipButton';
 import CommunityNFTEmbed from '../CommunityNFTEmbed';
 import CommunityDeFiEmbed from '../CommunityDeFiEmbed';
@@ -676,45 +675,7 @@ function CommunityPostCardEnhanced({
       role="article"
       aria-label={`Post by ${post.author} in ${community.displayName}`}
     >
-      <div className="flex">
-        {/* Vote Section with Staking */}
-        <div className="flex flex-col items-center p-3 bg-gray-50 dark:bg-gray-700/50 border-r border-gray-200 dark:border-gray-600">
-          {/* Upvote Button with Staking */}
-          <StakingVoteButton
-            postId={post.id}
-            communityId={community.id}
-            voteType="upvote"
-            currentVote={userVote}
-            onVote={handleVote}
-            disabled={!isConnected}
-            className="mb-2"
-          />
-
-          {/* Vote Score */}
-          <span
-            className={`text-sm font-bold py-1 ${voteScore > 0
-              ? 'text-orange-500'
-              : voteScore < 0
-                ? 'text-blue-500'
-                : 'text-gray-500 dark:text-gray-400'
-              }`}
-            aria-label={`Vote score: ${voteScore > 0 ? '+' : ''}${voteScore}`}
-          >
-            {voteScore > 0 ? '+' : ''}{voteScore}
-          </span>
-
-          {/* Downvote Button with Staking */}
-          <StakingVoteButton
-            postId={post.id}
-            communityId={community.id}
-            voteType="downvote"
-            currentVote={userVote}
-            onVote={handleVote}
-            disabled={!isConnected}
-            className="mt-2"
-          />
-        </div>
-
+      <div className="flex flex-col">
         {/* Post Content */}
         <div className="flex-1 p-4">
           {/* Post Header */}
@@ -877,7 +838,7 @@ function CommunityPostCardEnhanced({
                 <RichContentPreview
                   content={post.content}
                   contentType="html"
-                  maxLength={500}
+                  maxLines={6}
                   isExpanded={isExpanded}
                   onToggleExpand={() => setIsExpanded(!isExpanded)}
                   className="mb-4"
@@ -965,14 +926,19 @@ function CommunityPostCardEnhanced({
                 <PostInteractionBar
                   post={{
                     id: post.id,
+                    title: post.title,
+                    content: post.content,
                     contentCid: post.contentCid,
-                    content: post.content, // add actual content
-                    shareId: post.shareId, // add shareId
+                    shareId: post.shareId,
                     author: post.author,
+                    authorProfile: post.authorProfile,
                     communityId: community.id,
+                    communityName: community.displayName || community.name,
                     commentCount: comments.length,
-                    authorProfile: post.authorProfile, // add author profile
-                    viewCount: post.views || post.viewCount || 0 // pass view count
+                    shareCount: post.shares || 0,
+                    viewCount: post.views || post.viewCount || 0,
+                    upvotes: (post as any).upvotes || 0,
+                    downvotes: (post as any).downvotes || 0
                   }}
                   postType="community"
                   userMembership={userMembership}
@@ -983,6 +949,8 @@ function CommunityPostCardEnhanced({
                     console.log('Sharing community post:', postId, shareType, message);
                     addToast(`Post shared via ${shareType}!`, 'success');
                   }}
+                  onUpvote={async () => handleVote(post.id, 'upvote')}
+                  onDownvote={async () => handleVote(post.id, 'downvote')}
                 />
               </div>
             )}

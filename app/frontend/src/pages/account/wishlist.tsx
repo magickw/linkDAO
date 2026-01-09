@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import Layout from '@/components/Layout';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'react-hot-toast';
 import { Heart, Plus, Edit, Trash2, Share2, TrendingDown, ShoppingCart, Star, ArrowUpDown } from 'lucide-react';
 import Link from 'next/link';
+import { Button } from '@/design-system/components/Button';
+import { GlassPanel } from '@/design-system/components/GlassPanel';
 
 interface Wishlist {
     id: string;
@@ -164,29 +167,32 @@ export default function WishlistPage() {
     }
 
     return (
-        <div className="max-w-7xl mx-auto p-6">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-8">
-                <div>
-                    <h1 className="text-3xl font-bold text-white">My Wishlists</h1>
-                    <p className="text-white/60 mt-1">Save items you love for later</p>
-                </div>
-                <button
-                    onClick={() => {
-                        setEditingWishlist(null);
-                        setShowWishlistForm(true);
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-                >
-                    <Plus size={20} />
-                    Create Wishlist
-                </button>
-            </div>
+        <>
+        <Layout fullWidth={true}>
+            <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    {/* Header */}
+                    <div className="flex justify-between items-center mb-8">
+                        <div>
+                            <h1 className="text-3xl font-bold text-white">My Wishlists</h1>
+                            <p className="text-white/60 mt-1">Save items you love for later</p>
+                        </div>
+                        <Button
+                            variant="primary"
+                            onClick={() => {
+                                setEditingWishlist(null);
+                                setShowWishlistForm(true);
+                            }}
+                            icon={<Plus size={20} />}
+                        >
+                            Create Wishlist
+                        </Button>
+                    </div>
 
             <div className="grid grid-cols-12 gap-6">
                 {/* Wishlist Sidebar */}
                 <div className="col-span-12 lg:col-span-3">
-                    <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+                    <GlassPanel variant="secondary" className="p-4">
                         <h3 className="text-sm font-semibold text-white/60 uppercase mb-3">
                             Your Wishlists
                         </h3>
@@ -195,12 +201,13 @@ export default function WishlistPage() {
                             <div className="text-center py-8">
                                 <Heart size={32} className="mx-auto text-white/40 mb-2" />
                                 <p className="text-sm text-white/60 mb-3">No wishlists yet</p>
-                                <button
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
                                     onClick={() => setShowWishlistForm(true)}
-                                    className="text-sm text-blue-400 hover:text-blue-300"
                                 >
                                     Create your first wishlist
-                                </button>
+                                </Button>
                             </div>
                         ) : (
                             <div className="space-y-2">
@@ -230,7 +237,7 @@ export default function WishlistPage() {
                                 ))}
                             </div>
                         )}
-                    </div>
+                    </GlassPanel>
                 </div>
 
                 {/* Wishlist Content */}
@@ -238,7 +245,7 @@ export default function WishlistPage() {
                     {selectedWishlist ? (
                         <>
                             {/* Wishlist Header */}
-                            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 mb-6">
+                            <GlassPanel variant="secondary" className="p-6 mb-6">
                                 <div className="flex justify-between items-start">
                                     <div>
                                         <h2 className="text-2xl font-bold text-white mb-2">
@@ -249,30 +256,31 @@ export default function WishlistPage() {
                                         )}
                                     </div>
                                     <div className="flex gap-2">
-                                        <button
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
                                             onClick={() => handleShareWishlist(selectedWishlist)}
-                                            className="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
+                                            icon={<Share2 size={18} />}
                                             title="Share wishlist"
-                                        >
-                                            <Share2 size={18} className="text-white/80" />
-                                        </button>
-                                        <button
+                                        />
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
                                             onClick={() => {
                                                 setEditingWishlist(selectedWishlist);
                                                 setShowWishlistForm(true);
                                             }}
-                                            className="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
+                                            icon={<Edit size={18} />}
                                             title="Edit wishlist"
-                                        >
-                                            <Edit size={18} className="text-white/80" />
-                                        </button>
-                                        <button
+                                        />
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
                                             onClick={() => handleDeleteWishlist(selectedWishlist.id)}
-                                            className="p-2 bg-red-500/20 hover:bg-red-500/30 rounded-lg transition-colors"
+                                            icon={<Trash2 size={18} />}
+                                            className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
                                             title="Delete wishlist"
-                                        >
-                                            <Trash2 size={18} className="text-red-400" />
-                                        </button>
+                                        />
                                     </div>
                                 </div>
 
@@ -281,11 +289,11 @@ export default function WishlistPage() {
                                     <span>•</span>
                                     <span>{selectedWishlist.isPublic ? 'Public' : 'Private'}</span>
                                 </div>
-                            </div>
+                            </GlassPanel>
 
                             {/* Wishlist Items */}
                             {wishlistItems.length === 0 ? (
-                                <div className="text-center py-12 bg-white/5 rounded-xl">
+                                <GlassPanel variant="primary" className="text-center py-12">
                                     <Heart size={48} className="mx-auto text-white/40 mb-4" />
                                     <h3 className="text-xl font-semibold text-white mb-2">
                                         Your wishlist is empty
@@ -293,13 +301,13 @@ export default function WishlistPage() {
                                     <p className="text-white/60 mb-4">
                                         Browse products and add them to this wishlist
                                     </p>
-                                    <Link
-                                        href="/marketplace"
-                                        className="inline-block px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                                    <Button
+                                        variant="primary"
+                                        onClick={() => window.location.href = '/marketplace'}
                                     >
                                         Browse Marketplace
-                                    </Link>
-                                </div>
+                                    </Button>
+                                </GlassPanel>
                             ) : (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {wishlistItems.map((item) => (
@@ -313,7 +321,7 @@ export default function WishlistPage() {
                             )}
                         </>
                     ) : (
-                        <div className="text-center py-12 bg-white/5 rounded-xl">
+                        <GlassPanel variant="primary" className="text-center py-12">
                             <Heart size={48} className="mx-auto text-white/40 mb-4" />
                             <h3 className="text-xl font-semibold text-white mb-2">
                                 Select a wishlist
@@ -321,27 +329,30 @@ export default function WishlistPage() {
                             <p className="text-white/60">
                                 Choose a wishlist from the sidebar to view items
                             </p>
-                        </div>
+                        </GlassPanel>
                     )}
                 </div>
             </div>
+            </div>
+            </div>
+        </Layout>
 
-            {/* Wishlist Form Modal */}
-            {showWishlistForm && (
-                <WishlistFormModal
-                    wishlist={editingWishlist}
-                    onClose={() => {
-                        setShowWishlistForm(false);
-                        setEditingWishlist(null);
-                    }}
-                    onSave={() => {
-                        setShowWishlistForm(false);
-                        setEditingWishlist(null);
-                        fetchWishlists();
-                    }}
-                />
-            )}
-        </div>
+        {/* Wishlist Form Modal */}
+        {showWishlistForm && (
+            <WishlistFormModal
+                wishlist={editingWishlist}
+                onClose={() => {
+                    setShowWishlistForm(false);
+                    setEditingWishlist(null);
+                }}
+                onSave={() => {
+                    setShowWishlistForm(false);
+                    setEditingWishlist(null);
+                    fetchWishlists();
+                }}
+            />
+        )}
+        </>
     );
 }
 
@@ -357,7 +368,7 @@ function WishlistItemCard({ item, onRemove }: {
     const hasPriceDrop = priceDropPercent > 0;
 
     return (
-        <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10 hover:border-white/20 transition-all">
+        <GlassPanel variant="secondary" className="p-4 hover:border-white/20 transition-all">
             <div className="flex gap-4">
                 {/* Product Image */}
                 <div className="w-24 h-24 bg-white/10 rounded-lg flex-shrink-0 overflow-hidden">
@@ -380,13 +391,14 @@ function WishlistItemCard({ item, onRemove }: {
                         <h3 className="font-semibold text-white line-clamp-2">
                             {product?.name || 'Product'}
                         </h3>
-                        <button
+                        <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={onRemove}
-                            className="p-1 hover:bg-red-500/20 rounded transition-colors flex-shrink-0"
+                            icon={<Trash2 size={16} />}
+                            className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
                             title="Remove"
-                        >
-                            <Trash2 size={16} className="text-red-400" />
-                        </button>
+                        />
                     </div>
 
                     {/* Price Info */}
@@ -436,13 +448,17 @@ function WishlistItemCard({ item, onRemove }: {
                     )}
 
                     {/* Add to Cart Button */}
-                    <button className="mt-3 w-full py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-lg transition-colors flex items-center justify-center gap-2">
-                        <ShoppingCart size={16} />
+                    <Button
+                        variant="primary"
+                        size="sm"
+                        className="mt-3 w-full"
+                        icon={<ShoppingCart size={16} />}
+                    >
                         Add to Cart
-                    </button>
+                    </Button>
                 </div>
             </div>
-        </div>
+        </GlassPanel>
     );
 }
 
@@ -491,7 +507,7 @@ function WishlistFormModal({ wishlist, onClose, onSave }: {
 
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-900 rounded-xl max-w-md w-full">
+            <GlassPanel variant="modal" className="max-w-md w-full">
                 <div className="p-6">
                     <h2 className="text-2xl font-bold text-white mb-6">
                         {wishlist ? 'Edit Wishlist' : 'Create Wishlist'}
@@ -539,24 +555,26 @@ function WishlistFormModal({ wishlist, onClose, onSave }: {
                         </div>
 
                         <div className="flex gap-3 pt-4">
-                            <button
+                            <Button
                                 type="button"
+                                variant="ghost"
                                 onClick={onClose}
-                                className="flex-1 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-colors"
+                                className="flex-1"
                             >
                                 Cancel
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                                 type="submit"
-                                disabled={saving}
-                                className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors disabled:opacity-50"
+                                variant="primary"
+                                loading={saving}
+                                className="flex-1"
                             >
                                 {saving ? 'Saving...' : wishlist ? 'Update' : 'Create'}
-                            </button>
+                            </Button>
                         </div>
                     </form>
                 </div>
-            </div>
+            </GlassPanel>
         </div>
     );
 }

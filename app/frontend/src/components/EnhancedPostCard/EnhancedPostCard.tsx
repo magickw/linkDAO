@@ -775,78 +775,43 @@ const EnhancedPostCard = React.memo(({
               )}
 
               {/* Consolidated Engagement Bar */}
-              <div className="mt-3 pt-2 border-t border-gray-100 dark:border-gray-800 flex items-center gap-4">
-                {/* Voting Section */}
-                <div className="flex items-center space-x-1 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-1">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleUpvote(); }}
-                    disabled={!onUpvote}
-                    className={`p-1.5 rounded-md transition-colors ${onUpvote
-                      ? 'text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'
-                      : 'text-gray-300 cursor-not-allowed'}`}
-                    aria-label="Upvote"
-                  >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                    </svg>
-                  </button>
-                  <div className="flex flex-col items-center min-w-[2rem]">
-                    <span className="text-xs font-medium text-green-600">
-                      {post.upvotes || 0}
-                    </span>
-                    <span className="text-xs font-medium text-red-600">
-                      {post.downvotes || 0}
-                    </span>
-                  </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleDownvote(); }}
-                    disabled={!onDownvote}
-                    className={`p-1.5 rounded-md transition-colors ${onDownvote
-                      ? 'text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20'
-                      : 'text-gray-300 cursor-not-allowed'}`}
-                    aria-label="Downvote"
-                  >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                </div>
-
-                {/* Interactions Section */}
-                <div className="flex-1">
-                  <PostInteractionBar
-                    post={{
-                      id: post.id,
-                      title: post.title,
-                      contentCid: post.contentCid,
-                      content: post.content,
-                      author: post.author,
-                      communityId: post.communityId,
-                      communityName: post.communityName || 'general',
-                      commentCount: post.comments,
-                      shareId: (post as any).shareId,
-                      isRepostedByMe: isRepostedByMe,
-                      shareCount: repostCount,
-                      authorProfile: post.authorProfile,
-                      media: post.media,
-                      viewCount: post.views // Add views mapping
-                    }}
-                    postType={post.communityId ? 'community' : 'feed'}
-                    onComment={() => {
-                      setExpanded(true);
-                      if (onExpand) onExpand();
-                    }}
-                    onReaction={onReaction}
-                    onTip={onTip}
-                    onShare={async (postId, shareType, message, media, replyRestriction) => {
-                      if (shareType === 'timeline') {
-                        await handleRepost(postId, message, media, replyRestriction);
-                      }
-                    }}
-                    onUnrepost={handleUnrepost}
-                    className="border-none p-0 !bg-transparent"
-                  />
-                </div>
+              <div className="mt-3 pt-2 border-t border-gray-100 dark:border-gray-800">
+                <PostInteractionBar
+                  post={{
+                    id: post.id,
+                    title: post.title,
+                    contentCid: post.contentCid,
+                    content: post.content,
+                    author: post.author,
+                    communityId: post.communityId,
+                    communityName: post.communityName || 'general',
+                    commentCount: post.comments,
+                    shareId: (post as any).shareId,
+                    isRepostedByMe: isRepostedByMe,
+                    shareCount: repostCount,
+                    authorProfile: post.authorProfile,
+                    media: post.media,
+                    viewCount: post.views,
+                    upvotes: post.upvotes,
+                    downvotes: post.downvotes
+                  }}
+                  postType={post.communityId ? 'community' : 'feed'}
+                  onComment={() => {
+                    setExpanded(true);
+                    if (onExpand) onExpand();
+                  }}
+                  onReaction={onReaction}
+                  onTip={onTip}
+                  onShare={async (postId, shareType, message, media, replyRestriction) => {
+                    if (shareType === 'timeline') {
+                      await handleRepost(postId, message, media, replyRestriction);
+                    }
+                  }}
+                  onUnrepost={handleUnrepost}
+                  onUpvote={onUpvote}
+                  onDownvote={onDownvote}
+                  className="border-none p-0 !bg-transparent"
+                />
               </div>
 
               {/* Comment System - Show when expanded */}
