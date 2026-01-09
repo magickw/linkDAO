@@ -883,8 +883,8 @@ import { eq, sql } from 'drizzle-orm';
 import { db } from './db/index';
 // Import listing routes
 import listingRoutes from './routes/listingRoutes';
-// Import order creation routes
-import orderCreationRoutes from './routes/orderCreationRoutes';
+// Import order routes
+import orderRoutes from './routes/orderRoutes';
 // Import token reaction routes
 import tokenReactionRoutes from './routes/tokenReactionRoutes';
 // Import enhanced search routes
@@ -1051,8 +1051,8 @@ app.use('/api/analytics', advancedAnalyticsRouter);
 // Listing routes
 app.use('/api/listings', listingRoutes);
 
-// Order creation routes
-app.use('/api/orders', orderCreationRoutes);
+// Order routes
+app.use('/api/orders', orderRoutes);
 
 // =============================================================================
 // MARKETPLACE ROUTES - Optimized Order (Most Specific → Most Generic)

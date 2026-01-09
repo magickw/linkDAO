@@ -27,8 +27,10 @@ const createOrderValidation = [
   body('listingId').isString().notEmpty(),
   body('buyerAddress').matches(/^0x[a-fA-F0-9]{40}$/),
   body('sellerAddress').matches(/^0x[a-fA-F0-9]{40}$/),
-  body('amount').isString().notEmpty(),
-  body('paymentToken').isString().notEmpty(),
+  body('amount').optional().isString(),
+  body('price').optional().isString(), // Alias for amount
+  body('paymentToken').optional().isString(),
+  body('tokenAddress').optional().isString(), // Alias for paymentToken
   body('quantity').optional().isInt({ min: 1 }),
   body('shippingAddress.name').optional().isString(),
   body('shippingAddress.street').optional().isString(),
@@ -37,7 +39,18 @@ const createOrderValidation = [
   body('shippingAddress.postalCode').optional().isString(),
   body('shippingAddress.country').optional().isString(),
   body('shippingAddress.phone').optional().isString(),
-  body('notes').optional().isString()
+  body('shippingAddress.phone').optional().isString(),
+  body('notes').optional().isString(),
+  // Custom validation to ensure required fields are present (either direct or alias)
+  body().custom((value) => {
+    if (!value.amount && !value.price) {
+      throw new Error('Amount (or price) is required');
+    }
+    if (!value.paymentToken && !value.tokenAddress) {
+      throw new Error('Payment token (or token address) is required');
+    }
+    return true;
+  })
 ];
 
 const updateOrderStatusValidation = [

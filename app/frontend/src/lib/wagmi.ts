@@ -17,9 +17,9 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
   const originalWarn = console.warn;
   console.warn = (...args) => {
     const message = args.join(' ');
-    if (message.includes('Failed to fetch remote project configuration') || 
-        message.includes('api.web3modal.org') ||
-        message.includes('Reown Config')) {
+    if (message.includes('Failed to fetch remote project configuration') ||
+      message.includes('api.web3modal.org') ||
+      message.includes('Reown Config')) {
       return; // Suppress these specific warnings
     }
     originalWarn.apply(console, args);
@@ -40,7 +40,7 @@ const getRpcUrl = (chainId: number) => {
   if (process.env.NODE_ENV === 'production') {
     return `/api/proxy?target=${encodeURIComponent(getChainRpcUrl(chainId))}`;
   }
-  
+
   // In development, use direct URLs
   return getChainRpcUrl(chainId);
 };
@@ -58,7 +58,7 @@ export const getChainRpcUrl = (chainId: number) => {
     case arbitrum.id:
       return process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL || 'https://arbitrum.llamarpc.com';
     case sepolia.id:
-      return process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || 'https://sepolia.drpc.org';
+      return process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com';
     default:
       return 'https://eth.llamarpc.com';
   }
@@ -99,10 +99,10 @@ export const config = createConfig({
     }),
     injected({
       target() {
-        return { 
-          id: 'injected', 
-          name: 'Injected Wallet', 
-          provider: typeof window !== 'undefined' ? window.ethereum : undefined 
+        return {
+          id: 'injected',
+          name: 'Injected Wallet',
+          provider: typeof window !== 'undefined' ? window.ethereum : undefined
         }
       },
     }),

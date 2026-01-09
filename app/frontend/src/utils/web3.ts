@@ -123,42 +123,42 @@ export async function getProvider() {
 export async function getSigner() {
   try {
     // Try wagmi wallet client first
-    const client = await getWalletClient(config);
+    try {
+      const client = await getWalletClient(config);
 
-    if (client) {
-      // Check if the client has the necessary methods before accessing them
-      // Use getChainId helper from wagmi core instead of accessing properties directly
-      try {
-        const chainId = await getChainId(config);
-        console.log('Wallet client chain ID:', chainId);
-      } catch (e) {
-        console.warn('Could not get chain ID:', e);
-      }
+      if (client) {
+        // Check if the client has the necessary methods before accessing them
 
-      const injectedProvider = (client as any).transport?.provider;
-      if (injectedProvider) {
-        try {
-          const provider = new ethers.BrowserProvider(injectedProvider as any);
-          // Create provider with network detection disabled to prevent JsonRpcProvider issues
+        // Removed getChainId(config) call as it was causing crashes in some environments
+        // and we don't strictly need it here for the signer creation
+
+        const injectedProvider = (client as any).transport?.provider;
+        if (injectedProvider) {
           try {
-            // Disable network detection by setting polling: false and staticNetwork
-            const signer = await provider.getSigner();
-            // Verify that the signer has the necessary methods
+            const provider = new ethers.BrowserProvider(injectedProvider as any);
+            // Create provider with network detection disabled to prevent JsonRpcProvider issues
             try {
-              await signer.getAddress();
-            } catch (addressError) {
-              console.warn('Could not get address from signer:', addressError);
-              return null;
+              // Disable network detection by setting polling: false and staticNetwork
+              const signer = await provider.getSigner();
+              // Verify that the signer has the necessary methods
+              try {
+                await signer.getAddress();
+                return signer;
+              } catch (addressError) {
+                console.warn('Could not get address from signer:', addressError);
+                // Continue to fallback
+              }
+            } catch (signerError) {
+              console.error('Error getting signer from provider:', signerError);
+              // Don't return null here, try fallback approach
             }
-            return signer;
-          } catch (signerError) {
-            console.error('Error getting signer from provider:', signerError);
-            // Don't return null here, try fallback approach
+          } catch (e) {
+            console.warn('Failed to create signer from wagmi client:', e);
           }
-        } catch (e) {
-          console.warn('Failed to create signer from wagmi client:', e);
         }
       }
+    } catch (walletClientError) {
+      console.warn('Error getting wallet client, falling back to injected provider:', walletClientError);
     }
 
     // Fallback to direct injected provider (window.ethereum) with better error handling

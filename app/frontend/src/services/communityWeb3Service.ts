@@ -256,37 +256,39 @@ export class CommunityWeb3Service {
           throw new Error('No signer available. Please ensure your wallet is connected.');
         }
       }
-      
+
       if (!signer) throw new Error('No signer available. Please ensure your wallet is connected.');
 
       // Use environment configuration for contract addresses
       const { ENV_CONFIG } = await import('@/config/environment');
-      const { getChainId } = await import('@wagmi/core');
-      const { config } = await import('@/lib/wagmi');
-      
+      // const { getChainId } = await import('@wagmi/core'); // Removed to avoid connector errors
+      // const { config } = await import('@/lib/wagmi'); // Removed dependency on config for chain ID
+
       const TIP_ROUTER_ADDRESS = ENV_CONFIG.TIP_ROUTER_ADDRESS;
       const LDAO_TOKEN_ADDRESS = ENV_CONFIG.LDAO_TOKEN_ADDRESS;
-      
-      // Get current chain ID
+
+      // Get current chain ID directly from the signer's provider
+      // This is more reliable than getChainId(config) which can crash if connectors are in a transitional state
       let chainId: number;
       try {
-        chainId = await getChainId(config);
-      } catch (e) {
-        // Fallback: try to get from provider
-        const provider = await getProvider();
-        if (provider) {
-          const network = await provider.getNetwork();
+        if (signer.provider) {
+          const network = await (signer.provider as any).getNetwork();
           chainId = Number(network.chainId);
+          console.log('Detected chain ID from signer:', chainId);
         } else {
-          // Default to Sepolia (11155111) if we can't detect
+          console.warn('Signer has no provider, defaulting to Sepolia');
           chainId = 11155111;
         }
+      } catch (e) {
+        console.warn('Failed to get chain ID from signer provider, defaulting to Sepolia:', e);
+        // Default to Sepolia (11155111) as fallback
+        chainId = 11155111;
       }
 
       // Get token address based on token type and chain
       let tokenAddress: string;
       let tokenDecimals: number;
-      
+
       if (input.token === 'LDAO') {
         tokenAddress = LDAO_TOKEN_ADDRESS;
         tokenDecimals = 18;

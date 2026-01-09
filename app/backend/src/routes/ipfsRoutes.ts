@@ -72,11 +72,22 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       message: 'File uploaded to IPFS successfully'
     });
   } catch (error) {
-    safeLogger.error('IPFS file upload error:', error);
+    const errorDetails = {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      fileName: req.file?.originalname,
+      fileSize: req.file?.size,
+      mimeType: req.file?.mimetype,
+      contentType: detectedContentType,
+      userId: userId
+    };
+
+    safeLogger.error('IPFS file upload error:', errorDetails);
 
     res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : 'Upload failed'
+      error: error instanceof Error ? error.message : 'Upload failed',
+      details: errorDetails
     });
   }
 });

@@ -168,11 +168,38 @@ export class IPFSService {
 
       return metadata;
     } catch (error: any) {
-      safeLogger.error('Pinata upload failed:', {
-        error: error.message,
-        response: error.response?.data
-      });
-      throw new Error(`Pinata upload failed: ${error.response?.data?.error?.reason || error.response?.data?.error || error.message}`);
+      const errorDetails = {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        responseData: error.response?.data,
+        stack: error.stack,
+        hasPinataCredentials: !!(process.env.PINATA_API_KEY && process.env.PINATA_API_KEY_SECRET) || !!process.env.PINATA_JWT,
+        fileSize: bufferContent.length,
+        fileName: options?.metadata?.name,
+        mimeType: options?.metadata?.mimeType
+      };
+
+      safeLogger.error('Pinata upload failed:', errorDetails);
+
+      // Provide detailed error message
+      let errorMessage = `Pinata upload failed: ${error.message}`;
+      
+      if (error.response?.data?.error?.reason) {
+        errorMessage = `Pinata error: ${error.response.data.error.reason}`;
+      } else if (error.response?.data?.error) {
+        errorMessage = `Pinata error: ${error.response.data.error}`;
+      } else if (error.response?.status === 401) {
+        errorMessage = 'Pinata authentication failed - invalid API credentials';
+      } else if (error.response?.status === 403) {
+        errorMessage = 'Pinata access forbidden - check API key permissions';
+      } else if (error.response?.status === 413) {
+        errorMessage = 'File too large for Pinata upload';
+      } else if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+        errorMessage = 'Cannot connect to Pinata API - network error';
+      }
+
+      throw new Error(errorMessage);
     }
   }
 
@@ -734,7 +761,7 @@ export class IPFSService {
         {
           headers: {
             'pinata_api_key': process.env.PINATA_API_KEY || '',
-            'pinata_secret_api_key': process.env.PINATA_SECRET_KEY || '',
+            'pinata_secret_api_key': process.env.PINATA_API_KEY_SECRET || '',
           },
         }
       );

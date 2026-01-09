@@ -31,6 +31,14 @@ export class OrderController {
       const input: CreateOrderInput = req.body;
 
       // Validate required fields
+      // Normalize aliases
+      if (!input.amount && (input as any).price) {
+        input.amount = (input as any).price;
+      }
+      if (!input.paymentToken && (input as any).tokenAddress) {
+        input.paymentToken = (input as any).tokenAddress;
+      }
+
       if (!input.listingId || !input.buyerAddress || !input.sellerAddress || !input.amount || !input.paymentToken) {
         throw new ValidationError('Missing required fields');
       }
