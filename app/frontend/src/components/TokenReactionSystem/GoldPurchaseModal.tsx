@@ -5,9 +5,25 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { ethers } from 'ethers';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { useWeb3 } from '../../context/Web3Context';
 import { useToast } from '../../context/ToastContext';
+import { useNetworkSwitch } from '@/hooks/useNetworkSwitch';
+import { StripeProvider } from '../Payment/StripeProvider';
+import { StripePaymentForm } from '../Payment/StripePaymentForm';
+
+// ERC-20 ABI for USDC transfers
+const ERC20_ABI = [
+  'function transfer(address to, uint256 amount) returns (bool)',
+  'function approve(address spender, uint256 amount) returns (bool)',
+  'function balanceOf(address owner) view returns (uint256)',
+  'function allowance(address owner, address spender) view returns (uint256)',
+  'function decimals() view returns (uint8)'
+];
+
+// Platform treasury address for receiving payments
+const TREASURY_ADDRESS = process.env.NEXT_PUBLIC_TREASURY_ADDRESS || '0xeF85C8CcC03320dA32371940b315D563be2585e5';
 
 // Simple types for now to avoid dependency issues
 const PaymentMethodType = {
@@ -65,13 +81,22 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
   onClose,
   isLoading = false
 }) => {
-  const { address, isConnected } = useWeb3();
+  const { address, isConnected, signer } = useWeb3();
   const { addToast } = useToast();
+  const { currentChainId, currentChainName, ensureNetwork, isSwitching, getChainName } = useNetworkSwitch();
 
   const [selectedPackage, setSelectedPackage] = useState<string>('100');
   const [showCheckout, setShowCheckout] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PrioritizedPaymentMethod | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Stripe payment state
+  const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
+  const [showStripeForm, setShowStripeForm] = useState(false);
+
+  // Crypto payment state
+  const [usdcBalance, setUsdcBalance] = useState<string>('0');
+  const [isCheckingBalance, setIsCheckingBalance] = useState(false);
 
   const goldPackages: GoldPackage[] = [
     {
@@ -199,63 +224,128 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
       // Process actual payment based on selected method
       if (selectedPaymentMethod.method.type === 'FIAT_STRIPE') {
         // Create Stripe checkout session for fiat payment
-        // Create Stripe checkout session for fiat payment
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.linkdao.io';
 
-        // Use the dedicated gold purchase endpoint
+        // Get auth token
+        let authToken = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
+        if (!authToken) {
+          try {
+            const sessionData = localStorage.getItem('linkdao_session_data');
+            if (sessionData) {
+              const parsed = JSON.parse(sessionData);
+              authToken = parsed.token || parsed.accessToken || '';
+            }
+          } catch (e) {
+            console.warn('Failed to parse session data');
+          }
+        }
+
+        // Create payment intent on backend
         const response = await fetch(`${apiUrl}/api/gold/payment-intent`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            // Add authorization header if available from context/hook
-            // 'Authorization': `Bearer ${token}` 
+            ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}),
           },
           body: JSON.stringify({
             packageId: selectedPackage,
-            paymentMethod: 'stripe'
+            paymentMethod: 'stripe',
+            amount: Math.round(selectedPackageData.price * 100), // Convert to cents
+            currency: 'usd'
           }),
         });
 
         if (!response.ok) {
-          throw new Error('Failed to create payment session');
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || 'Failed to create payment session');
         }
 
         const paymentIntent = await response.json();
 
-        // In a real implementation, you would redirect to Stripe Checkout here
-        // For now, we'll simulate the payment completion
-        addToast('Redirecting to Stripe for payment...', 'info');
+        if (!paymentIntent.clientSecret) {
+          throw new Error('No client secret received from server');
+        }
 
-        // Simulate successful payment (replace with actual Stripe redirect handling)
-        setTimeout(async () => {
-          try {
-            // Call backend endpoint to complete purchase and send receipt
-            await completeGoldPurchase(paymentIntent.id || 'stripe-' + Date.now(), selectedPackage, 'stripe');
-
-            addToast('Gold purchase successful! Award will be given.', 'success');
-            await onPurchase(selectedPackage);
-            onClose();
-          } catch (error) {
-            console.error('Error completing purchase:', error);
-            addToast('Error completing purchase', 'error');
-          } finally {
-            setIsProcessing(false);
-          }
-        }, 3000);
-
-        return; // Exit early to avoid closing modal immediately
+        // Show Stripe payment form
+        setStripeClientSecret(paymentIntent.clientSecret);
+        setShowStripeForm(true);
+        setIsProcessing(false);
+        return; // Exit - StripePaymentForm will handle completion
       } else {
-        // Handle crypto payment (USDC, etc.)
-        addToast('Crypto payment processing...', 'info');
+        // Handle crypto payment (USDC)
+        if (!isConnected || !signer || !address) {
+          addToast('Please connect your wallet first', 'error');
+          setIsProcessing(false);
+          return;
+        }
 
-        // Simulate crypto payment processing
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        const requiredChainId = selectedPaymentMethod.method.chainId;
 
-        const transactionHash = '0x' + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
-        const network = selectedPaymentMethod.method.id?.replace('usdc-', '') || 'Ethereum';
+        // Auto-switch network if needed
+        if (requiredChainId && currentChainId !== requiredChainId) {
+          const targetNetworkName = getChainName(requiredChainId);
+          addToast(`Switching to ${targetNetworkName}...`, 'info');
+
+          const switchResult = await ensureNetwork(requiredChainId);
+
+          if (!switchResult.success) {
+            addToast(switchResult.error || `Please switch to ${targetNetworkName} to continue`, 'error');
+            setIsProcessing(false);
+            return;
+          }
+
+          addToast(`Switched to ${targetNetworkName}`, 'success');
+        }
+
+        // Get USDC contract for the selected network
+        const usdcAddress = selectedPaymentMethod.method.token?.address;
+        if (!usdcAddress) {
+          throw new Error('USDC contract address not found');
+        }
+
+        // Create contract instance
+        const usdcContract = new ethers.Contract(usdcAddress, ERC20_ABI, signer);
+
+        // Get decimals (USDC uses 6 decimals)
+        const decimals = await usdcContract.decimals();
+
+        // Calculate amount in smallest units (e.g., 1.79 USDC = 1790000 units)
+        const amountInUnits = ethers.parseUnits(selectedPackageData.price.toString(), decimals);
+
+        // Check user's USDC balance
+        const balance = await usdcContract.balanceOf(address);
+        if (balance < amountInUnits) {
+          const formattedBalance = ethers.formatUnits(balance, decimals);
+          addToast(`Insufficient USDC balance. You have ${parseFloat(formattedBalance).toFixed(2)} USDC but need ${selectedPackageData.price.toFixed(2)} USDC`, 'error');
+          setIsProcessing(false);
+          return;
+        }
+
+        addToast('Please confirm the USDC transfer in your wallet...', 'info');
+
+        // Execute transfer to treasury
+        const tx = await usdcContract.transfer(TREASURY_ADDRESS, amountInUnits);
+
+        addToast('Transaction submitted. Waiting for confirmation...', 'info');
+
+        // Wait for transaction confirmation
+        const receipt = await tx.wait();
+
+        if (receipt.status !== 1) {
+          throw new Error('Transaction failed');
+        }
+
+        const transactionHash = receipt.hash;
+        const network = selectedPaymentMethod.method.id?.replace('usdc-', '') || 'unknown';
 
         // Call backend endpoint to complete purchase and send receipt
-        await completeGoldPurchase('crypto-' + Date.now(), selectedPackage, 'usdc', network, transactionHash);
+        await completeGoldPurchase(
+          `crypto-${transactionHash}`,
+          selectedPackage,
+          'usdc',
+          network,
+          transactionHash
+        );
 
         addToast('Gold purchase successful! Award will be given.', 'success');
         await onPurchase(selectedPackage);
@@ -263,9 +353,47 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
       }
     } catch (error: any) {
       console.error('Purchase failed:', error);
-      addToast(`Purchase failed: ${error.message}`, 'error');
+
+      // Handle specific error types
+      if (error.code === 'ACTION_REJECTED' || error.code === 4001) {
+        addToast('Transaction cancelled by user', 'info');
+      } else if (error.code === 'INSUFFICIENT_FUNDS') {
+        addToast('Insufficient funds for gas fees', 'error');
+      } else {
+        addToast(`Purchase failed: ${error.message || 'Unknown error'}`, 'error');
+      }
+    } finally {
       setIsProcessing(false);
     }
+  };
+
+  // Handle Stripe payment success
+  const handleStripeSuccess = async (paymentIntentId: string) => {
+    try {
+      // Complete purchase on backend
+      await completeGoldPurchase(paymentIntentId, selectedPackage, 'stripe');
+
+      addToast('Gold purchase successful!', 'success');
+      await onPurchase(selectedPackage);
+      setShowStripeForm(false);
+      setStripeClientSecret(null);
+      onClose();
+    } catch (error: any) {
+      console.error('Error completing purchase:', error);
+      addToast(`Error completing purchase: ${error.message}`, 'error');
+    }
+  };
+
+  // Handle Stripe payment error
+  const handleStripeError = (error: Error) => {
+    console.error('Stripe payment error:', error);
+    addToast(`Payment failed: ${error.message}`, 'error');
+  };
+
+  // Handle Stripe payment cancel
+  const handleStripeCancel = () => {
+    setShowStripeForm(false);
+    setStripeClientSecret(null);
   };
 
   const completeGoldPurchase = async (
@@ -319,13 +447,17 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900">Buy gold to give this award</h2>
+            <h2 className="text-xl font-semibold text-gray-900">
+              {showStripeForm ? 'Complete Your Payment' : 'Buy gold to give this award'}
+            </h2>
             <p className="text-sm text-gray-600 mt-1">
-              Gold is used to give awards. You need at least {goldNeeded} more gold for this award
+              {showStripeForm
+                ? `You're purchasing ${selectedPackageData?.amount || 0} gold for $${selectedPackageData?.price || 0}`
+                : `Gold is used to give awards. You need at least ${goldNeeded} more gold for this award`}
             </p>
           </div>
           <button
-            onClick={onClose}
+            onClick={showStripeForm ? handleStripeCancel : onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -334,85 +466,118 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
           </button>
         </div>
 
-        {/* Gold Usage Info */}
-        <div className="p-6 bg-blue-50 border-b border-gray-200">
-          <div className="flex items-center space-x-2 mb-2">
-            <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-              <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-            </svg>
-            <span className="text-sm font-medium text-blue-900">How gold will be used</span>
+        {/* Stripe Payment Form */}
+        {showStripeForm && stripeClientSecret && (
+          <div className="p-6">
+            <StripeProvider options={{ clientSecret: stripeClientSecret }}>
+              <StripePaymentForm
+                clientSecret={stripeClientSecret}
+                amount={selectedPackageData?.price || 0}
+                currency="USD"
+                onSuccess={handleStripeSuccess}
+                onError={handleStripeError}
+                onCancel={handleStripeCancel}
+                metadata={{
+                  packageId: selectedPackage,
+                  goldAmount: String(selectedPackageData?.amount || 0),
+                  userId: address || 'anonymous'
+                }}
+              />
+            </StripeProvider>
           </div>
-          <p className="text-sm text-blue-800">
-            {awardCost} gold will automatically be used to give this award. {remainingGold} gold will go to your balance to use on future awards.
-          </p>
-        </div>
+        )}
 
-        {/* Gold Packages */}
-        <div className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Choose Gold Package</h3>
-          <div className="grid grid-cols-3 md:grid-cols-5 gap-4 mb-6">
-            {goldPackages.map((pkg) => {
-              const theme = packageThemes[pkg.id];
-              return (
-                <button
-                  key={pkg.id}
-                  onClick={() => handlePackageSelect(pkg.id)}
-                  className={`
-                    relative p-4 rounded-lg border-2 transition-all
-                    ${selectedPackage === pkg.id
-                      ? 'border-yellow-500 bg-yellow-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                    }
-                  `}
-                >
-                  {pkg.popular && (
-                    <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
-                      <span className="bg-yellow-500 text-white text-xs px-2 py-1 rounded-full">
-                        Most Popular
-                      </span>
+        {/* Regular Purchase Flow (hidden when Stripe form is shown) */}
+        {!showStripeForm && (
+          <>
+            {/* Gold Usage Info */}
+            <div className="p-6 bg-blue-50 border-b border-gray-200">
+              <div className="flex items-center space-x-2 mb-2">
+                <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                  <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                </svg>
+                <span className="text-sm font-medium text-blue-900">How gold will be used</span>
+              </div>
+              <p className="text-sm text-blue-800">
+                {awardCost} gold will automatically be used to give this award. {remainingGold} gold will go to your balance to use on future awards.
+              </p>
+            </div>
+
+            {/* Gold Packages */}
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Choose Gold Package</h3>
+              <div className="grid grid-cols-3 md:grid-cols-5 gap-4 mb-6">
+                {goldPackages.map((pkg) => {
+                  const theme = packageThemes[pkg.id];
+                  return (
+                    <button
+                      key={pkg.id}
+                      onClick={() => handlePackageSelect(pkg.id)}
+                      className={`
+                        relative p-4 rounded-lg border-2 transition-all
+                        ${selectedPackage === pkg.id
+                          ? 'border-yellow-500 bg-yellow-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                        }
+                      `}
+                    >
+                      {pkg.popular && (
+                        <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
+                          <span className="bg-yellow-500 text-white text-xs px-2 py-1 rounded-full">
+                            Most Popular
+                          </span>
+                        </div>
+                      )}
+                      <div className="text-center">
+                        <div className="text-2xl mb-1">{theme.icon}</div>
+                        <div className="text-xs font-medium text-gray-900 mb-1">{theme.name}</div>
+                        <div className="text-lg font-bold text-gray-900">{pkg.amount}</div>
+                        <div className="text-sm text-gray-600">gold</div>
+                        <div className="text-lg font-bold text-gray-900 mt-2">${pkg.price}</div>
+                        {pkg.bonus && (
+                          <div className="text-xs text-green-600 mt-1">+{pkg.bonus} bonus</div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Payment Method Selection */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Payment Method</h3>
+
+                {/* Wallet Connection Warning for USDC */}
+                {selectedPaymentMethod?.method.type === 'STABLECOIN_USDC' && !isConnected && (
+                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg mb-4">
+                    <p className="text-sm text-yellow-800">
+                      Please connect your wallet to pay with USDC
+                    </p>
+                  </div>
+                )}
+
+                {/* Simple Payment Method Selection */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* USDC with Network Selector */}
+                  <div className={`p-4 rounded-lg border-2 transition-all ${selectedPaymentMethod?.method.type === 'STABLECOIN_USDC'
+                    ? 'border-green-500 bg-green-50'
+                    : 'border-gray-200'
+                    }`}>
+                    <div className="flex items-center space-x-3 mb-3">
+                      <div className="p-2 bg-green-100 rounded-lg">
+                        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div className="text-left">
+                        <div className="flex items-center space-x-2">
+                          <h4 className="font-medium text-gray-900">USDC</h4>
+                          <span className="bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">Recommended</span>
+                        </div>
+                        <p className="text-sm text-gray-600">No platform fees, you pay gas</p>
+                      </div>
                     </div>
-                  )}
-                  <div className="text-center">
-                    <div className="text-2xl mb-1">{theme.icon}</div>
-                    <div className="text-xs font-medium text-gray-900 mb-1">{theme.name}</div>
-                    <div className="text-lg font-bold text-gray-900">{pkg.amount}</div>
-                    <div className="text-sm text-gray-600">gold</div>
-                    <div className="text-lg font-bold text-gray-900 mt-2">${pkg.price}</div>
-                    {pkg.bonus && (
-                      <div className="text-xs text-green-600 mt-1">+{pkg.bonus} bonus</div>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Payment Method Selection */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">Payment Method</h3>
-
-            {/* Simple Payment Method Selection */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* USDC with Network Selector */}
-              <div className={`p-4 rounded-lg border-2 transition-all ${selectedPaymentMethod?.method.type === 'STABLECOIN_USDC'
-                ? 'border-green-500 bg-green-50'
-                : 'border-gray-200'
-                }`}>
-                <div className="flex items-center space-x-3 mb-3">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div className="text-left">
-                    <div className="flex items-center space-x-2">
-                      <h4 className="font-medium text-gray-900">USDC</h4>
-                      <span className="bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">Recommended</span>
-                    </div>
-                    <p className="text-sm text-gray-600">No platform fees, you pay gas</p>
-                  </div>
-                </div>
                 <select
                   value={selectedPaymentMethod?.method.id || 'usdc-base'}
                   onChange={(e) => {
@@ -587,8 +752,23 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
                     </div>
                   </div>
                 </div>
+
+                {/* Network Switch Notice */}
+                {selectedPaymentMethod.method.type !== 'FIAT_STRIPE' &&
+                  selectedPaymentMethod.method.chainId &&
+                  currentChainId !== selectedPaymentMethod.method.chainId && (
+                    <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center space-x-2">
+                      <svg className="w-4 h-4 text-yellow-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-xs text-yellow-700">
+                        You're on {currentChainName}. Will switch to {getChainName(selectedPaymentMethod.method.chainId)} when you click purchase.
+                      </span>
+                    </div>
+                  )}
               </div>
-            )}          </div>
+            )}
+          </div>
         </div>
 
         {/* Footer */}
@@ -613,13 +793,13 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
             </button>
             <button
               onClick={handlePurchase}
-              disabled={!selectedPaymentMethod || isProcessing}
+              disabled={!selectedPaymentMethod || isProcessing || isSwitching || (selectedPaymentMethod?.method.type === 'STABLECOIN_USDC' && !isConnected)}
               className="flex-1 bg-blue-900 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isProcessing ? (
+              {isProcessing || isSwitching ? (
                 <div className="flex items-center justify-center space-x-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  <span>Processing...</span>
+                  <span>{isSwitching ? 'Switching Network...' : 'Processing...'}</span>
                 </div>
               ) : (
                 `Buy Gold and Give Award`
@@ -627,6 +807,8 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
             </button>
           </div>
         </div>
+          </>
+        )}
       </div>
     </div>
   );

@@ -375,7 +375,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
                 )}
               </button>
 
-              <ConnectButton />
+              <ConnectButton showBalance={false} chainStatus="none" />
 
               <button
                 onClick={() => {

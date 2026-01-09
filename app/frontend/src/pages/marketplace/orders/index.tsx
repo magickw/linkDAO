@@ -109,7 +109,31 @@ export default function OrdersPage() {
             if (!response.ok) throw new Error('Failed to fetch orders');
 
             const data = await response.json();
-            setOrders(data.orders || []);
+            // Sanitize order data to ensure all required properties exist
+            const sanitizedOrders = (data.orders || []).map((order: any) => ({
+                id: order.id || order._id || `order-${Date.now()}`,
+                orderNumber: order.orderNumber || order.order_number || order.id || 'N/A',
+                status: order.status || 'pending',
+                total: typeof order.total === 'number' ? order.total : parseFloat(order.total) || 0,
+                currency: order.currency || 'USD',
+                createdAt: order.createdAt || order.created_at || new Date(),
+                updatedAt: order.updatedAt || order.updated_at || new Date(),
+                items: Array.isArray(order.items) ? order.items.map((item: any) => ({
+                    id: item.id || item._id || `item-${Date.now()}`,
+                    productId: item.productId || item.product_id || '',
+                    productName: item.productName || item.product_name || item.name || 'Unknown Product',
+                    productImage: item.productImage || item.product_image || item.image || null,
+                    quantity: item.quantity || 1,
+                    price: typeof item.price === 'number' ? item.price : parseFloat(item.price) || 0,
+                    total: typeof item.total === 'number' ? item.total : parseFloat(item.total) || 0
+                })) : [],
+                shippingAddress: order.shippingAddress || order.shipping_address || null,
+                trackingNumber: order.trackingNumber || order.tracking_number || null,
+                trackingUrl: order.trackingUrl || order.tracking_url || null,
+                paymentMethod: order.paymentMethod || order.payment_method || null,
+                estimatedDelivery: order.estimatedDelivery || order.estimated_delivery || null
+            }));
+            setOrders(sanitizedOrders);
         } catch (error) {
             console.error('Error fetching orders:', error);
             toast.error('Failed to load orders');
@@ -155,9 +179,11 @@ export default function OrdersPage() {
 
     const filteredOrders = orders.filter(order => {
         const matchesStatus = filterStatus === 'all' || order.status === filterStatus;
+        const orderNumber = order.orderNumber || '';
+        const items = order.items || [];
         const matchesSearch = searchQuery === '' ||
-            order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            order.items.some(item => item.productName.toLowerCase().includes(searchQuery.toLowerCase()));
+            orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            items.some(item => (item.productName || '').toLowerCase().includes(searchQuery.toLowerCase()));
         return matchesStatus && matchesSearch;
     });
 
@@ -344,27 +370,27 @@ function OrderCard({ order, onViewDetails }: {
             {/* Header */}
             <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
-                    {getStatusIcon(order.status)}
+                    {getStatusIcon(order.status || 'pending')}
                     <div>
-                        <h3 className="font-semibold text-white">Order #{order.orderNumber}</h3>
+                        <h3 className="font-semibold text-white">Order #{order.orderNumber || 'N/A'}</h3>
                         <p className="text-sm text-white/60">
-                            {new Date(order.createdAt).toLocaleDateString('en-US', {
+                            {order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-US', {
                                 month: 'long',
                                 day: 'numeric',
                                 year: 'numeric'
-                            })}
+                            }) : 'Unknown date'}
                         </p>
                     </div>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(order.status)}`}>
-                    {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(order.status || 'pending')}`}>
+                    {(order.status || 'pending').charAt(0).toUpperCase() + (order.status || 'pending').slice(1)}
                 </span>
             </div>
 
             {/* Items Preview */}
             <div className="mb-4">
                 <div className="flex gap-2 mb-2">
-                    {order.items.slice(0, 3).map((item) => (
+                    {(order.items || []).slice(0, 3).map((item) => (
                         <div
                             key={item.id}
                             className="w-16 h-16 bg-white/10 rounded-lg overflow-hidden flex-shrink-0"
@@ -382,14 +408,14 @@ function OrderCard({ order, onViewDetails }: {
                             )}
                         </div>
                     ))}
-                    {order.items.length > 3 && (
+                    {(order.items || []).length > 3 && (
                         <div className="w-16 h-16 bg-white/10 rounded-lg flex items-center justify-center">
-                            <span className="text-sm text-white/60">+{order.items.length - 3}</span>
+                            <span className="text-sm text-white/60">+{(order.items || []).length - 3}</span>
                         </div>
                     )}
                 </div>
                 <p className="text-sm text-white/60">
-                    {order.items.length} item{order.items.length !== 1 ? 's' : ''}
+                    {(order.items || []).length} item{(order.items || []).length !== 1 ? 's' : ''}
                 </p>
             </div>
 
@@ -420,9 +446,9 @@ function OrderCard({ order, onViewDetails }: {
             <div className="flex justify-between items-center pt-4 border-t border-white/10">
                 <div>
                     <span className="text-2xl font-bold text-white">
-                        ${order.total.toFixed(2)}
+                        ${(order.total || 0).toFixed(2)}
                     </span>
-                    <span className="text-sm text-white/60 ml-2">{order.currency}</span>
+                    <span className="text-sm text-white/60 ml-2">{order.currency || 'USD'}</span>
                 </div>
                 <Button
                     variant="primary"
@@ -474,7 +500,7 @@ function OrderDetailsModal({ order, onClose }: {
                     <div className="mb-6">
                         <h3 className="text-lg font-semibold text-white mb-4">Order Items</h3>
                         <div className="space-y-3">
-                            {order.items.map((item) => (
+                            {(order.items || []).map((item) => (
                                 <div
                                     key={item.id}
                                     className="flex gap-4 p-4 bg-white/5 rounded-lg"
@@ -483,7 +509,7 @@ function OrderDetailsModal({ order, onClose }: {
                                         {item.productImage ? (
                                             <img
                                                 src={item.productImage}
-                                                alt={item.productName}
+                                                alt={item.productName || 'Product'}
                                                 className="w-full h-full object-cover"
                                             />
                                         ) : (
@@ -493,12 +519,12 @@ function OrderDetailsModal({ order, onClose }: {
                                         )}
                                     </div>
                                     <div className="flex-1">
-                                        <h4 className="font-medium text-white mb-1">{item.productName}</h4>
-                                        <p className="text-sm text-white/60">Quantity: {item.quantity}</p>
-                                        <p className="text-sm text-white/60">Price: ${item.price.toFixed(2)}</p>
+                                        <h4 className="font-medium text-white mb-1">{item.productName || 'Unknown Product'}</h4>
+                                        <p className="text-sm text-white/60">Quantity: {item.quantity || 1}</p>
+                                        <p className="text-sm text-white/60">Price: ${(item.price || 0).toFixed(2)}</p>
                                     </div>
                                     <div className="text-right">
-                                        <p className="font-semibold text-white">${item.total.toFixed(2)}</p>
+                                        <p className="font-semibold text-white">${(item.total || 0).toFixed(2)}</p>
                                     </div>
                                 </div>
                             ))}
@@ -573,19 +599,19 @@ function OrderDetailsModal({ order, onClose }: {
                         <div className="p-4 bg-white/5 rounded-lg space-y-2">
                             <div className="flex justify-between text-white/80">
                                 <span>Subtotal</span>
-                                <span>${(order.total * 0.9).toFixed(2)}</span>
+                                <span>${((order.total || 0) * 0.9).toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between text-white/80">
                                 <span>Shipping</span>
-                                <span>${(order.total * 0.05).toFixed(2)}</span>
+                                <span>${((order.total || 0) * 0.05).toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between text-white/80">
                                 <span>Tax</span>
-                                <span>${(order.total * 0.05).toFixed(2)}</span>
+                                <span>${((order.total || 0) * 0.05).toFixed(2)}</span>
                             </div>
                             <div className="pt-2 border-t border-white/10 flex justify-between text-xl font-bold text-white">
                                 <span>Total</span>
-                                <span>${order.total.toFixed(2)}</span>
+                                <span>${(order.total || 0).toFixed(2)}</span>
                             </div>
                         </div>
                     </div>

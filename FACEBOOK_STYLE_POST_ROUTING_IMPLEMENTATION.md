@@ -33,10 +33,10 @@ https://www.linkdao.io/p/abcD92Kx
 
 #### 2. Canonical URL (User-Scoped)
 ```
-https://www.linkdao.io/baofeng/posts/abcD92Kx
+https://www.linkdao.io/baofeng/status/abcD92Kx
 ```
 - **Purpose**: Canonical, user-scoped post URL
-- **Format**: `/:handle/posts/:shareId`
+- **Format**: `/:handle/status/:shareId`
 - **Behavior**: Displays post in full-page view
 - **Benefits**:
   - SEO context
@@ -84,24 +84,24 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Populate existing posts with share_ids
-UPDATE quick_posts 
+UPDATE statuses 
 SET share_id = generate_share_id()
 WHERE share_id IS NULL;
 
 -- Make share_id NOT NULL
-ALTER TABLE quick_posts 
+ALTER TABLE statuses 
 ALTER COLUMN share_id SET NOT NULL;
 ```
 
 #### Schema Update: `schema.ts`
 ```typescript
-export const quickPosts = pgTable("quick_posts", {
+export const statuses = pgTable("statuses", {
   id: uuid("id").defaultRandom().primaryKey(),
   shareId: varchar("share_id", { length: 16 }).notNull().unique(), // NEW
   authorId: uuid("author_id").notNull().references(() => users.id),
   // ... other fields
 }, (t) => ({
-  shareIdIdx: index("idx_quick_posts_share_id").on(t.shareId), // NEW
+  shareIdIdx: index("idx_statuses_share_id").on(t.shareId), // NEW
   // ... other indexes
 }));
 ```
@@ -137,8 +137,8 @@ router.get('/:shareId', async (req, res) => {
   // Look up post by share_id
   const post = await db
     .select()
-    .from(quickPosts)
-    .where(eq(quickPosts.shareId, shareId))
+    .from(statuses)
+    .where(eq(statuses.shareId, shareId))
     .limit(1);
     
   // Look up author's handle
@@ -161,19 +161,19 @@ router.get('/:shareId', async (req, res) => {
 });
 ```
 
-##### 2. Quick Post Routes: `routes/quickPostRoutes.ts`
+##### 2. Quick Post Routes: `routes/statusRoutes.ts`
 ```typescript
 // GET /api/quick-posts/share/:shareId
 router.get('/share/:shareId', 
-  safeBind(quickPostController.getQuickPostByShareId, quickPostController)
+  safeBind(statusController.getStatusByShareId, statusController)
 );
 ```
 
 #### Service Layer Updates
 
-##### QuickPostService: `services/quickPostService.ts`
+##### StatusService: `services/statusService.ts`
 ```typescript
-async createQuickPost(postData: QuickPostInput) {
+async createStatus(postData: StatusInput) {
   const insertData = {
     authorId: postData.authorId,
     contentCid: postData.contentCid,
@@ -181,16 +181,16 @@ async createQuickPost(postData: QuickPostInput) {
     // ... other fields
   };
   
-  const [newPost] = await db.insert(quickPosts).values(insertData).returning();
+  const [newPost] = await db.insert(statuss).values(insertData).returning();
   return newPost;
 }
 
-async getQuickPostByShareId(shareId: string) {
+async getStatusByShareId(shareId: string) {
   const posts = await db
     .select()
-    .from(quickPosts)
-    .leftJoin(users, eq(quickPosts.authorId, users.id))
-    .where(eq(quickPosts.shareId, shareId))
+    .from(statuses)
+    .leftJoin(users, eq(statuses.authorId, users.id))
+    .where(eq(statuses.shareId, shareId))
     .limit(1);
     
   return posts[0] || null;
@@ -249,7 +249,7 @@ const handleCopyShareLink = () => {
 ### Creating a Post
 ```typescript
 // Backend automatically generates share_id
-const post = await quickPostService.createQuickPost({
+const post = await statusService.createStatus({
   authorId: user.id,
   content: "Hello world!",
   // ... other fields
@@ -328,7 +328,7 @@ router.push(`/${handle}/posts/${shareId}`);
 
 Share IDs are automatically generated on creation:
 ```typescript
-// In QuickPostService.createQuickPost()
+// In StatusService.createStatus()
 shareId: generateShareId(8)
 ```
 
