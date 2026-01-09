@@ -114,14 +114,15 @@ export class OrderService {
       const dbOrder = await databaseService.getOrderById(orderId);
       if (!dbOrder) return null;
 
-      const [buyer, seller] = await Promise.all([
+      const [buyer, seller, product] = await Promise.all([
         userProfileService.getProfileById(dbOrder.buyerId || ''),
-        userProfileService.getProfileById(dbOrder.sellerId || '')
+        userProfileService.getProfileById(dbOrder.sellerId || ''),
+        dbOrder.listingId ? databaseService.getProductById(dbOrder.listingId) : null
       ]);
 
       if (!buyer || !seller) return null;
 
-      return this.formatOrder(dbOrder, buyer, seller, dbOrder.escrowId?.toString());
+      return this.formatOrder(dbOrder, buyer, seller, dbOrder.escrowId?.toString(), product);
     } catch (error) {
       safeLogger.error('Error getting order:', error);
       throw error;
@@ -140,13 +141,14 @@ export class OrderService {
       const orders: MarketplaceOrder[] = [];
 
       for (const dbOrder of dbOrders) {
-        const [buyer, seller] = await Promise.all([
+        const [buyer, seller, product] = await Promise.all([
           userProfileService.getProfileById(dbOrder.buyerId || ''),
-          userProfileService.getProfileById(dbOrder.sellerId || '')
+          userProfileService.getProfileById(dbOrder.sellerId || ''),
+          dbOrder.listingId ? databaseService.getProductById(dbOrder.listingId) : null
         ]);
 
         if (buyer && seller) {
-          orders.push(this.formatOrder(dbOrder, buyer, seller, dbOrder.escrowId?.toString()));
+          orders.push(this.formatOrder(dbOrder, buyer, seller, dbOrder.escrowId?.toString(), product));
         }
       }
 
@@ -587,9 +589,35 @@ export class OrderService {
     return user;
   }
 
-  private formatOrder(dbOrder: any, buyer: any, seller: any, escrowId?: string): MarketplaceOrder {
+  private formatOrder(dbOrder: any, buyer: any, seller: any, escrowId?: string, product?: any): MarketplaceOrder {
+    // Parse product images if stored as JSON string
+    let productImage = '';
+    if (product?.images) {
+      try {
+        const images = typeof product.images === 'string' ? JSON.parse(product.images) : product.images;
+        productImage = Array.isArray(images) && images.length > 0 ? images[0] : '';
+      } catch (e) {
+        productImage = '';
+      }
+    }
+
+    // Calculate order total from amount
+    const orderTotal = parseFloat(dbOrder.amount) || 0;
+
+    // Build items array from product
+    const items = product ? [{
+      id: product.id?.toString() || dbOrder.listingId?.toString() || '',
+      productId: product.id?.toString() || dbOrder.listingId?.toString() || '',
+      productName: product.title || 'Unknown Product',
+      productImage: productImage,
+      quantity: dbOrder.quantity || 1,
+      price: orderTotal,
+      total: orderTotal
+    }] : [];
+
     return {
       id: dbOrder.id.toString(),
+      orderNumber: dbOrder.id.toString(),
       listingId: dbOrder.listingId?.toString() || '',
       buyerId: buyer.id?.toString(),
       sellerId: seller.id?.toString(),
@@ -597,10 +625,23 @@ export class OrderService {
       sellerWalletAddress: seller.walletAddress,
       escrowId,
       amount: dbOrder.amount,
+      total: orderTotal,
       paymentToken: dbOrder.paymentToken || '',
+      currency: dbOrder.paymentToken || 'USD',
       status: (dbOrder.status?.toUpperCase() as OrderStatus) || OrderStatus.CREATED,
       createdAt: dbOrder.createdAt?.toISOString() || new Date().toISOString(),
-      shippingAddress: this.formatShippingAddress(dbOrder)
+      shippingAddress: this.formatShippingAddress(dbOrder),
+      items,
+      product: product ? {
+        id: product.id?.toString() || '',
+        title: product.title || 'Unknown Product',
+        description: product.description || '',
+        image: productImage,
+        category: product.mainCategory || product.categoryId || '',
+        quantity: dbOrder.quantity || 1,
+        unitPrice: orderTotal,
+        totalPrice: orderTotal
+      } : undefined
     };
   }
 

@@ -20,7 +20,6 @@ const Analytics = dynamic(() => import('@vercel/analytics/react').then(mod => ({
   ssr: false
 });
 import NotificationSystem from '@/components/NotificationSystem';
-import { FloatingChatWidget } from '@/components/Messaging'; // Changed from MessagingWidget to FloatingChatWidget
 import { NotificationBell } from '@/components/NotificationBell';
 const NavigationSidebar = dynamic(() => import('@/components/NavigationSidebar'), {
   ssr: false
@@ -558,10 +557,6 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
         )}
 
         {/* {isConnected && <NotificationSystem />} */}
-
-        {/* Wallet-to-Wallet Messaging Widget - Available when connected */}
-        {isConnected && <FloatingChatWidget />} {/* Changed from MessagingWidget to FloatingChatWidget */}
-
 
       </div>
     </>

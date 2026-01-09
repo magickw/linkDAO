@@ -3,7 +3,6 @@ import { useRouter } from 'next/router';
 import { useAccount } from 'wagmi';
 import { useNavigation } from '@/context/NavigationContext';
 import { LoadingSpinner } from '@/components/animations/LoadingSkeletons';
-import { MessagingWidget } from '@/components/Messaging';
 import TrendingSidebar from '@/components/TrendingSidebar';
 import MobileNavigation from '@/components/MobileNavigation';
 
@@ -116,9 +115,6 @@ export default function DashboardLayout({
         </div>
 
         {/* Notification System placeholder */}
-
-        {/* Messaging Widget */}
-        <MessagingWidget />
 
         {/* Analytics placeholder */}
       </div>

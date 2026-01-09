@@ -41,25 +41,65 @@ export class SellerWorkflowService {
             if (!user) throw new Error('Seller not found');
 
             const orders = await this.orderService.getOrdersByUser(user.walletAddress);
-            // We need to filter for seller role
-            const sellerOrders = orders.filter(o => o.sellerWalletAddress === sellerId);
+            // We need to filter for seller role - compare wallet addresses
+            const sellerOrders = orders.filter(o =>
+                o.sellerWalletAddress?.toLowerCase() === user.walletAddress.toLowerCase()
+            );
+
+            // Transform orders to match SellerOrder frontend interface
+            const transformOrder = (order: any) => ({
+                id: order.id,
+                items: (order.items || []).map((item: any) => ({
+                    listingId: item.productId || item.id,
+                    title: item.productName || item.title || 'Unknown Product',
+                    quantity: item.quantity || 1,
+                    price: item.price || item.total || 0,
+                    image: item.productImage || item.image
+                })),
+                buyerAddress: order.buyerWalletAddress,
+                buyerName: order.buyerName,
+                totalAmount: parseFloat(order.amount) || order.total || 0,
+                currency: order.currency || order.paymentToken || 'USDC',
+                status: (order.status || 'pending').toLowerCase(),
+                escrowStatus: order.escrowId ? 'locked' : 'none',
+                paymentMethod: order.paymentToken ? 'crypto' : 'fiat',
+                shippingAddress: order.shippingAddress ? {
+                    name: order.shippingAddress.name || '',
+                    address: order.shippingAddress.street || order.shippingAddress.address || '',
+                    city: order.shippingAddress.city || '',
+                    state: order.shippingAddress.state || '',
+                    zipCode: order.shippingAddress.postalCode || order.shippingAddress.zipCode || '',
+                    country: order.shippingAddress.country || ''
+                } : undefined,
+                trackingNumber: order.trackingNumber,
+                estimatedDelivery: order.estimatedDelivery,
+                notes: order.notes,
+                createdAt: order.createdAt,
+                updatedAt: order.updatedAt
+            });
+
+            const transformedOrders = sellerOrders.map(transformOrder);
 
             const groupedOrders = {
-                new: sellerOrders.filter(o => o.status === OrderStatus.PAID),
-                processing: sellerOrders.filter(o => o.status === OrderStatus.PROCESSING),
-                readyToShip: sellerOrders.filter(o => o.status === OrderStatus.PROCESSING && o.trackingNumber),
-                shipped: sellerOrders.filter(o => o.status === OrderStatus.SHIPPED),
-                completed: sellerOrders.filter(o => o.status === OrderStatus.DELIVERED || o.status === OrderStatus.COMPLETED),
-                cancelled: sellerOrders.filter(o => o.status === OrderStatus.CANCELLED || o.status === OrderStatus.REFUNDED),
+                new: transformedOrders.filter(o => o.status === OrderStatus.PAID.toLowerCase()),
+                processing: transformedOrders.filter(o => o.status === OrderStatus.PROCESSING.toLowerCase() && !o.trackingNumber),
+                readyToShip: transformedOrders.filter(o => o.status === OrderStatus.PROCESSING.toLowerCase() && o.trackingNumber),
+                shipped: transformedOrders.filter(o => o.status === OrderStatus.SHIPPED.toLowerCase()),
+                completed: transformedOrders.filter(o => o.status === OrderStatus.DELIVERED.toLowerCase() || o.status === OrderStatus.COMPLETED.toLowerCase()),
+                cancelled: transformedOrders.filter(o => o.status === OrderStatus.CANCELLED.toLowerCase() || o.status === OrderStatus.REFUNDED.toLowerCase()),
             };
+
+            // Calculate total revenue from completed orders
+            const totalRevenue = [...groupedOrders.completed, ...groupedOrders.shipped]
+                .reduce((sum, order) => sum + (order.totalAmount || 0), 0);
 
             const stats: SellerDashboardStats = {
                 pendingCount: groupedOrders.new.length,
-                processingCount: groupedOrders.processing.length,
+                processingCount: groupedOrders.processing.length + groupedOrders.readyToShip.length,
                 readyToShipCount: groupedOrders.readyToShip.length,
                 shippedCount: groupedOrders.shipped.length,
                 completedCount: groupedOrders.completed.length,
-                revenue: '0' // Calculate revenue
+                revenue: totalRevenue.toFixed(2)
             };
 
             return {

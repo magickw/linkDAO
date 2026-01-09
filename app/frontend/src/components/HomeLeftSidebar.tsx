@@ -5,6 +5,7 @@ import { useAccount } from 'wagmi';
 import { useProfile } from '@/hooks/useProfile';
 import { EnhancedUserCard } from '@/components/Navigation';
 import { useNavigation } from '@/context/NavigationContext';
+import { MessageCircle } from 'lucide-react';
 
 interface HomeLeftSidebarProps {
     className?: string;
@@ -111,6 +112,17 @@ export default function HomeLeftSidebar({ className = '' }: HomeLeftSidebarProps
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                                     </svg>
                                     <span className="font-medium">Bookmarks</span>
+                                </Link>
+                                <Link
+                                    href="/chat"
+                                    className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
+                                        router.pathname === '/chat'
+                                            ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50'
+                                    }`}
+                                >
+                                    <MessageCircle className="h-5 w-5" />
+                                    <span className="font-medium">Chat</span>
                                 </Link>
                                 <Link
                                     href="/profile"

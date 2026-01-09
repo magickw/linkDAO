@@ -126,6 +126,16 @@ export interface MonthlyTrend {
   volume: string;
 }
 
+export interface OrderItem {
+  id: string;
+  productId: string;
+  productName: string;
+  productImage?: string;
+  quantity: number;
+  price: number;
+  total: number;
+}
+
 export interface MarketplaceOrder {
   id: string;
   listingId: string;
@@ -168,6 +178,11 @@ export interface MarketplaceOrder {
     totalPrice: number;
   };
   disputeId?: string;
+
+  // Frontend-compatible fields
+  orderNumber?: string;
+  total?: number;
+  items?: OrderItem[];
 }
 
 // Blockchain Event Models
