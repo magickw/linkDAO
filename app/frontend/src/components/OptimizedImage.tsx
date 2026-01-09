@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { getProxiedIPFSUrl } from '@/utils/ipfsProxy';
+import { ENV_CONFIG } from '@/config/environment';
 
 interface OptimizedImageProps {
   src: string;
@@ -83,7 +84,7 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   // List of IPFS gateways to try in order (prioritize more reliable gateways)
   // List of IPFS gateways to try (backend proxy first, then direct fallbacks)
   const ipfsGateways = [
-    '/api/ipfs/', // Backend proxy
+    `${ENV_CONFIG.BACKEND_URL}/api/ipfs/`, // Backend proxy with absolute URL
     'https://ipfs.io/ipfs/',
     'https://cloudflare-ipfs.com/ipfs/',
     'https://dweb.link/ipfs/',

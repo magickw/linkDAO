@@ -21,6 +21,7 @@ const Analytics = dynamic(() => import('@vercel/analytics/react').then(mod => ({
 });
 import NotificationSystem from '@/components/NotificationSystem';
 import { FloatingChatWidget } from '@/components/Messaging'; // Changed from MessagingWidget to FloatingChatWidget
+import { NotificationBell } from '@/components/NotificationBell';
 const NavigationSidebar = dynamic(() => import('@/components/NavigationSidebar'), {
   ssr: false
 });
@@ -324,6 +325,9 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
 
 
               <div className="flex items-center space-x-2">
+                {/* Notification Bell - only show when connected */}
+                {isConnected && <NotificationBell />}
+
                 {/* Dark mode toggle */}
                 <button
                   onClick={() => setDarkMode(!darkMode)}
@@ -351,6 +355,9 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
 
             {/* Mobile Navigation */}
             <div className="md:hidden flex items-center space-x-2">
+              {/* Notification Bell - only show when connected */}
+              {isConnected && <NotificationBell />}
+
               {/* Dark mode toggle */}
               <button
                 onClick={() => setDarkMode(!darkMode)}

@@ -25,6 +25,7 @@ import { formatPrice, formatDualPrice } from '../../../utils/priceFormatter';
 import { validateProductID, validateSellerID, normalizeID } from '../../../utils/idValidator';
 import { getFallbackImage } from '../../../utils/imageUtils';
 import { RefreshCw } from 'lucide-react';
+import { wishlistService } from '../../../services/wishlistService';
 
 import AuctionTimer from '../AuctionTimer';
 
@@ -278,6 +279,20 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const normalizedProductId = normalizeID(product.id, 'product');
   const normalizedSellerId = normalizeID(product.seller.id, 'seller');
 
+  // Check if product is already in wishlist on mount
+  useEffect(() => {
+    const inWishlist = wishlistService.isInWishlist(normalizedProductId);
+    setIsWishlisted(inWishlist);
+
+    // Subscribe to wishlist changes
+    const unsubscribe = wishlistService.subscribe((state) => {
+      const isInList = state.items.some(item => item.id === normalizedProductId);
+      setIsWishlisted(isInList);
+    });
+
+    return unsubscribe;
+  }, [normalizedProductId]);
+
   // Use centralized price data management
   const { priceData } = usePrice(normalizedProductId);
 
@@ -436,10 +451,48 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     }
   };
 
-  const handleWishlistToggle = (e: React.MouseEvent) => {
+  const handleWishlistToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsWishlisted(!isWishlisted);
-    onAddToWishlist?.(normalizedProductId);
+
+    try {
+      if (isWishlisted) {
+        // Remove from wishlist
+        await wishlistService.removeItem(normalizedProductId);
+        addToast(`Removed "${product.title}" from wishlist`, 'info');
+      } else {
+        // Add to wishlist
+        const wishlistItem = {
+          id: normalizedProductId,
+          title: product.title,
+          description: product.description,
+          image: getProductImage(product),
+          price: {
+            crypto: product.price.amount,
+            cryptoSymbol: product.price.currency,
+            fiat: product.price.usdEquivalent || '0',
+            fiatSymbol: 'USD'
+          },
+          seller: {
+            id: normalizedSellerId,
+            name: product.seller.name,
+            avatar: product.seller.avatar
+          },
+          category: product.category,
+          isDigital: product.category === 'digital' || product.isNFT || false,
+          isNFT: product.isNFT || false,
+          inventory: product.inventory || 1
+        };
+
+        await wishlistService.addItem(wishlistItem);
+        addToast(`Added "${product.title}" to wishlist! ❤️`, 'success');
+      }
+
+      // Call optional callback
+      onAddToWishlist?.(normalizedProductId);
+    } catch (error) {
+      console.error('Error updating wishlist:', error);
+      addToast('Failed to update wishlist. Please try again.', 'error');
+    }
   };
 
   const cardVariants: Variants = {

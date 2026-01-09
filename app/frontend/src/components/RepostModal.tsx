@@ -8,6 +8,7 @@ import { getProxiedIPFSUrl } from '@/utils/ipfsProxy';
 import { EmojiPicker } from './Pickers/EmojiPicker';
 import { GifPicker } from './Pickers/GifPicker';
 import { LocationPicker } from './Pickers/LocationPicker';
+import { ENV_CONFIG } from '@/config/environment';
 
 interface Location {
     name: string;
@@ -156,7 +157,7 @@ export default function RepostModal({
             const uploadPromises = selectedImages.map(async (file) => {
                 const formData = new FormData();
                 formData.append('file', file);
-                const response = await fetch('/api/ipfs/upload', {
+                const response = await fetch(`${ENV_CONFIG.BACKEND_URL}/api/ipfs/upload`, {
                     method: 'POST',
                     body: formData
                 });

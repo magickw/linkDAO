@@ -5,6 +5,7 @@ import { ContentTypeTabs } from './EnhancedPostComposer/ContentTypeTabs';
 import { PollCreator } from './EnhancedPostComposer/PollCreator';
 import { ProposalCreator } from './EnhancedPostComposer/ProposalCreator';
 import { ContentType, PollData, ProposalData } from '@/types/enhancedPost';
+import { ENV_CONFIG } from '@/config/environment';
 
 interface PostCreationModalProps {
   isOpen: boolean;
@@ -29,7 +30,7 @@ export default function PostCreationModal({ isOpen, onClose, onSubmit, isLoading
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch('/api/ipfs/upload', {
+    const response = await fetch(`${ENV_CONFIG.BACKEND_URL}/api/ipfs/upload`, {
       method: 'POST',
       body: formData,
     });

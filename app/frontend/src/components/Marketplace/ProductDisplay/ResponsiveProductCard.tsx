@@ -3,9 +3,9 @@
  * Provides optimized layouts for mobile, tablet, and desktop views
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
+import {
   DualPricing } from '../../../design-system/components/DualPricing';
 import { StablecoinPricing } from '../../../design-system/components/StablecoinPricing';
 import { TrustIndicators } from '../../../design-system/components/TrustIndicators';
@@ -13,18 +13,20 @@ import { GlassPanel } from '../../../design-system/components/GlassPanel';
 import { Button } from '../../../design-system/components/Button';
 import { designTokens } from '../../../design-system/tokens';
 import { useResponsive } from '../../../design-system/components/ResponsiveContainer';
-import { 
-  AnimatedProductBadge, 
-  AnimatedSellerBadge, 
-  AnimatedEngagementMetrics, 
+import {
+  AnimatedProductBadge,
+  AnimatedSellerBadge,
+  AnimatedEngagementMetrics,
   AnimatedTrustIndicator,
   productCardAnimations
 } from '../../../components/VisualPolish/MarketplaceAnimations';
-import { 
-  Heart, ShoppingCart, Eye, 
+import {
+  Heart, ShoppingCart, Eye,
   Star, CheckCircle, Shield, Vote,
   Truck, Award, Wrench
 } from 'lucide-react';
+import { wishlistService } from '../../../services/wishlistService';
+import { useToast } from '../../../context/ToastContext';
 
 interface Product {
   id: string;
@@ -266,6 +268,21 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
 }) => {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const { isMobile, isTablet, isDesktop } = useResponsive();
+  const { addToast } = useToast();
+
+  // Check if product is already in wishlist on mount
+  useEffect(() => {
+    const inWishlist = wishlistService.isInWishlist(product.id);
+    setIsWishlisted(inWishlist);
+
+    // Subscribe to wishlist changes
+    const unsubscribe = wishlistService.subscribe((state) => {
+      const isInList = state.items.some(item => item.id === product.id);
+      setIsWishlisted(isInList);
+    });
+
+    return unsubscribe;
+  }, [product.id]);
 
   const handleProductClick = () => {
     onProductClick?.(product.id);
@@ -280,10 +297,48 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
     onAddToCart?.(product.id);
   };
 
-  const handleWishlistToggle = (e: React.MouseEvent) => {
+  const handleWishlistToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsWishlisted(!isWishlisted);
-    onAddToWishlist?.(product.id);
+
+    try {
+      if (isWishlisted) {
+        // Remove from wishlist
+        await wishlistService.removeItem(product.id);
+        addToast(`Removed "${product.title}" from wishlist`, 'info');
+      } else {
+        // Add to wishlist
+        const wishlistItem = {
+          id: product.id,
+          title: product.title,
+          description: product.description,
+          image: product.images && product.images.length > 0 ? product.images[0] : '',
+          price: {
+            crypto: product.price.amount,
+            cryptoSymbol: product.price.currency,
+            fiat: product.price.usdEquivalent || '0',
+            fiatSymbol: 'USD'
+          },
+          seller: {
+            id: product.seller.id,
+            name: product.seller.name,
+            avatar: product.seller.avatar
+          },
+          category: product.category,
+          isDigital: product.category === 'digital' || product.isNFT || false,
+          isNFT: product.isNFT || false,
+          inventory: product.inventory || 1
+        };
+
+        await wishlistService.addItem(wishlistItem);
+        addToast(`Added "${product.title}" to wishlist! ❤️`, 'success');
+      }
+
+      // Call optional callback
+      onAddToWishlist?.(product.id);
+    } catch (error) {
+      console.error('Error updating wishlist:', error);
+      addToast('Failed to update wishlist. Please try again.', 'error');
+    }
   };
 
   const handleQuickView = (e: React.MouseEvent) => {

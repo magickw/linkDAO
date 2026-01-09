@@ -201,9 +201,13 @@ const EnhancedPostCard = React.memo(({
         return;
       }
       await PostService.repostPost(postId, address, message, media, replyRestriction);
-      setIsRepostedByMe(true);
+      // Only set isRepostedByMe for simple reposts (no message)
+      // Quote reposts (with message) create a new status and shouldn't change the original post's repost button state
+      if (!message) {
+        setIsRepostedByMe(true);
+      }
       setRepostCount(prev => prev + 1);
-      addToast('Post reposted successfully!', 'success');
+      addToast(message ? 'Quote post created successfully!' : 'Post reposted successfully!', 'success');
       // In a real app, you might want to refresh the feed
     } catch (error) {
       console.error('Error reposting:', error);

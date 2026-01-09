@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useWeb3 } from '@/context/Web3Context';
 import { useToast } from '@/context/ToastContext';
 import TokenReactionSystem from './TokenReactionSystem/TokenReactionSystem';
@@ -7,6 +7,7 @@ import RepostModal from './RepostModal';
 import CommunityTipButton from './CommunityTipButton';
 import AwardSelectionModal from './TokenReactionSystem/AwardSelectionModal';
 import { communityWeb3Service } from '@/services/communityWeb3Service';
+import { bookmarkService } from '@/services/bookmarkService';
 
 interface PostInteractionBarProps {
   post: {
@@ -41,7 +42,9 @@ interface PostInteractionBarProps {
   onAward?: (postId: string) => void;
   onUpvote?: (postId: string) => Promise<void>;
   onDownvote?: (postId: string) => Promise<void>;
+  onBookmarkChange?: (postId: string, isBookmarked: boolean) => void;
   userVote?: 'upvote' | 'downvote' | null;
+  isBookmarked?: boolean;
   className?: string;
 }
 
@@ -57,11 +60,22 @@ export default function PostInteractionBar({
   onAward,
   onUpvote,
   onDownvote,
+  onBookmarkChange,
   userVote = null,
+  isBookmarked: initialIsBookmarked = false,
   className = ''
 }: PostInteractionBarProps) {
   const { address, isConnected } = useWeb3();
   const { addToast } = useToast();
+
+  // Bookmark state
+  const [isBookmarked, setIsBookmarked] = useState(initialIsBookmarked);
+  const [isBookmarkLoading, setIsBookmarkLoading] = useState(false);
+
+  // Sync with prop changes
+  useEffect(() => {
+    setIsBookmarked(initialIsBookmarked);
+  }, [initialIsBookmarked]);
 
   // State for repost menu
   const [showRepostMenu, setShowRepostMenu] = useState(false);
@@ -125,15 +139,36 @@ export default function PostInteractionBar({
     }
   };
 
-  // Handle save post
-  const handleSavePost = () => {
+  // Handle save post (bookmark toggle)
+  const handleSavePost = async () => {
     if (!isConnected) {
       addToast('Please connect your wallet to save posts', 'error');
       return;
     }
 
-    // TODO: Implement save post functionality
-    addToast('Post saved to your collection!', 'success');
+    if (isBookmarkLoading) return;
+
+    setIsBookmarkLoading(true);
+    try {
+      const result = await bookmarkService.toggleBookmark(post.id);
+      setIsBookmarked(result.bookmarked);
+
+      if (result.bookmarked) {
+        addToast('Post saved to your bookmarks!', 'success');
+      } else {
+        addToast('Post removed from your bookmarks', 'info');
+      }
+
+      // Notify parent component if callback provided
+      if (onBookmarkChange) {
+        onBookmarkChange(post.id, result.bookmarked);
+      }
+    } catch (error: any) {
+      console.error('Error toggling bookmark:', error);
+      addToast(error.message || 'Failed to save post. Please try again.', 'error');
+    } finally {
+      setIsBookmarkLoading(false);
+    }
   };
 
   // Handle quick tip
@@ -405,12 +440,23 @@ export default function PostInteractionBar({
           {/* Save Button */}
           <button
             onClick={handleSavePost}
-            className="flex items-center space-x-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-medium transition-colors duration-200 hover:scale-105"
+            disabled={isBookmarkLoading}
+            className={`flex items-center space-x-2 text-sm font-medium transition-colors duration-200 hover:scale-105 ${
+              isBookmarked
+                ? 'text-primary-600 dark:text-primary-400'
+                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+            } ${isBookmarkLoading ? 'opacity-50 cursor-wait' : ''}`}
+            title={isBookmarked ? 'Remove from bookmarks' : 'Save to bookmarks'}
           >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg
+              className="h-5 w-5"
+              fill={isBookmarked ? 'currentColor' : 'none'}
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
             </svg>
-            <span className="hidden sm:inline">Save</span>
+            <span className="hidden sm:inline">{isBookmarked ? 'Saved' : 'Save'}</span>
           </button>
         </div>
 

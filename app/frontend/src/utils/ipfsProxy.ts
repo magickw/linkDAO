@@ -15,7 +15,14 @@ export function getProxiedIPFSUrl(ipfsUrl: string): string {
     // Check if URL is already a proxied URL (backend proxy or any gateway)
     try {
         const url = new URL(ipfsUrl, window.location.href);
-        // Check if it contains /api/ipfs/ or any IPFS gateway
+
+        // If it's a relative /api/ipfs/ URL, convert to absolute backend URL
+        if (url.pathname.includes('/api/ipfs/') && !ipfsUrl.startsWith('http')) {
+            const hash = url.pathname.split('/api/ipfs/')[1];
+            return `${BACKEND_URL}/api/ipfs/${hash}`;
+        }
+
+        // Check if it's already an absolute URL to our backend or any IPFS gateway
         if (
             url.pathname.includes('/api/ipfs/') ||
             url.pathname.includes('/ipfs/') ||
@@ -24,7 +31,18 @@ export function getProxiedIPFSUrl(ipfsUrl: string): string {
             url.hostname.includes('pinata.cloud') ||
             url.hostname.includes('dweb.link')
         ) {
-            return ipfsUrl; // Return as-is, already proxied
+            // If it's an absolute URL with /api/ipfs/, return as-is
+            if (ipfsUrl.startsWith('http') && url.pathname.includes('/api/ipfs/')) {
+                return ipfsUrl;
+            }
+            // For gateway URLs, extract hash and use our backend proxy
+            if (url.pathname.includes('/ipfs/')) {
+                const hash = url.pathname.split('/ipfs/')[1];
+                if (hash) {
+                    return `${BACKEND_URL}/api/ipfs/${hash}`;
+                }
+            }
+            return ipfsUrl;
         }
     } catch {
         // If URL parsing fails, continue with hash extraction
