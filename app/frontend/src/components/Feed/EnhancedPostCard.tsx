@@ -11,6 +11,7 @@ import OptimizedImage from '../OptimizedImage';
 import { ModerationWarning, ReportContentButton } from '../Moderation';
 import { IPFSContentService } from '../../services/ipfsContentService';
 import { getDisplayName, getUserAddress } from '../../utils/userDisplay';
+import { linkifyHtmlUrls } from '../../utils/contentParser';
 import DOMPurify from 'dompurify';
 import VideoEmbed from '../VideoEmbed';
 import { extractVideoUrls, VideoInfo } from '../../utils/videoUtils';
@@ -480,7 +481,7 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
           <div
             className="prose prose-sm dark:prose-invert max-w-none text-gray-900 dark:text-gray-100"
             dangerouslySetInnerHTML={{
-              __html: DOMPurify.sanitize(content, {
+              __html: DOMPurify.sanitize(linkifyHtmlUrls(content), {
                 ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'b', 'i', 'u', 'a', 'img', 'ul', 'ol', 'li', 'blockquote', 'code', 'pre', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'span', 'div'],
                 ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'target', 'rel', 'style'],
                 ALLOW_DATA_ATTR: false,

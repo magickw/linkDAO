@@ -9,14 +9,14 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
+import Layout from '@/components/Layout';
 import {
   MessageCircle, X, Send, Plus, Search, MoreVertical,
   User, Hash, Users, ChevronDown, ChevronRight,
   Settings, ArrowLeft, Loader2, AlertCircle, Wifi, WifiOff,
-  Wallet, Lock, Globe
+  Wallet, Lock, Globe, UserPlus, BookUser
 } from 'lucide-react';
 import { useAccount } from 'wagmi';
 import { useChatHistory } from '@/hooks/useChatHistory';
@@ -82,6 +82,7 @@ export default function ChatPage() {
 
   // UI State
   const [activeView, setActiveView] = useState<'list' | 'chat'>('list');
+  const [sidebarTab, setSidebarTab] = useState<'messages' | 'contacts'>('messages');
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
@@ -90,6 +91,11 @@ export default function ChatPage() {
   const [pendingContact, setPendingContact] = useState<Contact | null>(null);
   const [showRightSidebar, setShowRightSidebar] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  // Contact modals state
+  const [showAddContactModal, setShowAddContactModal] = useState(false);
+  const [showEditContactModal, setShowEditContactModal] = useState(false);
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
 
   // Channel categories state (matching screenshot design)
   const [channelCategories, setChannelCategories] = useState<ChannelCategory[]>([
@@ -453,6 +459,36 @@ export default function ChatPage() {
     );
   };
 
+  // Contact handlers
+  const handleContactMessage = (contact: Contact) => {
+    // Find existing conversation with this contact or start a new one
+    const existingConversation = hookConversations?.find(conv =>
+      conv.participants.some(p => p.toLowerCase() === contact.walletAddress.toLowerCase())
+    );
+
+    if (existingConversation) {
+      handleConversationSelect(existingConversation);
+    } else {
+      setNewRecipientAddress(contact.walletAddress);
+      startNewConversation(contact.walletAddress);
+    }
+    setSidebarTab('messages');
+  };
+
+  const handleContactEdit = (contact: Contact) => {
+    setEditingContact(contact);
+    setShowEditContactModal(true);
+  };
+
+  const handleAddContactClose = () => {
+    setShowAddContactModal(false);
+  };
+
+  const handleEditContactClose = () => {
+    setShowEditContactModal(false);
+    setEditingContact(null);
+  };
+
   // Sort conversations by last activity
   const sortedConversations = React.useMemo(() => {
     if (!hookConversations) return [] as Conversation[];
@@ -472,79 +508,71 @@ export default function ChatPage() {
   // Show loading state
   if (authLoading) {
     return (
-      <div className="h-screen bg-gray-900 flex items-center justify-center">
-        <Head>
-          <title>Chat | LinkDAO</title>
-        </Head>
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-          <p className="text-gray-400">Loading chat...</p>
+      <Layout title="Chat - LinkDAO" fullWidth={true} hideFooter={true}>
+        <div className="h-[calc(100vh-80px)] bg-gray-900 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+            <p className="text-gray-400">Loading chat...</p>
+          </div>
         </div>
-      </div>
+      </Layout>
     );
   }
 
   // Show connect wallet prompt
   if (!isConnected || !address) {
     return (
-      <div className="h-screen bg-gray-900 flex items-center justify-center">
-        <Head>
-          <title>Chat | LinkDAO</title>
-        </Head>
-        <div className="max-w-md w-full mx-4 bg-gray-800 rounded-2xl shadow-xl p-8 text-center border border-gray-700">
-          <div className="w-16 h-16 bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Wallet className="h-8 w-8 text-blue-400" />
+      <Layout title="Chat - LinkDAO" fullWidth={true} hideFooter={true}>
+        <div className="h-[calc(100vh-80px)] bg-gray-900 flex items-center justify-center">
+          <div className="max-w-md w-full mx-4 bg-gray-800 rounded-2xl shadow-xl p-8 text-center border border-gray-700">
+            <div className="w-16 h-16 bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Wallet className="h-8 w-8 text-blue-400" />
+            </div>
+            <h1 className="text-2xl font-bold text-white mb-3">Connect Your Wallet</h1>
+            <p className="text-gray-400 mb-6">
+              Connect your wallet to access LinkDAO Chat and start messaging with the community.
+            </p>
+            <button
+              onClick={() => router.push('/')}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors"
+            >
+              <Wallet className="h-5 w-5" />
+              Go to Home to Connect
+            </button>
           </div>
-          <h1 className="text-2xl font-bold text-white mb-3">Connect Your Wallet</h1>
-          <p className="text-gray-400 mb-6">
-            Connect your wallet to access LinkDAO Chat and start messaging with the community.
-          </p>
-          <button
-            onClick={() => router.push('/')}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors"
-          >
-            <Wallet className="h-5 w-5" />
-            Go to Home to Connect
-          </button>
         </div>
-      </div>
+      </Layout>
     );
   }
 
   // Show auth prompt
   if (!isAuthenticated) {
     return (
-      <div className="h-screen bg-gray-900 flex items-center justify-center">
-        <Head>
-          <title>Chat | LinkDAO</title>
-        </Head>
-        <div className="max-w-md w-full mx-4 bg-gray-800 rounded-2xl shadow-xl p-8 text-center border border-gray-700">
-          <div className="w-16 h-16 bg-yellow-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-            <MessageCircle className="h-8 w-8 text-yellow-400" />
+      <Layout title="Chat - LinkDAO" fullWidth={true} hideFooter={true}>
+        <div className="h-[calc(100vh-80px)] bg-gray-900 flex items-center justify-center">
+          <div className="max-w-md w-full mx-4 bg-gray-800 rounded-2xl shadow-xl p-8 text-center border border-gray-700">
+            <div className="w-16 h-16 bg-yellow-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+              <MessageCircle className="h-8 w-8 text-yellow-400" />
+            </div>
+            <h1 className="text-2xl font-bold text-white mb-3">Authentication Required</h1>
+            <p className="text-gray-400 mb-6">
+              Please authenticate your wallet to access the chat.
+            </p>
+            <button
+              onClick={() => router.push('/')}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors"
+            >
+              Go to Home to Authenticate
+            </button>
           </div>
-          <h1 className="text-2xl font-bold text-white mb-3">Authentication Required</h1>
-          <p className="text-gray-400 mb-6">
-            Please authenticate your wallet to access the chat.
-          </p>
-          <button
-            onClick={() => router.push('/')}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors"
-          >
-            Go to Home to Authenticate
-          </button>
         </div>
-      </div>
+      </Layout>
     );
   }
 
   return (
-    <>
-      <Head>
-        <title>{pageTitle}</title>
-        <meta name="description" content="LinkDAO Chat - Connect and message with the community" />
-      </Head>
-
-      <div className="h-screen bg-gray-900 flex">
+    <Layout title={pageTitle} fullWidth={true} hideFooter={true}>
+      <div className="h-[calc(100vh-80px)] bg-gray-900 flex">
         {/* Left Sidebar - Channels/Conversations */}
         <div className="w-64 bg-gray-800 border-r border-gray-700 flex flex-col">
           {/* Header */}
@@ -569,18 +597,47 @@ export default function ChatPage() {
             <div className="relative">
               <input
                 type="text"
-                placeholder="Search conversations..."
+                placeholder={sidebarTab === 'messages' ? "Search conversations..." : "Search contacts..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full px-3 py-2 text-sm bg-gray-700 text-white rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <Search className="absolute right-3 top-2.5 w-4 h-4 text-gray-400" />
             </div>
+
+            {/* Tab Switcher */}
+            <div className="flex mt-3 bg-gray-700 rounded-lg p-1">
+              <button
+                onClick={() => setSidebarTab('messages')}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  sidebarTab === 'messages'
+                    ? 'bg-gray-600 text-white'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <MessageCircle className="w-3.5 h-3.5" />
+                Messages
+              </button>
+              <button
+                onClick={() => setSidebarTab('contacts')}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  sidebarTab === 'contacts'
+                    ? 'bg-gray-600 text-white'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <BookUser className="w-3.5 h-3.5" />
+                Contacts
+              </button>
+            </div>
           </div>
 
-          {/* Channel Categories */}
+          {/* Sidebar Content */}
           <div className="flex-1 overflow-y-auto">
-            {channelCategories.map((category) => (
+            {sidebarTab === 'messages' ? (
+              /* Channel Categories / Messages */
+              <>
+                {channelCategories.map((category) => (
               <div key={category.id} className="py-2">
                 {/* Category Header */}
                 <button
@@ -690,6 +747,30 @@ export default function ChatPage() {
                 )}
               </div>
             ))}
+              </>
+            ) : (
+              /* Contacts View */
+              <div className="p-2">
+                <div className="flex items-center justify-between px-2 mb-3">
+                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    Your Contacts
+                  </span>
+                  <button
+                    onClick={() => setShowAddContactModal(true)}
+                    className="p-1 hover:bg-gray-700 rounded text-gray-400 hover:text-white"
+                    title="Add Contact"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                  </button>
+                </div>
+                <ContactList
+                  className="space-y-1"
+                  flat={true}
+                  onContactMessage={handleContactMessage}
+                  onContactEdit={handleContactEdit}
+                />
+              </div>
+            )}
           </div>
 
           {/* User Profile / Settings */}
@@ -855,6 +936,23 @@ export default function ChatPage() {
           </motion.div>
         )}
       </AnimatePresence>
-    </>
+
+      {/* Add Contact Modal */}
+      {showAddContactModal && (
+        <AddContactModal
+          isOpen={showAddContactModal}
+          onClose={handleAddContactClose}
+        />
+      )}
+
+      {/* Edit Contact Modal */}
+      {showEditContactModal && editingContact && (
+        <EditContactModal
+          isOpen={showEditContactModal}
+          onClose={handleEditContactClose}
+          contact={editingContact}
+        />
+      )}
+    </Layout>
   );
 }

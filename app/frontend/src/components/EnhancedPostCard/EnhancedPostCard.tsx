@@ -25,6 +25,7 @@ import { extractVideoUrls, VideoInfo } from '@/utils/videoUtils';
 import ReactionPurchaseSystem from '../Community/ReactionPurchaseSystem';
 import QuotedPost from './QuotedPost';
 import { getAvatarUrl } from '@/utils/userDisplay';
+import { linkifyText } from '@/utils/contentParser';
 
 
 // Helper to map string badges to XPBadge objects
@@ -682,7 +683,7 @@ const EnhancedPostCard = React.memo(({
                       className="text-gray-700 dark:text-gray-300 text-base leading-relaxed"
                       id={`post-content-${post.id}`}
                     >
-                      {contentDisplay}
+                      {linkifyText(contentDisplay)}
                     </p>
 
                     {!expanded && post.content.length > 280 && (

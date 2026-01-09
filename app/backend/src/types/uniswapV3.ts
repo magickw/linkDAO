@@ -54,10 +54,10 @@ export interface LiquidityInfo {
   sqrtPriceX96: string;
   tick: number;
   fee: number;
-  token0: string;
-  token1: string;
-  reserve0: string;
-  reserve1: string;
+  token0: TokenInfo;
+  token1: TokenInfo;
+  reserve0?: string;
+  reserve1?: string;
 }
 
 export interface PriceQuote {

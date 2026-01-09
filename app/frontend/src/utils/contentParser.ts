@@ -116,6 +116,48 @@ export const markdownComponents: Components = {
 };
 
 /**
+ * URL regex pattern for linkifying URLs in HTML content
+ * Matches URLs that are NOT already inside anchor tags
+ */
+const URL_PATTERN = /(?<!href=["'])(https?:\/\/[^\s<>"']+)/gi;
+
+/**
+ * Linkify URLs in HTML string content (convert plain URLs to anchor tags)
+ * @param htmlContent - HTML string that may contain plain URLs
+ * @returns HTML string with URLs converted to anchor tags
+ */
+export const linkifyHtmlUrls = (htmlContent: string): string => {
+  if (!htmlContent) return htmlContent;
+
+  // First, extract all existing anchor tags and their URLs to avoid double-linking
+  const existingLinks: string[] = [];
+  const anchorRegex = /<a[^>]*href=["']([^"']+)["'][^>]*>.*?<\/a>/gi;
+  let anchorMatch;
+  while ((anchorMatch = anchorRegex.exec(htmlContent)) !== null) {
+    existingLinks.push(anchorMatch[1]);
+  }
+
+  // Replace URLs that are not already in anchor tags
+  return htmlContent.replace(URL_PATTERN, (url) => {
+    // Skip if this URL is already in an existing anchor tag
+    if (existingLinks.some(existingUrl => existingUrl.includes(url) || url.includes(existingUrl))) {
+      return url;
+    }
+
+    // Clean up trailing punctuation that's likely not part of the URL
+    let cleanUrl = url;
+    let trailingPunctuation = '';
+    const punctuationMatch = url.match(/[.,;:!?\)\]]+$/);
+    if (punctuationMatch) {
+      trailingPunctuation = punctuationMatch[0];
+      cleanUrl = url.substring(0, url.length - trailingPunctuation.length);
+    }
+
+    return `<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline break-all">${cleanUrl}</a>${trailingPunctuation}`;
+  });
+};
+
+/**
  * Process content based on type (HTML, markdown, or plain text)
  * @param content - The content to process
  * @param contentType - The type of content ('html', 'markdown', or 'text')
@@ -126,17 +168,21 @@ export const processContent = (content: string, contentType: string = 'text'): R
 
   switch (contentType) {
     case 'html':
-      const sanitizedHtml = sanitizeHtml(content, sanitizeConfig);
+      // Linkify URLs before sanitizing and parsing HTML
+      const linkedHtml = linkifyHtmlUrls(content);
+      const sanitizedHtml = sanitizeHtml(linkedHtml, sanitizeConfig);
       return HTMLReactParser(sanitizedHtml);
     case 'markdown':
       return React.createElement(ReactMarkdown, { remarkPlugins: [remarkGfm], components: markdownComponents }, content);
     default:
       // Auto-detect if content contains HTML tags
       if (/<[^>]+>/.test(content)) {
-        const sanitizedHtml = sanitizeHtml(content, sanitizeConfig);
+        // Linkify URLs before sanitizing and parsing HTML
+        const linkedContent = linkifyHtmlUrls(content);
+        const sanitizedHtml = sanitizeHtml(linkedContent, sanitizeConfig);
         return HTMLReactParser(sanitizedHtml);
       }
-      // Treat as plain text with markdown support
+      // Treat as plain text with markdown support (ReactMarkdown auto-links URLs with remarkGfm)
       return React.createElement(ReactMarkdown, { remarkPlugins: [remarkGfm], components: markdownComponents }, content);
   }
 };
@@ -326,4 +372,85 @@ export const formatTimestamp = (timestamp: Date | string): string => {
   if (minutes < 60) return `${minutes}m ago`;
   if (hours < 24) return `${hours}h ago`;
   return `${days}d ago`;
+};
+
+/**
+ * URL regex pattern for detecting URLs in text
+ * Matches http://, https://, and www. URLs
+ */
+const URL_REGEX = /(?:https?:\/\/|www\.)[^\s<>"\)\]]+/gi;
+
+/**
+ * Linkify text content by converting URLs to clickable links
+ * @param text - The text content to linkify
+ * @param className - Optional CSS class for the links
+ * @returns React elements with clickable links
+ */
+export const linkifyText = (text: string, className?: string): React.ReactNode => {
+  if (!text) return null;
+
+  const linkClassName = className || 'text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline break-all';
+
+  // Find all URLs in the text
+  const matches = text.match(URL_REGEX);
+
+  if (!matches || matches.length === 0) {
+    return text;
+  }
+
+  // Split text by URLs and create React elements
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let key = 0;
+
+  // Use a fresh regex for exec to track lastIndex properly
+  const urlRegex = /(?:https?:\/\/|www\.)[^\s<>"\)\]]+/gi;
+  let match;
+
+  while ((match = urlRegex.exec(text)) !== null) {
+    // Add text before the URL
+    if (match.index > lastIndex) {
+      parts.push(text.substring(lastIndex, match.index));
+    }
+
+    // Get the URL and clean up any trailing punctuation
+    let url = match[0];
+    let trailingPunctuation = '';
+
+    // Remove common trailing punctuation that's likely not part of the URL
+    const punctuationMatch = url.match(/[.,;:!?\)\]]+$/);
+    if (punctuationMatch) {
+      trailingPunctuation = punctuationMatch[0];
+      url = url.substring(0, url.length - trailingPunctuation.length);
+    }
+
+    // Ensure URL has protocol
+    const href = url.startsWith('www.') ? `https://${url}` : url;
+
+    // Create the link element
+    parts.push(
+      React.createElement('a', {
+        key: `link-${key++}`,
+        href,
+        target: '_blank',
+        rel: 'noopener noreferrer',
+        className: linkClassName,
+        onClick: (e: React.MouseEvent) => e.stopPropagation()
+      }, url)
+    );
+
+    // Add back trailing punctuation
+    if (trailingPunctuation) {
+      parts.push(trailingPunctuation);
+    }
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Add remaining text after last URL
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+
+  return React.createElement(React.Fragment, null, ...parts);
 };
