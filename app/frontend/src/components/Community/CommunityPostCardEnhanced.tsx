@@ -153,6 +153,15 @@ function CommunityPostCardEnhanced({
     return new Date(date).toLocaleDateString();
   };
 
+  const [upvoteCount, setUpvoteCount] = useState((post as any).upvotes || 0);
+  const [downvoteCount, setDownvoteCount] = useState((post as any).downvotes || 0);
+
+  // Sync state with props if post changes
+  useEffect(() => {
+    setUpvoteCount((post as any).upvotes || 0);
+    setDownvoteCount((post as any).downvotes || 0);
+  }, [post]);
+
   // Handle voting with staking
   const handleVote = useCallback((postId: string, voteType: 'upvote' | 'downvote', stakeAmount?: string) => {
     if (!hasWallet) {
@@ -171,9 +180,38 @@ function CommunityPostCardEnhanced({
     }
 
     // Toggle vote if clicking the same type
-    const finalVoteType = userVote === voteType ? 'remove' : voteType;
+    const isRemoving = userVote === voteType;
+    const finalVoteType = isRemoving ? 'remove' : voteType;
 
-    // Optimistically update UI
+    // Optimistically update counts
+    if (isRemoving) {
+      // Removing existing vote
+      if (voteType === 'upvote') {
+        setUpvoteCount(prev => Math.max(0, prev - 1));
+      } else {
+        setDownvoteCount(prev => Math.max(0, prev - 1));
+      }
+    } else {
+      // Adding new vote or switching
+      if (userVote === 'upvote') {
+        // Was upvote, now switching to downvote
+        setUpvoteCount(prev => Math.max(0, prev - 1));
+        setDownvoteCount(prev => prev + 1);
+      } else if (userVote === 'downvote') {
+        // Was downvote, now switching to upvote
+        setDownvoteCount(prev => Math.max(0, prev - 1));
+        setUpvoteCount(prev => prev + 1);
+      } else {
+        // New vote from null state
+        if (voteType === 'upvote') {
+          setUpvoteCount(prev => prev + 1);
+        } else {
+          setDownvoteCount(prev => prev + 1);
+        }
+      }
+    }
+
+    // Optimistically update status
     setUserVote(finalVoteType === 'remove' ? null : voteType);
 
     // Call parent handler with stake amount
@@ -937,11 +975,12 @@ function CommunityPostCardEnhanced({
                     commentCount: comments.length,
                     shareCount: post.shares || 0,
                     viewCount: post.views || post.viewCount || 0,
-                    upvotes: (post as any).upvotes || 0,
-                    downvotes: (post as any).downvotes || 0
+                    upvotes: upvoteCount,
+                    downvotes: downvoteCount
                   }}
                   postType="community"
                   userMembership={userMembership}
+                  userVote={userVote}
                   onComment={toggleComments}
                   onReaction={onReaction}
                   onTip={onTip}

@@ -41,6 +41,7 @@ interface PostInteractionBarProps {
   onAward?: (postId: string) => void;
   onUpvote?: (postId: string) => Promise<void>;
   onDownvote?: (postId: string) => Promise<void>;
+  userVote?: 'upvote' | 'downvote' | null;
   className?: string;
 }
 
@@ -56,6 +57,7 @@ export default function PostInteractionBar({
   onAward,
   onUpvote,
   onDownvote,
+  userVote = null,
   className = ''
 }: PostInteractionBarProps) {
   const { address, isConnected } = useWeb3();
@@ -214,9 +216,12 @@ export default function PostInteractionBar({
             <button
               onClick={handleUpvoteClick}
               disabled={!onUpvote}
-              className={`p-1.5 rounded-md transition-colors ${onUpvote
-                ? 'text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'
-                : 'text-gray-300 cursor-not-allowed'}`}
+              className={`p-1.5 rounded-md transition-colors ${userVote === 'upvote'
+                  ? 'text-green-600 bg-green-50 dark:bg-green-900/20'
+                  : onUpvote
+                    ? 'text-gray-300 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'
+                    : 'text-gray-200 cursor-not-allowed'
+                }`}
               aria-label="Upvote"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -224,19 +229,22 @@ export default function PostInteractionBar({
               </svg>
             </button>
             <div className="flex flex-col items-center min-w-[1.5rem] px-1">
-              <span className="text-xs font-medium text-green-600">
+              <span className={`text-xs font-medium ${userVote === 'upvote' ? 'text-green-600' : 'text-gray-500'}`}>
                 {post.upvotes || 0}
               </span>
-              <span className="text-xs font-medium text-red-600">
+              <span className={`text-xs font-medium ${userVote === 'downvote' ? 'text-red-600' : 'text-gray-500'}`}>
                 {post.downvotes || 0}
               </span>
             </div>
             <button
               onClick={handleDownvoteClick}
               disabled={!onDownvote}
-              className={`p-1.5 rounded-md transition-colors ${onDownvote
-                ? 'text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20'
-                : 'text-gray-300 cursor-not-allowed'}`}
+              className={`p-1.5 rounded-md transition-colors ${userVote === 'downvote'
+                  ? 'text-red-600 bg-red-50 dark:bg-red-900/20'
+                  : onDownvote
+                    ? 'text-gray-300 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20'
+                    : 'text-gray-200 cursor-not-allowed'
+                }`}
               aria-label="Downvote"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -108,6 +108,21 @@ export class StatusController {
     }
   }
 
+  async viewStatus(req: AuthenticatedRequest, res: Response): Promise<Response> {
+    try {
+      const { id } = req.params;
+      const userId = req.user?.id;
+      const ipAddress = req.ip || req.socket.remoteAddress;
+
+      const views = await this.statusService.incrementView(id, userId, ipAddress);
+
+      return res.json(apiResponse.success({ views }, 'View recorded successfully'));
+    } catch (error: any) {
+      console.error('Error incrementing status view:', error);
+      return res.status(500).json(apiResponse.error(error.message || 'Failed to record view', 500));
+    }
+  }
+
   async updateStatus(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { id } = req.params;

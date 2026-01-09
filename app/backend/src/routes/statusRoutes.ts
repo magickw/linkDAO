@@ -112,6 +112,7 @@ router.get('/csrf-token', safeBind(statusController.getCsrfToken, statusControll
 router.get('/author/:authorId', safeBind(statusController.getStatusesByAuthor, statusController));
 router.get('/tag/:tag', safeBind(statusController.getStatusesByTag, statusController));
 router.get('/share/:shareId', safeBind(statusController.getStatusByShareId, statusController));
+router.post('/:id/view', safeBind(statusController.viewStatus, statusController));
 router.get('/:id', safeBind(statusController.getStatus, statusController));
 router.put('/:id', authMiddleware, csrfProtection, safeBind(statusController.updateStatus, statusController));
 router.delete('/:id', authMiddleware, csrfProtection, safeBind(statusController.deleteStatus, statusController));

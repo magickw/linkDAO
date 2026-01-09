@@ -164,6 +164,26 @@ export class PostService {
     }
   }
 
+  static async markAsViewed(postId: string, isStatus: boolean = false): Promise<number> {
+    try {
+      const endpoint = isStatus
+        ? `${BACKEND_API_BASE_URL}/api/statuses/${postId}/view`
+        : `${BACKEND_API_BASE_URL}/api/posts/${postId}/view`;
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: await enhancedAuthService.getAuthHeaders()
+      });
+
+      const result = await this.handleResponse(response, 'Failed to mark as viewed');
+      return result.views || 0;
+    } catch (error) {
+      console.error('Error marking post as viewed:', error);
+      // Return 0 instead of throwing to prevent UI disruption for analytics calls
+      return 0;
+    }
+  }
+
   static async sendTip(
     postId: string,
     amount: number,

@@ -46,6 +46,31 @@ interface StatusTipInput {
 }
 
 export class StatusService {
+  async incrementView(statusId: string, userId?: string, ipAddress?: string) {
+    try {
+      // 1. Record the view in the status_views table for analytics/deduplication
+      await db.insert(schema.statusViews).values({
+        statusId,
+        userId: userId || null,
+        ipAddress: ipAddress || null
+      });
+
+      // 2. Increment the counter on the status itself
+      const [updatedStatus] = await db
+        .update(statuses)
+        .set({
+          views: sql`${statuses.views} + 1`
+        })
+        .where(eq(statuses.id, statusId))
+        .returning({ views: statuses.views });
+
+      return updatedStatus?.views || 0;
+    } catch (error) {
+      safeLogger.error('Error incrementing status view:', error);
+      return 0;
+    }
+  }
+
   async createStatus(postData: StatusInput) {
     try {
       // Build insert object dynamically to handle missing columns
@@ -174,6 +199,7 @@ export class StatusService {
           riskScore: statuses.riskScore,
           upvotes: statuses.upvotes,
           downvotes: statuses.downvotes,
+          views: statuses.views,
           createdAt: statuses.createdAt,
           updatedAt: statuses.updatedAt,
           walletAddress: users.walletAddress,

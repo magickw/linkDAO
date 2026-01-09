@@ -250,6 +250,34 @@ export class PostService {
     }
   }
 
+
+  async incrementView(postId: string, userId?: string, ipAddress?: string) {
+    try {
+      // 1. Record the view in the views table for analytics/deduplication
+      await db.insert(schema.views).values({
+        postId,
+        userId: userId || null,
+        ipAddress: ipAddress || null,
+        userAgent: null // Could add this if available
+      });
+
+      // 2. Increment the counter on the post itself
+      const [updatedPost] = await db
+        .update(schema.posts)
+        .set({
+          views: sql`${schema.posts.views} + 1`
+        })
+        .where(eq(schema.posts.id, postId))
+        .returning({ views: schema.posts.views });
+
+      return updatedPost?.views || 0;
+    } catch (error) {
+      safeLogger.error('Error incrementing post view:', error);
+      // Don't throw, just return current count or 0 to not break UI
+      return 0;
+    }
+  }
+
   async getPostById(id: string): Promise<Post | undefined> {
     // Convert string ID to number
     const postId = id;

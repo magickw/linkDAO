@@ -25,9 +25,46 @@ export interface OrderTrackingStatus {
 
 class OrderService {
   private apiBaseUrl: string;
+  private authToken: string | null = null;
 
   constructor() {
     this.apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    this.checkAuthStatus();
+  }
+
+  // Check authentication status from localStorage or other sources
+  private checkAuthStatus(): void {
+    if (typeof window !== 'undefined') {
+      let token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || localStorage.getItem('user_session') || sessionStorage.getItem('auth_token') || sessionStorage.getItem('token') || sessionStorage.getItem('authToken');
+
+      // Also check for linkdao_session_data (wallet authentication)
+      if (!token) {
+        try {
+          const sessionDataStr = localStorage.getItem('linkdao_session_data');
+          if (sessionDataStr) {
+            const sessionData = JSON.parse(sessionDataStr);
+            token = sessionData.token || sessionData.accessToken || '';
+          }
+        } catch (error) {
+          console.warn('Failed to parse linkdao_session_data, trying fallback token retrieval');
+        }
+      }
+
+      this.authToken = token;
+    }
+  }
+
+  // Get authentication headers
+  private getAuthHeaders(): HeadersInit {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+
+    if (this.authToken) {
+      headers['Authorization'] = `Bearer ${this.authToken}`;
+    }
+
+    return headers;
   }
 
   /**
@@ -35,11 +72,12 @@ class OrderService {
    */
   async getOrdersByUser(userAddress: string): Promise<MarketplaceOrder[]> {
     try {
+      // Refresh auth token
+      this.checkAuthStatus();
+
       const response = await fetch(`${this.apiBaseUrl}/api/orders/user/${userAddress}`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
         credentials: 'include'
       });
 
@@ -67,11 +105,12 @@ class OrderService {
    */
   async getOrderById(orderId: string): Promise<MarketplaceOrder | null> {
     try {
+      // Refresh auth token
+      this.checkAuthStatus();
+
       const response = await fetch(`${this.apiBaseUrl}/api/order-management/${orderId}`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
         credentials: 'include'
       });
 
@@ -99,12 +138,13 @@ class OrderService {
    */
   async getOrderTrackingStatus(orderId: string): Promise<OrderTrackingStatus> {
     try {
+      // Refresh auth token
+      this.checkAuthStatus();
+
       // Get order details
       const orderResponse = await fetch(`${this.apiBaseUrl}/api/orders/${orderId}`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
         credentials: 'include'
       });
 
@@ -118,9 +158,7 @@ class OrderService {
       // Get order history/timeline
       const historyResponse = await fetch(`${this.apiBaseUrl}/api/orders/${orderId}/history`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
         credentials: 'include'
       });
 
@@ -182,11 +220,12 @@ class OrderService {
    */
   async confirmDelivery(orderId: string, deliveryInfo: any): Promise<boolean> {
     try {
+      // Refresh auth token
+      this.checkAuthStatus();
+
       const response = await fetch(`${this.apiBaseUrl}/api/orders/${orderId}/delivery/confirm`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify({ deliveryInfo })
       });
@@ -211,13 +250,14 @@ class OrderService {
    */
   async releaseFunds(orderId: string): Promise<boolean> {
     try {
+      // Refresh auth token
+      this.checkAuthStatus();
+
       // This would typically be a specific endpoint, but for now we'll simulate
       // by updating the order status to completed
       const response = await fetch(`${this.apiBaseUrl}/api/orders/${orderId}/status`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify({ status: 'COMPLETED' })
       });
@@ -242,11 +282,12 @@ class OrderService {
    */
   async openDispute(orderId: string, reason: string): Promise<boolean> {
     try {
+      // Refresh auth token
+      this.checkAuthStatus();
+
       const response = await fetch(`${this.apiBaseUrl}/api/orders/${orderId}/dispute`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify({ 
           initiatorAddress: '', // This would be filled with the user's address
@@ -306,11 +347,12 @@ class OrderService {
    */
   async addTrackingInfo(orderId: string, trackingNumber: string, carrier: string): Promise<boolean> {
     try {
+      // Refresh auth token
+      this.checkAuthStatus();
+
       const response = await fetch(`${this.apiBaseUrl}/api/orders/${orderId}/shipping`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify({ 
           trackingNumber,
@@ -406,11 +448,12 @@ class OrderService {
    */
   async getOrderAnalytics(userAddress: string, timeframe: 'week' | 'month' | 'year' = 'month'): Promise<any> {
     try {
+      // Refresh auth token
+      this.checkAuthStatus();
+
       const response = await fetch(`${this.apiBaseUrl}/api/orders/analytics/${userAddress}?timeframe=${timeframe}`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
         credentials: 'include'
       });
 

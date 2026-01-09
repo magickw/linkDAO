@@ -178,6 +178,7 @@ export const posts = pgTable("posts", {
   pinnedBy: text("pinned_by"),
   upvotes: integer("upvotes").default(0),
   downvotes: integer("downvotes").default(0),
+  views: integer("views").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (t) => ({
@@ -217,6 +218,7 @@ export const statuses = pgTable("statuses", {
   riskScore: numeric("risk_score", { precision: 5, scale: 4 }).default('0'),
   upvotes: integer("upvotes").default(0),
   downvotes: integer("downvotes").default(0),
+  views: integer("views").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (t) => ({

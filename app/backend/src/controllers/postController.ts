@@ -137,6 +137,28 @@ export class PostController {
     }
   }
 
+  async viewPost(req: Request, res: Response): Promise<Response> {
+    try {
+      const { id } = req.params;
+      // Optional: get userId from auth middleware if available, or IP from request
+      const userId = (req as any).user?.id;
+      const ipAddress = req.ip || req.socket.remoteAddress;
+
+      const views = await this.postService.incrementView(id, userId, ipAddress);
+
+      return res.json({
+        success: true,
+        data: { views }
+      });
+    } catch (error: any) {
+      console.error('Error incrementing post view:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to record view'
+      });
+    }
+  }
+
   async getFeed(req: Request, res: Response): Promise<Response> {
     try {
       const { forUser } = req.query;

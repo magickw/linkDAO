@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useWeb3 } from '@/context/Web3Context';
@@ -247,6 +247,20 @@ const EnhancedPostCard = React.memo(({
     }
   }, [post.id, post.title, post.content, addToast]);
 
+  const [upvoteCount, setUpvoteCount] = useState((post as any).upvotes || 0);
+  const [downvoteCount, setDownvoteCount] = useState((post as any).downvotes || 0);
+  const [userVote, setUserVote] = useState<'upvote' | 'downvote' | null>((post as any).userVote || (post as any).voteStatus || null);
+
+  // Sync state with props if post changes
+  useEffect(() => {
+    setUpvoteCount((post as any).upvotes || 0);
+    setDownvoteCount((post as any).downvotes || 0);
+    // Only sync userVote if explicitly provided, to avoid overwriting local optimistic state with null
+    if ((post as any).userVote !== undefined) {
+      setUserVote((post as any).userVote);
+    }
+  }, [post]);
+
   const handleReport = useCallback(() => {
     // TODO: Implement report modal
     addToast('Report functionality coming soon', 'info');
@@ -261,18 +275,53 @@ const EnhancedPostCard = React.memo(({
   const handleUpvote = useCallback(async () => {
     if (!onUpvote) return;
 
+    // Optimistic update
+    const isRemoving = userVote === 'upvote';
+
+    // Update counts
+    if (isRemoving) {
+      setUpvoteCount(p => Math.max(0, p - 1));
+      setUserVote(null);
+    } else {
+      if (userVote === 'downvote') {
+        setDownvoteCount(p => Math.max(0, p - 1));
+        setUpvoteCount(p => p + 1);
+      } else {
+        setUpvoteCount(p => p + 1);
+      }
+      setUserVote('upvote');
+    }
+
     try {
       await onUpvote(post.id);
       analyticsService.trackUserEvent('post_upvote', { postId: post.id });
     } catch (error) {
       console.error('Error upvoting post:', error);
       addToast('Failed to upvote post', 'error');
+      // Revert would go here
     }
-  }, [onUpvote, post.id, addToast]);
+  }, [onUpvote, post.id, addToast, userVote]);
 
   // Handle downvote
   const handleDownvote = useCallback(async () => {
     if (!onDownvote) return;
+
+    // Optimistic update
+    const isRemoving = userVote === 'downvote';
+
+    // Update counts
+    if (isRemoving) {
+      setDownvoteCount(p => Math.max(0, p - 1));
+      setUserVote(null);
+    } else {
+      if (userVote === 'upvote') {
+        setUpvoteCount(p => Math.max(0, p - 1));
+        setDownvoteCount(p => p + 1);
+      } else {
+        setDownvoteCount(p => p + 1);
+      }
+      setUserVote('downvote');
+    }
 
     try {
       await onDownvote(post.id);
@@ -281,7 +330,7 @@ const EnhancedPostCard = React.memo(({
       console.error('Error downvoting post:', error);
       addToast('Failed to downvote post', 'error');
     }
-  }, [onDownvote, post.id, addToast]);
+  }, [onDownvote, post.id, addToast, userVote]);
 
   // Calculate trending level if not provided - memoized
   const trendingLevel = useMemo(() => {
@@ -792,10 +841,11 @@ const EnhancedPostCard = React.memo(({
                     authorProfile: post.authorProfile,
                     media: post.media,
                     viewCount: post.views,
-                    upvotes: post.upvotes,
-                    downvotes: post.downvotes
+                    upvotes: upvoteCount,
+                    downvotes: downvoteCount
                   }}
                   postType={post.communityId ? 'community' : 'feed'}
+                  userVote={userVote}
                   onComment={() => {
                     setExpanded(true);
                     if (onExpand) onExpand();

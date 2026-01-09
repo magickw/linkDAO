@@ -16,6 +16,7 @@ import VideoEmbed from '../VideoEmbed';
 import { extractVideoUrls, VideoInfo } from '../../utils/videoUtils';
 import { communityWeb3Service } from '../../services/communityWeb3Service';
 import { FeedService } from '../../services/feedService';
+import { PostService } from '../../services/postService';
 
 interface EnhancedPostCardProps {
   post: any;
@@ -56,6 +57,40 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
   const [ipfsGatewayIndex, setIpfsGatewayIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewCount, setViewCount] = useState<number>(post.views || 0);
+  const hasRecordedView = React.useRef(false);
+
+  // Track view on mount
+  useEffect(() => {
+    if (!hasRecordedView.current && post.id) {
+      hasRecordedView.current = true;
+      // Optimistic update (optional, but good for immediate feedback if valid)
+      // For views, we usually wait for server or just increment locally if we want strictly 
+      // but here we will fetch the updated count from the server response
+
+      const isStatus = post.isStatus || false;
+
+      // Delay slightly to prioritize critical rendering
+      const timer = setTimeout(() => {
+        PostService.markAsViewed(post.id, isStatus)
+          .then(newCount => {
+            if (newCount > viewCount) {
+              setViewCount(newCount);
+            } else {
+              // If server returns 0 or error, just increment locally for this session
+              setViewCount(prev => prev + 1);
+            }
+          })
+          .catch(err => {
+            console.warn('Failed to record view:', err);
+            // Best effort: increment locally
+            setViewCount(prev => prev + 1);
+          });
+      }, 2000); // 2 second delay to ensure user actually saw it
+
+      return () => clearTimeout(timer);
+    }
+  }, [post.id, post.isStatus]);
 
   // Extract video URLs from content for embedding
   const videoEmbeds = useMemo(() => {
@@ -106,12 +141,12 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
         // If post has contentCid that looks like a valid IPFS CID, fetch from IPFS
         if (post.contentCid && (post.contentCid.startsWith('Qm') || post.contentCid.startsWith('bafy'))) {
           console.log('Fetching content from IPFS for CID:', post.contentCid);
-          
+
           // Add timeout to prevent hanging
           const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => reject(new Error('IPFS fetch timeout')), 3000);
           });
-          
+
           const contentText = await Promise.race([
             IPFSContentService.getContentFromIPFS(post.contentCid),
             timeoutPromise
@@ -267,18 +302,19 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
         return;
       }
 
-      // Use feed service tipping for feed posts
-      const txHash = await FeedService.tipPost(post.id, {
-        amount: amount,
-        tokenType: token || 'LDAO',
-        message: message || ''
-      });
+      // Use post service tipping
+      const txHash = await PostService.sendTip(
+        post.id,
+        parseFloat(amount),
+        token || 'LDAO',
+        message || ''
+      );
 
       if (onTip) {
         // Let the parent component handle the success message
         await onTip(post.id, amount, token, message);
         // Don't show success message here since the parent component will handle it
-        
+
         // Invalidate feed cache to reflect updated tip counts
         await invalidateFeedCache();
 
@@ -614,8 +650,13 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
           </button>
         </div>
 
-        <div>
-          <span>{post.views} views</span>
+        <div className="flex items-center space-x-1 text-gray-500 text-xs">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+          </svg>
+          <span>{viewCount} views</span>
+          <span className="mx-1">•</span>
           <span>Score: {post.engagementScore}</span>
         </div>
       </div>
