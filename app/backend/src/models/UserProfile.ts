@@ -5,6 +5,7 @@ export interface UserProfile {
   displayName: string;   // Essential field with fallback
   ens?: string;
   avatarCid?: string;
+  bannerCid?: string;    // Banner image CID or URL (public)
   bioCid?: string;
   email?: string;
   socialLinks?: any[]; // Social links are public
@@ -53,6 +54,7 @@ export interface CreateUserProfileInput {
   displayName?: string;
   ens?: string;
   avatarCid?: string;
+  bannerCid?: string;    // Banner image CID or URL (public)
   bioCid?: string;
   socialLinks?: any[]; // Social links are public
   website?: string; // Website is public
@@ -87,6 +89,7 @@ export interface UpdateUserProfileInput {
   displayName?: string;
   ens?: string;
   avatarCid?: string;
+  bannerCid?: string;    // Banner image CID or URL (public)
   bioCid?: string;
   email?: string;
   socialLinks?: any[]; // Social links are public

@@ -107,6 +107,7 @@ export class UserProfileService {
       displayName: input.displayName, // Public display name
       ens: input.ens || null, // ENS name is public
       avatarCid: input.avatarCid || null, // Avatar is public
+      bannerCid: input.bannerCid || null, // Banner is public
       bioCid: input.bioCid || null, // Bio is public
       profileCid: null, // Legacy field, no longer used
       socialLinks: input.socialLinks || [], // Social links are public
@@ -127,6 +128,7 @@ export class UserProfileService {
           displayName: userData.displayName,
           ens: userData.ens,
           avatarCid: userData.avatarCid,
+          bannerCid: userData.bannerCid,
           bioCid: userData.bioCid,
           socialLinks: userData.socialLinks,
           website: userData.website,
@@ -158,6 +160,7 @@ export class UserProfileService {
       displayName: dbUser.displayName || '', // Public display name
       ens: dbUser.ens || '', // ENS is now stored in database column
       avatarCid: dbUser.avatarCid || '', // Avatar is now stored in database column
+      bannerCid: dbUser.bannerCid || '', // Banner is now stored in database column
       bioCid: dbUser.bioCid || '', // Bio is now stored in database column
       socialLinks: dbUser.socialLinks || [], // Social links are now stored in database column
       website: dbUser.website || '', // Website is now stored in database column
@@ -233,6 +236,7 @@ export class UserProfileService {
       displayName: dbUser.displayName || dbUser.handle || `User ${id.substring(0, 8)}`, // Public display name - fallback to handle or wallet ID
       ens: dbUser.ens || '', // ENS is now stored in database column
       avatarCid: dbUser.avatarCid || '', // Avatar is now stored in database column
+      bannerCid: dbUser.bannerCid || '', // Banner is now stored in database column
       bioCid: dbUser.bioCid || '', // Bio is now stored in database column
       socialLinks: dbUser.socialLinks || [], // Social links are now stored in database column
       website: dbUser.website || '', // Website is now stored in database column
@@ -297,6 +301,7 @@ export class UserProfileService {
         displayName: dbUser.displayName || dbUser.handle || `User ${dbUser.walletAddress.substring(0, 8)}`, // Public display name - fallback to handle or wallet address
         ens: dbUser.ens || '', // ENS is now stored in database column
         avatarCid: dbUser.avatarCid || '', // Avatar is now stored in database column
+        bannerCid: dbUser.bannerCid || '', // Banner is now stored in database column
         bioCid: dbUser.bioCid || '', // Bio is now stored in database column
         socialLinks: dbUser.socialLinks || [], // Social links are now stored in database column
         website: dbUser.website || '', // Website is now stored in database column
@@ -353,6 +358,7 @@ export class UserProfileService {
         displayName: dbUser.displayName || dbUser.handle || `User ${dbUser.walletAddress.substring(0, 8)}`,
         ens: dbUser.ens || '',
         avatarCid: dbUser.avatarCid || '',
+        bannerCid: dbUser.bannerCid || '',
         bioCid: dbUser.bioCid || '',
         socialLinks: dbUser.socialLinks || [], // Social links are public
         website: dbUser.website || '', // Website is public
@@ -428,6 +434,7 @@ export class UserProfileService {
         displayName: input.displayName !== undefined ? input.displayName : existingProfile.displayName, // Public display name
         ens: input.ens !== undefined ? input.ens : existingProfile.ens, // ENS is public
         avatarCid: input.avatarCid !== undefined ? input.avatarCid : existingProfile.avatarCid, // Avatar is public
+        bannerCid: input.bannerCid !== undefined ? input.bannerCid : existingProfile.bannerCid, // Banner is public
         bioCid: input.bioCid !== undefined ? input.bioCid : existingProfile.bioCid, // Bio is public
         socialLinks: input.socialLinks !== undefined ? input.socialLinks : existingProfile.socialLinks, // Social links are public
         website: input.website !== undefined ? input.website : existingProfile.website, // Website is public
