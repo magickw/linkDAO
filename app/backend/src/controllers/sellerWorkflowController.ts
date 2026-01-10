@@ -237,4 +237,169 @@ export class SellerWorkflowController {
             return res.status(500).json({ error: error.message || 'Failed to bulk ship orders' });
         }
     }
+
+    // ==================== SERVICE DELIVERY ENDPOINTS ====================
+
+    /**
+     * Schedule a service delivery
+     */
+    async scheduleService(req: Request, res: Response): Promise<Response> {
+        try {
+            const sellerId = (req as any).user?.id;
+            if (!sellerId) {
+                return res.status(401).json({ error: 'User not authenticated' });
+            }
+
+            const { orderId } = req.params;
+            const { date, time, timezone, notes } = req.body;
+
+            if (!date || !time || !timezone) {
+                return res.status(400).json({ error: 'Date, time, and timezone are required' });
+            }
+
+            const result = await sellerWorkflowService.scheduleService(orderId, sellerId, {
+                date,
+                time,
+                timezone,
+                notes
+            });
+
+            return res.json(result);
+        } catch (error: any) {
+            safeLogger.error('Error scheduling service:', error);
+            const status = error.message === 'Unauthorized' ? 403 :
+                           error.message === 'Order not found' ? 404 : 500;
+            return res.status(status).json({ error: error.message || 'Failed to schedule service' });
+        }
+    }
+
+    /**
+     * Add a deliverable to a service order
+     */
+    async addServiceDeliverable(req: Request, res: Response): Promise<Response> {
+        try {
+            const sellerId = (req as any).user?.id;
+            if (!sellerId) {
+                return res.status(401).json({ error: 'User not authenticated' });
+            }
+
+            const { orderId } = req.params;
+            const { type, url, name, description } = req.body;
+
+            if (!type || !url || !name) {
+                return res.status(400).json({ error: 'Type, url, and name are required' });
+            }
+
+            if (!['file', 'link', 'document'].includes(type)) {
+                return res.status(400).json({ error: 'Type must be file, link, or document' });
+            }
+
+            const result = await sellerWorkflowService.addServiceDeliverable(orderId, sellerId, {
+                type,
+                url,
+                name,
+                description
+            });
+
+            return res.json(result);
+        } catch (error: any) {
+            safeLogger.error('Error adding deliverable:', error);
+            const status = error.message === 'Unauthorized' ? 403 :
+                           error.message === 'Order not found' ? 404 : 500;
+            return res.status(status).json({ error: error.message || 'Failed to add deliverable' });
+        }
+    }
+
+    /**
+     * Remove a deliverable from a service order
+     */
+    async removeServiceDeliverable(req: Request, res: Response): Promise<Response> {
+        try {
+            const sellerId = (req as any).user?.id;
+            if (!sellerId) {
+                return res.status(401).json({ error: 'User not authenticated' });
+            }
+
+            const { orderId, deliverableId } = req.params;
+
+            const result = await sellerWorkflowService.removeServiceDeliverable(orderId, sellerId, deliverableId);
+
+            return res.json(result);
+        } catch (error: any) {
+            safeLogger.error('Error removing deliverable:', error);
+            const status = error.message === 'Unauthorized' ? 403 :
+                           error.message === 'Order not found' ? 404 : 500;
+            return res.status(status).json({ error: error.message || 'Failed to remove deliverable' });
+        }
+    }
+
+    /**
+     * Start a service
+     */
+    async startService(req: Request, res: Response): Promise<Response> {
+        try {
+            const sellerId = (req as any).user?.id;
+            if (!sellerId) {
+                return res.status(401).json({ error: 'User not authenticated' });
+            }
+
+            const { orderId } = req.params;
+
+            await sellerWorkflowService.startService(orderId, sellerId);
+
+            return res.json({ success: true, message: 'Service started' });
+        } catch (error: any) {
+            safeLogger.error('Error starting service:', error);
+            const status = error.message === 'Unauthorized' ? 403 :
+                           error.message === 'Order not found' ? 404 : 500;
+            return res.status(status).json({ error: error.message || 'Failed to start service' });
+        }
+    }
+
+    /**
+     * Mark service as complete
+     */
+    async markServiceComplete(req: Request, res: Response): Promise<Response> {
+        try {
+            const sellerId = (req as any).user?.id;
+            if (!sellerId) {
+                return res.status(401).json({ error: 'User not authenticated' });
+            }
+
+            const { orderId } = req.params;
+            const { completionNotes } = req.body;
+
+            const result = await sellerWorkflowService.markServiceComplete(orderId, sellerId, completionNotes);
+
+            return res.json(result);
+        } catch (error: any) {
+            safeLogger.error('Error marking service complete:', error);
+            const status = error.message === 'Unauthorized' ? 403 :
+                           error.message === 'Order not found' ? 404 : 500;
+            return res.status(status).json({ error: error.message || 'Failed to mark service complete' });
+        }
+    }
+
+    /**
+     * Get service details
+     */
+    async getServiceDetails(req: Request, res: Response): Promise<Response> {
+        try {
+            const sellerId = (req as any).user?.id;
+            if (!sellerId) {
+                return res.status(401).json({ error: 'User not authenticated' });
+            }
+
+            const { orderId } = req.params;
+
+            const result = await sellerWorkflowService.getServiceDetails(orderId, sellerId);
+
+            return res.json(result);
+        } catch (error: any) {
+            safeLogger.error('Error getting service details:', error);
+            const status = error.message === 'Unauthorized' ? 403 :
+                           error.message === 'Order not found' ? 404 : 500;
+            return res.status(status).json({ error: error.message || 'Failed to get service details' });
+        }
+    }
 }

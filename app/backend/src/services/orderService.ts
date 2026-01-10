@@ -612,8 +612,26 @@ export class OrderService {
       productImage: productImage,
       quantity: dbOrder.quantity || 1,
       price: orderTotal,
-      total: orderTotal
+      total: orderTotal,
+      isPhysical: product.isPhysical ?? false,
+      isService: product.isService ?? false,
+      serviceType: product.serviceType
     }] : [];
+
+    // Determine if this is a service order
+    const isServiceOrder = product?.isService === true || dbOrder.isServiceOrder === true;
+
+    // Parse service deliverables from JSON if stored
+    let serviceDeliverables = [];
+    if (dbOrder.serviceDeliverables) {
+      try {
+        serviceDeliverables = typeof dbOrder.serviceDeliverables === 'string'
+          ? JSON.parse(dbOrder.serviceDeliverables)
+          : dbOrder.serviceDeliverables;
+      } catch (e) {
+        serviceDeliverables = [];
+      }
+    }
 
     return {
       id: dbOrder.id.toString(),
@@ -640,8 +658,25 @@ export class OrderService {
         category: product.mainCategory || product.categoryId || '',
         quantity: dbOrder.quantity || 1,
         unitPrice: orderTotal,
-        totalPrice: orderTotal
-      } : undefined
+        totalPrice: orderTotal,
+        isPhysical: product.isPhysical ?? false,
+        isService: product.isService ?? false,
+        serviceType: product.serviceType,
+        serviceDurationMinutes: product.serviceDurationMinutes
+      } : undefined,
+      // Service delivery fields
+      isServiceOrder,
+      serviceStatus: dbOrder.serviceStatus || 'pending',
+      serviceSchedule: dbOrder.scheduledDate ? {
+        scheduledDate: dbOrder.scheduledDate,
+        scheduledTime: dbOrder.scheduledTime || '',
+        timezone: dbOrder.scheduledTimezone || 'UTC',
+        notes: dbOrder.serviceNotes
+      } : undefined,
+      serviceDeliverables,
+      serviceCompletedAt: dbOrder.serviceCompletedAt?.toISOString(),
+      buyerConfirmedAt: dbOrder.buyerConfirmedAt?.toISOString(),
+      serviceNotes: dbOrder.serviceNotes
     };
   }
 

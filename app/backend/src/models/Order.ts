@@ -134,7 +134,30 @@ export interface OrderItem {
   quantity: number;
   price: number;
   total: number;
+  isPhysical?: boolean;
+  isService?: boolean;
+  serviceType?: 'remote' | 'in_person' | 'consultation' | 'subscription';
 }
+
+// Service delivery related types
+export interface ServiceDeliverable {
+  type: 'file' | 'link' | 'document';
+  url: string;
+  name: string;
+  description?: string;
+  uploadedAt: string;
+  size?: number;
+}
+
+export interface ServiceSchedule {
+  scheduledDate: string;
+  scheduledTime: string;
+  timezone: string;
+  duration?: number; // in minutes
+  notes?: string;
+}
+
+export type ServiceStatus = 'pending' | 'scheduled' | 'in_progress' | 'completed' | 'buyer_confirmed' | 'cancelled';
 
 export interface MarketplaceOrder {
   id: string;
@@ -176,8 +199,21 @@ export interface MarketplaceOrder {
     quantity: number;
     unitPrice: number;
     totalPrice: number;
+    isPhysical?: boolean;
+    isService?: boolean;
+    serviceType?: 'remote' | 'in_person' | 'consultation' | 'subscription';
+    serviceDurationMinutes?: number;
   };
   disputeId?: string;
+
+  // Service delivery fields
+  isServiceOrder?: boolean;
+  serviceStatus?: ServiceStatus;
+  serviceSchedule?: ServiceSchedule;
+  serviceDeliverables?: ServiceDeliverable[];
+  serviceCompletedAt?: string;
+  buyerConfirmedAt?: string;
+  serviceNotes?: string;
 
   // Frontend-compatible fields
   orderNumber?: string;

@@ -3,7 +3,11 @@ import { sellerWorkflowService } from '../services/sellerWorkflowService';
 import {
     SellerWorkflowDashboard,
     ShippingLabelResult,
-    PackingSlip
+    PackingSlip,
+    ServiceDetails,
+    ScheduleServiceInput,
+    AddDeliverableInput,
+    ServiceDeliverable
 } from '../types/seller';
 import { useToast } from '../context/ToastContext';
 
@@ -79,6 +83,77 @@ export function useSellerWorkflow(isActive: boolean = false) {
         }
     };
 
+    // ==================== SERVICE DELIVERY METHODS ====================
+
+    const scheduleService = async (orderId: string, schedule: ScheduleServiceInput): Promise<boolean> => {
+        try {
+            await sellerWorkflowService.scheduleService(orderId, schedule);
+            addToast('Service scheduled successfully', 'success');
+            fetchDashboard();
+            return true;
+        } catch (err: any) {
+            addToast(err.message || 'Failed to schedule service', 'error');
+            return false;
+        }
+    };
+
+    const getServiceDetails = async (orderId: string): Promise<ServiceDetails | null> => {
+        try {
+            return await sellerWorkflowService.getServiceDetails(orderId);
+        } catch (err: any) {
+            addToast(err.message || 'Failed to get service details', 'error');
+            return null;
+        }
+    };
+
+    const addDeliverable = async (orderId: string, deliverable: AddDeliverableInput): Promise<ServiceDeliverable | null> => {
+        try {
+            const result = await sellerWorkflowService.addDeliverable(orderId, deliverable);
+            addToast('Deliverable added successfully', 'success');
+            fetchDashboard();
+            return result.deliverable;
+        } catch (err: any) {
+            addToast(err.message || 'Failed to add deliverable', 'error');
+            return null;
+        }
+    };
+
+    const removeDeliverable = async (orderId: string, deliverableId: string): Promise<boolean> => {
+        try {
+            await sellerWorkflowService.removeDeliverable(orderId, deliverableId);
+            addToast('Deliverable removed', 'success');
+            fetchDashboard();
+            return true;
+        } catch (err: any) {
+            addToast(err.message || 'Failed to remove deliverable', 'error');
+            return false;
+        }
+    };
+
+    const startService = async (orderId: string): Promise<boolean> => {
+        try {
+            await sellerWorkflowService.startService(orderId);
+            addToast('Service started', 'success');
+            fetchDashboard();
+            return true;
+        } catch (err: any) {
+            addToast(err.message || 'Failed to start service', 'error');
+            return false;
+        }
+    };
+
+    const completeService = async (orderId: string, completionNotes?: string): Promise<boolean> => {
+        try {
+            await sellerWorkflowService.completeService(orderId, completionNotes);
+            addToast('Service marked as complete', 'success');
+            fetchDashboard();
+            return true;
+        } catch (err: any) {
+            addToast(err.message || 'Failed to complete service', 'error');
+            return false;
+        }
+    };
+
     return {
         dashboardData,
         loading,
@@ -87,6 +162,13 @@ export function useSellerWorkflow(isActive: boolean = false) {
         startProcessing,
         markReadyToShip,
         confirmShipment,
-        getPackingSlip
+        getPackingSlip,
+        // Service methods
+        scheduleService,
+        getServiceDetails,
+        addDeliverable,
+        removeDeliverable,
+        startService,
+        completeService
     };
 }

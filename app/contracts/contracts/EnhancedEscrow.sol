@@ -2,6 +2,10 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
@@ -11,19 +15,28 @@ import "./Governance.sol";
 
 /**
  * @title LinkDAO Enhanced Escrow
- * @notice Enhanced escrow contract with automated release, delivery tracking, reputation integration, 
- *         community dispute resolution, and notification system
+ * @notice Enhanced escrow contract with automated release, delivery tracking, reputation integration,
+ *         community dispute resolution, notification system, and NFT atomic swap support
  */
-contract EnhancedEscrow is ReentrancyGuard, Ownable {
+contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Receiver {
     // Enum for escrow status
-    enum EscrowStatus { 
-        CREATED, 
-        FUNDS_LOCKED, 
-        DELIVERY_CONFIRMED, 
-        DISPUTE_OPENED, 
-        RESOLVED_BUYER_WINS, 
+    enum EscrowStatus {
+        CREATED,
+        FUNDS_LOCKED,
+        NFT_DEPOSITED,      // New: NFT deposited by seller
+        READY_FOR_RELEASE,  // New: Both funds and NFT are in escrow
+        DELIVERY_CONFIRMED,
+        DISPUTE_OPENED,
+        RESOLVED_BUYER_WINS,
         RESOLVED_SELLER_WINS,
         CANCELLED
+    }
+
+    // Enum for NFT standard
+    enum NFTStandard {
+        NONE,       // Not an NFT escrow
+        ERC721,
+        ERC1155
     }
     
     // Enum for dispute resolution method
@@ -58,6 +71,12 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable {
         uint256 resolvedAt;
         EscrowStatus status;
         DisputeResolutionMethod resolutionMethod;
+        // NFT fields for atomic swap
+        NFTStandard nftStandard;
+        address nftContractAddress;
+        uint256 nftTokenId;
+        uint256 nftAmount;          // For ERC1155 (always 1 for ERC721)
+        bool nftDeposited;
         // Community voting fields
         uint256 votesForBuyer;
         uint256 votesForSeller;
@@ -133,6 +152,9 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable {
     // Events
     event EscrowCreated(uint256 indexed escrowId, address indexed buyer, address indexed seller, uint256 amount);
     event FundsLocked(uint256 indexed escrowId, uint256 amount);
+    event NFTDeposited(uint256 indexed escrowId, address indexed nftContract, uint256 tokenId, NFTStandard standard);
+    event NFTTransferred(uint256 indexed escrowId, address indexed to, address nftContract, uint256 tokenId);
+    event EscrowReadyForRelease(uint256 indexed escrowId);
     event DeliveryConfirmed(uint256 indexed escrowId, string deliveryInfo);
     event DisputeOpened(uint256 indexed escrowId, DisputeResolutionMethod method);
     event VoteCast(uint256 indexed escrowId, address indexed voter, bool forBuyer, uint256 votingPower);
@@ -181,6 +203,11 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable {
     
     modifier onlySameChain(uint256 escrowId) {
         require(escrowChainId[escrowId] == chainId, "Escrow not on this chain");
+        _;
+    }
+
+    modifier onlySeller(uint256 escrowId) {
+        require(msg.sender == escrows[escrowId].seller, "Only seller can call this function");
         _;
     }
 
@@ -825,5 +852,398 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable {
 
     function setArbitratorFee(address arbitrator, uint256 fee) external onlyOwner {
         arbitratorFees[arbitrator] = fee;
+    }
+
+    // ==================== NFT ATOMIC SWAP FUNCTIONS ====================
+
+    /**
+     * @notice Create a new escrow for NFT purchase with atomic swap
+     * @param listingId ID of the marketplace listing
+     * @param seller Address of the seller (NFT owner)
+     * @param tokenAddress Address of the payment token (address(0) for ETH)
+     * @param amount Payment amount
+     * @param deliveryDeadline Deadline for NFT deposit and confirmation
+     * @param resolutionMethod Dispute resolution method
+     * @param nftStandard The NFT standard (ERC721 or ERC1155)
+     * @param nftContractAddress Address of the NFT contract
+     * @param nftTokenId Token ID of the NFT
+     * @param nftAmount Amount of NFTs (for ERC1155, always 1 for ERC721)
+     * @return escrowId ID of the created escrow
+     */
+    function createNFTEscrow(
+        uint256 listingId,
+        address seller,
+        address tokenAddress,
+        uint256 amount,
+        uint256 deliveryDeadline,
+        DisputeResolutionMethod resolutionMethod,
+        NFTStandard nftStandard,
+        address nftContractAddress,
+        uint256 nftTokenId,
+        uint256 nftAmount
+    ) external payable nonReentrant notSuspended(msg.sender) notSuspended(seller) returns (uint256) {
+        require(seller != address(0), "Invalid seller address");
+        require(seller != msg.sender, "Buyer and seller cannot be the same");
+        require(amount > 0, "Amount must be greater than 0");
+        require(deliveryDeadline > block.timestamp, "Delivery deadline must be in the future");
+        require(nftStandard != NFTStandard.NONE, "NFT standard must be specified");
+        require(nftContractAddress != address(0), "Invalid NFT contract address");
+        require(nftAmount > 0, "NFT amount must be greater than 0");
+
+        // For ERC721, amount must be 1
+        if (nftStandard == NFTStandard.ERC721) {
+            require(nftAmount == 1, "ERC721 amount must be 1");
+        }
+
+        uint256 escrowId = nextEscrowId++;
+        uint256 feeAmount = (amount * platformFeePercentage) / 10000;
+
+        Escrow storage newEscrow = escrows[escrowId];
+        newEscrow.id = escrowId;
+        newEscrow.listingId = listingId;
+        newEscrow.buyer = msg.sender;
+        newEscrow.seller = seller;
+        newEscrow.tokenAddress = tokenAddress;
+        newEscrow.amount = amount;
+        newEscrow.feeAmount = feeAmount;
+        newEscrow.deliveryDeadline = deliveryDeadline;
+        newEscrow.createdAt = block.timestamp;
+        newEscrow.status = EscrowStatus.CREATED;
+        newEscrow.resolutionMethod = resolutionMethod;
+
+        // Set NFT details
+        newEscrow.nftStandard = nftStandard;
+        newEscrow.nftContractAddress = nftContractAddress;
+        newEscrow.nftTokenId = nftTokenId;
+        newEscrow.nftAmount = nftAmount;
+        newEscrow.nftDeposited = false;
+
+        // Cross-chain support
+        escrowChainId[escrowId] = chainId;
+
+        userEscrows[msg.sender].push(escrowId);
+        userEscrows[seller].push(escrowId);
+
+        emit EscrowCreated(escrowId, msg.sender, seller, amount);
+
+        return escrowId;
+    }
+
+    /**
+     * @notice Deposit NFT into escrow (called by seller)
+     * @param escrowId ID of the escrow
+     */
+    function depositNFT(uint256 escrowId)
+        external
+        nonReentrant
+        escrowExists(escrowId)
+        onlySeller(escrowId)
+        onlySameChain(escrowId)
+    {
+        Escrow storage escrow = escrows[escrowId];
+        require(escrow.nftStandard != NFTStandard.NONE, "Not an NFT escrow");
+        require(!escrow.nftDeposited, "NFT already deposited");
+        require(
+            escrow.status == EscrowStatus.CREATED || escrow.status == EscrowStatus.FUNDS_LOCKED,
+            "Invalid escrow status for NFT deposit"
+        );
+
+        // Transfer NFT from seller to this contract
+        if (escrow.nftStandard == NFTStandard.ERC721) {
+            IERC721(escrow.nftContractAddress).safeTransferFrom(
+                msg.sender,
+                address(this),
+                escrow.nftTokenId
+            );
+        } else if (escrow.nftStandard == NFTStandard.ERC1155) {
+            IERC1155(escrow.nftContractAddress).safeTransferFrom(
+                msg.sender,
+                address(this),
+                escrow.nftTokenId,
+                escrow.nftAmount,
+                ""
+            );
+        }
+
+        escrow.nftDeposited = true;
+
+        // Update status based on whether funds are already locked
+        if (escrow.status == EscrowStatus.FUNDS_LOCKED) {
+            escrow.status = EscrowStatus.READY_FOR_RELEASE;
+            emit EscrowReadyForRelease(escrowId);
+        } else {
+            escrow.status = EscrowStatus.NFT_DEPOSITED;
+        }
+
+        emit NFTDeposited(escrowId, escrow.nftContractAddress, escrow.nftTokenId, escrow.nftStandard);
+    }
+
+    /**
+     * @notice Lock funds in NFT escrow (overload for NFT escrows)
+     * @param escrowId ID of the escrow
+     */
+    function lockFundsForNFT(uint256 escrowId) external payable nonReentrant escrowExists(escrowId) onlySameChain(escrowId) {
+        Escrow storage escrow = escrows[escrowId];
+        require(msg.sender == escrow.buyer, "Only buyer can lock funds");
+        require(escrow.nftStandard != NFTStandard.NONE, "Use lockFunds for non-NFT escrows");
+        require(
+            escrow.status == EscrowStatus.CREATED || escrow.status == EscrowStatus.NFT_DEPOSITED,
+            "Invalid escrow status"
+        );
+
+        uint256 totalAmount = escrow.amount + escrow.feeAmount;
+
+        if (escrow.tokenAddress == address(0)) {
+            // ETH payment
+            require(msg.value == totalAmount, "Incorrect ETH amount");
+        } else {
+            // ERC20 token payment
+            require(msg.value == 0, "ETH not accepted for token payments");
+            IERC20(escrow.tokenAddress).transferFrom(msg.sender, address(this), totalAmount);
+        }
+
+        // Update status based on whether NFT is already deposited
+        if (escrow.nftDeposited) {
+            escrow.status = EscrowStatus.READY_FOR_RELEASE;
+            emit EscrowReadyForRelease(escrowId);
+        } else {
+            escrow.status = EscrowStatus.FUNDS_LOCKED;
+        }
+
+        emit FundsLocked(escrowId, escrow.amount);
+    }
+
+    /**
+     * @notice Confirm NFT delivery and execute atomic swap
+     * @param escrowId ID of the escrow
+     * @param deliveryInfo Delivery confirmation information
+     */
+    function confirmNFTDelivery(uint256 escrowId, string memory deliveryInfo)
+        external
+        escrowExists(escrowId)
+        onlySameChain(escrowId)
+    {
+        Escrow storage escrow = escrows[escrowId];
+        require(msg.sender == escrow.buyer, "Only buyer can confirm NFT delivery");
+        require(escrow.nftStandard != NFTStandard.NONE, "Not an NFT escrow");
+        require(escrow.status == EscrowStatus.READY_FOR_RELEASE, "Escrow not ready for release");
+
+        escrow.deliveryInfo = deliveryInfo;
+        escrow.status = EscrowStatus.DELIVERY_CONFIRMED;
+        escrow.resolvedAt = block.timestamp;
+
+        // Execute atomic swap: NFT to buyer, funds to seller
+        _transferNFT(escrowId, escrow.buyer);
+        _releaseFunds(escrowId, escrow.seller);
+
+        // Update reputation scores
+        _updateReputationOnSuccess(escrow.buyer, escrow.seller);
+
+        emit DeliveryConfirmed(escrowId, deliveryInfo);
+        emit EscrowResolved(escrowId, EscrowStatus.DELIVERY_CONFIRMED, escrow.seller);
+    }
+
+    /**
+     * @notice Internal function to transfer NFT
+     * @param escrowId ID of the escrow
+     * @param recipient Address to receive the NFT
+     */
+    function _transferNFT(uint256 escrowId, address recipient) internal {
+        Escrow storage escrow = escrows[escrowId];
+        require(escrow.nftDeposited, "NFT not deposited");
+
+        if (escrow.nftStandard == NFTStandard.ERC721) {
+            IERC721(escrow.nftContractAddress).safeTransferFrom(
+                address(this),
+                recipient,
+                escrow.nftTokenId
+            );
+        } else if (escrow.nftStandard == NFTStandard.ERC1155) {
+            IERC1155(escrow.nftContractAddress).safeTransferFrom(
+                address(this),
+                recipient,
+                escrow.nftTokenId,
+                escrow.nftAmount,
+                ""
+            );
+        }
+
+        emit NFTTransferred(escrowId, recipient, escrow.nftContractAddress, escrow.nftTokenId);
+    }
+
+    /**
+     * @notice Resolve NFT dispute - returns NFT to seller or transfers to buyer
+     * @param escrowId ID of the escrow
+     * @param buyerWins True if buyer wins, false if seller wins
+     */
+    function resolveNFTDisputeByArbitrator(uint256 escrowId, bool buyerWins)
+        external
+        escrowExists(escrowId)
+        onlyArbitrator(escrowId)
+        onlySameChain(escrowId)
+    {
+        Escrow storage escrow = escrows[escrowId];
+        require(escrow.status == EscrowStatus.DISPUTE_OPENED, "No active dispute");
+        require(escrow.nftStandard != NFTStandard.NONE, "Use resolveDisputeByArbitrator for non-NFT escrows");
+        require(escrow.resolutionMethod == DisputeResolutionMethod.ARBITRATOR, "Not arbitrator resolution");
+
+        if (buyerWins) {
+            escrow.status = EscrowStatus.RESOLVED_BUYER_WINS;
+            // Buyer gets both NFT and refund
+            if (escrow.nftDeposited) {
+                _transferNFT(escrowId, escrow.buyer);
+            }
+            _releaseFunds(escrowId, escrow.buyer);
+            _updateReputationOnDispute(escrow.buyer, escrow.seller, true);
+        } else {
+            escrow.status = EscrowStatus.RESOLVED_SELLER_WINS;
+            // Seller gets NFT back and payment
+            if (escrow.nftDeposited) {
+                _transferNFT(escrowId, escrow.seller);
+            }
+            _releaseFunds(escrowId, escrow.seller);
+            _updateReputationOnDispute(escrow.buyer, escrow.seller, false);
+        }
+
+        escrow.resolvedAt = block.timestamp;
+
+        emit EscrowResolved(escrowId, escrow.status, buyerWins ? escrow.buyer : escrow.seller);
+    }
+
+    /**
+     * @notice Open dispute for NFT escrow
+     * @param escrowId ID of the escrow
+     */
+    function openNFTDispute(uint256 escrowId) external escrowExists(escrowId) onlyParticipant(escrowId) onlySameChain(escrowId) {
+        Escrow storage escrow = escrows[escrowId];
+        require(escrow.nftStandard != NFTStandard.NONE, "Use openDispute for non-NFT escrows");
+        require(
+            escrow.status == EscrowStatus.FUNDS_LOCKED ||
+            escrow.status == EscrowStatus.NFT_DEPOSITED ||
+            escrow.status == EscrowStatus.READY_FOR_RELEASE,
+            "Invalid escrow status for dispute"
+        );
+        require(block.timestamp <= escrow.deliveryDeadline + 7 days, "Dispute period expired");
+
+        escrow.status = EscrowStatus.DISPUTE_OPENED;
+
+        emit DisputeOpened(escrowId, escrow.resolutionMethod);
+    }
+
+    /**
+     * @notice Emergency refund for NFT escrow (DAO only)
+     * @param escrowId ID of the escrow
+     */
+    function executeNFTEmergencyRefund(uint256 escrowId) external onlyDAO escrowExists(escrowId) {
+        Escrow storage escrow = escrows[escrowId];
+        require(escrow.nftStandard != NFTStandard.NONE, "Use executeEmergencyRefund for non-NFT escrows");
+        require(
+            escrow.status == EscrowStatus.FUNDS_LOCKED ||
+            escrow.status == EscrowStatus.NFT_DEPOSITED ||
+            escrow.status == EscrowStatus.READY_FOR_RELEASE ||
+            escrow.status == EscrowStatus.DISPUTE_OPENED,
+            "Invalid status for refund"
+        );
+
+        escrow.status = EscrowStatus.CANCELLED;
+        escrow.resolvedAt = block.timestamp;
+
+        // Return NFT to seller if deposited
+        if (escrow.nftDeposited) {
+            _transferNFT(escrowId, escrow.seller);
+        }
+
+        // Return funds to buyer if locked
+        if (escrow.status == EscrowStatus.FUNDS_LOCKED ||
+            escrow.status == EscrowStatus.READY_FOR_RELEASE) {
+            _releaseFunds(escrowId, escrow.buyer);
+        }
+
+        emit EmergencyRefund(escrowId, escrow.buyer, escrow.amount);
+    }
+
+    /**
+     * @notice Get NFT escrow details
+     * @param escrowId ID of the escrow
+     * @return nftStandard The NFT standard
+     * @return nftContractAddress The NFT contract address
+     * @return nftTokenId The token ID
+     * @return nftAmount The amount (for ERC1155)
+     * @return nftDeposited Whether the NFT has been deposited
+     */
+    function getNFTEscrowDetails(uint256 escrowId)
+        external
+        view
+        escrowExists(escrowId)
+        returns (
+            NFTStandard nftStandard,
+            address nftContractAddress,
+            uint256 nftTokenId,
+            uint256 nftAmount,
+            bool nftDeposited
+        )
+    {
+        Escrow storage escrow = escrows[escrowId];
+        return (
+            escrow.nftStandard,
+            escrow.nftContractAddress,
+            escrow.nftTokenId,
+            escrow.nftAmount,
+            escrow.nftDeposited
+        );
+    }
+
+    // ==================== ERC721/ERC1155 RECEIVER IMPLEMENTATIONS ====================
+
+    /**
+     * @notice Handle ERC721 token reception
+     * @dev Implementation of IERC721Receiver
+     */
+    function onERC721Received(
+        address /* operator */,
+        address /* from */,
+        uint256 /* tokenId */,
+        bytes calldata /* data */
+    ) external pure override returns (bytes4) {
+        return IERC721Receiver.onERC721Received.selector;
+    }
+
+    /**
+     * @notice Handle ERC1155 single token reception
+     * @dev Implementation of IERC1155Receiver
+     */
+    function onERC1155Received(
+        address /* operator */,
+        address /* from */,
+        uint256 /* id */,
+        uint256 /* value */,
+        bytes calldata /* data */
+    ) external pure override returns (bytes4) {
+        return IERC1155Receiver.onERC1155Received.selector;
+    }
+
+    /**
+     * @notice Handle ERC1155 batch token reception
+     * @dev Implementation of IERC1155Receiver
+     */
+    function onERC1155BatchReceived(
+        address /* operator */,
+        address /* from */,
+        uint256[] calldata /* ids */,
+        uint256[] calldata /* values */,
+        bytes calldata /* data */
+    ) external pure override returns (bytes4) {
+        return IERC1155Receiver.onERC1155BatchReceived.selector;
+    }
+
+    /**
+     * @notice Check if contract supports an interface
+     * @dev Implementation of ERC165
+     */
+    function supportsInterface(bytes4 interfaceId) public pure override(IERC165) returns (bool) {
+        return
+            interfaceId == type(IERC721Receiver).interfaceId ||
+            interfaceId == type(IERC1155Receiver).interfaceId ||
+            interfaceId == type(IERC165).interfaceId;
     }
 }

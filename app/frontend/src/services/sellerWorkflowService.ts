@@ -3,7 +3,11 @@ import { enhancedAuthService } from './enhancedAuthService';
 import {
     SellerWorkflowDashboard,
     ShippingLabelResult,
-    PackingSlip
+    PackingSlip,
+    ServiceDetails,
+    ScheduleServiceInput,
+    AddDeliverableInput,
+    ServiceDeliverable
 } from '../types/seller';
 
 const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
@@ -17,6 +21,13 @@ class SellerWorkflowService {
         markReadyToShip: (orderId: string) => `${WORKFLOW_API_BASE}/${orderId}/ready`,
         confirmShipment: (orderId: string) => `${WORKFLOW_API_BASE}/${orderId}/ship`,
         getPackingSlip: (orderId: string) => `${WORKFLOW_API_BASE}/${orderId}/packing-slip`,
+        // Service endpoints
+        scheduleService: (orderId: string) => `${WORKFLOW_API_BASE}/${orderId}/service/schedule`,
+        getServiceDetails: (orderId: string) => `${WORKFLOW_API_BASE}/${orderId}/service`,
+        addDeliverable: (orderId: string) => `${WORKFLOW_API_BASE}/${orderId}/service/deliverables`,
+        removeDeliverable: (orderId: string, deliverableId: string) => `${WORKFLOW_API_BASE}/${orderId}/service/deliverables/${deliverableId}`,
+        startService: (orderId: string) => `${WORKFLOW_API_BASE}/${orderId}/service/start`,
+        completeService: (orderId: string) => `${WORKFLOW_API_BASE}/${orderId}/service/complete`,
     };
 
     private async getAuthHeaders(): Promise<Record<string, string>> {
@@ -99,6 +110,95 @@ class SellerWorkflowService {
             {
                 method: 'GET',
                 headers
+            }
+        );
+    }
+
+    // ==================== SERVICE DELIVERY METHODS ====================
+
+    /**
+     * Schedule a service delivery
+     */
+    async scheduleService(orderId: string, schedule: ScheduleServiceInput): Promise<{ success: boolean; scheduledDate: string; scheduledTime: string; timezone: string }> {
+        const headers = await this.getAuthHeaders();
+        return await enhancedRequestManager.request<{ success: boolean; scheduledDate: string; scheduledTime: string; timezone: string }>(
+            this.endpoints.scheduleService(orderId),
+            {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(schedule)
+            }
+        );
+    }
+
+    /**
+     * Get service details for an order
+     */
+    async getServiceDetails(orderId: string): Promise<ServiceDetails> {
+        const headers = await this.getAuthHeaders();
+        return await enhancedRequestManager.request<ServiceDetails>(
+            this.endpoints.getServiceDetails(orderId),
+            {
+                method: 'GET',
+                headers
+            }
+        );
+    }
+
+    /**
+     * Add a deliverable to a service order
+     */
+    async addDeliverable(orderId: string, deliverable: AddDeliverableInput): Promise<{ success: boolean; deliverable: ServiceDeliverable; totalDeliverables: number }> {
+        const headers = await this.getAuthHeaders();
+        return await enhancedRequestManager.request<{ success: boolean; deliverable: ServiceDeliverable; totalDeliverables: number }>(
+            this.endpoints.addDeliverable(orderId),
+            {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(deliverable)
+            }
+        );
+    }
+
+    /**
+     * Remove a deliverable from a service order
+     */
+    async removeDeliverable(orderId: string, deliverableId: string): Promise<{ success: boolean; remainingDeliverables: number }> {
+        const headers = await this.getAuthHeaders();
+        return await enhancedRequestManager.request<{ success: boolean; remainingDeliverables: number }>(
+            this.endpoints.removeDeliverable(orderId, deliverableId),
+            {
+                method: 'DELETE',
+                headers
+            }
+        );
+    }
+
+    /**
+     * Start a service
+     */
+    async startService(orderId: string): Promise<{ success: boolean; message: string }> {
+        const headers = await this.getAuthHeaders();
+        return await enhancedRequestManager.request<{ success: boolean; message: string }>(
+            this.endpoints.startService(orderId),
+            {
+                method: 'POST',
+                headers
+            }
+        );
+    }
+
+    /**
+     * Mark service as complete
+     */
+    async completeService(orderId: string, completionNotes?: string): Promise<{ success: boolean; completedAt: string }> {
+        const headers = await this.getAuthHeaders();
+        return await enhancedRequestManager.request<{ success: boolean; completedAt: string }>(
+            this.endpoints.completeService(orderId),
+            {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ completionNotes })
             }
         );
     }

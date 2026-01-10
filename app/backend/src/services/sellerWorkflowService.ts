@@ -64,36 +64,61 @@ export class SellerWorkflowService {
             );
 
             // Transform orders to match SellerOrder frontend interface
-            const transformOrder = (order: any) => ({
-                id: order.id,
-                items: (order.items || []).map((item: any) => ({
-                    listingId: item.productId || item.id,
-                    title: item.productName || item.title || 'Unknown Product',
-                    quantity: item.quantity || 1,
-                    price: item.price || item.total || 0,
-                    image: item.productImage || item.image
-                })),
-                buyerAddress: order.buyerWalletAddress,
-                buyerName: order.buyerName,
-                totalAmount: parseFloat(order.amount) || order.total || 0,
-                currency: order.currency || order.paymentToken || 'USDC',
-                status: (order.status || 'pending').toLowerCase(),
-                escrowStatus: order.escrowId ? 'locked' : 'none',
-                paymentMethod: order.paymentToken ? 'crypto' : 'fiat',
-                shippingAddress: order.shippingAddress ? {
-                    name: order.shippingAddress.name || '',
-                    address: order.shippingAddress.street || order.shippingAddress.address || '',
-                    city: order.shippingAddress.city || '',
-                    state: order.shippingAddress.state || '',
-                    zipCode: order.shippingAddress.postalCode || order.shippingAddress.zipCode || '',
-                    country: order.shippingAddress.country || ''
-                } : undefined,
-                trackingNumber: order.trackingNumber,
-                estimatedDelivery: order.estimatedDelivery,
-                notes: order.notes,
-                createdAt: order.createdAt,
-                updatedAt: order.updatedAt
-            });
+            const transformOrder = (order: any) => {
+                // Determine if order contains only digital goods (no physical items)
+                const hasPhysicalItems = order.items?.some((item: any) => item.isPhysical === true)
+                    || order.product?.isPhysical === true;
+
+                // Determine if this is a service order
+                const isServiceOrder = order.isServiceOrder === true
+                    || order.items?.some((item: any) => item.isService === true)
+                    || order.product?.isService === true;
+
+                return {
+                    id: order.id,
+                    items: (order.items || []).map((item: any) => ({
+                        listingId: item.productId || item.id,
+                        title: item.productName || item.title || 'Unknown Product',
+                        quantity: item.quantity || 1,
+                        price: item.price || item.total || 0,
+                        image: item.productImage || item.image,
+                        isPhysical: item.isPhysical ?? false,
+                        isService: item.isService ?? false,
+                        serviceType: item.serviceType
+                    })),
+                    buyerAddress: order.buyerWalletAddress,
+                    buyerName: order.buyerName,
+                    totalAmount: parseFloat(order.amount) || order.total || 0,
+                    currency: order.currency || order.paymentToken || 'USDC',
+                    status: (order.status || 'pending').toLowerCase(),
+                    escrowStatus: order.escrowId ? 'locked' : 'none',
+                    paymentMethod: order.paymentToken ? 'crypto' : 'fiat',
+                    shippingAddress: order.shippingAddress ? {
+                        name: order.shippingAddress.name || '',
+                        address: order.shippingAddress.street || order.shippingAddress.address || '',
+                        city: order.shippingAddress.city || '',
+                        state: order.shippingAddress.state || '',
+                        zipCode: order.shippingAddress.postalCode || order.shippingAddress.zipCode || '',
+                        country: order.shippingAddress.country || ''
+                    } : undefined,
+                    trackingNumber: order.trackingNumber,
+                    estimatedDelivery: order.estimatedDelivery,
+                    notes: order.notes,
+                    createdAt: order.createdAt,
+                    updatedAt: order.updatedAt,
+                    isPhysical: hasPhysicalItems,
+                    requiresShipping: hasPhysicalItems,
+                    // Service-specific fields
+                    isService: isServiceOrder,
+                    serviceStatus: order.serviceStatus || 'pending',
+                    serviceSchedule: order.serviceSchedule,
+                    serviceDeliverables: order.serviceDeliverables || [],
+                    serviceCompletedAt: order.serviceCompletedAt,
+                    buyerConfirmedAt: order.buyerConfirmedAt,
+                    serviceNotes: order.serviceNotes,
+                    serviceType: order.product?.serviceType || order.items?.[0]?.serviceType
+                };
+            };
 
             const transformedOrders = sellerOrders.map(transformOrder);
 
@@ -461,6 +486,265 @@ export class SellerWorkflowService {
             };
         } catch (error) {
             safeLogger.error('Error in bulk ship orders:', error);
+            throw error;
+        }
+    }
+
+    // ==================== SERVICE DELIVERY METHODS ====================
+
+    /**
+     * Schedule a service delivery
+     */
+    async scheduleService(
+        orderId: string,
+        sellerId: string,
+        schedule: { date: string; time: string; timezone: string; notes?: string }
+    ): Promise<any> {
+        try {
+            const order = await this.databaseService.getOrderById(orderId);
+            if (!order) throw new Error('Order not found');
+
+            const isSeller = order.sellerId === sellerId || order.sellerWalletAddress === sellerId;
+            if (!isSeller) throw new Error('Unauthorized');
+
+            // Update order with schedule information
+            await this.databaseService.updateOrder(orderId, {
+                scheduledDate: schedule.date,
+                scheduledTime: schedule.time,
+                scheduledTimezone: schedule.timezone,
+                serviceNotes: schedule.notes,
+                serviceStatus: 'scheduled'
+            });
+
+            // Notify buyer about the scheduled service
+            await this.notificationService.notifyOrderStatusChange(
+                order.buyerWalletAddress,
+                orderId,
+                'SERVICE_SCHEDULED' as any
+            );
+
+            safeLogger.info(`Service scheduled for order ${orderId}: ${schedule.date} ${schedule.time}`);
+
+            return {
+                success: true,
+                scheduledDate: schedule.date,
+                scheduledTime: schedule.time,
+                timezone: schedule.timezone
+            };
+        } catch (error) {
+            safeLogger.error('Error scheduling service:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Add a deliverable to a service order
+     */
+    async addServiceDeliverable(
+        orderId: string,
+        sellerId: string,
+        deliverable: { type: 'file' | 'link' | 'document'; url: string; name: string; description?: string }
+    ): Promise<any> {
+        try {
+            const order = await this.databaseService.getOrderById(orderId);
+            if (!order) throw new Error('Order not found');
+
+            const isSeller = order.sellerId === sellerId || order.sellerWalletAddress === sellerId;
+            if (!isSeller) throw new Error('Unauthorized');
+
+            // Get existing deliverables
+            let existingDeliverables = [];
+            if (order.serviceDeliverables) {
+                try {
+                    existingDeliverables = typeof order.serviceDeliverables === 'string'
+                        ? JSON.parse(order.serviceDeliverables)
+                        : order.serviceDeliverables;
+                } catch (e) {
+                    existingDeliverables = [];
+                }
+            }
+
+            // Add new deliverable
+            const newDeliverable = {
+                ...deliverable,
+                uploadedAt: new Date().toISOString(),
+                id: uuidv4()
+            };
+            existingDeliverables.push(newDeliverable);
+
+            // Update order with new deliverables
+            await this.databaseService.updateOrder(orderId, {
+                serviceDeliverables: JSON.stringify(existingDeliverables)
+            });
+
+            safeLogger.info(`Deliverable added to order ${orderId}: ${deliverable.name}`);
+
+            return {
+                success: true,
+                deliverable: newDeliverable,
+                totalDeliverables: existingDeliverables.length
+            };
+        } catch (error) {
+            safeLogger.error('Error adding deliverable:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Remove a deliverable from a service order
+     */
+    async removeServiceDeliverable(
+        orderId: string,
+        sellerId: string,
+        deliverableId: string
+    ): Promise<any> {
+        try {
+            const order = await this.databaseService.getOrderById(orderId);
+            if (!order) throw new Error('Order not found');
+
+            const isSeller = order.sellerId === sellerId || order.sellerWalletAddress === sellerId;
+            if (!isSeller) throw new Error('Unauthorized');
+
+            // Get existing deliverables
+            let existingDeliverables = [];
+            if (order.serviceDeliverables) {
+                try {
+                    existingDeliverables = typeof order.serviceDeliverables === 'string'
+                        ? JSON.parse(order.serviceDeliverables)
+                        : order.serviceDeliverables;
+                } catch (e) {
+                    existingDeliverables = [];
+                }
+            }
+
+            // Remove the deliverable
+            const updatedDeliverables = existingDeliverables.filter((d: any) => d.id !== deliverableId);
+
+            // Update order
+            await this.databaseService.updateOrder(orderId, {
+                serviceDeliverables: JSON.stringify(updatedDeliverables)
+            });
+
+            safeLogger.info(`Deliverable ${deliverableId} removed from order ${orderId}`);
+
+            return {
+                success: true,
+                remainingDeliverables: updatedDeliverables.length
+            };
+        } catch (error) {
+            safeLogger.error('Error removing deliverable:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Mark service as in progress
+     */
+    async startService(orderId: string, sellerId: string): Promise<boolean> {
+        try {
+            const order = await this.databaseService.getOrderById(orderId);
+            if (!order) throw new Error('Order not found');
+
+            const isSeller = order.sellerId === sellerId || order.sellerWalletAddress === sellerId;
+            if (!isSeller) throw new Error('Unauthorized');
+
+            await this.databaseService.updateOrder(orderId, {
+                serviceStatus: 'in_progress'
+            });
+
+            await this.notificationService.notifyOrderStatusChange(
+                order.buyerWalletAddress,
+                orderId,
+                'SERVICE_STARTED' as any
+            );
+
+            safeLogger.info(`Service started for order ${orderId}`);
+            return true;
+        } catch (error) {
+            safeLogger.error('Error starting service:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Mark service as complete (awaiting buyer confirmation)
+     */
+    async markServiceComplete(orderId: string, sellerId: string, completionNotes?: string): Promise<any> {
+        try {
+            const order = await this.databaseService.getOrderById(orderId);
+            if (!order) throw new Error('Order not found');
+
+            const isSeller = order.sellerId === sellerId || order.sellerWalletAddress === sellerId;
+            if (!isSeller) throw new Error('Unauthorized');
+
+            const completedAt = new Date().toISOString();
+
+            await this.databaseService.updateOrder(orderId, {
+                serviceStatus: 'completed',
+                serviceCompletedAt: completedAt,
+                serviceNotes: completionNotes || order.serviceNotes
+            });
+
+            // Update main order status
+            await this.orderService.updateOrderStatus(orderId, 'DELIVERED' as any);
+
+            // Notify buyer to confirm
+            await this.notificationService.notifyOrderStatusChange(
+                order.buyerWalletAddress,
+                orderId,
+                'SERVICE_COMPLETED' as any
+            );
+
+            safeLogger.info(`Service marked complete for order ${orderId}`);
+
+            return {
+                success: true,
+                completedAt
+            };
+        } catch (error) {
+            safeLogger.error('Error marking service complete:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get service details for an order
+     */
+    async getServiceDetails(orderId: string, sellerId: string): Promise<any> {
+        try {
+            const order = await this.databaseService.getOrderById(orderId);
+            if (!order) throw new Error('Order not found');
+
+            const isSeller = order.sellerId === sellerId || order.sellerWalletAddress === sellerId;
+            if (!isSeller) throw new Error('Unauthorized');
+
+            // Parse deliverables
+            let deliverables = [];
+            if (order.serviceDeliverables) {
+                try {
+                    deliverables = typeof order.serviceDeliverables === 'string'
+                        ? JSON.parse(order.serviceDeliverables)
+                        : order.serviceDeliverables;
+                } catch (e) {
+                    deliverables = [];
+                }
+            }
+
+            return {
+                orderId: order.id,
+                serviceStatus: order.serviceStatus || 'pending',
+                schedule: order.scheduledDate ? {
+                    date: order.scheduledDate,
+                    time: order.scheduledTime,
+                    timezone: order.scheduledTimezone
+                } : null,
+                deliverables,
+                completedAt: order.serviceCompletedAt,
+                buyerConfirmedAt: order.buyerConfirmedAt,
+                notes: order.serviceNotes
+            };
+        } catch (error) {
+            safeLogger.error('Error getting service details:', error);
             throw error;
         }
     }

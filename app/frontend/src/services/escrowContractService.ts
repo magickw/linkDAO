@@ -20,11 +20,20 @@ import { getEscrowAddress, getNetworkName } from '@/config/escrowConfig';
 export enum EscrowStatus {
   CREATED = 0,
   FUNDS_LOCKED = 1,
-  DELIVERY_CONFIRMED = 2,
-  DISPUTE_OPENED = 3,
-  RESOLVED_BUYER_WINS = 4,
-  RESOLVED_SELLER_WINS = 5,
-  CANCELLED = 6
+  NFT_DEPOSITED = 2,      // NFT deposited by seller
+  READY_FOR_RELEASE = 3,  // Both funds and NFT are in escrow
+  DELIVERY_CONFIRMED = 4,
+  DISPUTE_OPENED = 5,
+  RESOLVED_BUYER_WINS = 6,
+  RESOLVED_SELLER_WINS = 7,
+  CANCELLED = 8
+}
+
+// NFT Standard enum matching the smart contract
+export enum NFTStandard {
+  NONE = 0,     // Not an NFT escrow
+  ERC721 = 1,
+  ERC1155 = 2
 }
 
 // Dispute resolution method enum
@@ -52,6 +61,12 @@ export interface EscrowDetails {
   votesForBuyer: bigint;
   votesForSeller: bigint;
   totalVotingPower: bigint;
+  // NFT fields
+  nftStandard: NFTStandard;
+  nftContractAddress: Address;
+  nftTokenId: bigint;
+  nftAmount: bigint;
+  nftDeposited: boolean;
 }
 
 // Create escrow parameters
@@ -62,6 +77,14 @@ export interface CreateEscrowParams {
   amount: bigint;
   deliveryDeadline: number; // Unix timestamp in seconds
   resolutionMethod: DisputeResolutionMethod;
+}
+
+// Create NFT escrow parameters
+export interface CreateNFTEscrowParams extends CreateEscrowParams {
+  nftStandard: NFTStandard;
+  nftContractAddress: Address;
+  nftTokenId: bigint;
+  nftAmount: bigint;
 }
 
 // Enhanced Escrow Contract ABI (minimal, focused on payment flow)
@@ -175,6 +198,191 @@ export const ENHANCED_ESCROW_ABI = [
     ],
     name: 'DisputeOpened',
     type: 'event'
+  }
+] as const;
+
+// NFT Escrow ABI extensions
+export const NFT_ESCROW_ABI = [
+  // Create NFT Escrow
+  {
+    inputs: [
+      { name: 'listingId', type: 'uint256' },
+      { name: 'seller', type: 'address' },
+      { name: 'tokenAddress', type: 'address' },
+      { name: 'amount', type: 'uint256' },
+      { name: 'deliveryDeadline', type: 'uint256' },
+      { name: 'resolutionMethod', type: 'uint8' },
+      { name: 'nftStandard', type: 'uint8' },
+      { name: 'nftContractAddress', type: 'address' },
+      { name: 'nftTokenId', type: 'uint256' },
+      { name: 'nftAmount', type: 'uint256' }
+    ],
+    name: 'createNFTEscrow',
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'payable',
+    type: 'function'
+  },
+  // Deposit NFT
+  {
+    inputs: [{ name: 'escrowId', type: 'uint256' }],
+    name: 'depositNFT',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function'
+  },
+  // Lock funds for NFT escrow
+  {
+    inputs: [{ name: 'escrowId', type: 'uint256' }],
+    name: 'lockFundsForNFT',
+    outputs: [],
+    stateMutability: 'payable',
+    type: 'function'
+  },
+  // Confirm NFT delivery
+  {
+    inputs: [
+      { name: 'escrowId', type: 'uint256' },
+      { name: 'deliveryInfo', type: 'string' }
+    ],
+    name: 'confirmNFTDelivery',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function'
+  },
+  // Open NFT dispute
+  {
+    inputs: [{ name: 'escrowId', type: 'uint256' }],
+    name: 'openNFTDispute',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function'
+  },
+  // Get NFT escrow details
+  {
+    inputs: [{ name: 'escrowId', type: 'uint256' }],
+    name: 'getNFTEscrowDetails',
+    outputs: [
+      { name: 'nftStandard', type: 'uint8' },
+      { name: 'nftContractAddress', type: 'address' },
+      { name: 'nftTokenId', type: 'uint256' },
+      { name: 'nftAmount', type: 'uint256' },
+      { name: 'nftDeposited', type: 'bool' }
+    ],
+    stateMutability: 'view',
+    type: 'function'
+  },
+  // NFT Events
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: 'escrowId', type: 'uint256' },
+      { indexed: true, name: 'nftContract', type: 'address' },
+      { indexed: false, name: 'tokenId', type: 'uint256' },
+      { indexed: false, name: 'standard', type: 'uint8' }
+    ],
+    name: 'NFTDeposited',
+    type: 'event'
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: 'escrowId', type: 'uint256' },
+      { indexed: true, name: 'to', type: 'address' },
+      { indexed: false, name: 'nftContract', type: 'address' },
+      { indexed: false, name: 'tokenId', type: 'uint256' }
+    ],
+    name: 'NFTTransferred',
+    type: 'event'
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: 'escrowId', type: 'uint256' }
+    ],
+    name: 'EscrowReadyForRelease',
+    type: 'event'
+  }
+] as const;
+
+// ERC721 ABI for approval
+export const ERC721_ABI = [
+  {
+    inputs: [
+      { name: 'to', type: 'address' },
+      { name: 'tokenId', type: 'uint256' }
+    ],
+    name: 'approve',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function'
+  },
+  {
+    inputs: [
+      { name: 'operator', type: 'address' },
+      { name: 'approved', type: 'bool' }
+    ],
+    name: 'setApprovalForAll',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function'
+  },
+  {
+    inputs: [{ name: 'tokenId', type: 'uint256' }],
+    name: 'getApproved',
+    outputs: [{ name: '', type: 'address' }],
+    stateMutability: 'view',
+    type: 'function'
+  },
+  {
+    inputs: [
+      { name: 'owner', type: 'address' },
+      { name: 'operator', type: 'address' }
+    ],
+    name: 'isApprovedForAll',
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'view',
+    type: 'function'
+  },
+  {
+    inputs: [{ name: 'tokenId', type: 'uint256' }],
+    name: 'ownerOf',
+    outputs: [{ name: '', type: 'address' }],
+    stateMutability: 'view',
+    type: 'function'
+  }
+] as const;
+
+// ERC1155 ABI for approval
+export const ERC1155_ABI = [
+  {
+    inputs: [
+      { name: 'operator', type: 'address' },
+      { name: 'approved', type: 'bool' }
+    ],
+    name: 'setApprovalForAll',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function'
+  },
+  {
+    inputs: [
+      { name: 'account', type: 'address' },
+      { name: 'operator', type: 'address' }
+    ],
+    name: 'isApprovedForAll',
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'view',
+    type: 'function'
+  },
+  {
+    inputs: [
+      { name: 'account', type: 'address' },
+      { name: 'id', type: 'uint256' }
+    ],
+    name: 'balanceOf',
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function'
   }
 ] as const;
 
@@ -467,7 +675,13 @@ export class EscrowContractService {
         resolutionMethod: escrowData[12],
         votesForBuyer: escrowData[13],
         votesForSeller: escrowData[14],
-        totalVotingPower: escrowData[15]
+        totalVotingPower: escrowData[15],
+        // NFT fields - will be populated by getNFTEscrowDetails if this is an NFT escrow
+        nftStandard: NFTStandard.NONE,
+        nftContractAddress: '0x0000000000000000000000000000000000000000' as Address,
+        nftTokenId: 0n,
+        nftAmount: 0n,
+        nftDeposited: false
       };
     } catch (error) {
       console.error('Failed to get escrow details:', error);
@@ -573,5 +787,482 @@ export class EscrowContractService {
       console.error('Failed to approve token spending:', error);
       throw PaymentError.fromError(error);
     }
+  }
+
+  // ==================== NFT ESCROW METHODS ====================
+
+  /**
+   * Create a new NFT escrow for atomic swap
+   */
+  async createNFTEscrow(params: CreateNFTEscrowParams): Promise<bigint> {
+    if (!this.walletClient) {
+      throw new PaymentError({
+        code: PaymentErrorCode.WALLET_NOT_CONNECTED,
+        message: 'Wallet not connected',
+        userMessage: 'Please connect your wallet to create an NFT escrow',
+        recoveryOptions: [
+          {
+            action: 'connect_wallet',
+            label: 'Connect Wallet',
+            description: 'Connect your Web3 wallet',
+            priority: 'primary'
+          }
+        ],
+        retryable: true
+      });
+    }
+
+    try {
+      const escrowAddress = await this.getEscrowContractAddress();
+
+      const { request } = await this.publicClient.simulateContract({
+        address: escrowAddress,
+        abi: NFT_ESCROW_ABI,
+        functionName: 'createNFTEscrow',
+        args: [
+          params.listingId,
+          params.seller,
+          params.tokenAddress,
+          params.amount,
+          BigInt(params.deliveryDeadline),
+          params.resolutionMethod,
+          params.nftStandard,
+          params.nftContractAddress,
+          params.nftTokenId,
+          params.nftAmount
+        ],
+        account: (await this.walletClient.getAddresses())[0]
+      });
+
+      const hash = await this.walletClient.writeContract(request);
+      const receipt = await this.publicClient.waitForTransactionReceipt({ hash });
+
+      return this.parseEscrowIdFromReceipt(receipt);
+    } catch (error) {
+      console.error('Failed to create NFT escrow:', error);
+      throw PaymentError.fromError(error);
+    }
+  }
+
+  /**
+   * Deposit NFT into escrow (called by seller)
+   */
+  async depositNFT(escrowId: bigint): Promise<Hash> {
+    if (!this.walletClient) {
+      throw new PaymentError({
+        code: PaymentErrorCode.WALLET_NOT_CONNECTED,
+        message: 'Wallet not connected',
+        userMessage: 'Please connect your wallet to deposit NFT',
+        recoveryOptions: [
+          {
+            action: 'connect_wallet',
+            label: 'Connect Wallet',
+            description: 'Connect your Web3 wallet',
+            priority: 'primary'
+          }
+        ],
+        retryable: true
+      });
+    }
+
+    try {
+      const escrowAddress = await this.getEscrowContractAddress();
+
+      const { request } = await this.publicClient.simulateContract({
+        address: escrowAddress,
+        abi: NFT_ESCROW_ABI,
+        functionName: 'depositNFT',
+        args: [escrowId],
+        account: (await this.walletClient.getAddresses())[0]
+      });
+
+      const hash = await this.walletClient.writeContract(request);
+      await this.publicClient.waitForTransactionReceipt({ hash });
+
+      return hash;
+    } catch (error) {
+      console.error('Failed to deposit NFT:', error);
+      throw PaymentError.fromError(error);
+    }
+  }
+
+  /**
+   * Lock funds for NFT escrow
+   */
+  async lockFundsForNFT(escrowId: bigint, amount: bigint, isNative: boolean): Promise<Hash> {
+    if (!this.walletClient) {
+      throw new PaymentError({
+        code: PaymentErrorCode.WALLET_NOT_CONNECTED,
+        message: 'Wallet not connected',
+        userMessage: 'Please connect your wallet to lock funds',
+        recoveryOptions: [
+          {
+            action: 'connect_wallet',
+            label: 'Connect Wallet',
+            description: 'Connect your Web3 wallet',
+            priority: 'primary'
+          }
+        ],
+        retryable: true
+      });
+    }
+
+    try {
+      const escrowAddress = await this.getEscrowContractAddress();
+      const { total } = await this.calculateTotalWithFee(amount);
+
+      const { request } = await this.publicClient.simulateContract({
+        address: escrowAddress,
+        abi: NFT_ESCROW_ABI,
+        functionName: 'lockFundsForNFT',
+        args: [escrowId],
+        value: isNative ? total : 0n,
+        account: (await this.walletClient.getAddresses())[0]
+      });
+
+      const hash = await this.walletClient.writeContract(request);
+      await this.publicClient.waitForTransactionReceipt({ hash });
+
+      return hash;
+    } catch (error) {
+      console.error('Failed to lock funds for NFT escrow:', error);
+      throw PaymentError.fromError(error);
+    }
+  }
+
+  /**
+   * Confirm NFT delivery and execute atomic swap
+   */
+  async confirmNFTDelivery(escrowId: bigint, deliveryInfo: string): Promise<Hash> {
+    if (!this.walletClient) {
+      throw new PaymentError({
+        code: PaymentErrorCode.WALLET_NOT_CONNECTED,
+        message: 'Wallet not connected',
+        userMessage: 'Please connect your wallet to confirm NFT delivery',
+        recoveryOptions: [
+          {
+            action: 'connect_wallet',
+            label: 'Connect Wallet',
+            description: 'Connect your Web3 wallet',
+            priority: 'primary'
+          }
+        ],
+        retryable: true
+      });
+    }
+
+    try {
+      const escrowAddress = await this.getEscrowContractAddress();
+
+      const { request } = await this.publicClient.simulateContract({
+        address: escrowAddress,
+        abi: NFT_ESCROW_ABI,
+        functionName: 'confirmNFTDelivery',
+        args: [escrowId, deliveryInfo],
+        account: (await this.walletClient.getAddresses())[0]
+      });
+
+      const hash = await this.walletClient.writeContract(request);
+      await this.publicClient.waitForTransactionReceipt({ hash });
+
+      return hash;
+    } catch (error) {
+      console.error('Failed to confirm NFT delivery:', error);
+      throw PaymentError.fromError(error);
+    }
+  }
+
+  /**
+   * Open dispute for NFT escrow
+   */
+  async openNFTDispute(escrowId: bigint): Promise<Hash> {
+    if (!this.walletClient) {
+      throw new PaymentError({
+        code: PaymentErrorCode.WALLET_NOT_CONNECTED,
+        message: 'Wallet not connected',
+        userMessage: 'Please connect your wallet to open a dispute',
+        recoveryOptions: [
+          {
+            action: 'connect_wallet',
+            label: 'Connect Wallet',
+            description: 'Connect your Web3 wallet',
+            priority: 'primary'
+          }
+        ],
+        retryable: true
+      });
+    }
+
+    try {
+      const escrowAddress = await this.getEscrowContractAddress();
+
+      const { request } = await this.publicClient.simulateContract({
+        address: escrowAddress,
+        abi: NFT_ESCROW_ABI,
+        functionName: 'openNFTDispute',
+        args: [escrowId],
+        account: (await this.walletClient.getAddresses())[0]
+      });
+
+      const hash = await this.walletClient.writeContract(request);
+      await this.publicClient.waitForTransactionReceipt({ hash });
+
+      return hash;
+    } catch (error) {
+      console.error('Failed to open NFT dispute:', error);
+      throw PaymentError.fromError(error);
+    }
+  }
+
+  /**
+   * Get NFT escrow details
+   */
+  async getNFTEscrowDetails(escrowId: bigint): Promise<{
+    nftStandard: NFTStandard;
+    nftContractAddress: Address;
+    nftTokenId: bigint;
+    nftAmount: bigint;
+    nftDeposited: boolean;
+  }> {
+    try {
+      const escrowAddress = await this.getEscrowContractAddress();
+
+      const nftData = await this.publicClient.readContract({
+        address: escrowAddress,
+        abi: NFT_ESCROW_ABI,
+        functionName: 'getNFTEscrowDetails',
+        args: [escrowId],
+        authorizationList: [],
+      }) as any;
+
+      return {
+        nftStandard: nftData[0],
+        nftContractAddress: nftData[1],
+        nftTokenId: nftData[2],
+        nftAmount: nftData[3],
+        nftDeposited: nftData[4]
+      };
+    } catch (error) {
+      console.error('Failed to get NFT escrow details:', error);
+      throw PaymentError.fromError(error);
+    }
+  }
+
+  /**
+   * Get full escrow details with NFT info
+   */
+  async getFullEscrowDetails(escrowId: bigint): Promise<EscrowDetails> {
+    const baseDetails = await this.getEscrowDetails(escrowId);
+
+    try {
+      const nftDetails = await this.getNFTEscrowDetails(escrowId);
+      return {
+        ...baseDetails,
+        ...nftDetails
+      };
+    } catch {
+      // Not an NFT escrow, return base details
+      return baseDetails;
+    }
+  }
+
+  /**
+   * Check if NFT is approved for escrow contract
+   */
+  async isNFTApproved(
+    nftContractAddress: Address,
+    tokenId: bigint,
+    nftStandard: NFTStandard,
+    owner: Address
+  ): Promise<boolean> {
+    try {
+      const escrowAddress = await this.getEscrowContractAddress();
+
+      if (nftStandard === NFTStandard.ERC721) {
+        // Check specific approval
+        const approved = await this.publicClient.readContract({
+          address: nftContractAddress,
+          abi: ERC721_ABI,
+          functionName: 'getApproved',
+          args: [tokenId],
+          authorizationList: [],
+        });
+
+        if (approved === escrowAddress) {
+          return true;
+        }
+
+        // Check approval for all
+        const isApprovedForAll = await this.publicClient.readContract({
+          address: nftContractAddress,
+          abi: ERC721_ABI,
+          functionName: 'isApprovedForAll',
+          args: [owner, escrowAddress],
+          authorizationList: [],
+        });
+
+        return isApprovedForAll as boolean;
+      } else if (nftStandard === NFTStandard.ERC1155) {
+        // ERC1155 only has setApprovalForAll
+        const isApprovedForAll = await this.publicClient.readContract({
+          address: nftContractAddress,
+          abi: ERC1155_ABI,
+          functionName: 'isApprovedForAll',
+          args: [owner, escrowAddress],
+          authorizationList: [],
+        });
+
+        return isApprovedForAll as boolean;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Failed to check NFT approval:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Approve ERC721 for escrow contract
+   */
+  async approveERC721(nftContractAddress: Address, tokenId: bigint): Promise<Hash> {
+    if (!this.walletClient) {
+      throw new PaymentError({
+        code: PaymentErrorCode.WALLET_NOT_CONNECTED,
+        message: 'Wallet not connected',
+        userMessage: 'Please connect your wallet to approve NFT transfer',
+        recoveryOptions: [
+          {
+            action: 'connect_wallet',
+            label: 'Connect Wallet',
+            description: 'Connect your Web3 wallet',
+            priority: 'primary'
+          }
+        ],
+        retryable: true
+      });
+    }
+
+    try {
+      const escrowAddress = await this.getEscrowContractAddress();
+
+      const { request } = await this.publicClient.simulateContract({
+        address: nftContractAddress,
+        abi: ERC721_ABI,
+        functionName: 'approve',
+        args: [escrowAddress, tokenId],
+        account: (await this.walletClient.getAddresses())[0]
+      });
+
+      const hash = await this.walletClient.writeContract(request);
+      await this.publicClient.waitForTransactionReceipt({ hash });
+
+      return hash;
+    } catch (error) {
+      console.error('Failed to approve ERC721:', error);
+      throw PaymentError.fromError(error);
+    }
+  }
+
+  /**
+   * Approve ERC1155 for escrow contract (set approval for all)
+   */
+  async approveERC1155(nftContractAddress: Address): Promise<Hash> {
+    if (!this.walletClient) {
+      throw new PaymentError({
+        code: PaymentErrorCode.WALLET_NOT_CONNECTED,
+        message: 'Wallet not connected',
+        userMessage: 'Please connect your wallet to approve NFT transfer',
+        recoveryOptions: [
+          {
+            action: 'connect_wallet',
+            label: 'Connect Wallet',
+            description: 'Connect your Web3 wallet',
+            priority: 'primary'
+          }
+        ],
+        retryable: true
+      });
+    }
+
+    try {
+      const escrowAddress = await this.getEscrowContractAddress();
+
+      const { request } = await this.publicClient.simulateContract({
+        address: nftContractAddress,
+        abi: ERC1155_ABI,
+        functionName: 'setApprovalForAll',
+        args: [escrowAddress, true],
+        account: (await this.walletClient.getAddresses())[0]
+      });
+
+      const hash = await this.walletClient.writeContract(request);
+      await this.publicClient.waitForTransactionReceipt({ hash });
+
+      return hash;
+    } catch (error) {
+      console.error('Failed to approve ERC1155:', error);
+      throw PaymentError.fromError(error);
+    }
+  }
+
+  /**
+   * Get ERC721 owner
+   */
+  async getERC721Owner(nftContractAddress: Address, tokenId: bigint): Promise<Address> {
+    try {
+      const owner = await this.publicClient.readContract({
+        address: nftContractAddress,
+        abi: ERC721_ABI,
+        functionName: 'ownerOf',
+        args: [tokenId],
+        authorizationList: [],
+      });
+
+      return owner as Address;
+    } catch (error) {
+      console.error('Failed to get ERC721 owner:', error);
+      throw PaymentError.fromError(error);
+    }
+  }
+
+  /**
+   * Get ERC1155 balance
+   */
+  async getERC1155Balance(nftContractAddress: Address, owner: Address, tokenId: bigint): Promise<bigint> {
+    try {
+      const balance = await this.publicClient.readContract({
+        address: nftContractAddress,
+        abi: ERC1155_ABI,
+        functionName: 'balanceOf',
+        args: [owner, tokenId],
+        authorizationList: [],
+      });
+
+      return balance as bigint;
+    } catch (error) {
+      console.error('Failed to get ERC1155 balance:', error);
+      throw PaymentError.fromError(error);
+    }
+  }
+
+  /**
+   * Check if this is an NFT escrow
+   */
+  async isNFTEscrow(escrowId: bigint): Promise<boolean> {
+    try {
+      const nftDetails = await this.getNFTEscrowDetails(escrowId);
+      return nftDetails.nftStandard !== NFTStandard.NONE;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Check if NFT escrow is ready for release (both funds and NFT deposited)
+   */
+  async isReadyForRelease(escrowId: bigint): Promise<boolean> {
+    const details = await this.getEscrowDetails(escrowId);
+    return details.status === EscrowStatus.READY_FOR_RELEASE;
   }
 }

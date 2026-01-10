@@ -221,6 +221,14 @@ export interface SellerOrder {
         quantity: number;
         price: number;
         image?: string;
+        isPhysical?: boolean;
+        isService?: boolean;
+        serviceType?: 'remote' | 'in_person' | 'consultation' | 'subscription';
+        // NFT fields
+        isNFT?: boolean;
+        nftContractAddress?: string;
+        nftTokenId?: string;
+        nftStandard?: 'ERC721' | 'ERC1155';
     }>;
     buyerAddress: string;
     buyerName?: string;
@@ -242,6 +250,27 @@ export interface SellerOrder {
     notes?: string;
     createdAt: string;
     updatedAt: string;
+    // Physical vs Digital vs Service flags
+    isPhysical?: boolean;
+    requiresShipping?: boolean;
+    // Service delivery fields
+    isService?: boolean;
+    serviceStatus?: ServiceStatus;
+    serviceSchedule?: ServiceSchedule;
+    serviceDeliverables?: ServiceDeliverable[];
+    serviceCompletedAt?: string;
+    buyerConfirmedAt?: string;
+    serviceNotes?: string;
+    serviceType?: 'remote' | 'in_person' | 'consultation' | 'subscription';
+    // NFT Escrow fields
+    isNFTOrder?: boolean;
+    nftEscrowId?: string;
+    nftContractAddress?: string;
+    nftTokenId?: string;
+    nftStandard?: 'ERC721' | 'ERC1155';
+    nftAmount?: number;
+    nftDeposited?: boolean;
+    nftEscrowStatus?: 'created' | 'funds_locked' | 'nft_deposited' | 'ready_for_release' | 'completed' | 'disputed' | 'cancelled';
 }
 
 export interface SellerListing {
@@ -456,4 +485,49 @@ export interface PackingSlip {
     };
     items: Array<{ description: string; quantity: number }>;
     sellerId: string;
+}
+
+// Service Delivery Types
+export type ServiceStatus = 'pending' | 'scheduled' | 'in_progress' | 'completed' | 'buyer_confirmed' | 'cancelled';
+
+export interface ServiceSchedule {
+    scheduledDate: string;
+    scheduledTime: string;
+    timezone: string;
+    duration?: number;
+    notes?: string;
+}
+
+export interface ServiceDeliverable {
+    id: string;
+    type: 'file' | 'link' | 'document';
+    url: string;
+    name: string;
+    description?: string;
+    uploadedAt: string;
+    size?: number;
+}
+
+export interface ServiceDetails {
+    orderId: string;
+    serviceStatus: ServiceStatus;
+    schedule?: ServiceSchedule;
+    deliverables: ServiceDeliverable[];
+    completedAt?: string;
+    buyerConfirmedAt?: string;
+    notes?: string;
+}
+
+export interface ScheduleServiceInput {
+    date: string;
+    time: string;
+    timezone: string;
+    notes?: string;
+}
+
+export interface AddDeliverableInput {
+    type: 'file' | 'link' | 'document';
+    url: string;
+    name: string;
+    description?: string;
 }

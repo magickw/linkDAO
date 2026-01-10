@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { TokenBalance } from '../../types/wallet';
 import { useToast } from '@/context/ToastContext';
 import { useTokenTransfer } from '../../hooks/useTokenTransfer';
-import { useChainId } from 'wagmi';
+import { useNetworkSwitch, CHAIN_NAMES } from '../../hooks/useNetworkSwitch';
 
 interface SendTokenModalProps {
   isOpen: boolean;
@@ -14,7 +14,7 @@ interface SendTokenModalProps {
 
 export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, onSuccess }: SendTokenModalProps) {
   const { addToast } = useToast();
-  const currentChainId = useChainId();
+  const { currentChainId, ensureNetwork, isSwitching, getChainName, supportedChains } = useNetworkSwitch();
   const { transfer, isPending, txHash } = useTokenTransfer();
 
   const [selectedTokenSymbol, setSelectedTokenSymbol] = useState(tokens[0]?.symbol || 'ETH');
@@ -34,6 +34,14 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
   ];
 
   const selectedNetwork = networks.find(network => network.id === selectedChainId) || networks[0];
+  const needsNetworkSwitch = selectedChainId !== currentChainId;
+
+  // Pre-select current network when modal opens
+  useEffect(() => {
+    if (isOpen && currentChainId) {
+      setSelectedChainId(currentChainId);
+    }
+  }, [isOpen, currentChainId]);
 
   // Sync selected token when modal opens or when tokens/initialToken change
   useEffect(() => {
@@ -61,9 +69,29 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
     }
   }, [isOpen]);
 
+  // Get token balance for selected chain
+  const getTokenBalanceForChain = (token: TokenBalance, chainId: number): number => {
+    // Check if token has chain breakdown
+    if (token.chainBreakdown) {
+      const chainData = token.chainBreakdown.find(cb => cb.chainId === chainId);
+      if (chainData) return chainData.balance;
+    }
+    // Fall back to total balance if no chain breakdown or if token is on selected chain
+    if (token.chains?.includes(chainId) || !token.chains) {
+      return token.balance;
+    }
+    return 0;
+  };
+
   const selectedToken = tokens.find(t => t.symbol === selectedTokenSymbol);
-  const maxAmount = selectedToken?.balance || 0;
+  const maxAmount = selectedToken ? getTokenBalanceForChain(selectedToken, selectedChainId) : 0;
   const estimatedValue = parseFloat(amount || '0') * (selectedToken?.valueUSD || 0) / (selectedToken?.balance || 1);
+
+  // Handle network change with auto-switch
+  const handleNetworkChange = async (newChainId: number) => {
+    setSelectedChainId(newChainId);
+    setError(''); // Clear any previous errors
+  };
 
   const handleSend = async () => {
     if (!amount || !recipient) {
@@ -72,7 +100,7 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
     }
 
     if (parseFloat(amount) > maxAmount) {
-      setError('Insufficient balance');
+      setError(`Insufficient balance on ${selectedNetwork.name}. Available: ${maxAmount.toFixed(4)} ${selectedTokenSymbol}`);
       return;
     }
 
@@ -86,95 +114,34 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
       return;
     }
 
-    // Check if selected chain is different from current connected chain
-    if (selectedChainId !== currentChainId) {
-      // For cross-chain transfers, we need to use bridge service
-      const confirmed = window.confirm(
-        `You're attempting to send tokens to a different network (${selectedNetwork.name}) than your current connection (${networks.find(n => n.id === currentChainId)?.name}).\n\n` +
-        `This requires a cross-chain bridge service which is not yet fully implemented in this UI.\n\n` +
-        `Would you like to proceed with the standard transfer on your current connected network (${networks.find(n => n.id === currentChainId)?.name}) instead?`
-      );
-      
-      if (confirmed) {
-        // If confirmed, send on current chain instead of selected chain
-        try {
-          const hash = await transfer({
-            tokenAddress: selectedToken?.contractAddress,
-            recipient,
-            amount,
-            decimals: selectedTokenSymbol === 'USDC' ? 6 : 18, // Simple heuristic, ideally comes from token data
-            chainId: currentChainId // Use current chain instead of selected
-          });
-
-          if (hash) {
-            addToast('Transaction submitted successfully!', 'success');
-            if (onSuccess) onSuccess(hash);
-            
-            // Construct the explorer URL based on the current chain (since that's where tx actually went)
-            const currentNetworkInfo = networks.find(network => network.id === currentChainId);
-            let explorerUrl = currentNetworkInfo?.explorer ? `${currentNetworkInfo.explorer}/tx/${hash}` : `https://etherscan.io/tx/${hash}`;
-
-            // Ask user if they want to view the transaction on the explorer
-            if (window.confirm(`Transaction submitted! Would you like to view it on the blockchain explorer?`)) {
-              window.open(explorerUrl, '_blank', 'noopener,noreferrer');
-            }
-
-            onClose();
-          }
-        } catch (err) {
-          console.error(err);
-          setError(err instanceof Error ? err.message : 'Transaction failed');
-          addToast('Transaction failed: ' + (err instanceof Error ? err.message : 'Unknown error'), 'error');
-        }
-        return; // Return early to avoid the cross-chain logic below
-      } else {
-        // User chose not to proceed with current chain, so show cross-chain option
-        const crossChainConfirmed = window.confirm(
-          `To send tokens to the ${selectedNetwork.name} network, you need to use the cross-chain bridge.\n\n` +
-          `This will open the bridge interface where you can complete the cross-chain transfer.\n\n` +
-          `Note: Cross-chain transfers typically take 5-15 minutes and may involve additional fees.`
-        );
-        
-        if (crossChainConfirmed) {
-          // In a real implementation, this would open the cross-chain bridge interface
-          // For now, we'll just show an alert
-          alert(
-            `Cross-chain bridge functionality would open now.\n\n` +
-            `In the full implementation:\n` +
-            `- You would connect to the source network (${networks.find(n => n.id === currentChainId)?.name})\n` +
-            `- Approve the bridge contract\n` +
-            `- Initiate the cross-chain transfer to ${selectedNetwork.name}\n` +
-            `- Wait for the bridge to complete (5-15 minutes)\n` +
-            `- Receive tokens on ${selectedNetwork.name}`
-          );
-          onClose();
-          return;
-        } else {
-          // User cancelled cross-chain transfer
-          return;
-        }
-      }
-    }
-
-    // If we're here, sending on the same chain (selectedChainId === currentChainId)
     setError('');
+
+    // Auto-switch network if needed
+    if (needsNetworkSwitch) {
+      const switchResult = await ensureNetwork(selectedChainId);
+      if (!switchResult.success) {
+        setError(switchResult.error || 'Failed to switch network');
+        addToast(switchResult.error || 'Failed to switch network', 'error');
+        return;
+      }
+      addToast(`Switched to ${selectedNetwork.name}`, 'success');
+    }
 
     try {
       const hash = await transfer({
         tokenAddress: selectedToken?.contractAddress,
         recipient,
         amount,
-        decimals: selectedTokenSymbol === 'USDC' ? 6 : 18, // Simple heuristic, ideally comes from token data
+        decimals: selectedTokenSymbol === 'USDC' ? 6 : 18, // Simple heuristic
         chainId: selectedChainId
       });
 
       if (hash) {
         addToast('Transaction submitted successfully!', 'success');
         if (onSuccess) onSuccess(hash);
-        
+
         // Construct the explorer URL based on the selected chain
-        const selectedNetworkInfo = networks.find(network => network.id === selectedChainId);
-        let explorerUrl = selectedNetworkInfo?.explorer ? `${selectedNetworkInfo.explorer}/tx/${hash}` : `https://etherscan.io/tx/${hash}`;
+        const explorerUrl = selectedNetwork.explorer ? `${selectedNetwork.explorer}/tx/${hash}` : `https://etherscan.io/tx/${hash}`;
 
         // Ask user if they want to view the transaction on the explorer
         if (window.confirm(`Transaction submitted! Would you like to view it on the blockchain explorer?`)) {
@@ -204,7 +171,7 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Send Tokens</h2>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Chain ID: {selectedChainId} • Direct Transfer
+              Connected: {getChainName(currentChainId)}
             </p>
           </div>
           <button
@@ -219,6 +186,49 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
 
         {/* Content */}
         <div className="p-6 space-y-5">
+          {/* Network Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Network
+            </label>
+            <div className="relative">
+              <select
+                value={selectedChainId}
+                onChange={(e) => handleNetworkChange(Number(e.target.value))}
+                disabled={isSwitching}
+                className="w-full p-3 pl-10 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent appearance-none disabled:opacity-50"
+              >
+                {networks.map((network) => (
+                  <option key={network.id} value={network.id}>
+                    {network.name} ({network.symbol})
+                  </option>
+                ))}
+              </select>
+              <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                <div className="w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-xs font-bold text-primary-600 dark:text-primary-400">
+                  {selectedNetwork.symbol.slice(0, 1)}
+                </div>
+              </div>
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Network switch indicator */}
+            {needsNetworkSwitch && (
+              <div className="mt-2 flex items-center gap-2 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <span className="text-xs text-amber-700 dark:text-amber-300">
+                  Will auto-switch from {getChainName(currentChainId)} to {selectedNetwork.name}
+                </span>
+              </div>
+            )}
+          </div>
+
           {/* Token Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -246,45 +256,13 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </div>
-                      </div>
-                      <div className="mt-2 flex justify-between text-xs text-gray-500 dark:text-gray-400 px-1">
-                        <span>Balance: {selectedToken?.balance.toFixed(4)} {selectedTokenSymbol}</span>
-                        <span>≈ ${selectedToken?.valueUSD?.toFixed(2) || '0.00'}</span>
-                      </div>
-                    </div>
-            
-                    {/* Network Selection */}
-                    <div className="px-6 pb-5">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Network
-                      </label>
-                      <div className="relative">
-                        <select
-                          value={selectedChainId}
-                          onChange={(e) => setSelectedChainId(Number(e.target.value))}
-                          className="w-full p-3 pl-10 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent appearance-none"
-                        >
-                          {networks.map((network) => (
-                            <option key={network.id} value={network.id}>
-                              {network.name} ({network.symbol})
-                            </option>
-                          ))}
-                        </select>
-                        <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                          <div className="w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-xs font-bold text-primary-600 dark:text-primary-400">
-                            {selectedNetwork.symbol.slice(0, 1)}
-                          </div>
-                        </div>
-                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                          <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </div>
-                      </div>
-                      <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 px-1">
-                        Selected: {selectedNetwork.name} (Chain ID: {selectedChainId})
-                      </div>
-                    </div>
+            </div>
+            <div className="mt-2 flex justify-between text-xs text-gray-500 dark:text-gray-400 px-1">
+              <span>Balance on {selectedNetwork.name}: {maxAmount.toFixed(4)} {selectedTokenSymbol}</span>
+              <span>≈ ${((maxAmount * (selectedToken?.valueUSD || 0)) / (selectedToken?.balance || 1)).toFixed(2)}</span>
+            </div>
+          </div>
+
           {/* Amount */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -339,17 +317,27 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
           {/* Submit Button */}
           <button
             onClick={handleSend}
-            disabled={isPending || !amount || !recipient}
+            disabled={isPending || isSwitching || !amount || !recipient}
             className="w-full py-3.5 px-4 bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
           >
-            {isPending ? (
+            {isSwitching ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Switching Network...
+              </>
+            ) : isPending ? (
               <>
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 Processing...
               </>
             ) : (
               <>
-                Send {selectedTokenSymbol}
+                {needsNetworkSwitch && (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                )}
+                {needsNetworkSwitch ? `Switch & Send ${selectedTokenSymbol}` : `Send ${selectedTokenSymbol}`}
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>

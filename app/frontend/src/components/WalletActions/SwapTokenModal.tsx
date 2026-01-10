@@ -7,6 +7,7 @@ import { GasFeeService } from '@/services/gasFeeService';
 import { usePublicClient } from 'wagmi';
 import { DEFAULT_SLIPPAGE_OPTIONS, DEFAULT_SLIPPAGE } from '@/types/dex';
 import { TokenInfo } from '@/types/dex';
+import { useNetworkSwitch, CHAIN_NAMES } from '../../hooks/useNetworkSwitch';
 
 interface SwapTokenModalProps {
   isOpen: boolean;
@@ -18,6 +19,8 @@ interface SwapTokenModalProps {
 export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: SwapTokenModalProps) {
   const { addToast } = useToast();
   const publicClient = usePublicClient();
+  const { currentChainId, ensureNetwork, isSwitching, getChainName, supportedChains } = useNetworkSwitch();
+
   const [gasFeeService, setGasFeeService] = useState<GasFeeService | null>(null);
   const [fromToken, setFromToken] = useState(tokens[0]?.symbol || 'ETH');
   const [toToken, setToToken] = useState('USDC');
@@ -30,10 +33,45 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
   const [gasEstimate, setGasEstimate] = useState<string | null>(null);
   const [priceImpact, setPriceImpact] = useState<string | null>(null);
   const [popularTokens, setPopularTokens] = useState<TokenInfo[]>([]);
+  const [selectedChainId, setSelectedChainId] = useState<number>(currentChainId);
+
+  // Define available networks for swapping
+  const networks = [
+    { id: 1, name: 'Ethereum', symbol: 'ETH', explorer: 'https://etherscan.io' },
+    { id: 8453, name: 'Base', symbol: 'ETH', explorer: 'https://basescan.org' },
+    { id: 137, name: 'Polygon', symbol: 'MATIC', explorer: 'https://polygonscan.com' },
+    { id: 42161, name: 'Arbitrum', symbol: 'ETH', explorer: 'https://arbiscan.io' },
+    { id: 11155111, name: 'Sepolia', symbol: 'ETH', explorer: 'https://sepolia.etherscan.io' },
+    { id: 84532, name: 'Base Sepolia', symbol: 'ETH', explorer: 'https://sepolia.basescan.org' },
+  ];
+
+  const selectedNetwork = networks.find(network => network.id === selectedChainId) || networks[0];
+  const needsNetworkSwitch = selectedChainId !== currentChainId;
+
+  // Get token balance for selected chain
+  const getTokenBalanceForChain = (token: TokenBalance, chainId: number): number => {
+    // Check if token has chain breakdown
+    if (token.chainBreakdown) {
+      const chainData = token.chainBreakdown.find(cb => cb.chainId === chainId);
+      if (chainData) return chainData.balance;
+    }
+    // Fall back to total balance if no chain breakdown or if token is on selected chain
+    if (token.chains?.includes(chainId) || !token.chains) {
+      return token.balance;
+    }
+    return 0;
+  };
 
   const fromTokenData = tokens.find(t => t.symbol === fromToken);
   const toTokenData = tokens.find(t => t.symbol === toToken);
-  const maxAmount = fromTokenData?.balance || 0;
+  const maxAmount = fromTokenData ? getTokenBalanceForChain(fromTokenData, selectedChainId) : 0;
+
+  // Pre-select current network when modal opens
+  useEffect(() => {
+    if (isOpen && currentChainId) {
+      setSelectedChainId(currentChainId);
+    }
+  }, [isOpen, currentChainId]);
 
   // Initialize gas fee service
   useEffect(() => {
@@ -46,8 +84,7 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
   useEffect(() => {
     const fetchPopularTokens = async () => {
       try {
-        const chainId = publicClient?.chain?.id || 1;
-        const popular = await dexService.getPopularTokens(chainId);
+        const popular = await dexService.getPopularTokens(selectedChainId);
         setPopularTokens(popular);
       } catch (err) {
         console.error('Failed to fetch popular tokens:', err);
@@ -56,10 +93,10 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
       }
     };
 
-    if (isOpen && publicClient) {
+    if (isOpen) {
       fetchPopularTokens();
     }
-  }, [isOpen, publicClient]);
+  }, [isOpen, selectedChainId]);
 
   // Get real exchange rate from DEX
   useEffect(() => {
@@ -112,6 +149,12 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
     }
   }, [fromToken, toToken, fromAmount, fromTokenData, toTokenData, slippage]);
 
+  // Handle network change
+  const handleNetworkChange = async (newChainId: number) => {
+    setSelectedChainId(newChainId);
+    setError(''); // Clear any previous errors
+  };
+
   // Validate tokens before swap
   const validateTokens = async () => {
     if (!fromTokenData || !toTokenData) return false;
@@ -159,7 +202,7 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
     }
 
     if (parseFloat(fromAmount) > maxAmount) {
-      setError('Insufficient balance');
+      setError(`Insufficient balance on ${selectedNetwork.name}. Available: ${maxAmount.toFixed(4)} ${fromToken}`);
       return;
     }
 
@@ -175,15 +218,37 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
       return;
     }
 
-    setIsLoading(true);
     setError('');
+
+    // Auto-switch network if needed
+    if (needsNetworkSwitch) {
+      const switchResult = await ensureNetwork(selectedChainId);
+      if (!switchResult.success) {
+        setError(switchResult.error || 'Failed to switch network');
+        addToast(switchResult.error || 'Failed to switch network', 'error');
+        return;
+      }
+      addToast(`Switched to ${selectedNetwork.name}`, 'success');
+    }
+
+    setIsLoading(true);
 
     try {
       await onSwap(fromToken, toToken, parseFloat(fromAmount));
+
+      // Construct the explorer URL based on the selected chain
+      const explorerUrl = selectedNetwork.explorer;
+
+      addToast('Swap transaction submitted successfully!', 'success');
+
+      // Ask user if they want to view the transaction on the explorer
+      if (window.confirm(`Swap submitted! Would you like to view it on the blockchain explorer?`)) {
+        window.open(explorerUrl, '_blank', 'noopener,noreferrer');
+      }
+
       onClose();
       setFromAmount('');
       setToAmount('');
-      addToast('Swap transaction submitted successfully!', 'success');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Swap failed');
       addToast('Swap failed: ' + (err instanceof Error ? err.message : 'Unknown error'), 'error');
@@ -196,15 +261,20 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md border border-gray-100 dark:border-gray-700">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Swap Tokens</h2>
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Swap Tokens</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Connected: {getChainName(currentChainId)}
+            </p>
+          </div>
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -212,12 +282,55 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
 
         {/* Content */}
         <div className="p-6 space-y-4">
+          {/* Network Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Network
+            </label>
+            <div className="relative">
+              <select
+                value={selectedChainId}
+                onChange={(e) => handleNetworkChange(Number(e.target.value))}
+                disabled={isSwitching}
+                className="w-full p-3 pl-10 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent appearance-none disabled:opacity-50"
+              >
+                {networks.map((network) => (
+                  <option key={network.id} value={network.id}>
+                    {network.name} ({network.symbol})
+                  </option>
+                ))}
+              </select>
+              <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                <div className="w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-xs font-bold text-primary-600 dark:text-primary-400">
+                  {selectedNetwork.symbol.slice(0, 1)}
+                </div>
+              </div>
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Network switch indicator */}
+            {needsNetworkSwitch && (
+              <div className="mt-2 flex items-center gap-2 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <span className="text-xs text-amber-700 dark:text-amber-300">
+                  Will auto-switch from {getChainName(currentChainId)} to {selectedNetwork.name}
+                </span>
+              </div>
+            )}
+          </div>
+
           {/* From Token */}
           <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
             <div className="flex justify-between items-center mb-2">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">From</label>
               <span className="text-sm text-gray-500 dark:text-gray-400">
-                Balance: {maxAmount.toFixed(4)}
+                Balance on {selectedNetwork.name}: {maxAmount.toFixed(4)}
               </span>
             </div>
             <div className="flex gap-3">
@@ -350,30 +463,42 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
 
           {/* Error Message */}
           {error && (
-            <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-lg text-sm">
-              {error}
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2">
+              <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-sm text-red-700 dark:text-red-200">{error}</p>
             </div>
           )}
 
           {/* Swap Button */}
           <button
             onClick={handleSwap}
-            disabled={isLoading || !fromAmount || !toAmount}
-            className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${isLoading || !fromAmount || !toAmount
-                ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                : 'bg-primary-600 hover:bg-primary-700 text-white'
-              }`}
+            disabled={isLoading || isSwitching || !fromAmount || !toAmount}
+            className="w-full py-3.5 px-4 bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
           >
-            {isLoading ? (
-              <div className="flex items-center justify-center">
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
+            {isSwitching ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Switching Network...
+              </>
+            ) : isLoading ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 Processing...
-              </div>
+              </>
             ) : (
-              'Swap Tokens'
+              <>
+                {needsNetworkSwitch && (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                )}
+                {needsNetworkSwitch ? `Switch & Swap` : 'Swap Tokens'}
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                </svg>
+              </>
             )}
           </button>
         </div>

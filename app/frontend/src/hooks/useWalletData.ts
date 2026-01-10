@@ -1,13 +1,27 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useAccount, useChainId } from 'wagmi';
 import { walletService, WalletService, TokenBalance as ServiceTokenBalance } from '../services/walletService';
-import { EnhancedWalletData } from '../types/wallet';
+import { EnhancedWalletData, TokenBalance } from '../types/wallet';
 import { dexService } from '../services/dexService';
 import { cryptoPriceService } from '../services/cryptoPriceService';
 
 // Simple in-memory cache for recent transactions to reduce API calls
 const txCache = new Map<string, { data: any[]; timestamp: number }>();
 const TX_TTL_MS = 2 * 60 * 1000; // 2 minutes
+
+// Multi-chain balance cache
+const multiChainBalanceCache = new Map<string, { data: any; timestamp: number }>();
+const BALANCE_CACHE_TTL_MS = 60 * 1000; // 1 minute
+
+// Supported chains for multi-chain balance fetching
+const SUPPORTED_CHAINS = [
+  { id: 1, name: 'Ethereum', symbol: 'ETH' },
+  { id: 8453, name: 'Base', symbol: 'ETH' },
+  { id: 137, name: 'Polygon', symbol: 'MATIC' },
+  { id: 42161, name: 'Arbitrum', symbol: 'ETH' },
+  { id: 11155111, name: 'Sepolia', symbol: 'ETH' },
+  { id: 84532, name: 'Base Sepolia', symbol: 'ETH' },
+];
 
 // Allow external invalidation of the transaction cache
 export function invalidateTxCache(address?: string) {
@@ -21,6 +35,15 @@ export function invalidateTxCache(address?: string) {
   }
 }
 
+// Invalidate multi-chain balance cache
+export function invalidateBalanceCache(address?: string) {
+  if (!address) {
+    multiChainBalanceCache.clear();
+    return;
+  }
+  multiChainBalanceCache.delete(address);
+}
+
 interface UseWalletDataOptions {
   address?: string;
   chainId?: number;
@@ -28,6 +51,7 @@ interface UseWalletDataOptions {
   autoRefresh?: boolean;
   enableTransactionHistory?: boolean;
   maxTransactions?: number;
+  enableMultiChain?: boolean; // Enable multi-chain balance fetching
 }
 
 interface UseWalletDataReturn {
@@ -66,7 +90,8 @@ export function useWalletData({
   refreshInterval = 300000, // 5 minutes
   autoRefresh = true,
   enableTransactionHistory = false,
-  maxTransactions = 10
+  maxTransactions = 10,
+  enableMultiChain = true // Enable multi-chain by default
 }: UseWalletDataOptions = {}): UseWalletDataReturn {
   const { address: connectedAddress } = useAccount();
   const connectedChainId = useChainId();
@@ -93,24 +118,103 @@ export function useWalletData({
       setIsLoadingBalance(true);
       setError(null);
 
-      // Get wallet data from wallet service
-      const walletServiceInstance = new WalletService(chainId);
-      const walletData = await walletServiceInstance.getWalletData(address as `0x${string}`);
+      // Check cache first for multi-chain data
+      if (enableMultiChain) {
+        const cached = multiChainBalanceCache.get(address);
+        if (cached && Date.now() - cached.timestamp < BALANCE_CACHE_TTL_MS) {
+          setWalletData(cached.data);
+          setLastUpdated(new Date(cached.timestamp));
+          setIsLoadingBalance(false);
+          return;
+        }
+      }
+
+      let allTokens: ServiceTokenBalance[] = [];
+      const chainBalances: Map<string, Array<{ chainId: number; balance: number; valueUSD: number; contractAddress?: string }>> = new Map();
+
+      if (enableMultiChain) {
+        // Fetch balances from all supported chains in parallel
+        const chainFetches = SUPPORTED_CHAINS.map(async (chain) => {
+          try {
+            const walletServiceInstance = new WalletService(chain.id);
+            const data = await walletServiceInstance.getWalletData(address as `0x${string}`);
+            return { chainId: chain.id, tokens: data.tokens, transactions: data.transactions };
+          } catch (err) {
+            console.warn(`Failed to fetch data from ${chain.name}:`, err);
+            return { chainId: chain.id, tokens: [], transactions: [] };
+          }
+        });
+
+        const chainResults = await Promise.all(chainFetches);
+
+        // Aggregate tokens across chains
+        for (const result of chainResults) {
+          for (const token of result.tokens) {
+            const balance = parseFloat(token.balanceFormatted || '0');
+            if (balance <= 0) continue; // Skip zero balances
+
+            // Track per-chain breakdown
+            const existing = chainBalances.get(token.symbol) || [];
+            existing.push({
+              chainId: result.chainId,
+              balance,
+              valueUSD: token.valueUSD || 0,
+              contractAddress: token.address
+            });
+            chainBalances.set(token.symbol, existing);
+
+            // Add to allTokens if not already present
+            const existingToken = allTokens.find(t => t.symbol === token.symbol);
+            if (existingToken) {
+              // Update total balance
+              const existingBalance = parseFloat(existingToken.balanceFormatted || '0');
+              const newBalance = existingBalance + balance;
+              existingToken.balance = newBalance.toString();
+              existingToken.balanceFormatted = newBalance.toString();
+              existingToken.valueUSD = (existingToken.valueUSD || 0) + (token.valueUSD || 0);
+            } else {
+              allTokens.push({
+                ...token,
+                balance: balance.toString(),
+                balanceFormatted: balance.toString()
+              });
+            }
+          }
+        }
+      } else {
+        // Single chain mode (original behavior)
+        const walletServiceInstance = new WalletService(chainId);
+        const walletData = await walletServiceInstance.getWalletData(address as `0x${string}`);
+        allTokens = [...walletData.tokens];
+
+        // Track chain breakdown for single chain
+        for (const token of allTokens) {
+          const balance = parseFloat(token.balanceFormatted || '0');
+          if (balance > 0) {
+            chainBalances.set(token.symbol, [{
+              chainId,
+              balance,
+              valueUSD: token.valueUSD || 0,
+              contractAddress: token.address
+            }]);
+          }
+        }
+      }
 
       // Update token balances with real market prices using cryptoPriceService
       const tokensWithPrices = await cryptoPriceService.updateTokenBalances(
-        walletData.tokens.map(token => ({
+        allTokens.map(token => ({
           symbol: token.symbol,
           name: token.name,
           balance: parseFloat(token.balanceFormatted || '0'),
           valueUSD: 0, // Will be updated by price service
           change24h: 0, // Will be updated by price service
           contractAddress: token.address,
-          chains: [chainId]
+          chains: Array.from(chainBalances.get(token.symbol) || []).map(cb => cb.chainId)
         }))
       );
 
-      // Discover additional tokens the user might hold
+      // Discover additional tokens the user might hold on current chain
       let discoveredTokens: any[] = [];
       try {
         const discoveryResult = await dexService.discoverTokens(address, chainId);
@@ -118,9 +222,6 @@ export function useWalletData({
       } catch (err) {
         console.warn('Failed to discover tokens:', err);
       }
-
-      // Merge discovered tokens with existing balances
-      const allTokens: ServiceTokenBalance[] = [...walletData.tokens];
 
       // Update the original tokens with price data
       for (let i = 0; i < allTokens.length; i++) {
@@ -196,7 +297,8 @@ export function useWalletData({
         valueUSD: t.valueUSD,
         change24h: t.change24h,
         contractAddress: t.address,
-        chains: [chainId]
+        chains: (chainBalances.get(t.symbol) || []).map(cb => cb.chainId),
+        chainBreakdown: chainBalances.get(t.symbol) || []
       }));
 
       // Transform transactions to match frontend types
@@ -269,6 +371,11 @@ export function useWalletData({
         ]
       };
 
+      // Cache multi-chain data
+      if (enableMultiChain && address) {
+        multiChainBalanceCache.set(address, { data, timestamp: Date.now() });
+      }
+
       setWalletData(data);
       setLastUpdated(new Date());
     } catch (err) {
@@ -280,7 +387,7 @@ export function useWalletData({
     } finally {
       setIsLoadingBalance(false);
     }
-  }, [address, chainId, providedChainId, connectedChainId, enableTransactionHistory, maxTransactions]);
+  }, [address, chainId, providedChainId, connectedChainId, enableTransactionHistory, maxTransactions, enableMultiChain]);
 
   // Refresh wallet data manually
   const refreshWalletData = useCallback(async () => {

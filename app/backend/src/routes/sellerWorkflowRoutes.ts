@@ -107,4 +107,78 @@ router.post(
     controller.bulkShipOrders.bind(controller)
 );
 
+// ==================== SERVICE DELIVERY ROUTES ====================
+
+/**
+ * @route POST /api/seller/orders/:orderId/service/schedule
+ * @desc Schedule a service delivery
+ * @access Private
+ */
+router.post(
+    '/:orderId/service/schedule',
+    limiter,
+    authMiddleware,
+    controller.scheduleService.bind(controller)
+);
+
+/**
+ * @route GET /api/seller/orders/:orderId/service
+ * @desc Get service details
+ * @access Private
+ */
+router.get(
+    '/:orderId/service',
+    limiter,
+    authMiddleware,
+    controller.getServiceDetails.bind(controller)
+);
+
+/**
+ * @route POST /api/seller/orders/:orderId/service/deliverables
+ * @desc Add a deliverable to a service order
+ * @access Private
+ */
+router.post(
+    '/:orderId/service/deliverables',
+    limiter,
+    authMiddleware,
+    controller.addServiceDeliverable.bind(controller)
+);
+
+/**
+ * @route DELETE /api/seller/orders/:orderId/service/deliverables/:deliverableId
+ * @desc Remove a deliverable from a service order
+ * @access Private
+ */
+router.delete(
+    '/:orderId/service/deliverables/:deliverableId',
+    limiter,
+    authMiddleware,
+    controller.removeServiceDeliverable.bind(controller)
+);
+
+/**
+ * @route POST /api/seller/orders/:orderId/service/start
+ * @desc Start a service
+ * @access Private
+ */
+router.post(
+    '/:orderId/service/start',
+    limiter,
+    authMiddleware,
+    controller.startService.bind(controller)
+);
+
+/**
+ * @route POST /api/seller/orders/:orderId/service/complete
+ * @desc Mark service as complete
+ * @access Private
+ */
+router.post(
+    '/:orderId/service/complete',
+    limiter,
+    authMiddleware,
+    controller.markServiceComplete.bind(controller)
+);
+
 export default router;
