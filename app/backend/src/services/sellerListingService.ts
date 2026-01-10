@@ -110,6 +110,7 @@ interface ProductListing {
   price: string;
   currency: string;
   categoryId: string;
+  categorySlug?: string; // Category slug for frontend form population
   images: string[];
   metadata: any;
   inventory: number;
@@ -318,6 +319,16 @@ class SellerListingService {
     const userResult = await db.select().from(users).where(eq(users.id, listing.sellerId));
     const user = userResult[0];
 
+    // Get category info to include slug
+    let categorySlug: string | undefined;
+    if (listing.categoryId) {
+      const categoryResult = await db.select().from(categories).where(eq(categories.id, listing.categoryId));
+      const category = categoryResult[0];
+      if (category) {
+        categorySlug = category.slug;
+      }
+    }
+
     return {
       id: listing.id,
       sellerId: listing.sellerId.toString(),
@@ -327,6 +338,7 @@ class SellerListingService {
       price: listing.priceAmount?.toString() || '0',
       currency: listing.priceCurrency,
       categoryId: listing.categoryId,
+      categorySlug, // Include category slug for frontend form population
       images: listing.images ? JSON.parse(listing.images) : [],
       metadata: listing.metadata ? JSON.parse(listing.metadata) : {},
       inventory: listing.inventory,
