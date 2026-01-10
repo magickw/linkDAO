@@ -1299,6 +1299,21 @@ export const orders = pgTable("orders", {
   estimatedDeliveryMin: timestamp("estimated_delivery_min"),
   estimatedDeliveryMax: timestamp("estimated_delivery_max"),
   createdAt: timestamp("created_at").defaultNow(),
+  // Digital Delivery & Services
+  digitalDeliveryCompletedAt: timestamp("digital_delivery_completed_at"),
+  deliveryNotes: text("delivery_notes"),
+  serviceStatus: varchar("service_status", { length: 32 }), // 'pending', 'scheduled', 'in_progress', 'completed'
+  serviceScheduled: boolean("service_scheduled").default(false),
+  scheduledDate: varchar("scheduled_date", { length: 50 }),
+  scheduledTime: varchar("scheduled_time", { length: 50 }),
+  scheduledTimezone: varchar("scheduled_timezone", { length: 50 }),
+  serviceNotes: text("service_notes"),
+  serviceDeliverables: text("service_deliverables"), // JSON array of deliverables
+  serviceCompletedAt: timestamp("service_completed_at"),
+  buyerConfirmedAt: timestamp("buyer_confirmed_at"),
+  serviceStarted: boolean("service_started").default(false),
+  serviceStartedAt: timestamp("service_started_at"),
+  isServiceOrder: boolean("is_service_order").default(false),
 }, (t) => ({
   checkoutSessionIdx: index("idx_orders_checkout_session_id").on(t.checkoutSessionId),
   paymentMethodIdx: index("idx_orders_payment_method").on(t.paymentMethod),

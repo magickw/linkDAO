@@ -78,6 +78,13 @@ export class PaymentError extends Error {
     this.metadata = details.metadata;
   }
 
+  /**
+   * Get a user-friendly error message
+   */
+  getUserFriendlyMessage(): string {
+    return this.userMessage;
+  }
+
   static fromError(error: any): PaymentError {
     // Wallet connection errors
     if (error.message?.includes('wallet') || error.message?.includes('Wallet')) {
@@ -153,12 +160,15 @@ export class PaymentError extends Error {
       });
     }
 
-    // Network errors
-    if (error.message?.includes('network') || error.message?.includes('RPC')) {
+    // Network errors (including JsonRpcProvider failures)
+    if (error.message?.includes('network') || error.message?.includes('RPC') ||
+        error.message?.includes('JsonRpcProvider') || error.message?.includes('failed to detect network') ||
+        error.message?.includes('cannot start up') || error.message?.includes('ECONNREFUSED') ||
+        error.message?.includes('fetch failed') || error.message?.includes('timeout')) {
       return new PaymentError({
         code: PaymentErrorCode.NETWORK_ERROR,
         message: error.message,
-        userMessage: 'Network connection issue. Please check your internet connection',
+        userMessage: 'Network connection issue. Please check your internet connection and try again',
         recoveryOptions: [
           {
             action: 'retry',

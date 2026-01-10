@@ -4,6 +4,94 @@ import { safeLogger } from '../utils/safeLogger';
 
 const router = Router();
 
+// In-memory LRU cache for IPFS content (immutable content, safe to cache indefinitely)
+interface CacheEntry {
+    data: Buffer;
+    contentType: string;
+    size: number;
+    lastAccessed: number;
+}
+
+class IPFSCache {
+    private cache: Map<string, CacheEntry> = new Map();
+    private maxSize: number; // Max cache size in bytes
+    private currentSize: number = 0;
+    private maxEntries: number = 500; // Max number of cached items
+
+    constructor(maxSizeMB: number = 100) {
+        this.maxSize = maxSizeMB * 1024 * 1024;
+    }
+
+    get(hash: string): CacheEntry | undefined {
+        const entry = this.cache.get(hash);
+        if (entry) {
+            entry.lastAccessed = Date.now();
+            return entry;
+        }
+        return undefined;
+    }
+
+    set(hash: string, data: Buffer, contentType: string): void {
+        const size = data.length;
+
+        // Don't cache items larger than 10MB individually
+        if (size > 10 * 1024 * 1024) {
+            return;
+        }
+
+        // Evict entries if needed
+        while ((this.currentSize + size > this.maxSize || this.cache.size >= this.maxEntries) && this.cache.size > 0) {
+            this.evictOldest();
+        }
+
+        // If existing entry, remove its size first
+        const existing = this.cache.get(hash);
+        if (existing) {
+            this.currentSize -= existing.size;
+        }
+
+        this.cache.set(hash, {
+            data,
+            contentType,
+            size,
+            lastAccessed: Date.now()
+        });
+        this.currentSize += size;
+    }
+
+    private evictOldest(): void {
+        let oldestKey: string | null = null;
+        let oldestTime = Infinity;
+
+        const entries = Array.from(this.cache.entries());
+        for (const [key, entry] of entries) {
+            if (entry.lastAccessed < oldestTime) {
+                oldestTime = entry.lastAccessed;
+                oldestKey = key;
+            }
+        }
+
+        if (oldestKey) {
+            const entry = this.cache.get(oldestKey);
+            if (entry) {
+                this.currentSize -= entry.size;
+            }
+            this.cache.delete(oldestKey);
+        }
+    }
+
+    getStats(): { entries: number; sizeMB: number; maxSizeMB: number } {
+        return {
+            entries: this.cache.size,
+            sizeMB: Math.round(this.currentSize / (1024 * 1024) * 100) / 100,
+            maxSizeMB: Math.round(this.maxSize / (1024 * 1024))
+        };
+    }
+}
+
+// Initialize cache with 100MB limit (configurable via env)
+const ipfsCache = new IPFSCache(parseInt(process.env.IPFS_CACHE_SIZE_MB || '100'));
+
 /**
  * IPFS Proxy Route
  * Proxies IPFS content through the backend to avoid CORS issues
@@ -21,7 +109,24 @@ router.get('/ipfs/:hash(*)', async (req: Request, res: Response) => {
             });
         }
 
-        safeLogger.info('Proxying IPFS content', { hash });
+        // Check cache first
+        const cached = ipfsCache.get(hash);
+        if (cached) {
+            // Set appropriate headers
+            res.set('Content-Type', cached.contentType);
+            res.set('Access-Control-Allow-Origin', '*');
+            res.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+            res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+            res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+            res.set('Cross-Origin-Embedder-Policy', 'unsafe-none');
+            res.set('Cache-Control', 'public, max-age=31536000, immutable');
+            res.set('Content-Length', String(cached.size));
+            res.set('X-Cache', 'HIT');
+
+            return res.send(cached.data);
+        }
+
+        safeLogger.info('Proxying IPFS content (cache miss)', { hash });
 
         // Fetch from Pinata gateway
         const gatewayUrl = process.env.IPFS_GATEWAY_URL || 'https://gateway.pinata.cloud/ipfs';
@@ -53,14 +158,20 @@ router.get('/ipfs/:hash(*)', async (req: Request, res: Response) => {
         if (response.headers['content-length']) {
             res.set('Content-Length', response.headers['content-length']);
         }
+        res.set('X-Cache', 'MISS');
+
+        // Store in cache for future requests
+        const dataBuffer = Buffer.from(response.data);
+        ipfsCache.set(hash, dataBuffer, contentType);
 
         // Send the content
-        res.send(response.data);
+        res.send(dataBuffer);
 
         safeLogger.info('Successfully proxied IPFS content', {
             hash,
             contentType,
-            size: response.data.length
+            size: dataBuffer.length,
+            cacheStats: ipfsCache.getStats()
         });
 
     } catch (error: any) {
@@ -111,7 +222,8 @@ router.get('/health', (req: Request, res: Response) => {
         success: true,
         service: 'ipfs-proxy',
         status: 'healthy',
-        gateway: process.env.IPFS_GATEWAY_URL || 'https://gateway.pinata.cloud/ipfs'
+        gateway: process.env.IPFS_GATEWAY_URL || 'https://gateway.pinata.cloud/ipfs',
+        cache: ipfsCache.getStats()
     });
 });
 

@@ -172,7 +172,40 @@ export class OrderService {
 
       const previousStatus = currentOrder.status;
 
-      const success = await databaseService.updateOrder(orderId, { status: status.toLowerCase() });
+      const {
+        digitalDeliveryCompletedAt,
+        deliveryNotes,
+        serviceStatus,
+        serviceScheduled,
+        scheduledDate,
+        scheduledTime,
+        scheduledTimezone,
+        serviceNotes,
+        serviceDeliverables,
+        serviceCompletedAt,
+        buyerConfirmedAt,
+        serviceStarted,
+        serviceStartedAt,
+        isServiceOrder
+      } = metadata || {};
+
+      const success = await databaseService.updateOrder(orderId, {
+        status: status.toLowerCase(),
+        digitalDeliveryCompletedAt,
+        deliveryNotes,
+        serviceStatus,
+        serviceScheduled,
+        scheduledDate,
+        scheduledTime,
+        scheduledTimezone,
+        serviceNotes,
+        serviceDeliverables,
+        serviceCompletedAt,
+        buyerConfirmedAt,
+        serviceStarted,
+        serviceStartedAt,
+        isServiceOrder
+      });
 
       if (success) {
         // Create order event

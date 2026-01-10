@@ -339,6 +339,13 @@ export class PaymentError extends Error {
     super(message);
     this.name = 'PaymentError';
   }
+
+  /**
+   * Get a user-friendly error message
+   */
+  getUserFriendlyMessage(): string {
+    return this.message;
+  }
 }
 
 // Singleton instance

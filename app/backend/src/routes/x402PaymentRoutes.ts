@@ -3,8 +3,157 @@ import { x402PaymentService } from '../services/x402PaymentService';
 import { safeLogger } from '../utils/safeLogger';
 import { csrfProtection } from '../middleware/csrfProtection';
 import { authMiddleware } from '../middleware/authMiddleware';
+import { db } from '../db';
+import { userGoldBalance, goldTransaction } from '../db/schema';
+import { eq } from 'drizzle-orm';
 
 const router = express.Router();
+
+// Gold packages configuration (same as in goldPurchaseRoutes)
+const GOLD_PACKAGES = [
+  { id: '100', name: 'Starter Stack', amount: 100, price: 1.79 },
+  { id: '200', name: 'DeFi Degen', amount: 200, price: 3.59 },
+  { id: '300', name: 'Whale Pack', amount: 300, price: 5.39 },
+  { id: '500', name: 'Diamond Hands', amount: 500, price: 8.99 },
+  { id: '1000', name: 'OG Collection', amount: 1000, price: 16.99 }
+];
+
+/**
+ * x402 Gold Purchase endpoint
+ * POST /api/x402/gold-purchase
+ * Uses x402 protocol for ultra-low fee gold purchases
+ */
+router.post('/gold-purchase', async (req, res) => {
+  try {
+    const { packageId, amount, userId } = req.body;
+
+    // Validate required fields
+    if (!packageId || !userId) {
+      safeLogger.warn('Missing required fields in x402 gold purchase request', {
+        missingFields: { packageId: !packageId, userId: !userId }
+      });
+
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: packageId, userId'
+      });
+    }
+
+    // Find the gold package
+    const goldPackage = GOLD_PACKAGES.find(p => p.id === packageId);
+    if (!goldPackage) {
+      safeLogger.warn('Invalid gold package in x402 purchase', { packageId });
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid gold package'
+      });
+    }
+
+    // Validate user address format
+    const ethereumAddressRegex = /^0x[a-fA-F0-9]{40}$/;
+    if (!ethereumAddressRegex.test(userId)) {
+      safeLogger.warn('Invalid user address in x402 gold purchase', { userId });
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid user address'
+      });
+    }
+
+    safeLogger.info('Processing x402 gold purchase', { packageId, amount: goldPackage.price, userId });
+
+    // Generate a transaction ID for the x402 payment
+    const transactionId = `x402-gold-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+
+    // For x402 protocol, we process the payment through the x402 service
+    // In production, this would interact with the actual x402 payment infrastructure
+    const paymentResult = await x402PaymentService.processPayment({
+      orderId: transactionId,
+      amount: goldPackage.price.toString(),
+      currency: 'USDC',
+      buyerAddress: userId,
+      sellerAddress: process.env.TREASURY_ADDRESS || '0xeF85C8CcC03320dA32371940b315D563be2585e5',
+      listingId: `gold-package-${packageId}`
+    });
+
+    if (!paymentResult.success) {
+      safeLogger.error('x402 gold purchase payment failed', {
+        transactionId,
+        error: paymentResult.error
+      });
+
+      return res.status(400).json({
+        success: false,
+        error: paymentResult.error || 'x402 payment processing failed'
+      });
+    }
+
+    // Update user's gold balance
+    try {
+      let userBalance = await db.select().from(userGoldBalance)
+        .where(eq(userGoldBalance.userId, String(userId))).limit(1);
+
+      if (!userBalance.length) {
+        const newBalance = await db.insert(userGoldBalance).values({
+          userId: String(userId),
+          balance: 0,
+          totalPurchased: 0,
+        }).returning();
+        userBalance = newBalance;
+      }
+
+      // Update gold balance
+      await db.update(userGoldBalance)
+        .set({
+          balance: (userBalance[0]?.balance || 0) + goldPackage.amount,
+          totalPurchased: (userBalance[0]?.totalPurchased || 0) + goldPackage.amount,
+          lastPurchaseAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(userGoldBalance.userId, String(userId)));
+
+      // Create transaction record
+      await db.insert(goldTransaction).values({
+        userId: String(userId),
+        amount: goldPackage.amount,
+        type: 'purchase',
+        price: String(goldPackage.price),
+        paymentMethod: 'x402',
+        paymentIntentId: transactionId,
+        network: 'base',
+        transactionHash: paymentResult.transactionId || transactionId,
+        status: 'completed',
+        createdAt: new Date(),
+      });
+
+      safeLogger.info('x402 gold purchase completed successfully', {
+        transactionId,
+        userId,
+        goldAmount: goldPackage.amount
+      });
+
+      res.status(200).json({
+        success: true,
+        transactionId: transactionId,
+        goldAmount: goldPackage.amount,
+        newBalance: (userBalance[0]?.balance || 0) + goldPackage.amount
+      });
+    } catch (dbError) {
+      safeLogger.error('Database error during x402 gold purchase:', dbError);
+      // Payment went through but DB update failed - log for manual resolution
+      res.status(500).json({
+        success: false,
+        error: 'Payment processed but failed to update balance. Please contact support.',
+        transactionId: transactionId
+      });
+    }
+  } catch (error) {
+    safeLogger.error('Error processing x402 gold purchase:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error during x402 gold purchase'
+    });
+  }
+});
 
 /**
  * Process an x402 payment

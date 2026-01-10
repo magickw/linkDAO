@@ -27,12 +27,25 @@ const DEFAULT_RETRY_OPTIONS: RetryOptions = {
     if (error instanceof TypeError && error.message.includes('fetch')) {
       return true;
     }
-    
+
+    // Retry on RPC/JsonRpcProvider errors
+    const errorMessage = error?.message || '';
+    if (errorMessage.includes('JsonRpcProvider') ||
+        errorMessage.includes('failed to detect network') ||
+        errorMessage.includes('cannot start up') ||
+        errorMessage.includes('ECONNREFUSED') ||
+        errorMessage.includes('network') ||
+        errorMessage.includes('RPC') ||
+        errorMessage.includes('timeout') ||
+        errorMessage.includes('fetch failed')) {
+      return true;
+    }
+
     if (error.response) {
       const status = error.response.status;
       return status >= 500 || status === 429;
     }
-    
+
     return false;
   }
 };

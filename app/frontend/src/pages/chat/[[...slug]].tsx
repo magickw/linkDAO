@@ -403,7 +403,9 @@ export default function ChatPage() {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const response = await fetch('/api/messaging/conversations', {
+      // Use backend URL from environment variable or fallback to relative path
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || '';
+      const response = await fetch(`${apiUrl}/api/messaging/conversations`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -413,8 +415,11 @@ export default function ChatPage() {
         }),
       });
 
-      if (response.ok) {
-        const newConversation = await response.json();
+      const result = await response.json();
+
+      if (response.ok && result.success !== false) {
+        // Extract conversation data from API response wrapper
+        const newConversation = result.data || result;
         setSelectedConversation(newConversation);
         setActiveView('chat');
         setShowNewConversationModal(false);
@@ -425,12 +430,16 @@ export default function ChatPage() {
 
         loadConversations();
       } else {
+        // Handle error response
+        const errorMessage = result.message || result.error || 'Unknown error';
         if (response.status === 401) {
           alert('Please connect your wallet to start a conversation');
         } else if (response.status === 400) {
-          alert('Invalid address or conversation already exists');
+          alert(errorMessage || 'Invalid address or conversation already exists');
+        } else if (response.status === 503) {
+          alert('Messaging service is temporarily unavailable. Please try again later.');
         } else {
-          alert('Failed to start conversation. Please try again.');
+          alert(`Failed to start conversation: ${errorMessage}`);
         }
       }
     } catch (error) {

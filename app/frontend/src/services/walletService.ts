@@ -190,7 +190,7 @@ const getTokensForChain = (chainId: number) => {
         {
           symbol: 'LINK',
           name: 'Chainlink (Polygon)',
-          address: '0x53E0bca35eC356BD5ddDFebbD1Fc0fD03FaBaD39' as Address, // EIP-55 checksummed
+          address: '0x53E0bca35eC356BD5ddDFebbD1Fc0fD03FaBad39' as Address, // EIP-55 checksummed
           decimals: 18
         },
         {
