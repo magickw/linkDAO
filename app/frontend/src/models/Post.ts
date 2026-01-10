@@ -150,6 +150,11 @@ export interface CreatePostInput {
   communityId?: string; // Optional - for quick posts on timeline, can be added later
   poll?: any; // Poll data for poll posts
   proposal?: any; // Proposal data for governance posts
+  shareToSocialMedia?: {
+    twitter?: boolean;
+    facebook?: boolean;
+    linkedin?: boolean;
+  };
 }
 
 export interface UpdatePostInput {

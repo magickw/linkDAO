@@ -50,6 +50,11 @@ export default function UnifiedPostCreation({
   const [nftTokenId, setNftTokenId] = useState('');
   const [isExpanded, setIsExpanded] = useState(expanded);
   
+  // Social media sharing state
+  const [shareToTwitter, setShareToTwitter] = useState(false);
+  const [shareToFacebook, setShareToFacebook] = useState(false);
+  const [shareToLinkedIn, setShareToLinkedIn] = useState(false);
+  
   // Draft management
   const [draftKey, setDraftKey] = useState('');
   const [hasDraft, setHasDraft] = useState(false);
@@ -188,6 +193,11 @@ export default function UnifiedPostCreation({
         author: address,
         content,
         tags: tagArray,
+        shareToSocialMedia: {
+          twitter: shareToTwitter,
+          facebook: shareToFacebook,
+          linkedin: shareToLinkedIn,
+        },
       };
       
       if (media) {
@@ -221,6 +231,9 @@ export default function UnifiedPostCreation({
     setNftAddress('');
     setNftTokenId('');
     setIsExpanded(false);
+    setShareToTwitter(false);
+    setShareToFacebook(false);
+    setShareToLinkedIn(false);
     clearDraft();
     
     if (onCancel) {
@@ -537,8 +550,56 @@ export default function UnifiedPostCreation({
           </p>
         </div>
         
+        {/* Social Media Sharing Options */}
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+          <div className="flex items-center space-x-2 mb-3">
+            <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+            </svg>
+            <span className="text-sm font-medium text-gray-900 dark:text-white">Share to Social Media</span>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <label className="flex items-center space-x-2 cursor-pointer p-2 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+              <input
+                type="checkbox"
+                checked={shareToTwitter}
+                onChange={(e) => setShareToTwitter(e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <div className="flex items-center space-x-2">
+                <span className="text-lg">𝕏</span>
+                <span className="text-sm text-gray-700 dark:text-gray-300">Twitter</span>
+              </div>
+            </label>
+            <label className="flex items-center space-x-2 cursor-pointer p-2 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+              <input
+                type="checkbox"
+                checked={shareToFacebook}
+                onChange={(e) => setShareToFacebook(e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <div className="flex items-center space-x-2">
+                <span className="text-lg">f</span>
+                <span className="text-sm text-gray-700 dark:text-gray-300">Facebook</span>
+              </div>
+            </label>
+            <label className="flex items-center space-x-2 cursor-pointer p-2 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+              <input
+                type="checkbox"
+                checked={shareToLinkedIn}
+                onChange={(e) => setShareToLinkedIn(e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <div className="flex items-center space-x-2">
+                <span className="text-lg">in</span>
+                <span className="text-sm text-gray-700 dark:text-gray-300">LinkedIn</span>
+              </div>
+            </label>
+          </div>
+        </div>
+        
         {/* Action Buttons */}
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center mt-4">
           <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
             {hasDraft && (
               <span className="flex items-center space-x-1 text-amber-500">

@@ -7,6 +7,7 @@ import { ProfileService } from '@/services/profileService';
 import { UserProfile } from '@/models/UserProfile';
 import { EnhancedSecuritySettings } from '@/components/Settings/EnhancedSecuritySettings';
 import EmailPreferences from '@/components/Settings/EmailPreferences';
+import SocialConnectionsTab from '@/components/SocialMedia/SocialConnectionsTab';
 
 export default function Settings() {
   const { address, isConnected } = useAccount();
@@ -17,6 +18,7 @@ export default function Settings() {
   const [emailError, setEmailError] = useState('');
   const [emailSuccess, setEmailSuccess] = useState('');
   const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
   // Fetch user profile when component mounts or address changes
   useEffect(() => {
@@ -74,8 +76,14 @@ export default function Settings() {
     { id: 'profile', name: 'Profile', icon: '👤' },
     { id: 'wallet', name: 'Wallet', icon: '💰' },
     { id: 'preferences', name: 'Preferences', icon: '⚙️' },
+    { id: 'social', name: 'Social Connections', icon: '🔗' },
     { id: 'security', name: 'Security & Notifications', icon: '🔒' },
   ];
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   if (!isConnected) {
     return (
@@ -399,6 +407,12 @@ export default function Settings() {
                 </div>
               )}
 
+              {activeTab === 'social' && (
+                <div className="p-6">
+                  <SocialConnectionsTab onToast={showToast} />
+                </div>
+              )}
+
               {activeTab === 'security' && (
                 <EnhancedSecuritySettings />
               )}
@@ -419,6 +433,30 @@ export default function Settings() {
 
             <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
               <NotificationPreferences onClose={() => setShowNotificationPreferences(false)} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed bottom-4 right-4 z-50">
+          <div
+            className={`px-4 py-3 rounded-lg shadow-lg ${
+              toast.type === 'success'
+                ? 'bg-green-500 text-white'
+                : toast.type === 'error'
+                ? 'bg-red-500 text-white'
+                : 'bg-blue-500 text-white'
+            }`}
+          >
+            {toast.message}
+          </div>
+        </div>
+      )}
+    </Layout>
+  );
+}
             </div>
           </div>
         </div>
