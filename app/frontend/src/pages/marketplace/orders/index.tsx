@@ -50,6 +50,8 @@ interface OrderItem {
     quantity: number;
     price: number;
     total: number;
+    isPhysical?: boolean;
+    isService?: boolean;
 }
 
 export default function OrdersPage() {
@@ -72,9 +74,10 @@ export default function OrdersPage() {
         }
     }, [user]);
 
-    // Check if order can be cancelled
+    // Check if order can be cancelled (handle both uppercase and lowercase status)
     const canCancelOrder = useCallback((order: Order) => {
-        return ['pending', 'processing'].includes(order.status);
+        const status = order.status?.toLowerCase();
+        return ['pending', 'processing'].includes(status);
     }, []);
 
     // Handle cancel order
@@ -180,7 +183,9 @@ export default function OrdersPage() {
                     productImage: item.productImage || item.product_image || item.image || null,
                     quantity: item.quantity || 1,
                     price: typeof item.price === 'number' ? item.price : parseFloat(item.price) || 0,
-                    total: typeof item.total === 'number' ? item.total : parseFloat(item.total) || 0
+                    total: typeof item.total === 'number' ? item.total : parseFloat(item.total) || 0,
+                    isPhysical: item.isPhysical ?? false,
+                    isService: item.isService ?? false
                 })) : [],
                 shippingAddress: order.shippingAddress || order.shipping_address || null,
                 trackingNumber: order.trackingNumber || order.tracking_number || null,
@@ -564,6 +569,77 @@ function OrderDetailsModal({ order, onClose, onCancelOrder, canCancel, isCancell
     canCancel: boolean;
     isCancelling: boolean;
 }) {
+    // Calculate if order contains only digital items (not physical)
+    const isDigitalOnly = (order.items || []).every(item => !item.isPhysical);
+
+    // Calculate subtotal from items
+    const subtotal = (order.items || []).reduce((sum, item) => sum + (item.total || item.price * (item.quantity || 1)), 0);
+
+    // Shipping is $0 for digital-only orders
+    const shipping = isDigitalOnly ? 0 : (order.total - subtotal) * 0.5; // Approximate shipping
+
+    // Calculate tax (remaining amount after shipping)
+    const tax = order.total - subtotal - shipping;
+
+    // Handle invoice download
+    const handleDownloadInvoice = () => {
+        // Create invoice content
+        const invoiceContent = `
+INVOICE
+========================================
+Order #: ${order.orderNumber}
+Date: ${new Date(order.createdAt).toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+})}
+Status: ${(order.status || 'pending').toUpperCase()}
+
+ITEMS
+----------------------------------------
+${(order.items || []).map(item =>
+`${item.productName}
+  Quantity: ${item.quantity || 1}
+  Unit Price: $${(item.price || 0).toFixed(2)}
+  Total: $${(item.total || 0).toFixed(2)}`
+).join('\n\n')}
+
+----------------------------------------
+SUMMARY
+----------------------------------------
+Subtotal: $${subtotal.toFixed(2)}
+Shipping: $${shipping.toFixed(2)}${isDigitalOnly ? ' (Digital Delivery)' : ''}
+Tax: $${Math.max(0, tax).toFixed(2)}
+----------------------------------------
+TOTAL: $${(order.total || 0).toFixed(2)} ${order.currency || 'USD'}
+========================================
+
+${order.shippingAddress ? `
+SHIPPING ADDRESS
+----------------------------------------
+${order.shippingAddress.firstName || ''} ${order.shippingAddress.lastName || ''}
+${order.shippingAddress.addressLine1 || ''}
+${order.shippingAddress.addressLine2 ? order.shippingAddress.addressLine2 + '\n' : ''}${order.shippingAddress.city || ''}, ${order.shippingAddress.state || ''} ${order.shippingAddress.postalCode || ''}
+${order.shippingAddress.country || ''}
+` : ''}
+
+Thank you for your order!
+        `.trim();
+
+        // Create and download the file
+        const blob = new Blob([invoiceContent], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `invoice-${order.orderNumber}.txt`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <GlassPanel variant="modal" className="max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -694,16 +770,16 @@ function OrderDetailsModal({ order, onClose, onCancelOrder, canCancel, isCancell
                         <h3 className="text-lg font-semibold text-white mb-4">Order Summary</h3>
                         <div className="p-4 bg-white/5 rounded-lg space-y-2">
                             <div className="flex justify-between text-white/80">
-                                <span>Subtotal</span>
-                                <span>${((order.total || 0) * 0.9).toFixed(2)}</span>
+                                <span>Subtotal ({(order.items || []).length} item{(order.items || []).length !== 1 ? 's' : ''})</span>
+                                <span>${subtotal.toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between text-white/80">
-                                <span>Shipping</span>
-                                <span>${((order.total || 0) * 0.05).toFixed(2)}</span>
+                                <span>Shipping{isDigitalOnly ? ' (Digital Delivery)' : ''}</span>
+                                <span>{isDigitalOnly ? 'Free' : `$${shipping.toFixed(2)}`}</span>
                             </div>
                             <div className="flex justify-between text-white/80">
                                 <span>Tax</span>
-                                <span>${((order.total || 0) * 0.05).toFixed(2)}</span>
+                                <span>${Math.max(0, tax).toFixed(2)}</span>
                             </div>
                             <div className="pt-2 border-t border-white/10 flex justify-between text-xl font-bold text-white">
                                 <span>Total</span>
@@ -739,6 +815,7 @@ function OrderDetailsModal({ order, onClose, onCancelOrder, canCancel, isCancell
                             fullWidth
                             icon={<Download size={16} />}
                             iconPosition="left"
+                            onClick={handleDownloadInvoice}
                         >
                             Download Invoice
                         </Button>

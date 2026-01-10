@@ -191,17 +191,16 @@ class CryptoPriceService {
   private async getLDAOPriceFromContract(): Promise<CryptoPriceData | null> {
     try {
       // Import the contract service to get the price
-      const { ldaoTokenService } = await import('./web3/ldaoTokenService');
       const { ldaoAcquisitionService } = await import('./ldaoAcquisitionService');
-      
+
       // Try to get price from LDAO Treasury contract with timeout
       const quote = await Promise.race([
         ldaoAcquisitionService.getQuote('1'),
-        new Promise((_, reject) => 
+        new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Price fetch timeout')), 5000)
         )
       ]);
-      
+
       if (quote && quote.usdAmount) {
         return {
           id: 'ldao',
@@ -214,40 +213,30 @@ class CryptoPriceService {
           last_updated: new Date().toISOString()
         };
       }
-      
+
       // Fallback to a reasonable default if contract call fails
-      return {
-        id: 'ldao',
-        symbol: 'LDAO',
-        name: 'LinkDAO Token',
-        current_price: 0.01, // Conservative fallback price
-        price_change_percentage_24h: 0,
-        market_cap: 0,
-        total_volume: 0,
-        last_updated: new Date().toISOString()
-      };
-    } catch (error: any) {
-      console.error('Failed to fetch LDAO price from contract:', error);
-      
-      // Check if it's a network/provider error and return fallback
-      if (error.message?.includes('network') || 
-          error.message?.includes('provider') ||
-          error.message?.includes('timeout')) {
-        console.warn('Network error detected, using fallback price for LDAO');
-        return {
-          id: 'ldao',
-          symbol: 'LDAO',
-          name: 'LinkDAO Token',
-          current_price: 0.01, // Conservative fallback price
-          price_change_percentage_24h: 0,
-          market_cap: 0,
-          total_volume: 0,
-          last_updated: new Date().toISOString()
-        };
-      }
-      
-      return null;
+      return this.getLDAOFallbackPrice();
+    } catch {
+      // Silently return fallback price - contract calls failing is expected
+      // when the network isn't available or contract isn't deployed
+      return this.getLDAOFallbackPrice();
     }
+  }
+
+  /**
+   * Get fallback LDAO price when contract is unavailable
+   */
+  private getLDAOFallbackPrice(): CryptoPriceData {
+    return {
+      id: 'ldao',
+      symbol: 'LDAO',
+      name: 'LinkDAO Token',
+      current_price: 0.01, // Conservative fallback price
+      price_change_percentage_24h: 0,
+      market_cap: 0,
+      total_volume: 0,
+      last_updated: new Date().toISOString()
+    };
   }
 
   /**

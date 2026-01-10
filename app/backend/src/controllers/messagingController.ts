@@ -77,10 +77,15 @@ export class MessagingController {
       res.status(201).json(apiResponse.success(conversation.data || conversation, 'Conversation started successfully'));
     } catch (error) {
       safeLogger.error('Error starting conversation:', error);
-      if (error instanceof Error && error.message.includes('Messaging service temporarily unavailable')) {
-        res.status(503).json(apiResponse.error('Messaging service temporarily unavailable. Please try again later.', 503));
+      if (error instanceof Error) {
+        if (error.message.includes('Messaging service temporarily unavailable')) {
+          res.status(503).json(apiResponse.error('Messaging service temporarily unavailable. Please try again later.', 503));
+        } else {
+          // Pass through the actual error message for better debugging
+          res.status(500).json(apiResponse.error(error.message || 'Failed to start conversation', 500));
+        }
       } else {
-        res.status(500).json(apiResponse.error('Failed to start conversation'));
+        res.status(500).json(apiResponse.error('Failed to start conversation', 500));
       }
     }
   }

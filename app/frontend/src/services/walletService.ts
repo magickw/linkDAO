@@ -479,7 +479,10 @@ export class WalletService {
     // Fallback to per-chain API
     try {
       if (!config.apiKey) {
-        console.warn(`No API key configured for chain ${chainId}`);
+        // Only log warning in development mode to reduce console noise in production
+        if (process.env.NODE_ENV === 'development') {
+          console.debug(`Token discovery: No API key for chain ${chainId}, using known tokens only`);
+        }
         return [];
       }
 

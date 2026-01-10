@@ -23,7 +23,7 @@ export default function WhatsHappeningWidget({ className = '' }: WhatsHappeningW
       try {
         setIsLoading(true);
 
-        // Fetch recent posts from the feed
+        // Fetch recent posts from the feed (max 50 per backend validation)
         const feedResponse = await FeedService.getEnhancedFeed(
           {
             sortBy: FeedSortType.NEW,
@@ -31,7 +31,7 @@ export default function WhatsHappeningWidget({ className = '' }: WhatsHappeningW
             feedSource: 'all'
           },
           1,
-          100
+          50
         );
 
         // Extract hashtags and calculate trending score

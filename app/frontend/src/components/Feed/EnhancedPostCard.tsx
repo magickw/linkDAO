@@ -509,36 +509,65 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
           </div>
         )}
 
-        {/* Media */}
+        {/* Media - Display all images in a grid layout */}
         {post.mediaCids && post.mediaCids.length > 0 && !imageError && (
-          <div onClick={onExpand}>
-            <OptimizedImage
-              src={post.mediaCids[0]}
-              alt="Post media"
-              width={600}
-              height={300}
-              lazy={true}
-              quality={0.85}
-              onError={(e) => {
-                console.error('Image failed to load:', {
-                  postId: post.id,
-                  mediaCid: post.mediaCids[0],
-                  error: e
-                });
-                console.error('All IPFS gateways failed for this image');
-                setImageError(true);
-              }}
-            />
+          <div
+            onClick={onExpand}
+            className={`mt-3 grid gap-2 ${
+              post.mediaCids.length === 1
+                ? 'grid-cols-1'
+                : post.mediaCids.length === 2
+                  ? 'grid-cols-2'
+                  : post.mediaCids.length === 3
+                    ? 'grid-cols-2'
+                    : 'grid-cols-2'
+            }`}
+          >
+            {post.mediaCids.map((mediaCid: string, index: number) => (
+              <div
+                key={`media-${index}-${mediaCid}`}
+                className={`relative overflow-hidden rounded-lg ${
+                  post.mediaCids.length === 3 && index === 0
+                    ? 'col-span-2'
+                    : ''
+                }`}
+              >
+                <OptimizedImage
+                  src={mediaCid}
+                  alt={`Post media ${index + 1}`}
+                  width={post.mediaCids.length === 1 ? 600 : 300}
+                  height={post.mediaCids.length === 1 ? 300 : 200}
+                  lazy={true}
+                  quality={0.85}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    console.error('Image failed to load:', {
+                      postId: post.id,
+                      mediaCid: mediaCid,
+                      index: index,
+                      error: e
+                    });
+                    // Only set error if all images fail
+                    if (index === post.mediaCids.length - 1) {
+                      setImageError(true);
+                    }
+                  }}
+                />
+              </div>
+            ))}
           </div>
         )}
         {/* Show error message if image failed to load from all gateways */}
         {post.mediaCids && post.mediaCids.length > 0 && imageError && (
           <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 text-center">
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-              Failed to load image from IPFS
+              Failed to load {post.mediaCids.length > 1 ? 'images' : 'image'} from IPFS
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-500 font-mono">
-              CID: {post.mediaCids[0]}
+              {post.mediaCids.length > 1
+                ? `CIDs: ${post.mediaCids.slice(0, 2).join(', ')}${post.mediaCids.length > 2 ? ` (+${post.mediaCids.length - 2} more)` : ''}`
+                : `CID: ${post.mediaCids[0]}`
+              }
             </p>
             <button
               onClick={() => {
@@ -551,10 +580,13 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
             </button>
           </div>
         )}
-        {/* Debug: Show CID */}
+        {/* Debug: Show CIDs */}
         {post.mediaCids && post.mediaCids.length > 0 && process.env.NODE_ENV === 'development' && (
           <div className="text-xs text-gray-500 mt-1">
-            CID: {post.mediaCids[0]} (Gateway: {ipfsGateways[ipfsGatewayIndex]})
+            {post.mediaCids.length > 1
+              ? `CIDs: ${post.mediaCids.length} images`
+              : `CID: ${post.mediaCids[0]}`
+            } (Gateway: {ipfsGateways[ipfsGatewayIndex]})
           </div>
         )}
 

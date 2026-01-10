@@ -244,7 +244,7 @@ export class MessagingService {
       const newConversation = await db
         .insert(conversations)
         .values({
-          participants: JSON.stringify(participants),
+          participants: participants,
           lastActivity: new Date(),
           createdAt: new Date()
         })
@@ -267,8 +267,12 @@ export class MessagingService {
       };
     } catch (error) {
       safeLogger.error('Error starting conversation:', error);
-      if (error instanceof Error && error.message.includes('database')) {
-        throw new Error('Messaging service temporarily unavailable. Database connection error.');
+      if (error instanceof Error) {
+        if (error.message.includes('database') || error.message.includes('connection')) {
+          throw new Error('Messaging service temporarily unavailable. Database connection error.');
+        }
+        // Preserve the original error message for better debugging
+        throw new Error(`Failed to start conversation: ${error.message}`);
       }
       throw new Error('Failed to start conversation');
     }

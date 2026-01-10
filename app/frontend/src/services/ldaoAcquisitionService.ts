@@ -87,24 +87,49 @@ class LDAOAcquisitionService {
     try {
       if (typeof window !== 'undefined' && window.ethereum) {
         this.initializationAttempted = true;
-        
-        // Create provider without requiring immediate access to signer
-        this.provider = new ethers.BrowserProvider(window.ethereum);
+
+        // Create provider with timeout to prevent infinite network detection retries
+        const providerPromise = (async () => {
+          const provider = new ethers.BrowserProvider(window.ethereum);
+          // Try to detect network with a timeout
+          try {
+            await Promise.race([
+              provider.getNetwork(),
+              new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Network detection timeout')), 3000)
+              )
+            ]);
+          } catch {
+            // Network detection failed - provider still usable for contract calls
+          }
+          return provider;
+        })();
+
+        // Wait for provider with overall timeout
+        this.provider = await Promise.race([
+          providerPromise,
+          new Promise<ethers.BrowserProvider>((_, reject) =>
+            setTimeout(() => reject(new Error('Provider initialization timeout')), 5000)
+          )
+        ]).catch(() => {
+          // If provider creation times out, return null and allow fallback
+          return null;
+        });
+
+        if (!this.provider) {
+          return;
+        }
 
         // Initialize contracts with deployed addresses
         const treasuryAddress = process.env.NEXT_PUBLIC_LDAO_TREASURY_ADDRESS;
         const ldaoAddress = process.env.NEXT_PUBLIC_LDAO_TOKEN_ADDRESS;
 
         if (!treasuryAddress || !ldaoAddress) {
-          console.warn('Treasury or LDAO token address not configured');
           return;
         }
 
         // Get signer only when needed, not during initialization
-        const signer = await this.provider.getSigner().catch(() => {
-          console.warn('No signer available, using provider only');
-          return null;
-        });
+        const signer = await this.provider.getSigner().catch(() => null);
 
         // Treasury contract ABI (simplified)
         const treasuryABI = [
@@ -124,25 +149,19 @@ class LDAOAcquisitionService {
 
         // Only initialize with signer if available, otherwise use provider
         this.treasuryContract = new ethers.Contract(
-          treasuryAddress, 
-          treasuryABI, 
+          treasuryAddress,
+          treasuryABI,
           signer || this.provider
         );
         this.ldaoContract = new ethers.Contract(
-          ldaoAddress, 
-          ldaoABI, 
+          ldaoAddress,
+          ldaoABI,
           signer || this.provider
         );
       }
-    } catch (error) {
-      console.error('Failed to initialize contracts:', error);
+    } catch {
+      // Silently fail - contracts will be null and fallback values will be used
       this.initializationPromise = null;
-      // Don't throw here - allow initialization to be retried later
-      if (error instanceof Error && error.message.includes('No signer available')) {
-        console.warn('Contract initialized in read-only mode (no signer)');
-      } else {
-        console.error('Contract initialization failed:', error);
-      }
     }
   }
 
@@ -368,19 +387,7 @@ class LDAOAcquisitionService {
       if (!this.treasuryContract) {
         // Return a default quote if contract is not initialized
         // This allows the UI to still function even if contract is not available
-        return {
-          ldaoAmount,
-          usdAmount: (parseFloat(ldaoAmount) * 0.01).toString(), // Default price of $0.01 per LDAO
-          ethAmount: (parseFloat(ldaoAmount) * 0.000005).toString(), // Default ETH rate
-          usdcAmount: (parseFloat(ldaoAmount) * 0.01).toString(), // Default USDC rate
-          discount: 0,
-          fees: {
-            processing: '0.01',
-            gas: '0.005',
-            total: '0.015'
-          },
-          estimatedTime: '2-5 minutes'
-        };
+        return this.getDefaultQuote(ldaoAmount);
       }
 
       const ldaoAmountWei = ethers.parseEther(ldaoAmount);
@@ -404,23 +411,30 @@ class LDAOAcquisitionService {
         },
         estimatedTime: '2-5 minutes'
       };
-    } catch (error) {
-      console.error('Quote error:', error);
-      // Return a default quote to allow functionality even if contract call fails
-      return {
-        ldaoAmount,
-        usdAmount: (parseFloat(ldaoAmount) * 0.01).toString(), // Default price of $0.01 per LDAO
-        ethAmount: (parseFloat(ldaoAmount) * 0.000005).toString(), // Default ETH rate
-        usdcAmount: (parseFloat(ldaoAmount) * 0.01).toString(), // Default USDC rate
-        discount: 0,
-        fees: {
-          processing: '0.01',
-          gas: '0.005',
-          total: '0.015'
-        },
-        estimatedTime: '2-5 minutes'
-      };
+    } catch {
+      // Silently return default quote - contract calls failing is expected
+      // when the network isn't available or contract isn't deployed
+      return this.getDefaultQuote(ldaoAmount);
     }
+  }
+
+  /**
+   * Get default quote when contract is unavailable
+   */
+  private getDefaultQuote(ldaoAmount: string): PurchaseQuote {
+    return {
+      ldaoAmount,
+      usdAmount: (parseFloat(ldaoAmount) * 0.01).toString(), // Default price of $0.01 per LDAO
+      ethAmount: (parseFloat(ldaoAmount) * 0.000005).toString(), // Default ETH rate
+      usdcAmount: (parseFloat(ldaoAmount) * 0.01).toString(), // Default USDC rate
+      discount: 0,
+      fees: {
+        processing: '0.01',
+        gas: '0.005',
+        total: '0.015'
+      },
+      estimatedTime: '2-5 minutes'
+    };
   }
 
   /**
