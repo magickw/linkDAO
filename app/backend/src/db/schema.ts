@@ -6390,7 +6390,7 @@ export const socialMediaConnections = pgTable("social_media_connections", {
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (t) => ({
   userPlatformIdx: index("idx_social_connections_user_platform").on(t.userId, t.platform),
-  userPlatformUnique: uniqueIndex("unique_user_platform").on(t.userId, t.platform),
+  userPlatformUnique: unique("unique_user_platform").on(t.userId, t.platform),
   statusIdx: index("idx_social_connections_status").on(t.status),
 }));
 
