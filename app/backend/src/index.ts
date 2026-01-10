@@ -508,11 +508,17 @@ import paymentMethodRoutes from './routes/paymentMethodRoutes';
 import wishlistRoutes from './routes/wishlistRoutes';
 import buyerProfileRoutes from './routes/buyerProfileRoutes';
 
+// Import data deletion routes (GDPR/Platform compliance for Facebook, LinkedIn)
+import dataDeletionRoutes from './routes/dataDeletionRoutes';
+
 // Import Gold Purchase Routes
 import goldPurchaseRoutes from './routes/goldPurchaseRoutes';
 
 // Mount Gold Purchase Routes
 app.use('/api/gold', goldPurchaseRoutes);
+
+// Data deletion routes (required by Facebook and LinkedIn for OAuth apps)
+app.use('/api/data-deletion', dataDeletionRoutes);
 
 // Reputation routes
 app.use('/marketplace/reputation', reputationRoutes);

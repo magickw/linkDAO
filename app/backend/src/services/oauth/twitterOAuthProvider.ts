@@ -6,16 +6,16 @@
 import { BaseOAuthProvider, OAuthConfig, OAuthTokens, OAuthUserInfo, SocialMediaContent, PostResult } from './baseOAuthProvider';
 import { safeLogger } from '../../utils/safeLogger';
 
-// Twitter API endpoints
+// Twitter API endpoints (X API v2)
 const TWITTER_AUTH_URL = 'https://twitter.com/i/oauth2/authorize';
 const TWITTER_TOKEN_URL = 'https://api.twitter.com/2/oauth2/token';
 const TWITTER_REVOKE_URL = 'https://api.twitter.com/2/oauth2/revoke';
 const TWITTER_USER_URL = 'https://api.twitter.com/2/users/me';
 const TWITTER_TWEET_URL = 'https://api.twitter.com/2/tweets';
-const TWITTER_MEDIA_UPLOAD_URL = 'https://upload.twitter.com/1.1/media/upload.json';
+const TWITTER_MEDIA_UPLOAD_URL = 'https://api.twitter.com/2/media/upload'; // v2 endpoint (v1.1 deprecated March 2025)
 
-// Default scopes for Twitter
-const DEFAULT_SCOPES = ['tweet.read', 'tweet.write', 'users.read', 'offline.access'];
+// Default scopes for Twitter OAuth 2.0
+const DEFAULT_SCOPES = ['tweet.read', 'tweet.write', 'users.read', 'media.write', 'offline.access'];
 
 export class TwitterOAuthProvider extends BaseOAuthProvider {
   constructor() {

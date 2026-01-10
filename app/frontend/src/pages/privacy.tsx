@@ -182,7 +182,11 @@ export default function PrivacyPolicy() {
 
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3 mt-6">6.3 Deletion Requests</h3>
             <p>
-              You may request deletion of your off-chain data by contacting us. However, please note:
+              You can request deletion of your off-chain data through our{' '}
+              <a href="/data-deletion" className="text-primary-600 dark:text-primary-400 hover:underline">
+                Data Deletion page
+              </a>
+              . However, please note:
             </p>
             <ul className="list-disc pl-6 space-y-2">
               <li>Blockchain data is permanent and cannot be deleted</li>

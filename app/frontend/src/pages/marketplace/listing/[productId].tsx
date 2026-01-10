@@ -104,10 +104,29 @@ const ProductDetailPageRoute: React.FC = () => {
                 try {
                   imageUrls = JSON.parse(productData.images);
                 } catch {
-                  imageUrls = [];
+                  // If parsing fails, treat it as a single image URL
+                  imageUrls = productData.images.trim() ? [productData.images] : [];
                 }
               }
             }
+
+            // Process image URLs to handle different formats
+            imageUrls = imageUrls.filter(url => url && typeof url === 'string').map(url => {
+              // If it's already a full URL, return as-is
+              if (url.startsWith('http://') || url.startsWith('https://')) {
+                return url;
+              }
+              // Handle IPFS protocol URLs
+              if (url.startsWith('ipfs://')) {
+                return url.replace('ipfs://', 'https://ipfs.io/ipfs/');
+              }
+              // Handle IPFS CIDs (Qm... or bafy...)
+              if (url.startsWith('Qm') || url.startsWith('bafy') || url.startsWith('baf')) {
+                return `https://ipfs.io/ipfs/${url}`;
+              }
+              // Return as-is for other formats
+              return url;
+            });
 
             // Get inventory - handle both `inventory` and `quantity` fields
             const rawInventory = productData.inventory ?? productData.quantity ?? 0;
@@ -198,7 +217,20 @@ const ProductDetailPageRoute: React.FC = () => {
               },
               inventory: inventory,
               rawInventory: rawInventory,
-              category: { id: productData.categoryId, name: categoryName }
+              category: { id: productData.categoryId, name: categoryName },
+              // Enhanced debugging for the three issues
+              shippingDebug: {
+                rawShipping: productData.shipping,
+                hasMethods: !!productData.shipping?.methods,
+                standardMethod: productData.shipping?.methods?.standard,
+                expressMethod: productData.shipping?.methods?.express,
+              },
+              imagesDebug: {
+                rawImages: productData.images,
+                isArray: Array.isArray(productData.images),
+                parsedUrls: imageUrls,
+                urlCount: imageUrls.length,
+              }
             });
 
             // Enhance seller information by fetching full profile if needed
@@ -288,11 +320,67 @@ const ProductDetailPageRoute: React.FC = () => {
               tags: Array.isArray(productData.tags) ? productData.tags :
                 (typeof productData.tags === 'string' ? JSON.parse(productData.tags || '[]') : []),
               inventory: !isNaN(inventory) ? inventory : 0,
-              shipping: {
-                freeShipping: productData.shipping?.free || false,
-                estimatedDays: productData.shipping?.estimatedDays || '3-5 business days',
-                cost: productData.shipping?.cost
-              },
+              shipping: (() => {
+                const shippingData = productData.shipping;
+
+                // Handle both flat structure (legacy) and nested ShippingConfiguration structure
+                if (!shippingData) {
+                  return {
+                    freeShipping: false,
+                    estimatedDays: '3-5 business days',
+                    cost: undefined
+                  };
+                }
+
+                // Check if it's a ShippingConfiguration object (has methods property)
+                if (shippingData.methods) {
+                  // Extract shipping details from the enabled method
+                  const standardMethod = shippingData.methods.standard;
+                  const expressMethod = shippingData.methods.express;
+                  const internationalMethod = shippingData.methods.international;
+
+                  // Find the primary (enabled) shipping method
+                  let primaryCost: number | undefined;
+                  let primaryEstimatedDays = '3-5 business days';
+                  let isFreeShipping = false;
+
+                  if (standardMethod?.enabled) {
+                    primaryCost = standardMethod.cost;
+                    primaryEstimatedDays = standardMethod.estimatedDays || '5-7 business days';
+                    isFreeShipping = standardMethod.cost === 0;
+                  } else if (expressMethod?.enabled) {
+                    primaryCost = expressMethod.cost;
+                    primaryEstimatedDays = expressMethod.estimatedDays || '2-3 business days';
+                    isFreeShipping = expressMethod.cost === 0;
+                  } else if (internationalMethod?.enabled) {
+                    primaryCost = internationalMethod.cost;
+                    primaryEstimatedDays = internationalMethod.estimatedDays || '10-15 business days';
+                    isFreeShipping = internationalMethod.cost === 0;
+                  }
+
+                  // Check for free shipping threshold
+                  if (shippingData.freeShippingThreshold && shippingData.freeShippingThreshold > 0) {
+                    // If product price exceeds threshold, shipping is free
+                    const productPrice = parseFloat(String(productData.price?.amount || productData.priceAmount || 0));
+                    if (productPrice >= shippingData.freeShippingThreshold) {
+                      isFreeShipping = true;
+                    }
+                  }
+
+                  return {
+                    freeShipping: isFreeShipping,
+                    estimatedDays: primaryEstimatedDays,
+                    cost: primaryCost !== undefined ? `$${primaryCost.toFixed(2)}` : undefined
+                  };
+                }
+
+                // Handle flat structure (legacy or simplified format)
+                return {
+                  freeShipping: shippingData.free || shippingData.freeShipping || false,
+                  estimatedDays: shippingData.estimatedDays || '3-5 business days',
+                  cost: shippingData.cost ? (typeof shippingData.cost === 'number' ? `$${shippingData.cost.toFixed(2)}` : shippingData.cost) : undefined
+                };
+              })(),
               reviews: {
                 average: productData.average_rating || productData.averageRating || 0,
                 count: productData.review_count || productData.reviewCount || 0

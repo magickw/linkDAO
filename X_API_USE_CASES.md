@@ -7,6 +7,16 @@ LinkDAO is a blockchain-based social platform that enables users to:
 - Engage in Web3 social interactions with token-based rewards
 - Participate in community governance and content moderation
 
+## X API Version & Access Tier
+
+**API Version:** X API v2 (current standard, all new development should use v2)
+
+**Recommended Access Tier:** Basic ($200/month) - provides access to most commonly used endpoints
+
+**Note:** The Free tier is extremely limited (500 posts/month, 17 requests/24 hours for posting). For production applications, Basic tier is the minimum recommended.
+
+---
+
 ## Use Cases for X's Data and API
 
 ### 1. User Account Synchronization
@@ -18,8 +28,11 @@ LinkDAO is a blockchain-based social platform that enables users to:
 - Verified status
 
 **API Endpoints:**
-- `GET /2/users/me` - Retrieve authenticated user's profile
+- `GET /2/users/me` - Retrieve authenticated user's profile (Rate limit: 25 req/24 hrs per user)
 - `GET /2/users/by/username/{username}` - Look up user by username
+- `GET /2/users/{id}` - Retrieve user by ID with additional fields
+
+**Required Scopes:** `users.read`, `tweet.read`
 
 **Benefits:**
 - Seamless cross-platform identity verification
@@ -36,9 +49,16 @@ LinkDAO is a blockchain-based social platform that enables users to:
 - Media upload capabilities (for images, videos)
 
 **API Endpoints:**
-- `POST /2/tweets` - Create tweets on behalf of users
-- `POST /2/media/upload` - Upload media attachments
-- `POST /2/tweets/search/stream` - Monitor for mentions/replies
+- `POST /2/tweets` - Create posts on behalf of users
+- `POST /2/media/upload` - Upload media attachments (v2 endpoint, replaces deprecated v1.1)
+  - For chunked uploads: `POST /2/media/upload` with INIT, APPEND, FINALIZE commands
+- `GET /2/tweets/search/recent` - Search recent posts (last 7 days)
+
+**Required Scopes:** `tweet.write`, `tweet.read`, `media.write`
+
+**Rate Limits (Basic Tier):**
+- Post creation: 100 posts/24 hrs per user
+- Media upload: Tied to post creation limits
 
 **Benefits:**
 - Amplify user content reach
@@ -56,10 +76,14 @@ LinkDAO is a blockchain-based social platform that enables users to:
 - User's likes and retweets
 
 **API Endpoints:**
-- `GET /2/users/{id}/tweets` - Retrieve user's tweets
-- `GET /2/users/{id}/followers` - Get follower list
-- `GET /2/users/{id}/following` - Get following list
+- `GET /2/users/{id}/tweets` - Retrieve user's tweets (max 3200 most recent)
+- `GET /2/users/{id}/followers` - Get follower list (max 1000 per request)
+- `GET /2/users/{id}/following` - Get following list (max 1000 per request)
 - `GET /2/users/{id}/liked_tweets` - Get user's liked tweets
+
+**Required Scopes:** `tweet.read`, `users.read`, `follows.read`, `like.read`
+
+**Access Note:** Followers/following endpoints may require Basic tier or higher with user context authentication.
 
 **Benefits:**
 - Richer user profiles with social context
@@ -72,12 +96,16 @@ LinkDAO is a blockchain-based social platform that enables users to:
 **Purpose:** Enable users to sign up/log in to LinkDAO using their X account credentials.
 
 **Data Used:**
-- OAuth 2.0 authentication tokens
+- OAuth 2.0 authentication tokens (with PKCE)
 - Basic user identity verification
 
-**API Endpoints:**
-- OAuth 2.0 authorization flow
-- `GET /2/users/me` - Verify authenticated user
+**Authentication Flow:**
+- OAuth 2.0 Authorization Code Flow with PKCE
+- Authorization URL: `https://x.com/i/oauth2/authorize`
+- Token URL: `https://api.x.com/2/oauth2/token`
+- `GET /2/users/me` - Verify authenticated user after token exchange
+
+**Required Scopes:** `users.read`, `tweet.read` (minimum for login)
 
 **Benefits:**
 - Frictionless onboarding experience
@@ -92,11 +120,16 @@ LinkDAO is a blockchain-based social platform that enables users to:
 **Data Used:**
 - User's account age and verification status
 - Public reputation indicators
-- Suspicious activity patterns (if available)
+- Account creation date
 
 **API Endpoints:**
-- `GET /2/users/{id}` - Retrieve user metadata
-- User search endpoints for reputation checks
+- `GET /2/users/{id}` - Retrieve user metadata including:
+  - `created_at` - Account creation date
+  - `verified` - Verification status
+  - `public_metrics` - Follower/following counts
+  - `protected` - Whether account is private
+
+**Required Scopes:** `users.read`
 
 **Benefits:**
 - Improved community safety
@@ -115,7 +148,9 @@ LinkDAO is a blockchain-based social platform that enables users to:
 **API Endpoints:**
 - `GET /2/users/{id}/followers` - Access follower list
 - `GET /2/users/{id}/following` - Access following list
-- User search endpoints
+- `GET /2/users/by` - Batch lookup users by usernames (max 100)
+
+**Required Scopes:** `users.read`, `follows.read`
 
 **Benefits:**
 - Network effects and viral growth
@@ -134,6 +169,9 @@ LinkDAO is a blockchain-based social platform that enables users to:
 **API Endpoints:**
 - `POST /2/tweets` - Share achievement announcements
 - `POST /2/media/upload` - Upload achievement badges/images
+  - Supports: Images (JPEG, PNG, GIF, WEBP), Videos (MP4), Animated GIFs
+
+**Required Scopes:** `tweet.write`, `media.write`
 
 **Benefits:**
 - User recognition and gamification
@@ -147,16 +185,36 @@ LinkDAO is a blockchain-based social platform that enables users to:
 
 **Data Used:**
 - Public tweets from specific accounts or hashtags
-- Real-time tweet streams (filtered)
+- Recent tweet searches
 
 **API Endpoints:**
-- `GET /2/tweets/search/recent` - Search recent tweets
-- Filtered stream endpoint (if available)
+- `GET /2/tweets/search/recent` - Search recent tweets (last 7 days)
+- `GET /2/tweets/search/all` - Full-archive search (Pro tier and above only)
+- Filtered Stream endpoints (Pro tier and above):
+  - `POST /2/tweets/search/stream/rules` - Add filter rules
+  - `GET /2/tweets/search/stream` - Connect to filtered stream
+
+**Required Scopes:** `tweet.read`
+
+**Access Note:** Filtered stream and full-archive search require Pro tier ($5,000/month) or Enterprise access.
 
 **Benefits:**
 - Richer content ecosystem
 - Cross-platform engagement
 - Trending topic awareness
+
+---
+
+## API Access Tiers Summary
+
+| Tier | Monthly Cost | Post Reads | Key Features |
+|------|-------------|------------|--------------|
+| Free | $0 | 500/month | Very limited, 17 posts/24 hrs write |
+| Basic | $200 | 10,000/month | Most v2 endpoints, 100 posts/24 hrs write |
+| Pro | $5,000 | 1,000,000/month | Full-archive search, filtered stream |
+| Enterprise | Custom | 50,000,000+/month | Highest limits, dedicated support |
+
+**Recommendation for LinkDAO:** Start with Basic tier for production. Upgrade to Pro if real-time streaming or full-archive search is needed.
 
 ---
 
@@ -172,16 +230,44 @@ LinkDAO is a blockchain-based social platform that enables users to:
 
 ## Compliance with X Developer Agreement
 
-✅ We understand that we may not resell anything received via X APIs
-✅ We accept the Developer Agreement, Incorporated Developer Terms, and X Developer Policy
-✅ We understand our Developer account may be terminated for violations
-✅ By accessing X APIs, we indicate agreement with all terms and policies
+- We understand that we may not resell anything received via X APIs
+- We accept the Developer Agreement, Incorporated Developer Terms, and X Developer Policy
+- We understand our Developer account may be terminated for violations
+- By accessing X APIs, we indicate agreement with all terms and policies
+
+## Technical Implementation Notes
+
+### Authentication Best Practices
+- Use OAuth 2.0 with PKCE (Proof Key for Code Exchange)
+- Store refresh tokens securely (encrypted at rest)
+- Implement token refresh logic before expiration
+- Handle rate limit errors gracefully with exponential backoff
+
+### Rate Limit Handling
+- Implement request queuing for bulk operations
+- Cache API responses where appropriate
+- Monitor `x-rate-limit-remaining` headers
+- Use webhooks where available instead of polling
+
+### Migration Notes (2025)
+- v1.1 media upload endpoint (`upload.twitter.com/1.1/media/upload.json`) was deprecated March 31, 2025
+- All new development should use v2 endpoints exclusively
+- X is transitioning terminology from "tweets" to "posts" in documentation
+
+---
 
 ## Contact & Support
 
 For questions about our X API usage or data protection practices:
 - Email: support@linkdao.io
 - Documentation: https://docs.linkdao.io/privacy
+
+## References
+
+- [X API Documentation](https://developer.x.com/en/docs/x-api)
+- [X API v2 Support](https://developer.x.com/en/support/x-api/v2)
+- [X Developer Changelog](https://docs.x.com/changelog)
+- [X API Pricing](https://developer.x.com/en/products/twitter-api)
 
 ---
 
