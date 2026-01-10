@@ -64,6 +64,25 @@ export interface ReturnAnalytics {
             refunds: number;
         }>;
     };
+    categoryData: CategoryMetrics[];
+    sellerPerformance: SellerPerformanceMetrics[];
+}
+
+export interface CategoryMetrics {
+    category: string;
+    count: number;
+    percentage: number;
+    avgRefundAmount: number;
+}
+
+export interface SellerPerformanceMetrics {
+    sellerId: string;
+    sellerName: string;
+    totalReturns: number;
+    approvalRate: number;
+    avgProcessingTime: number;
+    customerSatisfaction: number;
+    complianceScore: number;
 }
 
 export interface RealtimeMetrics {
@@ -140,6 +159,26 @@ class ReturnAnalyticsService {
                 start: period.start,
                 end: period.end,
                 sellerId,
+            },
+            withCredentials: true,
+        });
+        return response.data.data;
+    }
+
+    /**
+     * Get drill-down analytics
+     */
+    async getDrillDownAnalytics(
+        type: 'category' | 'seller' | 'reason' | 'status',
+        value: string,
+        period: { start: string; end: string }
+    ): Promise<any> {
+        const response = await axios.get(`${API_URL}/admin/returns/analytics/drill-down`, {
+            params: {
+                type,
+                value,
+                start: period.start,
+                end: period.end,
             },
             withCredentials: true,
         });

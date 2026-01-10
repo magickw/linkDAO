@@ -2,6 +2,7 @@ import Stripe from 'stripe';
 import { safeLogger } from '../utils/safeLogger';
 import { IPaymentProcessor } from './ldaoAcquisitionService';
 import { PurchaseRequest, PurchaseResult, PaymentMethod } from '../types/ldaoAcquisition';
+import { chargebackWebhookService } from './chargebackWebhookService';
 
 export interface StripeConfig {
   secretKey: string;
@@ -140,6 +141,23 @@ export class StripePaymentService implements IPaymentProcessor {
         break;
       case 'payment_intent.canceled':
         await this.handlePaymentCancellation(event.data.object);
+        break;
+      // Chargeback/Dispute events
+      case 'charge.dispute.created':
+      case 'charge.dispute.updated':
+      case 'charge.dispute.closed':
+      case 'radar.early_fraud_warning.created':
+        await chargebackWebhookService.processStripeDisputeEvent({
+          id: event.id,
+          type: event.type,
+          data: event.data,
+          created: event.created,
+          object: 'event',
+          api_version: '2023-10-16',
+          livemode: false,
+          pending_webhooks: 0,
+          request: null
+        } as any);
         break;
       default:
         safeLogger.info(`Unhandled Stripe event type: ${event.type}`);

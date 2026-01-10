@@ -1120,6 +1120,10 @@ app.use('/api/checkout', checkoutRoutes);
 import goldWebhookRoutes from './routes/goldWebhookRoutes';
 app.use('/api/gold/webhooks', goldWebhookRoutes);
 
+// PayPal webhook routes for chargebacks/disputes
+import { createPayPalWebhookRoutes } from './routes/paypalWebhookRoutes';
+app.use('/api/paypal', createPayPalWebhookRoutes());
+
 // Token reaction routes
 app.use('/api/reactions', tokenReactionRoutes);
 
@@ -1333,6 +1337,15 @@ httpServer.listen(PORT, () => {
       console.log('✅ Blockchain event monitoring started');
     } catch (err) {
       console.warn('⚠️ Blockchain event monitoring failed to start (this is OK if blockchain is temporarily unavailable):', err);
+    }
+
+    // Start escrow scheduler service for auto-refunds and seller releases
+    try {
+      const { escrowSchedulerService } = await import('./services/escrowSchedulerService');
+      escrowSchedulerService.start();
+      console.log('✅ Escrow scheduler service started (auto-refunds and seller releases)');
+    } catch (err) {
+      console.warn('⚠️ Escrow scheduler service failed to start:', err);
     }
 
     initializeServices().then(async ({ cacheService, cacheWarmingService }) => {

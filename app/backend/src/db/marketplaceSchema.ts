@@ -2,7 +2,6 @@ import { pgTable, serial, varchar, text, timestamp, integer, uuid, primaryKey, i
 import { sql } from "drizzle-orm";
 import { users } from "./schema";
 
-// Marketplace roles (only required for buyers/sellers)
 export const marketplaceUsers = pgTable("marketplace_users", {
   userId: uuid("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
   role: varchar("role", { length: 10 }).notNull(), // 'buyer' | 'seller'

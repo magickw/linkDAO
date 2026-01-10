@@ -1,13 +1,66 @@
-import React from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { useSellerOrders, useSeller } from '@/hooks/useSeller';
 import { Button, GlassPanel, LoadingSkeleton } from '@/design-system';
 import Layout from '@/components/Layout';
+import { useOrderNotifications } from '@/hooks/useOrderNotifications';
+import { Bell, Package, Truck, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 
 export default function SellerOrdersPage() {
   const router = useRouter();
   const { profile } = useSeller();
-  const { orders, loading, error } = useSellerOrders();
+  const { orders, loading, error, refetch } = useSellerOrders();
+  const [newOrderCount, setNewOrderCount] = useState(0);
+  const [recentNotifications, setRecentNotifications] = useState<any[]>([]);
+  const [showNotificationPanel, setShowNotificationPanel] = useState(false);
+
+  // Subscribe to order notifications for sellers
+  const { notifications, unreadCount, markAsRead, clearNotifications } = useOrderNotifications({
+    autoSubscribe: true,
+    filterByRole: 'seller',
+    showToasts: true,
+    maxNotifications: 20,
+  });
+
+  // Handle new order notifications - refresh the orders list
+  useEffect(() => {
+    if (notifications.length > 0) {
+      const latestNotification = notifications[0];
+      // Track new orders specifically
+      if (latestNotification.event === 'order_created') {
+        setNewOrderCount(prev => prev + 1);
+      }
+      // Add to recent notifications
+      setRecentNotifications(prev => [latestNotification, ...prev].slice(0, 10));
+      // Refresh orders list when new notifications arrive
+      if (refetch) {
+        refetch();
+      }
+    }
+  }, [notifications, refetch]);
+
+  // Clear new order count when user views orders
+  const handleViewOrders = useCallback(() => {
+    setNewOrderCount(0);
+  }, []);
+
+  // Get notification icon based on event type
+  const getNotificationIcon = (event: string) => {
+    switch (event) {
+      case 'order_created':
+        return <Package className="w-5 h-5 text-green-400" />;
+      case 'order_shipped':
+        return <Truck className="w-5 h-5 text-purple-400" />;
+      case 'delivery_confirmed':
+        return <CheckCircle className="w-5 h-5 text-blue-400" />;
+      case 'order_cancelled':
+        return <XCircle className="w-5 h-5 text-red-400" />;
+      case 'order_disputed':
+        return <AlertTriangle className="w-5 h-5 text-yellow-400" />;
+      default:
+        return <Bell className="w-5 h-5 text-gray-400" />;
+    }
+  };
 
   if (!profile) {
     return (
@@ -48,10 +101,82 @@ export default function SellerOrdersPage() {
               </svg>
               Back to Dashboard
             </button>
-            
+
             <h1 className="text-2xl font-bold text-white">Seller Orders</h1>
-            
-            <div></div> {/* Spacer for alignment */}
+
+            {/* Notification Bell with Badge */}
+            <div className="relative">
+              <button
+                onClick={() => setShowNotificationPanel(!showNotificationPanel)}
+                className="relative p-2 rounded-full hover:bg-white/10 transition-colors"
+              >
+                <Bell className="w-6 h-6 text-white" />
+                {(unreadCount > 0 || newOrderCount > 0) && (
+                  <span className="absolute -top-1 -right-1 min-w-[20px] h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1">
+                    {unreadCount + newOrderCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Notification Dropdown Panel */}
+              {showNotificationPanel && (
+                <div className="absolute right-0 top-12 w-80 z-50">
+                  <GlassPanel className="p-4 max-h-96 overflow-y-auto">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-white font-semibold">Order Notifications</h3>
+                      {recentNotifications.length > 0 && (
+                        <button
+                          onClick={() => {
+                            clearNotifications();
+                            setRecentNotifications([]);
+                            setNewOrderCount(0);
+                          }}
+                          className="text-xs text-gray-400 hover:text-white"
+                        >
+                          Clear all
+                        </button>
+                      )}
+                    </div>
+
+                    {recentNotifications.length === 0 ? (
+                      <div className="text-center py-6">
+                        <Bell className="w-10 h-10 text-gray-500 mx-auto mb-2" />
+                        <p className="text-gray-400 text-sm">No new notifications</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {recentNotifications.map((notif, index) => (
+                          <div
+                            key={`${notif.event}-${index}`}
+                            className="flex items-start gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 cursor-pointer transition-colors"
+                            onClick={() => {
+                              router.push(`/marketplace/seller/orders/${notif.data.orderId}`);
+                              setShowNotificationPanel(false);
+                            }}
+                          >
+                            {getNotificationIcon(notif.event)}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white text-sm font-medium truncate">
+                                {notif.data.productTitle}
+                              </p>
+                              <p className="text-gray-400 text-xs">
+                                Order #{notif.data.orderNumber}
+                              </p>
+                              <p className="text-gray-500 text-xs mt-1">
+                                {notif.event.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                              </p>
+                            </div>
+                            <span className="text-xs text-gray-500">
+                              {new Date(notif.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </GlassPanel>
+                </div>
+              )}
+            </div>
           </div>
 
           {loading ? (

@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'react-hot-toast';
 import { API_BASE_URL } from '@/config/api';
+import { orderService } from '@/services/orderService';
 import {
     Package,
     Truck,
@@ -16,7 +17,9 @@ import {
     Calendar,
     DollarSign,
     ExternalLink,
-    Search
+    Search,
+    AlertTriangle,
+    X
 } from 'lucide-react';
 import Link from 'next/link';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
@@ -56,6 +59,9 @@ export default function OrdersPage() {
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [filterStatus, setFilterStatus] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState('');
+    const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
+    const [showCancelConfirm, setShowCancelConfirm] = useState<Order | null>(null);
+    const [cancelReason, setCancelReason] = useState('');
 
     useEffect(() => {
         if (user) {
@@ -65,6 +71,55 @@ export default function OrdersPage() {
             setLoading(false);
         }
     }, [user]);
+
+    // Check if order can be cancelled
+    const canCancelOrder = useCallback((order: Order) => {
+        return ['pending', 'processing'].includes(order.status);
+    }, []);
+
+    // Handle cancel order
+    const handleCancelOrder = useCallback(async (order: Order) => {
+        if (!canCancelOrder(order)) {
+            toast.error('This order cannot be cancelled');
+            return;
+        }
+        setShowCancelConfirm(order);
+        setCancelReason('');
+    }, [canCancelOrder]);
+
+    // Confirm cancel order
+    const confirmCancelOrder = useCallback(async () => {
+        if (!showCancelConfirm) return;
+
+        setCancellingOrderId(showCancelConfirm.id);
+        try {
+            const result = await orderService.cancelOrder(showCancelConfirm.id, cancelReason || 'Cancelled by buyer');
+
+            if (result.success) {
+                toast.success(result.message || 'Order cancelled successfully');
+
+                // Update the order in the local state
+                setOrders(prev => prev.map(o =>
+                    o.id === showCancelConfirm.id
+                        ? { ...o, status: 'cancelled' as const }
+                        : o
+                ));
+
+                // Close modals
+                setShowCancelConfirm(null);
+                setSelectedOrder(null);
+
+                if (result.refundInitiated) {
+                    toast.success('Refund has been initiated. You will receive your funds shortly.');
+                }
+            }
+        } catch (error) {
+            console.error('Failed to cancel order:', error);
+            toast.error(error instanceof Error ? error.message : 'Failed to cancel order');
+        } finally {
+            setCancellingOrderId(null);
+        }
+    }, [showCancelConfirm, cancelReason]);
 
     const fetchOrders = async () => {
         if (!user?.address) {
@@ -308,6 +363,9 @@ export default function OrdersPage() {
                             key={order.id}
                             order={order}
                             onViewDetails={() => setSelectedOrder(order)}
+                            onCancelOrder={() => handleCancelOrder(order)}
+                            canCancel={canCancelOrder(order)}
+                            isCancelling={cancellingOrderId === order.id}
                         />
                     ))}
                 </div>
@@ -318,6 +376,21 @@ export default function OrdersPage() {
                         <OrderDetailsModal
                             order={selectedOrder}
                             onClose={() => setSelectedOrder(null)}
+                            onCancelOrder={() => handleCancelOrder(selectedOrder)}
+                            canCancel={canCancelOrder(selectedOrder)}
+                            isCancelling={cancellingOrderId === selectedOrder.id}
+                        />
+                    )}
+
+                    {/* Cancel Confirmation Dialog */}
+                    {showCancelConfirm && (
+                        <CancelConfirmDialog
+                            order={showCancelConfirm}
+                            reason={cancelReason}
+                            onReasonChange={setCancelReason}
+                            onConfirm={confirmCancelOrder}
+                            onCancel={() => setShowCancelConfirm(null)}
+                            isLoading={cancellingOrderId === showCancelConfirm.id}
                         />
                     )}
                 </div>
@@ -327,9 +400,12 @@ export default function OrdersPage() {
 }
 
 // Order Card Component
-function OrderCard({ order, onViewDetails }: {
+function OrderCard({ order, onViewDetails, onCancelOrder, canCancel, isCancelling }: {
     order: Order;
     onViewDetails: () => void;
+    onCancelOrder: () => void;
+    canCancel: boolean;
+    isCancelling: boolean;
 }) {
     const getStatusIcon = (status: string) => {
         switch (status) {
@@ -450,23 +526,43 @@ function OrderCard({ order, onViewDetails }: {
                     </span>
                     <span className="text-sm text-white/60 ml-2">{order.currency || 'USD'}</span>
                 </div>
-                <Button
-                    variant="primary"
-                    icon={<Eye size={16} />}
-                    iconPosition="left"
-                    onClick={onViewDetails}
-                >
-                    View Details
-                </Button>
+                <div className="flex gap-2">
+                    {canCancel && (
+                        <Button
+                            variant="outline"
+                            icon={isCancelling ? <RefreshCw size={16} className="animate-spin" /> : <XCircle size={16} />}
+                            iconPosition="left"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onCancelOrder();
+                            }}
+                            disabled={isCancelling}
+                            className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                        >
+                            {isCancelling ? 'Cancelling...' : 'Cancel'}
+                        </Button>
+                    )}
+                    <Button
+                        variant="primary"
+                        icon={<Eye size={16} />}
+                        iconPosition="left"
+                        onClick={onViewDetails}
+                    >
+                        View Details
+                    </Button>
+                </div>
             </div>
         </GlassPanel>
     );
 }
 
 // Order Details Modal Component
-function OrderDetailsModal({ order, onClose }: {
+function OrderDetailsModal({ order, onClose, onCancelOrder, canCancel, isCancelling }: {
     order: Order;
     onClose: () => void;
+    onCancelOrder: () => void;
+    canCancel: boolean;
+    isCancelling: boolean;
 }) {
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -625,6 +721,19 @@ function OrderDetailsModal({ order, onClose }: {
                         >
                             Close
                         </Button>
+                        {canCancel && (
+                            <Button
+                                variant="outline"
+                                fullWidth
+                                icon={isCancelling ? <RefreshCw size={16} className="animate-spin" /> : <XCircle size={16} />}
+                                iconPosition="left"
+                                onClick={onCancelOrder}
+                                disabled={isCancelling}
+                                className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                            >
+                                {isCancelling ? 'Cancelling...' : 'Cancel Order'}
+                            </Button>
+                        )}
                         <Button
                             variant="primary"
                             fullWidth
@@ -632,6 +741,108 @@ function OrderDetailsModal({ order, onClose }: {
                             iconPosition="left"
                         >
                             Download Invoice
+                        </Button>
+                    </div>
+                </div>
+            </GlassPanel>
+        </div>
+    );
+}
+
+// Cancel Confirmation Dialog Component
+function CancelConfirmDialog({
+    order,
+    reason,
+    onReasonChange,
+    onConfirm,
+    onCancel,
+    isLoading
+}: {
+    order: Order;
+    reason: string;
+    onReasonChange: (reason: string) => void;
+    onConfirm: () => void;
+    onCancel: () => void;
+    isLoading: boolean;
+}) {
+    return (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+            <GlassPanel variant="modal" className="max-w-md w-full">
+                <div className="p-6">
+                    {/* Header */}
+                    <div className="flex items-start gap-4 mb-6">
+                        <div className="p-3 bg-red-500/20 rounded-full">
+                            <AlertTriangle size={24} className="text-red-400" />
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="text-xl font-bold text-white mb-1">Cancel Order</h3>
+                            <p className="text-white/60 text-sm">
+                                Are you sure you want to cancel order #{order.orderNumber}?
+                            </p>
+                        </div>
+                        <button
+                            onClick={onCancel}
+                            className="p-1 hover:bg-white/10 rounded-lg transition-colors"
+                            disabled={isLoading}
+                        >
+                            <X size={20} className="text-white/60" />
+                        </button>
+                    </div>
+
+                    {/* Warning Message */}
+                    <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                        <p className="text-yellow-400 text-sm">
+                            <strong>Warning:</strong> This action cannot be undone. If you've already paid for this order, a refund will be initiated automatically.
+                        </p>
+                    </div>
+
+                    {/* Cancellation Reason */}
+                    <div className="mb-6">
+                        <label className="block text-sm font-medium text-white/80 mb-2">
+                            Reason for cancellation (optional)
+                        </label>
+                        <textarea
+                            value={reason}
+                            onChange={(e) => onReasonChange(e.target.value)}
+                            placeholder="Please tell us why you're cancelling this order..."
+                            rows={3}
+                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/40 focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 resize-none"
+                            disabled={isLoading}
+                        />
+                    </div>
+
+                    {/* Order Summary */}
+                    <div className="mb-6 p-4 bg-white/5 rounded-lg">
+                        <div className="flex justify-between items-center mb-2">
+                            <span className="text-white/60">Order Total</span>
+                            <span className="font-semibold text-white">${(order.total || 0).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <span className="text-white/60">Items</span>
+                            <span className="text-white">{(order.items || []).length} item{(order.items || []).length !== 1 ? 's' : ''}</span>
+                        </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-3">
+                        <Button
+                            variant="outline"
+                            fullWidth
+                            onClick={onCancel}
+                            disabled={isLoading}
+                        >
+                            Keep Order
+                        </Button>
+                        <Button
+                            variant="primary"
+                            fullWidth
+                            onClick={onConfirm}
+                            disabled={isLoading}
+                            icon={isLoading ? <RefreshCw size={16} className="animate-spin" /> : <XCircle size={16} />}
+                            iconPosition="left"
+                            className="bg-red-500 hover:bg-red-600 border-red-500"
+                        >
+                            {isLoading ? 'Cancelling...' : 'Yes, Cancel Order'}
                         </Button>
                     </div>
                 </div>

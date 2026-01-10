@@ -385,4 +385,83 @@ router.post(
     }
 );
 
+// ============================================================================
+// DRILL DOWN ANALYTICS ENDPOINT
+// ============================================================================
+
+/**
+ * GET /api/admin/returns/analytics/drill-down
+ * Get detailed drill-down data
+ * Query params: type (category|seller|reason|status), value, start, end
+ * Permission: returns.analytics
+ * Rate limit: 50 requests per 15 minutes
+ * Cache: 5 minutes
+ */
+router.get(
+    '/analytics/drill-down',
+    requirePermission('returns.analytics'),
+    adminRateLimit(50, 15 * 60 * 1000),
+    async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            const { type, value, start, end } = req.query;
+
+            // Validate required parameters
+            if (!type || !value || !start || !end) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Missing required parameters',
+                    details: 'type, value, start, and end are required',
+                });
+            }
+
+            const allowedTypes = ['category', 'seller', 'reason', 'status'];
+            if (!allowedTypes.includes(type as string)) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Invalid drill-down type',
+                    details: `Type must be one of: ${allowedTypes.join(', ')}`,
+                });
+            }
+
+            // Validate date format
+            const startDate = new Date(start as string);
+            const endDate = new Date(end as string);
+
+            if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Invalid date format',
+                    details: 'Dates must be valid ISO 8601 format',
+                });
+            }
+
+            const data = await returnAnalyticsService.getDrillDownAnalytics(
+                type as 'category' | 'seller' | 'reason' | 'status',
+                value as string,
+                {
+                    start: start as string,
+                    end: end as string,
+                }
+            );
+
+            res.json({
+                success: true,
+                data: data,
+                meta: {
+                    cached: true,
+                    timestamp: new Date().toISOString(),
+                    parameters: { type, value, start, end },
+                },
+            });
+        } catch (error: any) {
+            safeLogger.error('Error fetching drill-down analytics:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Failed to fetch drill-down analytics',
+                details: error.message,
+            });
+        }
+    }
+);
+
 export default router;

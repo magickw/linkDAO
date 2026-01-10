@@ -507,6 +507,11 @@ export class SellerWorkflowService {
             const isSeller = order.sellerId === sellerId || order.sellerWalletAddress === sellerId;
             if (!isSeller) throw new Error('Unauthorized');
 
+            // Validate order status - can schedule from PAID or PROCESSING status
+            if (order.status !== OrderStatus.PAID && order.status !== OrderStatus.PROCESSING) {
+                throw new Error(`Cannot schedule service for order with status: ${order.status}`);
+            }
+
             // Update order with schedule information
             await this.databaseService.updateOrder(orderId, {
                 scheduledDate: schedule.date,
@@ -515,6 +520,15 @@ export class SellerWorkflowService {
                 serviceNotes: schedule.notes,
                 serviceStatus: 'scheduled'
             });
+
+            // Update main order status to PROCESSING if it was PAID
+            if (order.status === OrderStatus.PAID) {
+                await this.orderService.updateOrderStatus(orderId, OrderStatus.PROCESSING, {
+                    serviceScheduled: true,
+                    scheduledDate: schedule.date,
+                    scheduledTime: schedule.time
+                });
+            }
 
             // Notify buyer about the scheduled service
             await this.notificationService.notifyOrderStatusChange(
@@ -638,7 +652,7 @@ export class SellerWorkflowService {
     }
 
     /**
-     * Mark service as in progress
+     * Mark service as in progress (can start from PAID, scheduled, or PROCESSING status)
      */
     async startService(orderId: string, sellerId: string): Promise<boolean> {
         try {
@@ -648,9 +662,23 @@ export class SellerWorkflowService {
             const isSeller = order.sellerId === sellerId || order.sellerWalletAddress === sellerId;
             if (!isSeller) throw new Error('Unauthorized');
 
+            // Validate order status - can start service from PAID or PROCESSING status
+            if (order.status !== OrderStatus.PAID && order.status !== OrderStatus.PROCESSING) {
+                throw new Error(`Cannot start service for order with status: ${order.status}`);
+            }
+
+            // Update service status to in_progress
             await this.databaseService.updateOrder(orderId, {
                 serviceStatus: 'in_progress'
             });
+
+            // Update main order status to PROCESSING if it was PAID
+            if (order.status === OrderStatus.PAID) {
+                await this.orderService.updateOrderStatus(orderId, OrderStatus.PROCESSING, {
+                    serviceStarted: true,
+                    serviceStartedAt: new Date().toISOString()
+                });
+            }
 
             await this.notificationService.notifyOrderStatusChange(
                 order.buyerWalletAddress,
@@ -677,6 +705,17 @@ export class SellerWorkflowService {
             const isSeller = order.sellerId === sellerId || order.sellerWalletAddress === sellerId;
             if (!isSeller) throw new Error('Unauthorized');
 
+            // Validate order status - can only complete from PROCESSING status
+            if (order.status !== OrderStatus.PROCESSING) {
+                throw new Error(`Cannot complete service for order with status: ${order.status}. Order must be in PROCESSING status.`);
+            }
+
+            // Validate service status - must be in_progress or scheduled to complete
+            const validServiceStatuses = ['in_progress', 'scheduled', 'pending'];
+            if (order.serviceStatus && !validServiceStatuses.includes(order.serviceStatus)) {
+                throw new Error(`Cannot complete service with status: ${order.serviceStatus}`);
+            }
+
             const completedAt = new Date().toISOString();
 
             await this.databaseService.updateOrder(orderId, {
@@ -685,8 +724,8 @@ export class SellerWorkflowService {
                 serviceNotes: completionNotes || order.serviceNotes
             });
 
-            // Update main order status
-            await this.orderService.updateOrderStatus(orderId, 'DELIVERED' as any);
+            // Update main order status to DELIVERED
+            await this.orderService.updateOrderStatus(orderId, OrderStatus.DELIVERED);
 
             // Notify buyer to confirm
             await this.notificationService.notifyOrderStatusChange(
@@ -703,6 +742,49 @@ export class SellerWorkflowService {
             };
         } catch (error) {
             safeLogger.error('Error marking service complete:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Complete digital product delivery (for non-service digital goods)
+     */
+    async completeDigitalDelivery(orderId: string, sellerId: string, deliveryNotes?: string): Promise<any> {
+        try {
+            const order = await this.databaseService.getOrderById(orderId);
+            if (!order) throw new Error('Order not found');
+
+            const isSeller = order.sellerId === sellerId || order.sellerWalletAddress === sellerId;
+            if (!isSeller) throw new Error('Unauthorized');
+
+            // For digital products, we can transition from PAID or PROCESSING to DELIVERED
+            if (order.status !== OrderStatus.PAID && order.status !== OrderStatus.PROCESSING) {
+                throw new Error(`Order must be PAID or PROCESSING to complete digital delivery. Current status: ${order.status}`);
+            }
+
+            const completedAt = new Date().toISOString();
+
+            // Update order status to DELIVERED
+            await this.orderService.updateOrderStatus(orderId, OrderStatus.DELIVERED, {
+                digitalDeliveryCompletedAt: completedAt,
+                deliveryNotes: deliveryNotes || 'Digital product delivered'
+            });
+
+            // Notify buyer about the delivery
+            await this.notificationService.notifyOrderStatusChange(
+                order.buyerWalletAddress,
+                orderId,
+                OrderStatus.DELIVERED
+            );
+
+            safeLogger.info(`Digital delivery completed for order ${orderId}`);
+
+            return {
+                success: true,
+                completedAt
+            };
+        } catch (error) {
+            safeLogger.error('Error completing digital delivery:', error);
             throw error;
         }
     }

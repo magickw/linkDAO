@@ -1142,6 +1142,16 @@ export const escrows = pgTable("escrows", {
   // Delivery tracking
   deliveryInfo: text("delivery_info"),
   deliveryConfirmed: boolean("delivery_confirmed").default(false),
+  deliveryConfirmedAt: timestamp("delivery_confirmed_at"),
+  // Escrow expiry
+  expiresAt: timestamp("expires_at"),
+  // Payment tracking
+  paymentMethod: varchar("payment_method", { length: 32 }),
+  stripePaymentIntentId: varchar("stripe_payment_intent_id", { length: 255 }),
+  paypalCaptureId: varchar("paypal_capture_id", { length: 255 }),
+  tokenAddress: varchar("token_address", { length: 66 }),
+  // Resolution details
+  resolution: text("resolution"),
 });
 
 export const reputations = pgTable("reputations", {

@@ -131,6 +131,16 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Re
     uint256 public constant VOTING_PERIOD = 7 days;
     uint256 public constant MIN_VOTING_POWER = 100; // Minimum LDAO tokens to vote
     uint256 public constant REPUTATION_DECAY_PERIOD = 365 days;
+    uint256 public constant DEADLINE_GRACE_PERIOD = 3 days; // Grace period after deadline before auto-refund
+
+    // Dispute bond configuration
+    uint256 public disputeBondPercentage = 500; // 5% of escrow amount (basis points)
+    uint256 public constant MIN_DISPUTE_BOND = 0.01 ether; // Minimum bond amount
+    uint256 public constant MAX_DISPUTE_BOND_PERCENTAGE = 2000; // Maximum 20% of escrow amount
+    bool public disputeBondRequired = true; // Whether bonds are required
+
+    // Platform default arbiter - CRITICAL: Never use buyer or seller as arbiter
+    address public platformArbiter;
     
     // Cross-chain support
     uint256 public chainId;
@@ -148,6 +158,10 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Re
     mapping(address => uint256[]) public userReviews;
     mapping(address => bool) public authorizedArbitrators;
     mapping(address => uint256) public arbitratorFees;
+
+    // Dispute bond mappings
+    mapping(uint256 => uint256) public disputeBonds; // escrowId => bond amount deposited
+    mapping(uint256 => address) public disputeInitiator; // escrowId => who opened the dispute
     
     // Events
     event EscrowCreated(uint256 indexed escrowId, address indexed buyer, address indexed seller, uint256 amount);
@@ -163,6 +177,12 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Re
     event ReputationUpdated(address indexed user, uint256 newScore, ReputationTier newTier);
     event ArbitratorAppointed(uint256 indexed escrowId, address indexed arbitrator);
     event EmergencyRefund(uint256 indexed escrowId, address indexed buyer, uint256 amount);
+    event DeadlineRefund(uint256 indexed escrowId, address indexed buyer, uint256 amount, string reason);
+    event PlatformArbiterUpdated(address indexed oldArbiter, address indexed newArbiter);
+    event DisputeBondDeposited(uint256 indexed escrowId, address indexed depositor, uint256 amount);
+    event DisputeBondRefunded(uint256 indexed escrowId, address indexed recipient, uint256 amount);
+    event DisputeBondForfeited(uint256 indexed escrowId, address indexed loser, uint256 amount, address indexed winner);
+    event DisputeBondConfigUpdated(uint256 newPercentage, bool required);
     event UserSuspended(address indexed user, uint256 duration, string reason);
     
     // Modifiers
@@ -211,9 +231,11 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Re
         _;
     }
 
-    constructor(address _ldaoToken, address _governance) Ownable(msg.sender) {
+    constructor(address _ldaoToken, address _governance, address _platformArbiter) Ownable(msg.sender) {
+        require(_platformArbiter != address(0), "Platform arbiter cannot be zero address");
         ldaoToken = LDAOToken(_ldaoToken);
         governance = Governance(_governance);
+        platformArbiter = _platformArbiter;
         chainId = block.chainid;
     }
 
@@ -318,7 +340,13 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Re
         
         // Cross-chain support
         escrowChainId[escrowId] = chainId;
-        
+
+        // CRITICAL: Always set arbitrator to platform arbiter, never to buyer/seller
+        if (resolutionMethod == DisputeResolutionMethod.ARBITRATOR) {
+            newEscrow.appointedArbitrator = platformArbiter;
+            emit ArbitratorAppointed(escrowId, platformArbiter);
+        }
+
         // Set security features
         newEscrow.requiresMultiSig = requiresMultiSig;
         newEscrow.multiSigThreshold = requiresMultiSig ? multiSigThreshold : 0;
@@ -449,16 +477,54 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Re
     }
 
     /**
-     * @notice Open a dispute
+     * @notice Calculate required dispute bond for an escrow
+     * @param escrowId ID of the escrow
+     * @return bondAmount The required bond amount
+     */
+    function calculateDisputeBond(uint256 escrowId) public view escrowExists(escrowId) returns (uint256 bondAmount) {
+        Escrow storage escrow = escrows[escrowId];
+        bondAmount = (escrow.amount * disputeBondPercentage) / 10000;
+
+        // Ensure minimum bond
+        if (bondAmount < MIN_DISPUTE_BOND) {
+            bondAmount = MIN_DISPUTE_BOND;
+        }
+
+        return bondAmount;
+    }
+
+    /**
+     * @notice Open a dispute (requires bond deposit)
      * @param escrowId ID of the escrow
      */
-    function openDispute(uint256 escrowId) external escrowExists(escrowId) onlyParticipant(escrowId) onlySameChain(escrowId) {
+    function openDispute(uint256 escrowId) external payable escrowExists(escrowId) onlyParticipant(escrowId) onlySameChain(escrowId) {
         Escrow storage escrow = escrows[escrowId];
         require(escrow.status == EscrowStatus.FUNDS_LOCKED, "Invalid escrow status");
         require(block.timestamp <= escrow.deliveryDeadline + 7 days, "Dispute period expired");
-        
+
+        // Handle dispute bond if required
+        if (disputeBondRequired) {
+            uint256 requiredBond = calculateDisputeBond(escrowId);
+            require(msg.value >= requiredBond, "Insufficient dispute bond");
+
+            // Store bond info
+            disputeBonds[escrowId] = msg.value;
+            disputeInitiator[escrowId] = msg.sender;
+
+            // Refund excess
+            if (msg.value > requiredBond) {
+                (bool refunded, ) = payable(msg.sender).call{value: msg.value - requiredBond}("");
+                require(refunded, "Failed to refund excess bond");
+                disputeBonds[escrowId] = requiredBond;
+            }
+
+            emit DisputeBondDeposited(escrowId, msg.sender, disputeBonds[escrowId]);
+        } else {
+            disputeInitiator[escrowId] = msg.sender;
+        }
+
         escrow.status = EscrowStatus.DISPUTE_OPENED;
-        
+
         emit DisputeOpened(escrowId, escrow.resolutionMethod);
     }
     
@@ -514,16 +580,16 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Re
      * @param escrowId ID of the escrow
      * @param buyerWins True if buyer wins, false if seller wins
      */
-    function resolveDisputeByArbitrator(uint256 escrowId, bool buyerWins) 
-        external 
-        escrowExists(escrowId) 
-        onlyArbitrator(escrowId) 
+    function resolveDisputeByArbitrator(uint256 escrowId, bool buyerWins)
+        external
+        escrowExists(escrowId)
+        onlyArbitrator(escrowId)
         onlySameChain(escrowId)
     {
         Escrow storage escrow = escrows[escrowId];
         require(escrow.status == EscrowStatus.DISPUTE_OPENED, "No active dispute");
         require(escrow.resolutionMethod == DisputeResolutionMethod.ARBITRATOR, "Not arbitrator resolution");
-        
+
         if (buyerWins) {
             escrow.status = EscrowStatus.RESOLVED_BUYER_WINS;
             _releaseFunds(escrowId, escrow.buyer);
@@ -533,9 +599,12 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Re
             _releaseFunds(escrowId, escrow.seller);
             _updateReputationOnDispute(escrow.buyer, escrow.seller, false);
         }
-        
+
         escrow.resolvedAt = block.timestamp;
-        
+
+        // Handle dispute bond distribution
+        _handleDisputeBondDistribution(escrowId, buyerWins);
+
         emit EscrowResolved(escrowId, escrow.status, buyerWins ? escrow.buyer : escrow.seller);
     }
 
@@ -729,9 +798,9 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Re
 
     function _resolveDisputeByVoting(uint256 escrowId) internal {
         Escrow storage escrow = escrows[escrowId];
-        
+
         bool buyerWins = escrow.votesForBuyer > escrow.votesForSeller;
-        
+
         if (buyerWins) {
             escrow.status = EscrowStatus.RESOLVED_BUYER_WINS;
             _releaseFunds(escrowId, escrow.buyer);
@@ -741,10 +810,44 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Re
             _releaseFunds(escrowId, escrow.seller);
             _updateReputationOnDispute(escrow.buyer, escrow.seller, false);
         }
-        
+
         escrow.resolvedAt = block.timestamp;
-        
+
+        // Handle dispute bond distribution
+        _handleDisputeBondDistribution(escrowId, buyerWins);
+
         emit EscrowResolved(escrowId, escrow.status, buyerWins ? escrow.buyer : escrow.seller);
+    }
+
+    /**
+     * @notice Handle dispute bond distribution after resolution
+     * @param escrowId ID of the escrow
+     * @param buyerWins Whether the buyer won the dispute
+     */
+    function _handleDisputeBondDistribution(uint256 escrowId, bool buyerWins) internal {
+        uint256 bondAmount = disputeBonds[escrowId];
+        if (bondAmount == 0) return;
+
+        Escrow storage escrow = escrows[escrowId];
+        address initiator = disputeInitiator[escrowId];
+        bool initiatorWon = (initiator == escrow.buyer && buyerWins) ||
+                           (initiator == escrow.seller && !buyerWins);
+
+        if (initiatorWon) {
+            // Refund bond to winner (dispute initiator)
+            (bool sent, ) = payable(initiator).call{value: bondAmount}("");
+            require(sent, "Failed to refund bond");
+            emit DisputeBondRefunded(escrowId, initiator, bondAmount);
+        } else {
+            // Bond forfeited - give to the winner
+            address winner = buyerWins ? escrow.buyer : escrow.seller;
+            (bool sent, ) = payable(winner).call{value: bondAmount}("");
+            require(sent, "Failed to transfer forfeited bond");
+            emit DisputeBondForfeited(escrowId, initiator, bondAmount, winner);
+        }
+
+        // Clear bond data
+        disputeBonds[escrowId] = 0;
     }
 
     function _updateReputationOnSuccess(address buyer, address seller) internal {
@@ -854,6 +957,142 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Re
         arbitratorFees[arbitrator] = fee;
     }
 
+    /**
+     * @notice Set platform arbiter address
+     * @param newArbiter Address of the new platform arbiter
+     */
+    function setPlatformArbiter(address newArbiter) external onlyOwner {
+        require(newArbiter != address(0), "Arbiter cannot be zero address");
+        address oldArbiter = platformArbiter;
+        platformArbiter = newArbiter;
+        emit PlatformArbiterUpdated(oldArbiter, newArbiter);
+    }
+
+    /**
+     * @notice Configure dispute bond settings
+     * @param newPercentage New bond percentage in basis points (e.g., 500 = 5%)
+     * @param required Whether bonds are required
+     */
+    function setDisputeBondConfig(uint256 newPercentage, bool required) external onlyOwner {
+        require(newPercentage <= MAX_DISPUTE_BOND_PERCENTAGE, "Percentage too high");
+        disputeBondPercentage = newPercentage;
+        disputeBondRequired = required;
+        emit DisputeBondConfigUpdated(newPercentage, required);
+    }
+
+    /**
+     * @notice Get dispute bond configuration
+     * @return percentage Current bond percentage in basis points
+     * @return minBond Minimum bond amount
+     * @return required Whether bonds are required
+     */
+    function getDisputeBondConfig() external view returns (uint256 percentage, uint256 minBond, bool required) {
+        return (disputeBondPercentage, MIN_DISPUTE_BOND, disputeBondRequired);
+    }
+
+    // ==================== AUTOMATIC TIMEOUT ENFORCEMENT ====================
+
+    /**
+     * @notice Check if escrow is eligible for deadline refund
+     * @param escrowId ID of the escrow
+     * @return eligible Whether the escrow is eligible for deadline refund
+     * @return reason The reason for eligibility or ineligibility
+     */
+    function isEligibleForDeadlineRefund(uint256 escrowId) public view escrowExists(escrowId) returns (bool eligible, string memory reason) {
+        Escrow storage escrow = escrows[escrowId];
+
+        // Must be in a state where funds are locked
+        if (escrow.status != EscrowStatus.FUNDS_LOCKED &&
+            escrow.status != EscrowStatus.NFT_DEPOSITED &&
+            escrow.status != EscrowStatus.CREATED) {
+            return (false, "Escrow not in refundable status");
+        }
+
+        // Deadline must have passed plus grace period
+        if (block.timestamp <= escrow.deliveryDeadline + DEADLINE_GRACE_PERIOD) {
+            return (false, "Deadline grace period not expired");
+        }
+
+        return (true, "Eligible for deadline refund");
+    }
+
+    /**
+     * @notice Claim refund after delivery deadline has passed
+     * @dev Can be called by buyer or any keeper/automated service
+     * @param escrowId ID of the escrow
+     */
+    function claimDeadlineRefund(uint256 escrowId) external nonReentrant escrowExists(escrowId) onlySameChain(escrowId) {
+        Escrow storage escrow = escrows[escrowId];
+
+        (bool eligible, string memory reason) = isEligibleForDeadlineRefund(escrowId);
+        require(eligible, reason);
+
+        // Check if funds were actually locked
+        bool fundsLocked = escrow.status == EscrowStatus.FUNDS_LOCKED ||
+                          escrow.status == EscrowStatus.NFT_DEPOSITED ||
+                          (escrow.nftStandard != NFTStandard.NONE && escrow.status == EscrowStatus.CREATED);
+
+        escrow.status = EscrowStatus.CANCELLED;
+        escrow.resolvedAt = block.timestamp;
+
+        // Return NFT to seller if it was deposited
+        if (escrow.nftDeposited) {
+            _transferNFT(escrowId, escrow.seller);
+        }
+
+        // Return funds to buyer if they were locked
+        if (fundsLocked && escrow.status != EscrowStatus.CREATED) {
+            _releaseFunds(escrowId, escrow.buyer);
+        }
+
+        emit DeadlineRefund(escrowId, escrow.buyer, escrow.amount, "Delivery deadline exceeded");
+    }
+
+    /**
+     * @notice Claim refund after delivery deadline for NFT escrow
+     * @param escrowId ID of the escrow
+     */
+    function claimNFTDeadlineRefund(uint256 escrowId) external nonReentrant escrowExists(escrowId) onlySameChain(escrowId) {
+        Escrow storage escrow = escrows[escrowId];
+        require(escrow.nftStandard != NFTStandard.NONE, "Not an NFT escrow");
+
+        (bool eligible, string memory reason) = isEligibleForDeadlineRefund(escrowId);
+        require(eligible, reason);
+
+        escrow.status = EscrowStatus.CANCELLED;
+        escrow.resolvedAt = block.timestamp;
+
+        // Return NFT to seller if deposited
+        if (escrow.nftDeposited) {
+            _transferNFT(escrowId, escrow.seller);
+        }
+
+        // Return funds to buyer
+        if (escrow.status == EscrowStatus.FUNDS_LOCKED ||
+            escrow.status == EscrowStatus.NFT_DEPOSITED ||
+            escrow.status == EscrowStatus.READY_FOR_RELEASE) {
+            _releaseFunds(escrowId, escrow.buyer);
+        }
+
+        emit DeadlineRefund(escrowId, escrow.buyer, escrow.amount, "NFT delivery deadline exceeded");
+    }
+
+    /**
+     * @notice Get remaining time until deadline refund is available
+     * @param escrowId ID of the escrow
+     * @return timeRemaining Seconds until refund is available (0 if already available)
+     */
+    function getTimeUntilDeadlineRefund(uint256 escrowId) external view escrowExists(escrowId) returns (uint256 timeRemaining) {
+        Escrow storage escrow = escrows[escrowId];
+        uint256 refundAvailableAt = escrow.deliveryDeadline + DEADLINE_GRACE_PERIOD;
+
+        if (block.timestamp >= refundAvailableAt) {
+            return 0;
+        }
+
+        return refundAvailableAt - block.timestamp;
+    }
+
     // ==================== NFT ATOMIC SWAP FUNCTIONS ====================
 
     /**
@@ -920,6 +1159,12 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Re
 
         // Cross-chain support
         escrowChainId[escrowId] = chainId;
+
+        // CRITICAL: Always set arbitrator to platform arbiter, never to buyer/seller
+        if (resolutionMethod == DisputeResolutionMethod.ARBITRATOR) {
+            newEscrow.appointedArbitrator = platformArbiter;
+            emit ArbitratorAppointed(escrowId, platformArbiter);
+        }
 
         userEscrows[msg.sender].push(escrowId);
         userEscrows[seller].push(escrowId);

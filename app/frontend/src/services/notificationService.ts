@@ -233,7 +233,8 @@ class NotificationService {
               comment_mention: { enabled: true, push: true, sound: true },
               community_invite: { enabled: true, push: true, sound: true },
               governance_proposal: { enabled: true, push: true, sound: true },
-              system_alert: { enabled: true, push: true, sound: true }
+              system_alert: { enabled: true, push: true, sound: true },
+              order_update: { enabled: true, push: true, sound: true }
             },
             quietHours: {
               enabled: false,
@@ -258,7 +259,8 @@ class NotificationService {
               comment_mention: { enabled: true, push: true, sound: true },
               community_invite: { enabled: true, push: true, sound: true },
               governance_proposal: { enabled: true, push: true, sound: true },
-              system_alert: { enabled: true, push: true, sound: true }
+              system_alert: { enabled: true, push: true, sound: true },
+              order_update: { enabled: true, push: true, sound: true }
             },
             quietHours: {
               enabled: false,

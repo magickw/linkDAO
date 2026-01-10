@@ -4,6 +4,7 @@ import { db } from '../db';
 import { disputes, escrows, users, orders } from '../db/schema';
 import { NotificationService } from './notificationService';
 import { reputationService } from './reputationService';
+import { refundPaymentService, RefundResult } from './refundPaymentService';
 
 export interface CreateDisputeRequest {
   escrowId: string;
@@ -605,40 +606,160 @@ export class DisputeService {
     resolverId: string,
     reasoning: string
   ): Promise<void> {
+    // Get escrow and order details for refund processing
+    const escrow = await this.getDisputeEscrow(disputeId);
+
+    // Calculate actual refund amount based on verdict
+    let actualRefundAmount = refundAmount;
+    if (verdict === VerdictType.FAVOR_BUYER && refundAmount === 0) {
+      // Full refund for buyer
+      actualRefundAmount = parseFloat(escrow.amount);
+    } else if (verdict === VerdictType.PARTIAL_REFUND && refundAmount === 0) {
+      // Default to 50% if no amount specified
+      actualRefundAmount = parseFloat(escrow.amount) * 0.5;
+    }
+
+    // Process refund if verdict favors buyer or is partial refund
+    let refundResult: RefundResult | null = null;
+    if ((verdict === VerdictType.FAVOR_BUYER || verdict === VerdictType.PARTIAL_REFUND) && actualRefundAmount > 0) {
+      refundResult = await this.processDisputeRefund(escrow, actualRefundAmount);
+    }
+
+    // Update dispute record with resolution
     await db.update(disputes)
       .set({
         status: 'resolved',
+        resolvedAt: new Date(),
         resolution: JSON.stringify({
           verdict,
-          refundAmount,
+          refundAmount: actualRefundAmount,
           resolverId,
           reasoning,
-          resolvedAt: new Date().toISOString()
+          resolvedAt: new Date().toISOString(),
+          refundResult: refundResult ? {
+            success: refundResult.success,
+            refundId: refundResult.refundId,
+            transactionHash: refundResult.transactionHash,
+            error: refundResult.error
+          } : null
         })
       })
       .where(eq(disputes.id, disputeId));
 
+    // Update escrow status based on verdict
+    await db.update(escrows)
+      .set({
+        resolvedAt: new Date(),
+        resolverAddress: resolverId
+      })
+      .where(eq(escrows.id, escrow.id));
+
+    // Update order status if we have an order associated
+    if (escrow.listingId) {
+      const orderStatus = verdict === VerdictType.FAVOR_BUYER ? 'refunded' :
+                          verdict === VerdictType.PARTIAL_REFUND ? 'partially_refunded' :
+                          verdict === VerdictType.FAVOR_SELLER ? 'completed' : 'closed';
+
+      await db.update(orders)
+        .set({ status: orderStatus })
+        .where(eq(orders.listingId, escrow.listingId));
+    }
+
     // Update reputation based on verdict
     await this.updateReputationFromVerdict(disputeId, verdict);
 
-    // Send notifications to parties
-    const escrow = await this.getDisputeEscrow(disputeId);
-    
+    // Send notifications to parties with refund details
+    const notificationData = {
+      disputeId,
+      verdict,
+      refundAmount: actualRefundAmount,
+      refundSuccess: refundResult?.success,
+      refundId: refundResult?.refundId,
+      transactionHash: refundResult?.transactionHash
+    };
+
     await this.notificationService.sendOrderNotification(
       escrow.buyerId!,
       'dispute_resolved',
       escrow.id.toString(),
-      { disputeId, verdict, refundAmount }
+      notificationData
     );
 
     await this.notificationService.sendOrderNotification(
       escrow.sellerId!,
       'dispute_resolved',
       escrow.id.toString(),
-      { disputeId, verdict, refundAmount }
+      notificationData
     );
 
     await this.logDisputeEvent(disputeId, 'dispute_resolved', resolverId);
+
+    // Log refund result if applicable
+    if (refundResult) {
+      if (refundResult.success) {
+        safeLogger.info(`Dispute ${disputeId} refund processed successfully: ${refundResult.refundId || refundResult.transactionHash}`);
+      } else {
+        safeLogger.error(`Dispute ${disputeId} refund failed: ${refundResult.error}`);
+      }
+    }
+  }
+
+  /**
+   * Process refund based on the escrow's payment method
+   */
+  private async processDisputeRefund(escrow: any, amount: number): Promise<RefundResult> {
+    try {
+      safeLogger.info(`Processing dispute refund for escrow ${escrow.id}, amount: ${amount}`);
+
+      // Get the buyer's wallet address for crypto refunds
+      const [buyer] = await db.select().from(users).where(eq(users.id, escrow.buyerId)).limit(1);
+
+      if (!buyer) {
+        throw new Error('Buyer not found for refund');
+      }
+
+      // Determine payment method from escrow/order data
+      const paymentMethod = escrow.paymentMethod || escrow.tokenAddress ? 'crypto' : 'fiat';
+      const paymentToken = escrow.paymentToken || escrow.tokenAddress;
+
+      if (paymentMethod === 'crypto' || paymentToken) {
+        // Process blockchain refund
+        return await refundPaymentService.processBlockchainRefund(
+          buyer.walletAddress,
+          amount.toString(),
+          paymentToken !== 'ETH' ? paymentToken : undefined
+        );
+      } else if (escrow.stripePaymentIntentId) {
+        // Process Stripe refund
+        return await refundPaymentService.processStripeRefund(
+          escrow.stripePaymentIntentId,
+          amount,
+          'Dispute resolved in buyer favor'
+        );
+      } else if (escrow.paypalCaptureId) {
+        // Process PayPal refund
+        return await refundPaymentService.processPayPalRefund(
+          escrow.paypalCaptureId,
+          amount,
+          'USD',
+          'Dispute resolved in buyer favor'
+        );
+      } else {
+        safeLogger.warn(`No payment method found for escrow ${escrow.id}, cannot process automatic refund`);
+        return {
+          success: false,
+          error: 'No payment method found for automatic refund',
+          provider: 'unknown'
+        };
+      }
+    } catch (error: any) {
+      safeLogger.error(`Error processing dispute refund for escrow ${escrow.id}:`, error);
+      return {
+        success: false,
+        error: error.message,
+        provider: 'unknown'
+      };
+    }
   }
 
   private async updateReputationFromVerdict(disputeId: number, verdict: VerdictType): Promise<void> {

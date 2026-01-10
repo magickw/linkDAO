@@ -402,4 +402,28 @@ export class SellerWorkflowController {
             return res.status(status).json({ error: error.message || 'Failed to get service details' });
         }
     }
+
+    /**
+     * Complete digital product delivery (for non-service digital goods)
+     */
+    async completeDigitalDelivery(req: Request, res: Response): Promise<Response> {
+        try {
+            const sellerId = (req as any).user?.id;
+            if (!sellerId) {
+                return res.status(401).json({ error: 'User not authenticated' });
+            }
+
+            const { orderId } = req.params;
+            const { deliveryNotes } = req.body;
+
+            const result = await sellerWorkflowService.completeDigitalDelivery(orderId, sellerId, deliveryNotes);
+
+            return res.json(result);
+        } catch (error: any) {
+            safeLogger.error('Error completing digital delivery:', error);
+            const status = error.message === 'Unauthorized' ? 403 :
+                           error.message === 'Order not found' ? 404 : 500;
+            return res.status(status).json({ error: error.message || 'Failed to complete digital delivery' });
+        }
+    }
 }

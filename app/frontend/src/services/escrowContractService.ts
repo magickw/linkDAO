@@ -386,6 +386,121 @@ export const ERC1155_ABI = [
   }
 ] as const;
 
+// Deadline Refund ABI
+export const DEADLINE_REFUND_ABI = [
+  {
+    inputs: [{ name: 'escrowId', type: 'uint256' }],
+    name: 'isEligibleForDeadlineRefund',
+    outputs: [
+      { name: 'eligible', type: 'bool' },
+      { name: 'reason', type: 'string' }
+    ],
+    stateMutability: 'view',
+    type: 'function'
+  },
+  {
+    inputs: [{ name: 'escrowId', type: 'uint256' }],
+    name: 'getTimeUntilDeadlineRefund',
+    outputs: [{ name: 'timeRemaining', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function'
+  },
+  {
+    inputs: [{ name: 'escrowId', type: 'uint256' }],
+    name: 'claimDeadlineRefund',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function'
+  },
+  {
+    inputs: [{ name: 'escrowId', type: 'uint256' }],
+    name: 'claimNFTDeadlineRefund',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function'
+  },
+  // Events
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: 'escrowId', type: 'uint256' },
+      { indexed: true, name: 'buyer', type: 'address' },
+      { indexed: false, name: 'amount', type: 'uint256' },
+      { indexed: false, name: 'reason', type: 'string' }
+    ],
+    name: 'DeadlineRefund',
+    type: 'event'
+  }
+] as const;
+
+// Dispute Bond ABI
+export const DISPUTE_BOND_ABI = [
+  {
+    inputs: [{ name: 'escrowId', type: 'uint256' }],
+    name: 'calculateDisputeBond',
+    outputs: [{ name: 'bondAmount', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function'
+  },
+  {
+    inputs: [],
+    name: 'getDisputeBondConfig',
+    outputs: [
+      { name: 'percentage', type: 'uint256' },
+      { name: 'minBond', type: 'uint256' },
+      { name: 'required', type: 'bool' }
+    ],
+    stateMutability: 'view',
+    type: 'function'
+  },
+  {
+    inputs: [{ name: 'escrowId', type: 'uint256' }],
+    name: 'disputeBonds',
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function'
+  },
+  {
+    inputs: [{ name: 'escrowId', type: 'uint256' }],
+    name: 'disputeInitiator',
+    outputs: [{ name: '', type: 'address' }],
+    stateMutability: 'view',
+    type: 'function'
+  },
+  // Events
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: 'escrowId', type: 'uint256' },
+      { indexed: true, name: 'depositor', type: 'address' },
+      { indexed: false, name: 'amount', type: 'uint256' }
+    ],
+    name: 'DisputeBondDeposited',
+    type: 'event'
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: 'escrowId', type: 'uint256' },
+      { indexed: true, name: 'recipient', type: 'address' },
+      { indexed: false, name: 'amount', type: 'uint256' }
+    ],
+    name: 'DisputeBondRefunded',
+    type: 'event'
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: 'escrowId', type: 'uint256' },
+      { indexed: true, name: 'loser', type: 'address' },
+      { indexed: false, name: 'amount', type: 'uint256' },
+      { indexed: true, name: 'winner', type: 'address' }
+    ],
+    name: 'DisputeBondForfeited',
+    type: 'event'
+  }
+] as const;
+
 export class EscrowContractService {
   private publicClient: PublicClient;
   private walletClient?: WalletClient;
@@ -1264,5 +1379,283 @@ export class EscrowContractService {
   async isReadyForRelease(escrowId: bigint): Promise<boolean> {
     const details = await this.getEscrowDetails(escrowId);
     return details.status === EscrowStatus.READY_FOR_RELEASE;
+  }
+
+  // ==================== DEADLINE REFUND METHODS ====================
+
+  /**
+   * Check if escrow is eligible for deadline refund
+   */
+  async isEligibleForDeadlineRefund(escrowId: bigint): Promise<{ eligible: boolean; reason: string }> {
+    try {
+      const escrowAddress = await this.getEscrowContractAddress();
+
+      const result = await this.publicClient.readContract({
+        address: escrowAddress,
+        abi: DEADLINE_REFUND_ABI,
+        functionName: 'isEligibleForDeadlineRefund',
+        args: [escrowId],
+        authorizationList: [],
+      }) as [boolean, string];
+
+      return {
+        eligible: result[0],
+        reason: result[1]
+      };
+    } catch (error) {
+      console.error('Failed to check deadline refund eligibility:', error);
+      return { eligible: false, reason: 'Failed to check eligibility' };
+    }
+  }
+
+  /**
+   * Get remaining time until deadline refund is available
+   */
+  async getTimeUntilDeadlineRefund(escrowId: bigint): Promise<bigint> {
+    try {
+      const escrowAddress = await this.getEscrowContractAddress();
+
+      const timeRemaining = await this.publicClient.readContract({
+        address: escrowAddress,
+        abi: DEADLINE_REFUND_ABI,
+        functionName: 'getTimeUntilDeadlineRefund',
+        args: [escrowId],
+        authorizationList: [],
+      });
+
+      return timeRemaining as bigint;
+    } catch (error) {
+      console.error('Failed to get time until deadline refund:', error);
+      return 0n;
+    }
+  }
+
+  /**
+   * Claim refund after delivery deadline has passed
+   */
+  async claimDeadlineRefund(escrowId: bigint): Promise<Hash> {
+    if (!this.walletClient) {
+      throw new PaymentError({
+        code: PaymentErrorCode.WALLET_NOT_CONNECTED,
+        message: 'Wallet not connected',
+        userMessage: 'Please connect your wallet to claim refund',
+        recoveryOptions: [
+          {
+            action: 'connect_wallet',
+            label: 'Connect Wallet',
+            description: 'Connect your Web3 wallet',
+            priority: 'primary'
+          }
+        ],
+        retryable: true
+      });
+    }
+
+    try {
+      const escrowAddress = await this.getEscrowContractAddress();
+
+      const { request } = await this.publicClient.simulateContract({
+        address: escrowAddress,
+        abi: DEADLINE_REFUND_ABI,
+        functionName: 'claimDeadlineRefund',
+        args: [escrowId],
+        account: (await this.walletClient.getAddresses())[0]
+      });
+
+      const hash = await this.walletClient.writeContract(request);
+      await this.publicClient.waitForTransactionReceipt({ hash });
+
+      return hash;
+    } catch (error) {
+      console.error('Failed to claim deadline refund:', error);
+      throw PaymentError.fromError(error);
+    }
+  }
+
+  /**
+   * Claim deadline refund for NFT escrow
+   */
+  async claimNFTDeadlineRefund(escrowId: bigint): Promise<Hash> {
+    if (!this.walletClient) {
+      throw new PaymentError({
+        code: PaymentErrorCode.WALLET_NOT_CONNECTED,
+        message: 'Wallet not connected',
+        userMessage: 'Please connect your wallet to claim NFT refund',
+        recoveryOptions: [
+          {
+            action: 'connect_wallet',
+            label: 'Connect Wallet',
+            description: 'Connect your Web3 wallet',
+            priority: 'primary'
+          }
+        ],
+        retryable: true
+      });
+    }
+
+    try {
+      const escrowAddress = await this.getEscrowContractAddress();
+
+      const { request } = await this.publicClient.simulateContract({
+        address: escrowAddress,
+        abi: DEADLINE_REFUND_ABI,
+        functionName: 'claimNFTDeadlineRefund',
+        args: [escrowId],
+        account: (await this.walletClient.getAddresses())[0]
+      });
+
+      const hash = await this.walletClient.writeContract(request);
+      await this.publicClient.waitForTransactionReceipt({ hash });
+
+      return hash;
+    } catch (error) {
+      console.error('Failed to claim NFT deadline refund:', error);
+      throw PaymentError.fromError(error);
+    }
+  }
+
+  // ==================== DISPUTE BOND METHODS ====================
+
+  /**
+   * Get dispute bond configuration
+   */
+  async getDisputeBondConfig(): Promise<{ percentage: bigint; minBond: bigint; required: boolean }> {
+    try {
+      const escrowAddress = await this.getEscrowContractAddress();
+
+      const result = await this.publicClient.readContract({
+        address: escrowAddress,
+        abi: DISPUTE_BOND_ABI,
+        functionName: 'getDisputeBondConfig',
+        authorizationList: [],
+      }) as [bigint, bigint, boolean];
+
+      return {
+        percentage: result[0],
+        minBond: result[1],
+        required: result[2]
+      };
+    } catch (error) {
+      console.error('Failed to get dispute bond config:', error);
+      // Return defaults
+      return {
+        percentage: 500n, // 5%
+        minBond: 10000000000000000n, // 0.01 ETH
+        required: true
+      };
+    }
+  }
+
+  /**
+   * Calculate required dispute bond for an escrow
+   */
+  async calculateDisputeBond(escrowId: bigint): Promise<bigint> {
+    try {
+      const escrowAddress = await this.getEscrowContractAddress();
+
+      const bondAmount = await this.publicClient.readContract({
+        address: escrowAddress,
+        abi: DISPUTE_BOND_ABI,
+        functionName: 'calculateDisputeBond',
+        args: [escrowId],
+        authorizationList: [],
+      });
+
+      return bondAmount as bigint;
+    } catch (error) {
+      console.error('Failed to calculate dispute bond:', error);
+      throw PaymentError.fromError(error);
+    }
+  }
+
+  /**
+   * Get deposited bond amount for an escrow
+   */
+  async getDisputeBond(escrowId: bigint): Promise<bigint> {
+    try {
+      const escrowAddress = await this.getEscrowContractAddress();
+
+      const bondAmount = await this.publicClient.readContract({
+        address: escrowAddress,
+        abi: DISPUTE_BOND_ABI,
+        functionName: 'disputeBonds',
+        args: [escrowId],
+        authorizationList: [],
+      });
+
+      return bondAmount as bigint;
+    } catch (error) {
+      console.error('Failed to get dispute bond:', error);
+      return 0n;
+    }
+  }
+
+  /**
+   * Get dispute initiator address
+   */
+  async getDisputeInitiator(escrowId: bigint): Promise<Address | null> {
+    try {
+      const escrowAddress = await this.getEscrowContractAddress();
+
+      const initiator = await this.publicClient.readContract({
+        address: escrowAddress,
+        abi: DISPUTE_BOND_ABI,
+        functionName: 'disputeInitiator',
+        args: [escrowId],
+        authorizationList: [],
+      });
+
+      return initiator as Address;
+    } catch (error) {
+      console.error('Failed to get dispute initiator:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Open a dispute with bond payment
+   */
+  async openDisputeWithBond(escrowId: bigint): Promise<Hash> {
+    if (!this.walletClient) {
+      throw new PaymentError({
+        code: PaymentErrorCode.WALLET_NOT_CONNECTED,
+        message: 'Wallet not connected',
+        userMessage: 'Please connect your wallet to open a dispute',
+        recoveryOptions: [
+          {
+            action: 'connect_wallet',
+            label: 'Connect Wallet',
+            description: 'Connect your Web3 wallet',
+            priority: 'primary'
+          }
+        ],
+        retryable: true
+      });
+    }
+
+    try {
+      const escrowAddress = await this.getEscrowContractAddress();
+
+      // Get required bond amount
+      const bondAmount = await this.calculateDisputeBond(escrowId);
+
+      // Open dispute with bond payment
+      const { request } = await this.publicClient.simulateContract({
+        address: escrowAddress,
+        abi: ENHANCED_ESCROW_ABI,
+        functionName: 'openDispute',
+        args: [escrowId],
+        value: bondAmount,
+        account: (await this.walletClient.getAddresses())[0]
+      });
+
+      const hash = await this.walletClient.writeContract(request);
+      await this.publicClient.waitForTransactionReceipt({ hash });
+
+      return hash;
+    } catch (error) {
+      console.error('Failed to open dispute with bond:', error);
+      throw PaymentError.fromError(error);
+    }
   }
 }

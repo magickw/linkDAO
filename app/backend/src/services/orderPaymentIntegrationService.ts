@@ -8,6 +8,7 @@ import { ReceiptService } from './receiptService';
 import { emailService } from './emailService';
 import { ReceiptStatus } from '../types/receipt';
 import { ethers } from 'ethers';
+import { refundPaymentService, RefundResult } from './refundPaymentService';
 
 export interface PaymentTransaction {
   id: string;
@@ -605,7 +606,7 @@ export class OrderPaymentIntegrationService {
     orderId: string,
     amount?: string,
     reason?: string
-  ): Promise<{ success: boolean; refundTransactionId?: string }> {
+  ): Promise<{ success: boolean; refundTransactionId?: string; error?: string }> {
     try {
       safeLogger.info(`💰 Processing refund for order ${orderId}`);
 
@@ -629,30 +630,57 @@ export class OrderPaymentIntegrationService {
 
       // Process refund based on payment method
       const originalTransaction = completedTransactions[0];
-      let refundResult: any = {};
+      let refundResult: RefundResult;
 
       switch (originalTransaction.paymentMethod) {
         case 'crypto':
         case 'escrow':
-          if (originalTransaction.escrowId) {
-            // Mock refund for now - in production, implement actual escrow refund
-            refundResult = {
-              transactionHash: '0xrefund' + Date.now(),
-              success: true,
-              refundId: 'refund_' + originalTransaction.escrowId
-            };
+          // Get buyer address for crypto refund
+          const order = await this.databaseService.getOrderById(orderId);
+          if (!order || !order.buyerAddress) {
+            throw new Error('Buyer address not found for crypto refund');
           }
+
+          // Process actual blockchain refund
+          refundResult = await refundPaymentService.processBlockchainRefund(
+            order.buyerAddress,
+            refundAmount,
+            originalTransaction.metadata?.tokenAddress
+          );
           break;
+
         case 'fiat':
           if (originalTransaction.paymentIntentId) {
-            // Mock refund for now - in production, implement actual fiat refund
-            refundResult = {
-              refundId: 'refund_' + originalTransaction.paymentIntentId,
-              success: true,
-              amount: parseFloat(refundAmount) * 100
-            };
+            // Process actual Stripe refund
+            refundResult = await refundPaymentService.processStripeRefund(
+              originalTransaction.paymentIntentId,
+              parseFloat(refundAmount),
+              reason
+            );
+          } else if (originalTransaction.metadata?.paypalCaptureId) {
+            // Process actual PayPal refund
+            refundResult = await refundPaymentService.processPayPalRefund(
+              originalTransaction.metadata.paypalCaptureId,
+              parseFloat(refundAmount),
+              originalTransaction.currency,
+              reason
+            );
+          } else {
+            throw new Error('No fiat payment identifier found for refund');
           }
           break;
+
+        default:
+          throw new Error(`Unsupported payment method for refund: ${originalTransaction.paymentMethod}`);
+      }
+
+      // Check if refund was successful
+      if (!refundResult.success) {
+        safeLogger.error(`Refund failed for order ${orderId}: ${refundResult.error}`);
+        return {
+          success: false,
+          error: refundResult.error || 'Refund processing failed'
+        };
       }
 
       // Create refund transaction record
@@ -668,7 +696,9 @@ export class OrderPaymentIntegrationService {
           metadata: {
             isRefund: true,
             originalTransactionId: originalTransaction.id,
-            refundReason: reason
+            refundReason: reason,
+            provider: refundResult.provider,
+            retryCount: refundResult.retryCount
           }
         }
       );
@@ -676,19 +706,23 @@ export class OrderPaymentIntegrationService {
       // Update refund transaction status
       await this.updatePaymentTransactionStatus(
         refundTransaction.id,
-        PaymentTransactionStatus.COMPLETED,
+        PaymentTransactionStatus.REFUNDED,
         {
           transactionHash: refundResult.transactionHash,
-          receiptData: refundResult
+          receiptData: {
+            refundId: refundResult.refundId,
+            transactionHash: refundResult.transactionHash,
+            provider: refundResult.provider
+          }
         }
       );
 
       safeLogger.info(`✅ Refund processed for order ${orderId}: ${refundAmount} ${originalTransaction.currency}`);
       return { success: true, refundTransactionId: refundTransaction.id };
 
-    } catch (error) {
+    } catch (error: any) {
       safeLogger.error('Error processing refund:', error);
-      return { success: false };
+      return { success: false, error: error.message };
     }
   }
 

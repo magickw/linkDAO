@@ -143,10 +143,20 @@ export class RefundPaymentService {
         // Handle ERC20 token refund
         const tokenABI = [
           "function transfer(address to, uint256 amount) returns (bool)",
-          "function balanceOf(address owner) view returns (uint256)"
+          "function balanceOf(address owner) view returns (uint256)",
+          "function decimals() view returns (uint8)"
         ];
         const tokenContract = new ethers.Contract(tokenAddress, tokenABI, wallet);
-        const tx = await tokenContract.transfer(recipientAddress, ethers.parseEther(amount));
+
+        // Get token decimals for proper amount conversion
+        let decimals = 18;
+        try {
+          decimals = await tokenContract.decimals();
+        } catch {
+          // Default to 18 decimals if call fails
+        }
+
+        tx = await tokenContract.transfer(recipientAddress, ethers.parseUnits(amount, decimals));
         await tx.wait();
       } else {
         // Handle native token refund

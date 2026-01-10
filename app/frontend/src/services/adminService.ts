@@ -187,39 +187,19 @@ class AdminService {
   // Order Management
   async getOrderMetrics(): Promise<AdminOrderMetrics> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/metrics`, {
+      const response = await fetch(`${this.baseUrl}/api/admin/orders/metrics`, {
         headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
-        // Return mock data for UI development if backend fails or 404s
-        return {
-          totalOrders: 1250,
-          totalRevenue: 450000,
-          averageOrderValue: 360,
-          ordersByStatus: {
-            'pending': 45,
-            'processing': 120,
-            'shipped': 850,
-            'delivered': 200,
-            'cancelled': 35
-          },
-          recentGrowth: 15.5
-        };
+        throw new Error(`Failed to fetch order metrics: ${response.status}`);
       }
 
       const result = await response.json();
       return result.data || result;
     } catch (error) {
       console.error('Error in getOrderMetrics:', error);
-      // Fallback mock data
-      return {
-        totalOrders: 0,
-        totalRevenue: 0,
-        averageOrderValue: 0,
-        ordersByStatus: {},
-        recentGrowth: 0
-      };
+      throw error;
     }
   }
 

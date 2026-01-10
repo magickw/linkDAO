@@ -20,7 +20,7 @@ import {
   DocumentArrowDownIcon,
 } from '@heroicons/react/24/outline';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Area } from 'recharts';
-import { returnAnalyticsService, ReturnAnalytics } from '../../../services/returnAnalyticsService';
+import { returnAnalyticsService, ReturnAnalytics, CategoryMetrics, SellerPerformanceMetrics } from '../../../services/returnAnalyticsService';
 
 interface FilterState {
   dateRange: {
@@ -42,23 +42,10 @@ interface TrendData {
   approvalRate: number;
 }
 
-interface CategoryData {
-  category: string;
-  count: number;
-  percentage: number;
-  avgRefundAmount: number;
-  [key: string]: string | number;
-}
+// interfaces specific to this component but leveraging service types
+// interface CategoryData extends CategoryMetrics { [key: string]: any } // if needed
+// but let's try just using the imported types directly first
 
-interface SellerPerformanceData {
-  sellerId: string;
-  sellerName: string;
-  totalReturns: number;
-  approvalRate: number;
-  avgProcessingTime: number;
-  customerSatisfaction: number;
-  complianceScore: number;
-}
 
 interface DrillDownData {
   type: 'category' | 'seller' | 'reason' | 'status' | null;
@@ -118,8 +105,8 @@ export const ReturnAnalyticsDashboard: React.FC = () => {
   // State management
   const [analytics, setAnalytics] = useState<ReturnAnalytics | null>(null);
   const [trendData, setTrendData] = useState<TrendData[]>([]);
-  const [categoryData, setCategoryData] = useState<CategoryData[]>([]);
-  const [sellerPerformance, setSellerPerformance] = useState<SellerPerformanceData[]>([]);
+  const [categoryData, setCategoryData] = useState<CategoryMetrics[]>([]);
+  const [sellerPerformance, setSellerPerformance] = useState<SellerPerformanceMetrics[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -162,12 +149,12 @@ export const ReturnAnalyticsDashboard: React.FC = () => {
       setIsRefreshing(true);
       const data = await returnAnalyticsService.getAnalytics(filters.dateRange, filters.sellerId);
       setAnalytics(data);
-      
+
       // Transform data for visualizations
       transformTrendData(data);
       transformCategoryData(data);
       transformSellerData(data);
-      
+
       setError(null);
     } catch (err) {
       console.error('Error fetching analytics:', err);
@@ -180,44 +167,29 @@ export const ReturnAnalyticsDashboard: React.FC = () => {
   // Transform trend data for line chart
   const transformTrendData = (data: ReturnAnalytics) => {
     if (!data.returnTrends?.weeklyTrend) return;
-    
+
     const transformed = data.returnTrends.weeklyTrend.map(week => ({
       date: week.week,
       returns: week.returns,
       refunds: week.refunds,
       approvalRate: week.returns > 0 ? (week.refunds / week.returns) * 100 : 0,
     }));
-    
+
     setTrendData(transformed);
   };
 
   // Transform category data for pie/bar charts
   const transformCategoryData = (data: ReturnAnalytics) => {
-    // Mock category data - in real implementation, this would come from the API
-    const mockCategories: CategoryData[] = [
-      { category: 'Electronics', count: 145, percentage: 32, avgRefundAmount: 250 },
-      { category: 'Clothing', count: 98, percentage: 22, avgRefundAmount: 45 },
-      { category: 'Home & Garden', count: 76, percentage: 17, avgRefundAmount: 120 },
-      { category: 'Books', count: 54, percentage: 12, avgRefundAmount: 25 },
-      { category: 'Sports', count: 43, percentage: 10, avgRefundAmount: 85 },
-      { category: 'Other', count: 32, percentage: 7, avgRefundAmount: 60 },
-    ];
-    
-    setCategoryData(mockCategories);
+    if (data.categoryData) {
+      setCategoryData(data.categoryData);
+    }
   };
 
   // Transform seller performance data
   const transformSellerData = (data: ReturnAnalytics) => {
-    // Mock seller data - in real implementation, this would come from the API
-    const mockSellers: SellerPerformanceData[] = [
-      { sellerId: 'S001', sellerName: 'TechStore Pro', totalReturns: 45, approvalRate: 92, avgProcessingTime: 2.3, customerSatisfaction: 4.5, complianceScore: 95 },
-      { sellerId: 'S002', sellerName: 'Fashion Hub', totalReturns: 38, approvalRate: 88, avgProcessingTime: 3.1, customerSatisfaction: 4.2, complianceScore: 90 },
-      { sellerId: 'S003', sellerName: 'Home Essentials', totalReturns: 32, approvalRate: 95, avgProcessingTime: 1.8, customerSatisfaction: 4.7, complianceScore: 98 },
-      { sellerId: 'S004', sellerName: 'Book World', totalReturns: 28, approvalRate: 85, avgProcessingTime: 2.5, customerSatisfaction: 4.3, complianceScore: 87 },
-      { sellerId: 'S005', sellerName: 'Sports Gear', totalReturns: 25, approvalRate: 90, avgProcessingTime: 2.0, customerSatisfaction: 4.4, complianceScore: 92 },
-    ];
-    
-    setSellerPerformance(mockSellers);
+    if (data.sellerPerformance) {
+      setSellerPerformance(data.sellerPerformance);
+    }
   };
 
   // Initial data load
@@ -339,7 +311,7 @@ export const ReturnAnalyticsDashboard: React.FC = () => {
       ['Export Date', new Date().toLocaleDateString(), '', ''],
       ['Date Range', `${data.dateRange.start} to ${data.dateRange.end}`, '', ''],
       ['', '', '', ''],
-      
+
       // Metrics
       ['Metrics', '', '', ''],
       ['Total Returns', data.analytics?.metrics?.totalReturns || 0, '', ''],
@@ -348,7 +320,7 @@ export const ReturnAnalyticsDashboard: React.FC = () => {
       ['Total Refund Amount', `$${data.analytics?.financial?.totalRefundAmount || 0}`, '', ''],
       ['Average Refund Amount', `$${data.analytics?.financial?.averageRefundAmount || 0}`, '', ''],
       ['', '', '', ''],
-      
+
       // Category data
       ['Category Analysis', '', '', ''],
       ['Category', 'Count', 'Percentage', 'Avg Refund Amount'],
@@ -359,7 +331,7 @@ export const ReturnAnalyticsDashboard: React.FC = () => {
         `$${cat.avgRefundAmount}`
       ]),
       ['', '', '', ''],
-      
+
       // Seller performance
       ['Seller Performance', '', '', ''],
       ['Seller Name', 'Total Returns', 'Approval Rate', 'Avg Processing Time'],
@@ -436,21 +408,21 @@ Customer Satisfaction: ${data.analytics?.customerSatisfaction || 0}/5.0
 
 CATEGORY BREAKDOWN
 ------------------
-${data.categoryData.map((cat: any) => 
-  `${cat.category}: ${cat.count} returns (${cat.percentage}%), Avg: ${cat.avgRefundAmount}`
-).join('\n')}
+${data.categoryData.map((cat: any) =>
+      `${cat.category}: ${cat.count} returns (${cat.percentage}%), Avg: ${cat.avgRefundAmount}`
+    ).join('\n')}
 
 SELLER PERFORMANCE
 ------------------
-${data.sellerPerformance.map((seller: any) => 
-  `${seller.sellerName}: ${seller.totalReturns} returns, ${seller.approvalRate}% approval, ${seller.avgProcessingTime} days avg processing`
-).join('\n')}
+${data.sellerPerformance.map((seller: any) =>
+      `${seller.sellerName}: ${seller.totalReturns} returns, ${seller.approvalRate}% approval, ${seller.avgProcessingTime} days avg processing`
+    ).join('\n')}
 
 TREND ANALYSIS
 ----------------
-${data.trendData.map((trend: any) => 
-  `${trend.date}: ${trend.returns} returns, ${trend.refunds} refunds, ${trend.approvalRate.toFixed(1)}% approval rate`
-).join('\n')}
+${data.trendData.map((trend: any) =>
+      `${trend.date}: ${trend.returns} returns, ${trend.refunds} refunds, ${trend.approvalRate.toFixed(1)}% approval rate`
+    ).join('\n')}
 ')}
     `.trim();
 
@@ -469,88 +441,25 @@ ${data.trendData.map((trend: any) =>
   const handleDrillDown = async (type: 'category' | 'seller' | 'reason' | 'status', value: string) => {
     try {
       setIsLoading(true);
-      // In a real implementation, this would call an API endpoint to get detailed data
-      // For now, we'll simulate with mock data
-      const drillDownData = {
+
+      const drilledData = await returnAnalyticsService.getDrillDownAnalytics(
         type,
         value,
-        data: {
-          // Mock detailed data based on drill-down type
-          details: await getDrillDownDetails(type, value),
-          trends: await getDrillDownTrends(type, value),
-          relatedItems: await getRelatedItems(type, value)
-        }
-      };
-      
-      setDrillDown(drillDownData);
+        filters.dateRange
+      );
+
+      setDrillDown({
+        type,
+        value,
+        data: drilledData
+      });
+
     } catch (error) {
       console.error('Drill-down failed:', error);
       setError('Failed to load detailed information');
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const getDrillDownDetails = async (type: string, value: string) => {
-    // Mock implementation - in real app, this would fetch from API
-    switch (type) {
-      case 'category':
-        return {
-          category: value,
-          totalReturns: Math.floor(Math.random() * 200) + 50,
-          avgRefundAmount: Math.floor(Math.random() * 300) + 50,
-          topReasons: [
-            { reason: 'Defective', count: 45, percentage: 35 },
-            { reason: 'Wrong Item', count: 32, percentage: 25 },
-            { reason: 'Not as Described', count: 28, percentage: 22 },
-            { reason: 'Other', count: 23, percentage: 18 }
-          ],
-          monthlyTrend: Array.from({ length: 6 }, (_, i) => ({
-            month: new Date(Date.now() - (5 - i) * 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short' }),
-            returns: Math.floor(Math.random() * 40) + 10,
-            refunds: Math.floor(Math.random() * 35) + 8
-          }))
-        };
-      case 'seller':
-        return {
-          sellerName: value,
-          sellerId: `S${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
-          totalReturns: Math.floor(Math.random() * 100) + 20,
-          approvalRate: Math.floor(Math.random() * 20) + 80,
-          avgProcessingTime: (Math.random() * 3 + 1).toFixed(1),
-          customerSatisfaction: (Math.random() * 1.5 + 3.5).toFixed(1),
-          complianceScore: Math.floor(Math.random() * 15) + 85,
-          topCategories: [
-            { category: 'Electronics', returns: 25, percentage: 40 },
-            { category: 'Clothing', returns: 18, percentage: 29 },
-            { category: 'Home & Garden', returns: 12, percentage: 19 },
-            { category: 'Other', returns: 7, percentage: 12 }
-          ]
-        };
-      default:
-        return {};
-    }
-  };
-
-  const getDrillDownTrends = async (type: string, value: string) => {
-    // Mock trend data
-    return Array.from({ length: 12 }, (_, i) => ({
-      date: new Date(Date.now() - (11 - i) * 7 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-      returns: Math.floor(Math.random() * 20) + 5,
-      refunds: Math.floor(Math.random() * 18) + 4,
-      approvalRate: Math.floor(Math.random() * 20) + 80
-    }));
-  };
-
-  const getRelatedItems = async (type: string, value: string) => {
-    // Mock related items
-    return Array.from({ length: 10 }, (_, i) => ({
-      id: `R${1000 + i}`,
-      date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-      customer: `Customer ${i + 1}`,
-      amount: Math.floor(Math.random() * 500) + 50,
-      status: ['approved', 'rejected', 'pending'][Math.floor(Math.random() * 3)]
-    }));
   };
 
   const clearDrillDown = () => {
@@ -562,15 +471,15 @@ ${data.trendData.map((trend: any) =>
     try {
       setIsLoading(true);
       setComparisonPeriod(period);
-      
+
       // Calculate previous period dates
       const currentEnd = new Date(filters.dateRange.end);
       const currentStart = new Date(filters.dateRange.start);
       const duration = currentEnd.getTime() - currentStart.getTime();
-      
+
       const previousEnd = new Date(currentStart.getTime() - 24 * 60 * 60 * 1000);
       const previousStart = new Date(previousEnd.getTime() - duration);
-      
+
       // Fetch current and previous period data
       const [currentData, previousData] = await Promise.all([
         returnAnalyticsService.getAnalytics(filters.dateRange),
@@ -579,7 +488,7 @@ ${data.trendData.map((trend: any) =>
           end: previousEnd.toISOString().split('T')[0]
         })
       ]);
-      
+
       setComparisonData({
         current: currentData,
         previous: previousData
@@ -594,11 +503,11 @@ ${data.trendData.map((trend: any) =>
 
   const calculateChange = (current: number, previous: number): { value: number; percentage: number; trend: 'up' | 'down' | 'neutral' } => {
     if (previous === 0) return { value: current, percentage: 0, trend: 'neutral' };
-    
+
     const change = current - previous;
     const percentage = (change / previous) * 100;
     const trend = change > 0 ? 'up' : change < 0 ? 'down' : 'neutral';
-    
+
     return { value: change, percentage, trend };
   };
 
@@ -617,7 +526,7 @@ ${data.trendData.map((trend: any) =>
                 Comprehensive analytics on return patterns, trends, and performance metrics
               </p>
             </div>
-            
+
             <div className="flex items-center space-x-4">
               {/* Export Button */}
               <div className="relative">
@@ -629,7 +538,7 @@ ${data.trendData.map((trend: any) =>
                   <ArrowDownTrayIcon className={`w-5 h-5 ${isExporting ? 'animate-pulse' : ''}`} />
                   <span>{isExporting ? 'Exporting...' : 'Export'}</span>
                 </button>
-                
+
                 {/* Export Dropdown Menu */}
                 <AnimatePresence>
                   {showExportMenu && (
@@ -657,19 +566,19 @@ ${data.trendData.map((trend: any) =>
 
               {/* Comparison Button */}
               <button
-              onClick={() => {
-                if (showComparison) {
-                  setShowComparison(false);
-                } else {
-                  handleComparison(comparisonPeriod);
-                  setShowComparison(true);
-                }
-              }}
-              className="flex items-center space-x-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
-            >
-              <ArrowsRightLeftIcon className="w-5 h-5" />
-              <span>Compare</span>
-            </button>
+                onClick={() => {
+                  if (showComparison) {
+                    setShowComparison(false);
+                  } else {
+                    handleComparison(comparisonPeriod);
+                    setShowComparison(true);
+                  }
+                }}
+                className="flex items-center space-x-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+              >
+                <ArrowsRightLeftIcon className="w-5 h-5" />
+                <span>Compare</span>
+              </button>
 
               {/* Refresh Button */}
               <button
@@ -786,7 +695,7 @@ ${data.trendData.map((trend: any) =>
                         </span>
                         <ChevronDownIcon className="w-4 h-4" />
                       </button>
-                      
+
                       <div
                         id="status-dropdown"
                         className="absolute z-10 mt-1 w-full bg-gray-800 border border-gray-600 rounded-lg shadow-lg hidden"
@@ -828,7 +737,7 @@ ${data.trendData.map((trend: any) =>
                         </span>
                         <ChevronDownIcon className="w-4 h-4" />
                       </button>
-                      
+
                       <div
                         id="category-dropdown"
                         className="absolute z-10 mt-1 w-full bg-gray-800 border border-gray-600 rounded-lg shadow-lg hidden"
@@ -870,7 +779,7 @@ ${data.trendData.map((trend: any) =>
                         </span>
                         <ChevronDownIcon className="w-4 h-4" />
                       </button>
-                      
+
                       <div
                         id="reason-dropdown"
                         className="absolute z-10 mt-1 w-full bg-gray-800 border border-gray-600 rounded-lg shadow-lg hidden"
@@ -964,7 +873,7 @@ ${data.trendData.map((trend: any) =>
                   <ArrowsRightLeftIcon className="w-6 h-6 text-purple-400" />
                   <h2 className="text-xl font-bold text-white">Period Comparison</h2>
                 </div>
-                
+
                 <div className="flex items-center space-x-4">
                   {/* Period Selector */}
                   <div className="flex space-x-2">
@@ -972,17 +881,16 @@ ${data.trendData.map((trend: any) =>
                       <button
                         key={period}
                         onClick={() => handleComparison(period)}
-                        className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                          comparisonPeriod === period
-                            ? 'bg-purple-600 text-white'
-                            : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
-                        }`}
+                        className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${comparisonPeriod === period
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                          }`}
                       >
                         {period.charAt(0).toUpperCase() + period.slice(1)}
                       </button>
                     ))}
                   </div>
-                  
+
                   <button
                     onClick={() => setShowComparison(false)}
                     className="text-gray-400 hover:text-white transition-colors"
@@ -1025,11 +933,10 @@ ${data.trendData.map((trend: any) =>
                         ) : (
                           <div className="w-4 h-4" />
                         )}
-                        <span className={`text-sm font-medium ${
-                          change.trend === 'up' ? 'text-red-400' :
+                        <span className={`text-sm font-medium ${change.trend === 'up' ? 'text-red-400' :
                           change.trend === 'down' ? 'text-green-400' :
-                          'text-gray-400'
-                        }`}>
+                            'text-gray-400'
+                          }`}>
                           {change.trend !== 'neutral' && (change.trend === 'up' ? '+' : '')}
                           {change.percentage.toFixed(1)}%
                         </span>
@@ -1069,11 +976,10 @@ ${data.trendData.map((trend: any) =>
                         ) : (
                           <div className="w-4 h-4" />
                         )}
-                        <span className={`text-sm font-medium ${
-                          change.trend === 'up' ? 'text-red-400' :
+                        <span className={`text-sm font-medium ${change.trend === 'up' ? 'text-red-400' :
                           change.trend === 'down' ? 'text-green-400' :
-                          'text-gray-400'
-                        }`}>
+                            'text-gray-400'
+                          }`}>
                           {change.trend !== 'neutral' && (change.trend === 'up' ? '+' : '')}
                           {change.percentage.toFixed(1)}%
                         </span>
@@ -1112,11 +1018,10 @@ ${data.trendData.map((trend: any) =>
                         ) : (
                           <div className="w-4 h-4" />
                         )}
-                        <span className={`text-sm font-medium ${
-                          change.trend === 'up' ? 'text-green-400' :
+                        <span className={`text-sm font-medium ${change.trend === 'up' ? 'text-green-400' :
                           change.trend === 'down' ? 'text-red-400' :
-                          'text-gray-400'
-                        }`}>
+                            'text-gray-400'
+                          }`}>
                           {change.trend !== 'neutral' && (change.trend === 'up' ? '+' : '')}
                           {change.percentage.toFixed(1)}%
                         </span>
@@ -1156,11 +1061,10 @@ ${data.trendData.map((trend: any) =>
                         ) : (
                           <div className="w-4 h-4" />
                         )}
-                        <span className={`text-sm font-medium ${
-                          change.trend === 'up' ? 'text-red-400' :
+                        <span className={`text-sm font-medium ${change.trend === 'up' ? 'text-red-400' :
                           change.trend === 'down' ? 'text-green-400' :
-                          'text-gray-400'
-                        }`}>
+                            'text-gray-400'
+                          }`}>
                           {change.trend !== 'neutral' && (change.trend === 'up' ? '+' : '')}
                           {change.percentage.toFixed(1)}%
                         </span>
@@ -1189,7 +1093,7 @@ ${data.trendData.map((trend: any) =>
                     Drill-down: {drillDown.type} - {drillDown.value}
                   </h2>
                 </div>
-                
+
                 <button
                   onClick={clearDrillDown}
                   className="text-gray-400 hover:text-white transition-colors"
@@ -1199,10 +1103,67 @@ ${data.trendData.map((trend: any) =>
               </div>
 
               {/* Drill-down content would be rendered here based on the type */}
-              <div className="text-gray-400">
-                <p>Detailed analysis for {drillDown.type} "{drillDown.value}"</p>
-                <p className="text-sm mt-2">This would show detailed metrics, trends, and related items.</p>
-              </div>
+              {drillDown.data && (
+                <div className="space-y-6">
+                  {/* Summary Stats */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-gray-700/50 p-4 rounded-lg">
+                      <p className="text-sm text-gray-400">Filtered Returns</p>
+                      <p className="text-xl font-bold text-white">{drillDown.data.details?.totalCount || 0}</p>
+                    </div>
+                    <div className="bg-gray-700/50 p-4 rounded-lg">
+                      <p className="text-sm text-gray-400">Refund Value</p>
+                      <p className="text-xl font-bold text-green-400">
+                        ${(Number(drillDown.data.details?.totalRefundValue) || 0).toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Filtered Trend */}
+                  {drillDown.data.trends && drillDown.data.trends.length > 0 && (
+                    <div className="bg-gray-700/30 p-4 rounded-lg h-48">
+                      <p className="text-sm text-gray-400 mb-2">Trend Analysis</p>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={drillDown.data.trends}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                          <XAxis dataKey="date" hide />
+                          <Tooltip
+                            contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151' }}
+                          />
+                          <Line type="monotone" dataKey="count" stroke="#8B5CF6" strokeWidth={2} dot={false} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+
+                  {/* Related Items */}
+                  {drillDown.data.relatedItems && drillDown.data.relatedItems.length > 0 && (
+                    <div className="bg-gray-700/30 p-4 rounded-lg">
+                      <p className="text-sm text-gray-400 mb-2">Top Related Returns</p>
+                      <div className="max-h-40 overflow-y-auto">
+                        <table className="w-full text-sm text-left">
+                          <thead className="text-xs text-gray-500 uppercase bg-gray-700/50">
+                            <tr>
+                              <th className="px-2 py-1">Item/Seller</th>
+                              <th className="px-2 py-1">Value</th>
+                              <th className="px-2 py-1">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {drillDown.data.relatedItems.map((item: any, idx: number) => (
+                              <tr key={idx} className="border-b border-gray-700/50">
+                                <td className="px-2 py-1 text-white truncate max-w-[150px]">{item.name}</td>
+                                <td className="px-2 py-1 text-green-400">${Number(item.value || 0).toFixed(2)}</td>
+                                <td className="px-2 py-1 text-gray-300">{item.status}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -1302,46 +1263,46 @@ ${data.trendData.map((trend: any) =>
             <ResponsiveContainer width="100%" height={320}>
               <LineChart data={trendData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis 
-                  dataKey="date" 
+                <XAxis
+                  dataKey="date"
                   stroke="#9CA3AF"
                   tick={{ fill: '#9CA3AF' }}
                 />
-                <YAxis 
+                <YAxis
                   stroke="#9CA3AF"
                   tick={{ fill: '#9CA3AF' }}
                 />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#1F2937', 
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#1F2937',
                     border: '1px solid #374151',
                     borderRadius: '8px',
                     color: '#F3F4F6'
                   }}
                 />
-                <Legend 
+                <Legend
                   wrapperStyle={{ color: '#9CA3AF' }}
                 />
-                <Line 
-                  type="monotone" 
-                  dataKey="returns" 
-                  stroke="#3B82F6" 
+                <Line
+                  type="monotone"
+                  dataKey="returns"
+                  stroke="#3B82F6"
                   strokeWidth={2}
                   name="Returns"
                   dot={{ fill: '#3B82F6', r: 4 }}
                 />
-                <Line 
-                  type="monotone" 
-                  dataKey="refunds" 
-                  stroke="#10B981" 
+                <Line
+                  type="monotone"
+                  dataKey="refunds"
+                  stroke="#10B981"
                   strokeWidth={2}
                   name="Refunds"
                   dot={{ fill: '#10B981', r: 4 }}
                 />
-                <Line 
-                  type="monotone" 
-                  dataKey="approvalRate" 
-                  stroke="#F59E0B" 
+                <Line
+                  type="monotone"
+                  dataKey="approvalRate"
+                  stroke="#F59E0B"
                   strokeWidth={2}
                   name="Approval Rate (%)"
                   dot={{ fill: '#F59E0B', r: 4 }}
@@ -1369,7 +1330,7 @@ ${data.trendData.map((trend: any) =>
               <ResponsiveContainer width="100%" height={320}>
                 <PieChart>
                   <Pie
-                    data={categoryData}
+                    data={categoryData as any[]}
                     cx="50%"
                     cy="50%"
                     labelLine={false}
@@ -1377,20 +1338,20 @@ ${data.trendData.map((trend: any) =>
                     outerRadius={100}
                     fill="#8884d8"
                     dataKey="count"
-                    onClick={(data) => handleDrillDown('category', data.category)}
+                    onClick={(data: any) => handleDrillDown('category', data.payload?.category || data.category)}
                     style={{ cursor: 'pointer' }}
                   >
                     {categoryData.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
+                      <Cell
+                        key={`cell-${index}`}
                         fill={COLORS[index % COLORS.length]}
                         style={{ cursor: 'pointer' }}
                       />
                     ))}
                   </Pie>
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: '#1F2937', 
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1F2937',
                       border: '1px solid #374151',
                       borderRadius: '8px',
                       color: '#F3F4F6'
@@ -1414,35 +1375,35 @@ ${data.trendData.map((trend: any) =>
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={320}>
-                <BarChart data={categoryData}>
+                <BarChart data={categoryData as any[]}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis 
-                    dataKey="category" 
+                  <XAxis
+                    dataKey="category"
                     stroke="#9CA3AF"
                     tick={{ fill: '#9CA3AF', fontSize: 12 }}
                     angle={-45}
                     textAnchor="end"
                     height={80}
                   />
-                  <YAxis 
+                  <YAxis
                     stroke="#9CA3AF"
                     tick={{ fill: '#9CA3AF' }}
                     label={{ value: 'Amount ($)', angle: -90, position: 'insideLeft', fill: '#9CA3AF' }}
                   />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: '#1F2937', 
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1F2937',
                       border: '1px solid #374151',
                       borderRadius: '8px',
                       color: '#F3F4F6'
                     }}
                     formatter={(value: number) => `$${value.toFixed(2)}`}
                   />
-                  <Bar 
-                    dataKey="avgRefundAmount" 
+                  <Bar
+                    dataKey="avgRefundAmount"
                     fill="#10B981"
-                    radius={[8, 8, 0, 0]}
-                    onClick={(data) => handleDrillDown('category', data.category)}
+                    radius={[4, 4, 0, 0]}
+                    onClick={(data: any) => handleDrillDown('category', data.category || data.payload?.category)}
                     style={{ cursor: 'pointer' }}
                   />
                 </BarChart>
@@ -1508,12 +1469,11 @@ ${data.trendData.map((trend: any) =>
                       <td className="py-4 px-4 text-center">
                         <div className="flex items-center justify-center space-x-2">
                           <div className="w-16 bg-gray-700 rounded-full h-2">
-                            <div 
-                              className={`h-2 rounded-full ${
-                                seller.approvalRate >= 90 ? 'bg-green-500' : 
-                                seller.approvalRate >= 80 ? 'bg-yellow-500' : 
-                                'bg-red-500'
-                              }`}
+                            <div
+                              className={`h-2 rounded-full ${seller.approvalRate >= 90 ? 'bg-green-500' :
+                                seller.approvalRate >= 80 ? 'bg-yellow-500' :
+                                  'bg-red-500'
+                                }`}
                               style={{ width: `${seller.approvalRate}%` }}
                             />
                           </div>
@@ -1530,11 +1490,10 @@ ${data.trendData.map((trend: any) =>
                         </div>
                       </td>
                       <td className="py-4 px-4 text-center">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          seller.complianceScore >= 95 ? 'bg-green-500/20 text-green-400' :
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${seller.complianceScore >= 95 ? 'bg-green-500/20 text-green-400' :
                           seller.complianceScore >= 85 ? 'bg-yellow-500/20 text-yellow-400' :
-                          'bg-red-500/20 text-red-400'
-                        }`}>
+                            'bg-red-500/20 text-red-400'
+                          }`}>
                           {seller.complianceScore}%
                         </span>
                       </td>

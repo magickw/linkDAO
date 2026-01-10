@@ -6,11 +6,13 @@ import { AdminOrderList } from './AdminOrderList';
 
 export function AdminOrderDashboard() {
     const [metrics, setMetrics] = useState<AdminOrderMetrics | null>(null);
+    const [delayedOrdersCount, setDelayedOrdersCount] = useState<number>(0);
     const [loading, setLoading] = useState(true);
     const [activeView, setActiveView] = useState<'all' | 'delayed'>('all');
 
     useEffect(() => {
         loadMetrics();
+        loadDelayedOrdersCount();
     }, []);
 
     const loadMetrics = async () => {
@@ -22,6 +24,15 @@ export function AdminOrderDashboard() {
             console.error('Failed to load order metrics:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadDelayedOrdersCount = async () => {
+        try {
+            const delayedOrders = await adminService.getDelayedOrders();
+            setDelayedOrdersCount(delayedOrders.length);
+        } catch (error) {
+            console.error('Failed to load delayed orders count:', error);
         }
     };
 
@@ -63,7 +74,7 @@ export function AdminOrderDashboard() {
                 />
                 <StatCard
                     title="Delayed Orders"
-                    value="0" // TODO: Add to metrics or fetch separately
+                    value={delayedOrdersCount.toLocaleString()}
                     icon={AlertTriangle}
                     color="bg-red-500"
                 />

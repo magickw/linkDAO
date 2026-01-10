@@ -377,7 +377,9 @@ export const SellerOrdersTab: React.FC<SellerOrdersTabProps> = ({ isActive }) =>
         addDeliverable,
         removeDeliverable,
         startService,
-        completeService
+        completeService,
+        // Digital product delivery
+        completeDigitalDelivery
     } = useSellerWorkflow(isActive);
 
     const [activeStatus, setActiveStatus] = useState<'new' | 'processing' | 'ready' | 'shipped'>('new');
@@ -718,9 +720,15 @@ export const SellerOrdersTab: React.FC<SellerOrdersTabProps> = ({ isActive }) =>
                                 )}
 
                                 {activeStatus === 'new' && !isServiceOrder(order) && (
-                                    <Button size="sm" variant="primary" onClick={() => handleProcess(order.id)}>
-                                        {requiresShipping(order) ? 'Start Processing' : 'Mark as Delivered'}
-                                    </Button>
+                                    requiresShipping(order) ? (
+                                        <Button size="sm" variant="primary" onClick={() => handleProcess(order.id)}>
+                                            Start Processing
+                                        </Button>
+                                    ) : (
+                                        <Button size="sm" variant="primary" onClick={() => completeDigitalDelivery(order.id)}>
+                                            Mark as Delivered
+                                        </Button>
+                                    )
                                 )}
 
                                 {/* Service order actions */}
@@ -736,7 +744,7 @@ export const SellerOrdersTab: React.FC<SellerOrdersTabProps> = ({ isActive }) =>
                                         <Button
                                             size="sm"
                                             variant="secondary"
-                                            onClick={() => handleProcess(order.id)}
+                                            onClick={() => startService(order.id)}
                                         >
                                             Start Immediately
                                         </Button>
@@ -746,13 +754,22 @@ export const SellerOrdersTab: React.FC<SellerOrdersTabProps> = ({ isActive }) =>
                                 {isServiceOrder(order) && activeStatus === 'processing' && (
                                     <>
                                         {order.serviceStatus === 'scheduled' && (
-                                            <Button
-                                                size="sm"
-                                                variant="primary"
-                                                onClick={() => startService(order.id)}
-                                            >
-                                                Start Service
-                                            </Button>
+                                            <>
+                                                <Button
+                                                    size="sm"
+                                                    variant="primary"
+                                                    onClick={() => startService(order.id)}
+                                                >
+                                                    Start Service
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="secondary"
+                                                    onClick={() => setScheduleModal({ isOpen: true, orderId: order.id })}
+                                                >
+                                                    Reschedule
+                                                </Button>
+                                            </>
                                         )}
                                         {(order.serviceStatus === 'in_progress' || order.serviceStatus === 'pending') && (
                                             <>
@@ -812,7 +829,7 @@ export const SellerOrdersTab: React.FC<SellerOrdersTabProps> = ({ isActive }) =>
 
                                 {/* For digital products in processing */}
                                 {activeStatus === 'processing' && !requiresShipping(order) && !isServiceOrder(order) && (
-                                    <Button size="sm" variant="primary" onClick={() => handleProcess(order.id)}>
+                                    <Button size="sm" variant="primary" onClick={() => completeDigitalDelivery(order.id)}>
                                         Complete Digital Delivery
                                     </Button>
                                 )}

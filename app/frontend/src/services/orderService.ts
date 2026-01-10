@@ -1,8 +1,9 @@
-import { 
-  Order as MarketplaceOrder, 
-  OrderEvent, 
+import {
+  Order as MarketplaceOrder,
+  OrderEvent,
   OrderStatus
 } from '../types/order';
+import { orderNotificationService, OrderNotificationData } from './orderNotificationService';
 
 export interface OrderTrackingStatus {
   orderId: string;
@@ -223,6 +224,9 @@ class OrderService {
       // Refresh auth token
       this.checkAuthStatus();
 
+      // Get order details first for notification
+      const order = await this.getOrderById(orderId);
+
       const response = await fetch(`${this.apiBaseUrl}/api/orders/${orderId}/delivery/confirm`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
@@ -233,6 +237,27 @@ class OrderService {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || `Failed to confirm delivery: ${response.status} ${response.statusText}`);
+      }
+
+      // Send delivery confirmation notification
+      if (order) {
+        try {
+          const notificationData: OrderNotificationData = {
+            orderId: order.id,
+            orderNumber: order.id.slice(0, 8).toUpperCase(),
+            buyerAddress: order.buyerAddress,
+            sellerAddress: order.sellerAddress,
+            productTitle: order.product?.title || 'Order',
+            productImage: order.product?.image,
+            amount: order.totalAmount || parseFloat(order.amount) || 0,
+            currency: order.currency || 'USD',
+          };
+
+          await orderNotificationService.sendOrderNotification('delivery_confirmed', notificationData);
+          await orderNotificationService.sendNotificationViaBackend('delivery_confirmed', notificationData);
+        } catch (notificationError) {
+          console.warn('Failed to send delivery confirmation notification:', notificationError);
+        }
       }
 
       return true;
@@ -278,6 +303,79 @@ class OrderService {
   }
 
   /**
+   * Cancel an order
+   * Can only cancel orders in CREATED or PAID status
+   */
+  async cancelOrder(orderId: string, reason?: string): Promise<{ success: boolean; refundInitiated?: boolean; message?: string }> {
+    try {
+      // Refresh auth token
+      this.checkAuthStatus();
+
+      // First get order details to check if it can be cancelled
+      const order = await this.getOrderById(orderId);
+      if (!order) {
+        throw new Error('Order not found');
+      }
+
+      // Check if order can be cancelled
+      if (!['CREATED', 'PAID', 'PROCESSING'].includes(order.status)) {
+        throw new Error(`Cannot cancel order in ${order.status} status. Only orders that are pending, paid, or processing can be cancelled.`);
+      }
+
+      const response = await fetch(`${this.apiBaseUrl}/api/orders/${orderId}/cancel`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          reason: reason || 'Cancelled by buyer',
+          initiatedBy: 'buyer'
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to cancel order: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      // Send cancellation notification to both parties
+      try {
+        const notificationData: OrderNotificationData = {
+          orderId: order.id,
+          orderNumber: order.id.slice(0, 8).toUpperCase(),
+          buyerAddress: order.buyerAddress,
+          sellerAddress: order.sellerAddress,
+          productTitle: order.product?.title || 'Order',
+          productImage: order.product?.image,
+          amount: order.totalAmount || parseFloat(order.amount) || 0,
+          currency: order.currency || 'USD',
+          cancellationReason: reason,
+          refundAmount: result.refundInitiated ? (order.totalAmount || parseFloat(order.amount) || 0) : undefined,
+        };
+
+        await orderNotificationService.sendOrderNotification('order_cancelled', notificationData);
+        await orderNotificationService.sendNotificationViaBackend('order_cancelled', notificationData);
+      } catch (notificationError) {
+        console.warn('Failed to send cancellation notification:', notificationError);
+        // Don't fail the cancellation if notification fails
+      }
+
+      return {
+        success: true,
+        refundInitiated: result.refundInitiated || false,
+        message: result.message || 'Order cancelled successfully'
+      };
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to cancel order');
+    }
+  }
+
+  /**
    * Open dispute for an order
    */
   async openDispute(orderId: string, reason: string): Promise<boolean> {
@@ -285,19 +383,43 @@ class OrderService {
       // Refresh auth token
       this.checkAuthStatus();
 
+      // Get order details first for notification
+      const order = await this.getOrderById(orderId);
+
       const response = await fetch(`${this.apiBaseUrl}/api/orders/${orderId}/dispute`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
         credentials: 'include',
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           initiatorAddress: '', // This would be filled with the user's address
-          reason 
+          reason
         })
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || `Failed to open dispute: ${response.status} ${response.statusText}`);
+      }
+
+      // Send dispute notification
+      if (order) {
+        try {
+          const notificationData: OrderNotificationData = {
+            orderId: order.id,
+            orderNumber: order.id.slice(0, 8).toUpperCase(),
+            buyerAddress: order.buyerAddress,
+            sellerAddress: order.sellerAddress,
+            productTitle: order.product?.title || 'Order',
+            productImage: order.product?.image,
+            amount: order.totalAmount || parseFloat(order.amount) || 0,
+            currency: order.currency || 'USD',
+          };
+
+          await orderNotificationService.sendOrderNotification('order_disputed', notificationData);
+          await orderNotificationService.sendNotificationViaBackend('order_disputed', notificationData);
+        } catch (notificationError) {
+          console.warn('Failed to send dispute notification:', notificationError);
+        }
       }
 
       return true;
@@ -350,11 +472,14 @@ class OrderService {
       // Refresh auth token
       this.checkAuthStatus();
 
+      // Get order details first for notification
+      const order = await this.getOrderById(orderId);
+
       const response = await fetch(`${this.apiBaseUrl}/api/orders/${orderId}/shipping`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
         credentials: 'include',
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           trackingNumber,
           carrier,
           service: 'Standard',
@@ -373,6 +498,29 @@ class OrderService {
         throw new Error(errorData.message || `Failed to add tracking information: ${response.status} ${response.statusText}`);
       }
 
+      // Send shipping notification
+      if (order) {
+        try {
+          const notificationData: OrderNotificationData = {
+            orderId: order.id,
+            orderNumber: order.id.slice(0, 8).toUpperCase(),
+            buyerAddress: order.buyerAddress,
+            sellerAddress: order.sellerAddress,
+            productTitle: order.product?.title || 'Order',
+            productImage: order.product?.image,
+            amount: order.totalAmount || parseFloat(order.amount) || 0,
+            currency: order.currency || 'USD',
+            trackingNumber,
+            trackingUrl: this.getTrackingUrl(carrier, trackingNumber),
+          };
+
+          await orderNotificationService.sendOrderNotification('order_shipped', notificationData);
+          await orderNotificationService.sendNotificationViaBackend('order_shipped', notificationData);
+        } catch (notificationError) {
+          console.warn('Failed to send shipping notification:', notificationError);
+        }
+      }
+
       return true;
     } catch (error) {
       console.error('Error adding tracking information:', error);
@@ -381,6 +529,21 @@ class OrderService {
       }
       throw new Error('Failed to add tracking information');
     }
+  }
+
+  /**
+   * Get tracking URL for a carrier
+   */
+  private getTrackingUrl(carrier: string, trackingNumber: string): string {
+    const carrierUrls: Record<string, string> = {
+      'ups': `https://www.ups.com/track?tracknum=${trackingNumber}`,
+      'fedex': `https://www.fedex.com/fedextrack/?trknbr=${trackingNumber}`,
+      'usps': `https://tools.usps.com/go/TrackConfirmAction?tLabels=${trackingNumber}`,
+      'dhl': `https://www.dhl.com/us-en/home/tracking/tracking-parcel.html?submit=1&tracking-id=${trackingNumber}`,
+    };
+
+    const normalizedCarrier = carrier.toLowerCase().replace(/[^a-z]/g, '');
+    return carrierUrls[normalizedCarrier] || '';
   }
 
   /**
@@ -506,6 +669,78 @@ class OrderService {
       },
       timeline: timeline
     };
+  }
+
+  /**
+   * Send notification for a newly created order
+   */
+  async sendOrderCreatedNotification(order: MarketplaceOrder): Promise<void> {
+    try {
+      const notificationData: OrderNotificationData = {
+        orderId: order.id,
+        orderNumber: order.id.slice(0, 8).toUpperCase(),
+        buyerAddress: order.buyerAddress,
+        sellerAddress: order.sellerAddress,
+        productTitle: order.product?.title || 'Order',
+        productImage: order.product?.image,
+        amount: order.totalAmount || parseFloat(order.amount) || 0,
+        currency: order.currency || 'USD',
+      };
+
+      await orderNotificationService.sendOrderNotification('order_created', notificationData);
+      await orderNotificationService.sendNotificationViaBackend('order_created', notificationData);
+    } catch (error) {
+      console.warn('Failed to send order created notification:', error);
+    }
+  }
+
+  /**
+   * Send notification when order is marked as delivered
+   */
+  async sendOrderDeliveredNotification(orderId: string): Promise<void> {
+    try {
+      const order = await this.getOrderById(orderId);
+      if (!order) return;
+
+      const notificationData: OrderNotificationData = {
+        orderId: order.id,
+        orderNumber: order.id.slice(0, 8).toUpperCase(),
+        buyerAddress: order.buyerAddress,
+        sellerAddress: order.sellerAddress,
+        productTitle: order.product?.title || 'Order',
+        productImage: order.product?.image,
+        amount: order.totalAmount || parseFloat(order.amount) || 0,
+        currency: order.currency || 'USD',
+      };
+
+      await orderNotificationService.sendOrderNotification('order_delivered', notificationData);
+      await orderNotificationService.sendNotificationViaBackend('order_delivered', notificationData);
+    } catch (error) {
+      console.warn('Failed to send order delivered notification:', error);
+    }
+  }
+
+  /**
+   * Send notification when payment is received
+   */
+  async sendPaymentReceivedNotification(order: MarketplaceOrder): Promise<void> {
+    try {
+      const notificationData: OrderNotificationData = {
+        orderId: order.id,
+        orderNumber: order.id.slice(0, 8).toUpperCase(),
+        buyerAddress: order.buyerAddress,
+        sellerAddress: order.sellerAddress,
+        productTitle: order.product?.title || 'Order',
+        productImage: order.product?.image,
+        amount: order.totalAmount || parseFloat(order.amount) || 0,
+        currency: order.currency || 'USD',
+      };
+
+      await orderNotificationService.sendOrderNotification('payment_received', notificationData);
+      await orderNotificationService.sendNotificationViaBackend('payment_received', notificationData);
+    } catch (error) {
+      console.warn('Failed to send payment received notification:', error);
+    }
   }
 }
 

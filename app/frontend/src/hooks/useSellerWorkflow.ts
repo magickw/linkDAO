@@ -154,6 +154,18 @@ export function useSellerWorkflow(isActive: boolean = false) {
         }
     };
 
+    const completeDigitalDelivery = async (orderId: string, deliveryNotes?: string): Promise<boolean> => {
+        try {
+            await sellerWorkflowService.completeDigitalDelivery(orderId, deliveryNotes);
+            addToast('Digital product delivered successfully', 'success');
+            fetchDashboard();
+            return true;
+        } catch (err: any) {
+            addToast(err.message || 'Failed to complete digital delivery', 'error');
+            return false;
+        }
+    };
+
     return {
         dashboardData,
         loading,
@@ -169,6 +181,8 @@ export function useSellerWorkflow(isActive: boolean = false) {
         addDeliverable,
         removeDeliverable,
         startService,
-        completeService
+        completeService,
+        // Digital product delivery
+        completeDigitalDelivery
     };
 }

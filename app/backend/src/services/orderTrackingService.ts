@@ -16,6 +16,9 @@ import {
 } from '../models/Order';
 import { AppError, NotFoundError, ForbiddenError } from '../middleware/errorHandler';
 import { shippingProviderService } from './shippingProviderService';
+import { db } from '../db';
+import { escrows } from '../db/schema';
+import { eq } from 'drizzle-orm';
 
 export class OrderTrackingService {
   private databaseService: DatabaseService;
@@ -467,8 +470,24 @@ export class OrderTrackingService {
         deliveryInfo
       );
 
-      // Start auto-completion timer (handled by OrderService)
-      // This would typically trigger payment release after a delay
+      // Update escrow delivery confirmation for auto-release
+      if (dbOrder.escrowId) {
+        try {
+          await db.update(escrows)
+            .set({
+              deliveryConfirmed: true,
+              deliveryConfirmedAt: new Date()
+            })
+            .where(eq(escrows.id, dbOrder.escrowId));
+
+          safeLogger.info(`Escrow ${dbOrder.escrowId} marked as delivery confirmed, auto-release will be triggered after grace period`);
+        } catch (escrowError) {
+          safeLogger.error('Error updating escrow delivery confirmation:', escrowError);
+          // Don't throw - delivery confirmation should still succeed
+        }
+      }
+
+      // Start auto-completion timer (handled by EscrowSchedulerService)
     } catch (error) {
       safeLogger.error('Error confirming delivery:', error);
       throw error;

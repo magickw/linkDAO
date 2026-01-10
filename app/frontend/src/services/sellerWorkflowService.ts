@@ -28,6 +28,8 @@ class SellerWorkflowService {
         removeDeliverable: (orderId: string, deliverableId: string) => `${WORKFLOW_API_BASE}/${orderId}/service/deliverables/${deliverableId}`,
         startService: (orderId: string) => `${WORKFLOW_API_BASE}/${orderId}/service/start`,
         completeService: (orderId: string) => `${WORKFLOW_API_BASE}/${orderId}/service/complete`,
+        // Digital product delivery endpoint
+        completeDigitalDelivery: (orderId: string) => `${WORKFLOW_API_BASE}/${orderId}/digital/complete`,
     };
 
     private async getAuthHeaders(): Promise<Record<string, string>> {
@@ -199,6 +201,21 @@ class SellerWorkflowService {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({ completionNotes })
+            }
+        );
+    }
+
+    /**
+     * Complete digital product delivery (for non-service digital goods)
+     */
+    async completeDigitalDelivery(orderId: string, deliveryNotes?: string): Promise<{ success: boolean; completedAt: string }> {
+        const headers = await this.getAuthHeaders();
+        return await enhancedRequestManager.request<{ success: boolean; completedAt: string }>(
+            this.endpoints.completeDigitalDelivery(orderId),
+            {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ deliveryNotes })
             }
         );
     }

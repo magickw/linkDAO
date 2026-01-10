@@ -181,4 +181,18 @@ router.post(
     controller.markServiceComplete.bind(controller)
 );
 
+// ==================== DIGITAL PRODUCT DELIVERY ROUTES ====================
+
+/**
+ * @route POST /api/seller/orders/:orderId/digital/complete
+ * @desc Complete digital product delivery (for non-service digital goods)
+ * @access Private
+ */
+router.post(
+    '/:orderId/digital/complete',
+    limiter,
+    authMiddleware,
+    controller.completeDigitalDelivery.bind(controller)
+);
+
 export default router;

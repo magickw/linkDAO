@@ -163,7 +163,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         transition={{ duration: 0.3 }}
       >
         {activeTab === 'overview' && (
-          <OverviewTab metrics={overviewMetrics} />
+          <OverviewTab metrics={overviewMetrics} realTimeStats={realTimeStats} />
         )}
         
         {activeTab === 'sales' && (
@@ -183,7 +183,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 };
 
 // Overview Tab Component
-const OverviewTab: React.FC<{ metrics: any }> = ({ metrics }) => {
+const OverviewTab: React.FC<{ metrics: any; realTimeStats: any }> = ({ metrics, realTimeStats }) => {
   if (!metrics) return <LoadingSkeleton className="h-96" />;
 
   return (
@@ -283,15 +283,21 @@ const OverviewTab: React.FC<{ metrics: any }> = ({ metrics }) => {
           <div className="space-y-3">
             <div className="flex justify-between">
               <span className="text-gray-300">Uptime</span>
-              <span className="text-green-400 font-medium">99.9%</span>
+              <span className="text-green-400 font-medium">
+                {realTimeStats?.systemLoad ? `${(realTimeStats.systemLoad * 100).toFixed(1)}%` : 'N/A'}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-300">Response Time</span>
-              <span className="text-white font-medium">150ms</span>
+              <span className="text-white font-medium">
+                {realTimeStats?.responseTime ? `${realTimeStats.responseTime.toFixed(0)}ms` : 'N/A'}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-300">Error Rate</span>
-              <span className="text-white font-medium">0.02%</span>
+              <span className="text-white font-medium">
+                {realTimeStats?.errorRate !== undefined ? `${(realTimeStats.errorRate * 100).toFixed(2)}%` : 'N/A'}
+              </span>
             </div>
           </div>
         </GlassPanel>

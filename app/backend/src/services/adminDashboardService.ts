@@ -97,9 +97,9 @@ interface AdminAlert {
 export interface AdminOrderMetrics {
   totalOrders: number;
   totalRevenue: number; // Sum of order amounts
+  averageOrderValue: number; // Average order amount
   ordersByStatus: Record<string, number>;
-  averageFulfillmentTimeHours: number; // Time from paid to shipped
-  disputeRate: number; // Percentage of orders with disputes
+  recentGrowth: number; // Percentage growth in orders
 }
 
 export interface AdminOrderFilters {
@@ -267,7 +267,10 @@ export class AdminDashboardService implements IAdminDashboardService {
       const totalOrders = totals[0]?.count || 0;
       const totalRevenue = Number(totals[0]?.revenue || 0);
 
-      // 2. Orders by Status
+      // 2. Average Order Value
+      const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+      // 3. Orders by Status
       const byStatus = await db.select({
         status: orders.status,
         count: count()
@@ -275,36 +278,40 @@ export class AdminDashboardService implements IAdminDashboardService {
         .groupBy(orders.status);
 
       const ordersByStatus: Record<string, number> = {};
-      let disputeCount = 0;
-
       byStatus.forEach(item => {
         if (item.status) {
           ordersByStatus[item.status] = item.count;
-          if (item.status.toLowerCase().includes('dispute')) {
-            disputeCount += item.count;
-          }
         }
       });
 
-      // 3. Dispute Rate
-      const disputeRate = totalOrders > 0 ? (disputeCount / totalOrders) * 100 : 0;
+      // 4. Recent Growth (orders in last 30 days vs previous 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      // 4. Avg Fulfillment Time
-      const deliveryTimes = await db.select({
-        avgTime: sql<number>`avg(extract(epoch from (${orders.actualDelivery} - ${orders.createdAt})))`
-      })
+      const sixtyDaysAgo = new Date();
+      sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+
+      const recentOrders = await db.select({ count: count() })
         .from(orders)
-        .where(eq(orders.status, 'DELIVERED'));
+        .where(sql`${orders.createdAt} >= ${thirtyDaysAgo}`);
 
-      const avgSeconds = Number(deliveryTimes[0]?.avgTime || 0);
-      const averageFulfillmentTimeHours = avgSeconds / 3600;
+      const previousOrders = await db.select({ count: count() })
+        .from(orders)
+        .where(sql`${orders.createdAt} >= ${sixtyDaysAgo} AND ${orders.createdAt} < ${thirtyDaysAgo}`);
+
+      const recentCount = recentOrders[0]?.count || 0;
+      const previousCount = previousOrders[0]?.count || 0;
+
+      const recentGrowth = previousCount > 0
+        ? ((recentCount - previousCount) / previousCount) * 100
+        : 0;
 
       return {
         totalOrders,
         totalRevenue,
+        averageOrderValue,
         ordersByStatus,
-        averageFulfillmentTimeHours,
-        disputeRate
+        recentGrowth
       };
 
     } catch (error) {

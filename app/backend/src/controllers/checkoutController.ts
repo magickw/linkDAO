@@ -7,6 +7,7 @@ import { cartService } from '../services/cartService';
 import { OrderService } from '../services/orderService';
 import { StripePaymentService } from '../services/stripePaymentService';
 import { taxCalculationService, TaxableItem, Address } from '../services/taxCalculationService';
+import { highValueTransactionService } from '../services/highValueTransactionService';
 import { db } from '../db';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -229,6 +230,31 @@ export class CheckoutController {
             const total = subtotal + shipping + tax + platformFee;
 
             safeLogger.info(`Processing checkout for user ${req.user.address}, total: ${total}, method: ${paymentMethod}`);
+
+            // Validate high-value transaction for seller
+            const sellerId = cart.items[0].product?.sellerId || '';
+            if (sellerId) {
+                const transactionValidation = await highValueTransactionService.validateTransaction(
+                    sellerId,
+                    req.user.id || req.user.address,
+                    total,
+                    'USD'
+                );
+
+                if (!transactionValidation.valid) {
+                    res.status(403).json(apiResponse.error(
+                        transactionValidation.error || 'Transaction validation failed',
+                        403,
+                        { warnings: transactionValidation.warnings }
+                    ));
+                    return;
+                }
+
+                // Log warnings if any
+                if (transactionValidation.warnings.length > 0) {
+                    safeLogger.warn('Transaction warnings:', transactionValidation.warnings);
+                }
+            }
 
             // Initialize order service
             const orderServiceInstance = new OrderService();
