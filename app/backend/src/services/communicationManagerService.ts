@@ -140,7 +140,7 @@ export class CommunicationManagerService {
           query = query.where(
             and(
               eq(chatMessages.conversationId, filters.conversationId || ''),
-              sql`participants::jsonb ? ${filters.userAddress}`
+              sql`(SELECT participants FROM conversations WHERE id = ${chatMessages.conversationId}) ? ${filters.userAddress}`
             )
           ) as any;
         }

@@ -529,7 +529,7 @@ class SellerService {
     };
 
     // Quantity resolution
-    const inventory = listing.inventory !== undefined ? listing.inventory : (listing.inventory ?? (listing.stock ?? 1));
+    const inventory = listing.inventory !== undefined ? listing.inventory : 1;
 
     // Extract specifications from metadata (where they're stored during creation)
     const specifications = metadata.specifications || listing.specifications || enhanced.specifications || {

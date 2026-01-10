@@ -75,7 +75,7 @@ export interface Product extends BaseEntity {
   image?: string;
   status: 'active' | 'draft' | 'sold';
   category: string;
-  stock: number;
+  inventory: number;
 }
 
 export interface Order extends BaseEntity {

@@ -38,7 +38,7 @@ interface ProductCardProps {
       onChainCertified?: boolean;
     };
     category?: string;
-    stock?: number;
+    inventory?: number;
     location?: string;
     shipping?: {
       free?: boolean;
@@ -240,11 +240,11 @@ export const EnhancedProductCard: React.FC<ProductCardProps> = ({
               </motion.div>
             )}
 
-            {/* Stock Warning */}
-            {product.stock !== undefined && product.stock > 0 && product.stock < 5 && (
+            {/* Inventory Warning */}
+            {product.inventory !== undefined && product.inventory > 0 && product.inventory < 5 && (
               <div className="absolute bottom-2 left-2">
                 <span className="bg-orange-500 text-white text-xs font-medium px-2 py-1 rounded">
-                  Only {product.stock} left
+                  Only {product.inventory} left
                 </span>
               </div>
             )}

@@ -28,7 +28,7 @@ interface ProductCardProps {
     trust?: {
       escrowProtected?: boolean;
     };
-    stock?: number;
+    inventory?: number;
     discount?: number;
     listingType?: 'FIXED_PRICE' | 'AUCTION';
     endTime?: string;
@@ -241,10 +241,10 @@ export const SimpleProductCard: React.FC<ProductCardProps> = ({
               )}
             </div>
 
-            {/* Stock & Auction Info */}
-            {product.stock !== undefined && product.stock < 5 && product.stock > 0 && (
+            {/* Inventory & Auction Info */}
+            {product.inventory !== undefined && product.inventory < 5 && product.inventory > 0 && (
               <p className="text-xs text-orange-600 dark:text-orange-400 font-medium mt-1">
-                Only {product.stock} left
+                Only {product.inventory} left
               </p>
             )}
             {product.listingType === 'AUCTION' && timeRemaining && (

@@ -22,7 +22,7 @@ export type Product = {
   description: string;
   price: string;
   image: string;
-  stock: number;
+  inventory: number;
   status: 'active' | 'draft' | 'sold';
   category: string;
   createdAt: string;
@@ -83,7 +83,7 @@ const parseProductFromChain = (productData: any): Product => ({
   description: productData.metadata?.description || '',
   price: formatEther(productData.price.toString()),
   image: productData.metadata?.image || '/placeholder-product.png',
-  stock: productData.quantity.toNumber(),
+  inventory: productData.quantity.toNumber(),
   status: productData.status === 0 ? 'draft' : 'active',
   category: productData.metadata?.category || 'Uncategorized',
   createdAt: new Date(productData.createdAt.toNumber() * 1000).toISOString(),
@@ -142,7 +142,7 @@ interface UseMarketplaceReturn {
     price: string;
     category: string;
     image: string;
-    stock: number;
+    inventory: number;
   }>;
   updateProduct: (id: string, updates: Partial<Omit<Product, 'id' | 'createdAt' | 'updatedAt'>>) => Promise<{ success: boolean }>;
   deleteProduct: (id: string) => Promise<{ success: boolean }>;
@@ -270,7 +270,7 @@ export const useMarketplace = (): UseMarketplaceReturn => {
       description: `Description for product ${startIndex + i + 1}`,
       price: '0.1',
       image: 'https://placehold.co/150',
-      stock: 10,
+      inventory: 10,
       category: 'Electronics',
       status: 'active',
       createdAt: new Date().toISOString(),
@@ -301,7 +301,7 @@ export const useMarketplace = (): UseMarketplaceReturn => {
         productData.name,
         productData.description,
         parseEther(productData.price),
-        productData.stock,
+        productData.inventory,
         productData.category,
         {
           name: productData.name,
@@ -348,7 +348,7 @@ export const useMarketplace = (): UseMarketplaceReturn => {
         updates.name || '',
         updates.description || '',
         priceInWei,
-        updates.stock || 0,
+        updates.inventory || 0,
         updates.category || '',
         {
           name: updates.name || '',

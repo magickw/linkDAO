@@ -18,7 +18,7 @@ interface ExtendedProduct extends Omit<Product, 'id' | 'createdAt' | 'updatedAt'
   createdAt: string;
   updatedAt: string;
   image?: string;
-  stock: number;
+  inventory: number;
   category: string;
 }
 
@@ -36,7 +36,7 @@ const mockProducts: ExtendedProduct[] = [
     image: '/placeholder-product.jpg',
     status: 'active',
     category: 'Art',
-    stock: 10,
+    inventory: 10,
     createdAt: '2023-01-01',
     updatedAt: '2023-01-01',
   },
@@ -47,7 +47,7 @@ const mockProducts: ExtendedProduct[] = [
     price: '1.2',
     status: 'draft',
     category: 'Collectibles',
-    stock: 5,
+    inventory: 5,
     createdAt: '2023-01-02',
     updatedAt: '2023-01-02',
   },
@@ -130,10 +130,10 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({ address })
       ),
     },
     {
-      key: 'stock',
-      header: 'Stock',
+      key: 'inventory',
+      header: 'Inventory',
       render: (product: ExtendedProduct) => (
-        <div className="text-white">{product.stock}</div>
+        <div className="text-white">{product.inventory}</div>
       ),
     },
     {

@@ -140,7 +140,7 @@ afterEach(() => {
       name: `Test Product ${id}`,
       description: `This is test product ${id}`,
       price: Math.floor(Math.random() * 1000),
-      stock: Math.floor(Math.random() * 100),
+      inventory: Math.floor(Math.random() * 100),
       images: [`/images/product-${id}.jpg`]
     }),
     

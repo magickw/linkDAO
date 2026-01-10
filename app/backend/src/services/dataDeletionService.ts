@@ -119,7 +119,7 @@ export class DataDeletionService {
       const [conversationsResult] = await db
         .select({ count: sql<number>`count(*)::int` })
         .from(conversations)
-        .where(sql`participants::jsonb ? ${user?.walletAddress?.toLowerCase() || ''}`);
+        .where(sql`${conversations.participants} ? ${user?.walletAddress?.toLowerCase() || ''}`);
 
       // Get messages count
       const [messagesResult] = await db
@@ -339,7 +339,7 @@ export class DataDeletionService {
           const userConversations = await db
             .select()
             .from(conversations)
-            .where(sql`participants::jsonb ? ${walletAddress}`);
+            .where(sql`${conversations.participants} ? ${walletAddress}`);
 
           for (const conv of userConversations) {
             const participants = JSON.parse(conv.participants as string || '[]');

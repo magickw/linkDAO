@@ -146,7 +146,7 @@ export class MessagingService {
             `
           })
           .from(conversations)
-          .where(sql`participants::jsonb ? ${normalizedAddress}`)
+          .where(sql`${conversations.participants} ? ${normalizedAddress}`)
           .orderBy(desc(conversations.lastActivity))
           .limit(actualLimit)
           .offset(offset);
@@ -222,8 +222,8 @@ export class MessagingService {
         .select()
         .from(conversations)
         .where(
-          sql`participants @> ${JSON.stringify([normalizedInitiatorAddress])}::jsonb
-              AND participants @> ${JSON.stringify([normalizedParticipantAddress])}::jsonb`
+          sql`${conversations.participants} @> ${JSON.stringify([normalizedInitiatorAddress])}::jsonb
+              AND ${conversations.participants} @> ${JSON.stringify([normalizedParticipantAddress])}::jsonb`
         )
         .limit(1);
 
@@ -296,7 +296,7 @@ export class MessagingService {
         .where(
           and(
             eq(conversations.id, conversationId),
-            sql`participants::jsonb ? ${userAddress}`
+            sql`${conversations.participants} ? ${userAddress}`
           )
         )
         .limit(1);
@@ -831,7 +831,7 @@ export class MessagingService {
         .where(
           and(
             ...whereConditions,
-            sql`participants::jsonb ? ${userAddress}`
+            sql`${conversations.participants} ? ${userAddress}`
           )
         )
         .orderBy(desc(chatMessages.sentAt))
