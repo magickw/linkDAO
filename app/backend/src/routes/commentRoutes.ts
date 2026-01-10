@@ -237,7 +237,8 @@ router.post('/comments/:commentId/vote', csrfProtection, authMiddleware, async (
       });
     }
 
-    const comment = await commentService.voteComment(commentId, voteType);
+    const userId = (req as any).user?.id;
+    const comment = await commentService.voteComment(commentId, voteType, userId);
 
     return res.json({
       success: true,

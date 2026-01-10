@@ -1,12 +1,12 @@
 import { db } from '../db';
-import { statuses, statusReactions, statusTips, users, statusTags } from '../db/schema';
+import { statuses, statusReactions, statusTips, users, statusTags, statusViews } from '../db/schema';
 import { eq, and, sql, desc, asc, isNull, aliasedTable, or } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 import { trendingCacheService } from './trendingCacheService';
 import { getWebSocketService } from './webSocketService';
 import { generateShareId } from '../utils/shareIdGenerator';
+import communityNotificationService from './communityNotificationService';
 
-// Define interfaces for input data
 // Define interfaces for input data
 interface StatusInput {
   authorId: string;
@@ -49,7 +49,7 @@ export class StatusService {
   async incrementView(statusId: string, userId?: string, ipAddress?: string) {
     try {
       // 1. Record the view in the status_views table for analytics/deduplication
-      await db.insert(schema.statusViews).values({
+      await db.insert(statusViews).values({
         statusId,
         userId: userId || null,
         ipAddress: ipAddress || null
@@ -474,6 +474,80 @@ export class StatusService {
         });
       }
 
+      // Trigger user notification
+      try {
+        if (userId) { // Ensure reactor is known
+          const status = await db
+            .select({
+              authorId: statuses.authorId,
+              content: statuses.content,
+              contentCid: statuses.contentCid
+            })
+            .from(statuses)
+            .where(eq(statuses.id, statusId))
+            .limit(1);
+
+          if (status[0] && status[0].authorId !== userId) {
+            const reactor = await db
+              .select({
+                displayName: users.displayName,
+                handle: users.handle,
+                walletAddress: users.walletAddress
+              })
+              .from(users)
+              .where(eq(users.id, userId))
+              .limit(1);
+
+            const author = await db
+              .select({ walletAddress: users.walletAddress })
+              .from(users)
+              .where(eq(users.id, status[0].authorId))
+              .limit(1);
+
+            if (reactor[0] && author[0]) {
+              const reactorName = reactor[0].displayName || reactor[0].handle || reactor[0].walletAddress.substring(0, 6);
+
+              let notifType: any = 'award';
+              let title = 'New Award';
+              let message = `${reactorName} awarded your status`;
+
+              if (type === 'upvote') {
+                notifType = 'post_upvote';
+                title = 'New Upvote';
+                message = `${reactorName} upvoted your status`;
+              } else if (type === 'downvote') {
+                notifType = 'post_downvote';
+                title = 'New Downvote';
+                message = `${reactorName} downvoted your status`;
+              } else {
+                // Emoji or other reaction, treat as award/reaction
+                message = `${reactorName} reacted with ${type} to your status`;
+              }
+
+              await communityNotificationService.sendNotification({
+                userAddress: author[0].walletAddress,
+                communityId: 'global',
+                communityName: 'LinkDAO',
+                type: notifType,
+                title: title,
+                message: message,
+                contentPreview: (status[0].content || status[0].contentCid || '').substring(0, 100),
+                userName: reactorName,
+                actionUrl: `/status/${statusId}`,
+                metadata: {
+                  reactorId: userId,
+                  reactionType: type,
+                  amount,
+                  statusId
+                }
+              });
+            }
+          }
+        }
+      } catch (notifyError) {
+        safeLogger.error('Error sending reaction notification:', notifyError);
+      }
+
       return reaction;
     } catch (error) {
       safeLogger.error('Error adding quick post reaction:', error);
@@ -508,6 +582,62 @@ export class StatusService {
           fromUserId,
           tip
         });
+      }
+
+      // Trigger user notification
+      try {
+        if (fromUserId !== toUserId) {
+          const tipper = await db
+            .select({
+              displayName: users.displayName,
+              handle: users.handle,
+              walletAddress: users.walletAddress
+            })
+            .from(users)
+            .where(eq(users.id, fromUserId))
+            .limit(1);
+
+          const recipient = await db
+            .select({ walletAddress: users.walletAddress })
+            .from(users)
+            .where(eq(users.id, toUserId))
+            .limit(1);
+
+          // Fetch status for preview
+          const status = await db
+            .select({
+              content: statuses.content,
+              contentCid: statuses.contentCid
+            })
+            .from(statuses)
+            .where(eq(statuses.id, statusId))
+            .limit(1);
+
+          if (tipper[0] && recipient[0]) {
+            const tipperName = tipper[0].displayName || tipper[0].handle || tipper[0].walletAddress.substring(0, 6);
+
+            await communityNotificationService.sendNotification({
+              userAddress: recipient[0].walletAddress,
+              communityId: 'global',
+              communityName: 'LinkDAO',
+              type: 'tip',
+              title: 'New Tip!',
+              message: `${tipperName} tipped you ${amount} ${token}`,
+              contentPreview: (status[0]?.content || status[0]?.contentCid || '').substring(0, 100),
+              userName: tipperName,
+              actionUrl: `/status/${statusId}`,
+              metadata: {
+                tipperId: fromUserId,
+                amount,
+                token,
+                message,
+                statusId
+              }
+            });
+          }
+        }
+      } catch (notifyError) {
+        safeLogger.error('Error sending tip notification:', notifyError);
       }
 
       return tip;

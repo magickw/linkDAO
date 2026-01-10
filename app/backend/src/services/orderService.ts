@@ -773,7 +773,9 @@ export class OrderService {
         // Start auto-completion timer
         setTimeout(async () => {
           const currentOrder = await this.getOrderById(orderId);
-          if (currentOrder?.status === OrderStatus.DELIVERED) {
+          // Normalize status comparison to handle case differences
+          const normalizedStatus = (currentOrder?.status || '').toUpperCase();
+          if (normalizedStatus === OrderStatus.DELIVERED) {
             await this.updateOrderStatus(orderId, OrderStatus.COMPLETED);
           }
         }, 7 * 24 * 60 * 60 * 1000); // 7 days

@@ -37,6 +37,8 @@ import { NotificationService } from './notificationService';
 import { WebSocketService } from './webSocketService';
 import { EmailService } from './emailService';
 import { safeLogger } from '../utils/safeLogger';
+import { db } from '../db';
+import { notifications } from '../db/schema';
 
 /**
  * Order email data structure for email notifications
@@ -86,7 +88,7 @@ export class SellerNotificationService implements ISellerNotificationService {
   private notificationService: NotificationService;
   private webSocketService: WebSocketService | null = null;
   private emailService: EmailService;
-  
+
   /**
    * In-memory cache for tracking last notification time per seller
    * Used to enforce the "max 1 per minute" batching rule
@@ -141,7 +143,7 @@ export class SellerNotificationService implements ISellerNotificationService {
       notification.status = 'batched';
       await this.storeNotification(notification);
       this.updateSellerNotificationTiming(notification.sellerId, true);
-      
+
       safeLogger.info(`Notification batched for seller ${notification.sellerId}`, {
         notificationId: notification.id,
         type: notification.type,
@@ -207,7 +209,7 @@ export class SellerNotificationService implements ISellerNotificationService {
       for (const [sellerId, notifications] of notificationsBySeller) {
         try {
           const preferences = await this.getNotificationPreferences(sellerId);
-          
+
           // Check quiet hours
           if (this.isInQuietHours(preferences)) {
             // Skip non-urgent notifications during quiet hours
@@ -223,19 +225,19 @@ export class SellerNotificationService implements ISellerNotificationService {
           } else {
             // Check if we should batch based on timing
             const timing = this.sellerNotificationTimings.get(sellerId);
-            const timeSinceLastNotification = timing 
-              ? Date.now() - timing.lastNotificationSentAt.getTime() 
+            const timeSinceLastNotification = timing
+              ? Date.now() - timing.lastNotificationSentAt.getTime()
               : NOTIFICATION_BATCHING.minIntervalMs + 1;
 
             if (timeSinceLastNotification < NOTIFICATION_BATCHING.minIntervalMs) {
               // Still within batching window, only send urgent
               const urgentNotifications = notifications.filter(n => n.priority === 'urgent' || n.priority === 'high');
               const normalNotifications = notifications.filter(n => n.priority === 'normal');
-              
+
               if (urgentNotifications.length > 0) {
                 await this.processSellerNotifications(sellerId, urgentNotifications, preferences, result);
               }
-              
+
               // Keep normal notifications batched
               result.batched += normalNotifications.length;
             } else {
@@ -273,7 +275,7 @@ export class SellerNotificationService implements ISellerNotificationService {
   async getNotificationPreferences(sellerId: string): Promise<NotificationPreferences> {
     try {
       const preferences = await this.databaseService.getSellerNotificationPreferences(sellerId);
-      
+
       if (preferences) {
         return preferences;
       }
@@ -308,7 +310,7 @@ export class SellerNotificationService implements ISellerNotificationService {
   ): Promise<NotificationPreferences> {
     try {
       const existingPrefs = await this.getNotificationPreferences(sellerId);
-      
+
       const updatedPrefs: NotificationPreferences = {
         ...existingPrefs,
         ...preferences,
@@ -513,7 +515,7 @@ export class SellerNotificationService implements ISellerNotificationService {
    */
   private createNotificationFromInput(input: SellerNotificationInput): SellerNotification {
     const now = new Date();
-    
+
     // Determine priority using enhanced logic
     const priorityResult = this.determinePriority(input);
     const priority = input.priority || priorityResult.priority;
@@ -566,7 +568,7 @@ export class SellerNotificationService implements ISellerNotificationService {
     // Check for high-value order
     const orderTotal = data.totalAmount as number || data.orderTotal as number || data.amount as number || 0;
     const highValueThreshold = data.highValueThreshold as number || HIGH_VALUE_ORDER_CONFIG.defaultThresholdUSD;
-    
+
     if (orderTotal >= highValueThreshold) {
       isHighValue = true;
       reasons.push(`High-value order: $${orderTotal.toFixed(2)} (threshold: $${highValueThreshold})`);
@@ -577,7 +579,7 @@ export class SellerNotificationService implements ISellerNotificationService {
     const shippingMethod = (data.shippingMethod as string || '').toLowerCase();
     const shippingType = (data.shippingType as string || '').toLowerCase();
     const isExpeditedFlag = data.isExpedited as boolean || data.expeditedShipping as boolean;
-    
+
     if (isExpeditedFlag) {
       isExpedited = true;
       reasons.push('Expedited shipping requested');
@@ -633,7 +635,7 @@ export class SellerNotificationService implements ISellerNotificationService {
     }
 
     const timeSinceLastNotification = Date.now() - timing.lastNotificationSentAt.getTime();
-    
+
     // If less than minIntervalMs since last notification, batch this one
     return timeSinceLastNotification < NOTIFICATION_BATCHING.minIntervalMs;
   }
@@ -645,7 +647,7 @@ export class SellerNotificationService implements ISellerNotificationService {
    */
   private updateSellerNotificationTiming(sellerId: string, wasBatched: boolean = false): void {
     const existing = this.sellerNotificationTimings.get(sellerId);
-    
+
     if (wasBatched && existing) {
       // Increment batched count
       existing.batchedCount++;
@@ -665,7 +667,7 @@ export class SellerNotificationService implements ISellerNotificationService {
   private cleanupOldTimings(): void {
     const maxAge = NOTIFICATION_BATCHING.maxBatchWindowMs * 5; // Keep for 5 minutes
     const now = Date.now();
-    
+
     for (const [sellerId, timing] of this.sellerNotificationTimings) {
       if (now - timing.lastNotificationSentAt.getTime() > maxAge) {
         this.sellerNotificationTimings.delete(sellerId);
@@ -750,7 +752,7 @@ export class SellerNotificationService implements ISellerNotificationService {
 
     const timezone = preferences.quietHoursTimezone || 'UTC';
     const now = new Date();
-    
+
     // Get current time in seller's timezone
     const formatter = new Intl.DateTimeFormat('en-US', {
       timeZone: timezone,
@@ -758,7 +760,7 @@ export class SellerNotificationService implements ISellerNotificationService {
       minute: '2-digit',
       hour12: false,
     });
-    
+
     const currentTime = formatter.format(now);
     const [currentHour, currentMinute] = currentTime.split(':').map(Number);
     const currentMinutes = currentHour * 60 + currentMinute;
@@ -927,7 +929,7 @@ export class SellerNotificationService implements ISellerNotificationService {
       result.sent += notifications.length;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      
+
       for (const notification of notifications) {
         notification.status = 'failed';
         notification.error = errorMessage;
@@ -1015,7 +1017,7 @@ export class SellerNotificationService implements ISellerNotificationService {
     try {
       // Get seller email from database
       const sellerProfile = await this.databaseService.getUserByAddress(notification.sellerId);
-      
+
       if (!sellerProfile?.email) {
         notification.channelStatus.email = {
           status: 'skipped',
@@ -1026,10 +1028,10 @@ export class SellerNotificationService implements ISellerNotificationService {
 
       // Extract order data from notification
       const orderData = this.extractOrderEmailData(notification);
-      
+
       // Generate email HTML based on notification type
       const emailHtml = this.generateSellerNotificationEmailHtml(notification, orderData);
-      
+
       // Generate email subject
       const emailSubject = this.generateEmailSubject(notification, orderData);
 
@@ -1072,7 +1074,7 @@ export class SellerNotificationService implements ISellerNotificationService {
    */
   private extractOrderEmailData(notification: SellerNotification): OrderEmailData {
     const data = notification.data || {};
-    
+
     return {
       orderId: notification.orderId || data.orderId as string || '',
       orderNumber: data.orderNumber as string,
@@ -1098,11 +1100,11 @@ export class SellerNotificationService implements ISellerNotificationService {
    */
   private generateEmailSubject(notification: SellerNotification, orderData: OrderEmailData): string {
     const orderRef = orderData.orderNumber || orderData.orderId || 'Order';
-    
+
     switch (notification.type) {
       case 'new_order':
-        const priorityPrefix = notification.priority === 'urgent' ? '🚨 URGENT: ' : 
-                              notification.priority === 'high' ? '⚡ ' : '';
+        const priorityPrefix = notification.priority === 'urgent' ? '🚨 URGENT: ' :
+          notification.priority === 'high' ? '⚡ ' : '';
         return `${priorityPrefix}New Order Received - ${orderRef}`;
       case 'cancellation_request':
         return `⚠️ Cancellation Request - ${orderRef}`;
@@ -1132,7 +1134,7 @@ export class SellerNotificationService implements ISellerNotificationService {
   ): string {
     const baseUrl = process.env.FRONTEND_URL || 'https://linkdao.io';
     const actionUrl = this.getActionUrl(notification);
-    
+
     // Format currency
     const formatCurrency = (amount: number | undefined, currency: string = 'USD'): string => {
       if (amount === undefined || amount === null) return 'N/A';
@@ -1152,24 +1154,24 @@ export class SellerNotificationService implements ISellerNotificationService {
     };
 
     // Generate items HTML if available
-    const itemsHtml = orderData.items && orderData.items.length > 0 
+    const itemsHtml = orderData.items && orderData.items.length > 0
       ? this.generateOrderItemsHtml(orderData.items, orderData.currency || 'USD')
       : '';
 
     // Generate shipping address HTML
-    const shippingAddressHtml = orderData.shippingAddress 
+    const shippingAddressHtml = orderData.shippingAddress
       ? this.generateShippingAddressHtml(orderData.shippingAddress)
       : '';
 
     // Priority badge
-    const priorityBadge = notification.priority === 'urgent' 
+    const priorityBadge = notification.priority === 'urgent'
       ? '<span style="background: #dc2626; color: white; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; margin-left: 8px;">URGENT</span>'
       : notification.priority === 'high'
-      ? '<span style="background: #f59e0b; color: white; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; margin-left: 8px;">HIGH PRIORITY</span>'
-      : '';
+        ? '<span style="background: #f59e0b; color: white; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; margin-left: 8px;">HIGH PRIORITY</span>'
+        : '';
 
     // Expedited shipping badge
-    const expeditedBadge = orderData.isExpedited 
+    const expeditedBadge = orderData.isExpedited
       ? '<span style="background: #7c3aed; color: white; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; margin-left: 8px;">⚡ EXPEDITED</span>'
       : '';
 
@@ -1490,10 +1492,44 @@ export class SellerNotificationService implements ISellerNotificationService {
             actionUrl: this.getActionUrl(notification),
             ...notification.data,
           },
-          priority: notification.priority === 'urgent' ? 'urgent' : 
-                   notification.priority === 'high' ? 'high' : 'medium',
+          priority: notification.priority === 'urgent' ? 'urgent' :
+            notification.priority === 'high' ? 'high' : 'medium',
           timestamp: new Date(),
         });
+      }
+
+      notification.channelStatus.in_app = {
+        status: 'sent',
+        sentAt: new Date(),
+      };
+
+      // Double-write to notifications table for unified history
+      try {
+        // Get user wallet address from sellerId
+        const user = await this.databaseService.getUserById(notification.sellerId);
+
+        if (user && user.walletAddress) {
+          await db.insert(notifications).values({
+            userAddress: user.walletAddress,
+            type: notification.type,
+            orderId: notification.orderId,
+            message: notification.body || notification.title, // Use body if available, else title
+            metadata: JSON.stringify({
+              title: notification.title,
+              actionUrl: this.getActionUrl(notification),
+              priority: notification.priority,
+              ...notification.data
+            }),
+            read: false,
+            createdAt: new Date()
+          });
+          safeLogger.debug(`Notification double-written to users notifications table for ${user.walletAddress}`);
+        } else {
+          safeLogger.warn(`Could not find wallet address for seller ${notification.sellerId}, skipping double-write`);
+        }
+      } catch (dbError) {
+        safeLogger.error('Error double-writing to notifications table:', dbError);
+        // Don't fail the whole method, as the primary delivery (WS) might have succeeded
       }
 
       notification.channelStatus.in_app = {

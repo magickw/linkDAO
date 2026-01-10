@@ -110,7 +110,6 @@ const getTokensForChain = (chainId: number) => {
       // Optionally include DAI/WBTC via env-configured addresses to avoid hardcoding incorrect addresses
       const baseDai = process.env.NEXT_PUBLIC_BASE_DAI_ADDRESS as `0x${string}` | undefined;
       const baseWbtc = process.env.NEXT_PUBLIC_BASE_WBTC_ADDRESS as `0x${string}` | undefined;
-      const ldaoAddress = process.env.NEXT_PUBLIC_LDAO_TOKEN_ADDRESS as `0x${string}` | undefined;
       return [
         {
           symbol: 'USDC',
@@ -131,18 +130,11 @@ const getTokensForChain = (chainId: number) => {
           address: '0x88Fb150BDc53A65fe94Dea0c9BA0a6dAf8C6e196' as Address,
           decimals: 18
         },
-        // LDAO Token
-        ...(ldaoAddress ? [{
-          symbol: 'LDAO',
-          name: 'LinkDAO Token',
-          address: ldaoAddress as Address,
-          decimals: 18
-        }] : []),
+        // Note: LDAO token is only deployed on Sepolia testnet
         ...(baseDai ? [{ symbol: 'DAI', name: 'Dai (Base)', address: baseDai as Address, decimals: 18 }] : []),
         ...(baseWbtc ? [{ symbol: 'WBTC', name: 'Wrapped Bitcoin (Base)', address: baseWbtc as Address, decimals: 8 }] : []),
       ];
     case 84532: // Base Sepolia
-      const ldaoSepoliaAddress = process.env.NEXT_PUBLIC_LDAO_TOKEN_ADDRESS as `0x${string}` | undefined;
       return [
         {
           symbol: 'USDC',
@@ -156,13 +148,7 @@ const getTokensForChain = (chainId: number) => {
           address: '0x4200000000000000000000000000000000000006' as Address,
           decimals: 18
         },
-        // LDAO Token
-        ...(ldaoSepoliaAddress ? [{
-          symbol: 'LDAO',
-          name: 'LinkDAO Token',
-          address: ldaoSepoliaAddress as Address,
-          decimals: 18
-        }] : []),
+        // Note: LDAO token is only deployed on Ethereum Sepolia testnet
       ];
     case 11155111: // Sepolia Testnet
       const ethSepoliaLdaoAddress = process.env.NEXT_PUBLIC_LDAO_TOKEN_ADDRESS as `0x${string}` | undefined;
@@ -192,7 +178,7 @@ const getTokensForChain = (chainId: number) => {
         {
           symbol: 'USDT',
           name: 'Tether USD (Polygon)',
-          address: '0xc2132D05D31c914a87C6611C10748AaCB6D3cC19' as Address,
+          address: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F' as Address, // Official USDT (PoS) - EIP-55 checksummed
           decimals: 6
         },
         {
@@ -204,7 +190,7 @@ const getTokensForChain = (chainId: number) => {
         {
           symbol: 'LINK',
           name: 'Chainlink (Polygon)',
-          address: '0x53E0bca35eC356BD5ddDFebbD1fC0fD03Fabad39' as Address,
+          address: '0x53E0bca35eC356BD5ddDFebbD1Fc0fD03FaBaD39' as Address, // EIP-55 checksummed
           decimals: 18
         },
         {
@@ -228,7 +214,7 @@ const getTokensForChain = (chainId: number) => {
         {
           symbol: 'UNI',
           name: 'Uniswap (Polygon)',
-          address: '0xb33EaAd8d922B1083446DC23f610c2567fb5180f' as Address,
+          address: '0xb33EaAd8d922B1083446DC23f610c2567fB5180f' as Address, // EIP-55 checksummed
           decimals: 18
         }
       ];
@@ -243,7 +229,7 @@ const getTokensForChain = (chainId: number) => {
         {
           symbol: 'USDT',
           name: 'Tether USD (Arbitrum)',
-          address: '0xfd086bC7CD5C481DCC9C85ebE478A1C0b69fcBB9' as Address,
+          address: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9' as Address, // EIP-55 checksummed
           decimals: 6
         },
         {
@@ -261,7 +247,7 @@ const getTokensForChain = (chainId: number) => {
         {
           symbol: 'DAI',
           name: 'Dai (Arbitrum)',
-          address: '0xda10009cBd5D07dd0CeCc66161FC93D7c9000da1' as Address,
+          address: '0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1' as Address, // EIP-55 checksummed
           decimals: 18
         },
         {
@@ -279,7 +265,7 @@ const getTokensForChain = (chainId: number) => {
         {
           symbol: 'UNI',
           name: 'Uniswap (Arbitrum)',
-          address: '0xfa7F8980b0f1E64A2062791cc3b0871572f1F7f0' as Address,
+          address: '0xFa7F8980b0f1E64A2062791cc3b0871572f1F7f0' as Address, // EIP-55 checksummed
           decimals: 18
         }
       ];
@@ -365,32 +351,32 @@ export class WalletService {
     let chain;
     let rpcUrl: string | undefined;
 
-    // Get RPC URL from environment variables based on chain
+    // Get RPC URL from environment variables based on chain, with fallback public RPCs
     switch (chainId) {
       case 8453: // Base Mainnet
         chain = base;
-        rpcUrl = process.env.NEXT_PUBLIC_BASE_RPC_URL || process.env.BASE_RPC_URL;
+        rpcUrl = process.env.NEXT_PUBLIC_BASE_RPC_URL || process.env.BASE_RPC_URL || 'https://mainnet.base.org';
         break;
       case 84532: // Base Sepolia
         chain = baseSepolia;
-        rpcUrl = process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL || process.env.NEXT_PUBLIC_BASE_GOERLI_RPC_URL;
+        rpcUrl = process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL || process.env.NEXT_PUBLIC_BASE_GOERLI_RPC_URL || 'https://sepolia.base.org';
         break;
       case 11155111: // Sepolia Testnet
         chain = sepolia;
-        rpcUrl = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || process.env.NEXT_PUBLIC_RPC_URL;
+        rpcUrl = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || process.env.NEXT_PUBLIC_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com';
         break;
       case 137: // Polygon
         chain = polygon;
-        rpcUrl = process.env.NEXT_PUBLIC_POLYGON_RPC_URL;
+        rpcUrl = process.env.NEXT_PUBLIC_POLYGON_RPC_URL || 'https://polygon-rpc.com';
         break;
       case 42161: // Arbitrum
         chain = arbitrum;
-        rpcUrl = process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL;
+        rpcUrl = process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL || 'https://arb1.arbitrum.io/rpc';
         break;
       case 1: // Ethereum Mainnet
       default:
         chain = mainnet;
-        rpcUrl = process.env.NEXT_PUBLIC_MAINNET_RPC_URL;
+        rpcUrl = process.env.NEXT_PUBLIC_MAINNET_RPC_URL || 'https://eth.llamarpc.com';
         break;
     }
 

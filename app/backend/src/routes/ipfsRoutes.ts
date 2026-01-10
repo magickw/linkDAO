@@ -221,13 +221,17 @@ router.get('/:hash', async (req, res) => {
       }
     }
 
-    // Set appropriate headers
+    // Set appropriate headers including CORS headers for cross-origin resource loading
     res.set({
       'Content-Type': contentType,
       'Content-Length': sentContent.length,
       'Content-Disposition': `inline; filename="${metadata.name}"`,
       'Cache-Control': 'public, max-age=31536000', // 1 year for IPFS content
-      'ETag': `"${hash}-${width || ''}-${height || ''}-${format || ''}"`
+      'ETag': `"${hash}-${width || ''}-${height || ''}-${format || ''}"`,
+      // Cross-origin headers to allow IPFS resources to be loaded from any origin
+      'Cross-Origin-Resource-Policy': 'cross-origin',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Expose-Headers': 'Content-Length, Content-Type'
     });
 
     // Send file content

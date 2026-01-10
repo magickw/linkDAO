@@ -78,7 +78,9 @@ export class OrderTimelineService {
             });
 
             // Add Delivery Event
-            if (order.status === OrderStatus.DELIVERED || order.status === OrderStatus.COMPLETED) {
+            // Normalize status comparison to handle case differences
+            const normalizedStatus = (order.status || '').toUpperCase();
+            if (normalizedStatus === OrderStatus.DELIVERED || normalizedStatus === OrderStatus.COMPLETED) {
                 timeline.push({
                     orderId,
                     type: 'ORDER_DELIVERED',
@@ -91,7 +93,7 @@ export class OrderTimelineService {
             }
 
             // Add Cancellation Event
-            if (order.status === OrderStatus.CANCELLED) {
+            if (normalizedStatus === OrderStatus.CANCELLED) {
                 timeline.push({
                     orderId,
                     type: 'ORDER_CANCELLED',

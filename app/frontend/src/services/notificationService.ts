@@ -4,16 +4,16 @@
  * Implements requirements 6.1, 6.3, 6.4, 6.5 from the interconnected social platform spec
  */
 
-import type { 
-  AppNotification, 
-  NotificationPreferences, 
-  GetNotificationsOptions, 
-  GetNotificationsResponse 
+import type {
+  AppNotification,
+  NotificationPreferences,
+  GetNotificationsOptions,
+  GetNotificationsResponse
 } from '../types/notifications';
 
 class NotificationService {
   private static instance: NotificationService;
-  private baseUrl = '/api/notifications';
+  private baseUrl = '/api/user-notifications';
 
   static getInstance(): NotificationService {
     if (!NotificationService.instance) {
@@ -28,7 +28,7 @@ class NotificationService {
   async getNotifications(options: GetNotificationsOptions = {}): Promise<GetNotificationsResponse> {
     try {
       const params = new URLSearchParams();
-      
+
       if (options.page) params.append('page', options.page.toString());
       if (options.limit) params.append('limit', options.limit.toString());
       if (options.includeRead !== undefined) params.append('includeRead', options.includeRead.toString());
@@ -66,7 +66,7 @@ class NotificationService {
       }
 
       const data = await response.json();
-      
+
       return {
         notifications: data.notifications.map(this.transformNotification),
         unreadCount: data.unreadCount,
@@ -234,7 +234,7 @@ class NotificationService {
               community_invite: { enabled: true, push: true, sound: true },
               governance_proposal: { enabled: true, push: true, sound: true },
               system_alert: { enabled: true, push: true, sound: true },
-              order_update: { enabled: true, push: true, sound: true }
+              marketplace: { enabled: true, push: true, sound: true }
             },
             quietHours: {
               enabled: false,
@@ -260,7 +260,7 @@ class NotificationService {
               community_invite: { enabled: true, push: true, sound: true },
               governance_proposal: { enabled: true, push: true, sound: true },
               system_alert: { enabled: true, push: true, sound: true },
-              order_update: { enabled: true, push: true, sound: true }
+              marketplace: { enabled: true, push: true, sound: true }
             },
             quietHours: {
               enabled: false,
@@ -549,18 +549,41 @@ class NotificationService {
   }
 
   private transformNotification(data: any): AppNotification {
+    // Derive category if not provided
+    let category = data.category;
+    if (!category) {
+      const type = data.type;
+      if (['new_order', 'cancellation_request', 'dispute_opened', 'review_received', 'order_update', 'payment_received', 'return_requested', 'shipped', 'delivered'].includes(type)) {
+        category = 'marketplace';
+      } else if (['tip', 'award'].includes(type)) {
+        category = 'financial';
+      } else if (['post_upvote', 'post_downvote', 'comment_upvote', 'comment_downvote', 'new_comment', 'comment_reply', 'post_reply', 'bookmark', 'reaction'].includes(type)) {
+        category = 'social_interaction';
+      } else if (type === 'message') {
+        category = 'direct_message';
+      } else if (type === 'mention') {
+        category = 'comment_mention';
+      } else if (['community', 'community_join'].includes(type)) {
+        category = 'community_invite';
+      } else if (['governance', 'governance_proposal'].includes(type)) {
+        category = 'governance_proposal';
+      } else {
+        category = 'system_alert';
+      }
+    }
+
     return {
       id: data.id,
       type: data.type,
-      category: data.category,
-      title: data.title,
+      category: category,
+      title: data.title || (data.metadata ? JSON.parse(data.metadata).title : 'Notification'), // Fallback title
       message: data.message,
       data: data.data,
       fromAddress: data.fromAddress,
       fromName: data.fromName,
       avatarUrl: data.avatarUrl,
-      actionUrl: data.actionUrl,
-      priority: data.priority,
+      actionUrl: data.actionUrl || (data.metadata ? JSON.parse(data.metadata).actionUrl : undefined), // Fallback actionUrl
+      priority: data.priority || (data.metadata ? JSON.parse(data.metadata).priority : 'medium'), // Fallback priority
       isRead: data.isRead,
       createdAt: new Date(data.createdAt),
       expiresAt: data.expiresAt ? new Date(data.expiresAt) : undefined,

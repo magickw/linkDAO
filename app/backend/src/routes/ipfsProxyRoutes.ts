@@ -39,10 +39,12 @@ router.get('/ipfs/:hash(*)', async (req: Request, res: Response) => {
         const contentType = response.headers['content-type'] || 'application/octet-stream';
         res.set('Content-Type', contentType);
 
-        // Enable CORS
+        // Enable CORS and Cross-Origin Resource Policy for cross-origin loading
         res.set('Access-Control-Allow-Origin', '*');
         res.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
         res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+        res.set('Cross-Origin-Embedder-Policy', 'unsafe-none');
 
         // Cache for 1 year (IPFS content is immutable)
         res.set('Cache-Control', 'public, max-age=31536000, immutable');
@@ -96,6 +98,8 @@ router.options('/ipfs/:hash(*)', (req: Request, res: Response) => {
     res.set('Access-Control-Allow-Origin', '*');
     res.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
     res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.set('Cross-Origin-Embedder-Policy', 'unsafe-none');
     res.status(204).send();
 });
 

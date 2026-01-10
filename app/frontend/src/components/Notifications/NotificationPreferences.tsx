@@ -26,15 +26,15 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
   const handlePreferenceChange = (path: string[], value: any) => {
     const newPreferences = { ...localPreferences };
     let current: any = newPreferences;
-    
+
     // Navigate to the nested property
     for (let i = 0; i < path.length - 1; i++) {
       current = current[path[i]];
     }
-    
+
     // Set the value
     current[path[path.length - 1]] = value;
-    
+
     setLocalPreferences(newPreferences);
     setHasChanges(true);
   };
@@ -56,7 +56,10 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
     comment_mention: 'Mentions',
     community_invite: 'Community Invites',
     governance_proposal: 'Governance Proposals',
-    system_alert: 'System Alerts'
+    system_alert: 'System Alerts',
+    social_interaction: 'Social Interactions',
+    financial: 'Financial',
+    marketplace: 'Marketplace (Orders)'
   };
 
   const categoryDescriptions = {
@@ -65,7 +68,10 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
     comment_mention: 'When someone mentions you in a comment',
     community_invite: 'Invitations to join communities',
     governance_proposal: 'New proposals and voting reminders',
-    system_alert: 'Important system updates and security alerts'
+    system_alert: 'Important system updates and security alerts',
+    social_interaction: 'Likes, replies, bookmarks, and new comments',
+    financial: 'Tips and awards',
+    marketplace: 'Order updates, sales, and shipping notifications'
   };
 
   if (!isOpen) return null;
@@ -95,7 +101,7 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
               Global Settings
             </h3>
-            
+
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -164,7 +170,7 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
               Notification Categories
             </h3>
-            
+
             <div className="space-y-6">
               {Object.entries(localPreferences.categories).map(([category, settings]) => (
                 <div key={category} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
@@ -202,7 +208,7 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
                           Push notifications
                         </label>
                       </div>
-                      
+
                       <div className="flex items-center space-x-2">
                         <input
                           type="checkbox"
@@ -227,7 +233,7 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
               Quiet Hours
             </h3>
-            
+
             <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
               <div className="flex items-center justify-between mb-4">
                 <div>
@@ -262,7 +268,7 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                       End Time
@@ -289,7 +295,7 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
           >
             Reset Changes
           </button>
-          
+
           <div className="flex space-x-3">
             <button
               onClick={onClose}

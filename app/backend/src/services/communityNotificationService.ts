@@ -1,9 +1,10 @@
 import emailService, { CommunityNotificationEmailData } from './emailService';
 import { safeLogger } from '../utils/safeLogger';
 import { pushNotificationService } from './pushNotificationService';
+import { getWebSocketService } from './webSocketService';
 import { db } from '../db';
-import { users, notificationPreferences } from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { users, notificationPreferences, notifications } from '../db/schema';
+import { eq, desc, and } from 'drizzle-orm';
 
 export interface CommunityNotificationPayload {
   userAddress: string;
@@ -37,7 +38,12 @@ export type CommunityNotificationType =
   | 'moderation_ban'
   | 'role_change'
   | 'role_promotion'
-  | 'community_announcement';
+  | 'community_announcement'
+  | 'bookmark'
+  | 'award'
+  | 'post_downvote'
+  | 'comment_downvote'
+  | 'tip';
 
 export interface NotificationPreference {
   email: boolean;
@@ -49,7 +55,7 @@ export interface NotificationPreference {
 export class CommunityNotificationService {
   private static instance: CommunityNotificationService;
 
-  private constructor() {}
+  private constructor() { }
 
   public static getInstance(): CommunityNotificationService {
     if (!CommunityNotificationService.instance) {
@@ -63,6 +69,30 @@ export class CommunityNotificationService {
    */
   async sendNotification(payload: CommunityNotificationPayload): Promise<void> {
     try {
+      // 1. Persist notification to database
+      try {
+        await db.insert(notifications).values({
+          userAddress: payload.userAddress,
+          type: payload.type,
+          message: payload.message,
+          metadata: JSON.stringify({
+            title: payload.title,
+            actionUrl: payload.actionUrl,
+            communityId: payload.communityId,
+            communityName: payload.communityName,
+            communityAvatar: payload.communityAvatar,
+            userName: payload.userName,
+            contentPreview: payload.contentPreview,
+            ...payload.metadata
+          }),
+          read: false
+        });
+      } catch (dbError) {
+        safeLogger.error('[CommunityNotification] Error persisting notification to DB:', dbError);
+        // Continue to send push/email even if DB fails, or throw? 
+        // Best to continue to ensure delivery, but log error.
+      }
+
       // Get user preferences
       const preferences = await this.getUserPreferences(payload.userAddress);
 
@@ -83,6 +113,26 @@ export class CommunityNotificationService {
       }
 
       // In-app notifications are handled separately by the real-time notification service
+      // Trigger a real-time update here if the user is connected
+      try {
+        const webSocketService = getWebSocketService();
+        if (webSocketService) {
+          webSocketService.sendNotification(payload.userAddress, {
+            type: 'notification:new', // Use generic type or specific
+            title: payload.title,
+            message: payload.message,
+            data: {
+              id: Math.random().toString(36).substring(7), // Temporary ID if needed, or let WS service handle
+              ...payload // Pass full payload
+            },
+            priority: 'medium',
+            timestamp: new Date()
+          });
+        }
+      } catch (wsError) {
+        safeLogger.error('[CommunityNotification] Error sending real-time notification:', wsError);
+      }
+
     } catch (error) {
       safeLogger.error('[CommunityNotification] Error sending notification:', error);
     }
@@ -297,8 +347,12 @@ export class CommunityNotificationService {
       'moderation_warning',
       'moderation_ban',
       'role_change',
-      'role_promotion',
       'community_announcement',
+      'bookmark',
+      'award',
+      'post_downvote',
+      'comment_downvote',
+      'tip',
     ];
   }
 
@@ -330,6 +384,12 @@ export class CommunityNotificationService {
         return 'community_update';
       case 'mention':
         return 'mention';
+      case 'tip':
+      case 'award':
+      case 'bookmark':
+      case 'post_downvote':
+      case 'comment_downvote':
+        return 'community_update'; // Fallback for now
       default:
         return 'community_update';
     }
@@ -564,6 +624,70 @@ export class CommunityNotificationService {
       actionUrl: `/communities/${communityId}`,
       metadata: { action, reason },
     });
+  }
+
+  /**
+   * Get notifications for a user
+   */
+  async getUserNotifications(userAddress: string, limit: number = 20, offset: number = 0) {
+    try {
+      const result = await db
+        .select()
+        .from(notifications)
+        .where(eq(notifications.userAddress, userAddress))
+        .orderBy(desc(notifications.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      const unreadCount = await db
+        .select({ count: notifications.id })
+        .from(notifications)
+        .where(and(
+          eq(notifications.userAddress, userAddress),
+          eq(notifications.read, false)
+        ));
+
+      return {
+        notifications: result.map(n => ({
+          ...n,
+          metadata: n.metadata ? JSON.parse(n.metadata) : {}
+        })),
+        unreadCount: unreadCount.length
+      };
+    } catch (error) {
+      safeLogger.error('[CommunityNotification] Error getting user notifications:', error);
+      throw new Error('Failed to get notifications');
+    }
+  }
+
+  /**
+   * Mark notification as read
+   */
+  async markAsRead(notificationId: number) {
+    try {
+      await db
+        .update(notifications)
+        .set({ read: true })
+        .where(eq(notifications.id, notificationId));
+    } catch (error) {
+      safeLogger.error('[CommunityNotification] Error marking notification as read:', error);
+      throw new Error('Failed to mark notification as read');
+    }
+  }
+
+  /**
+   * Mark all notifications as read for a user
+   */
+  async markAllAsRead(userAddress: string) {
+    try {
+      await db
+        .update(notifications)
+        .set({ read: true })
+        .where(eq(notifications.userAddress, userAddress));
+    } catch (error) {
+      safeLogger.error('[CommunityNotification] Error marking all notifications as read:', error);
+      throw new Error('Failed to mark all notifications as read');
+    }
   }
 }
 

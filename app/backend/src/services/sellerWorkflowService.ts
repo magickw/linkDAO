@@ -178,7 +178,9 @@ export class SellerWorkflowService {
             const isSeller = order.sellerId === sellerId || order.sellerWalletAddress === sellerId;
             if (!isSeller) throw new Error('Unauthorized');
 
-            if (order.status !== OrderStatus.PAID) throw new Error('Order must be PAID to start processing');
+            // Normalize status comparison to handle case differences
+            const normalizedStatus = (order.status || '').toUpperCase();
+            if (normalizedStatus !== OrderStatus.PAID) throw new Error('Order must be PAID to start processing');
 
             await this.orderService.updateOrderStatus(orderId, OrderStatus.PROCESSING);
 
@@ -508,7 +510,9 @@ export class SellerWorkflowService {
             if (!isSeller) throw new Error('Unauthorized');
 
             // Validate order status - can schedule from PAID or PROCESSING status
-            if (order.status !== OrderStatus.PAID && order.status !== OrderStatus.PROCESSING) {
+            // Normalize status comparison to handle case differences
+            const normalizedStatus = (order.status || '').toUpperCase();
+            if (normalizedStatus !== OrderStatus.PAID && normalizedStatus !== OrderStatus.PROCESSING) {
                 throw new Error(`Cannot schedule service for order with status: ${order.status}`);
             }
 
@@ -522,7 +526,9 @@ export class SellerWorkflowService {
             });
 
             // Update main order status to PROCESSING if it was PAID
-            if (order.status === OrderStatus.PAID) {
+            // Normalize status comparison to handle case differences
+            const normalizedStatus = (order.status || '').toUpperCase();
+            if (normalizedStatus === OrderStatus.PAID) {
                 await this.orderService.updateOrderStatus(orderId, OrderStatus.PROCESSING, {
                     serviceScheduled: true,
                     scheduledDate: schedule.date,
@@ -663,7 +669,9 @@ export class SellerWorkflowService {
             if (!isSeller) throw new Error('Unauthorized');
 
             // Validate order status - can start service from PAID or PROCESSING status
-            if (order.status !== OrderStatus.PAID && order.status !== OrderStatus.PROCESSING) {
+            // Normalize status comparison to handle case differences
+            const normalizedStatus = (order.status || '').toUpperCase();
+            if (normalizedStatus !== OrderStatus.PAID && normalizedStatus !== OrderStatus.PROCESSING) {
                 throw new Error(`Cannot start service for order with status: ${order.status}`);
             }
 
@@ -673,7 +681,9 @@ export class SellerWorkflowService {
             });
 
             // Update main order status to PROCESSING if it was PAID
-            if (order.status === OrderStatus.PAID) {
+            // Normalize status comparison to handle case differences
+            const normalizedStatus = (order.status || '').toUpperCase();
+            if (normalizedStatus === OrderStatus.PAID) {
                 await this.orderService.updateOrderStatus(orderId, OrderStatus.PROCESSING, {
                     serviceStarted: true,
                     serviceStartedAt: new Date().toISOString()
@@ -706,7 +716,9 @@ export class SellerWorkflowService {
             if (!isSeller) throw new Error('Unauthorized');
 
             // Validate order status - can only complete from PROCESSING status
-            if (order.status !== OrderStatus.PROCESSING) {
+            // Normalize status comparison to handle case differences
+            const normalizedStatus = (order.status || '').toUpperCase();
+            if (normalizedStatus !== OrderStatus.PROCESSING) {
                 throw new Error(`Cannot complete service for order with status: ${order.status}. Order must be in PROCESSING status.`);
             }
 
@@ -758,7 +770,9 @@ export class SellerWorkflowService {
             if (!isSeller) throw new Error('Unauthorized');
 
             // For digital products, we can transition from PAID or PROCESSING to DELIVERED
-            if (order.status !== OrderStatus.PAID && order.status !== OrderStatus.PROCESSING) {
+            // Normalize status comparison to handle case differences (DB stores lowercase, enum is uppercase)
+            const normalizedStatus = (order.status || '').toUpperCase();
+            if (normalizedStatus !== OrderStatus.PAID && normalizedStatus !== OrderStatus.PROCESSING) {
                 throw new Error(`Order must be PAID or PROCESSING to complete digital delivery. Current status: ${order.status}`);
             }
 

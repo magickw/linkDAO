@@ -47,6 +47,8 @@ export const ultimateCorsMiddleware = (req: Request, res: Response, next: NextFu
       'Access-Control-Allow-Credentials': 'true',
       'Access-Control-Max-Age': '86400',
       'Access-Control-Expose-Headers': 'X-Request-ID, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset',
+      'Cross-Origin-Resource-Policy': 'cross-origin',
+      'Cross-Origin-Embedder-Policy': 'unsafe-none',
       'Content-Length': '0'
     });
     res.end();
@@ -75,6 +77,9 @@ export const ultimateCorsMiddleware = (req: Request, res: Response, next: NextFu
     finalHeaders['Access-Control-Allow-Credentials'] = 'true';
     finalHeaders['Access-Control-Max-Age'] = '86400';
     finalHeaders['Access-Control-Expose-Headers'] = 'X-Request-ID, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset';
+    // Cross-Origin headers to allow resources to be loaded from any origin
+    finalHeaders['Cross-Origin-Resource-Policy'] = 'cross-origin';
+    finalHeaders['Cross-Origin-Embedder-Policy'] = 'unsafe-none';
 
     console.log(`[ULTIMATE-CORS] writeHead called for ${req.path} - forcing origin: ${singleOrigin}`);
 

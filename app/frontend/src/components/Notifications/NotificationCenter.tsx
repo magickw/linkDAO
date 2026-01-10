@@ -23,7 +23,7 @@ interface NotificationCenterProps {
   pendingNotifications?: number;
 }
 
-type FilterType = 'all' | 'unread' | 'message' | 'reaction' | 'mention' | 'community' | 'governance';
+type FilterType = 'all' | 'unread' | 'message' | 'reaction' | 'mention' | 'community' | 'governance' | 'financial' | 'social_interaction' | 'marketplace';
 
 export const NotificationCenter: React.FC<NotificationCenterProps> = ({
   isOpen,
@@ -65,12 +65,21 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
       case 'governance':
         filtered = filtered.filter(n => n.type === 'governance');
         break;
+      case 'financial':
+        filtered = filtered.filter(n => ['tip', 'award'].includes(n.type));
+        break;
+      case 'social_interaction':
+        filtered = filtered.filter(n => ['post_upvote', 'post_downvote', 'comment_upvote', 'comment_downvote', 'new_comment', 'comment_reply', 'post_reply', 'bookmark', 'reaction'].includes(n.type));
+        break;
+      case 'marketplace':
+        filtered = filtered.filter(n => ['new_order', 'cancellation_request', 'dispute_opened', 'review_received', 'order_update', 'payment_received', 'return_requested', 'shipped', 'delivered'].includes(n.type));
+        break;
     }
 
     // Apply search
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(n => 
+      filtered = filtered.filter(n =>
         n.title.toLowerCase().includes(query) ||
         n.message.toLowerCase().includes(query) ||
         n.fromName?.toLowerCase().includes(query)
@@ -83,32 +92,32 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
   // Group notifications by date
   const groupedNotifications = useMemo(() => {
     const groups: Record<string, Notification[]> = {};
-    
+
     filteredNotifications.forEach(notification => {
       const date = new Date(notification.createdAt);
       const today = new Date();
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);
-      
+
       let groupKey: string;
       if (date.toDateString() === today.toDateString()) {
         groupKey = 'Today';
       } else if (date.toDateString() === yesterday.toDateString()) {
         groupKey = 'Yesterday';
       } else {
-        groupKey = date.toLocaleDateString('en-US', { 
-          weekday: 'long', 
-          month: 'short', 
-          day: 'numeric' 
+        groupKey = date.toLocaleDateString('en-US', {
+          weekday: 'long',
+          month: 'short',
+          day: 'numeric'
         });
       }
-      
+
       if (!groups[groupKey]) {
         groups[groupKey] = [];
       }
       groups[groupKey].push(notification);
     });
-    
+
     return groups;
   }, [filteredNotifications]);
 
@@ -128,6 +137,12 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
         return notifications.filter(n => n.type === 'community').length;
       case 'governance':
         return notifications.filter(n => n.type === 'governance').length;
+      case 'financial':
+        return notifications.filter(n => ['tip', 'award'].includes(n.type)).length;
+      case 'social_interaction':
+        return notifications.filter(n => ['post_upvote', 'post_downvote', 'comment_upvote', 'comment_downvote', 'new_comment', 'comment_reply', 'post_reply', 'bookmark'].includes(n.type)).length;
+      case 'marketplace':
+        return notifications.filter(n => ['new_order', 'cancellation_request', 'dispute_opened', 'review_received', 'order_update', 'payment_received', 'return_requested', 'shipped', 'delivered'].includes(n.type)).length;
       default:
         return 0;
     }
@@ -165,6 +180,18 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
           </svg>
         );
+      case 'financial':
+        return (
+          <span className="text-sm">💰</span>
+        );
+      case 'social_interaction':
+        return (
+          <span className="text-sm">❤️</span>
+        );
+      case 'marketplace':
+        return (
+          <span className="text-sm">🛍️</span>
+        );
       default:
         return null;
     }
@@ -192,7 +219,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
               </span>
             )}
           </div>
-          
+
           <div className="flex items-center space-x-2">
             <button
               onClick={onOpenPreferences}
@@ -204,7 +231,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
             </button>
-            
+
             <button
               onClick={onClose}
               className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
@@ -246,7 +273,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
-            
+
             {unreadCount > 0 && (
               <button
                 onClick={onMarkAllAsRead}
@@ -260,18 +287,18 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
 
           {/* Filter Tabs */}
           <div className="flex space-x-1 overflow-x-auto">
-            {(['all', 'unread', 'message', 'reaction', 'mention', 'community', 'governance'] as FilterType[]).map((filter) => {
+            {(['all', 'unread', 'message', 'social_interaction', 'financial', 'marketplace', 'mention', 'community', 'governance'] as FilterType[]).map((filter) => {
               const count = getFilterCount(filter);
               const isActive = activeFilter === filter;
-              
+
               return (
                 <button
                   key={filter}
                   onClick={() => setActiveFilter(filter)}
                   className={`
                     flex items-center space-x-1 px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors
-                    ${isActive 
-                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' 
+                    ${isActive
+                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
                       : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
                     }
                     ${!isOnline && pendingNotifications > 0 ? 'opacity-50 cursor-not-allowed' : ''}
@@ -279,12 +306,12 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                   disabled={!isOnline && pendingNotifications > 0}
                 >
                   {getFilterIcon(filter)}
-                  <span className="capitalize">{filter}</span>
+                  <span className="capitalize">{filter.replace('_', ' ')}</span>
                   {count > 0 && (
                     <span className={`
                       px-1.5 py-0.5 rounded-full text-xs
-                      ${isActive 
-                        ? 'bg-blue-200 text-blue-800 dark:bg-blue-800 dark:text-blue-200' 
+                      ${isActive
+                        ? 'bg-blue-200 text-blue-800 dark:bg-blue-800 dark:text-blue-200'
                         : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
                       }
                     `}>
@@ -309,8 +336,8 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
               </svg>
               <p className="text-sm">
-                {searchQuery ? 'No notifications match your search' : 
-                 !isOnline && pendingNotifications > 0 ? 'Notifications will appear when synced' : 'No notifications yet'}
+                {searchQuery ? 'No notifications match your search' :
+                  !isOnline && pendingNotifications > 0 ? 'Notifications will appear when synced' : 'No notifications yet'}
               </p>
             </div>
           ) : (

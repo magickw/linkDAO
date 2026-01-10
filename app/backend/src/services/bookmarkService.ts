@@ -6,7 +6,8 @@
 
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
-import { bookmarks, posts, statuses } from '../db/schema';
+import { bookmarks, posts, statuses, users } from '../db/schema';
+import communityNotificationService from './communityNotificationService';
 import { eq, and, sql, or } from 'drizzle-orm';
 
 type ContentType = 'post' | 'status';
@@ -69,6 +70,95 @@ class BookmarkService {
       }
 
       await db.insert(bookmarks).values(insertData);
+
+      // Trigger notification
+      try {
+        let authorId: string | undefined;
+        let contentPreview: string | undefined;
+        let contentIdForUrl: string = contentId;
+        let communityId: string = 'global';
+        let communityName: string = 'LinkDAO';
+        let actionUrl = '';
+
+        if (contentType === 'status') {
+          const status = await db
+            .select({
+              authorId: statuses.authorId,
+              content: statuses.content,
+              contentCid: statuses.contentCid
+            })
+            .from(statuses)
+            .where(eq(statuses.id, contentId))
+            .limit(1);
+
+          if (status[0]) {
+            authorId = status[0].authorId;
+            contentPreview = status[0].content || status[0].contentCid;
+            actionUrl = `/status/${contentId}`;
+          }
+        } else {
+          // Post
+          const post = await db
+            .select({
+              authorId: posts.authorId,
+              contentCid: posts.contentCid
+            })
+            .from(posts)
+            .where(eq(posts.id, contentId))
+            .limit(1);
+
+          if (post[0]) {
+            authorId = post[0].authorId;
+            contentPreview = post[0].contentCid; // Posts use CID, might need IPFS fetch but we use CID as preview text for now or 'New Post'
+            actionUrl = `/post/${contentId}`; // Assuming route
+            // Attempts to find community? For now default to global
+          }
+        }
+
+        if (authorId && authorId !== userId) {
+          // Get bookmarker user details
+          const bookmarker = await db
+            .select({
+              walletAddress: users.walletAddress,
+              displayName: users.displayName,
+              handle: users.handle
+            })
+            .from(users)
+            .where(eq(users.id, userId))
+            .limit(1);
+
+          // Get author wallet address
+          const author = await db
+            .select({ walletAddress: users.walletAddress })
+            .from(users)
+            .where(eq(users.id, authorId))
+            .limit(1);
+
+          if (bookmarker[0] && author[0]) {
+            const bookmarkerName = bookmarker[0].displayName || bookmarker[0].handle || bookmarker[0].walletAddress.substring(0, 6);
+
+            await communityNotificationService.sendNotification({
+              userAddress: author[0].walletAddress,
+              communityId,
+              communityName,
+              type: 'bookmark',
+              title: 'New Bookmark',
+              message: `${bookmarkerName} bookmarked your ${contentType}`,
+              contentPreview: contentPreview?.substring(0, 100),
+              userName: bookmarkerName,
+              actionUrl,
+              metadata: {
+                bookmarkerId: userId,
+                contentType,
+                contentId
+              }
+            });
+          }
+        }
+      } catch (notifyError) {
+        safeLogger.error('Error sending bookmark notification:', notifyError);
+        // Don't fail the bookmark action
+      }
 
       return true;
     } catch (error) {

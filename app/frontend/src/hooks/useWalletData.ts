@@ -259,7 +259,8 @@ export function useWalletData({
       const sortedTokens = allTokens.sort((a, b) => b.valueUSD - a.valueUSD);
 
       // Get recent transactions with USD values - deferred because this is expensive
-      let recentTransactions = walletData.transactions || [];
+      // Note: Transaction fetching is handled separately in a dedicated useEffect to avoid blocking
+      let recentTransactions: any[] = [];
       try {
         // Only fetch transaction history if explicitly enabled and after initial wallet data load
         if (enableTransactionHistory) {

@@ -27,8 +27,8 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
     const showTimer = setTimeout(() => setIsVisible(true), 100);
 
     // Auto-dismiss timer based on priority
-    const dismissDelay = notification.priority === 'urgent' ? 10000 : 
-                        notification.priority === 'high' ? 7000 : 5000;
+    const dismissDelay = notification.priority === 'urgent' ? 10000 :
+      notification.priority === 'high' ? 7000 : 5000;
 
     const progressInterval = setInterval(() => {
       setProgress(prev => {
@@ -60,11 +60,11 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
 
   const getToastStyles = () => {
     const baseStyles = 'transform transition-all duration-300 ease-in-out';
-    
+
     if (!isVisible) {
       return `${baseStyles} translate-x-full opacity-0`;
     }
-    
+
     return `${baseStyles} translate-x-0 opacity-100`;
   };
 
@@ -83,7 +83,7 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
 
   const getNotificationIcon = () => {
     const iconClass = "w-5 h-5";
-    
+
     switch (notification.type) {
       case 'message':
         return (
@@ -121,6 +121,36 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         );
+      case 'tip':
+        return (
+          <span className="text-xl">💰</span>
+        );
+      case 'bookmark':
+        return (
+          <span className="text-xl">🔖</span>
+        );
+      case 'award':
+        return (
+          <span className="text-xl">🏆</span>
+        );
+      case 'new_comment':
+      case 'comment_reply':
+      case 'post_reply':
+        return (
+          <svg className={`${iconClass} text-blue-600 dark:text-blue-400`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+        );
+      case 'post_upvote':
+      case 'comment_upvote':
+        return (
+          <span className="text-xl">⬆️</span>
+        );
+      case 'post_downvote':
+      case 'comment_downvote':
+        return (
+          <span className="text-xl">⬇️</span>
+        );
       default:
         return (
           <svg className={`${iconClass} text-blue-600 dark:text-blue-400`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -138,7 +168,7 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
       `}>
         {/* Progress bar */}
         <div className="h-1 bg-gray-200 dark:bg-gray-700">
-          <div 
+          <div
             className="h-full bg-blue-500 transition-all duration-100 ease-linear"
             style={{ width: `${progress}%` }}
           />
@@ -171,7 +201,7 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
                     {notification.message}
                   </p>
-                  
+
                   {notification.fromName && (
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       from {notification.fromName}
@@ -203,11 +233,11 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
                     className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-md hover:bg-blue-700 transition-colors"
                   >
                     {notification.type === 'message' ? 'Reply' :
-                     notification.type === 'community' ? 'View' :
-                     notification.type === 'governance' ? 'Vote' :
-                     'View'}
+                      notification.type === 'community' ? 'View' :
+                        notification.type === 'governance' ? 'Vote' :
+                          'View'}
                   </button>
-                  
+
                   <button
                     onClick={handleDismiss}
                     className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 px-3 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
