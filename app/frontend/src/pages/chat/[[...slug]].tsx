@@ -34,6 +34,9 @@ import EditContactModal from '@/components/Messaging/Contacts/EditContactModal';
 import MessagingInterface from '@/components/Messaging/MessagingInterface';
 import { OnlineStatus } from '@/components/Messaging/MessageStatusComponents';
 import { useAuth } from '@/context/AuthContext';
+import { useProfiles } from '@/hooks/useProfiles';
+import { useProfile } from '@/hooks/useProfile';
+import { UserProfile } from '@/models/UserProfile';
 
 // Channel categories for organization (matching screenshot design)
 interface ChannelCategory {
@@ -97,6 +100,13 @@ export default function ChatPage() {
   const [showEditContactModal, setShowEditContactModal] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
 
+  // Channel creation modal state
+  const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
+  const [newChannelType, setNewChannelType] = useState<'public' | 'private' | 'gated'>('public');
+  const [newChannelName, setNewChannelName] = useState('');
+  const [newChannelDescription, setNewChannelDescription] = useState('');
+  const [isCreatingChannel, setIsCreatingChannel] = useState(false);
+
   // Channel categories state (matching screenshot design)
   const [channelCategories, setChannelCategories] = useState<ChannelCategory[]>([
     { id: 'direct', name: 'Direct Messages', isCollapsed: false },
@@ -114,6 +124,53 @@ export default function ChatPage() {
     sendMessage: sendChatMessage,
     markAsRead
   } = useChatHistory();
+
+  // Collect unique participant addresses from conversations for profile fetching
+  const participantAddresses = React.useMemo(() => {
+    if (!hookConversations || !address) return [];
+    const addresses = new Set<string>();
+    hookConversations.forEach(conv => {
+      conv.participants.forEach(p => {
+        if (p !== address) {
+          addresses.add(p);
+        }
+      });
+    });
+    return Array.from(addresses);
+  }, [hookConversations, address]);
+
+  // Fetch profiles for all conversation participants
+  const { data: participantProfiles, isLoading: profilesLoading } = useProfiles(participantAddresses);
+
+  // Fetch current user's profile
+  const { profile: currentUserProfile } = useProfile(address);
+
+  // Helper function to get profile for a specific address
+  const getParticipantProfile = useCallback((participantAddress: string): UserProfile | undefined => {
+    return participantProfiles?.find(
+      p => p.walletAddress.toLowerCase() === participantAddress.toLowerCase()
+    );
+  }, [participantProfiles]);
+
+  // Helper function to get display name for a participant
+  const getDisplayName = useCallback((participantAddress: string): string => {
+    const profile = getParticipantProfile(participantAddress);
+    if (profile?.displayName) return profile.displayName;
+    if (profile?.handle) return profile.handle;
+    if (profile?.ens) return profile.ens;
+    return truncateAddress(participantAddress);
+  }, [getParticipantProfile]);
+
+  // Helper function to get avatar URL for a participant
+  const getAvatarUrl = useCallback((participantAddress: string): string | null => {
+    const profile = getParticipantProfile(participantAddress);
+    const cid = profile?.avatarCid || profile?.profileCid;
+    if (cid) {
+      // Use IPFS gateway to resolve the CID
+      return `https://ipfs.io/ipfs/${cid}`;
+    }
+    return null;
+  }, [getParticipantProfile]);
 
   // Online status and typing indicators
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
@@ -498,6 +555,66 @@ export default function ChatPage() {
     setEditingContact(null);
   };
 
+  // Channel creation handlers
+  const handleOpenCreateChannel = (channelType: 'public' | 'private' | 'gated') => {
+    setNewChannelType(channelType);
+    setNewChannelName('');
+    setNewChannelDescription('');
+    setShowCreateChannelModal(true);
+  };
+
+  const handleCreateChannel = async () => {
+    if (!newChannelName.trim()) {
+      alert('Please enter a channel name');
+      return;
+    }
+
+    setIsCreatingChannel(true);
+    try {
+      // TODO: Implement channel creation API call
+      // For now, show a message that this feature is coming soon
+      const token = localStorage.getItem('linkdao_access_token') ||
+        localStorage.getItem('authToken') ||
+        localStorage.getItem('token');
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || '';
+
+      const response = await fetch(`${apiUrl}/api/messaging/channels`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          name: newChannelName.trim(),
+          description: newChannelDescription.trim(),
+          type: newChannelType,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setShowCreateChannelModal(false);
+        setNewChannelName('');
+        setNewChannelDescription('');
+        // TODO: Navigate to the new channel or refresh channel list
+        alert(`Channel "${newChannelName}" created successfully!`);
+      } else if (response.status === 404 || response.status === 501) {
+        // API not implemented yet
+        alert('Channel creation is coming soon! This feature is under development.');
+      } else {
+        const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+        alert(`Failed to create channel: ${error.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Failed to create channel:', error);
+      // If API doesn't exist yet, show coming soon message
+      alert('Channel creation is coming soon! This feature is under development.');
+    } finally {
+      setIsCreatingChannel(false);
+    }
+  };
+
   // Sort conversations by last activity
   const sortedConversations = React.useMemo(() => {
     if (!hookConversations) return [] as Conversation[];
@@ -649,24 +766,33 @@ export default function ChatPage() {
                 {channelCategories.map((category) => (
               <div key={category.id} className="py-2">
                 {/* Category Header */}
-                <button
-                  onClick={() => toggleCategory(category.id)}
-                  className="w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-300"
-                >
-                  <div className="flex items-center gap-1">
+                <div className="group w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-300">
+                  <button
+                    onClick={() => toggleCategory(category.id)}
+                    className="flex items-center gap-1"
+                  >
                     {category.isCollapsed ? (
                       <ChevronRight className="w-3 h-3" />
                     ) : (
                       <ChevronDown className="w-3 h-3" />
                     )}
                     {category.name}
-                  </div>
-                  <Plus className="w-3 h-3 opacity-0 group-hover:opacity-100 hover:text-white cursor-pointer"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowNewConversationModal(true);
-                        }} />
-                </button>
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (category.id === 'direct') {
+                        setShowNewConversationModal(true);
+                      } else {
+                        handleOpenCreateChannel(category.id as 'public' | 'private' | 'gated');
+                      }
+                    }}
+                    className="p-1 rounded hover:bg-gray-700 hover:text-white transition-colors"
+                    title={category.id === 'direct' ? 'New conversation' : `Create ${category.id} channel`}
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
 
                 {/* Category Items */}
                 {!category.isCollapsed && (
@@ -695,6 +821,8 @@ export default function ChatPage() {
                             const conversationTyping = typingUsers.get(conversation.id) || [];
                             const isTyping = conversationTyping.length > 0;
                             const isSelected = selectedConversation?.id === conversation.id;
+                            const avatarUrl = getAvatarUrl(otherParticipant);
+                            const displayName = getDisplayName(otherParticipant);
 
                             return (
                               <button
@@ -707,8 +835,24 @@ export default function ChatPage() {
                                 }`}
                               >
                                 <div className="relative flex-shrink-0">
-                                  <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
-                                    <User className="w-4 h-4 text-gray-400" />
+                                  <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center overflow-hidden">
+                                    {avatarUrl ? (
+                                      <img
+                                        src={avatarUrl}
+                                        alt={displayName}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                          // Fallback to User icon if image fails to load
+                                          e.currentTarget.style.display = 'none';
+                                          const parent = e.currentTarget.parentElement;
+                                          if (parent) {
+                                            parent.innerHTML = '<svg class="w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+                                          }
+                                        }}
+                                      />
+                                    ) : (
+                                      <User className="w-4 h-4 text-gray-400" />
+                                    )}
                                   </div>
                                   <div className="absolute -bottom-0.5 -right-0.5">
                                     <OnlineStatus isOnline={isUserOnline} size={10} />
@@ -716,7 +860,7 @@ export default function ChatPage() {
                                 </div>
                                 <div className="flex-1 min-w-0 text-left">
                                   <div className="truncate font-medium">
-                                    {truncateAddress(otherParticipant)}
+                                    {displayName}
                                   </div>
                                   {isTyping ? (
                                     <div className="text-xs text-blue-400">typing...</div>
@@ -785,12 +929,27 @@ export default function ChatPage() {
           {/* User Profile / Settings */}
           <div className="p-3 border-t border-gray-700 bg-gray-800/50">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
-                <User className="w-4 h-4 text-gray-400" />
+              <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center overflow-hidden">
+                {currentUserProfile?.avatarCid ? (
+                  <img
+                    src={`https://ipfs.io/ipfs/${currentUserProfile.avatarCid}`}
+                    alt={currentUserProfile.displayName || currentUserProfile.handle || 'You'}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      const parent = e.currentTarget.parentElement;
+                      if (parent) {
+                        parent.innerHTML = '<svg class="w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+                      }
+                    }}
+                  />
+                ) : (
+                  <User className="w-4 h-4 text-gray-400" />
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-white truncate">
-                  {truncateAddress(address)}
+                  {currentUserProfile?.displayName || currentUserProfile?.handle || truncateAddress(address)}
                 </div>
                 <div className="text-xs text-green-400">Online</div>
               </div>
@@ -809,7 +968,8 @@ export default function ChatPage() {
               onClose={handleBackToList}
               conversationId={selectedConversation.id}
               participantAddress={getOtherParticipant(selectedConversation)}
-              participantName={truncateAddress(getOtherParticipant(selectedConversation))}
+              participantName={getDisplayName(getOtherParticipant(selectedConversation))}
+              hideSidebar={true}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center">
@@ -844,11 +1004,30 @@ export default function ChatPage() {
             </div>
             <div className="flex-1 overflow-y-auto p-3">
               <div className="space-y-2">
-                {selectedConversation.participants.map((participant) => (
+                {selectedConversation.participants.map((participant) => {
+                  const participantAvatarUrl = participant === address ? null : getAvatarUrl(participant);
+                  const participantDisplayName = participant === address ? truncateAddress(participant) : getDisplayName(participant);
+
+                  return (
                   <div key={participant} className="flex items-center gap-2 p-2 rounded hover:bg-gray-700/50">
                     <div className="relative">
-                      <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
-                        <User className="w-4 h-4 text-gray-400" />
+                      <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center overflow-hidden">
+                        {participantAvatarUrl ? (
+                          <img
+                            src={participantAvatarUrl}
+                            alt={participantDisplayName}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              const parent = e.currentTarget.parentElement;
+                              if (parent) {
+                                parent.innerHTML = '<svg class="w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+                              }
+                            }}
+                          />
+                        ) : (
+                          <User className="w-4 h-4 text-gray-400" />
+                        )}
                       </div>
                       <OnlineStatus
                         isOnline={onlineUsers.has(participant) || participant === address}
@@ -857,12 +1036,13 @@ export default function ChatPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm text-white truncate">
-                        {truncateAddress(participant)}
+                        {participantDisplayName}
                         {participant === address && <span className="text-xs text-gray-500 ml-1">(you)</span>}
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -962,6 +1142,100 @@ export default function ChatPage() {
           contact={editingContact}
         />
       )}
+
+      {/* Create Channel Modal */}
+      <AnimatePresence>
+        {showCreateChannelModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
+            onClick={() => setShowCreateChannelModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4 border border-gray-700 shadow-2xl"
+            >
+              <h3 className="text-xl font-semibold text-white mb-4">
+                Create {newChannelType.charAt(0).toUpperCase() + newChannelType.slice(1)} Channel
+              </h3>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Channel Name
+                  </label>
+                  <input
+                    type="text"
+                    value={newChannelName}
+                    onChange={(e) => setNewChannelName(e.target.value)}
+                    placeholder="e.g., general, announcements"
+                    className="w-full px-4 py-3 border border-gray-600 rounded-lg bg-gray-700 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Description (optional)
+                  </label>
+                  <textarea
+                    value={newChannelDescription}
+                    onChange={(e) => setNewChannelDescription(e.target.value)}
+                    placeholder="What's this channel about?"
+                    rows={3}
+                    className="w-full px-4 py-3 border border-gray-600 rounded-lg bg-gray-700 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  />
+                </div>
+
+                {newChannelType === 'gated' && (
+                  <div className="p-3 bg-purple-900/30 border border-purple-700 rounded-lg">
+                    <p className="text-sm text-purple-300">
+                      <Lock className="w-4 h-4 inline mr-1" />
+                      Gated channels require token ownership or specific criteria to join.
+                    </p>
+                  </div>
+                )}
+
+                {newChannelType === 'private' && (
+                  <div className="p-3 bg-gray-700/50 border border-gray-600 rounded-lg">
+                    <p className="text-sm text-gray-300">
+                      <Lock className="w-4 h-4 inline mr-1" />
+                      Private channels are invite-only.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setShowCreateChannelModal(false)}
+                  className="flex-1 px-4 py-3 text-gray-300 border border-gray-600 rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateChannel}
+                  disabled={!newChannelName.trim() || isCreatingChannel}
+                  className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                >
+                  {isCreatingChannel ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    'Create Channel'
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </Layout>
   );
 }

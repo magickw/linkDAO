@@ -34,7 +34,27 @@ class RealTimeNotificationService {
       [NotificationCategory.REACTION]: { enabled: true, priority: NotificationPriority.LOW, sound: false, desktop: false, email: false },
       [NotificationCategory.COMMENT]: { enabled: true, priority: NotificationPriority.NORMAL, sound: false, desktop: true, email: false },
       [NotificationCategory.FOLLOW]: { enabled: true, priority: NotificationPriority.NORMAL, sound: false, desktop: true, email: false },
-      [NotificationCategory.SYSTEM]: { enabled: true, priority: NotificationPriority.HIGH, sound: true, desktop: true, email: false }
+      [NotificationCategory.SYSTEM]: { enabled: true, priority: NotificationPriority.HIGH, sound: true, desktop: true, email: false },
+      // Social interaction notification defaults
+      [NotificationCategory.UPVOTE]: { enabled: true, priority: NotificationPriority.LOW, sound: false, desktop: false, email: false },
+      [NotificationCategory.DOWNVOTE]: { enabled: false, priority: NotificationPriority.LOW, sound: false, desktop: false, email: false },
+      [NotificationCategory.REPOST]: { enabled: true, priority: NotificationPriority.NORMAL, sound: false, desktop: true, email: false },
+      [NotificationCategory.AWARD]: { enabled: true, priority: NotificationPriority.HIGH, sound: true, desktop: true, email: false },
+      [NotificationCategory.BOOKMARK]: { enabled: false, priority: NotificationPriority.LOW, sound: false, desktop: false, email: false },
+      // Order/marketplace notification defaults
+      [NotificationCategory.ORDER_CREATED]: { enabled: true, priority: NotificationPriority.HIGH, sound: true, desktop: true, email: true },
+      [NotificationCategory.ORDER_CONFIRMED]: { enabled: true, priority: NotificationPriority.NORMAL, sound: false, desktop: true, email: false },
+      [NotificationCategory.ORDER_PROCESSING]: { enabled: true, priority: NotificationPriority.NORMAL, sound: false, desktop: true, email: false },
+      [NotificationCategory.ORDER_SHIPPED]: { enabled: true, priority: NotificationPriority.HIGH, sound: true, desktop: true, email: true },
+      [NotificationCategory.ORDER_DELIVERED]: { enabled: true, priority: NotificationPriority.HIGH, sound: true, desktop: true, email: true },
+      [NotificationCategory.ORDER_COMPLETED]: { enabled: true, priority: NotificationPriority.HIGH, sound: true, desktop: true, email: false },
+      [NotificationCategory.ORDER_CANCELLED]: { enabled: true, priority: NotificationPriority.HIGH, sound: true, desktop: true, email: true },
+      [NotificationCategory.ORDER_REFUNDED]: { enabled: true, priority: NotificationPriority.HIGH, sound: true, desktop: true, email: true },
+      [NotificationCategory.ORDER_DISPUTED]: { enabled: true, priority: NotificationPriority.URGENT, sound: true, desktop: true, email: true },
+      [NotificationCategory.PAYMENT_RECEIVED]: { enabled: true, priority: NotificationPriority.HIGH, sound: true, desktop: true, email: false },
+      [NotificationCategory.DELIVERY_CONFIRMED]: { enabled: true, priority: NotificationPriority.HIGH, sound: true, desktop: true, email: false },
+      [NotificationCategory.ESCROW_FUNDED]: { enabled: true, priority: NotificationPriority.HIGH, sound: true, desktop: true, email: false },
+      [NotificationCategory.ESCROW_RELEASED]: { enabled: true, priority: NotificationPriority.HIGH, sound: true, desktop: true, email: true }
     },
     quietHours: {
       enabled: false,
@@ -369,9 +389,28 @@ class RealTimeNotificationService {
       [NotificationCategory.REACTION]: '/icons/reaction.png',
       [NotificationCategory.COMMENT]: '/icons/comment.png',
       [NotificationCategory.FOLLOW]: '/icons/follow.png',
-      [NotificationCategory.SYSTEM]: '/icons/system.png'
+      [NotificationCategory.SYSTEM]: '/icons/system.png',
+      [NotificationCategory.UPVOTE]: '/icons/upvote.png',
+      [NotificationCategory.DOWNVOTE]: '/icons/downvote.png',
+      [NotificationCategory.REPOST]: '/icons/repost.png',
+      [NotificationCategory.AWARD]: '/icons/award.png',
+      [NotificationCategory.BOOKMARK]: '/icons/bookmark.png',
+      // Order/marketplace icons
+      [NotificationCategory.ORDER_CREATED]: '/icons/order-new.png',
+      [NotificationCategory.ORDER_CONFIRMED]: '/icons/order-confirmed.png',
+      [NotificationCategory.ORDER_PROCESSING]: '/icons/order-processing.png',
+      [NotificationCategory.ORDER_SHIPPED]: '/icons/order-shipped.png',
+      [NotificationCategory.ORDER_DELIVERED]: '/icons/order-delivered.png',
+      [NotificationCategory.ORDER_COMPLETED]: '/icons/order-completed.png',
+      [NotificationCategory.ORDER_CANCELLED]: '/icons/order-cancelled.png',
+      [NotificationCategory.ORDER_REFUNDED]: '/icons/order-refunded.png',
+      [NotificationCategory.ORDER_DISPUTED]: '/icons/order-disputed.png',
+      [NotificationCategory.PAYMENT_RECEIVED]: '/icons/payment-received.png',
+      [NotificationCategory.DELIVERY_CONFIRMED]: '/icons/delivery-confirmed.png',
+      [NotificationCategory.ESCROW_FUNDED]: '/icons/escrow-funded.png',
+      [NotificationCategory.ESCROW_RELEASED]: '/icons/escrow-released.png'
     };
-    
+
     return iconMap[notification.category] || '/icons/default-notification.png';
   }
 
@@ -405,9 +444,28 @@ class RealTimeNotificationService {
       [NotificationCategory.REACTION]: '/sounds/reaction.mp3',
       [NotificationCategory.COMMENT]: '/sounds/comment.mp3',
       [NotificationCategory.FOLLOW]: '/sounds/follow.mp3',
-      [NotificationCategory.SYSTEM]: '/sounds/system.mp3'
+      [NotificationCategory.SYSTEM]: '/sounds/system.mp3',
+      [NotificationCategory.UPVOTE]: '/sounds/upvote.mp3',
+      [NotificationCategory.DOWNVOTE]: '/sounds/downvote.mp3',
+      [NotificationCategory.REPOST]: '/sounds/repost.mp3',
+      [NotificationCategory.AWARD]: '/sounds/award.mp3',
+      [NotificationCategory.BOOKMARK]: '/sounds/bookmark.mp3',
+      // Order/marketplace sounds
+      [NotificationCategory.ORDER_CREATED]: '/sounds/order-new.mp3',
+      [NotificationCategory.ORDER_CONFIRMED]: '/sounds/order-confirmed.mp3',
+      [NotificationCategory.ORDER_PROCESSING]: '/sounds/order-processing.mp3',
+      [NotificationCategory.ORDER_SHIPPED]: '/sounds/order-shipped.mp3',
+      [NotificationCategory.ORDER_DELIVERED]: '/sounds/order-delivered.mp3',
+      [NotificationCategory.ORDER_COMPLETED]: '/sounds/order-completed.mp3',
+      [NotificationCategory.ORDER_CANCELLED]: '/sounds/order-cancelled.mp3',
+      [NotificationCategory.ORDER_REFUNDED]: '/sounds/order-refunded.mp3',
+      [NotificationCategory.ORDER_DISPUTED]: '/sounds/order-disputed.mp3',
+      [NotificationCategory.PAYMENT_RECEIVED]: '/sounds/payment-received.mp3',
+      [NotificationCategory.DELIVERY_CONFIRMED]: '/sounds/delivery-confirmed.mp3',
+      [NotificationCategory.ESCROW_FUNDED]: '/sounds/escrow-funded.mp3',
+      [NotificationCategory.ESCROW_RELEASED]: '/sounds/escrow-released.mp3'
     };
-    
+
     return soundMap[notification.category] || '/sounds/default.mp3';
   }
 

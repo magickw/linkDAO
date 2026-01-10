@@ -6,7 +6,27 @@ export enum NotificationCategory {
   REACTION = 'reaction',
   COMMENT = 'comment',
   FOLLOW = 'follow',
-  SYSTEM = 'system'
+  SYSTEM = 'system',
+  // Social interaction categories
+  UPVOTE = 'upvote',
+  DOWNVOTE = 'downvote',
+  REPOST = 'repost',
+  AWARD = 'award',
+  BOOKMARK = 'bookmark',
+  // Order/marketplace categories
+  ORDER_CREATED = 'order_created',
+  ORDER_CONFIRMED = 'order_confirmed',
+  ORDER_PROCESSING = 'order_processing',
+  ORDER_SHIPPED = 'order_shipped',
+  ORDER_DELIVERED = 'order_delivered',
+  ORDER_COMPLETED = 'order_completed',
+  ORDER_CANCELLED = 'order_cancelled',
+  ORDER_REFUNDED = 'order_refunded',
+  ORDER_DISPUTED = 'order_disputed',
+  PAYMENT_RECEIVED = 'payment_received',
+  DELIVERY_CONFIRMED = 'delivery_confirmed',
+  ESCROW_FUNDED = 'escrow_funded',
+  ESCROW_RELEASED = 'escrow_released'
 }
 
 export enum NotificationPriority {
@@ -104,12 +124,286 @@ export interface ReactionNotification extends BaseNotification {
   };
 }
 
-export type RealTimeNotification = 
-  | MentionNotification 
-  | TipNotification 
-  | GovernanceNotification 
-  | CommunityNotification 
-  | ReactionNotification 
+export interface UpvoteNotification extends BaseNotification {
+  category: NotificationCategory.UPVOTE;
+  metadata: {
+    postId: string;
+    postTitle?: string;
+    postPreview?: string;
+    voterAddress: string;
+    voterUsername: string;
+    voterAvatar?: string;
+    totalUpvotes: number;
+    isAggregated?: boolean;
+    aggregatedCount?: number;
+    aggregatedUsers?: Array<{ address: string; username: string; avatar?: string }>;
+  };
+}
+
+export interface DownvoteNotification extends BaseNotification {
+  category: NotificationCategory.DOWNVOTE;
+  metadata: {
+    postId: string;
+    postTitle?: string;
+    postPreview?: string;
+    voterAddress: string;
+    voterUsername: string;
+    voterAvatar?: string;
+    totalDownvotes: number;
+  };
+}
+
+export interface RepostNotification extends BaseNotification {
+  category: NotificationCategory.REPOST;
+  metadata: {
+    originalPostId: string;
+    repostId: string;
+    postTitle?: string;
+    postPreview?: string;
+    reposterAddress: string;
+    reposterUsername: string;
+    reposterAvatar?: string;
+    repostComment?: string;
+    totalReposts: number;
+  };
+}
+
+export interface AwardNotification extends BaseNotification {
+  category: NotificationCategory.AWARD;
+  metadata: {
+    postId: string;
+    postTitle?: string;
+    postPreview?: string;
+    awardType: 'silver' | 'gold' | 'platinum' | 'diamond' | string;
+    awardIcon?: string;
+    awardCost: number;
+    awardMessage?: string;
+    giverAddress: string;
+    giverUsername: string;
+    giverAvatar?: string;
+    totalAwards: number;
+  };
+}
+
+export interface BookmarkNotification extends BaseNotification {
+  category: NotificationCategory.BOOKMARK;
+  metadata: {
+    postId: string;
+    postTitle?: string;
+    postPreview?: string;
+    bookmarkerAddress: string;
+    bookmarkerUsername: string;
+    bookmarkerAvatar?: string;
+    totalBookmarks: number;
+  };
+}
+
+// Order/Marketplace notification interfaces
+export interface OrderCreatedNotification extends BaseNotification {
+  category: NotificationCategory.ORDER_CREATED;
+  metadata: {
+    orderId: string;
+    orderNumber: string;
+    productTitle: string;
+    productImage?: string;
+    amount: number;
+    currency: string;
+    buyerAddress: string;
+    buyerUsername?: string;
+    sellerAddress: string;
+    sellerUsername?: string;
+    recipientType: 'buyer' | 'seller';
+  };
+}
+
+export interface OrderConfirmedNotification extends BaseNotification {
+  category: NotificationCategory.ORDER_CONFIRMED;
+  metadata: {
+    orderId: string;
+    orderNumber: string;
+    productTitle: string;
+    productImage?: string;
+    sellerAddress: string;
+    sellerUsername?: string;
+    recipientType: 'buyer' | 'seller';
+  };
+}
+
+export interface OrderProcessingNotification extends BaseNotification {
+  category: NotificationCategory.ORDER_PROCESSING;
+  metadata: {
+    orderId: string;
+    orderNumber: string;
+    productTitle: string;
+    productImage?: string;
+    estimatedCompletion?: string;
+    recipientType: 'buyer' | 'seller';
+  };
+}
+
+export interface OrderShippedNotification extends BaseNotification {
+  category: NotificationCategory.ORDER_SHIPPED;
+  metadata: {
+    orderId: string;
+    orderNumber: string;
+    productTitle: string;
+    productImage?: string;
+    trackingNumber?: string;
+    trackingCarrier?: string;
+    trackingUrl?: string;
+    estimatedDelivery?: string;
+    recipientType: 'buyer' | 'seller';
+  };
+}
+
+export interface OrderDeliveredNotification extends BaseNotification {
+  category: NotificationCategory.ORDER_DELIVERED;
+  metadata: {
+    orderId: string;
+    orderNumber: string;
+    productTitle: string;
+    productImage?: string;
+    deliveredAt: string;
+    recipientType: 'buyer' | 'seller';
+  };
+}
+
+export interface OrderCompletedNotification extends BaseNotification {
+  category: NotificationCategory.ORDER_COMPLETED;
+  metadata: {
+    orderId: string;
+    orderNumber: string;
+    productTitle: string;
+    productImage?: string;
+    amount: number;
+    currency: string;
+    completedAt: string;
+    recipientType: 'buyer' | 'seller';
+  };
+}
+
+export interface OrderCancelledNotification extends BaseNotification {
+  category: NotificationCategory.ORDER_CANCELLED;
+  metadata: {
+    orderId: string;
+    orderNumber: string;
+    productTitle: string;
+    productImage?: string;
+    cancellationReason?: string;
+    cancelledBy: 'buyer' | 'seller' | 'system';
+    recipientType: 'buyer' | 'seller';
+  };
+}
+
+export interface OrderRefundedNotification extends BaseNotification {
+  category: NotificationCategory.ORDER_REFUNDED;
+  metadata: {
+    orderId: string;
+    orderNumber: string;
+    productTitle: string;
+    productImage?: string;
+    refundAmount: number;
+    currency: string;
+    refundReason?: string;
+    recipientType: 'buyer' | 'seller';
+  };
+}
+
+export interface OrderDisputedNotification extends BaseNotification {
+  category: NotificationCategory.ORDER_DISPUTED;
+  metadata: {
+    orderId: string;
+    orderNumber: string;
+    productTitle: string;
+    productImage?: string;
+    disputeId: string;
+    disputeReason: string;
+    openedBy: 'buyer' | 'seller';
+    recipientType: 'buyer' | 'seller';
+  };
+}
+
+export interface PaymentReceivedNotification extends BaseNotification {
+  category: NotificationCategory.PAYMENT_RECEIVED;
+  metadata: {
+    orderId: string;
+    orderNumber: string;
+    productTitle: string;
+    productImage?: string;
+    amount: number;
+    currency: string;
+    paymentMethod: 'crypto' | 'fiat' | 'escrow';
+    transactionHash?: string;
+    recipientType: 'buyer' | 'seller';
+  };
+}
+
+export interface DeliveryConfirmedNotification extends BaseNotification {
+  category: NotificationCategory.DELIVERY_CONFIRMED;
+  metadata: {
+    orderId: string;
+    orderNumber: string;
+    productTitle: string;
+    productImage?: string;
+    confirmedAt: string;
+    buyerAddress: string;
+    buyerUsername?: string;
+    recipientType: 'buyer' | 'seller';
+  };
+}
+
+export interface EscrowFundedNotification extends BaseNotification {
+  category: NotificationCategory.ESCROW_FUNDED;
+  metadata: {
+    orderId: string;
+    orderNumber: string;
+    productTitle: string;
+    escrowContractAddress: string;
+    amount: number;
+    currency: string;
+    recipientType: 'buyer' | 'seller';
+  };
+}
+
+export interface EscrowReleasedNotification extends BaseNotification {
+  category: NotificationCategory.ESCROW_RELEASED;
+  metadata: {
+    orderId: string;
+    orderNumber: string;
+    productTitle: string;
+    escrowContractAddress: string;
+    amount: number;
+    currency: string;
+    releasedTo: string;
+    transactionHash?: string;
+    recipientType: 'buyer' | 'seller';
+  };
+}
+
+export type RealTimeNotification =
+  | MentionNotification
+  | TipNotification
+  | GovernanceNotification
+  | CommunityNotification
+  | ReactionNotification
+  | UpvoteNotification
+  | DownvoteNotification
+  | RepostNotification
+  | AwardNotification
+  | BookmarkNotification
+  | OrderCreatedNotification
+  | OrderConfirmedNotification
+  | OrderProcessingNotification
+  | OrderShippedNotification
+  | OrderDeliveredNotification
+  | OrderCompletedNotification
+  | OrderCancelledNotification
+  | OrderRefundedNotification
+  | OrderDisputedNotification
+  | PaymentReceivedNotification
+  | DeliveryConfirmedNotification
+  | EscrowFundedNotification
+  | EscrowReleasedNotification
   | BaseNotification;
 
 export interface NotificationQueue {

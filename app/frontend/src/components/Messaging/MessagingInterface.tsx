@@ -110,6 +110,8 @@ interface MessagingInterfaceProps {
   conversationId?: string;
   participantAddress?: string;
   participantName?: string;
+  /** When true, hides the left sidebar (for use when parent component has its own sidebar) */
+  hideSidebar?: boolean;
 }
 
 const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
@@ -117,7 +119,8 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   onClose,
   conversationId,
   participantAddress,
-  participantName
+  participantName,
+  hideSidebar = false
 }) => {
   const { address, isConnected } = useAccount();
   const { isMobile, triggerHapticFeedback, touchTargetClasses } = useMobileOptimization();
@@ -798,7 +801,8 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
 
   return (
     <div className={`flex h-full bg-gray-900 rounded-lg overflow-hidden ${className}`}>
-      {/* Channels Sidebar - Hidden on mobile by default */}
+      {/* Channels Sidebar - Hidden on mobile by default or when hideSidebar is true */}
+      {!hideSidebar && (
       <div className={`w-60 border-r border-gray-700 flex flex-col bg-gray-800 ${isMobile ? 'hidden md:block' : ''}`}>
         {/* Header */}
         <div className="p-4 border-b border-gray-700">
@@ -971,6 +975,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
           ))}
         </div>
       </div>
+      )}
 
       {/* Cross-Chain Bridge Panel */}
       {showCrossChainBridge && (

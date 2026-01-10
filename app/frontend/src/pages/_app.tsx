@@ -17,6 +17,9 @@ import { ToastProvider } from '@/context/ToastContext';
 import { NavigationProvider } from '@/context/NavigationContext';
 import { SellerQueryProvider } from '@/providers/SellerQueryProvider';
 import { ContactProvider } from '@/contexts/ContactContext';
+import { ChatNotificationProvider } from '@/contexts/ChatNotificationContext';
+import { SocialNotificationProvider } from '@/contexts/SocialNotificationContext';
+import { OrderNotificationProvider } from '@/contexts/OrderNotificationContext';
 import { ENV_CONFIG } from '@/config/environment';
 import { contractRegistryService } from '@/services/contractRegistryService';
 
@@ -297,12 +300,18 @@ export default function App({ Component, pageProps, router }: AppProps) {
                       <ToastProvider>
                         <NavigationProvider>
                           <ContactProvider>
-                            <EnhancedThemeProvider defaultTheme="system">
-                              <AppContent>
-                                <Component {...pageProps} />
-                              </AppContent>
-                              <WalletLoginBridgeWithToast autoLogin={true} />
-                            </EnhancedThemeProvider>
+                            <ChatNotificationProvider>
+                              <SocialNotificationProvider>
+                                <OrderNotificationProvider>
+                                  <EnhancedThemeProvider defaultTheme="system">
+                                    <AppContent>
+                                      <Component {...pageProps} />
+                                    </AppContent>
+                                    <WalletLoginBridgeWithToast autoLogin={true} />
+                                  </EnhancedThemeProvider>
+                                </OrderNotificationProvider>
+                              </SocialNotificationProvider>
+                            </ChatNotificationProvider>
                           </ContactProvider>
                         </NavigationProvider>
                       </ToastProvider>
