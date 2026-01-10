@@ -137,7 +137,7 @@ const SocialConnectionsTab: React.FC<SocialConnectionsTabProps> = ({ onToast }) 
     }
   };
 
-  const platforms: SocialPlatform[] = ['twitter', 'facebook', 'linkedin'];
+  const platforms: SocialPlatform[] = ['twitter', 'facebook', 'linkedin', 'threads'];
 
   if (loading) {
     return (
@@ -158,7 +158,7 @@ const SocialConnectionsTab: React.FC<SocialConnectionsTabProps> = ({ onToast }) 
       </div>
 
       {/* Platform Cards */}
-      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {platforms.map((platform) => {
           const connection = isPlatformConnected(connections, platform);
           const config = PLATFORM_CONFIG[platform];

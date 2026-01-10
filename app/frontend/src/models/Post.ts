@@ -154,6 +154,7 @@ export interface CreatePostInput {
     twitter?: boolean;
     facebook?: boolean;
     linkedin?: boolean;
+    threads?: boolean;
   };
 }
 

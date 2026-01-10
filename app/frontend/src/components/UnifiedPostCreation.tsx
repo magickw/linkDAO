@@ -54,6 +54,7 @@ export default function UnifiedPostCreation({
   const [shareToTwitter, setShareToTwitter] = useState(false);
   const [shareToFacebook, setShareToFacebook] = useState(false);
   const [shareToLinkedIn, setShareToLinkedIn] = useState(false);
+  const [shareToThreads, setShareToThreads] = useState(false);
   
   // Draft management
   const [draftKey, setDraftKey] = useState('');
@@ -197,6 +198,7 @@ export default function UnifiedPostCreation({
           twitter: shareToTwitter,
           facebook: shareToFacebook,
           linkedin: shareToLinkedIn,
+          threads: shareToThreads,
         },
       };
       
@@ -234,6 +236,7 @@ export default function UnifiedPostCreation({
     setShareToTwitter(false);
     setShareToFacebook(false);
     setShareToLinkedIn(false);
+    setShareToThreads(false);
     clearDraft();
     
     if (onCancel) {
@@ -558,7 +561,7 @@ export default function UnifiedPostCreation({
             </svg>
             <span className="text-sm font-medium text-gray-900 dark:text-white">Share to Social Media</span>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <label className="flex items-center space-x-2 cursor-pointer p-2 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
               <input
                 type="checkbox"
@@ -593,6 +596,18 @@ export default function UnifiedPostCreation({
               <div className="flex items-center space-x-2">
                 <span className="text-lg">in</span>
                 <span className="text-sm text-gray-700 dark:text-gray-300">LinkedIn</span>
+              </div>
+            </label>
+            <label className="flex items-center space-x-2 cursor-pointer p-2 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+              <input
+                type="checkbox"
+                checked={shareToThreads}
+                onChange={(e) => setShareToThreads(e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <div className="flex items-center space-x-2">
+                <span className="text-lg">@</span>
+                <span className="text-sm text-gray-700 dark:text-gray-300">Threads</span>
               </div>
             </label>
           </div>

@@ -25,7 +25,7 @@ class SocialMediaOAuthController {
       }
 
       if (!platform || !isSupportedPlatform(platform)) {
-        res.status(400).json(apiResponse.error(`Unsupported platform: ${platform}. Supported: twitter, facebook, linkedin`, 400));
+        res.status(400).json(apiResponse.error(`Unsupported platform: ${platform}. Supported: twitter, facebook, linkedin, threads`, 400));
         return;
       }
 

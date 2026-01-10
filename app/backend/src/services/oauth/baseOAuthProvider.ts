@@ -34,7 +34,7 @@ export interface OAuthUserInfo {
 }
 
 // Supported platforms
-export type SocialPlatform = 'twitter' | 'facebook' | 'linkedin';
+export type SocialPlatform = 'twitter' | 'facebook' | 'linkedin' | 'threads';
 
 // Content to post to social media
 export interface SocialMediaContent {
@@ -56,6 +56,7 @@ export const PLATFORM_LIMITS: Record<SocialPlatform, { textLimit: number; mediaL
   twitter: { textLimit: 280, mediaLimit: 4 },
   facebook: { textLimit: 63206, mediaLimit: 10 },
   linkedin: { textLimit: 3000, mediaLimit: 9 },
+  threads: { textLimit: 500, mediaLimit: 10 },
 };
 
 /**
@@ -183,6 +184,9 @@ export function getOAuthProvider(platform: SocialPlatform): BaseOAuthProvider {
     case 'linkedin':
       const { LinkedInOAuthProvider } = require('./linkedinOAuthProvider');
       return new LinkedInOAuthProvider();
+    case 'threads':
+      const { ThreadsOAuthProvider } = require('./threadsOAuthProvider');
+      return new ThreadsOAuthProvider();
     default:
       throw new Error(`Unsupported platform: ${platform}`);
   }
@@ -192,5 +196,5 @@ export function getOAuthProvider(platform: SocialPlatform): BaseOAuthProvider {
  * Check if a platform is supported
  */
 export function isSupportedPlatform(platform: string): platform is SocialPlatform {
-  return ['twitter', 'facebook', 'linkedin'].includes(platform);
+  return ['twitter', 'facebook', 'linkedin', 'threads'].includes(platform);
 }

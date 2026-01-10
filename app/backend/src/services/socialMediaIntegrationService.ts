@@ -64,6 +64,7 @@ const PLATFORM_CHAR_LIMITS: Record<SocialPlatform, number> = {
   twitter: 280,
   facebook: 63206,
   linkedin: 3000,
+  threads: 500,
 };
 
 export class SocialMediaIntegrationService {

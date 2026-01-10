@@ -1,14 +1,14 @@
 /**
  * Social Media Connection Service
- * Handles OAuth connections to social media platforms (Twitter, Facebook, LinkedIn)
+ * Handles OAuth connections to social media platforms (Twitter, Facebook, LinkedIn, Threads)
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 
-  process.env.NEXT_PUBLIC_API_URL || 
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
   'http://localhost:10000';
 
 // Platform types
-export type SocialPlatform = 'twitter' | 'facebook' | 'linkedin';
+export type SocialPlatform = 'twitter' | 'facebook' | 'linkedin' | 'threads';
 
 // Connection status
 export type ConnectionStatus = 'active' | 'expired' | 'revoked' | 'error';
@@ -291,6 +291,14 @@ export const PLATFORM_CONFIG: Record<SocialPlatform, {
     color: '#0A66C2',
     description: 'Share professional updates to LinkedIn with up to 3,000 characters and 9 images',
     features: ['3,000 characters', '9 images', 'Professional network'],
+  },
+  threads: {
+    name: 'threads',
+    displayName: 'Threads',
+    icon: '@',
+    color: '#000000',
+    description: 'Share your statuses to Threads with up to 500 characters and 10 images',
+    features: ['500 characters', '10 images', 'Instagram integration'],
   },
 };
 
