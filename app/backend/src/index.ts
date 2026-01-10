@@ -1262,6 +1262,10 @@ app.use('/api/ipfs', ipfsRoutes);
 import newsletterRoutes from './routes/newsletterRoutes';
 app.use('/api/newsletter', newsletterRoutes);
 
+// Social Media OAuth routes for Twitter, Facebook, LinkedIn integration
+import socialMediaOAuthRoutes from './routes/socialMediaOAuthRoutes';
+app.use('/api/social-media', socialMediaOAuthRoutes);
+
 // Marketplace fallback endpoint is now handled by marketplaceListingsRoutes
 
 // Socket.io fallback route (WebSockets may be disabled on resource-constrained environments)

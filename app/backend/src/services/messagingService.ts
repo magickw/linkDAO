@@ -103,13 +103,15 @@ export class MessagingService {
     const offset = (page - 1) * limit;
 
     try {
-      this.validateAddress(userAddress);
+      // Normalize address to lowercase for consistent comparison
+      const normalizedAddress = userAddress.toLowerCase();
+      this.validateAddress(normalizedAddress);
 
       // MEMORY OPTIMIZATION: Perform cleanup periodically
       await this.performCleanup();
 
-      // MEMORY OPTIMIZATION: Check cache first
-      const cacheKey = `conversations:${userAddress}:${page}:${limit}:${options.search || ''}`;
+      // MEMORY OPTIMIZATION: Check cache first (use normalized address)
+      const cacheKey = `conversations:${normalizedAddress}:${page}:${limit}:${options.search || ''}`;
       const cached = await cacheService.get(cacheKey);
       if (cached) {
         return cached;
@@ -137,14 +139,14 @@ export class MessagingService {
                 'sender_address', m.sender_address,
                 'sent_at', m.timestamp
               )
-              FROM chat_messages m 
+              FROM chat_messages m
               WHERE m.conversation_id = ${conversations.id}
-              ORDER BY m.timestamp DESC 
+              ORDER BY m.timestamp DESC
               LIMIT 1)
             `
           })
           .from(conversations)
-          .where(sql`participants::jsonb ? ${userAddress}`)
+          .where(sql`participants::jsonb ? ${normalizedAddress}`)
           .orderBy(desc(conversations.lastActivity))
           .limit(actualLimit)
           .offset(offset);
@@ -179,22 +181,24 @@ export class MessagingService {
     const { initiatorAddress, participantAddress, initialMessage } = data;
 
     try {
-      this.validateAddress(initiatorAddress);
-      
+      // Normalize addresses to lowercase for consistent comparison
+      const normalizedInitiatorAddress = initiatorAddress.toLowerCase();
+      this.validateAddress(normalizedInitiatorAddress);
+
       // Check if participantAddress is an ENS name and resolve it to a wallet address
       let resolvedParticipantAddress = participantAddress;
       if (participantAddress && typeof participantAddress === 'string' && participantAddress.endsWith('.eth')) {
         // Import ENS service here to avoid circular dependencies
         const { ensService } = await import('./ensService');
         const validationResult = await ensService.validateENSHandle(participantAddress);
-        
+
         if (!validationResult.isValid || !validationResult.address) {
           return {
             success: false,
             message: `Invalid ENS name: ${participantAddress}. ${validationResult.error || 'ENS name could not be resolved.'}`
           };
         }
-        
+
         resolvedParticipantAddress = validationResult.address;
       } else {
         // Validate that the participant address is a valid Ethereum address
@@ -206,18 +210,20 @@ export class MessagingService {
         }
       }
 
-      // Validate the resolved participant address
-      this.validateAddress(resolvedParticipantAddress);
+      // Normalize resolved participant address to lowercase
+      const normalizedParticipantAddress = resolvedParticipantAddress.toLowerCase();
+
+      // Validate the normalized participant address
+      this.validateAddress(normalizedParticipantAddress);
 
       // Check if conversation already exists between these participants
+      // Use JSONB containment operator - requires participants column to be jsonb type
       const existingConversation = await db
         .select()
         .from(conversations)
         .where(
-          and(
-            sql`participants @> ${JSON.stringify([initiatorAddress])}::jsonb`,
-            sql`participants @> ${JSON.stringify([resolvedParticipantAddress])}::jsonb`
-          )
+          sql`participants @> ${JSON.stringify([normalizedInitiatorAddress])}::jsonb
+              AND participants @> ${JSON.stringify([normalizedParticipantAddress])}::jsonb`
         )
         .limit(1);
 
@@ -230,7 +236,7 @@ export class MessagingService {
       }
 
       // Check if user is blocked
-      const isBlocked = await this.checkIfBlocked(initiatorAddress, resolvedParticipantAddress);
+      const isBlocked = await this.checkIfBlocked(normalizedInitiatorAddress, normalizedParticipantAddress);
       if (isBlocked) {
         return {
           success: false,
@@ -238,8 +244,8 @@ export class MessagingService {
         };
       }
 
-      // Create new conversation
-      const participants = [initiatorAddress, resolvedParticipantAddress];
+      // Create new conversation with lowercase addresses
+      const participants = [normalizedInitiatorAddress, normalizedParticipantAddress];
 
       const newConversation = await db
         .insert(conversations)
@@ -254,7 +260,7 @@ export class MessagingService {
       if (initialMessage) {
         await this.sendMessage({
           conversationId: newConversation[0].id,
-          fromAddress: initiatorAddress,
+          fromAddress: normalizedInitiatorAddress,
           content: initialMessage,
           contentType: 'text',
           attachments: []

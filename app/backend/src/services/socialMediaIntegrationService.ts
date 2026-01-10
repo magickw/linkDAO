@@ -1,7 +1,10 @@
 import { databaseService } from './databaseService';
 import { safeLogger } from '../utils/safeLogger';
-import { posts, communities, users } from '../db/schema';
+import { posts, communities, users, socialMediaPosts, socialMediaConnections } from '../db/schema';
 import { eq, and, desc } from 'drizzle-orm';
+import { db } from '../db';
+import { socialMediaConnectionService } from './socialMediaConnectionService';
+import { getOAuthProvider, SocialPlatform, SocialMediaContent } from './oauth';
 
 export interface SocialMediaPost {
   id: string;
@@ -45,6 +48,24 @@ export interface SocialMediaAnalytics {
   };
 }
 
+// New interface for OAuth-based posting results
+export interface SocialPostResult {
+  statusId: string;
+  platform: SocialPlatform;
+  connectionId: string;
+  success: boolean;
+  externalPostId?: string;
+  externalPostUrl?: string;
+  error?: string;
+}
+
+// Platform character limits
+const PLATFORM_CHAR_LIMITS: Record<SocialPlatform, number> = {
+  twitter: 280,
+  facebook: 63206,
+  linkedin: 3000,
+};
+
 export class SocialMediaIntegrationService {
   private apiKeys: Map<string, string>;
   private webhookUrls: Map<string, string>;
@@ -64,6 +85,260 @@ export class SocialMediaIntegrationService {
     this.apiKeys.set('twitter', process.env.TWITTER_API_KEY || '');
     this.apiKeys.set('discord', process.env.DISCORD_WEBHOOK_URL || '');
     this.webhookUrls.set('telegram', process.env.TELEGRAM_BOT_TOKEN || '');
+  }
+
+  /**
+   * Post content to connected social media platforms via OAuth
+   * This is the main method for status synchronization
+   */
+  async postToConnectedPlatforms(
+    statusId: string,
+    userId: string,
+    platforms: SocialPlatform[],
+    content: string,
+    mediaUrls?: string[]
+  ): Promise<SocialPostResult[]> {
+    const results: SocialPostResult[] = [];
+
+    for (const platform of platforms) {
+      try {
+        // Get user's connection for this platform
+        const connection = await socialMediaConnectionService.getConnection(userId, platform);
+
+        if (!connection) {
+          results.push({
+            statusId,
+            platform,
+            connectionId: '',
+            success: false,
+            error: `No ${platform} connection found. Please connect your account first.`,
+          });
+          continue;
+        }
+
+        if (connection.status !== 'active') {
+          results.push({
+            statusId,
+            platform,
+            connectionId: connection.id,
+            success: false,
+            error: `${platform} connection is ${connection.status}. Please reconnect your account.`,
+          });
+          continue;
+        }
+
+        // Get access token (auto-refreshes if needed)
+        const accessToken = await socialMediaConnectionService.getAccessToken(userId, platform);
+
+        if (!accessToken) {
+          results.push({
+            statusId,
+            platform,
+            connectionId: connection.id,
+            success: false,
+            error: `Failed to get ${platform} access token. Please reconnect your account.`,
+          });
+          continue;
+        }
+
+        // Adapt content for platform
+        const adaptedContent = this.adaptContentForPlatform(content, platform);
+
+        // Get OAuth provider and post
+        const provider = getOAuthProvider(platform);
+        const socialContent: SocialMediaContent = {
+          text: adaptedContent,
+          mediaUrls: mediaUrls,
+        };
+
+        const postResult = await provider.postContent(accessToken, socialContent);
+
+        // Store post record in database
+        const postRecord = await db
+          .insert(socialMediaPosts)
+          .values({
+            statusId,
+            connectionId: connection.id,
+            platform,
+            contentSent: adaptedContent,
+            mediaSent: mediaUrls ? JSON.stringify(mediaUrls) : null,
+            externalPostId: postResult.externalPostId,
+            externalPostUrl: postResult.externalPostUrl,
+            postStatus: postResult.success ? 'posted' : 'failed',
+            errorMessage: postResult.error,
+            postedAt: postResult.success ? new Date() : null,
+          })
+          .returning();
+
+        // Update connection last used timestamp
+        await socialMediaConnectionService.updateLastUsed(connection.id);
+
+        results.push({
+          statusId,
+          platform,
+          connectionId: connection.id,
+          success: postResult.success,
+          externalPostId: postResult.externalPostId,
+          externalPostUrl: postResult.externalPostUrl,
+          error: postResult.error,
+        });
+
+        if (postResult.success) {
+          safeLogger.info(`Posted to ${platform}`, {
+            statusId,
+            externalPostId: postResult.externalPostId,
+          });
+        } else {
+          safeLogger.warn(`Failed to post to ${platform}`, {
+            statusId,
+            error: postResult.error,
+          });
+        }
+      } catch (error) {
+        safeLogger.error(`Error posting to ${platform}:`, error);
+        results.push({
+          statusId,
+          platform,
+          connectionId: '',
+          success: false,
+          error: error instanceof Error ? error.message : `Failed to post to ${platform}`,
+        });
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Adapt content for a specific platform's requirements
+   */
+  adaptContentForPlatform(content: string, platform: SocialPlatform): string {
+    const limit = PLATFORM_CHAR_LIMITS[platform];
+
+    // If content fits, return as-is
+    if (content.length <= limit) {
+      return content;
+    }
+
+    // Truncate with ellipsis, leaving room for "..."
+    return content.substring(0, limit - 3) + '...';
+  }
+
+  /**
+   * Get post history for a status across all platforms
+   */
+  async getPostHistory(statusId: string): Promise<Array<{
+    platform: SocialPlatform;
+    externalPostId?: string;
+    externalPostUrl?: string;
+    postStatus: string;
+    postedAt?: Date;
+    errorMessage?: string;
+  }>> {
+    const posts = await db
+      .select({
+        platform: socialMediaPosts.platform,
+        externalPostId: socialMediaPosts.externalPostId,
+        externalPostUrl: socialMediaPosts.externalPostUrl,
+        postStatus: socialMediaPosts.postStatus,
+        postedAt: socialMediaPosts.postedAt,
+        errorMessage: socialMediaPosts.errorMessage,
+      })
+      .from(socialMediaPosts)
+      .where(eq(socialMediaPosts.statusId, statusId))
+      .orderBy(desc(socialMediaPosts.createdAt));
+
+    return posts.map((post) => ({
+      ...post,
+      platform: post.platform as SocialPlatform,
+      postStatus: post.postStatus || 'pending',
+      externalPostId: post.externalPostId || undefined,
+      externalPostUrl: post.externalPostUrl || undefined,
+      postedAt: post.postedAt || undefined,
+      errorMessage: post.errorMessage || undefined,
+    }));
+  }
+
+  /**
+   * Retry a failed social media post
+   */
+  async retryPost(postRecordId: string, userId: string): Promise<SocialPostResult> {
+    // Get the post record
+    const postRecords = await db
+      .select()
+      .from(socialMediaPosts)
+      .where(eq(socialMediaPosts.id, postRecordId))
+      .limit(1);
+
+    if (postRecords.length === 0) {
+      throw new Error('Post record not found');
+    }
+
+    const record = postRecords[0];
+
+    // Check retry count
+    if ((record.retryCount || 0) >= 3) {
+      throw new Error('Maximum retry attempts reached');
+    }
+
+    // Get connection
+    const connections = await db
+      .select()
+      .from(socialMediaConnections)
+      .where(eq(socialMediaConnections.id, record.connectionId))
+      .limit(1);
+
+    if (connections.length === 0) {
+      throw new Error('Connection not found');
+    }
+
+    const connection = connections[0];
+
+    // Verify ownership
+    if (connection.userId !== userId) {
+      throw new Error('Unauthorized');
+    }
+
+    const platform = record.platform as SocialPlatform;
+
+    // Get access token
+    const accessToken = await socialMediaConnectionService.getAccessToken(userId, platform);
+
+    if (!accessToken) {
+      throw new Error('Failed to get access token');
+    }
+
+    // Retry posting
+    const provider = getOAuthProvider(platform);
+    const socialContent: SocialMediaContent = {
+      text: record.contentSent,
+      mediaUrls: record.mediaSent ? JSON.parse(record.mediaSent) : undefined,
+    };
+
+    const postResult = await provider.postContent(accessToken, socialContent);
+
+    // Update record
+    await db
+      .update(socialMediaPosts)
+      .set({
+        externalPostId: postResult.externalPostId,
+        externalPostUrl: postResult.externalPostUrl,
+        postStatus: postResult.success ? 'posted' : 'failed',
+        errorMessage: postResult.error,
+        retryCount: (record.retryCount || 0) + 1,
+        postedAt: postResult.success ? new Date() : null,
+      })
+      .where(eq(socialMediaPosts.id, postRecordId));
+
+    return {
+      statusId: record.statusId,
+      platform,
+      connectionId: record.connectionId,
+      success: postResult.success,
+      externalPostId: postResult.externalPostId,
+      externalPostUrl: postResult.externalPostUrl,
+      error: postResult.error,
+    };
   }
 
   /**

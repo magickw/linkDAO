@@ -763,7 +763,7 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
                     >
                       {pkg.popular && (
                         <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
-                          <span className="bg-yellow-500 text-white text-xs px-2 py-1 rounded-full">
+                          <span className="bg-yellow-500 text-white text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap">
                             Most Popular
                           </span>
                         </div>

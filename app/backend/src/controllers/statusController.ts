@@ -5,6 +5,8 @@ import { MetadataService } from '../services/metadataService';
 import { safeLogger } from '../utils/safeLogger';
 import { apiResponse } from '../utils/apiResponse';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
+import { socialMediaIntegrationService, SocialPostResult } from '../services/socialMediaIntegrationService';
+import { SocialPlatform, isSupportedPlatform } from '../services/oauth';
 
 export class StatusController {
   private statusService: StatusService;
@@ -22,7 +24,7 @@ export class StatusController {
     try {
       console.log('POST /api/statuses - Creating status');
 
-      const { content, authorId, parentId, isRepost, media, tags, onchainRef, isTokenGated, gatedContentPreview } = req.body;
+      const { content, authorId, parentId, isRepost, media, tags, onchainRef, isTokenGated, gatedContentPreview, shareToSocialMedia } = req.body;
       console.log('🔍 [DEBUG-CREATE] Status body:', JSON.stringify({ content, parentId, isRepost }));
 
       if ((!content || content.trim() === '') && !isRepost) {
@@ -67,7 +69,41 @@ export class StatusController {
 
       console.log('Status created:', status.id);
 
-      return res.status(201).json(apiResponse.success(status, 'Status created successfully'));
+      // Handle social media sharing if requested
+      let socialMediaResults: SocialPostResult[] = [];
+      if (shareToSocialMedia && typeof shareToSocialMedia === 'object') {
+        // Extract platforms that are set to true
+        const platformsToShare: SocialPlatform[] = [];
+
+        for (const [platform, shouldShare] of Object.entries(shareToSocialMedia)) {
+          if (shouldShare === true && isSupportedPlatform(platform)) {
+            platformsToShare.push(platform as SocialPlatform);
+          }
+        }
+
+        if (platformsToShare.length > 0) {
+          try {
+            // Post to connected platforms asynchronously (don't block response)
+            socialMediaResults = await socialMediaIntegrationService.postToConnectedPlatforms(
+              status.id,
+              authenticatedUser.id,
+              platformsToShare,
+              content,
+              media // Pass media URLs if available
+            );
+
+            console.log('Social media posting results:', socialMediaResults);
+          } catch (socialError) {
+            // Log error but don't fail the status creation
+            safeLogger.error('Error posting to social media:', socialError);
+          }
+        }
+      }
+
+      return res.status(201).json(apiResponse.success({
+        ...status,
+        socialMediaResults: socialMediaResults.length > 0 ? socialMediaResults : undefined,
+      }, 'Status created successfully'));
     } catch (error: any) {
       console.error('Error creating status:', error);
       return res.status(500).json(apiResponse.error(error.message || 'Failed to create status', 500));

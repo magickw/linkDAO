@@ -6358,6 +6358,87 @@ export const sellerTierHistory = pgTable("seller_tier_history", {
   createdAtIdx: index("idx_seller_tier_history_created_at").on(t.createdAt),
 }));
 
+// ============================================================================
+// Social Media Integration Tables
+// ============================================================================
+
+// Social Media Connections - Store OAuth tokens per user per platform
+export const socialMediaConnections = pgTable("social_media_connections", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  platform: varchar("platform", { length: 32 }).notNull(), // 'twitter' | 'facebook' | 'linkedin'
+
+  // Encrypted OAuth tokens (using encryptionService)
+  accessToken: text("access_token").notNull(), // Encrypted
+  refreshToken: text("refresh_token"), // Encrypted (nullable - not all platforms use it)
+  tokenExpiry: timestamp("token_expiry"),
+
+  // Platform-specific user info
+  platformUserId: varchar("platform_user_id", { length: 255 }).notNull(),
+  platformUsername: varchar("platform_username", { length: 255 }),
+  platformDisplayName: varchar("platform_display_name", { length: 255 }),
+  platformAvatarUrl: text("platform_avatar_url"),
+
+  // OAuth metadata
+  scopes: text("scopes"), // JSON array of granted scopes
+
+  // Status tracking
+  status: varchar("status", { length: 32 }).default("active"), // 'active' | 'expired' | 'revoked' | 'error'
+  lastError: text("last_error"),
+  lastUsedAt: timestamp("last_used_at"),
+  connectedAt: timestamp("connected_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  userPlatformIdx: index("idx_social_connections_user_platform").on(t.userId, t.platform),
+  userPlatformUnique: uniqueIndex("unique_user_platform").on(t.userId, t.platform),
+  statusIdx: index("idx_social_connections_status").on(t.status),
+}));
+
+// Social Media Posts - Track cross-posted content for analytics and retry logic
+export const socialMediaPosts = pgTable("social_media_posts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  statusId: uuid("status_id").notNull().references(() => statuses.id, { onDelete: "cascade" }),
+  connectionId: uuid("connection_id").notNull().references(() => socialMediaConnections.id, { onDelete: "cascade" }),
+  platform: varchar("platform", { length: 32 }).notNull(),
+
+  // External post reference
+  externalPostId: varchar("external_post_id", { length: 255 }),
+  externalPostUrl: text("external_post_url"),
+
+  // Content sent
+  contentSent: text("content_sent").notNull(),
+  mediaSent: text("media_sent"), // JSON array of media URLs/IDs
+
+  // Status
+  postStatus: varchar("post_status", { length: 32 }).default("pending"), // 'pending' | 'posted' | 'failed' | 'deleted'
+  errorMessage: text("error_message"),
+  retryCount: integer("retry_count").default(0),
+
+  // Timestamps
+  postedAt: timestamp("posted_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  statusIdx: index("idx_social_posts_status_id").on(t.statusId),
+  connectionIdx: index("idx_social_posts_connection_id").on(t.connectionId),
+  postStatusIdx: index("idx_social_posts_post_status").on(t.postStatus),
+}));
+
+// OAuth States - Temporary storage for OAuth state parameters (CSRF protection)
+export const oauthStates = pgTable("oauth_states", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  state: varchar("state", { length: 128 }).notNull().unique(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  platform: varchar("platform", { length: 32 }).notNull(),
+  codeVerifier: text("code_verifier"), // For PKCE (Twitter OAuth 2.0)
+  redirectUri: text("redirect_uri"),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  stateIdx: index("idx_oauth_states_state").on(t.state),
+  expiresIdx: index("idx_oauth_states_expires").on(t.expiresAt),
+  userIdx: index("idx_oauth_states_user").on(t.userId),
+}));
+
 
 // Verification Schema
 export * from "./verificationSchema";
