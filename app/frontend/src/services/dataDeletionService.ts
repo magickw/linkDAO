@@ -3,7 +3,7 @@
  * Frontend service for communicating with data deletion API
  */
 
-import { apiClient } from './api';
+import { API_BASE_URL } from '../config/api';
 
 export interface DataCategories {
   profile: boolean;
@@ -75,18 +75,36 @@ export interface DeletionStatus {
 }
 
 class DataDeletionService {
-  private baseUrl = '/api/data-deletion';
+  private baseUrl = `${API_BASE_URL}/data-deletion`;
+
+  private getHeaders(): HeadersInit {
+    const token = localStorage.getItem('auth_token');
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': token ? `Bearer ${token}` : '',
+    };
+  }
 
   /**
    * Get summary of user's stored data
    */
   async getUserDataSummary(): Promise<UserDataSummary> {
     try {
-      const response = await apiClient.get(`${this.baseUrl}/summary`);
-      return response.data?.data || response.data;
+      const response = await fetch(`${this.baseUrl}/summary`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to fetch user data summary');
+      }
+
+      const data = await response.json();
+      return data.data || data;
     } catch (error: any) {
       console.error('Error fetching user data summary:', error);
-      throw new Error(error.response?.data?.message || 'Failed to fetch user data summary');
+      throw new Error(error.message || 'Failed to fetch user data summary');
     }
   }
 
@@ -95,11 +113,21 @@ class DataDeletionService {
    */
   async getPolicy(): Promise<DeletionPolicy> {
     try {
-      const response = await apiClient.get(`${this.baseUrl}/policy`);
-      return response.data?.data || response.data;
+      const response = await fetch(`${this.baseUrl}/policy`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to fetch deletion policy');
+      }
+
+      const data = await response.json();
+      return data.data || data;
     } catch (error: any) {
       console.error('Error fetching deletion policy:', error);
-      throw new Error(error.response?.data?.message || 'Failed to fetch deletion policy');
+      throw new Error(error.message || 'Failed to fetch deletion policy');
     }
   }
 
@@ -108,11 +136,22 @@ class DataDeletionService {
    */
   async deleteData(categories: DataCategories): Promise<DeletionResult> {
     try {
-      const response = await apiClient.post(`${this.baseUrl}/delete`, { categories });
-      return response.data?.data || response.data;
+      const response = await fetch(`${this.baseUrl}/delete`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ categories }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to delete user data');
+      }
+
+      const data = await response.json();
+      return data.data || data;
     } catch (error: any) {
       console.error('Error deleting user data:', error);
-      throw new Error(error.response?.data?.message || 'Failed to delete user data');
+      throw new Error(error.message || 'Failed to delete user data');
     }
   }
 
@@ -121,13 +160,22 @@ class DataDeletionService {
    */
   async deleteAllData(): Promise<DeletionResult> {
     try {
-      const response = await apiClient.post(`${this.baseUrl}/delete-all`, {
-        confirmDelete: 'DELETE_ALL_MY_DATA'
+      const response = await fetch(`${this.baseUrl}/delete-all`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ confirmDelete: 'DELETE_ALL_MY_DATA' }),
       });
-      return response.data?.data || response.data;
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to delete all user data');
+      }
+
+      const data = await response.json();
+      return data.data || data;
     } catch (error: any) {
       console.error('Error deleting all user data:', error);
-      throw new Error(error.response?.data?.message || 'Failed to delete all user data');
+      throw new Error(error.message || 'Failed to delete all user data');
     }
   }
 
@@ -136,11 +184,21 @@ class DataDeletionService {
    */
   async getDeletionStatus(confirmationCode: string): Promise<DeletionStatus> {
     try {
-      const response = await apiClient.get(`${this.baseUrl}/status/${confirmationCode}`);
-      return response.data?.data || response.data;
+      const response = await fetch(`${this.baseUrl}/status/${confirmationCode}`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to check deletion status');
+      }
+
+      const data = await response.json();
+      return data.data || data;
     } catch (error: any) {
       console.error('Error checking deletion status:', error);
-      throw new Error(error.response?.data?.message || 'Failed to check deletion status');
+      throw new Error(error.message || 'Failed to check deletion status');
     }
   }
 }

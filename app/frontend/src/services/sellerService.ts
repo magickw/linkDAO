@@ -473,21 +473,39 @@ class SellerService {
   private transformBackendListing(listing: any): SellerListing {
     const enhanced = listing.enhancedData || {};
 
+    // Parse metadata if it's a string (backend stores as JSON)
+    const metadata = typeof listing.metadata === 'string'
+      ? JSON.parse(listing.metadata)
+      : (listing.metadata || {});
+
     // Title & Description resolution
     const title = enhanced.title || listing.title || listing.metadataURI || 'Untitled Listing';
     const description = enhanced.description || listing.description || '';
 
-    // Category resolution (Backend uses categoryId or mainCategory, or category object)
+    // Category resolution - Handle UUID, slug, or object
+    // Backend returns categoryId as UUID, but frontend needs slug for dropdown
     let category = 'other';
     if (typeof listing.category === 'object' && listing.category !== null) {
-      // If category is an object, use slug or name
+      // If category is an object with slug/name
       category = listing.category.slug || listing.category.name || 'other';
-    } else {
-      // If string or fallback
-      category = listing.category || listing.categoryId || listing.mainCategory || 'other';
+    } else if (listing.categorySlug) {
+      // If backend provides categorySlug directly
+      category = listing.categorySlug;
+    } else if (listing.category && typeof listing.category === 'string') {
+      // If category is already a slug string
+      category = listing.category;
+    } else if (listing.categoryId && typeof listing.categoryId === 'string') {
+      // If categoryId is a UUID, we'll need the categories list to resolve it
+      // For now, store it - the edit page will need to resolve it from the categories list
+      category = listing.categoryId;
+    } else if (listing.mainCategory) {
+      category = listing.mainCategory;
     }
-    // Ensure category is lowercase to match select options
-    category = category.toString().toLowerCase();
+    // Ensure category is lowercase to match select options (except for UUIDs)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(category)) {
+      category = category.toString().toLowerCase();
+    }
 
     // Price resolution (Backend uses priceAmount, priceCrypto or price)
     let price = 0;
@@ -513,22 +531,43 @@ class SellerService {
     // Quantity resolution
     const inventory = listing.inventory !== undefined ? listing.inventory : (listing.inventory ?? (listing.stock ?? 1));
 
+    // Extract specifications from metadata (where they're stored during creation)
+    const specifications = metadata.specifications || listing.specifications || enhanced.specifications || {
+      weight: { value: 0, unit: 'g' },
+      dimensions: { length: 0, width: 0, height: 0, unit: 'cm' }
+    };
+
+    // Extract condition from metadata (where it's stored during creation)
+    const condition = metadata.condition || enhanced.condition || listing.condition || 'new';
+
+    // Extract itemType from metadata (PHYSICAL, DIGITAL, NFT, SERVICE)
+    const itemType = metadata.itemType || enhanced.itemType || (backendShipping ? 'PHYSICAL' : 'DIGITAL');
+
+    // Extract other metadata fields
+    const escrowEnabled = metadata.escrowEnabled ?? enhanced.escrowEnabled ?? listing.escrowEnabled ?? true;
+    const listingType = metadata.listingType || listing.listingType || 'FIXED_PRICE';
+    const royalty = metadata.royalty || listing.royalty || 0;
+    const tokenAddress = metadata.tokenAddress || listing.tokenAddress || '';
+    const seoTitle = metadata.seoTitle || listing.seoTitle || '';
+    const seoDescription = metadata.seoDescription || listing.seoDescription || '';
+
     return {
       id: listing.id,
       title,
       description,
       category,
+      categoryId: listing.categoryId, // Keep UUID for reference
       subcategory: listing.subcategory || listing.subCategory,
       price,
       currency: listing.currency || listing.priceCurrency || 'ETH',
       inventory,
-      condition: enhanced.condition || listing.condition || 'new',
+      condition,
       images,
-      specifications: listing.specifications || {},
+      specifications,
       tags,
       status: listing.status === 'ACTIVE' ? 'active' : (listing.status?.toLowerCase() || 'active'),
-      saleType: listing.saleType || (listing.listingType === 'AUCTION' ? 'auction' : 'fixed'),
-      escrowEnabled: enhanced.escrowEnabled || listing.escrowEnabled || false,
+      saleType: listing.saleType || (listingType === 'AUCTION' ? 'auction' : 'fixed'),
+      escrowEnabled,
       shippingOptions,
       // For the edit form to have raw shipping data if needed
       shipping: backendShipping,
@@ -536,8 +575,16 @@ class SellerService {
       favorites: listing.favorites || enhanced.favorites || 0,
       questions: listing.questions || 0,
       createdAt: listing.createdAt || new Date().toISOString(),
-      updatedAt: listing.updatedAt || new Date().toISOString()
-    } as any; // Cast to any to allow extra fields like 'shipping'
+      updatedAt: listing.updatedAt || new Date().toISOString(),
+      // Additional fields from metadata for edit form
+      itemType,
+      listingType,
+      royalty,
+      tokenAddress,
+      seoTitle,
+      seoDescription,
+      metadata // Include raw metadata for any other fields
+    } as any; // Cast to any to allow extra fields
   }
 
   // Orders Management - Using Unified API Client

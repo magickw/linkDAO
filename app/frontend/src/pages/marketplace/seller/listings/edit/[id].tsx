@@ -293,18 +293,20 @@ const EditListingPage: React.FC = () => {
       try {
         setInitialLoading(true);
 
-        // Load categories from API
+        // Load categories from API - declare in outer scope so it's available for category resolution
+        let categoriesData: CategoryInfo[] = [];
         try {
-          const categoriesData = await marketplaceService.getCategories();
+          categoriesData = await marketplaceService.getCategories();
           setCategories(categoriesData);
         } catch (error) {
           console.error('Error loading categories:', error);
           // Fallback to default categories
-          setCategories(DEFAULT_CATEGORIES.map(cat => ({
+          categoriesData = DEFAULT_CATEGORIES.map(cat => ({
             id: cat.value,
             name: cat.label,
             slug: cat.value
-          })));
+          }));
+          setCategories(categoriesData);
         }
 
         // Fetch the listing data from the API
@@ -318,25 +320,51 @@ const EditListingPage: React.FC = () => {
           throw new Error('Listing not found');
         }
 
+        // Resolve category: The transform may return a UUID, we need to find the matching slug
+        let resolvedCategory = listing.category || '';
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+        // If the category is a UUID, look it up in the categories list
+        if (uuidRegex.test(resolvedCategory) && categoriesData.length > 0) {
+          const matchedCategory = categoriesData.find((cat: CategoryInfo) => cat.id === resolvedCategory);
+          if (matchedCategory) {
+            resolvedCategory = matchedCategory.slug || matchedCategory.id;
+          }
+        }
+        // Also check if we need to match by categoryId
+        if ((listing as any).categoryId && uuidRegex.test((listing as any).categoryId) && categoriesData.length > 0) {
+          const matchedCategory = categoriesData.find((cat: CategoryInfo) => cat.id === (listing as any).categoryId);
+          if (matchedCategory) {
+            resolvedCategory = matchedCategory.slug || matchedCategory.id;
+          }
+        }
+
+        console.log('Resolved category:', resolvedCategory, 'from listing.category:', listing.category, 'categoryId:', (listing as any).categoryId);
+
         // Transform listing data to form data
-        // Note: We now use the transformed data from SellerService
+        // Note: We now use the transformed data from SellerService which extracts data from metadata
         const transformedData: EnhancedFormData = {
           title: listing.title,
           description: listing.description,
-          category: listing.category || '',
+          category: resolvedCategory,
           tags: listing.tags || [],
           seoTitle: (listing as any).seoTitle || '',
           seoDescription: (listing as any).seoDescription || '',
-          itemType: (listing as any).shipping ? 'PHYSICAL' : 'DIGITAL',
+          // Use itemType from transformed data (extracted from metadata)
+          itemType: ((listing as any).itemType as 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE') ||
+                    ((listing as any).shipping ? 'PHYSICAL' : 'DIGITAL'),
+          // Use condition from transformed data (extracted from metadata)
           condition: listing.condition || 'new',
           price: listing.price.toString(),
           currency: (listing.currency as 'USDC' | 'USDT' | 'ETH' | 'USD') || 'USD',
-          listingType: (listing as any).saleType === 'auction' ? 'AUCTION' : 'FIXED_PRICE',
+          listingType: ((listing as any).listingType as 'FIXED_PRICE' | 'AUCTION') ||
+                       ((listing as any).saleType === 'auction' ? 'AUCTION' : 'FIXED_PRICE'),
           duration: 86400,
-          royalty: 0,
+          royalty: (listing as any).royalty || 0,
           inventory: (listing as any).inventory || listing.inventory || 1,
           unlimitedQuantity: ((listing as any).inventory || listing.inventory || 1) >= 999999,
           escrowEnabled: listing.escrowEnabled ?? true,
+          // Use specifications from transformed data (extracted from metadata)
           specifications: listing.specifications || {
             weight: { value: 0, unit: 'g' },
             dimensions: { length: 0, width: 0, height: 0, unit: 'cm' }
@@ -378,6 +406,15 @@ const EditListingPage: React.FC = () => {
           } : undefined),
           variants: (listing as any).variants || []
         };
+
+        console.log('Transformed form data:', {
+          category: transformedData.category,
+          condition: transformedData.condition,
+          itemType: transformedData.itemType,
+          specifications: transformedData.specifications,
+          inventory: transformedData.inventory
+        });
+
         setFormData(transformedData);
         setExistingImages(listing.images || []);
         // Set primary image index to 0 by default (first image)
