@@ -457,10 +457,3 @@ export default function Settings() {
     </Layout>
   );
 }
-            </div>
-          </div>
-        </div>
-      )}
-    </Layout>
-  );
-}
