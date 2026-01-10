@@ -526,8 +526,7 @@ export class SellerWorkflowService {
             });
 
             // Update main order status to PROCESSING if it was PAID
-            // Normalize status comparison to handle case differences
-            const normalizedStatus = (order.status || '').toUpperCase();
+            // Use the already-declared normalizedStatus variable
             if (normalizedStatus === OrderStatus.PAID) {
                 await this.orderService.updateOrderStatus(orderId, OrderStatus.PROCESSING, {
                     serviceScheduled: true,
@@ -681,8 +680,7 @@ export class SellerWorkflowService {
             });
 
             // Update main order status to PROCESSING if it was PAID
-            // Normalize status comparison to handle case differences
-            const normalizedStatus = (order.status || '').toUpperCase();
+            // Use the already-declared normalizedStatus variable
             if (normalizedStatus === OrderStatus.PAID) {
                 await this.orderService.updateOrderStatus(orderId, OrderStatus.PROCESSING, {
                     serviceStarted: true,
