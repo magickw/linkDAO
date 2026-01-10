@@ -13,9 +13,17 @@ const LINKEDIN_USERINFO_URL = 'https://api.linkedin.com/v2/userinfo';
 const LINKEDIN_SHARE_URL = 'https://api.linkedin.com/v2/ugcPosts';
 
 // Default scopes for LinkedIn
-// openid and profile are required for Sign In with LinkedIn
-// w_member_social is required for posting
-const DEFAULT_SCOPES = ['openid', 'profile', 'email', 'w_member_social'];
+// If you have "Sign In with LinkedIn using OpenID Connect" enabled, use: openid profile email w_member_social
+// If you only have basic LinkedIn OAuth, use: r_liteprofile r_emailaddress w_member_social
+// Configure via LINKEDIN_SCOPES env var (space-separated)
+const getLinkedInScopes = (): string[] => {
+  const envScopes = process.env.LINKEDIN_SCOPES;
+  if (envScopes) {
+    return envScopes.split(/[\s,]+/).filter(s => s.length > 0);
+  }
+  // Default to legacy scopes which work without OpenID Connect product
+  return ['r_liteprofile', 'r_emailaddress', 'w_member_social'];
+};
 
 export class LinkedInOAuthProvider extends BaseOAuthProvider {
   constructor() {
@@ -23,7 +31,7 @@ export class LinkedInOAuthProvider extends BaseOAuthProvider {
       clientId: process.env.LINKEDIN_CLIENT_ID || '',
       clientSecret: process.env.LINKEDIN_CLIENT_SECRET || '',
       callbackUrl: process.env.LINKEDIN_CALLBACK_URL || 'http://localhost:3001/api/social-media/callback/linkedin',
-      scopes: DEFAULT_SCOPES,
+      scopes: getLinkedInScopes(),
       authorizationUrl: LINKEDIN_AUTH_URL,
       tokenUrl: LINKEDIN_TOKEN_URL,
     };
@@ -129,32 +137,102 @@ export class LinkedInOAuthProvider extends BaseOAuthProvider {
   }
 
   /**
-   * Get user information from LinkedIn using OpenID Connect userinfo endpoint
+   * Get user information from LinkedIn
+   * Supports both OpenID Connect (userinfo) and legacy (r_liteprofile) endpoints
    */
   async getUserInfo(accessToken: string): Promise<OAuthUserInfo> {
     try {
+      // Try OpenID Connect userinfo endpoint first
       const response = await fetch(LINKEDIN_USERINFO_URL, {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
         },
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        safeLogger.error('LinkedIn user info fetch failed:', { status: response.status, error: errorText });
-        throw new Error(`Failed to get user info: ${response.status}`);
+      if (response.ok) {
+        const data = await response.json();
+        return {
+          platformUserId: data.sub, // LinkedIn user URN
+          displayName: data.name,
+          email: data.email,
+          avatarUrl: data.picture,
+        };
       }
 
-      const data = await response.json();
+      // Fall back to legacy API endpoints if OpenID Connect fails
+      safeLogger.info('OpenID userinfo failed, trying legacy LinkedIn API');
+      return await this.getUserInfoLegacy(accessToken);
+    } catch (error) {
+      safeLogger.error('LinkedIn user info error, trying legacy API:', error);
+      // Try legacy API as fallback
+      return await this.getUserInfoLegacy(accessToken);
+    }
+  }
+
+  /**
+   * Get user information using legacy LinkedIn API (r_liteprofile, r_emailaddress scopes)
+   */
+  private async getUserInfoLegacy(accessToken: string): Promise<OAuthUserInfo> {
+    try {
+      // Get basic profile info
+      const profileResponse = await fetch(
+        'https://api.linkedin.com/v2/me?projection=(id,localizedFirstName,localizedLastName,profilePicture(displayImage~:playableStreams))',
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (!profileResponse.ok) {
+        const errorText = await profileResponse.text();
+        safeLogger.error('LinkedIn legacy profile fetch failed:', { status: profileResponse.status, error: errorText });
+        throw new Error(`Failed to get user profile: ${profileResponse.status}`);
+      }
+
+      const profileData = await profileResponse.json();
+
+      // Get email (separate API call for legacy)
+      let email: string | undefined;
+      try {
+        const emailResponse = await fetch(
+          'https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))',
+          {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+            },
+          }
+        );
+
+        if (emailResponse.ok) {
+          const emailData = await emailResponse.json();
+          email = emailData.elements?.[0]?.['handle~']?.emailAddress;
+        }
+      } catch (emailError) {
+        safeLogger.warn('Failed to fetch LinkedIn email:', emailError);
+      }
+
+      // Extract profile picture URL from the complex LinkedIn structure
+      let avatarUrl: string | undefined;
+      const profilePicture = profileData.profilePicture?.['displayImage~']?.elements;
+      if (profilePicture && profilePicture.length > 0) {
+        // Get the largest image
+        const largestImage = profilePicture[profilePicture.length - 1];
+        avatarUrl = largestImage?.identifiers?.[0]?.identifier;
+      }
+
+      const displayName = [profileData.localizedFirstName, profileData.localizedLastName]
+        .filter(Boolean)
+        .join(' ') || 'LinkedIn User';
 
       return {
-        platformUserId: data.sub, // LinkedIn user URN
-        displayName: data.name,
-        email: data.email,
-        avatarUrl: data.picture,
+        platformUserId: profileData.id,
+        displayName,
+        email,
+        avatarUrl,
       };
     } catch (error) {
-      safeLogger.error('LinkedIn user info error:', error);
+      safeLogger.error('LinkedIn legacy user info error:', error);
       throw error;
     }
   }

@@ -83,7 +83,7 @@ const parseProductFromChain = (productData: any): Product => ({
   description: productData.metadata?.description || '',
   price: formatEther(productData.price.toString()),
   image: productData.metadata?.image || '/placeholder-product.png',
-  inventory: productData.quantity.toNumber(),
+  inventory: productData.inventory?.toNumber?.() ?? productData.inventory ?? 0,
   status: productData.status === 0 ? 'draft' : 'active',
   category: productData.metadata?.category || 'Uncategorized',
   createdAt: new Date(productData.createdAt.toNumber() * 1000).toISOString(),
