@@ -108,7 +108,21 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
           rules: Array.isArray(data.rules) ? data.rules : [],
           moderators: Array.isArray(data.moderators) ? data.moderators : [],
           createdAt: data.createdAt || new Date(),
-          onlineMemberCount: typeof data.onlineMemberCount === 'number' ? data.onlineMemberCount : 0
+          onlineMemberCount: typeof data.onlineMemberCount === 'number' ? data.onlineMemberCount : 0,
+          // Ensure isPublic has a default value (default to true if not specified)
+          isPublic: typeof data.isPublic === 'boolean' ? data.isPublic : true,
+          // Ensure settings has proper structure with defaults
+          settings: data.settings ? {
+            allowedPostTypes: Array.isArray(data.settings.allowedPostTypes) ? data.settings.allowedPostTypes : [],
+            requireApproval: typeof data.settings.requireApproval === 'boolean' ? data.settings.requireApproval : false,
+            minimumReputation: typeof data.settings.minimumReputation === 'number' ? data.settings.minimumReputation : 0,
+            stakingRequirements: Array.isArray(data.settings.stakingRequirements) ? data.settings.stakingRequirements : []
+          } : {
+            allowedPostTypes: [],
+            requireApproval: false,
+            minimumReputation: 0,
+            stakingRequirements: []
+          }
         };
 
         setCommunityData(processedCommunityData);

@@ -405,6 +405,47 @@ router.post('/api/messaging/conversations/:conversationId/messages', csrfProtect
         edited_at: created.editedAt ? String(created.editedAt) : null,
         deleted_at: created.deletedAt ? String(created.deletedAt) : null,
       });
+
+      // Broadcast message to WebSocket clients
+      try {
+        const { getWebSocketService } = require('../services/webSocketService');
+        const wsService = getWebSocketService();
+        if (wsService) {
+          // We need participants to broadcast to
+          try {
+            // We can query DB for participants if we don't have them easily handy,
+            // or try to grab from in-memory if we believe it's synced. 
+            // DB is safer.
+            const dbConv = await db.select({ participants: conversations.participants }).from(conversations).where(eq(conversations.id, conversationId)).limit(1);
+            const participants = dbConv.length > 0 ? dbConv[0].participants : [];
+
+            const broadcastMsg = {
+              id: String(created.id),
+              conversationId: String(created.conversationId ?? conversationId),
+              fromAddress: String(created.senderAddress ?? ''),
+              content: String(created.content ?? ''),
+              timestamp: (created.sentAt instanceof Date ? created.sentAt.toISOString() : String(created.sentAt)),
+              contentType: 'text',
+              deliveryStatus: 'sent'
+            };
+
+            // 1. Send to conversation room
+            wsService.sendToConversation(conversationId, 'new_message', broadcastMsg);
+
+            // 2. Send to individual participants
+            if (participants && Array.isArray(participants) && participants.length > 0) {
+              (participants as string[]).forEach((p: string) => {
+                wsService.sendToUser(p, 'new_message', broadcastMsg);
+              });
+            }
+          } catch (e) {
+            safeLogger.error('[compatibilityChat] Error fetching participants for DB WS broadcast', e);
+          }
+        }
+      } catch (wsError) {
+        safeLogger.error('[compatibilityChat] Error broadcasting WebSocket message (DB path)', wsError);
+      }
+
       return res.status(201).json(created);
     } catch (err) {
       safeLogger.error('[compatibilityChat] DB error creating message', err);
@@ -440,6 +481,46 @@ router.post('/api/messaging/conversations/:conversationId/messages', csrfProtect
   conv.last_message = content;
   conv.last_activity = msg.timestamp;
   conv.unread_count = (conv.unread_count || 0) + 1;
+
+  // Broadcast message to WebSocket clients
+  try {
+    const { getWebSocketService } = require('../services/webSocketService');
+    const wsService = getWebSocketService();
+    if (wsService) {
+      // Get conversation participants from DB or in-memory
+      let participants = conv ? conv.participants : [];
+
+      // If we used DB (above), we might not have 'conv' populated correctly depending on flow
+      // but 'participants' should be available from context or DB query
+
+      if (hasDb && (!participants || participants.length === 0)) {
+        try {
+          const dbConv = await db.select({ participants: conversations.participants }).from(conversations).where(eq(conversations.id, conversationId)).limit(1);
+          if (dbConv.length > 0) {
+            participants = dbConv[0].participants;
+          }
+        } catch (e) {
+          safeLogger.error('[compatibilityChat] Error fetching participants for WS broadcast', e);
+        }
+      }
+
+      // 1. Send to conversation room (for active viewers)
+      wsService.sendToConversation(conversationId, 'new_message', msg);
+
+      // 2. Send to individual participants (for notifications/list updates)
+      if (participants && participants.length > 0) {
+        participants.forEach((p: string) => {
+          // Don't send notification to sender (optional, but good practice to still send update)
+          // wsService.sendToUser(p, 'new_message', msg);
+
+          // Use sendMessageUpdate helper if available or manual send
+          wsService.sendToUser(p, 'new_message', msg);
+        });
+      }
+    }
+  } catch (wsError) {
+    safeLogger.error('[compatibilityChat] Error broadcasting WebSocket message', wsError);
+  }
 
   res.status(201).json(msg);
 });
@@ -522,7 +603,38 @@ router.post('/api/chat/messages', csrfProtection, authMiddleware, async (req: Re
   conv.last_activity = msg.timestamp;
   conv.unread_count = (conv.unread_count || 0) + 1;
 
-  res.status(201).json({ message: msg });
+  // Broadcast
+  try {
+    const { getWebSocketService } = require('../services/webSocketService');
+    const wsService = getWebSocketService();
+    if (wsService) {
+      const participants = (conv ? conv.participants : []) as string[];
+      // 1. Send to conversation room
+      // Map to frontend format
+      const broadcastMsg = {
+        id: msg.id,
+        conversationId: msg.conversation_id,
+        fromAddress: msg.sender_address,
+        content: msg.content,
+        timestamp: msg.timestamp,
+        contentType: 'text',
+        deliveryStatus: 'sent'
+      };
+
+      wsService.sendToConversation(conversation_id, 'new_message', broadcastMsg);
+
+      // 2. Send to individual participants
+      if (participants && participants.length > 0) {
+        participants.forEach((p: string) => {
+          wsService.sendToUser(p, 'new_message', broadcastMsg);
+        });
+      }
+    }
+  } catch (wsError) {
+    safeLogger.error('[compatibilityChat] Error broadcasting WebSocket message (legacy endpoint)', wsError);
+  }
+
+  return res.status(201).json({ message: msg });
 });
 
 // Mark messages as read for a conversation (matches frontend expectation)

@@ -43,19 +43,25 @@ export default function CommunitySettingsModal({
         category: community.category || '',
         slug: community.slug || '',
         tags: Array.isArray(community.tags) ? [...community.tags] : [],
-        isPublic: community.isPublic ?? true,
+        isPublic: typeof community.isPublic === 'boolean' ? community.isPublic : true,
         rules: Array.isArray(community.rules) ? [...community.rules] : [],
         avatar: community.avatar || '',
         banner: community.banner || '',
         treasuryAddress: community.treasuryAddress || '',
         governanceToken: community.governanceToken || '',
-        settings: community.settings ? {
-          ...community.settings,
-          allowedPostTypes: Array.isArray(community.settings.allowedPostTypes)
+        settings: {
+          allowedPostTypes: community.settings?.allowedPostTypes
             ? [...community.settings.allowedPostTypes]
+            : [],
+          requireApproval: typeof community.settings?.requireApproval === 'boolean'
+            ? community.settings.requireApproval
+            : false,
+          minimumReputation: typeof community.settings?.minimumReputation === 'number'
+            ? community.settings.minimumReputation
+            : 0,
+          stakingRequirements: community.settings?.stakingRequirements
+            ? [...community.settings.stakingRequirements]
             : []
-        } : {
-          allowedPostTypes: []
         }
       });
     }
@@ -144,6 +150,17 @@ export default function CommunitySettingsModal({
     }
   };
 
+  // Helper function to generate slug from name
+  const generateSlug = (name: string): string => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-') // Replace multiple hyphens with single
+      .replace(/^-|-$/g, '') // Remove leading/trailing hyphens
+      .substring(0, 64); // Limit to 64 characters
+  };
+
   const handleSubmit = async () => {
     if (!canModerate) {
       addToast('You do not have permission to modify this community', 'error');
@@ -152,7 +169,28 @@ export default function CommunitySettingsModal({
 
     try {
       setLoading(true);
-      const updatedCommunity = await CommunityService.updateCommunity(community.id, formData);
+
+      // Prepare update data - auto-generate slug if empty
+      const updateData = { ...formData };
+
+      // If slug is empty, generate from displayName or name
+      if (!updateData.slug || updateData.slug.trim() === '') {
+        const baseName = updateData.displayName || community.displayName || community.name;
+        if (baseName) {
+          updateData.slug = generateSlug(baseName);
+          // Update local form state too
+          setFormData(prev => ({ ...prev, slug: updateData.slug }));
+        }
+      }
+
+      // Validate slug before sending
+      if (updateData.slug && updateData.slug.length < 3) {
+        addToast('URL slug must be at least 3 characters', 'error');
+        setLoading(false);
+        return;
+      }
+
+      const updatedCommunity = await CommunityService.updateCommunity(community.id, updateData);
       addToast('Community settings updated successfully!', 'success');
       onUpdate(updatedCommunity);
       onClose();

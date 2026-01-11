@@ -535,7 +535,12 @@ export class CommunityService {
         creatorAddress: community.creatorAddress, // Add creatorAddress
         treasuryAddress: PLATFORM_TREASURY_ADDRESS, // Use platform-wide address
         governanceToken: PLATFORM_GOVERNANCE_TOKEN, // Use platform-wide token
-        settings: this.safeJsonParse(community.settings, null),
+        settings: this.safeJsonParse(community.settings, {
+          allowedPostTypes: [],
+          requireApproval: false,
+          minimumReputation: 0,
+          stakingRequirements: []
+        }),
         createdAt: community.createdAt,
         updatedAt: community.updatedAt,
         // User-specific data
@@ -676,7 +681,12 @@ export class CommunityService {
         creatorAddress: community.creatorAddress, // Add creatorAddress
         treasuryAddress: PLATFORM_TREASURY_ADDRESS, // Use platform-wide address
         governanceToken: PLATFORM_GOVERNANCE_TOKEN, // Use platform-wide token
-        settings: this.safeJsonParse(community.settings, null),
+        settings: this.safeJsonParse(community.settings, {
+          allowedPostTypes: [],
+          requireApproval: false,
+          minimumReputation: 0,
+          stakingRequirements: []
+        }),
         createdAt: community.createdAt,
         updatedAt: community.updatedAt,
         // User-specific data
@@ -906,7 +916,8 @@ export class CommunityService {
           throw new Error('This slug is already taken by another community');
         }
       }
-      // Check if user has permission to update (must be admin or moderator)
+      // Check if user has permission to update
+      // First check communityMembers table for admin/moderator role
       const membershipResult = await db
         .select({ role: communityMembers.role })
         .from(communityMembers)
@@ -923,18 +934,50 @@ export class CommunityService {
         )
         .limit(1);
 
-      if (membershipResult.length === 0) {
+      let hasPermission = membershipResult.length > 0;
+
+      // If not in communityMembers, also check if user is creator or in moderators array
+      if (!hasPermission) {
+        const communityData = await db
+          .select({
+            creatorAddress: communities.creatorAddress,
+            moderators: communities.moderators
+          })
+          .from(communities)
+          .where(eq(communities.id, communityId))
+          .limit(1);
+
+        if (communityData.length > 0) {
+          const community = communityData[0];
+          // Check if user is the creator
+          if (community.creatorAddress?.toLowerCase() === normalizedUserAddress) {
+            hasPermission = true;
+          }
+          // Check if user is in moderators array
+          if (!hasPermission && community.moderators) {
+            const moderatorsList = this.safeJsonParse(community.moderators, []);
+            if (Array.isArray(moderatorsList)) {
+              hasPermission = moderatorsList.some(
+                (mod: string) => mod.toLowerCase() === normalizedUserAddress
+              );
+            }
+          }
+        }
+      }
+
+      if (!hasPermission) {
         throw new Error('Only community admins or moderators can update community settings');
       }
 
       // Prepare update data
       const updateFields: any = {};
 
-      if (sanitizedUpdateData.displayName !== undefined) {
+      if (sanitizedUpdateData.displayName !== undefined && sanitizedUpdateData.displayName !== '') {
         updateFields.displayName = sanitizedUpdateData.displayName;
       }
 
-      if (sanitizedUpdateData.slug !== undefined) {
+      // Only update slug if it's a valid non-empty string (validation already done above)
+      if (sanitizedUpdateData.slug !== undefined && sanitizedUpdateData.slug !== '') {
         updateFields.slug = sanitizedUpdateData.slug;
       }
 
@@ -942,7 +985,7 @@ export class CommunityService {
         updateFields.description = sanitizedUpdateData.description;
       }
 
-      if (sanitizedUpdateData.category !== undefined) {
+      if (sanitizedUpdateData.category !== undefined && sanitizedUpdateData.category !== '') {
         updateFields.category = sanitizedUpdateData.category;
       }
 
@@ -950,11 +993,13 @@ export class CommunityService {
         updateFields.tags = JSON.stringify(sanitizedUpdateData.tags);
       }
 
-      if (sanitizedUpdateData.avatar !== undefined) {
+      // Only update avatar if it has a value (prevent accidental clearing)
+      if (sanitizedUpdateData.avatar !== undefined && sanitizedUpdateData.avatar !== '') {
         updateFields.avatar = sanitizedUpdateData.avatar;
       }
 
-      if (sanitizedUpdateData.banner !== undefined) {
+      // Only update banner if it has a value (prevent accidental clearing)
+      if (sanitizedUpdateData.banner !== undefined && sanitizedUpdateData.banner !== '') {
         updateFields.banner = sanitizedUpdateData.banner;
       }
 
@@ -1003,6 +1048,7 @@ export class CommunityService {
       return {
         id: community.id,
         name: community.name,
+        slug: community.slug,
         displayName: community.displayName,
         description: community.description || '',
         category: community.category,
@@ -1013,7 +1059,14 @@ export class CommunityService {
         postCount: community.postCount,
         isPublic: community.isPublic,
         rules: this.safeJsonParse(community.rules, []),
-        settings: this.safeJsonParse(community.settings, {}),
+        moderators: this.safeJsonParse(community.moderators, []),
+        creatorAddress: community.creatorAddress,
+        settings: this.safeJsonParse(community.settings, {
+          allowedPostTypes: [],
+          requireApproval: false,
+          minimumReputation: 0,
+          stakingRequirements: []
+        }),
         createdAt: community.createdAt,
         updatedAt: community.updatedAt,
         treasuryAddress: PLATFORM_TREASURY_ADDRESS, // Return platform address

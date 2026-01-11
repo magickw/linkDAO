@@ -210,7 +210,7 @@ export class RedisService {
       await this.client.connect();
       safeLogger.info('Successfully connected to Redis');
     } catch (error) {
-      safeLogger.error('Failed to connect to Redis:', {
+      safeLogger.error('Failed to connect to Redis (graceful degradation enabled):', {
         error: {
           name: error.name,
           message: error.message,
@@ -223,7 +223,8 @@ export class RedisService {
         redisUrl: (process.env.REDIS_URL || 'redis://localhost:6379').replace(/\/\/[^:]+:[^@]+@/, '//***:***@')
       });
       this.useRedis = false; // Disable Redis on connection failure
-      throw error;
+      // Do NOT throw - gracefully degrade instead of failing requests
+      // The caller should check useRedis/isConnected before proceeding
     }
   }
 
