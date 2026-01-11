@@ -47,8 +47,8 @@ const ProductPage: React.FC = () => {
               console.warn('Failed to fetch review stats:', reviewError);
             }
             
-            // Get inventory - handle both `inventory` and `quantity` fields
-            const rawInventory = productData.inventory ?? productData.quantity ?? 0;
+            // Get inventory from the inventory field
+            const rawInventory = productData.inventory ?? 0;
             const inventory = typeof rawInventory === 'string' ? parseInt(rawInventory, 10) : Number(rawInventory);
 
             // Transform the product data to match the ProductDetailPage component interface

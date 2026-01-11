@@ -635,10 +635,10 @@ export default function ChatPage() {
   if (authLoading) {
     return (
       <Layout title="Chat - LinkDAO" fullWidth={true} hideFooter={true}>
-        <div className="h-[calc(100vh-80px)] bg-gray-900 flex items-center justify-center">
+        <div className="h-[calc(100vh-80px)] bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
           <div className="flex flex-col items-center gap-4">
             <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-            <p className="text-gray-400">Loading chat...</p>
+            <p className="text-gray-500 dark:text-gray-400">Loading chat...</p>
           </div>
         </div>
       </Layout>
@@ -649,13 +649,13 @@ export default function ChatPage() {
   if (!isConnected || !address) {
     return (
       <Layout title="Chat - LinkDAO" fullWidth={true} hideFooter={true}>
-        <div className="h-[calc(100vh-80px)] bg-gray-900 flex items-center justify-center">
-          <div className="max-w-md w-full mx-4 bg-gray-800 rounded-2xl shadow-xl p-8 text-center border border-gray-700">
-            <div className="w-16 h-16 bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Wallet className="h-8 w-8 text-blue-400" />
+        <div className="h-[calc(100vh-80px)] bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+          <div className="max-w-md w-full mx-4 bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center border border-gray-200 dark:border-gray-700">
+            <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Wallet className="h-8 w-8 text-blue-600 dark:text-blue-400" />
             </div>
-            <h1 className="text-2xl font-bold text-white mb-3">Connect Your Wallet</h1>
-            <p className="text-gray-400 mb-6">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Connect Your Wallet</h1>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">
               Connect your wallet to access LinkDAO Chat and start messaging with the community.
             </p>
             <button
@@ -675,13 +675,13 @@ export default function ChatPage() {
   if (!isAuthenticated) {
     return (
       <Layout title="Chat - LinkDAO" fullWidth={true} hideFooter={true}>
-        <div className="h-[calc(100vh-80px)] bg-gray-900 flex items-center justify-center">
-          <div className="max-w-md w-full mx-4 bg-gray-800 rounded-2xl shadow-xl p-8 text-center border border-gray-700">
-            <div className="w-16 h-16 bg-yellow-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-              <MessageCircle className="h-8 w-8 text-yellow-400" />
+        <div className="h-[calc(100vh-80px)] bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+          <div className="max-w-md w-full mx-4 bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center border border-gray-200 dark:border-gray-700">
+            <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+              <MessageCircle className="h-8 w-8 text-yellow-600 dark:text-yellow-400" />
             </div>
-            <h1 className="text-2xl font-bold text-white mb-3">Authentication Required</h1>
-            <p className="text-gray-400 mb-6">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Authentication Required</h1>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">
               Please authenticate your wallet to access the chat.
             </p>
             <button
@@ -698,23 +698,23 @@ export default function ChatPage() {
 
   return (
     <Layout title={pageTitle} fullWidth={true} hideFooter={true}>
-      <div className="h-[calc(100vh-80px)] bg-gray-900 flex">
+      <div className="h-[calc(100vh-80px)] bg-gray-50 dark:bg-gray-900 flex">
         {/* Left Sidebar - Channels/Conversations */}
-        <div className="w-64 bg-gray-800 border-r border-gray-700 flex flex-col">
+        <div className="w-64 bg-gray-100 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
           {/* Header */}
-          <div className="p-4 border-b border-gray-700">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-3">
-              <h1 className="text-lg font-bold text-white flex items-center gap-2">
-                <MessageCircle className="h-5 w-5 text-blue-400" />
+              <h1 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <MessageCircle className="h-5 w-5 text-blue-500 dark:text-blue-400" />
                 LinkDAO Chat
               </h1>
               <div className="flex items-center gap-1">
                 {connectionState.status === 'connected' ? (
-                  <Wifi size={14} className="text-green-400" title="Connected" />
+                  <Wifi size={14} className="text-green-500 dark:text-green-400" title="Connected" />
                 ) : connectionState.status === 'connecting' || connectionState.status === 'reconnecting' ? (
-                  <Loader2 size={14} className="text-yellow-400 animate-spin" title="Connecting..." />
+                  <Loader2 size={14} className="text-yellow-500 dark:text-yellow-400 animate-spin" title="Connecting..." />
                 ) : (
-                  <WifiOff size={14} className="text-red-400" title="Disconnected" />
+                  <WifiOff size={14} className="text-red-500 dark:text-red-400" title="Disconnected" />
                 )}
               </div>
             </div>
@@ -726,19 +726,19 @@ export default function ChatPage() {
                 placeholder={sidebarTab === 'messages' ? "Search conversations..." : "Search contacts..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-gray-700 text-white rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-300 dark:border-transparent"
               />
-              <Search className="absolute right-3 top-2.5 w-4 h-4 text-gray-400" />
+              <Search className="absolute right-3 top-2.5 w-4 h-4 text-gray-500 dark:text-gray-400" />
             </div>
 
             {/* Tab Switcher */}
-            <div className="flex mt-3 bg-gray-700 rounded-lg p-1">
+            <div className="flex mt-3 bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
               <button
                 onClick={() => setSidebarTab('messages')}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-md transition-colors ${
                   sidebarTab === 'messages'
-                    ? 'bg-gray-600 text-white'
-                    : 'text-gray-400 hover:text-white'
+                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                 }`}
               >
                 <MessageCircle className="w-3.5 h-3.5" />
@@ -748,8 +748,8 @@ export default function ChatPage() {
                 onClick={() => setSidebarTab('contacts')}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-md transition-colors ${
                   sidebarTab === 'contacts'
-                    ? 'bg-gray-600 text-white'
-                    : 'text-gray-400 hover:text-white'
+                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                 }`}
               >
                 <BookUser className="w-3.5 h-3.5" />
@@ -766,7 +766,7 @@ export default function ChatPage() {
                 {channelCategories.map((category) => (
               <div key={category.id} className="py-2">
                 {/* Category Header */}
-                <div className="group w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-300">
+                <div className="group w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-300">
                   <button
                     onClick={() => toggleCategory(category.id)}
                     className="flex items-center gap-1"
@@ -787,7 +787,7 @@ export default function ChatPage() {
                         handleOpenCreateChannel(category.id as 'public' | 'private' | 'gated');
                       }
                     }}
-                    className="p-1 rounded hover:bg-gray-700 hover:text-white transition-colors"
+                    className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors"
                     title={category.id === 'direct' ? 'New conversation' : `Create ${category.id} channel`}
                   >
                     <Plus className="w-3.5 h-3.5" />
@@ -801,17 +801,17 @@ export default function ChatPage() {
                       <>
                         {conversationsLoading ? (
                           <div className="flex items-center justify-center py-4">
-                            <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                            <Loader2 className="w-4 h-4 animate-spin text-gray-500 dark:text-gray-400" />
                           </div>
                         ) : conversationsError ? (
-                          <div className="px-3 py-2 text-xs text-red-400">
+                          <div className="px-3 py-2 text-xs text-red-500 dark:text-red-400">
                             {conversationsError}
-                            <button onClick={loadConversations} className="ml-2 text-blue-400 hover:underline">
+                            <button onClick={loadConversations} className="ml-2 text-blue-500 dark:text-blue-400 hover:underline">
                               Retry
                             </button>
                           </div>
                         ) : sortedConversations.length === 0 ? (
-                          <div className="px-3 py-2 text-xs text-gray-500">
+                          <div className="px-3 py-2 text-xs text-gray-500 dark:text-gray-500">
                             No conversations yet
                           </div>
                         ) : (
@@ -830,12 +830,12 @@ export default function ChatPage() {
                                 onClick={() => handleConversationSelect(conversation)}
                                 className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md mx-1 transition-colors ${
                                   isSelected
-                                    ? 'bg-gray-700 text-white'
-                                    : 'text-gray-300 hover:bg-gray-700/50 hover:text-white'
+                                    ? 'bg-blue-100 dark:bg-gray-700 text-gray-900 dark:text-white'
+                                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'
                                 }`}
                               >
                                 <div className="relative flex-shrink-0">
-                                  <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center overflow-hidden">
+                                  <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center overflow-hidden">
                                     {avatarUrl ? (
                                       <img
                                         src={avatarUrl}
@@ -882,17 +882,17 @@ export default function ChatPage() {
                       </>
                     )}
                     {category.id === 'public' && (
-                      <div className="px-3 py-2 text-xs text-gray-500">
+                      <div className="px-3 py-2 text-xs text-gray-500 dark:text-gray-500">
                         No public channels yet
                       </div>
                     )}
                     {category.id === 'private' && (
-                      <div className="px-3 py-2 text-xs text-gray-500">
+                      <div className="px-3 py-2 text-xs text-gray-500 dark:text-gray-500">
                         No private channels yet
                       </div>
                     )}
                     {category.id === 'gated' && (
-                      <div className="px-3 py-2 text-xs text-gray-500">
+                      <div className="px-3 py-2 text-xs text-gray-500 dark:text-gray-500">
                         No gated channels yet
                       </div>
                     )}
@@ -905,12 +905,12 @@ export default function ChatPage() {
               /* Contacts View */
               <div className="p-2">
                 <div className="flex items-center justify-between px-2 mb-3">
-                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                  <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Your Contacts
                   </span>
                   <button
                     onClick={() => setShowAddContactModal(true)}
-                    className="p-1 hover:bg-gray-700 rounded text-gray-400 hover:text-white"
+                    className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                     title="Add Contact"
                   >
                     <UserPlus className="w-4 h-4" />
@@ -927,9 +927,9 @@ export default function ChatPage() {
           </div>
 
           {/* User Profile / Settings */}
-          <div className="p-3 border-t border-gray-700 bg-gray-800/50">
+          <div className="p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800/50">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center overflow-hidden">
+              <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center overflow-hidden">
                 {currentUserProfile?.avatarCid ? (
                   <img
                     src={`https://ipfs.io/ipfs/${currentUserProfile.avatarCid}`}
@@ -948,20 +948,20 @@ export default function ChatPage() {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-white truncate">
+                <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
                   {currentUserProfile?.displayName || currentUserProfile?.handle || truncateAddress(address)}
                 </div>
-                <div className="text-xs text-green-400">Online</div>
+                <div className="text-xs text-green-600 dark:text-green-400">Online</div>
               </div>
-              <button className="p-1.5 hover:bg-gray-700 rounded">
-                <Settings className="w-4 h-4 text-gray-400" />
+              <button className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded">
+                <Settings className="w-4 h-4 text-gray-500 dark:text-gray-400" />
               </button>
             </div>
           </div>
         </div>
 
         {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col bg-gray-900">
+        <div className="flex-1 flex flex-col bg-white dark:bg-gray-900">
           {selectedConversation ? (
             <MessagingInterface
               className="h-full"
@@ -974,11 +974,11 @@ export default function ChatPage() {
           ) : (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
-                <MessageCircle className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                <h2 className="text-xl font-semibold text-gray-400 mb-2">
+                <MessageCircle className="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+                <h2 className="text-xl font-semibold text-gray-600 dark:text-gray-400 mb-2">
                   Welcome to LinkDAO Chat
                 </h2>
-                <p className="text-gray-500 mb-6 max-w-md">
+                <p className="text-gray-500 dark:text-gray-500 mb-6 max-w-md">
                   Select a conversation from the sidebar or start a new one to begin messaging.
                 </p>
                 <button
@@ -995,11 +995,11 @@ export default function ChatPage() {
 
         {/* Right Sidebar - Members/Info (optional, toggle with state) */}
         {showRightSidebar && selectedConversation && (
-          <div className="w-60 bg-gray-800 border-l border-gray-700 flex flex-col">
-            <div className="p-4 border-b border-gray-700">
+          <div className="w-60 bg-gray-50 dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-white">Members</h3>
-                <Settings className="w-4 h-4 text-gray-400 cursor-pointer hover:text-white" />
+                <h3 className="font-semibold text-gray-900 dark:text-white">Members</h3>
+                <Settings className="w-4 h-4 text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-900 dark:hover:text-white" />
               </div>
             </div>
             <div className="flex-1 overflow-y-auto p-3">
@@ -1009,9 +1009,9 @@ export default function ChatPage() {
                   const participantDisplayName = participant === address ? truncateAddress(participant) : getDisplayName(participant);
 
                   return (
-                  <div key={participant} className="flex items-center gap-2 p-2 rounded hover:bg-gray-700/50">
+                  <div key={participant} className="flex items-center gap-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700/50">
                     <div className="relative">
-                      <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center overflow-hidden">
+                      <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center overflow-hidden">
                         {participantAvatarUrl ? (
                           <img
                             src={participantAvatarUrl}
@@ -1035,9 +1035,9 @@ export default function ChatPage() {
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm text-white truncate">
+                      <div className="text-sm text-gray-900 dark:text-white truncate">
                         {participantDisplayName}
-                        {participant === address && <span className="text-xs text-gray-500 ml-1">(you)</span>}
+                        {participant === address && <span className="text-xs text-gray-500 dark:text-gray-500 ml-1">(you)</span>}
                       </div>
                     </div>
                   </div>
@@ -1047,16 +1047,16 @@ export default function ChatPage() {
             </div>
 
             {/* Additional sections */}
-            <div className="border-t border-gray-700">
-              <button className="w-full p-3 text-left text-sm text-gray-400 hover:text-white hover:bg-gray-700/50 flex items-center justify-between">
+            <div className="border-t border-gray-200 dark:border-gray-700">
+              <button className="w-full p-3 text-left text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50 flex items-center justify-between">
                 <span>Pinned Messages</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
-              <button className="w-full p-3 text-left text-sm text-gray-400 hover:text-white hover:bg-gray-700/50 flex items-center justify-between">
+              <button className="w-full p-3 text-left text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50 flex items-center justify-between">
                 <span>Files</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
-              <button className="w-full p-3 text-left text-sm text-gray-400 hover:text-white hover:bg-gray-700/50 flex items-center justify-between">
+              <button className="w-full p-3 text-left text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50 flex items-center justify-between">
                 <span>Active Polls</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -1080,14 +1080,14 @@ export default function ChatPage() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4 border border-gray-700 shadow-2xl"
+              className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4 border border-gray-200 dark:border-gray-700 shadow-2xl"
             >
-              <h3 className="text-xl font-semibold text-white mb-4">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
                 Start New Conversation
               </h3>
 
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Recipient Wallet Address or ENS
                 </label>
                 <input
@@ -1095,14 +1095,14 @@ export default function ChatPage() {
                   value={newRecipientAddress}
                   onChange={(e) => setNewRecipientAddress(e.target.value)}
                   placeholder="0x... or name.eth"
-                  className="w-full px-4 py-3 border border-gray-600 rounded-lg bg-gray-700 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowNewConversationModal(false)}
-                  className="flex-1 px-4 py-3 text-gray-300 border border-gray-600 rounded-lg hover:bg-gray-700 transition-colors"
+                  className="flex-1 px-4 py-3 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                 >
                   Cancel
                 </button>
@@ -1158,15 +1158,15 @@ export default function ChatPage() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4 border border-gray-700 shadow-2xl"
+              className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4 border border-gray-200 dark:border-gray-700 shadow-2xl"
             >
-              <h3 className="text-xl font-semibold text-white mb-4">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
                 Create {newChannelType.charAt(0).toUpperCase() + newChannelType.slice(1)} Channel
               </h3>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Channel Name
                   </label>
                   <input
@@ -1174,12 +1174,12 @@ export default function ChatPage() {
                     value={newChannelName}
                     onChange={(e) => setNewChannelName(e.target.value)}
                     placeholder="e.g., general, announcements"
-                    className="w-full px-4 py-3 border border-gray-600 rounded-lg bg-gray-700 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Description (optional)
                   </label>
                   <textarea
@@ -1187,13 +1187,13 @@ export default function ChatPage() {
                     onChange={(e) => setNewChannelDescription(e.target.value)}
                     placeholder="What's this channel about?"
                     rows={3}
-                    className="w-full px-4 py-3 border border-gray-600 rounded-lg bg-gray-700 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                   />
                 </div>
 
                 {newChannelType === 'gated' && (
-                  <div className="p-3 bg-purple-900/30 border border-purple-700 rounded-lg">
-                    <p className="text-sm text-purple-300">
+                  <div className="p-3 bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-700 rounded-lg">
+                    <p className="text-sm text-purple-700 dark:text-purple-300">
                       <Lock className="w-4 h-4 inline mr-1" />
                       Gated channels require token ownership or specific criteria to join.
                     </p>
@@ -1201,8 +1201,8 @@ export default function ChatPage() {
                 )}
 
                 {newChannelType === 'private' && (
-                  <div className="p-3 bg-gray-700/50 border border-gray-600 rounded-lg">
-                    <p className="text-sm text-gray-300">
+                  <div className="p-3 bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg">
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
                       <Lock className="w-4 h-4 inline mr-1" />
                       Private channels are invite-only.
                     </p>
@@ -1213,7 +1213,7 @@ export default function ChatPage() {
               <div className="flex gap-3 mt-6">
                 <button
                   onClick={() => setShowCreateChannelModal(false)}
-                  className="flex-1 px-4 py-3 text-gray-300 border border-gray-600 rounded-lg hover:bg-gray-700 transition-colors"
+                  className="flex-1 px-4 py-3 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                 >
                   Cancel
                 </button>

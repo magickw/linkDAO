@@ -509,7 +509,7 @@ export class UnifiedMarketplaceService {
           categoryId: listing.categoryId || listing.category?.id || '',
           images: imageUrls,
           metadata: listing.metadata || {},
-          inventory: listing.inventory ?? listing.inventory ?? 0,
+          inventory: listing.inventory ?? 0,
           status: listing.status || 'active',
           tags: Array.isArray(listing.tags) ? listing.tags : [],
           shipping: listing.shipping,

@@ -46,7 +46,7 @@ const getMockSuggestions = (query: string): SearchSuggestion[] => {
     'compound yield token',
     'aave liquidity pool',
     'curve stablecoin pool',
-    'yearn vault shares',
+    'yearn vault tokens',
     'lido staked eth',
     'governance token',
     'high apy defi',

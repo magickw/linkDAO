@@ -58,7 +58,7 @@ export function transformDisplayListingToUnified(
       displayCurrency: formatCurrency(displayListing.currency),
 
       // Inventory and availability
-      inventory: displayListing.inventory ?? displayListing.quantity ?? 1,
+      inventory: displayListing.inventory ?? 1,
       condition: displayListing.condition || 'new',
       availability: displayListing.isActive === false ? 'out_of_stock' : 'available',
 
@@ -207,8 +207,8 @@ export function transformSellerListingToUnified(
       }
     }
 
-    // Get inventory from either quantity or inventory field
-    const inventory = backendListing.inventory ?? backendListing.quantity ?? 0;
+    // Get inventory from the inventory field
+    const inventory = backendListing.inventory ?? 0;
 
     // Get category from either category or categoryId
     const category = backendListing.category || backendListing.categoryId || '';
@@ -379,7 +379,7 @@ export function transformMarketplaceListingToUnified(
       displayCurrency: formatCurrency(marketplaceListing.currency),
 
       // Inventory and availability
-      inventory: marketplaceListing.inventory ?? marketplaceListing.quantity ?? 1,
+      inventory: marketplaceListing.inventory ?? 1,
       condition: 'new', // Default
       availability: marketplaceListing.isActive ? 'available' : 'out_of_stock',
 
@@ -1287,7 +1287,7 @@ export function transformBackendListingToUnified(
       displayCurrency: backendListing.currency || 'USD',
 
       // Inventory and availability
-      inventory: backendListing.inventory ?? backendListing.quantity ?? 0,
+      inventory: backendListing.inventory ?? 0,
       condition: condition as 'new' | 'used' | 'refurbished',
       availability: availability,
 

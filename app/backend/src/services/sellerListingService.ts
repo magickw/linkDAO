@@ -2,6 +2,7 @@ import { db } from '../db';
 import { sellers, products, users, categories } from '../db/schema';
 import { eq, and, desc, asc, or } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
+import { cacheService } from './cacheService';
 
 /**
  * Listing Query Options
@@ -677,6 +678,15 @@ class SellerListingService {
       .set(updateData)
       .where(eq(products.id, listingId))
       .returning();
+
+    // Invalidate public listing cache to ensure fresh data is served
+    try {
+      await cacheService.invalidate(`listing:${listingId}`);
+      safeLogger.info(`Cache invalidated for listing:${listingId} after update`);
+    } catch (cacheError) {
+      safeLogger.warn(`Failed to invalidate cache for listing:${listingId}:`, cacheError);
+      // Continue without throwing - cache invalidation failure shouldn't block the update
+    }
 
     // Get seller address
     const userResult = await db.select().from(users).where(eq(users.id, updated.sellerId));

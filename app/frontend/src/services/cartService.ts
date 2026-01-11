@@ -1093,7 +1093,7 @@ class CartService {
         category: product.category?.name || product.category || item.category || 'general',
         isDigital: product.isDigital || item.isDigital || false,
         isNFT: product.isNFT || item.isNFT || false,
-        inventory: parseInt(String(product.inventory || product.quantity || item.inventory || 0), 10),
+        inventory: parseInt(String(product.inventory || item.inventory || 0), 10),
         quantity: parseInt(String(item.quantity || 1), 10),
         shipping: {
           cost: product.shipping?.cost || '0',

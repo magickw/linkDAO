@@ -107,7 +107,7 @@ function calculateTrendingScore(post: EnhancedPost, config: TrendingAlgorithmCon
   const postTime = new Date(post.createdAt).getTime();
   const hoursOld = (now - postTime) / (1000 * 60 * 60);
 
-  // Engagement score (reactions, tips, comments, shares)
+  // Engagement score (reactions, tips, comments, reposts)
   const engagementScore = (
     post.reactions.reduce((sum, r) => sum + r.totalAmount, 0) * 2 +
     post.tips.reduce((sum, t) => sum + t.amount, 0) * 3 +

@@ -48,11 +48,12 @@ class ENSService {
   private initializeProvider() {
     try {
       // Use public provider for ENS resolution
+      // Always use mainnet (chainId 1) for ENS resolution
       this.provider = new ethers.JsonRpcProvider(
         process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL || 'https://cloudflare-eth.com',
-        undefined, // Let ethers determine the network
+        1, // Mainnet for ENS resolution
         {
-          staticNetwork: true
+          staticNetwork: true // Prevent network detection issues
         }
       );
     } catch (error) {

@@ -35,7 +35,12 @@ interface ChatNotificationContextType {
 const ChatNotificationContext = createContext<ChatNotificationContextType | undefined>(undefined);
 
 // WebSocket connection states
-type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
+type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'failed';
+
+// Reconnection configuration
+const MAX_RECONNECT_ATTEMPTS = 5;
+const INITIAL_RECONNECT_DELAY = 1000;
+const MAX_RECONNECT_DELAY = 30000;
 
 export const ChatNotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { address, isConnected } = useAccount();
@@ -44,6 +49,7 @@ export const ChatNotificationProvider: React.FC<{ children: React.ReactNode }> =
   const [notifications, setNotifications] = useState<ChatNotification[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectAttemptsRef = useRef<number>(0);
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
 
   // Calculate unread count
@@ -134,6 +140,12 @@ export const ChatNotificationProvider: React.FC<{ children: React.ReactNode }> =
       return;
     }
 
+    // Check if we've exceeded max reconnection attempts
+    if (connectionState === 'failed') {
+      console.warn('[ChatNotifications] Max reconnection attempts reached, not retrying');
+      return;
+    }
+
     setConnectionState('connecting');
 
     const wsUrl = process.env.NEXT_PUBLIC_WS_URL ||
@@ -142,7 +154,7 @@ export const ChatNotificationProvider: React.FC<{ children: React.ReactNode }> =
                     : '');
 
     if (!wsUrl) {
-      console.warn('WebSocket URL not configured for chat notifications');
+      console.warn('[ChatNotifications] WebSocket URL not configured');
       return;
     }
 
@@ -152,6 +164,7 @@ export const ChatNotificationProvider: React.FC<{ children: React.ReactNode }> =
       ws.onopen = () => {
         console.log('[ChatNotifications] WebSocket connected');
         setConnectionState('connected');
+        reconnectAttemptsRef.current = 0; // Reset attempts on successful connection
 
         // Subscribe to notification events
         ws.send(JSON.stringify({
@@ -228,18 +241,30 @@ export const ChatNotificationProvider: React.FC<{ children: React.ReactNode }> =
         setConnectionState('disconnected');
         wsRef.current = null;
 
-        // Attempt to reconnect after a delay (with exponential backoff)
-        if (isConnected && isAuthenticated) {
-          const delay = Math.min(30000, 1000 * Math.pow(2, Math.random() * 3));
+        // Attempt to reconnect with exponential backoff (up to max attempts)
+        if (isConnected && isAuthenticated && reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
+          reconnectAttemptsRef.current++;
+          const delay = Math.min(
+            INITIAL_RECONNECT_DELAY * Math.pow(2, reconnectAttemptsRef.current - 1),
+            MAX_RECONNECT_DELAY
+          );
+          console.log(`[ChatNotifications] Reconnecting (attempt ${reconnectAttemptsRef.current}/${MAX_RECONNECT_ATTEMPTS}) in ${delay}ms`);
+
           reconnectTimeoutRef.current = setTimeout(() => {
             setConnectionState('reconnecting');
             connectWebSocket();
           }, delay);
+        } else if (reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
+          console.error('[ChatNotifications] Max reconnection attempts reached, giving up');
+          setConnectionState('failed');
         }
       };
 
       ws.onerror = (error) => {
-        console.error('[ChatNotifications] WebSocket error:', error);
+        // Only log once, not spam the console
+        if (reconnectAttemptsRef.current === 0) {
+          console.warn('[ChatNotifications] WebSocket connection error');
+        }
       };
 
       wsRef.current = ws;
@@ -247,7 +272,7 @@ export const ChatNotificationProvider: React.FC<{ children: React.ReactNode }> =
       console.error('[ChatNotifications] Failed to create WebSocket:', error);
       setConnectionState('disconnected');
     }
-  }, [address, isAuthenticated, isConnected, addNotification, router]);
+  }, [address, isAuthenticated, isConnected, addNotification, router, connectionState]);
 
   // Disconnect WebSocket
   const disconnectWebSocket = useCallback(() => {
@@ -261,6 +286,7 @@ export const ChatNotificationProvider: React.FC<{ children: React.ReactNode }> =
       wsRef.current = null;
     }
 
+    reconnectAttemptsRef.current = 0; // Reset attempts on manual disconnect
     setConnectionState('disconnected');
   }, []);
 

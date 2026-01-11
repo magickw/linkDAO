@@ -128,8 +128,8 @@ const ProductDetailPageRoute: React.FC = () => {
               return url;
             });
 
-            // Get inventory - handle both `inventory` and `quantity` fields
-            const rawInventory = productData.inventory ?? productData.quantity ?? 0;
+            // Get inventory from the inventory field
+            const rawInventory = productData.inventory ?? 0;
             const inventory = typeof rawInventory === 'string' ? parseInt(rawInventory, 10) : Number(rawInventory);
 
             // Determine category name - use category object from API or create a readable name

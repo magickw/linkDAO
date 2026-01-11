@@ -4,10 +4,12 @@ import { ethers } from 'ethers'
 import { getChainRpcUrl } from '@/lib/wagmi'
 import { hasInjectedProvider, getInjectedProvider } from '@/utils/walletConnector'
 
-/**
- * Wrap an EIP-1193 provider to avoid "Cannot assign to read only property" errors.
- * This happens when extensions like LastPass freeze request objects.
- */
+// Provider creation state to prevent infinite retries
+let providerCreationAttempts = 0;
+const MAX_PROVIDER_CREATION_ATTEMPTS = 3;
+let lastProviderError: Error | null = null;
+let cachedProvider: ethers.Provider | null = null;
+
 /**
  * Wrap an EIP-1193 provider to avoid "Cannot assign to read only property" errors.
  * This happens when extensions like LastPass freeze request objects.
@@ -45,6 +47,19 @@ export function wrapProvider(provider: any): any {
  * Get the public client for read operations
  */
 export async function getProvider() {
+  // Return cached provider if available
+  if (cachedProvider) {
+    return cachedProvider;
+  }
+
+  // Check if we've exceeded max creation attempts
+  if (providerCreationAttempts >= MAX_PROVIDER_CREATION_ATTEMPTS) {
+    console.warn('Max provider creation attempts reached, returning null');
+    return null;
+  }
+
+  providerCreationAttempts++;
+
   try {
     console.log('Getting provider...');
     const client = getPublicClient(config);
@@ -65,11 +80,16 @@ export async function getProvider() {
             console.warn('Network detection failed, using default configuration');
           });
           console.log('Created BrowserProvider');
+          cachedProvider = provider;
+          providerCreationAttempts = 0; // Reset on success
           return provider;
         } catch (e) {
           console.warn('Failed to initialize BrowserProvider with network detection:', e);
           // Create provider without network detection as fallback
-          return new ethers.BrowserProvider(injectedProvider as any);
+          const fallbackProvider = new ethers.BrowserProvider(injectedProvider as any);
+          cachedProvider = fallbackProvider;
+          providerCreationAttempts = 0;
+          return fallbackProvider;
         }
       }
     }
@@ -85,6 +105,8 @@ export async function getProvider() {
             console.warn('Network detection failed for injected provider, using default configuration');
           });
           console.log('Created BrowserProvider from direct injected provider');
+          cachedProvider = provider;
+          providerCreationAttempts = 0;
           return provider;
         } catch (e) {
           console.warn('Failed to create provider from injected provider:', e);
@@ -100,11 +122,14 @@ export async function getProvider() {
 
     if (envRpc) {
       try {
-        const chainId = envChainId ? parseInt(envChainId, 10) : undefined;
+        const chainId = envChainId ? parseInt(envChainId, 10) : 1;
         console.log('Creating JsonRpcProvider with RPC:', envRpc, 'Chain ID:', chainId);
-        return new ethers.JsonRpcProvider(envRpc, chainId, {
+        const provider = new ethers.JsonRpcProvider(envRpc, chainId, {
           staticNetwork: true  // Prevent network detection issues
         });
+        cachedProvider = provider;
+        providerCreationAttempts = 0;
+        return provider;
       } catch (e) {
         console.warn('Invalid NEXT_PUBLIC_RPC_URL or NEXT_PUBLIC_RPC_CHAIN_ID, falling back to configured chain RPC', e);
       }
@@ -126,30 +151,31 @@ export async function getProvider() {
         });
 
         // Don't wait for network detection - just return the provider
+        cachedProvider = provider;
+        providerCreationAttempts = 0;
         return provider;
       }
     } catch (e) {
       console.warn('Error getting chain RPC URL:', e);
     }
 
-    // Last-resort: use ethers default provider with fallback
-    console.log('Using default provider with fallback');
+    // Last-resort: use a simple JsonRpcProvider with staticNetwork
+    console.log('Using fallback provider');
     try {
-      return ethers.getDefaultProvider('mainnet', {
-        etherscan: process.env.ETHERSCAN_API_KEY,
-        infura: process.env.INFURA_PROJECT_ID,
-        alchemy: process.env.ALCHEMY_API_KEY,
-        pocket: process.env.POCKET_APPLICATION_ID,
-        quorum: 1
-      });
-    } catch (fallbackError) {
-      console.warn('Default provider failed, using basic fallback:', fallbackError);
-      return new ethers.JsonRpcProvider('https://eth.llamarpc.com', 1, {
+      const provider = new ethers.JsonRpcProvider('https://eth.llamarpc.com', 1, {
         staticNetwork: true  // Prevent network detection issues
       });
+      cachedProvider = provider;
+      providerCreationAttempts = 0;
+      return provider;
+    } catch (fallbackError) {
+      console.warn('Fallback provider creation failed:', fallbackError);
+      lastProviderError = fallbackError instanceof Error ? fallbackError : new Error('Unknown error');
+      return null;
     }
   } catch (error) {
     console.error('Error getting provider:', error);
+    lastProviderError = error instanceof Error ? error : new Error('Unknown error');
     return null;
   }
 }
@@ -316,4 +342,20 @@ export function parseUnits(value: string, decimals: number): bigint {
     console.error('Error parsing units:', error)
     return 0n
   }
+}
+
+/**
+ * Reset provider cache - useful when wallet state changes
+ */
+export function resetProviderCache(): void {
+  cachedProvider = null;
+  providerCreationAttempts = 0;
+  lastProviderError = null;
+}
+
+/**
+ * Get the last provider creation error
+ */
+export function getLastProviderError(): Error | null {
+  return lastProviderError;
 }
