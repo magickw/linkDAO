@@ -16,6 +16,7 @@ import { paymentMethodService, CreatePaymentMethodInput } from '../../../service
 import { OptimizedImage } from '../../Performance/OptimizedImageLoader';
 import { PromoCodesManager } from '../PromoCodes/PromoCodesManager';
 import { SellerOrdersTab } from './SellerOrdersTab';
+import { SellerDashboardLayout } from './SellerDashboardLayout';
 
 interface SellerDashboardProps {
   mockWalletAddress?: string;
@@ -460,6 +461,17 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
   const currentTier = profile?.tier ? getTierById(profile.tier.id) : undefined;
   const nextTier = profile?.tier ? getNextTier(profile.tier.id) : undefined;
 
+  // Get tier color for sidebar
+  const getTierColor = (tierId: string | undefined) => {
+    switch (tierId) {
+      case 'diamond': return 'from-cyan-500 to-indigo-600';
+      case 'platinum': return 'from-slate-400 to-slate-600';
+      case 'gold': return 'from-yellow-400 to-yellow-600';
+      case 'silver': return 'from-gray-300 to-gray-500';
+      default: return 'from-orange-400 to-orange-600';
+    }
+  };
+
   const formatCurrency = (amount: number, currency = 'USD') => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -483,10 +495,20 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
 
   return (
     <TierProvider walletAddress={walletAddress}>
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4">
+      <SellerDashboardLayout
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        unreadNotifications={unreadNotifications}
+        pendingOrdersCount={dashboard?.orders?.summary?.pending || 0}
+        unreadMessagesCount={0}
+        storeName={profile?.storeName || 'Seller Store'}
+        storeImage={profile?.profileImageCdn || profile?.profileImageUrl}
+        tierName={currentTier?.name || 'Bronze'}
+        tierColor={getTierColor(currentTier?.id as string)}
+      >
         <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+          {/* Desktop Header */}
+          <div className="hidden lg:flex flex-col md:flex-row md:items-center md:justify-between mb-8">
             <div className="flex items-center mb-4 md:mb-0">
               {profile?.profileImageCdn || profile?.profileImageUrl ? (
                 <img
@@ -504,12 +526,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
               <div>
                 <h1 className="text-2xl font-bold text-white">{profile?.storeName || 'Seller Store'}</h1>
                 <div className="flex items-center space-x-2 mt-1">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${(currentTier?.id as string) === 'diamond' ? 'bg-gradient-to-r from-cyan-500 to-indigo-600 text-white' :
-                    (currentTier?.id as string) === 'platinum' ? 'bg-gradient-to-r from-slate-400 to-slate-600 text-white' :
-                      (currentTier?.id as string) === 'gold' ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-gray-900' :
-                        (currentTier?.id as string) === 'silver' ? 'bg-gradient-to-r from-gray-300 to-gray-500 text-gray-900' :
-                          'bg-gradient-to-r from-orange-400 to-orange-600 text-white'
-                    }`}>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium bg-gradient-to-r ${getTierColor(currentTier?.id as string)} text-white`}>
                     {currentTier?.name}
                   </span>
                   <div className="flex items-center">
@@ -533,21 +550,6 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
             </div>
 
             <div className="flex space-x-3">
-              {unreadNotifications > 0 && (
-                <Button
-                  onClick={() => setActiveTab('notifications')}
-                  variant="outline"
-                  className="relative"
-                >
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM11 19H6a2 2 0 01-2-2V7a2 2 0 012-2h5m5 0v5" />
-                  </svg>
-                  Notifications
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {unreadNotifications}
-                  </span>
-                </Button>
-              )}
               <Button
                 onClick={() => {
                   const sellerId = profile?.walletAddress || dashboardAddress;
@@ -577,8 +579,33 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
             </div>
           </div>
 
+          {/* Mobile Action Buttons */}
+          <div className="lg:hidden flex gap-2 mb-6">
+            <Button
+              onClick={() => {
+                const sellerId = profile?.walletAddress || dashboardAddress;
+                if (sellerId) {
+                  router.push(`/marketplace/seller/store/${sellerId}`);
+                }
+              }}
+              variant="outline"
+              size="sm"
+              className="flex-1"
+            >
+              View Store
+            </Button>
+            <Button
+              onClick={() => router.push('/marketplace/seller/listings/create')}
+              variant="primary"
+              size="sm"
+              className="flex-1"
+            >
+              New Listing
+            </Button>
+          </div>
+
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
             <StatCard
               title="Total Sales"
               value={formatCurrency(stats?.balance?.totalEarnings || 0)}
@@ -624,39 +651,6 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
             />
           </div>
 
-          {/* Tab Navigation */}
-          <div className="flex space-x-1 mb-6">
-            {[
-              { id: 'overview', label: 'Overview', icon: '📊' },
-              { id: 'orders', label: 'Orders', icon: '📦' },
-              { id: 'listings', label: 'Listings', icon: '🏪' },
-              { id: 'analytics', label: 'Analytics', icon: '📈' },
-              { id: 'messaging', label: 'Messaging', icon: '💬' },
-              { id: 'payouts', label: 'Payouts', icon: '💰' },
-              { id: 'promotions', label: 'Promotions', icon: '🏷️' },
-              { id: 'billing', label: 'Billing', icon: '💳' },
-              { id: 'notifications', label: 'Notifications', icon: '🔔' },
-              { id: 'profile', label: 'Profile', icon: '👤' },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === tab.id
-                  ? 'bg-purple-600 text-white'
-                  : 'text-gray-300 hover:text-white hover:bg-gray-700'
-                  }`}
-              >
-                <span className="mr-2">{tab.icon}</span>
-                {tab.label}
-                {tab.id === 'notifications' && unreadNotifications > 0 && (
-                  <span className="ml-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {unreadNotifications}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-
           {/* Tab Content */}
           <div className="space-y-6">
             {activeTab === 'promotions' && dashboardAddress && (
@@ -665,6 +659,27 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
 
             {activeTab === 'orders' && (
               <SellerOrdersTab isActive={activeTab === 'orders'} />
+            )}
+
+            {activeTab === 'returns' && (
+              <GlassPanel className="p-6">
+                <h3 className="text-xl font-semibold text-white mb-4">Returns & Refunds</h3>
+                <p className="text-gray-400 mb-6">
+                  Manage return requests and process refunds for your orders.
+                </p>
+
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-gray-700 rounded-full mx-auto mb-4 flex items-center justify-center">
+                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                    </svg>
+                  </div>
+                  <h4 className="text-lg font-medium text-white mb-2">No Return Requests</h4>
+                  <p className="text-gray-400">
+                    You don't have any pending return requests at the moment.
+                  </p>
+                </div>
+              </GlassPanel>
             )}
 
             {activeTab === 'overview' && (
@@ -1664,12 +1679,63 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
               </GlassPanel>
             )}
 
-            {/* Other tabs would be implemented similarly */}
-            {activeTab !== 'overview' && activeTab !== 'notifications' && activeTab !== 'listings' && activeTab !== 'messaging' && activeTab !== 'analytics' && activeTab !== 'profile' && activeTab !== 'payouts' && activeTab !== 'billing' && (
-              <GlassPanel className="p-6 text-center">
-                <p className="text-gray-400">
-                  {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} section coming soon...
+            {/* Help tab */}
+            {activeTab === 'help' && (
+              <GlassPanel className="p-6">
+                <h3 className="text-xl font-semibold text-white mb-4">Help & Support</h3>
+                <p className="text-gray-400 mb-6">
+                  Get help with your seller account and find answers to common questions.
                 </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-gray-800 rounded-lg p-4 hover:bg-gray-750 transition-colors cursor-pointer">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                        <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        </svg>
+                      </div>
+                      <h4 className="text-white font-medium">Seller Guide</h4>
+                    </div>
+                    <p className="text-gray-400 text-sm">Learn how to optimize your listings and increase sales.</p>
+                  </div>
+
+                  <div className="bg-gray-800 rounded-lg p-4 hover:bg-gray-750 transition-colors cursor-pointer">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                        <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <h4 className="text-white font-medium">FAQs</h4>
+                    </div>
+                    <p className="text-gray-400 text-sm">Find answers to frequently asked questions.</p>
+                  </div>
+
+                  <div className="bg-gray-800 rounded-lg p-4 hover:bg-gray-750 transition-colors cursor-pointer">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
+                        <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <h4 className="text-white font-medium">Contact Support</h4>
+                    </div>
+                    <p className="text-gray-400 text-sm">Reach out to our support team for assistance.</p>
+                  </div>
+
+                  <div className="bg-gray-800 rounded-lg p-4 hover:bg-gray-750 transition-colors cursor-pointer">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
+                        <svg className="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                      </div>
+                      <h4 className="text-white font-medium">Policies</h4>
+                    </div>
+                    <p className="text-gray-400 text-sm">Review seller policies and guidelines.</p>
+                  </div>
+                </div>
               </GlassPanel>
             )}
 
@@ -1860,8 +1926,8 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
             )}
           </div>
         </div>
-      </div>
-    </TierProvider >
+      </SellerDashboardLayout>
+    </TierProvider>
   );
 }
 

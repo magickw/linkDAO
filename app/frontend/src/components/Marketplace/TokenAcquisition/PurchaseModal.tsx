@@ -157,7 +157,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
           }
 
           // Test x402 service by making a lightweight status check
-          const testResponse = await fetch(`${apiBase}/api/x402/status`, {
+          const testResponse = await fetch(`${apiBase}/api/x402-payments/status`, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' }
           });

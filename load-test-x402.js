@@ -202,7 +202,7 @@ async function runWorker(workerData) {
     const requestStartTime = performance.now();
     
     try {
-      const response = await makeHttpRequest(`${baseUrl}/api/x402/payment`, {
+      const response = await makeHttpRequest(`${baseUrl}/api/x402-payments/payment`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

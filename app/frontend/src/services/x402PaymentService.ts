@@ -89,7 +89,7 @@ export class X402PaymentService {
       
       while (retryCount < maxRetries) {
         try {
-          const response = await fetch(`${this.API_BASE_URL}/api/x402/payment`, {
+          const response = await fetch(`${this.API_BASE_URL}/api/x402-payments/payment`, {
             method: 'POST',
             headers,
             credentials: 'include', // Include session cookies for authentication
@@ -202,7 +202,7 @@ export class X402PaymentService {
         headers['X-CSRF-Token'] = csrfToken;
       }
 
-      const response = await fetch(`${this.API_BASE_URL}/api/x402/payment/${encodeURIComponent(transactionId)}`, {
+      const response = await fetch(`${this.API_BASE_URL}/api/x402-payments/payment/${encodeURIComponent(transactionId)}`, {
         method: 'GET',
         headers,
         credentials: 'include' // Include session cookies for authentication
@@ -275,7 +275,7 @@ export class X402PaymentService {
         headers['X-CSRF-Token'] = csrfToken;
       }
 
-      const response = await fetch(`${this.API_BASE_URL}/api/x402/payment/${encodeURIComponent(transactionId)}/refund`, {
+      const response = await fetch(`${this.API_BASE_URL}/api/x402-payments/payment/${encodeURIComponent(transactionId)}/refund`, {
         method: 'POST',
         headers,
         credentials: 'include' // Include session cookies for authentication

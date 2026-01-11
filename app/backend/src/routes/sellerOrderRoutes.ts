@@ -246,6 +246,188 @@ router.get('/detail/:orderId',
     }
   });
 
+/**
+ * POST /api/marketplace/seller/orders/bulk-status
+ * Bulk update order status
+ */
+router.post('/bulk-status',
+  authMiddleware,
+  rateLimitWithCache(req => `bulk_status:${req.ip}`, 10, 60), // 10 requests per minute
+  cachingMiddleware.invalidate('sellerOrders'),
+  async (req: Request, res: Response) => {
+    try {
+      const sellerId = (req as any).user?.id;
+      if (!sellerId) return errorResponse(res, 'UNAUTHORIZED', 'User not authenticated', 401);
+
+      const { orderIds, status, notes } = req.body;
+
+      // Validate orderIds
+      if (!Array.isArray(orderIds) || orderIds.length === 0) {
+        return validationErrorResponse(res, [
+          { field: 'orderIds', message: 'orderIds must be a non-empty array' }
+        ]);
+      }
+
+      if (orderIds.length > 50) {
+        return validationErrorResponse(res, [
+          { field: 'orderIds', message: 'Maximum 50 orders can be updated at once' }
+        ]);
+      }
+
+      // Validate status
+      const validStatuses = ['pending', 'processing', 'ready_to_ship', 'shipped', 'delivered', 'completed', 'cancelled'];
+      if (!status || !validStatuses.includes(status)) {
+        return validationErrorResponse(res, [
+          { field: 'status', message: `Status must be one of: ${validStatuses.join(', ')}` }
+        ]);
+      }
+
+      const result = await sellerOrderService.bulkUpdateStatus(orderIds, status, sellerId, notes);
+
+      return successResponse(res, {
+        message: `Bulk status update completed`,
+        success: result.success,
+        failed: result.failed,
+        errors: result.errors,
+      }, 200);
+    } catch (error) {
+      safeLogger.error('Error bulk updating order status:', error);
+      return errorResponse(
+        res,
+        'BULK_UPDATE_ERROR',
+        'Failed to bulk update order status',
+        500,
+        { error: error instanceof Error ? error.message : 'Unknown error' }
+      );
+    }
+  });
+
+/**
+ * GET /api/marketplace/seller/orders/:orderId/messages
+ * Get messages for an order
+ */
+router.get('/:orderId/messages',
+  authMiddleware,
+  rateLimitWithCache(req => `order_messages:${req.ip}`, 60, 60),
+  async (req: Request, res: Response) => {
+    try {
+      const sellerId = (req as any).user?.id;
+      if (!sellerId) return errorResponse(res, 'UNAUTHORIZED', 'User not authenticated', 401);
+
+      const { orderId } = req.params;
+
+      const messages = await sellerOrderService.getOrderMessages(orderId, sellerId);
+
+      return successResponse(res, { messages }, 200);
+    } catch (error) {
+      safeLogger.error('Error fetching order messages:', error);
+
+      if (error instanceof Error) {
+        if (error.message.includes('not found')) {
+          return notFoundResponse(res, 'Order not found');
+        }
+        if (error.message.includes('not authorized')) {
+          return errorResponse(res, 'NOT_AUTHORIZED', error.message, 403);
+        }
+      }
+
+      return errorResponse(
+        res,
+        'MESSAGES_FETCH_ERROR',
+        'Failed to fetch order messages',
+        500,
+        { error: error instanceof Error ? error.message : 'Unknown error' }
+      );
+    }
+  });
+
+/**
+ * POST /api/marketplace/seller/orders/:orderId/messages
+ * Send a message on an order
+ */
+router.post('/:orderId/messages',
+  authMiddleware,
+  rateLimitWithCache(req => `send_message:${req.ip}`, 30, 60),
+  async (req: Request, res: Response) => {
+    try {
+      const sellerId = (req as any).user?.id;
+      if (!sellerId) return errorResponse(res, 'UNAUTHORIZED', 'User not authenticated', 401);
+
+      const { orderId } = req.params;
+      const { message } = req.body;
+
+      if (!message || typeof message !== 'string' || message.trim().length === 0) {
+        return validationErrorResponse(res, [
+          { field: 'message', message: 'Message is required' }
+        ]);
+      }
+
+      if (message.length > 2000) {
+        return validationErrorResponse(res, [
+          { field: 'message', message: 'Message must be less than 2000 characters' }
+        ]);
+      }
+
+      const result = await sellerOrderService.sendOrderMessage(orderId, sellerId, message.trim());
+
+      return successResponse(res, {
+        message: 'Message sent successfully',
+        ...result,
+      }, 201);
+    } catch (error) {
+      safeLogger.error('Error sending order message:', error);
+
+      if (error instanceof Error) {
+        if (error.message.includes('not found')) {
+          return notFoundResponse(res, 'Order not found');
+        }
+        if (error.message.includes('not authorized')) {
+          return errorResponse(res, 'NOT_AUTHORIZED', error.message, 403);
+        }
+      }
+
+      return errorResponse(
+        res,
+        'MESSAGE_SEND_ERROR',
+        'Failed to send message',
+        500,
+        { error: error instanceof Error ? error.message : 'Unknown error' }
+      );
+    }
+  });
+
+/**
+ * GET /api/marketplace/seller/orders/export
+ * Export orders to CSV
+ */
+router.get('/export',
+  authMiddleware,
+  rateLimitWithCache(req => `order_export:${req.ip}`, 5, 60), // 5 requests per minute
+  async (req: Request, res: Response) => {
+    try {
+      const sellerId = (req as any).user?.id;
+      if (!sellerId) return errorResponse(res, 'UNAUTHORIZED', 'User not authenticated', 401);
+
+      const { orderIds } = req.query;
+      const parsedOrderIds = orderIds ? String(orderIds).split(',') : undefined;
+
+      const csv = await sellerOrderService.exportOrdersToCSV(sellerId, parsedOrderIds);
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename=orders-${Date.now()}.csv`);
+      return res.send(csv);
+    } catch (error) {
+      safeLogger.error('Error exporting orders:', error);
+      return errorResponse(
+        res,
+        'EXPORT_ERROR',
+        'Failed to export orders',
+        500,
+        { error: error instanceof Error ? error.message : 'Unknown error' }
+      );
+    }
+  });
+
 // Initialize SellerWorkflowService
 import { SellerWorkflowService } from '../services/sellerWorkflowService';
 import { authMiddleware } from '../middleware/authMiddleware';

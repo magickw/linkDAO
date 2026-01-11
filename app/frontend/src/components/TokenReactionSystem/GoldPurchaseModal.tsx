@@ -399,7 +399,7 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.linkdao.io';
 
-    const response = await fetchWithAuth(`${apiUrl}/api/x402/gold-purchase`, {
+    const response = await fetchWithAuth(`${apiUrl}/api/x402-payments/gold-purchase`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

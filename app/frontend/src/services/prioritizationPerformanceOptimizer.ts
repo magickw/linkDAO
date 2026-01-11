@@ -79,6 +79,24 @@ export class PrioritizationPerformanceOptimizer {
     let cacheHits = 0;
     let cacheMisses = 0;
 
+    // Safety check: ensure methods is defined and not empty
+    if (!methods || methods.length === 0) {
+      console.warn('⚠️ parallelCostCalculation called with undefined or empty methods array');
+      return {
+        results: [],
+        errors: [],
+        cacheHits: 0,
+        cacheMisses: 0,
+        totalTime: 0,
+        metadata: {
+          totalTasks: 0,
+          completedTasks: 0,
+          failedTasks: 0,
+          averageTaskDuration: 0
+        }
+      };
+    }
+
     // Create cost calculation tasks
     const tasks = methods.map((method, index) => ({
       id: `cost_${method.type}_${index}`,

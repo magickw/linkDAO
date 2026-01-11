@@ -1211,8 +1211,8 @@ app.use('/api/marketplace/seller/returns', returnRoutes);
 // IPFS proxy routes (for serving IPFS content without CORS issues)
 app.use('/api', ipfsProxyRoutes);
 
-// x402 payment routes
-app.use('/api/x402', x402PaymentRoutes);
+// x402 payment routes (using separate path to avoid conflict with x402ResourceRoutes)
+app.use('/api/x402-payments', x402PaymentRoutes);
 
 // Receipt routes
 app.use('/api', receiptRoutes);
