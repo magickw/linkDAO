@@ -92,7 +92,8 @@ export class PostController {
   async getPostById(req: Request, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
-      const post = await this.postService.getPostById(id);
+      const userId = (req as any).user?.id;
+      const post = await this.postService.getPostById(id, userId);
 
       if (!post) {
         return res.status(404).json({
@@ -370,7 +371,7 @@ export class PostController {
         content: repostContent,
         contentCid: contentCid,
         parentId: targetPostId, // Use the flattened target ID
-        tags: originalStatus.tags || [],
+        tags: originalStatus.tags || undefined,
         isRepost: true
       });
 

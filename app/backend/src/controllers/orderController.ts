@@ -76,13 +76,19 @@ export class OrderController {
 
   /**
    * Get orders by user address
+   * @query role - Optional: 'buyer' to get only orders placed as buyer, 'seller' to get only orders received as seller
    */
   async getOrdersByUser(req: Request, res: Response): Promise<Response> {
     try {
       const { userAddress } = req.params;
-      const { status, limit = 50, offset = 0 } = req.query;
+      const { status, limit = 50, offset = 0, role } = req.query;
 
-      let orders = await orderService.getOrdersByUser(userAddress);
+      // Validate role if provided
+      if (role && role !== 'buyer' && role !== 'seller') {
+        throw new ValidationError('Invalid role. Must be "buyer" or "seller"');
+      }
+
+      let orders = await orderService.getOrdersByUser(userAddress, role as 'buyer' | 'seller' | undefined);
 
       // Filter by status if provided
       if (status) {
@@ -96,9 +102,13 @@ export class OrderController {
         orders: paginatedOrders,
         total: orders.length,
         limit: Number(limit),
-        offset: Number(offset)
+        offset: Number(offset),
+        role: role || 'all'
       });
     } catch (error: any) {
+      if (error instanceof AppError) {
+        throw error;
+      }
       throw new AppError(error.message);
     }
   }

@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useSwipeable } from 'react-swipeable';
-import { MessageItem } from './MessageItem';
-import { ChatMessage } from '../../services/messagingService';
+import { MessageItem, ChatMessage } from './MessageItem';
 import { Trash2, Heart, Reply } from 'lucide-react';
 
 interface SwipeableMessageProps {

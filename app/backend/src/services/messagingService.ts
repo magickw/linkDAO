@@ -1,8 +1,8 @@
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
-import { conversations, chatMessages, blockedUsers, messageReadStatus } from '../db/schema';
+import { conversations, chatMessages, blockedUsers, messageReadStatus, conversationParticipants, messageReactions } from '../db/schema';
 // import { notificationService } from './notificationService';
-import { eq, desc, asc, and, or, like, inArray, sql, gt, lt } from 'drizzle-orm';
+import { eq, desc, asc, and, or, like, inArray, sql, gt, lt, isNull, count } from 'drizzle-orm';
 import { sanitizeMessage, sanitizeConversation, sanitizeSearchQuery } from '../utils/sanitization';
 import { cacheService } from './cacheService';
 
@@ -1004,30 +1004,385 @@ export class MessagingService {
     }
   }
 
-  // Add participant (simplified)
+  // Add participant to group conversation
   async addParticipant(data: {
     conversationId: string;
     adderAddress: string;
     newParticipantAddress: string;
+    role?: string;
   }) {
-    // This would need proper group conversation management
-    return {
-      success: false,
-      message: 'Group conversation management not implemented yet'
-    };
+    try {
+      const { conversationId, adderAddress, newParticipantAddress, role = 'member' } = data;
+
+      this.validateAddress(adderAddress);
+      this.validateAddress(newParticipantAddress);
+
+      // Get conversation to check permissions
+      const conversation = await db
+        .select()
+        .from(conversations)
+        .where(eq(conversations.id, conversationId))
+        .limit(1);
+
+      if (!conversation.length) {
+        return { success: false, message: 'Conversation not found' };
+      }
+
+      const conv = conversation[0];
+
+      // Check if conversation is a group
+      if (conv.conversationType !== 'group') {
+        return { success: false, message: 'Can only add participants to group conversations' };
+      }
+
+      // Check if adder is a participant with admin/moderator role
+      const adderParticipant = await db
+        .select()
+        .from(conversationParticipants)
+        .where(
+          and(
+            eq(conversationParticipants.conversationId, conversationId),
+            eq(conversationParticipants.walletAddress, adderAddress.toLowerCase()),
+            isNull(conversationParticipants.leftAt)
+          )
+        )
+        .limit(1);
+
+      if (!adderParticipant.length) {
+        return { success: false, message: 'You are not a member of this conversation' };
+      }
+
+      // Check role permissions (admins and moderators can add members)
+      const adderRole = adderParticipant[0].role;
+      if (adderRole !== 'admin' && adderRole !== 'moderator') {
+        return { success: false, message: 'Only admins and moderators can add participants' };
+      }
+
+      // Check if new participant is already a member
+      const existingParticipant = await db
+        .select()
+        .from(conversationParticipants)
+        .where(
+          and(
+            eq(conversationParticipants.conversationId, conversationId),
+            eq(conversationParticipants.walletAddress, newParticipantAddress.toLowerCase()),
+            isNull(conversationParticipants.leftAt)
+          )
+        )
+        .limit(1);
+
+      if (existingParticipant.length) {
+        return { success: false, message: 'User is already a participant' };
+      }
+
+      // Add the participant
+      const newParticipant = await db
+        .insert(conversationParticipants)
+        .values({
+          conversationId,
+          walletAddress: newParticipantAddress.toLowerCase(),
+          role: role as any,
+          joinedAt: new Date()
+        })
+        .returning();
+
+      // Update conversation participants list
+      const currentParticipants = JSON.parse(conv.participants as string);
+      if (!currentParticipants.includes(newParticipantAddress.toLowerCase())) {
+        currentParticipants.push(newParticipantAddress.toLowerCase());
+        await db
+          .update(conversations)
+          .set({
+            participants: JSON.stringify(currentParticipants),
+            updatedAt: new Date()
+          })
+          .where(eq(conversations.id, conversationId));
+      }
+
+      // Invalidate cache
+      await cacheService.invalidatePattern(`conversations:${conversationId}:*`);
+
+      return {
+        success: true,
+        data: newParticipant[0],
+        message: 'Participant added successfully'
+      };
+    } catch (error) {
+      safeLogger.error('Error adding participant:', error);
+      if (error instanceof Error && error.message.includes('database')) {
+        throw new Error('Messaging service temporarily unavailable. Database connection error.');
+      }
+      throw new Error('Failed to add participant');
+    }
   }
 
-  // Remove participant (simplified)
+  // Remove participant from group conversation
   async removeParticipant(data: {
     conversationId: string;
     removerAddress: string;
     participantAddress: string;
   }) {
-    // This would need proper group conversation management
-    return {
-      success: false,
-      message: 'Group conversation management not implemented yet'
-    };
+    try {
+      const { conversationId, removerAddress, participantAddress } = data;
+
+      this.validateAddress(removerAddress);
+      this.validateAddress(participantAddress);
+
+      // Get conversation
+      const conversation = await db
+        .select()
+        .from(conversations)
+        .where(eq(conversations.id, conversationId))
+        .limit(1);
+
+      if (!conversation.length) {
+        return { success: false, message: 'Conversation not found' };
+      }
+
+      const conv = conversation[0];
+
+      // Check if conversation is a group
+      if (conv.conversationType !== 'group') {
+        return { success: false, message: 'Can only remove participants from group conversations' };
+      }
+
+      // Check if remover is a participant
+      const removerParticipant = await db
+        .select()
+        .from(conversationParticipants)
+        .where(
+          and(
+            eq(conversationParticipants.conversationId, conversationId),
+            eq(conversationParticipants.walletAddress, removerAddress.toLowerCase()),
+            isNull(conversationParticipants.leftAt)
+          )
+        )
+        .limit(1);
+
+      if (!removerParticipant.length) {
+        return { success: false, message: 'You are not a member of this conversation' };
+      }
+
+      // Users can remove themselves (leave), admins can remove others
+      const isSelf = removerAddress.toLowerCase() === participantAddress.toLowerCase();
+      const removerRole = removerParticipant[0].role;
+
+      if (!isSelf && removerRole !== 'admin') {
+        return { success: false, message: 'Only admins can remove other participants' };
+      }
+
+      // Mark participant as left
+      await db
+        .update(conversationParticipants)
+        .set({
+          leftAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(
+          and(
+            eq(conversationParticipants.conversationId, conversationId),
+            eq(conversationParticipants.walletAddress, participantAddress.toLowerCase()),
+            isNull(conversationParticipants.leftAt)
+          )
+        );
+
+      // Update conversation participants list
+      const currentParticipants = JSON.parse(conv.participants as string);
+      const updatedParticipants = currentParticipants.filter(
+        (p: string) => p.toLowerCase() !== participantAddress.toLowerCase()
+      );
+      await db
+        .update(conversations)
+        .set({
+          participants: JSON.stringify(updatedParticipants),
+          updatedAt: new Date()
+        })
+        .where(eq(conversations.id, conversationId));
+
+      // Invalidate cache
+      await cacheService.invalidatePattern(`conversations:${conversationId}:*`);
+
+      return {
+        success: true,
+        message: isSelf ? 'You have left the conversation' : 'Participant removed successfully'
+      };
+    } catch (error) {
+      safeLogger.error('Error removing participant:', error);
+      if (error instanceof Error && error.message.includes('database')) {
+        throw new Error('Messaging service temporarily unavailable. Database connection error.');
+      }
+      throw new Error('Failed to remove participant');
+    }
+  }
+
+  // Update participant role
+  async updateParticipantRole(data: {
+    conversationId: string;
+    updaterAddress: string;
+    participantAddress: string;
+    newRole: 'admin' | 'moderator' | 'member';
+  }) {
+    try {
+      const { conversationId, updaterAddress, participantAddress, newRole } = data;
+
+      this.validateAddress(updaterAddress);
+      this.validateAddress(participantAddress);
+
+      // Check if updater is admin
+      const updaterParticipant = await db
+        .select()
+        .from(conversationParticipants)
+        .where(
+          and(
+            eq(conversationParticipants.conversationId, conversationId),
+            eq(conversationParticipants.walletAddress, updaterAddress.toLowerCase()),
+            isNull(conversationParticipants.leftAt)
+          )
+        )
+        .limit(1);
+
+      if (!updaterParticipant.length || updaterParticipant[0].role !== 'admin') {
+        return { success: false, message: 'Only admins can update roles' };
+      }
+
+      // Update the role
+      await db
+        .update(conversationParticipants)
+        .set({
+          role: newRole,
+          updatedAt: new Date()
+        })
+        .where(
+          and(
+            eq(conversationParticipants.conversationId, conversationId),
+            eq(conversationParticipants.walletAddress, participantAddress.toLowerCase()),
+            isNull(conversationParticipants.leftAt)
+          )
+        );
+
+      return {
+        success: true,
+        message: 'Participant role updated successfully'
+      };
+    } catch (error) {
+      safeLogger.error('Error updating participant role:', error);
+      if (error instanceof Error && error.message.includes('database')) {
+        throw new Error('Messaging service temporarily unavailable. Database connection error.');
+      }
+      throw new Error('Failed to update participant role');
+    }
+  }
+
+  // Create group conversation
+  async createGroupConversation(data: {
+    creatorAddress: string;
+    participants: string[];
+    name?: string;
+    description?: string;
+    isPublic?: boolean;
+  }) {
+    try {
+      const { creatorAddress, participants, name, description, isPublic = false } = data;
+
+      this.validateAddress(creatorAddress);
+      participants.forEach(p => this.validateAddress(p));
+
+      // Ensure creator is included
+      const allParticipants = [creatorAddress.toLowerCase(), ...participants.map(p => p.toLowerCase())];
+      const uniqueParticipants = [...new Set(allParticipants)];
+
+      if (uniqueParticipants.length < 2) {
+        return { success: false, message: 'Group must have at least 2 participants' };
+      }
+
+      // Create the conversation
+      const newConversation = await db
+        .insert(conversations)
+        .values({
+          participants: JSON.stringify(uniqueParticipants),
+          conversationType: 'group',
+          subject: name,
+          title: name,
+          lastActivity: new Date(),
+          contextMetadata: JSON.stringify({
+            description,
+            isPublic,
+            createdBy: creatorAddress.toLowerCase()
+          })
+        })
+        .returning();
+
+      const conversationId = newConversation[0].id;
+
+      // Add all participants to conversationParticipants table
+      const participantRecords = uniqueParticipants.map((address, index) => ({
+        conversationId,
+        walletAddress: address,
+        role: index === 0 ? 'admin' : 'member', // Creator is admin
+        joinedAt: new Date()
+      }));
+
+      await db.insert(conversationParticipants).values(participantRecords);
+
+      return {
+        success: true,
+        data: {
+          id: conversationId,
+          participants: uniqueParticipants,
+          name,
+          description,
+          isPublic,
+          conversationType: 'group',
+          createdAt: newConversation[0].createdAt
+        }
+      };
+    } catch (error) {
+      safeLogger.error('Error creating group conversation:', error);
+      if (error instanceof Error && error.message.includes('database')) {
+        throw new Error('Messaging service temporarily unavailable. Database connection error.');
+      }
+      throw new Error('Failed to create group conversation');
+    }
+  }
+
+  // Get participant details with roles
+  async getParticipantsWithRoles(data: {
+    conversationId: string;
+    userAddress: string;
+  }) {
+    try {
+      const { conversationId, userAddress } = data;
+
+      this.validateAddress(userAddress);
+
+      // Get all active participants
+      const participants = await db
+        .select()
+        .from(conversationParticipants)
+        .where(
+          and(
+            eq(conversationParticipants.conversationId, conversationId),
+            isNull(conversationParticipants.leftAt)
+          )
+        );
+
+      return {
+        success: true,
+        data: participants.map(p => ({
+          address: p.walletAddress,
+          role: p.role,
+          joinedAt: p.joinedAt,
+          isMuted: p.isMuted,
+          notificationsEnabled: p.notificationsEnabled
+        }))
+      };
+    } catch (error) {
+      safeLogger.error('Error getting participants with roles:', error);
+      if (error instanceof Error && error.message.includes('database')) {
+        throw new Error('Messaging service temporarily unavailable. Database connection error.');
+      }
+      throw new Error('Failed to get participants');
+    }
   }
 
   // Helper method to check if user is blocked
@@ -1089,6 +1444,513 @@ export class MessagingService {
       safeLogger.info(`Cleared cache for user ${userAddress}`);
     } catch (error) {
       safeLogger.error('Error clearing user cache:', error);
+    }
+  }
+
+  // =====================================================
+  // PHASE 5: Advanced Features (Reactions, Pinning, Editing, Threading)
+  // =====================================================
+
+  // Add reaction to message
+  async addReaction(data: {
+    messageId: string;
+    userAddress: string;
+    emoji: string;
+  }) {
+    const { messageId, userAddress, emoji } = data;
+
+    try {
+      this.validateAddress(userAddress);
+
+      // Validate emoji (basic validation - allow Unicode emoji)
+      if (!emoji || emoji.length > 32) {
+        return { success: false, message: 'Invalid emoji' };
+      }
+
+      // Check if message exists and user has access
+      const message = await db
+        .select()
+        .from(chatMessages)
+        .where(eq(chatMessages.id, messageId))
+        .limit(1);
+
+      if (!message.length) {
+        return { success: false, message: 'Message not found' };
+      }
+
+      // Check if user is a participant in the conversation
+      const conversation = await this.getConversationDetails({
+        conversationId: message[0].conversationId,
+        userAddress
+      });
+
+      if (!conversation) {
+        return { success: false, message: 'Access denied' };
+      }
+
+      // Add or update reaction (upsert)
+      await db
+        .insert(messageReactions)
+        .values({
+          messageId,
+          userAddress: userAddress.toLowerCase(),
+          emoji,
+          createdAt: new Date()
+        })
+        .onConflictDoNothing();
+
+      // Get updated reaction counts
+      const reactions = await this.getMessageReactions(messageId);
+
+      return {
+        success: true,
+        data: reactions
+      };
+    } catch (error) {
+      safeLogger.error('Error adding reaction:', error);
+      if (error instanceof Error && error.message.includes('database')) {
+        throw new Error('Messaging service temporarily unavailable. Database connection error.');
+      }
+      throw new Error('Failed to add reaction');
+    }
+  }
+
+  // Remove reaction from message
+  async removeReaction(data: {
+    messageId: string;
+    userAddress: string;
+    emoji: string;
+  }) {
+    const { messageId, userAddress, emoji } = data;
+
+    try {
+      this.validateAddress(userAddress);
+
+      await db
+        .delete(messageReactions)
+        .where(
+          and(
+            eq(messageReactions.messageId, messageId),
+            eq(messageReactions.userAddress, userAddress.toLowerCase()),
+            eq(messageReactions.emoji, emoji)
+          )
+        );
+
+      // Get updated reaction counts
+      const reactions = await this.getMessageReactions(messageId);
+
+      return {
+        success: true,
+        data: reactions
+      };
+    } catch (error) {
+      safeLogger.error('Error removing reaction:', error);
+      if (error instanceof Error && error.message.includes('database')) {
+        throw new Error('Messaging service temporarily unavailable. Database connection error.');
+      }
+      throw new Error('Failed to remove reaction');
+    }
+  }
+
+  // Get reactions for a message
+  async getMessageReactions(messageId: string) {
+    try {
+      const reactions = await db
+        .select({
+          emoji: messageReactions.emoji,
+          count: count(messageReactions.id),
+          users: sql<string[]>`array_agg(${messageReactions.userAddress})`
+        })
+        .from(messageReactions)
+        .where(eq(messageReactions.messageId, messageId))
+        .groupBy(messageReactions.emoji);
+
+      return reactions.map(r => ({
+        emoji: r.emoji,
+        count: Number(r.count),
+        users: r.users || []
+      }));
+    } catch (error) {
+      safeLogger.error('Error getting message reactions:', error);
+      return [];
+    }
+  }
+
+  // Pin message
+  async pinMessage(data: {
+    messageId: string;
+    userAddress: string;
+  }) {
+    const { messageId, userAddress } = data;
+
+    try {
+      this.validateAddress(userAddress);
+
+      // Get message and check permissions
+      const message = await db
+        .select()
+        .from(chatMessages)
+        .where(eq(chatMessages.id, messageId))
+        .limit(1);
+
+      if (!message.length) {
+        return { success: false, message: 'Message not found' };
+      }
+
+      const conversationId = message[0].conversationId;
+
+      // Check if user has permission to pin (admin or moderator for groups)
+      const conversation = await db
+        .select()
+        .from(conversations)
+        .where(eq(conversations.id, conversationId))
+        .limit(1);
+
+      if (!conversation.length) {
+        return { success: false, message: 'Conversation not found' };
+      }
+
+      // For group conversations, check role
+      if (conversation[0].conversationType === 'group') {
+        const participant = await db
+          .select()
+          .from(conversationParticipants)
+          .where(
+            and(
+              eq(conversationParticipants.conversationId, conversationId),
+              eq(conversationParticipants.walletAddress, userAddress.toLowerCase()),
+              isNull(conversationParticipants.leftAt)
+            )
+          )
+          .limit(1);
+
+        if (!participant.length) {
+          return { success: false, message: 'Not a member of this conversation' };
+        }
+
+        const role = participant[0].role;
+        if (role !== 'admin' && role !== 'moderator') {
+          return { success: false, message: 'Only admins and moderators can pin messages' };
+        }
+      } else {
+        // For direct conversations, any participant can pin
+        const participants = JSON.parse(conversation[0].participants as string);
+        if (!participants.includes(userAddress.toLowerCase())) {
+          return { success: false, message: 'Not a member of this conversation' };
+        }
+      }
+
+      // Pin the message
+      await db
+        .update(chatMessages)
+        .set({
+          isPinned: true,
+          pinnedBy: userAddress.toLowerCase(),
+          pinnedAt: new Date()
+        })
+        .where(eq(chatMessages.id, messageId));
+
+      return {
+        success: true,
+        message: 'Message pinned successfully'
+      };
+    } catch (error) {
+      safeLogger.error('Error pinning message:', error);
+      if (error instanceof Error && error.message.includes('database')) {
+        throw new Error('Messaging service temporarily unavailable. Database connection error.');
+      }
+      throw new Error('Failed to pin message');
+    }
+  }
+
+  // Unpin message
+  async unpinMessage(data: {
+    messageId: string;
+    userAddress: string;
+  }) {
+    const { messageId, userAddress } = data;
+
+    try {
+      this.validateAddress(userAddress);
+
+      // Get message
+      const message = await db
+        .select()
+        .from(chatMessages)
+        .where(eq(chatMessages.id, messageId))
+        .limit(1);
+
+      if (!message.length) {
+        return { success: false, message: 'Message not found' };
+      }
+
+      // Check if user has access to unpin
+      const conversation = await this.getConversationDetails({
+        conversationId: message[0].conversationId,
+        userAddress
+      });
+
+      if (!conversation) {
+        return { success: false, message: 'Access denied' };
+      }
+
+      // Unpin the message
+      await db
+        .update(chatMessages)
+        .set({
+          isPinned: false,
+          pinnedBy: null,
+          pinnedAt: null
+        })
+        .where(eq(chatMessages.id, messageId));
+
+      return {
+        success: true,
+        message: 'Message unpinned successfully'
+      };
+    } catch (error) {
+      safeLogger.error('Error unpinning message:', error);
+      if (error instanceof Error && error.message.includes('database')) {
+        throw new Error('Messaging service temporarily unavailable. Database connection error.');
+      }
+      throw new Error('Failed to unpin message');
+    }
+  }
+
+  // Get pinned messages for a conversation
+  async getPinnedMessages(data: {
+    conversationId: string;
+    userAddress: string;
+  }) {
+    const { conversationId, userAddress } = data;
+
+    try {
+      this.validateAddress(userAddress);
+
+      // Check if user has access to conversation
+      const conversation = await this.getConversationDetails({ conversationId, userAddress });
+      if (!conversation) {
+        return { success: false, message: 'Access denied' };
+      }
+
+      const pinnedMessages = await db
+        .select()
+        .from(chatMessages)
+        .where(
+          and(
+            eq(chatMessages.conversationId, conversationId),
+            eq(chatMessages.isPinned, true),
+            isNull(chatMessages.deletedAt)
+          )
+        )
+        .orderBy(desc(chatMessages.pinnedAt));
+
+      return {
+        success: true,
+        data: pinnedMessages
+      };
+    } catch (error) {
+      safeLogger.error('Error getting pinned messages:', error);
+      if (error instanceof Error && error.message.includes('database')) {
+        throw new Error('Messaging service temporarily unavailable. Database connection error.');
+      }
+      throw new Error('Failed to get pinned messages');
+    }
+  }
+
+  // Edit message
+  async editMessage(data: {
+    messageId: string;
+    userAddress: string;
+    newContent: string;
+  }) {
+    const { messageId, userAddress, newContent } = data;
+
+    try {
+      this.validateAddress(userAddress);
+
+      // Get message
+      const message = await db
+        .select()
+        .from(chatMessages)
+        .where(eq(chatMessages.id, messageId))
+        .limit(1);
+
+      if (!message.length) {
+        return { success: false, message: 'Message not found' };
+      }
+
+      // Only sender can edit their own messages
+      if (message[0].senderAddress.toLowerCase() !== userAddress.toLowerCase()) {
+        return { success: false, message: 'Can only edit your own messages' };
+      }
+
+      // Check if message was sent within the edit window (15 minutes)
+      const sentAt = message[0].sentAt;
+      if (sentAt) {
+        const editWindowMs = 15 * 60 * 1000; // 15 minutes
+        if (Date.now() - sentAt.getTime() > editWindowMs) {
+          return { success: false, message: 'Edit window has expired (15 minutes)' };
+        }
+      }
+
+      // Validate new content
+      if (!newContent || newContent.trim().length === 0) {
+        return { success: false, message: 'Message content cannot be empty' };
+      }
+
+      if (newContent.length > 10240) {
+        return { success: false, message: 'Message content too long (max 10KB)' };
+      }
+
+      // Sanitize content
+      const sanitized = sanitizeMessage({
+        content: newContent,
+        messageType: message[0].messageType || 'text',
+        attachments: []
+      });
+
+      // Update message
+      const updatedMessage = await db
+        .update(chatMessages)
+        .set({
+          content: sanitized.content,
+          editedAt: new Date()
+        })
+        .where(eq(chatMessages.id, messageId))
+        .returning();
+
+      return {
+        success: true,
+        data: updatedMessage[0]
+      };
+    } catch (error) {
+      safeLogger.error('Error editing message:', error);
+      if (error instanceof Error && error.message.includes('database')) {
+        throw new Error('Messaging service temporarily unavailable. Database connection error.');
+      }
+      throw new Error('Failed to edit message');
+    }
+  }
+
+  // Get full message thread (parent + all replies)
+  async getFullMessageThread(data: {
+    messageId: string;
+    userAddress: string;
+  }) {
+    const { messageId, userAddress } = data;
+
+    try {
+      this.validateAddress(userAddress);
+
+      // Get the message
+      const message = await db
+        .select()
+        .from(chatMessages)
+        .where(eq(chatMessages.id, messageId))
+        .limit(1);
+
+      if (!message.length) {
+        return { success: false, message: 'Message not found' };
+      }
+
+      // Check if user has access
+      const conversation = await this.getConversationDetails({
+        conversationId: message[0].conversationId,
+        userAddress
+      });
+
+      if (!conversation) {
+        return { success: false, message: 'Access denied' };
+      }
+
+      // Find the root message (if this is a reply, find the original)
+      let rootMessageId = messageId;
+      let currentMessage = message[0];
+
+      // Walk up the reply chain to find root
+      while (currentMessage.replyToId) {
+        const parentMessage = await db
+          .select()
+          .from(chatMessages)
+          .where(eq(chatMessages.id, currentMessage.replyToId))
+          .limit(1);
+
+        if (parentMessage.length) {
+          rootMessageId = parentMessage[0].id;
+          currentMessage = parentMessage[0];
+        } else {
+          break;
+        }
+      }
+
+      // Get the root message
+      const rootMessage = await db
+        .select()
+        .from(chatMessages)
+        .where(eq(chatMessages.id, rootMessageId))
+        .limit(1);
+
+      // Get all direct replies to the root message
+      const replies = await db
+        .select()
+        .from(chatMessages)
+        .where(
+          and(
+            eq(chatMessages.replyToId, rootMessageId),
+            isNull(chatMessages.deletedAt)
+          )
+        )
+        .orderBy(asc(chatMessages.sentAt));
+
+      // Get reactions for root and replies
+      const allMessageIds = [rootMessageId, ...replies.map(r => r.id)];
+      const reactionsMap: { [key: string]: any[] } = {};
+
+      for (const msgId of allMessageIds) {
+        reactionsMap[msgId] = await this.getMessageReactions(msgId);
+      }
+
+      return {
+        success: true,
+        data: {
+          parentMessage: {
+            ...rootMessage[0],
+            reactions: reactionsMap[rootMessageId] || []
+          },
+          replies: replies.map(r => ({
+            ...r,
+            reactions: reactionsMap[r.id] || []
+          })),
+          replyCount: replies.length
+        }
+      };
+    } catch (error) {
+      safeLogger.error('Error getting full message thread:', error);
+      if (error instanceof Error && error.message.includes('database')) {
+        throw new Error('Messaging service temporarily unavailable. Database connection error.');
+      }
+      throw new Error('Failed to get message thread');
+    }
+  }
+
+  // Get reply count for a message
+  async getReplyCount(messageId: string): Promise<number> {
+    try {
+      const result = await db
+        .select({ count: count() })
+        .from(chatMessages)
+        .where(
+          and(
+            eq(chatMessages.replyToId, messageId),
+            isNull(chatMessages.deletedAt)
+          )
+        );
+
+      return Number(result[0]?.count || 0);
+    } catch (error) {
+      safeLogger.error('Error getting reply count:', error);
+      return 0;
     }
   }
 }

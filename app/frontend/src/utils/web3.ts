@@ -8,11 +8,25 @@ import { hasInjectedProvider, getInjectedProvider } from '@/utils/walletConnecto
  * Wrap an EIP-1193 provider to avoid "Cannot assign to read only property" errors.
  * This happens when extensions like LastPass freeze request objects.
  */
-function wrapProvider(provider: any): any {
+/**
+ * Wrap an EIP-1193 provider to avoid "Cannot assign to read only property" errors.
+ * This happens when extensions like LastPass freeze request objects.
+ */
+export function wrapProvider(provider: any): any {
   if (!provider) return provider;
 
+  // Create a clean object with just the necessary methods
+  // wrapping the original provider's methods. We avoid using ...provider
+  // because some extensions (like LastPass) inject properties that are read-only
+  // or throw errors when accessed/copied.
   return {
-    ...provider,
+    // Forward specific known properties that might be checked
+    isMetaMask: provider.isMetaMask,
+    isStatus: provider.isStatus,
+    host: provider.host,
+    path: provider.path,
+
+    // Intercept request to ensure args are mutable
     request: async (args: { method: string; params?: any[] }) => {
       // Create a mutable copy of the request args
       const requestArgs = {
@@ -21,6 +35,7 @@ function wrapProvider(provider: any): any {
       };
       return provider.request(requestArgs);
     },
+
     // Forward other common methods
     on: provider.on?.bind(provider),
     removeListener: provider.removeListener?.bind(provider),

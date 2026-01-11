@@ -1,26 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import { MessageCircle, Send, X, Users, Search, Paperclip } from 'lucide-react';
+import { MessageCircle, Send, X, Users, Search, Paperclip, RefreshCw } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { Button } from '@/design-system/components/Button';
-import { messagingService } from '@/services/messagingService';
-import { marketplaceService } from '@/services/marketplaceService';
+import { useUnifiedMessaging, useConversationMessages, useTypingIndicator } from '@/hooks/useUnifiedMessaging';
 import { useWeb3 } from '@/context/Web3Context';
+import { Message, Conversation } from '@/types/messaging';
 
-interface Message {
-  id: string;
-  fromAddress: string;
-  toAddress: string;
-  content: string;
-  timestamp: Date;
-  isOwn: boolean;
-  isRead: boolean;
-  isDelivered: boolean;
-}
-
-interface Conversation {
+interface LocalConversation {
   id: string;
   participants: string[];
   participantName: string;
@@ -63,255 +52,196 @@ function getAvatarUrl(profileCid: string | undefined, walletAddress?: string): s
 const MessagesPage: React.FC = () => {
   const router = useRouter();
   const { to } = router.query;
-  const { address: account, signer } = useWeb3();
+  const { address: account } = useWeb3();
 
   const formatAddress = (addr: string) => {
     if (!addr) return '';
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
-  // Helper function to generate conversation ID (same logic as messaging service)
-  const getConversationId = (addr1: string, addr2: string): string => {
-    const [a1, a2] = [addr1.toLowerCase(), addr2.toLowerCase()].sort();
-    return `${a1}_${a2}`;
-  };
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
+  // Use the unified messaging hook
+  const {
+    conversations: rawConversations,
+    isLoading,
+    isInitialized,
+    error,
+    connectionMode,
+    getOrCreateDMConversation,
+    sendMessage,
+    markAsRead,
+    forceSync,
+    isUserOnline
+  } = useUnifiedMessaging({
+    walletAddress: account || undefined,
+    autoInitialize: !!account
+  });
+
+  const [localConversations, setLocalConversations] = useState<LocalConversation[]>([]);
+  const [activeConversation, setActiveConversation] = useState<LocalConversation | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [messagingInitialized, setMessagingInitialized] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [error, setError] = useState<string | null>(null);
 
-  // Initialize messaging service when account/signer changes
+  // Use the conversation messages hook for the active conversation
+  const {
+    messages: rawMessages,
+    isLoading: messagesLoading,
+    refresh: refreshMessages
+  } = useConversationMessages(activeConversation?.id || null, {
+    walletAddress: account || undefined,
+    autoLoad: !!activeConversation
+  });
+
+  // Typing indicator
+  const { handleTyping, stopTyping } = useTypingIndicator(activeConversation?.id || null);
+
+  // Transform conversations to local format with user details
   useEffect(() => {
-    const initializeMessaging = async () => {
-      console.log('Initializing messaging service...', { account, signer: !!signer });
-
-      if (account && signer) {
-        try {
-          setLoading(true);
-          setMessagingInitialized(false);
-          setError(null);
-
-          console.log('Starting messaging service initialization');
-
-          // Add timeout to prevent infinite loading
-          const initPromise = messagingService.initialize(signer);
-          const timeoutPromise = new Promise<void>((_, reject) =>
-            setTimeout(() => reject(new Error('Messaging service initialization timeout')), 15000)
-          );
-
-          console.log('Waiting for initialization or timeout');
-          await Promise.race([initPromise, timeoutPromise]);
-          console.log('Messaging service initialization completed');
-
-          setMessagingInitialized(true);
-          setError(null);
-        } catch (error) {
-          console.error('Failed to initialize messaging service:', error);
-          setMessagingInitialized(true); // Set to true to stop loading, but show error
-          setError(error instanceof Error ? error.message : 'Failed to initialize messaging service');
-        } finally {
-          setLoading(false);
-          console.log('Finished messaging service initialization attempt');
-        }
-      } else {
-        console.log('Skipping messaging initialization - missing account or signer', { account, signer: !!signer });
+    const transformConversations = async () => {
+      if (!rawConversations || rawConversations.length === 0) {
+        setLocalConversations([]);
+        return;
       }
-    };
 
-    initializeMessaging();
-  }, [account, signer]);
+      const transformed = await Promise.all(
+        rawConversations.map(async (conv) => {
+          // Find the other participant (not current user)
+          const otherParticipant = conv.participants.find(p => p.toLowerCase() !== account?.toLowerCase());
 
-  // Load conversations and messages
-  useEffect(() => {
-    const loadConversations = async () => {
-      try {
-        setLoading(true);
+          // Get user details if available
+          let participantName = otherParticipant || 'Unknown User';
+          let participantAvatar = otherParticipant
+            ? `https://api.dicebear.com/7.x/identicon/svg?seed=${otherParticipant}&backgroundColor=b6e3f4`
+            : '/images/default-avatar.png';
 
-        // Wait for messaging service to be initialized
-        if (!messagingInitialized) {
-          return;
-        }
-
-        // Get all conversations from the messaging service
-        const allConversations = messagingService.getConversations();
-
-        // Transform to our format and fetch user details
-        const transformedConversations = await Promise.all(
-          allConversations.map(async (conv) => {
-            // Find the other participant (not current user)
-            const otherParticipant = conv.participants.find(p => p !== account?.toLowerCase());
-
-            // Get user details if available
-            let participantName = otherParticipant || 'Unknown User';
-            let participantAvatar = otherParticipant
-              ? `https://api.dicebear.com/7.x/identicon/svg?seed=${otherParticipant}&backgroundColor=b6e3f4`
-              : '/images/default-avatar.png';
-
-            if (otherParticipant) {
-              try {
-                // Try to get user details from marketplace service
-                const userResponse = await fetch(`/api/users/${otherParticipant}`);
-                if (userResponse.ok) {
-                  const userData = await userResponse.json();
-                  console.log('User data for ' + otherParticipant + ':', userData.data);
-                  // Prioritize storeName for sellers, then displayName, username, or name for regular users
-                  participantName = userData.data?.storeName ||
-                    userData.data?.displayName ||
-                    userData.data?.username ||
-                    userData.data?.name ||
-                    formatAddress(otherParticipant);
-                  const rawAvatarUrl = userData.data?.profileImageCdn ||
-                    userData.data?.profilePicture ||
-                    userData.data?.avatarUrl ||
-                    userData.data?.avatarCid ||
-                    userData.data?.profileImageUrl;
-                  participantAvatar = getAvatarUrl(rawAvatarUrl, otherParticipant);
-                  console.log('Raw avatar URL for ' + otherParticipant + ':', rawAvatarUrl);
-                  console.log('Resolved avatar for ' + otherParticipant + ':', participantAvatar);
-                } else {
-                  participantName = formatAddress(otherParticipant);
-                }
-              } catch (error) {
-                console.warn('Could not fetch user details:', error);
+          if (otherParticipant) {
+            try {
+              // Try to get user details from API
+              const userResponse = await fetch(`/api/users/${otherParticipant}`);
+              if (userResponse.ok) {
+                const userData = await userResponse.json();
+                // Prioritize storeName for sellers, then displayName, username, or name
+                participantName = userData.data?.storeName ||
+                  userData.data?.displayName ||
+                  userData.data?.username ||
+                  userData.data?.name ||
+                  formatAddress(otherParticipant);
+                const rawAvatarUrl = userData.data?.profileImageCdn ||
+                  userData.data?.profilePicture ||
+                  userData.data?.avatarUrl ||
+                  userData.data?.avatarCid ||
+                  userData.data?.profileImageUrl;
+                participantAvatar = getAvatarUrl(rawAvatarUrl, otherParticipant);
+              } else {
                 participantName = formatAddress(otherParticipant);
               }
+            } catch (error) {
+              console.warn('Could not fetch user details:', error);
+              participantName = formatAddress(otherParticipant);
             }
+          }
 
-            return {
-              id: conv.id,
-              participants: conv.participants,
-              participantName,
-              participantAvatar,
-              lastMessage: conv.lastMessage?.content,
-              lastActivity: conv.lastActivity,
-              unreadCount: conv.unreadCount,
-              isOnline: false // TODO: Implement presence system
-            };
-          })
+          return {
+            id: conv.id,
+            participants: conv.participants,
+            participantName,
+            participantAvatar,
+            lastMessage: conv.lastMessage?.content,
+            lastActivity: new Date(conv.lastActivity),
+            unreadCount: account ? (conv.unreadCounts?.[account] || 0) : 0,
+            isOnline: otherParticipant ? isUserOnline(otherParticipant) : false
+          };
+        })
+      );
+
+      setLocalConversations(transformed);
+    };
+
+    if (account) {
+      transformConversations();
+    }
+  }, [rawConversations, account, isUserOnline]);
+
+  // Handle URL query parameter for opening a specific conversation
+  useEffect(() => {
+    const openConversation = async () => {
+      if (to && account && isInitialized) {
+        const recipientAddress = to as string;
+
+        // Check if conversation already exists in local state
+        const existingConv = localConversations.find(c =>
+          c.participants.some(p => p.toLowerCase() === recipientAddress.toLowerCase())
         );
 
-        setConversations(transformedConversations);
+        if (existingConv) {
+          setActiveConversation(existingConv);
+        } else {
+          // Create or get the DM conversation
+          try {
+            const conversation = await getOrCreateDMConversation(recipientAddress);
 
-        // If a specific recipient was passed in the query, set them as active
-        if (to && account) {
-          // Create conversation ID using the same logic as the messaging service
-          const [addr1, addr2] = [account.toLowerCase(), (to as string).toLowerCase()].sort();
-          const conversationId = `${addr1}_${addr2}`;
-
-          const targetConversation = transformedConversations.find(c => c.id === conversationId);
-
-          if (targetConversation) {
-            setActiveConversation(targetConversation);
-          } else {
-            // Create new conversation if doesn't exist
-            const newConv: Conversation = {
-              id: conversationId,
-              participants: [account!, to as string],
-              participantName: formatAddress(to as string),
-              participantAvatar: `https://api.dicebear.com/7.x/identicon/svg?seed=${to as string}&backgroundColor=b6e3f4`,
+            // Create local representation
+            const newLocalConv: LocalConversation = {
+              id: conversation.id,
+              participants: conversation.participants,
+              participantName: formatAddress(recipientAddress),
+              participantAvatar: `https://api.dicebear.com/7.x/identicon/svg?seed=${recipientAddress}&backgroundColor=b6e3f4`,
               lastMessage: undefined,
               lastActivity: new Date(),
               unreadCount: 0,
-              isOnline: false
+              isOnline: isUserOnline(recipientAddress)
             };
-            setConversations(prev => [newConv, ...prev]);
-            setActiveConversation(newConv);
+
+            setActiveConversation(newLocalConv);
+          } catch (error) {
+            console.error('Failed to create conversation:', error);
           }
         }
-      } catch (error) {
-        console.error('Error loading conversations:', error);
-      } finally {
-        setLoading(false);
       }
     };
 
-    if (account && messagingInitialized) {
-      loadConversations();
-    }
-  }, [account, to, messagingInitialized]);
+    openConversation();
+  }, [to, account, isInitialized, localConversations, getOrCreateDMConversation, isUserOnline]);
 
-  // Load messages when active conversation changes
+  // Mark messages as read when viewing a conversation
   useEffect(() => {
-    if (activeConversation && messagingInitialized) {
-      const convMessages = messagingService.getMessages(activeConversation.id);
-
-      // Transform to our format
-      const transformedMessages = convMessages.map(msg => ({
-        id: msg.id,
-        fromAddress: msg.fromAddress,
-        toAddress: msg.toAddress,
-        content: msg.content,
-        timestamp: msg.timestamp,
-        isOwn: msg.fromAddress === account,
-        isRead: msg.isRead,
-        isDelivered: msg.isDelivered
-      }));
-
-      setMessages(transformedMessages);
-
-      // Mark messages as read
-      messagingService.markMessagesAsRead(activeConversation.id);
-    } else {
-      setMessages([]);
+    if (activeConversation && isInitialized) {
+      markAsRead(activeConversation.id);
     }
-  }, [activeConversation, account, messagingInitialized]);
+  }, [activeConversation, isInitialized, markAsRead]);
 
   // Scroll to bottom of messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [rawMessages]);
 
   const handleSendMessage = async () => {
-    if (newMessage.trim() === '' || !activeConversation || !account || !messagingInitialized) return;
+    if (newMessage.trim() === '' || !activeConversation || !account || !isInitialized) return;
 
     try {
-      // Get the recipient address (the other participant in the conversation)
-      const recipientAddress = activeConversation.participants.find(p => p !== account);
-      if (!recipientAddress) {
-        console.error('No recipient found for conversation');
-        return;
-      }
+      stopTyping();
 
-      // Send message using messaging service
-      await messagingService.sendMessage(recipientAddress, newMessage);
+      // Send message using unified messaging service
+      await sendMessage({
+        conversationId: activeConversation.id,
+        content: newMessage.trim(),
+        contentType: 'text'
+      });
 
       // Clear input
       setNewMessage('');
-
-      // Reload messages to get the new one
-      if (activeConversation) {
-        const convMessages = messagingService.getMessages(activeConversation.id);
-        const transformedMessages = convMessages.map(msg => ({
-          id: msg.id,
-          fromAddress: msg.fromAddress,
-          toAddress: msg.toAddress,
-          content: msg.content,
-          timestamp: msg.timestamp,
-          isOwn: msg.fromAddress === account,
-          isRead: msg.isRead,
-          isDelivered: msg.isDelivered
-        }));
-        setMessages(transformedMessages);
-      }
     } catch (error) {
       console.error('Error sending message:', error);
       alert('Failed to send message. Please try again.');
     }
   };
 
-  const handleConversationSelect = (conversation: Conversation) => {
+  const handleConversationSelect = (conversation: LocalConversation) => {
     setActiveConversation(conversation);
 
     // Get the other participant's address
-    const otherParticipant = conversation.participants.find(p => p !== account);
-    if (otherParticipant && account) {
-      // Generate conversation ID using our helper
-      const conversationId = getConversationId(account, otherParticipant);
+    const otherParticipant = conversation.participants.find(p => p.toLowerCase() !== account?.toLowerCase());
+    if (otherParticipant) {
       router.push(`/messages?to=${otherParticipant}`, undefined, { shallow: true });
     }
   };
@@ -323,7 +253,25 @@ const MessagesPage: React.FC = () => {
     }
   };
 
-  if (loading || !messagingInitialized) {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewMessage(e.target.value);
+    handleTyping();
+  };
+
+  const handleRefresh = async () => {
+    await forceSync();
+    if (activeConversation) {
+      await refreshMessages();
+    }
+  };
+
+  // Filter conversations by search query
+  const filteredConversations = localConversations.filter(conv =>
+    conv.participantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    conv.participants.some(p => p.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  if (isLoading && !isInitialized) {
     return (
       <Layout title="Messages | LinkDAO" fullWidth={true}>
         <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
@@ -333,7 +281,7 @@ const MessagesPage: React.FC = () => {
               {error ? (
                 <span className="text-red-400">Error: {error}</span>
               ) : (
-                'Initializing messaging service...'
+                'Loading messages...'
               )}
             </p>
             {error && (
@@ -364,16 +312,31 @@ const MessagesPage: React.FC = () => {
               <h1 className="text-2xl font-bold text-white flex items-center">
                 <MessageCircle className="mr-2" size={24} />
                 Messages
+                {connectionMode !== 'websocket' && (
+                  <span className="ml-2 text-xs px-2 py-1 bg-yellow-500/20 text-yellow-300 rounded">
+                    {connectionMode === 'offline' ? 'Offline' : 'Polling'}
+                  </span>
+                )}
               </h1>
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search conversations..."
-                  className="bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                <Search className="absolute right-3 top-2.5 text-white/50" size={18} />
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRefresh}
+                  disabled={isLoading}
+                >
+                  <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
+                </Button>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search conversations..."
+                    className="bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  <Search className="absolute right-3 top-2.5 text-white/50" size={18} />
+                </div>
               </div>
             </div>
 
@@ -383,52 +346,58 @@ const MessagesPage: React.FC = () => {
                 <div className="bg-white/5 rounded-lg p-4">
                   <h2 className="text-lg font-semibold text-white mb-4">Conversations</h2>
                   <div className="space-y-3">
-                    {conversations.map((conversation) => (
-                      <div
-                        key={conversation.id}
-                        className={`flex items-center p-3 rounded-lg cursor-pointer transition-colors ${activeConversation?.id === conversation.id
-                          ? 'bg-blue-600/30 border border-blue-500/50'
-                          : 'hover:bg-white/10'
-                          }`}
-                        onClick={() => handleConversationSelect(conversation)}
-                      >
-                        <div className="relative">
-                          <img
-                            src={conversation.participantAvatar}
-                            alt={conversation.participantName}
-                            className="w-12 h-12 rounded-full object-cover"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              const otherParticipant = conversation.participants.find(p => p !== account);
-                              target.src = otherParticipant
-                                ? `https://api.dicebear.com/7.x/identicon/svg?seed=${otherParticipant}&backgroundColor=b6e3f4`
-                                : '/images/default-avatar.png';
-                            }}
-                          />
-                          {conversation.isOnline && (
-                            <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-gray-900"></div>
+                    {filteredConversations.length > 0 ? (
+                      filteredConversations.map((conversation) => (
+                        <div
+                          key={conversation.id}
+                          className={`flex items-center p-3 rounded-lg cursor-pointer transition-colors ${activeConversation?.id === conversation.id
+                            ? 'bg-blue-600/30 border border-blue-500/50'
+                            : 'hover:bg-white/10'
+                            }`}
+                          onClick={() => handleConversationSelect(conversation)}
+                        >
+                          <div className="relative">
+                            <img
+                              src={conversation.participantAvatar}
+                              alt={conversation.participantName}
+                              className="w-12 h-12 rounded-full object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                const otherParticipant = conversation.participants.find(p => p.toLowerCase() !== account?.toLowerCase());
+                                target.src = otherParticipant
+                                  ? `https://api.dicebear.com/7.x/identicon/svg?seed=${otherParticipant}&backgroundColor=b6e3f4`
+                                  : '/images/default-avatar.png';
+                              }}
+                            />
+                            {conversation.isOnline && (
+                              <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-gray-900"></div>
+                            )}
+                          </div>
+                          <div className="ml-3 flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <h3 className="font-medium text-white truncate">
+                                {conversation.participantName}
+                              </h3>
+                              <span className="text-xs text-white/70">
+                                {conversation.lastActivity.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                            <p className="text-sm text-white/70 truncate">
+                              {conversation.lastMessage || 'No messages yet'}
+                            </p>
+                          </div>
+                          {conversation.unreadCount > 0 && (
+                            <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center text-xs text-white ml-2">
+                              {conversation.unreadCount}
+                            </div>
                           )}
                         </div>
-                        <div className="ml-3 flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <h3 className="font-medium text-white truncate">
-                              {conversation.participantName}
-                            </h3>
-                            <span className="text-xs text-white/70">
-                              {conversation.lastActivity.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          </div>
-                          <p className="text-sm text-white/70 truncate">
-                            {conversation.lastMessage || 'No messages yet'}
-                          </p>
-                        </div>
-                        {conversation.unreadCount > 0 && (
-                          <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center text-xs text-white ml-2">
-                            {conversation.unreadCount}
-                          </div>
-                        )}
+                      ))
+                    ) : (
+                      <div className="text-center py-8 text-white/50">
+                        {searchQuery ? 'No conversations found' : 'No conversations yet'}
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
               </div>
@@ -447,7 +416,7 @@ const MessagesPage: React.FC = () => {
                               className="w-10 h-10 rounded-full"
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement;
-                                const otherParticipant = activeConversation.participants.find(p => p !== account);
+                                const otherParticipant = activeConversation.participants.find(p => p.toLowerCase() !== account?.toLowerCase());
                                 target.src = otherParticipant
                                   ? `https://api.dicebear.com/7.x/identicon/svg?seed=${otherParticipant}&backgroundColor=b6e3f4`
                                   : '/images/default-avatar.png';
@@ -474,28 +443,40 @@ const MessagesPage: React.FC = () => {
                     {/* Messages */}
                     <div className="bg-white/5 rounded-lg p-4 flex-1 flex flex-col mb-4">
                       <div className="flex-1 overflow-y-auto max-h-96 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
-                        {messages.length > 0 ? (
-                          messages.map((message) => (
-                            <div
-                              key={message.id}
-                              className={`flex mb-4 ${message.isOwn ? 'justify-end' : 'justify-start'}`}
-                            >
+                        {messagesLoading ? (
+                          <div className="flex items-center justify-center h-full">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                          </div>
+                        ) : rawMessages.length > 0 ? (
+                          rawMessages.slice().reverse().map((message) => {
+                            const isOwn = message.fromAddress?.toLowerCase() === account?.toLowerCase();
+                            return (
                               <div
-                                className={`max-w-xs md:max-w-md lg:max-w-lg rounded-2xl px-4 py-2 ${message.isOwn
-                                  ? 'bg-blue-600 text-white rounded-br-none'
-                                  : 'bg-white/10 text-white rounded-bl-none'
-                                  }`}
+                                key={message.id}
+                                className={`flex mb-4 ${isOwn ? 'justify-end' : 'justify-start'}`}
                               >
-                                <div className="text-white/90">{message.content}</div>
                                 <div
-                                  className={`text-xs mt-1 flex justify-end ${message.isOwn ? 'text-blue-200' : 'text-white/50'
+                                  className={`max-w-xs md:max-w-md lg:max-w-lg rounded-2xl px-4 py-2 ${isOwn
+                                    ? 'bg-blue-600 text-white rounded-br-none'
+                                    : 'bg-white/10 text-white rounded-bl-none'
                                     }`}
                                 >
-                                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  <div className="text-white/90">{message.content}</div>
+                                  <div
+                                    className={`text-xs mt-1 flex justify-end ${isOwn ? 'text-blue-200' : 'text-white/50'
+                                      }`}
+                                  >
+                                    {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    {isOwn && message.deliveryStatus && (
+                                      <span className="ml-1">
+                                        {message.deliveryStatus === 'read' ? ' ✓✓' : message.deliveryStatus === 'delivered' ? ' ✓' : ''}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          ))
+                            );
+                          })
                         ) : (
                           <div className="flex items-center justify-center h-full">
                             <p className="text-white/50 text-center">No messages yet. Start the conversation!</p>
@@ -513,7 +494,7 @@ const MessagesPage: React.FC = () => {
                           placeholder="Type your message..."
                           className="flex-1 bg-white/10 border border-white/20 rounded-l-lg px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                           value={newMessage}
-                          onChange={(e) => setNewMessage(e.target.value)}
+                          onChange={handleInputChange}
                           onKeyPress={handleKeyPress}
                         />
                         <button className="bg-white/10 border-y border-r border-white/20 p-3 text-white hover:bg-white/20 transition-colors">
@@ -522,7 +503,7 @@ const MessagesPage: React.FC = () => {
                         <button
                           className="bg-blue-600 hover:bg-blue-700 rounded-r-lg px-4 py-3 text-white transition-colors"
                           onClick={handleSendMessage}
-                          disabled={!messagingInitialized}
+                          disabled={!isInitialized || !newMessage.trim()}
                         >
                           <Send size={20} />
                         </button>
@@ -535,7 +516,7 @@ const MessagesPage: React.FC = () => {
                       <MessageCircle size={48} className="text-white/30 mx-auto mb-4" />
                       <h3 className="text-xl font-medium text-white mb-2">Select a conversation</h3>
                       <p className="text-white/70">
-                        Choose a conversation from the list to start messaging a seller
+                        Choose a conversation from the list to start messaging
                       </p>
                     </div>
                   </div>

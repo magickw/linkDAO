@@ -1,6 +1,14 @@
 /**
  * NFT Negotiation Bot Service
  * AI-powered bot for NFT deal negotiations with testnet ETH rewards
+ *
+ * @deprecated This service uses the deprecated messagingService.
+ * When the messagingService is removed, this will need to be updated
+ * to use unifiedMessagingService events and methods instead.
+ *
+ * TODO: Migrate to use unifiedMessagingService:
+ * - Replace messagingService.on() with unifiedMessagingService.on()
+ * - Replace messagingService.sendMessage() with unifiedMessagingService.sendMessage()
  */
 
 import { ethers } from 'ethers';

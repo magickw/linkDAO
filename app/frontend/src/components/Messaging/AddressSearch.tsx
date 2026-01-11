@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../../design-system';
 import multichainResolver, { ResolvedAddress, AddressSearchResult } from '../../services/multichainResolver';
-import { messagingService } from '../../services/messagingService';
+import { unifiedMessagingService } from '../../services/unifiedMessagingService';
 
 interface AddressSearchProps {
   onAddressSelect: (address: ResolvedAddress) => void;
@@ -84,11 +84,11 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
     };
   }, [query]);
 
-  const loadRecentAddresses = () => {
+  const loadRecentAddresses = async () => {
     try {
-      const conversations = messagingService.getConversations();
+      const conversations = await unifiedMessagingService.getConversations({ limit: 5 });
       const addresses: ResolvedAddress[] = [];
-      
+
       // Extract unique addresses from recent conversations
       const uniqueAddresses = new Set<string>();
       conversations.slice(0, 5).forEach((conv: any) => {

@@ -4,6 +4,7 @@ import { messagingController } from '../controllers/messagingController';
 import { validateRequest } from '../middleware/validation';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { rateLimitingMiddleware } from '../middleware/rateLimitingMiddleware';
+import { uploadMessageAttachment, uploadVoiceMessage, handleMulterError } from '../middleware/uploadMiddleware';
 
 const router = express.Router();
 
@@ -249,20 +250,21 @@ router.get('/conversations/:id/participants',
 );
 
 // Add participant to group conversation
-router.post('/conversations/:id/participants', csrfProtection, 
+router.post('/conversations/:id/participants', csrfProtection,
   validateRequest({
     params: {
       id: { type: 'string', required: true }
     },
     body: {
-      userAddress: { type: 'string', required: true }
+      userAddress: { type: 'string', required: true },
+      role: { type: 'string', optional: true, enum: ['admin', 'moderator', 'member'] }
     }
   }),
   messagingController.addParticipant
 );
 
 // Remove participant from group conversation
-router.delete('/conversations/:id/participants/:userAddress', csrfProtection, 
+router.delete('/conversations/:id/participants/:userAddress', csrfProtection,
   validateRequest({
     params: {
       id: { type: 'string', required: true },
@@ -270,6 +272,150 @@ router.delete('/conversations/:id/participants/:userAddress', csrfProtection,
     }
   }),
   messagingController.removeParticipant
+);
+
+// Update participant role
+router.put('/conversations/:id/participants/:userAddress/role', csrfProtection,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true },
+      userAddress: { type: 'string', required: true }
+    },
+    body: {
+      role: { type: 'string', required: true, enum: ['admin', 'moderator', 'member'] }
+    }
+  }),
+  messagingController.updateParticipantRole
+);
+
+// Create group conversation
+router.post('/groups', csrfProtection,
+  validateRequest({
+    body: {
+      participants: { type: 'array', required: true },
+      name: { type: 'string', optional: true, maxLength: 100 },
+      description: { type: 'string', optional: true, maxLength: 500 },
+      isPublic: { type: 'boolean', optional: true }
+    }
+  }),
+  messagingController.createGroupConversation
+);
+
+// Upload message attachment (images, documents, etc.)
+router.post('/attachments',
+  csrfProtection,
+  uploadMessageAttachment,
+  handleMulterError,
+  messagingController.uploadAttachment
+);
+
+// Upload voice message
+router.post('/voice-messages',
+  csrfProtection,
+  uploadVoiceMessage,
+  handleMulterError,
+  messagingController.uploadVoiceMessage
+);
+
+// Get link preview
+router.post('/link-preview', csrfProtection,
+  validateRequest({
+    body: {
+      url: { type: 'string', required: true }
+    }
+  }),
+  messagingController.getLinkPreview
+);
+
+// =====================================================
+// PHASE 5: Advanced Features (Reactions, Pinning, Editing, Threading)
+// =====================================================
+
+// Add reaction to message
+router.post('/messages/:id/reactions', csrfProtection,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    },
+    body: {
+      emoji: { type: 'string', required: true, maxLength: 32 }
+    }
+  }),
+  messagingController.addReaction
+);
+
+// Remove reaction from message
+router.delete('/messages/:id/reactions/:emoji', csrfProtection,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true },
+      emoji: { type: 'string', required: true }
+    }
+  }),
+  messagingController.removeReaction
+);
+
+// Get reactions for a message
+router.get('/messages/:id/reactions',
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    }
+  }),
+  messagingController.getReactions
+);
+
+// Pin message
+router.post('/messages/:id/pin', csrfProtection,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    }
+  }),
+  messagingController.pinMessage
+);
+
+// Unpin message
+router.delete('/messages/:id/pin', csrfProtection,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    }
+  }),
+  messagingController.unpinMessage
+);
+
+// Get pinned messages for a conversation
+router.get('/conversations/:id/pinned',
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    }
+  }),
+  messagingController.getPinnedMessages
+);
+
+// Edit message
+router.put('/messages/:id', csrfProtection,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    },
+    body: {
+      content: { type: 'string', required: true, minLength: 1, maxLength: 10240 }
+    }
+  }),
+  messagingController.editMessage
+);
+
+// Get full message thread (parent + all replies)
+router.get('/messages/:id/full-thread',
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    }
+  }),
+  messagingController.getFullMessageThread
 );
 
 export default router;

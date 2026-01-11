@@ -673,11 +673,7 @@ const EnhancedPostCard = React.memo(({
 
               {/* Content - main focus */}
               <div className="mb-4">
-                {post.isRepost && (!post.content || post.content.trim() === '') ? (
-                  <p className="text-gray-500 dark:text-gray-400 text-sm italic">
-                    Shared without comment
-                  </p>
-                ) : (
+                {post.isRepost && (!post.content || post.content.trim() === '') ? null : (
                   <>
                     <p
                       className="text-gray-700 dark:text-gray-300 text-base leading-relaxed"

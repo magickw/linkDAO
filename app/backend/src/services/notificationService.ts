@@ -133,6 +133,12 @@ export class NotificationService {
         title: 'Cancellation Auto-Approved',
         message: 'The cancellation request was automatically approved due to no response',
         actionUrl: '/orders/{orderId}'
+      },
+      {
+        type: 'PRODUCT_FAVORITED',
+        title: 'Product Added to Wishlist',
+        message: 'Someone added your product to their wishlist',
+        actionUrl: '/seller/products/{productId}'
       }
     ];
 
@@ -211,6 +217,67 @@ export class NotificationService {
   ): Promise<void> {
     const notificationType = `ORDER_${newStatus}`; // e.g., ORDER_PROCESSING, ORDER_SHIPPED
     await this.sendOrderNotification(userAddress, notificationType, orderId, metadata);
+  }
+
+  /**
+   * Send seller notification for product events (e.g., favorites, views, etc.)
+   */
+  async sendSellerNotification(
+    sellerAddress: string,
+    type: string,
+    productId: string,
+    metadata?: any
+  ): Promise<void> {
+    try {
+      const template = this.templates.get(type);
+      if (!template) {
+        safeLogger.warn(`No template found for notification type: ${type}`);
+        return;
+      }
+
+      let message = template.message;
+      let actionUrl = template.actionUrl?.replace('{productId}', productId);
+
+      // Customize message based on metadata
+      if (metadata) {
+        if (metadata.productTitle) {
+          message = `Someone added "${metadata.productTitle}" to their wishlist`;
+        }
+        message = this.customizeMessage(message, metadata);
+      }
+
+      const notification: any = {
+        userAddress: sellerAddress,
+        type,
+        message,
+        metadata: { ...metadata, productId, recipientType: 'seller' },
+        read: false
+      };
+
+      // Store notification in database
+      await databaseService.createNotification(notification);
+
+      // Send real-time notification
+      await this.sendRealTimeNotification(sellerAddress, {
+        title: template.title,
+        message,
+        actionUrl,
+        metadata: { ...metadata, productId, recipientType: 'seller' }
+      });
+
+      // Send email notification if enabled
+      if (await this.shouldSendEmail(sellerAddress, type)) {
+        await this.sendEmailNotification(sellerAddress, template.title, message, actionUrl);
+      }
+
+      // Send push notification if enabled
+      if (await this.shouldSendPush(sellerAddress, type)) {
+        await this.sendPushNotification(sellerAddress, template.title, message, actionUrl);
+      }
+
+    } catch (error) {
+      safeLogger.error('Error sending seller notification:', error);
+    }
   }
 
   /**

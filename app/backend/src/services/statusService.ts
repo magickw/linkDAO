@@ -433,19 +433,55 @@ export class StatusService {
 
       let reaction;
       if (existingReactions.length > 0) {
-        // Update existing reaction
-        [reaction] = await db
-          .update(statusReactions)
-          .set({
-            type,
-            amount,
-            createdAt: new Date()
-          })
-          .where(and(
-            eq(statusReactions.statusId, statusId),
-            eq(statusReactions.userId, userId)
-          ))
-          .returning();
+        const oldType = existingReactions[0].type;
+
+        if (oldType === type) {
+          // Toggle off (remove reaction)
+          await db
+            .delete(statusReactions)
+            .where(and(
+              eq(statusReactions.statusId, statusId),
+              eq(statusReactions.userId, userId)
+            ));
+
+          // Decrement count
+          if (type === 'upvote') {
+            await db.update(statuses).set({ upvotes: sql`${statuses.upvotes} - 1` }).where(eq(statuses.id, statusId));
+          } else if (type === 'downvote') {
+            await db.update(statuses).set({ downvotes: sql`${statuses.downvotes} - 1` }).where(eq(statuses.id, statusId));
+          }
+
+          reaction = null; // Reaction removed
+        } else {
+          // Update existing reaction (Change type)
+          [reaction] = await db
+            .update(statusReactions)
+            .set({
+              type,
+              amount,
+              createdAt: new Date()
+            })
+            .where(and(
+              eq(statusReactions.statusId, statusId),
+              eq(statusReactions.userId, userId)
+            ))
+            .returning();
+
+          // Update counts if type changed
+          const updates: any = {};
+
+          // Decrement old type
+          if (oldType === 'upvote') updates.upvotes = sql`${statuses.upvotes} - 1`;
+          else if (oldType === 'downvote') updates.downvotes = sql`${statuses.downvotes} - 1`;
+
+          // Increment new type
+          if (type === 'upvote') updates.upvotes = updates.upvotes ? sql`${updates.upvotes} + 1` : sql`${statuses.upvotes} + 1`;
+          else if (type === 'downvote') updates.downvotes = updates.downvotes ? sql`${updates.downvotes} + 1` : sql`${statuses.downvotes} + 1`;
+
+          if (Object.keys(updates).length > 0) {
+            await db.update(statuses).set(updates).where(eq(statuses.id, statusId));
+          }
+        }
       } else {
         // Create new reaction
         [reaction] = await db
@@ -458,6 +494,13 @@ export class StatusService {
             createdAt: new Date()
           })
           .returning();
+
+        // Increment count for new reaction
+        if (type === 'upvote') {
+          await db.update(statuses).set({ upvotes: sql`${statuses.upvotes} + 1` }).where(eq(statuses.id, statusId));
+        } else if (type === 'downvote') {
+          await db.update(statuses).set({ downvotes: sql`${statuses.downvotes} + 1` }).where(eq(statuses.id, statusId));
+        }
       }
 
       // Update trending cache

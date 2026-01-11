@@ -1208,6 +1208,24 @@ export class DatabaseService {
   }
 
   /**
+   * Get inventory hold by order ID
+   */
+  async getInventoryHoldByOrderId(orderId: string): Promise<typeof schema.inventoryHolds.$inferSelect | null> {
+    try {
+      const result = await this.db
+        .select()
+        .from(schema.inventoryHolds)
+        .where(eq(schema.inventoryHolds.orderId, orderId))
+        .limit(1);
+
+      return result[0] || null;
+    } catch (error) {
+      safeLogger.error("Error getting inventory hold by order ID:", error);
+      return null;
+    }
+  }
+
+  /**
    * Find and release expired inventory holds
    */
   async releaseExpiredInventory(): Promise<number> {
@@ -1456,13 +1474,45 @@ export class DatabaseService {
     }
   }
 
-  async getOrdersByUser(userId: string) {
+  async getOrdersByUser(userId: string, role?: 'buyer' | 'seller') {
     try {
+      if (role === 'buyer') {
+        return await this.db.select().from(schema.orders).where(
+          eq(schema.orders.buyerId, userId)
+        );
+      } else if (role === 'seller') {
+        return await this.db.select().from(schema.orders).where(
+          eq(schema.orders.sellerId, userId)
+        );
+      }
+      // Default: return all orders where user is buyer OR seller (for backwards compatibility)
       return await this.db.select().from(schema.orders).where(
         or(eq(schema.orders.buyerId, userId), eq(schema.orders.sellerId, userId))
       );
     } catch (error) {
       safeLogger.error("Error getting orders by user:", error);
+      throw error;
+    }
+  }
+
+  async getOrdersByBuyer(userId: string) {
+    try {
+      return await this.db.select().from(schema.orders).where(
+        eq(schema.orders.buyerId, userId)
+      );
+    } catch (error) {
+      safeLogger.error("Error getting orders by buyer:", error);
+      throw error;
+    }
+  }
+
+  async getOrdersBySeller(userId: string) {
+    try {
+      return await this.db.select().from(schema.orders).where(
+        eq(schema.orders.sellerId, userId)
+      );
+    } catch (error) {
+      safeLogger.error("Error getting orders by seller:", error);
       throw error;
     }
   }

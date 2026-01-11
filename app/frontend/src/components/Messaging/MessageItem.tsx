@@ -4,9 +4,30 @@ import { Smile, Edit3, Star, Coins } from 'lucide-react';
 import { Button } from '@/design-system/components/Button';
 import { EmojiPicker } from './EmojiPicker';
 import { VoiceMessagePlayer } from './VoiceMessagePlayer';
-import { ChatMessage } from '@/services/messagingService';
-import { messagingService } from '@/services/messagingService';
+import { Message } from '@/types/messaging';
+import { unifiedMessagingService } from '@/services/unifiedMessagingService';
 import { useToast } from '@/hooks/useToast';
+
+// Alias for backward compatibility with components using ChatMessage
+export type ChatMessage = Message & {
+  messageType?: 'text' | 'nft_offer' | 'nft_counter' | 'system' | 'file';
+  metadata?: {
+    nftContract?: string;
+    nftTokenId?: string;
+    offerAmount?: string;
+    originalMessageId?: string;
+    fileUrl?: string;
+    fileName?: string;
+    fileSize?: number;
+    audioUrl?: string;
+    duration?: number;
+    rewardAmount?: string;
+    transactionHash?: string;
+    decryptionFailed?: boolean;
+    isPending?: boolean;
+  };
+  reactions?: Array<{ emoji: string; count: number; users: string[] }>;
+};
 
 interface MessageItemProps {
   message: ChatMessage;
@@ -43,9 +64,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   
   // Check if messaging service is initialized
   const isMessagingInitialized = () => {
-    // This is a simplified check - in a real implementation, you might want to check
-    // the actual initialization state of the messaging service
-    return messagingService && typeof messagingService === 'object';
+    // The unified service is always available as a singleton
+    return unifiedMessagingService && typeof unifiedMessagingService === 'object';
   };
 
   return (
@@ -113,23 +133,22 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                   </p>
                   {!isOwn && (
                     <div className="flex space-x-2 mt-2">
-                      <Button 
-                        variant="primary" 
+                      <Button
+                        variant="primary"
                         size="sm"
                         onClick={async () => {
                           // Accept offer
-                          const otherParticipant = getOtherParticipant(selectedConversation);
-                          if (otherParticipant) {
+                          if (selectedConversation) {
                             try {
                               if (!isMessagingInitialized()) {
                                 addToast("Messaging service not initialized. Please refresh the page.", "error");
                                 return;
                               }
-                              await messagingService.sendMessage(
-                                otherParticipant,
-                                'Offer accepted! 🎉',
-                                'text'
-                              );
+                              await unifiedMessagingService.sendMessage({
+                                conversationId: selectedConversation,
+                                content: 'Offer accepted! 🎉',
+                                contentType: 'text'
+                              });
                             } catch (error) {
                               console.error('Failed to send message:', error);
                               addToast("Failed to send message. Please try again.", "error");
@@ -139,25 +158,23 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                       >
                         Accept
                       </Button>
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         onClick={async () => {
                           // Counter offer
                           const counterAmount = prompt('Enter counter offer (ETH):');
-                          const otherParticipant = getOtherParticipant(selectedConversation);
-                          if (counterAmount && otherParticipant) {
+                          if (counterAmount && selectedConversation) {
                             try {
                               if (!isMessagingInitialized()) {
                                 addToast("Messaging service not initialized. Please refresh the page.", "error");
                                 return;
                               }
-                              await messagingService.sendNFTCounter(
-                                otherParticipant,
-                                message.id,
-                                counterAmount,
-                                `Counter offer: ${counterAmount} ETH`
-                              );
+                              await unifiedMessagingService.sendMessage({
+                                conversationId: selectedConversation,
+                                content: `Counter offer: ${counterAmount} ETH`,
+                                contentType: 'text'
+                              });
                             } catch (error) {
                               console.error('Failed to send counter offer:', error);
                               addToast("Failed to send counter offer. Please try again.", "error");

@@ -2,8 +2,13 @@ import { Router } from 'express';
 import { WishlistService } from '../services/wishlistService';
 import { asyncHandler } from '../utils/asyncHandler';
 import { authMiddleware } from '../middleware/authMiddleware';
+import { notificationService } from '../services/notificationService';
+import { DatabaseService } from '../services/databaseService';
+import { UserProfileService } from '../services/userProfileService';
 
 const router = Router();
+const databaseService = new DatabaseService();
+const userProfileService = new UserProfileService();
 
 // All routes require authentication
 router.use(authMiddleware);
@@ -147,6 +152,26 @@ router.post('/:id/items', asyncHandler(async (req, res) => {
         priceAtAdd,
         priceAlertThreshold
     });
+
+    // Notify the seller that someone favorited their product
+    try {
+        const product = await databaseService.getProductById(productId);
+        if (product && product.sellerId) {
+            // Get seller's wallet address
+            const sellerProfile = await userProfileService.getProfileById(product.sellerId);
+            if (sellerProfile && sellerProfile.walletAddress) {
+                await notificationService.sendSellerNotification(
+                    sellerProfile.walletAddress,
+                    'PRODUCT_FAVORITED',
+                    productId,
+                    { productTitle: product.title }
+                );
+            }
+        }
+    } catch (notifyError) {
+        // Don't fail the request if notification fails
+        console.error('Failed to send favorite notification to seller:', notifyError);
+    }
 
     res.status(201).json({
         success: true,

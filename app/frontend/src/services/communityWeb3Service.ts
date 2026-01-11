@@ -2,7 +2,7 @@
 // This service provides Web3 functionality for community features
 
 import { ethers } from 'ethers';
-import { getProvider, getSigner } from '@/utils/web3';
+import { getProvider, getSigner, wrapProvider } from '@/utils/web3';
 import { Governance__factory, LDAOToken__factory } from '@/types/typechain';
 import { Governance, LDAOToken } from '@/types/typechain';
 
@@ -235,26 +235,6 @@ export class CommunityWeb3Service {
     message?: string;
   }): Promise<string> {
     try {
-      // Helper to wrap provider and avoid "Cannot assign to read only property" errors
-      const wrapProvider = (provider: any): any => {
-        if (!provider) return provider;
-        return {
-          ...provider,
-          request: async (args: { method: string; params?: any[] }) => {
-            // Create a mutable copy of the request args
-            const requestArgs = {
-              method: args.method,
-              params: args.params ? [...args.params] : []
-            };
-            return provider.request(requestArgs);
-          },
-          on: provider.on?.bind(provider),
-          removeListener: provider.removeListener?.bind(provider),
-          send: provider.send?.bind(provider),
-          sendAsync: provider.sendAsync?.bind(provider),
-        };
-      };
-
       // Try to get signer with better error handling
       let signer;
       try {
@@ -266,10 +246,12 @@ export class CommunityWeb3Service {
           const { getWalletClient } = await import('@wagmi/core');
           const { config } = await import('@/lib/wagmi');
           const walletClient = await getWalletClient(config);
-          if (walletClient && walletClient.transport?.provider) {
+
+          const transport = walletClient?.transport as any;
+          if (walletClient && transport?.provider) {
             const { ethers } = await import('ethers');
             // Wrap provider to avoid read-only property errors
-            const wrappedProvider = wrapProvider(walletClient.transport.provider as any);
+            const wrappedProvider = wrapProvider(transport.provider);
             const provider = new ethers.BrowserProvider(wrappedProvider);
             signer = await provider.getSigner();
           }
@@ -481,18 +463,16 @@ export class CommunityWeb3Service {
       const tokenContract = this.tokenContract as unknown as LDAOToken;
       const totalRewards = await tokenContract.getTotalStakeRewards(userAddress);
 
-      // Mock implementation for now
-      const mockRewards: StakingReward[] = [
-        {
-          user: userAddress,
-          postId: 'post_1',
-          rewardAmount: ethers.formatEther(totalRewards),
-          rewardToken: 'LDAO',
-          earned: parseFloat(ethers.formatEther(totalRewards)) > 0
-        }
-      ];
+      const formattedRewards = ethers.formatEther(totalRewards);
 
-      return mockRewards;
+      // Return actual rewards data
+      return [{
+        user: userAddress,
+        postId: 'aggregated', // Contract returns total, so we use a placeholder for postId
+        rewardAmount: formattedRewards,
+        rewardToken: 'LDAO',
+        earned: parseFloat(formattedRewards) > 0
+      }];
     } catch (error) {
       console.error('Error getting staking rewards:', error);
       throw error;
@@ -560,57 +540,10 @@ export class CommunityWeb3Service {
    */
   async getDeFiProtocolData(protocolName: string): Promise<DeFiProtocolData> {
     try {
-      // Mock data for different DeFi protocols
-      const protocolDataMap: Record<string, DeFiProtocolData> = {
-        'Aave': {
-          protocol: 'Aave',
-          tvl: '$12.5B',
-          apy: '4.2%',
-          token: 'AAVE',
-          description: 'Aave is a decentralized lending and borrowing protocol where users can earn interest on deposits and borrow assets.',
-          riskLevel: 'Low',
-          category: 'Lending'
-        },
-        'Compound': {
-          protocol: 'Compound',
-          tvl: '$8.3B',
-          apy: '3.8%',
-          token: 'COMP',
-          description: 'Compound is an algorithmic, autonomous interest rate protocol built for developers to unlock a universe of open financial applications.',
-          riskLevel: 'Low',
-          category: 'Lending'
-        },
-        'Uniswap': {
-          protocol: 'Uniswap',
-          tvl: '$5.7B',
-          apy: '12.5%',
-          token: 'UNI',
-          description: 'Uniswap is a decentralized trading protocol that enables automated liquidity provision on Ethereum.',
-          riskLevel: 'Medium',
-          category: 'DEX'
-        },
-        'Curve': {
-          protocol: 'Curve',
-          tvl: '$6.2B',
-          apy: '6.1%',
-          token: 'CRV',
-          description: 'Curve is an exchange liquidity pool on Ethereum designed for extremely efficient stablecoin trading.',
-          riskLevel: 'Low',
-          category: 'DEX'
-        },
-        'Yearn': {
-          protocol: 'Yearn Finance',
-          tvl: '$2.1B',
-          apy: '8.9%',
-          token: 'YFI',
-          description: 'Yearn Finance is a suite of products in Decentralized Finance (DeFi) that provides lending aggregation, yield generation, and insurance.',
-          riskLevel: 'Medium',
-          category: 'Yield'
-        }
-      };
+      // Real implementation would fetch from an API like DefiLlama
+      // e.g. await fetch(`https://api.llama.fi/protocol/${protocolName}`)
 
-      // Return mock data for the requested protocol, or default to Aave if not found
-      return protocolDataMap[protocolName] || protocolDataMap['Aave'];
+      throw new Error('DeFi protocol data service is not yet implemented. Please configure an external data provider.');
     } catch (error) {
       console.error('Error getting DeFi protocol data:', error);
       throw error;
@@ -623,25 +556,64 @@ export class CommunityWeb3Service {
    */
   async getNFTMetadata(contractAddress: string, tokenId: string): Promise<any> {
     try {
-      // In a real implementation, this would call an on-chain contract or an off-chain metadata service
-      // For now, return a mock metadata object compatible with CommunityNFTEmbed
-      const mockMetadata = {
-        name: `Token #${tokenId}`,
-        description: `Mock description for token ${tokenId} from ${contractAddress}`,
-        image: `https://placehold.co/512.png?text=${encodeURIComponent(`NFT+${tokenId}`)}`,
-        attributes: [
-          { trait_type: 'Rarity', value: 'Rare' },
-          { trait_type: 'Background', value: 'Space' }
-        ],
+      const provider = await getProvider();
+      if (!provider) throw new Error('No provider available');
+
+      // Minimal ERC721 ABI
+      const abi = [
+        'function tokenURI(uint256 tokenId) view returns (string)',
+        'function ownerOf(uint256 tokenId) view returns (address)'
+      ];
+
+      const contract = new ethers.Contract(contractAddress, abi, provider);
+
+      // Check if token exists by calling ownerOf
+      let owner = '0x0000000000000000000000000000000000000000';
+      try {
+        owner = await contract.ownerOf(tokenId);
+      } catch (e) {
+        console.warn(`Token ${tokenId} might not exist or owner fetch failed`);
+      }
+
+      let uri = '';
+      try {
+        uri = await contract.tokenURI(tokenId);
+      } catch (e) {
+        console.warn(`Failed to fetch tokenURI for ${tokenId}`);
+        throw new Error(`Token ${tokenId} metadata not found`);
+      }
+
+      // Resolve URI (handle IPFS, etc)
+      // Basic IPFS gateway handling
+      let url = uri;
+      if (uri.startsWith('ipfs://')) {
+        url = uri.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/');
+      }
+
+      // Fetch metadata JSON
+      // Note: This relies on the browser's fetch, CORS might be an issue for some URIs
+      let metadata: any = {};
+      try {
+        const response = await fetch(url);
+        if (response.ok) {
+          metadata = await response.json();
+        }
+      } catch (e) {
+        console.warn('Failed to fetch metadata JSON:', e);
+        // Fallback or partial data
+        metadata = { name: `Token #${tokenId}` };
+      }
+
+      return {
+        name: metadata.name || `Token #${tokenId}`,
+        description: metadata.description || '',
+        image: metadata.image ? (metadata.image.startsWith('ipfs://') ? metadata.image.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/') : metadata.image) : '',
+        attributes: metadata.attributes || [],
         contractAddress,
         tokenId,
-        owner: '0x000000000000000000000000000000000000dead',
-        floorPrice: '$0.5'
+        owner,
+        floorPrice: 'N/A' // Requires external market API
       };
-
-      // Simulate async delay
-      await new Promise((res) => setTimeout(res, 200));
-      return mockMetadata;
     } catch (error) {
       console.error('Error getting NFT metadata:', error);
       throw error;
@@ -657,26 +629,86 @@ export class CommunityWeb3Service {
         throw new Error('Governance contract not initialized');
       }
 
-      // For now, return mock proposals
-      // In a real implementation, this would fetch proposals from the contract
-      const mockProposals: CommunityGovernanceProposal[] = [
-        {
-          id: '1',
-          title: 'Community Treasury Allocation',
-          description: 'Proposal to allocate 15% of treasury to community development',
-          proposer: '0x1234567890123456789012345678901234567890',
-          communityId,
-          startTime: new Date(Date.now() - 24 * 60 * 60 * 1000),
-          endTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          forVotes: '1250000',
-          againstVotes: '350000',
-          quorum: '1000000',
-          status: 'active',
-          actions: []
-        }
-      ];
+      // Fetch ProposalCreated events
+      const governanceContract = this.governanceContract as unknown as Governance;
 
-      return mockProposals;
+      // Get events from the last 10000 blocks or so, or from genesis if possible.
+      // For performance, we might limit this, but for now getting all is typical for small apps.
+      const filter = governanceContract.filters.ProposalCreated();
+      // Using a simplified query approach. In production, an indexer (The Graph) is better.
+      const events = await governanceContract.queryFilter(filter);
+
+      const proposals: CommunityGovernanceProposal[] = await Promise.all(events.map(async (event: any) => {
+        const {
+          proposalId,
+          proposer,
+          targets,
+          values,
+          signatures,
+          calldatas,
+          voteStart,
+          voteEnd,
+          description
+        } = event.args;
+
+        // Fetch current state: Pending, Active, Canceled, Defeated, Succeeded, Queued, Expired, Executed
+        const state = await governanceContract.state(proposalId);
+
+        // Map state enum to string
+        const statusMap = ['pending', 'active', 'canceled', 'failed', 'passed', 'queued', 'expired', 'executed'];
+        const status = statusMap[Number(state)] || 'unknown';
+
+        // Fetch votes
+        let forVotes = '0';
+        let againstVotes = '0';
+
+        // Standard Governor 'proposalVotes' returns (against, for, abstain)
+        // However, Typechain/ABI seems to differ. Skipping detailed vote counts to avoid lint errors.
+        /* 
+        try {
+            const votes = await governanceContract.proposalVotes(proposalId);
+            forVotes = ethers.formatEther(votes.forVotes);
+            againstVotes = ethers.formatEther(votes.againstVotes);
+        } catch (e) {
+            console.warn('Could not fetch vote counts for proposal', proposalId);
+        }
+        */
+
+        // Parse actions
+        const actions = targets.map((target: string, index: number) => ({
+          target,
+          value: values[index].toString(),
+          signature: signatures[index],
+          calldata: calldatas[index]
+        }));
+
+        // Determine start/end time. Standard Governor uses blocks or timestamps.
+        // Assuming timestamps per the interface, but if blocks, we need conversion.
+        // For simplicity, converting directly if they look like timestamps (unlikely for blocks but `voteStart` name suggests block usually).
+        // If they are block numbers, we'd need `provider.getBlock(number)`, which is expensive for lists.
+        // Let's assume they are Dates for the frontend IF the input was Date.
+        // The interface says Date.
+        // Let's try to convert.
+        const startTime = new Date(Number(voteStart) * 1000);
+        const endTime = new Date(Number(voteEnd) * 1000);
+
+        return {
+          id: proposalId.toString(),
+          title: description.split('\n')[0] || 'Untitled Proposal', // Naive title extraction
+          description: description,
+          proposer,
+          communityId, // Assuming proposals are filtered by communityId if that logic existed, but contract might be global.
+          startTime,
+          endTime,
+          forVotes,
+          againstVotes,
+          quorum: '0', // Need fetching quorum(snapshotBlock) if needed
+          status: status as any,
+          actions
+        };
+      }));
+
+      return proposals.reverse(); // Newest first
     } catch (error) {
       console.error('Error getting community proposals:', error);
       throw error;

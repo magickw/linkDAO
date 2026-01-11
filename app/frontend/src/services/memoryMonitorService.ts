@@ -3,6 +3,9 @@
  * Provides centralized monitoring and cleanup for all messaging-related memory usage
  */
 
+// Note: The deprecated messagingService is imported for backward compatibility
+// with existing memory monitoring. The new unifiedMessagingService manages its own
+// memory through IndexedDB cache limits.
 import { messagingService } from './messagingService';
 import { webSocketService } from './webSocketService';
 

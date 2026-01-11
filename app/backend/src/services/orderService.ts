@@ -83,10 +83,10 @@ export class OrderService {
       // Create initial order event
       await this.createOrderEvent(dbOrder.id.toString(), 'ORDER_CREATED', 'Order created successfully');
 
-      // Send notifications
+      // Send notifications with recipientType for proper buyer/seller isolation
       await Promise.all([
-        notificationService.sendOrderNotification(input.buyerAddress, 'ORDER_CREATED', dbOrder.id.toString()),
-        notificationService.sendOrderNotification(input.sellerAddress, 'ORDER_RECEIVED', dbOrder.id.toString())
+        notificationService.sendOrderNotification(input.buyerAddress, 'ORDER_CREATED', dbOrder.id.toString(), { recipientType: 'buyer' }),
+        notificationService.sendOrderNotification(input.sellerAddress, 'ORDER_RECEIVED', dbOrder.id.toString(), { recipientType: 'seller' })
       ]);
 
       // Start blockchain event monitoring
@@ -131,13 +131,15 @@ export class OrderService {
 
   /**
    * Get orders by user address (buyer or seller)
+   * @param userAddress - The wallet address of the user
+   * @param role - Optional role filter: 'buyer' for orders placed by user, 'seller' for orders received by user
    */
-  async getOrdersByUser(userAddress: string): Promise<MarketplaceOrder[]> {
+  async getOrdersByUser(userAddress: string, role?: 'buyer' | 'seller'): Promise<MarketplaceOrder[]> {
     try {
       const user = await userProfileService.getProfileByAddress(userAddress);
       if (!user) return [];
 
-      const dbOrders = await databaseService.getOrdersByUser(user.id);
+      const dbOrders = await databaseService.getOrdersByUser(user.id, role);
       const orders: MarketplaceOrder[] = [];
 
       for (const dbOrder of dbOrders) {
@@ -221,6 +223,17 @@ export class OrderService {
           }
         }
 
+        // Handle inventory release for cancelled/refunded orders
+        if (status === OrderStatus.CANCELLED || status === OrderStatus.REFUNDED) {
+          try {
+            await this.releaseOrderInventory(orderId, status === OrderStatus.CANCELLED ? 'order_cancelled' : 'order_cancelled');
+            safeLogger.info(`Inventory released for ${status} order`, { orderId });
+          } catch (inventoryError) {
+            safeLogger.error('Failed to release inventory for order:', { orderId, status, error: inventoryError });
+            // Don't throw - order status update succeeded, inventory release is secondary
+          }
+        }
+
         // Send notifications based on status
         await this.handleStatusChangeNotifications(orderId, status);
 
@@ -278,7 +291,7 @@ export class OrderService {
         order.buyerWalletAddress,
         'ORDER_SHIPPED',
         orderId,
-        { trackingNumber: trackingInfo.trackingNumber }
+        { trackingNumber: trackingInfo.trackingNumber, recipientType: 'buyer' }
       );
 
       // Start delivery tracking
@@ -415,7 +428,8 @@ export class OrderService {
 
       // Send notifications
       const otherParty = initiatorAddress === order.buyerWalletAddress ? order.sellerWalletAddress : order.buyerWalletAddress;
-      await notificationService.sendOrderNotification(otherParty, 'DISPUTE_INITIATED', orderId, { reason });
+      const otherPartyType = initiatorAddress === order.buyerWalletAddress ? 'seller' : 'buyer';
+      await notificationService.sendOrderNotification(otherParty, 'DISPUTE_INITIATED', orderId, { reason, recipientType: otherPartyType });
 
       // Send WebSocket updates for dispute initiation
       const wsService = getOrderWebSocketService();
@@ -487,7 +501,8 @@ export class OrderService {
 
       // Notify the other party
       const otherParty = requesterAddress === order.buyerWalletAddress ? order.sellerWalletAddress : order.buyerWalletAddress;
-      await notificationService.sendOrderNotification(otherParty, 'CANCELLATION_REQUESTED', orderId, { reason });
+      const otherPartyType = requesterAddress === order.buyerWalletAddress ? 'seller' : 'buyer';
+      await notificationService.sendOrderNotification(otherParty, 'CANCELLATION_REQUESTED', orderId, { reason, recipientType: otherPartyType });
 
       return true;
     } catch (error) {
@@ -521,17 +536,14 @@ export class OrderService {
         // Issue refund logic would go here
         // For now, assuming refund is handled externally or strictly via update
 
-        // Return items to inventory logic (using databaseService.updateListing or similar if we tracked inventory there)
-        // TODO: Implement inventory restoration
-
         // Update cancellation status
         await databaseService.updateCancellationStatus(cancellationRequest.id, 'approved', resolutionNotes);
 
-        // Update order status
+        // Update order status (this automatically releases inventory via updateOrderStatus)
         await this.updateOrderStatus(orderId, OrderStatus.CANCELLED);
 
         // Notification
-        await notificationService.sendOrderNotification(order.buyerWalletAddress, 'CANCELLATION_APPROVED', orderId);
+        await notificationService.sendOrderNotification(order.buyerWalletAddress, 'CANCELLATION_APPROVED', orderId, { recipientType: 'buyer' });
       } else {
         // Update cancellation status
         await databaseService.updateCancellationStatus(cancellationRequest.id, 'rejected', resolutionNotes);
@@ -542,7 +554,7 @@ export class OrderService {
         await this.updateOrderStatus(orderId, OrderStatus.PROCESSING); // Fallback
 
         // Notification
-        await notificationService.sendOrderNotification(order.buyerWalletAddress, 'CANCELLATION_REJECTED', orderId, { reason: resolutionNotes });
+        await notificationService.sendOrderNotification(order.buyerWalletAddress, 'CANCELLATION_REJECTED', orderId, { reason: resolutionNotes, recipientType: 'buyer' });
       }
 
       return true;
@@ -572,11 +584,11 @@ export class OrderService {
           // Update order status
           await this.updateOrderStatus(request.orderId, OrderStatus.CANCELLED, { reason: 'Cancellation Auto-Approved' });
 
-          // Notify buyer
+          // Notify buyer and seller
           const order = await this.getOrderById(request.orderId);
           if (order) {
-            await notificationService.sendOrderNotification(order.buyerWalletAddress, 'CANCELLATION_AUTO_APPROVED', request.orderId);
-            await notificationService.sendOrderNotification(order.sellerWalletAddress, 'CANCELLATION_AUTO_APPROVED', request.orderId);
+            await notificationService.sendOrderNotification(order.buyerWalletAddress, 'CANCELLATION_AUTO_APPROVED', request.orderId, { recipientType: 'buyer' });
+            await notificationService.sendOrderNotification(order.sellerWalletAddress, 'CANCELLATION_AUTO_APPROVED', request.orderId, { recipientType: 'seller' });
           }
 
           processedCount++;
@@ -750,24 +762,24 @@ export class OrderService {
 
     switch (status) {
       case OrderStatus.PAID:
-        await notificationService.sendOrderNotification(order.sellerWalletAddress, 'PAYMENT_RECEIVED', orderId);
+        await notificationService.sendOrderNotification(order.sellerWalletAddress, 'PAYMENT_RECEIVED', orderId, { recipientType: 'seller' });
         break;
       case OrderStatus.PROCESSING:
-        await notificationService.sendOrderNotification(order.buyerWalletAddress, 'ORDER_PROCESSING', orderId);
+        await notificationService.sendOrderNotification(order.buyerWalletAddress, 'ORDER_PROCESSING', orderId, { recipientType: 'buyer' });
         break;
       case OrderStatus.SHIPPED:
-        await notificationService.sendOrderNotification(order.buyerWalletAddress, 'ORDER_SHIPPED', orderId);
+        await notificationService.sendOrderNotification(order.buyerWalletAddress, 'ORDER_SHIPPED', orderId, { recipientType: 'buyer' });
         break;
       case OrderStatus.DELIVERED:
         await Promise.all([
-          notificationService.sendOrderNotification(order.buyerWalletAddress, 'ORDER_DELIVERED', orderId),
-          notificationService.sendOrderNotification(order.sellerWalletAddress, 'ORDER_DELIVERED', orderId)
+          notificationService.sendOrderNotification(order.buyerWalletAddress, 'ORDER_DELIVERED', orderId, { recipientType: 'buyer' }),
+          notificationService.sendOrderNotification(order.sellerWalletAddress, 'ORDER_DELIVERED', orderId, { recipientType: 'seller' })
         ]);
         break;
       case OrderStatus.COMPLETED:
         await Promise.all([
-          notificationService.sendOrderNotification(order.buyerWalletAddress, 'ORDER_COMPLETED', orderId),
-          notificationService.sendOrderNotification(order.sellerWalletAddress, 'ORDER_COMPLETED', orderId)
+          notificationService.sendOrderNotification(order.buyerWalletAddress, 'ORDER_COMPLETED', orderId, { recipientType: 'buyer' }),
+          notificationService.sendOrderNotification(order.sellerWalletAddress, 'ORDER_COMPLETED', orderId, { recipientType: 'seller' })
         ]);
         break;
     }
@@ -840,6 +852,27 @@ export class OrderService {
       await this.createOrderEvent(orderId, 'PAYMENT_RELEASED', 'Payment automatically released to seller');
     } catch (error) {
       safeLogger.error('Error auto-releasing payment:', error);
+    }
+  }
+
+  /**
+   * Release inventory hold for an order
+   * Called when order is cancelled or refunded
+   */
+  private async releaseOrderInventory(orderId: string, reason: 'order_cancelled' | 'order_completed' | 'expired'): Promise<void> {
+    try {
+      // Find the inventory hold associated with this order
+      const inventoryHold = await databaseService.getInventoryHoldByOrderId(orderId);
+
+      if (inventoryHold) {
+        await databaseService.releaseInventoryHold(inventoryHold.id, reason);
+        safeLogger.info('Released inventory hold for order', { orderId, holdId: inventoryHold.id, reason });
+      } else {
+        safeLogger.warn('No inventory hold found for order', { orderId });
+      }
+    } catch (error) {
+      safeLogger.error('Error releasing inventory for order:', { orderId, reason, error });
+      throw error;
     }
   }
 }

@@ -1,12 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Message } from '../../types/messaging';
 import { formatDistanceToNow, format } from 'date-fns';
+import { Pin } from 'lucide-react';
+import { MessageReactions, Reaction } from './MessageReactions';
+import { ThreadIndicator } from './MessageThreadView';
+import { MessageActionsButton } from './MessageContextMenu';
 
 interface MessageBubbleProps {
   message: Message;
   isOwn: boolean;
   showAvatar: boolean;
   showTimestamp: boolean;
+  currentUserAddress?: string;
+  replyCount?: number;
+  onContextMenu?: (event: React.MouseEvent, message: Message) => void;
+  onThreadClick?: (messageId: string) => void;
+  onReactionToggle?: (messageId: string, emoji: string) => void;
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
@@ -14,7 +23,13 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   isOwn,
   showAvatar,
   showTimestamp,
+  currentUserAddress,
+  replyCount = 0,
+  onContextMenu,
+  onThreadClick,
+  onReactionToggle,
 }) => {
+  const [showActions, setShowActions] = useState(false);
   const formatMessageTime = (timestamp: Date) => {
     const messageDate = new Date(timestamp);
     const now = new Date();
@@ -124,7 +139,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   };
 
   return (
-    <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} ${showAvatar ? 'mt-4' : 'mt-1'}`}>
+    <div
+      className={`flex ${isOwn ? 'justify-end' : 'justify-start'} ${showAvatar ? 'mt-4' : 'mt-1'} group`}
+      onContextMenu={(e) => onContextMenu?.(e, message)}
+      onMouseEnter={() => setShowActions(true)}
+      onMouseLeave={() => setShowActions(false)}
+    >
       <div className={`flex ${isOwn ? 'flex-row-reverse' : 'flex-row'} items-end space-x-2 max-w-xs sm:max-w-md`}>
         {/* Avatar */}
         {showAvatar && !isOwn && (
@@ -132,38 +152,87 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             {message.fromAddress.slice(2, 4).toUpperCase()}
           </div>
         )}
-        
-        {/* Message Bubble */}
-        <div className={`
-          relative px-4 py-2 rounded-2xl max-w-full
-          ${isOwn 
-            ? 'bg-blue-600 text-white rounded-br-md' 
-            : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 rounded-bl-md'
-          }
-        `}>
-          {renderMessageContent()}
-          
-          {/* Message Info */}
-          <div className={`flex items-center justify-between mt-1 space-x-2 ${
-            isOwn ? 'flex-row-reverse space-x-reverse' : 'flex-row'
-          }`}>
-            {showTimestamp && (
-              <span className={`text-xs ${
-                isOwn ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'
-              }`}>
-                {formatMessageTime(message.timestamp)}
-              </span>
-            )}
-            
-            {/* Delivery Status (only for own messages) */}
-            {isOwn && (
-              <div className="flex items-center">
-                {getDeliveryStatusIcon()}
-              </div>
-            )}
+
+        {/* Message Content Container */}
+        <div className="relative">
+          {/* Pinned Indicator */}
+          {message.isPinned && (
+            <div className="absolute -top-2 -right-2 z-10">
+              <Pin size={12} className="text-yellow-500 fill-yellow-500" />
+            </div>
+          )}
+
+          {/* Actions Button (shows on hover) */}
+          {showActions && (
+            <div className={`absolute top-0 ${isOwn ? '-left-8' : '-right-8'} z-10`}>
+              <MessageActionsButton
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onContextMenu?.(e as unknown as React.MouseEvent, message);
+                }}
+              />
+            </div>
+          )}
+
+          {/* Message Bubble */}
+          <div className={`
+            relative px-4 py-2 rounded-2xl max-w-full
+            ${isOwn
+              ? 'bg-blue-600 text-white rounded-br-md'
+              : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 rounded-bl-md'
+            }
+            ${message.isPinned ? 'ring-1 ring-yellow-500/50' : ''}
+          `}>
+            {renderMessageContent()}
+
+            {/* Message Info */}
+            <div className={`flex items-center justify-between mt-1 space-x-2 ${
+              isOwn ? 'flex-row-reverse space-x-reverse' : 'flex-row'
+            }`}>
+              {showTimestamp && (
+                <span className={`text-xs ${
+                  isOwn ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'
+                }`}>
+                  {formatMessageTime(message.timestamp)}
+                  {message.editedAt && (
+                    <span className="ml-1 opacity-70">(edited)</span>
+                  )}
+                </span>
+              )}
+
+              {/* Delivery Status (only for own messages) */}
+              {isOwn && (
+                <div className="flex items-center">
+                  {getDeliveryStatusIcon()}
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* Reactions */}
+          {message.reactions && message.reactions.length > 0 && (
+            <div className={`mt-1 ${isOwn ? 'text-right' : 'text-left'}`}>
+              <MessageReactions
+                messageId={message.id}
+                reactions={message.reactions as Reaction[]}
+                currentUserAddress={currentUserAddress || ''}
+                onReactionToggle={onReactionToggle}
+                compact
+              />
+            </div>
+          )}
+
+          {/* Thread Indicator */}
+          {replyCount > 0 && (
+            <div className={`mt-1 ${isOwn ? 'text-right' : 'text-left'}`}>
+              <ThreadIndicator
+                replyCount={replyCount}
+                onClick={() => onThreadClick?.(message.id)}
+              />
+            </div>
+          )}
         </div>
-        
+
         {/* Spacer for alignment */}
         {showAvatar && isOwn && <div className="w-8" />}
       </div>

@@ -82,7 +82,7 @@ export class BlockchainMarketplaceService {
         tokenAddress: dbListing.tokenAddress,
         price: dbListing.price,
         quantity: 1, // Default purchase quantity when retrieving listing info
-        inventory: dbListing.quantity || 0, // Available inventory from the database
+        inventory: dbListing.inventory || 0, // Available inventory from the database
         itemType: dbListing.itemType as 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE',
         listingType: dbListing.listingType as 'FIXED_PRICE' | 'AUCTION',
         status: (dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED') || 'ACTIVE',
@@ -354,7 +354,7 @@ export class BlockchainMarketplaceService {
     try {
       const updates: any = {};
       if (input.price !== undefined) updates.price = input.price;
-      if (input.quantity !== undefined) updates.quantity = input.quantity;
+      if (input.quantity !== undefined) updates.inventory = input.quantity; // Map quantity to inventory field
 
       const dbListing = await this.withTimeout(databaseService.updateListing(id, updates));
       if (!dbListing) return null;
@@ -370,7 +370,7 @@ export class BlockchainMarketplaceService {
         tokenAddress: dbListing.tokenAddress,
         price: dbListing.price,
         quantity: 1, // Default purchase quantity when retrieving listing info
-        inventory: dbListing.quantity || 0, // Available inventory from the database
+        inventory: dbListing.inventory || 0, // Available inventory from the database
         itemType: dbListing.itemType as 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE',
         listingType: dbListing.listingType as 'FIXED_PRICE' | 'AUCTION',
         status: (dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED') || 'ACTIVE',

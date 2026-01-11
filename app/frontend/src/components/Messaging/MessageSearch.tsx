@@ -518,3 +518,226 @@ const SearchResultCard: React.FC<SearchResultCardProps> = ({
 };
 
 export default MessageSearch;
+
+// Component to highlight search matches in message content
+interface HighlightedTextProps {
+  text: string;
+  highlight: string;
+  className?: string;
+}
+
+export const HighlightedText: React.FC<HighlightedTextProps> = ({
+  text,
+  highlight,
+  className = ''
+}) => {
+  if (!highlight.trim()) {
+    return <span className={className}>{text}</span>;
+  }
+
+  const regex = new RegExp(`(${highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  const parts = text.split(regex);
+
+  return (
+    <span className={className}>
+      {parts.map((part, index) => {
+        if (part.toLowerCase() === highlight.toLowerCase()) {
+          return (
+            <mark
+              key={index}
+              className="bg-yellow-500/40 text-white rounded px-0.5"
+            >
+              {part}
+            </mark>
+          );
+        }
+        return <span key={index}>{part}</span>;
+      })}
+    </span>
+  );
+};
+
+// Inline search bar for conversation header
+interface InlineSearchBarProps {
+  conversationId: string;
+  onResultClick: (messageId: string) => void;
+  onClose: () => void;
+  className?: string;
+}
+
+export const InlineSearchBar: React.FC<InlineSearchBarProps> = ({
+  conversationId,
+  onResultClick,
+  onClose,
+  className = ''
+}) => {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<Message[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const debounceRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Focus input on mount
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      } else if (e.key === 'Enter') {
+        if (e.shiftKey) {
+          navigateToPrevious();
+        } else {
+          navigateToNext();
+        }
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        navigateToPrevious();
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        navigateToNext();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [results, currentIndex]);
+
+  const searchMessages = useCallback(async (searchQuery: string) => {
+    if (!searchQuery.trim()) {
+      setResults([]);
+      setCurrentIndex(0);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const queryParams = new URLSearchParams({
+        q: searchQuery.trim(),
+        conversationId,
+        limit: '100'
+      });
+
+      const response = await fetch(`/api/messages/search?${queryParams}`);
+      if (response.ok) {
+        const data = await response.json();
+        const searchResults = data.results?.map((r: SearchResult) => r.message) || [];
+        setResults(searchResults);
+        setCurrentIndex(searchResults.length > 0 ? 1 : 0);
+
+        if (searchResults.length > 0) {
+          onResultClick(searchResults[0].id);
+        }
+      }
+    } catch (error) {
+      console.error('Search failed:', error);
+      setResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, [conversationId, onResultClick]);
+
+  const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newQuery = e.target.value;
+    setQuery(newQuery);
+
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
+    debounceRef.current = setTimeout(() => {
+      searchMessages(newQuery);
+    }, 300);
+  };
+
+  const navigateToNext = () => {
+    if (results.length === 0) return;
+    const nextIndex = currentIndex >= results.length ? 1 : currentIndex + 1;
+    setCurrentIndex(nextIndex);
+    onResultClick(results[nextIndex - 1].id);
+  };
+
+  const navigateToPrevious = () => {
+    if (results.length === 0) return;
+    const prevIndex = currentIndex <= 1 ? results.length : currentIndex - 1;
+    setCurrentIndex(prevIndex);
+    onResultClick(results[prevIndex - 1].id);
+  };
+
+  const clearSearch = () => {
+    setQuery('');
+    setResults([]);
+    setCurrentIndex(0);
+    inputRef.current?.focus();
+  };
+
+  return (
+    <div className={`bg-gray-800 border-b border-gray-700 ${className}`}>
+      <div className="flex items-center gap-2 px-3 py-2">
+        <Search size={18} className="text-gray-400 flex-shrink-0" />
+
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          onChange={handleQueryChange}
+          placeholder="Search in conversation..."
+          className="flex-1 bg-transparent text-white placeholder-gray-500
+                   text-sm focus:outline-none"
+        />
+
+        {isSearching && (
+          <div className="w-4 h-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent flex-shrink-0" />
+        )}
+
+        {query && !isSearching && (
+          <span className="text-sm text-gray-400 flex-shrink-0">
+            {results.length > 0 ? `${currentIndex} of ${results.length}` : 'No results'}
+          </span>
+        )}
+
+        {results.length > 0 && (
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <button
+              onClick={navigateToPrevious}
+              className="p-1 text-gray-400 hover:text-white rounded hover:bg-gray-700 transition-colors"
+              title="Previous (Shift+Enter)"
+            >
+              <ChevronDown size={16} className="rotate-180" />
+            </button>
+            <button
+              onClick={navigateToNext}
+              className="p-1 text-gray-400 hover:text-white rounded hover:bg-gray-700 transition-colors"
+              title="Next (Enter)"
+            >
+              <ChevronDown size={16} />
+            </button>
+          </div>
+        )}
+
+        {query && (
+          <button
+            onClick={clearSearch}
+            className="p-1 text-gray-400 hover:text-white rounded hover:bg-gray-700
+                     transition-colors flex-shrink-0"
+          >
+            <X size={16} />
+          </button>
+        )}
+
+        <button
+          onClick={onClose}
+          className="p-1 text-gray-400 hover:text-white rounded hover:bg-gray-700
+                   transition-colors flex-shrink-0 ml-1"
+          title="Close (Esc)"
+        >
+          <X size={18} />
+        </button>
+      </div>
+    </div>
+  );
+};

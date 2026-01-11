@@ -159,7 +159,7 @@ export default function OrdersPage() {
                 headers['Authorization'] = `Bearer ${token}`;
             }
 
-            const response = await fetch(`${API_BASE_URL}/api/orders/user/${user.address}`, {
+            const response = await fetch(`${API_BASE_URL}/api/orders/user/${user.address}?role=buyer`, {
                 headers,
                 credentials: 'include'
             });

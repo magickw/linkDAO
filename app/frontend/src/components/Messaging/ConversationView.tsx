@@ -1,10 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Conversation, Message } from '../../types/messaging';
 import { MessageBubble } from './MessageBubble';
 import { MessageInput } from './MessageInput';
 import { TypingIndicator } from './TypingIndicator';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { OrderConversationHeader } from './OrderConversationHeader';
+import { PinnedMessageBanner, PinnedMessagesPanel } from './PinnedMessagesPanel';
+import { MessageContextMenu, useMessageContextMenu } from './MessageContextMenu';
+import { MessageThreadView } from './MessageThreadView';
+import { MessageEditModal } from './MessageEditModal';
+import { InlineSearchBar } from './MessageSearch';
+import { unifiedMessagingService } from '../../services/unifiedMessagingService';
+import { Search } from 'lucide-react';
 
 interface ConversationViewProps {
   conversation: Conversation;
@@ -24,6 +31,16 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  // Phase 5: Advanced features state
+  const [showPinnedPanel, setShowPinnedPanel] = useState(false);
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+  const [replyTarget, setReplyTarget] = useState<Message | null>(null);
+  const [editTarget, setEditTarget] = useState<Message | null>(null);
+  const [replyCounts, setReplyCounts] = useState<Record<string, number>>({});
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const { contextMenu, openContextMenu, closeContextMenu } = useMessageContextMenu();
   
   const { socket, isConnected } = useWebSocket({
     walletAddress: currentUserAddress,
@@ -50,6 +67,13 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
       socket.on('typing_stop', handleTypingStop);
       socket.on('message_delivered', handleMessageDelivered);
       socket.on('message_read', handleMessageRead);
+      // Phase 5: Advanced feature events
+      socket.on('reaction_added', handleReactionAdded);
+      socket.on('reaction_removed', handleReactionRemoved);
+      socket.on('message_pinned', handleMessagePinned);
+      socket.on('message_unpinned', handleMessageUnpinned);
+      socket.on('message_edited', handleMessageEdited);
+      socket.on('message_deleted', handleMessageDeleted);
 
       return () => {
         socket.emit('leave_conversation', conversation.id);
@@ -58,6 +82,12 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
         socket.off('typing_stop', handleTypingStop);
         socket.off('message_delivered', handleMessageDelivered);
         socket.off('message_read', handleMessageRead);
+        socket.off('reaction_added', handleReactionAdded);
+        socket.off('reaction_removed', handleReactionRemoved);
+        socket.off('message_pinned', handleMessagePinned);
+        socket.off('message_unpinned', handleMessageUnpinned);
+        socket.off('message_edited', handleMessageEdited);
+        socket.off('message_deleted', handleMessageDeleted);
       };
     }
   }, [socket, isConnected, conversation.id]);
@@ -66,6 +96,19 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Keyboard shortcut for search (Ctrl/Cmd + F)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        setShowSearch(true);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const loadMessages = async () => {
     try {
@@ -132,12 +175,137 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
   };
 
   const handleMessageRead = (data: { messageId: string, status: string }) => {
-    setMessages(prev => prev.map(msg => 
-      msg.id === data.messageId 
+    setMessages(prev => prev.map(msg =>
+      msg.id === data.messageId
         ? { ...msg, deliveryStatus: data.status as any }
         : msg
     ));
   };
+
+  // Phase 5: Advanced feature handlers
+  const handleReactionAdded = useCallback((data: { messageId: string; emoji: string; userId: string }) => {
+    setMessages(prev => prev.map(msg => {
+      if (msg.id !== data.messageId) return msg;
+      const reactions = [...(msg.reactions || [])];
+      const existingReaction = reactions.find(r => r.emoji === data.emoji);
+      if (existingReaction) {
+        if (!existingReaction.users.includes(data.userId)) {
+          existingReaction.count++;
+          existingReaction.users.push(data.userId);
+        }
+      } else {
+        reactions.push({ emoji: data.emoji, count: 1, users: [data.userId] });
+      }
+      return { ...msg, reactions };
+    }));
+  }, []);
+
+  const handleReactionRemoved = useCallback((data: { messageId: string; emoji: string; userId: string }) => {
+    setMessages(prev => prev.map(msg => {
+      if (msg.id !== data.messageId) return msg;
+      const reactions = (msg.reactions || []).map(r => {
+        if (r.emoji !== data.emoji) return r;
+        return {
+          ...r,
+          count: Math.max(0, r.count - 1),
+          users: r.users.filter(u => u !== data.userId)
+        };
+      }).filter(r => r.count > 0);
+      return { ...msg, reactions };
+    }));
+  }, []);
+
+  const handleMessagePinned = useCallback((data: { messageId: string; pinnedBy: string }) => {
+    setMessages(prev => prev.map(msg =>
+      msg.id === data.messageId
+        ? { ...msg, isPinned: true, pinnedBy: data.pinnedBy, pinnedAt: new Date() }
+        : msg
+    ));
+  }, []);
+
+  const handleMessageUnpinned = useCallback((data: { messageId: string }) => {
+    setMessages(prev => prev.map(msg =>
+      msg.id === data.messageId
+        ? { ...msg, isPinned: false, pinnedBy: undefined, pinnedAt: undefined }
+        : msg
+    ));
+  }, []);
+
+  const handleMessageEdited = useCallback((data: { messageId: string; content: string; editedAt: string }) => {
+    setMessages(prev => prev.map(msg =>
+      msg.id === data.messageId
+        ? { ...msg, content: data.content, editedAt: new Date(data.editedAt) }
+        : msg
+    ));
+  }, []);
+
+  const handleMessageDeleted = useCallback((data: { messageId: string }) => {
+    setMessages(prev => prev.filter(msg => msg.id !== data.messageId));
+  }, []);
+
+  const handleReactionToggle = useCallback(async (messageId: string, emoji: string) => {
+    try {
+      const message = messages.find(m => m.id === messageId);
+      const existingReaction = message?.reactions?.find(r => r.emoji === emoji);
+      const hasReacted = existingReaction?.users.includes(currentUserAddress);
+
+      if (hasReacted) {
+        await unifiedMessagingService.removeReaction(messageId, emoji);
+      } else {
+        await unifiedMessagingService.addReaction(messageId, emoji);
+      }
+    } catch (error) {
+      console.error('Failed to toggle reaction:', error);
+    }
+  }, [messages, currentUserAddress]);
+
+  const handleContextMenuAction = useCallback((action: string, message: Message) => {
+    switch (action) {
+      case 'reply':
+        setReplyTarget(message);
+        break;
+      case 'edit':
+        setEditTarget(message);
+        break;
+      case 'thread':
+        setActiveThreadId(message.id);
+        break;
+    }
+    closeContextMenu();
+  }, [closeContextMenu]);
+
+  const handlePinToggle = useCallback((isPinned: boolean) => {
+    // Refresh pinned messages if panel is open
+    if (showPinnedPanel) {
+      setShowPinnedPanel(false);
+      setTimeout(() => setShowPinnedPanel(true), 100);
+    }
+  }, [showPinnedPanel]);
+
+  const handleReplyCountChange = useCallback((messageId: string, count: number) => {
+    setReplyCounts(prev => ({ ...prev, [messageId]: count }));
+  }, []);
+
+  const handleMessageEdit = useCallback((messageId: string, newContent: string) => {
+    setMessages(prev => prev.map(msg =>
+      msg.id === messageId
+        ? { ...msg, content: newContent, editedAt: new Date() }
+        : msg
+    ));
+    setEditTarget(null);
+  }, []);
+
+  const scrollToMessage = useCallback((messageId: string) => {
+    const element = document.getElementById(`message-${messageId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Highlight the message briefly
+      element.classList.add('ring-2', 'ring-blue-500', 'ring-opacity-75');
+      setTimeout(() => {
+        element.classList.remove('ring-2', 'ring-blue-500', 'ring-opacity-75');
+      }, 2000);
+    }
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -202,9 +370,9 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
   };
 
   return (
-    <div className="conversation-view h-full flex flex-col">
+    <div className="conversation-view h-full flex flex-col relative">
       {/* Order Context Header */}
-      <OrderConversationHeader 
+      <OrderConversationHeader
         conversation={{
           ...conversation,
           orderId: (conversation as any).orderId || 12345,
@@ -218,7 +386,7 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
         onViewOrder={handleViewOrder}
         onTrackPackage={handleTrackPackage}
       />
-      
+
       {/* Header */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
         <div className="flex items-center space-x-3">
@@ -257,6 +425,15 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
             </div>
           </div>
 
+          {/* Search Button */}
+          <button
+            onClick={() => setShowSearch(true)}
+            className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+            title="Search messages (Ctrl+F)"
+          >
+            <Search size={20} />
+          </button>
+
           {/* Options Menu */}
           <button className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -266,50 +443,130 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
         </div>
       </div>
 
-      {/* Messages Container */}
-      <div 
-        ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-800"
-      >
-        {loading ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-          </div>
-        ) : messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
-            <div className="text-center">
-              <div className="text-4xl mb-2">👋</div>
-              <p>Start the conversation!</p>
+      {/* Inline Search Bar */}
+      {showSearch && (
+        <InlineSearchBar
+          conversationId={conversation.id}
+          onResultClick={scrollToMessage}
+          onClose={() => setShowSearch(false)}
+        />
+      )}
+
+      {/* Pinned Messages Banner */}
+      <PinnedMessageBanner
+        conversationId={conversation.id}
+        onExpand={() => setShowPinnedPanel(true)}
+      />
+
+      {/* Pinned Messages Panel (Overlay) */}
+      {showPinnedPanel && (
+        <div className="absolute top-0 left-0 right-0 z-30 shadow-lg">
+          <PinnedMessagesPanel
+            conversationId={conversation.id}
+            currentUserAddress={currentUserAddress}
+            isAdmin={false}
+            onMessageClick={(messageId) => {
+              const element = document.getElementById(`message-${messageId}`);
+              element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              setShowPinnedPanel(false);
+            }}
+            onClose={() => setShowPinnedPanel(false)}
+          />
+        </div>
+      )}
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Messages Container */}
+        <div
+          ref={messagesContainerRef}
+          className={`flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-800 ${
+            activeThreadId ? 'hidden md:block md:w-1/2' : 'w-full'
+          }`}
+        >
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
             </div>
+          ) : messages.length === 0 ? (
+            <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
+              <div className="text-center">
+                <div className="text-4xl mb-2">👋</div>
+                <p>Start the conversation!</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              {messages.map((message, index) => (
+                <div key={message.id} id={`message-${message.id}`}>
+                  <MessageBubble
+                    message={message}
+                    isOwn={message.fromAddress === currentUserAddress}
+                    currentUserAddress={currentUserAddress}
+                    replyCount={replyCounts[message.id] || 0}
+                    showAvatar={
+                      index === 0 ||
+                      messages[index - 1].fromAddress !== message.fromAddress
+                    }
+                    showTimestamp={
+                      index === messages.length - 1 ||
+                      messages[index + 1].fromAddress !== message.fromAddress ||
+                      new Date(messages[index + 1].timestamp).getTime() - new Date(message.timestamp).getTime() > 300000
+                    }
+                    onContextMenu={(e, msg) => openContextMenu(e, {
+                      messageId: msg.id,
+                      conversationId: conversation.id,
+                      senderAddress: msg.fromAddress,
+                      content: msg.content,
+                      isPinned: msg.isPinned
+                    })}
+                    onThreadClick={(messageId) => setActiveThreadId(messageId)}
+                    onReactionToggle={handleReactionToggle}
+                  />
+                </div>
+              ))}
+
+              {/* Typing Indicator */}
+              {typingUsers.length > 0 && (
+                <TypingIndicator users={typingUsers} />
+              )}
+
+              <div ref={messagesEndRef} />
+            </>
+          )}
+        </div>
+
+        {/* Thread View (Side Panel) */}
+        {activeThreadId && (
+          <div className="w-full md:w-1/2 border-l border-gray-200 dark:border-gray-700">
+            <MessageThreadView
+              messageId={activeThreadId}
+              conversationId={conversation.id}
+              currentUserAddress={currentUserAddress}
+              onClose={() => setActiveThreadId(null)}
+              onReplyCountChange={handleReplyCountChange}
+            />
           </div>
-        ) : (
-          <>
-            {messages.map((message, index) => (
-              <MessageBubble
-                key={message.id}
-                message={message}
-                isOwn={message.fromAddress === currentUserAddress}
-                showAvatar={
-                  index === 0 || 
-                  messages[index - 1].fromAddress !== message.fromAddress
-                }
-                showTimestamp={
-                  index === messages.length - 1 ||
-                  messages[index + 1].fromAddress !== message.fromAddress ||
-                  new Date(messages[index + 1].timestamp).getTime() - new Date(message.timestamp).getTime() > 300000 // 5 minutes
-                }
-              />
-            ))}
-            
-            {/* Typing Indicator */}
-            {typingUsers.length > 0 && (
-              <TypingIndicator users={typingUsers} />
-            )}
-            
-            <div ref={messagesEndRef} />
-          </>
         )}
       </div>
+
+      {/* Reply Target Indicator */}
+      {replyTarget && (
+        <div className="px-4 py-2 bg-gray-100 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600 flex items-center gap-2">
+          <span className="text-sm text-gray-500">Replying to:</span>
+          <span className="text-sm text-gray-900 dark:text-white truncate flex-1">
+            {replyTarget.content}
+          </span>
+          <button
+            onClick={() => setReplyTarget(null)}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
 
       {/* Message Input */}
       <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
@@ -320,6 +577,40 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
           placeholder={isConnected ? "Type a message..." : "Connecting..."}
         />
       </div>
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <MessageContextMenu
+          messageId={contextMenu.messageId}
+          conversationId={contextMenu.conversationId}
+          currentUserAddress={currentUserAddress}
+          senderAddress={contextMenu.senderAddress}
+          content={contextMenu.content}
+          isPinned={contextMenu.isPinned}
+          position={contextMenu.position}
+          onClose={closeContextMenu}
+          onReply={() => {
+            const msg = messages.find(m => m.id === contextMenu.messageId);
+            if (msg) setReplyTarget(msg);
+          }}
+          onEdit={() => {
+            const msg = messages.find(m => m.id === contextMenu.messageId);
+            if (msg) setEditTarget(msg);
+          }}
+          onPinToggle={handlePinToggle}
+          onReactionAdd={(emoji) => handleReactionToggle(contextMenu.messageId, emoji)}
+        />
+      )}
+
+      {/* Message Edit Modal */}
+      {editTarget && (
+        <MessageEditModal
+          message={editTarget}
+          conversationId={conversation.id}
+          onClose={() => setEditTarget(null)}
+          onSave={handleMessageEdit}
+        />
+      )}
     </div>
   );
 };

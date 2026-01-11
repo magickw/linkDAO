@@ -117,4 +117,6 @@ router.get('/:id', safeBind(statusController.getStatus, statusController));
 router.put('/:id', authMiddleware, csrfProtection, safeBind(statusController.updateStatus, statusController));
 router.delete('/:id', authMiddleware, csrfProtection, safeBind(statusController.deleteStatus, statusController));
 
+router.post('/:id/react', authMiddleware, csrfProtection, safeBind(statusController.addStatusReaction, statusController));
+
 export default router;

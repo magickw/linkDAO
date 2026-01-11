@@ -3,12 +3,19 @@ export interface Message {
   conversationId: string;
   fromAddress: string;
   content: string;
-  contentType: 'text' | 'image' | 'file' | 'post_share';
+  contentType: 'text' | 'image' | 'file' | 'post_share' | 'voice';
   timestamp: Date;
   encryptionKey?: string;
   deliveryStatus: 'sent' | 'delivered' | 'read';
   replyToId?: string;
   attachments?: MessageAttachment[];
+  // Phase 5: Advanced features
+  reactions?: Array<{ emoji: string; count: number; users: string[] }>;
+  editedAt?: Date;
+  deletedAt?: Date;
+  isPinned?: boolean;
+  pinnedBy?: string;
+  pinnedAt?: Date;
 }
 
 export interface MessageAttachment {
@@ -33,6 +40,7 @@ export interface Conversation {
   lastActivity: Date;
   unreadCounts: Record<string, number>;
   isEncrypted: boolean;
+  readBy?: string[]; // Users who have read the latest messages
   metadata: {
     title?: string;
     type: 'direct' | 'group' | 'announcement';

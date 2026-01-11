@@ -1,7 +1,38 @@
 /**
- * Wallet-to-Wallet Messaging Service
+ * @deprecated This service is deprecated and will be removed in a future version.
+ *
+ * IMPORTANT: This service uses IndexedDB as the source of truth, which causes
+ * messages to be lost when browser cache is cleared.
+ *
+ * Please migrate to `unifiedMessagingService` which:
+ * - Uses backend API as the source of truth
+ * - Uses IndexedDB only as a cache layer
+ * - Properly syncs across devices and sessions
+ *
+ * Migration:
+ * ```typescript
+ * // Old (deprecated)
+ * import { messagingService } from '@/services/messagingService';
+ * const messages = await messagingService.getMessages(conversationId);
+ *
+ * // New (recommended)
+ * import { unifiedMessagingService } from '@/services/unifiedMessagingService';
+ * const { messages } = await unifiedMessagingService.getMessages(conversationId);
+ *
+ * // Or use the React hook:
+ * import { useUnifiedMessaging } from '@/hooks/useUnifiedMessaging';
+ * const { messages, sendMessage } = useUnifiedMessaging({ walletAddress });
+ * ```
+ *
+ * Wallet-to-Wallet Messaging Service (DEPRECATED)
  * Provides instant chat, encryption, multi-device support, and message management
  */
+
+console.warn(
+  '[DEPRECATED] messagingService.ts is deprecated. ' +
+  'Please migrate to unifiedMessagingService.ts which properly persists messages to the backend. ' +
+  'See the migration guide in the file header.'
+);
 
 import { ethers } from 'ethers';
 import { OfflineMessageQueueService } from './offlineMessageQueueService';

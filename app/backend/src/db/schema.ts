@@ -3765,6 +3765,12 @@ export const conversations = pgTable("conversations", {
   isAutomated: boolean("is_automated").default(false),
   status: varchar("status", { length: 32 }).default("active"),
   archivedAt: timestamp("archived_at"),
+  // Phase 5: Channel/Group support
+  channelName: varchar("channel_name", { length: 100 }),
+  isChannel: boolean("is_channel").default(false),
+  channelDescription: text("channel_description"),
+  channelAvatar: varchar("channel_avatar", { length: 500 }),
+  maxMembers: integer("max_members").default(100),
 }, (t) => ({
   lastActivityIdx: index("idx_conversations_last_activity").on(t.lastActivity),
 
@@ -3775,6 +3781,8 @@ export const conversations = pgTable("conversations", {
   conversationTypeIdx: index("idx_conversations_type").on(t.conversationType),
   statusIdx: index("idx_conversations_status").on(t.status),
   isAutomatedIdx: index("idx_conversations_is_automated").on(t.isAutomated),
+  // Phase 5: Channel indexes
+  isChannelIdx: index("idx_conversations_is_channel").on(t.isChannel),
 }));
 
 export const chatMessages = pgTable("chat_messages", {
@@ -3786,12 +3794,34 @@ export const chatMessages = pgTable("chat_messages", {
   encryptionMetadata: jsonb("encryption_metadata"),
   replyToId: uuid("reply_to_id").references(() => chatMessages.id),
   attachments: jsonb("attachments"),
+  isPinned: boolean("is_pinned").default(false),
+  pinnedBy: varchar("pinned_by", { length: 66 }),
+  pinnedAt: timestamp("pinned_at"),
   sentAt: timestamp("timestamp").defaultNow(),
   editedAt: timestamp("edited_at"),
   deletedAt: timestamp("deleted_at"),
+  // Phase 5 additions
+  deliveryStatus: varchar("delivery_status", { length: 16 }).default("sent"),
+  replyCount: integer("reply_count").default(0),
+  originalContent: text("original_content"),
 }, (t) => ({
   convoTimestampIdx: index("idx_chat_messages_conversation_id_timestamp").on(t.conversationId, t.sentAt),
   replyToIdx: index("idx_chat_messages_reply_to").on(t.replyToId),
+  isPinnedIdx: index("idx_chat_messages_is_pinned").on(t.conversationId, t.isPinned),
+  deliveryStatusIdx: index("idx_chat_messages_delivery_status").on(t.conversationId, t.deliveryStatus),
+}));
+
+// Message reactions table for emoji reactions
+export const messageReactions = pgTable("message_reactions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  messageId: uuid("message_id").references(() => chatMessages.id, { onDelete: "cascade" }).notNull(),
+  userAddress: varchar("user_address", { length: 66 }).notNull(),
+  emoji: varchar("emoji", { length: 32 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  messageIdx: index("idx_message_reactions_message").on(t.messageId),
+  userIdx: index("idx_message_reactions_user").on(t.userAddress),
+  uniqueReaction: unique("unique_message_reaction").on(t.messageId, t.userAddress, t.emoji),
 }));
 
 // Message read status tracking
@@ -3815,6 +3845,47 @@ export const blockedUsers = pgTable("blocked_users", {
   pk: primaryKey(t.blockerAddress, t.blockedAddress),
   blockerIdx: index("idx_blocked_users_blocker").on(t.blockerAddress),
   blockedIdx: index("idx_blocked_users_blocked").on(t.blockedAddress),
+}));
+
+// Phase 5: Conversation participants with roles
+export const conversationParticipants = pgTable("conversation_participants", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  conversationId: uuid("conversation_id").references(() => conversations.id, { onDelete: "cascade" }).notNull(),
+  userAddress: varchar("user_address", { length: 66 }).notNull(),
+  role: varchar("role", { length: 32 }).default("member"), // admin, moderator, member
+  nickname: varchar("nickname", { length: 100 }),
+  joinedAt: timestamp("joined_at").defaultNow(),
+  lastReadAt: timestamp("last_read_at"),
+  isMuted: boolean("is_muted").default(false),
+  mutedUntil: timestamp("muted_until"),
+  notificationsEnabled: boolean("notifications_enabled").default(true),
+}, (t) => ({
+  conversationIdx: index("idx_conversation_participants_conversation").on(t.conversationId),
+  userIdx: index("idx_conversation_participants_user").on(t.userAddress),
+  roleIdx: index("idx_conversation_participants_role").on(t.conversationId, t.role),
+  uniqueParticipant: unique("unique_conversation_participant").on(t.conversationId, t.userAddress),
+}));
+
+// Phase 5: Typing indicators (ephemeral)
+export const typingIndicators = pgTable("typing_indicators", {
+  conversationId: uuid("conversation_id").references(() => conversations.id, { onDelete: "cascade" }).notNull(),
+  userAddress: varchar("user_address", { length: 66 }).notNull(),
+  startedAt: timestamp("started_at").defaultNow(),
+}, (t) => ({
+  pk: primaryKey(t.conversationId, t.userAddress),
+  startedIdx: index("idx_typing_indicators_started").on(t.startedAt),
+}));
+
+// Phase 5: User presence tracking
+export const userPresence = pgTable("user_presence", {
+  userAddress: varchar("user_address", { length: 66 }).primaryKey(),
+  status: varchar("status", { length: 20 }).default("offline"), // online, away, busy, offline
+  lastSeen: timestamp("last_seen").defaultNow(),
+  currentConversationId: uuid("current_conversation_id").references(() => conversations.id, { onDelete: "set null" }),
+  deviceInfo: jsonb("device_info").default("{}"),
+}, (t) => ({
+  statusIdx: index("idx_user_presence_status").on(t.status),
+  lastSeenIdx: index("idx_user_presence_last_seen").on(t.lastSeen),
 }));
 
 // Message templates table for marketplace messaging

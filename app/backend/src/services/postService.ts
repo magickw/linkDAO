@@ -1,5 +1,8 @@
 import { Post, CreatePostInput, UpdatePostInput } from '../models/Post';
 import { safeLogger } from '../utils/safeLogger';
+import { db } from '../db';
+import * as schema from '../db/schema';
+import { eq, sql } from 'drizzle-orm';
 import { MetadataService } from './metadataService';
 import { databaseService } from './databaseService'; // Import the singleton instance
 import { UserProfileService } from './userProfileService';
@@ -279,7 +282,7 @@ export class PostService {
     }
   }
 
-  async getPostById(id: string): Promise<Post | undefined> {
+  async getPostById(id: string, viewerId?: string): Promise<Post | undefined> {
     // Convert string ID to number
     const postId = id;
     if (!postId) {
@@ -290,10 +293,12 @@ export class PostService {
     try {
       // Fetch the post from database using the new dedicated method
       let dbPost = await databaseService.getPostById(postId);
+      let isStatus = false;
 
       // Fallback to statuses if not found in regular posts
       if (!dbPost) {
         dbPost = await databaseService.getStatusById(postId);
+        isStatus = true;
       }
 
       if (!dbPost) {
@@ -303,26 +308,27 @@ export class PostService {
 
       // Get user profile for author info
       const author = dbPost.authorId ? await userProfileService.getProfileById(dbPost.authorId) : null;
-      if (!author) {
-        safeLogger.info(`Author not found for post ID: ${postId}, authorId: ${dbPost.authorId}`);
-        // Instead of returning undefined, create a minimal response with unknown author
-        return {
-          id: dbPost.id.toString(),
-          author: 'unknown',
-          parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
-          content: dbPost.content,
-          contentCid: dbPost.contentCid,
-          shareId: dbPost.shareId || '', // Include shareId for share URLs
-          mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
-          tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
-          createdAt: dbPost.createdAt || new Date(),
-          onchainRef: '',
-        };
+      const authorAddress = author ? author.walletAddress : 'unknown';
+
+      // Fetch enrichment data (shares, repost status)
+      let shares = 0;
+      let isRepostedByMe = false;
+
+      try {
+        const counts = await databaseService.getRepostCounts([postId]);
+        shares = counts.get(postId) || 0;
+
+        if (viewerId) {
+          const userReposts = await databaseService.getUserRepostIds(viewerId);
+          isRepostedByMe = userReposts.has(postId);
+        }
+      } catch (enrichError) {
+        safeLogger.warn('Failed to fetch enrichment data for post:', enrichError);
       }
 
       return {
         id: dbPost.id.toString(),
-        author: author.walletAddress,
+        author: authorAddress,
         parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
         content: dbPost.content,
         contentCid: dbPost.contentCid,
@@ -332,7 +338,11 @@ export class PostService {
         createdAt: dbPost.createdAt || new Date(),
         onchainRef: '',
         mediaUrls: dbPost.mediaUrls ? JSON.parse(dbPost.mediaUrls) : [],
-        location: dbPost.location || undefined
+        location: dbPost.location || undefined,
+        shares,
+        isRepostedByMe,
+        isStatus,
+        isRepost: dbPost.isRepost
       };
     } catch (error) {
       safeLogger.error('Error getting post by ID:', error);
@@ -759,7 +769,10 @@ export class PostService {
           isRepost: dbPost.isRepost,
           shares: repostCounts.get(dbPost.id.toString()) || 0,
           mediaUrls: dbPost.mediaUrls ? JSON.parse(dbPost.mediaUrls) : [],
-          location: dbPost.location || undefined
+          location: dbPost.location || undefined,
+          upvotes: dbPost.upvotes || 0,
+          downvotes: dbPost.downvotes || 0,
+          views: dbPost.views || 0
         };
       }));
 
@@ -788,7 +801,10 @@ export class PostService {
           title: null, // Statuses don't have titles
           shares: repostCounts.get(dbPost.id.toString()) || 0,
           mediaUrls: dbPost.mediaUrls ? JSON.parse(dbPost.mediaUrls) : [],
-          location: dbPost.location || undefined
+          location: dbPost.location || undefined,
+          upvotes: dbPost.upvotes || 0,
+          downvotes: dbPost.downvotes || 0,
+          views: dbPost.views || 0
         };
       }));
 
