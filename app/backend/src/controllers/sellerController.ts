@@ -1012,7 +1012,28 @@ export class SellerController {
       const db = databaseService.getDatabase();
       const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
 
-      let query = db.select({
+      // First get the user ID from wallet address (orders.sellerId references users.id directly)
+      const userRecord = await db.select({ id: users.id })
+        .from(users)
+        .where(eq(users.walletAddress, user.walletAddress.toLowerCase()))
+        .limit(1);
+
+      if (!userRecord.length) {
+        return res.status(404).json({ success: false, error: "User not found" });
+      }
+
+      const sellerId = userRecord[0].id;
+
+      // Build base conditions - orders.sellerId directly references users.id (UUID)
+      const conditions: any[] = [eq(schema.orders.sellerId, sellerId)];
+
+      // Apply status filter if provided
+      if (status) {
+        conditions.push(eq(schema.orders.status, status as string));
+      }
+
+      // Get orders with product information (left join to get product title)
+      const ordersList = await db.select({
         id: schema.orders.id,
         productId: schema.orders.listingId,
         productTitle: schema.products.title,
@@ -1021,42 +1042,32 @@ export class SellerController {
         currency: schema.orders.currency,
         status: schema.orders.status,
         createdAt: schema.orders.createdAt,
-        updatedAt: schema.orders.createdAt
+        updatedAt: schema.orders.createdAt,
+        trackingNumber: schema.orders.trackingNumber,
+        trackingCarrier: schema.orders.trackingCarrier,
+        shippingAddress: schema.orders.shippingAddress,
+        paymentMethod: schema.orders.paymentMethod
       })
         .from(schema.orders)
         .leftJoin(schema.products, eq(schema.orders.listingId, schema.products.id))
-        .leftJoin(schema.users, eq(schema.products.sellerId, schema.users.id))
-        .where(eq(schema.users.walletAddress, user.walletAddress));
+        .where(and(...conditions))
+        .orderBy(sortOrder === 'asc' ? schema.orders.createdAt : desc(schema.orders.createdAt))
+        .limit(parseInt(limit as string))
+        .offset(offset);
 
-      // Apply filters
-      if (status) {
-        query = query.where(eq(schema.orders.status, status as string));
-      }
-
-      // Apply sorting
-      const sortColumn = sortBy === 'amount' ? schema.orders.totalAmount :
-        sortBy === 'updated_at' ? schema.orders.createdAt :
-          schema.orders.createdAt;
-
-      query = sortOrder === 'asc' ? query.orderBy(sortColumn) : query.orderBy(desc(sortColumn));
-
-      const orders = await query.limit(parseInt(limit as string)).offset(offset);
-
-      // Get total count
+      // Get total count using the same conditions
       const totalResult = await db.select({ count: sql<number>`count(*)` })
         .from(schema.orders)
-        .leftJoin(schema.products, eq(schema.orders.listingId, schema.products.id))
-        .leftJoin(schema.users, eq(schema.products.sellerId, schema.users.id))
-        .where(eq(schema.users.walletAddress, user.walletAddress));
+        .where(and(...conditions));
 
       const total = totalResult[0]?.count || 0;
 
       res.json({
         success: true,
         data: {
-          orders: orders.map(order => ({
+          orders: ordersList.map(order => ({
             ...order,
-            amount: parseFloat(order.amount)
+            amount: parseFloat(order.amount || '0')
           })),
           pagination: {
             page: parseInt(page as string),

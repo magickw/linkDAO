@@ -1,8 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Fragment } from 'react';
+import { useRouter } from 'next/router';
+import { Listbox, Transition } from '@headlessui/react';
+import { Check, ChevronDown } from 'lucide-react';
 import { TokenBalance } from '../../types/wallet';
 import { useToast } from '@/context/ToastContext';
 import { useTokenTransfer } from '../../hooks/useTokenTransfer';
 import { useNetworkSwitch, CHAIN_NAMES } from '../../hooks/useNetworkSwitch';
+import { getTokenLogoWithFallback } from '@/utils/tokenLogoUtils';
+
 
 interface SendTokenModalProps {
   isOpen: boolean;
@@ -13,6 +18,7 @@ interface SendTokenModalProps {
 }
 
 export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, onSuccess }: SendTokenModalProps) {
+  const router = useRouter();
   const { addToast } = useToast();
   const { currentChainId, ensureNetwork, isSwitching, getChainName, supportedChains } = useNetworkSwitch();
   const { transfer, isPending, txHash } = useTokenTransfer();
@@ -137,16 +143,11 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
       });
 
       if (hash) {
-        addToast('Transaction submitted successfully!', 'success');
+        addToast('Transaction submitted successfully! Redirecting...', 'success');
         if (onSuccess) onSuccess(hash);
 
-        // Construct the explorer URL based on the selected chain
-        const explorerUrl = selectedNetwork.explorer ? `${selectedNetwork.explorer}/tx/${hash}` : `https://etherscan.io/tx/${hash}`;
-
-        // Ask user if they want to view the transaction on the explorer
-        if (window.confirm(`Transaction submitted! Would you like to view it on the blockchain explorer?`)) {
-          window.open(explorerUrl, '_blank', 'noopener,noreferrer');
-        }
+        // Redirect to transaction history
+        router.push('/wallet/transactions');
 
         onClose();
       }
@@ -192,160 +193,237 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
               Network
             </label>
             <div className="relative">
-              <select
-                value={selectedChainId}
-                onChange={(e) => handleNetworkChange(Number(e.target.value))}
-                disabled={isSwitching}
-                className="w-full p-3 pl-10 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent appearance-none disabled:opacity-50"
-              >
-                {networks.map((network) => (
-                  <option key={network.id} value={network.id}>
-                    {network.name} ({network.symbol})
-                  </option>
-                ))}
-              </select>
-              <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                <div className="w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-xs font-bold text-primary-600 dark:text-primary-400">
-                  {selectedNetwork.symbol.slice(0, 1)}
+              <Listbox value={selectedNetwork} onChange={(val) => handleNetworkChange(val.id)} disabled={isSwitching}>
+                <div className="relative mt-1">
+                  <Listbox.Button className="relative w-full cursor-default rounded-xl bg-white dark:bg-gray-700 py-3 pl-3 pr-10 text-left border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent sm:text-sm">
+                    <span className="flex items-center truncate">
+                      <div className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/30 text-xs font-bold text-primary-600 dark:text-primary-400">
+                        {selectedNetwork.symbol.slice(0, 1)}
+                      </div>
+                      <span className="block truncate text-gray-900 dark:text-gray-100">{selectedNetwork.name}</span>
+                    </span>
+                    <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                      <ChevronDown
+                        className="h-5 w-5 text-gray-400"
+                        aria-hidden="true"
+                      />
+                    </span>
+                  </Listbox.Button>
+                  <Transition
+                    as={Fragment}
+                    leave="transition ease-in duration-100"
+                    leaveFrom="opacity-100"
+                    leaveTo="opacity-0"
+                  >
+                    <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white dark:bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-50">
+                      {networks.map((network, networkIdx) => (
+                        <Listbox.Option
+                          key={networkIdx}
+                          className={({ active }) =>
+                            `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-900 dark:text-primary-100' : 'text-gray-900 dark:text-gray-100'
+                            }`
+                          }
+                          value={network}
+                        >
+                          {({ selected }) => (
+                            <>
+                              <span
+                                className={`block truncate ${selected ? 'font-medium' : 'font-normal'
+                                  }`}
+                              >
+                                {network.name}
+                              </span>
+                              {selected ? (
+                                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-600 dark:text-primary-400">
+                                  <Check className="h-5 w-5" aria-hidden="true" />
+                                </span>
+                              ) : null}
+                            </>
+                          )}
+                        </Listbox.Option>
+                      ))}
+                    </Listbox.Options>
+                  </Transition>
                 </div>
-              </div>
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </div>
+              </Listbox>
 
-            {/* Network switch indicator */}
-            {needsNetworkSwitch && (
-              <div className="mt-2 flex items-center gap-2 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                <span className="text-xs text-amber-700 dark:text-amber-300">
-                  Will auto-switch from {getChainName(currentChainId)} to {selectedNetwork.name}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Token Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Asset
-            </label>
-            <div className="relative">
-              <select
-                value={selectedTokenSymbol}
-                onChange={(e) => setSelectedTokenSymbol(e.target.value)}
-                className="w-full p-3 pl-10 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent appearance-none"
-              >
-                {tokens.map((token) => (
-                  <option key={token.symbol} value={token.symbol}>
-                    {token.symbol}
-                  </option>
-                ))}
-              </select>
-              <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                <div className="w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-xs font-bold text-primary-600 dark:text-primary-400">
-                  {selectedTokenSymbol.slice(0, 1)}
-                </div>
-              </div>
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </div>
-            <div className="mt-2 flex justify-between text-xs text-gray-500 dark:text-gray-400 px-1">
-              <span>Balance on {selectedNetwork.name}: {maxAmount.toFixed(4)} {selectedTokenSymbol}</span>
-              <span>≈ ${((maxAmount * (selectedToken?.valueUSD || 0)) / (selectedToken?.balance || 1)).toFixed(2)}</span>
-            </div>
-          </div>
-
-          {/* Amount */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Amount
-            </label>
-            <div className="relative">
-              <input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.00"
-                className="w-full p-3 pr-16 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent font-mono"
-              />
-              <button
-                onClick={handleMax}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 px-2 py-1 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 text-xs font-bold rounded hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-colors"
-              >
-                MAX
-              </button>
-            </div>
-            {amount && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-right">
-                ≈ ${estimatedValue.toFixed(2)} USD
-              </p>
-            )}
-          </div>
-
-          {/* Recipient */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Recipient Address
-            </label>
-            <input
-              type="text"
-              value={recipient}
-              onChange={(e) => setRecipient(e.target.value)}
-              placeholder="0x..."
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent font-mono text-sm"
-            />
-          </div>
-
-          {/* Error */}
-          {error && (
-            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2">
-              <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p className="text-sm text-red-700 dark:text-red-200">{error}</p>
-            </div>
-          )}
-
-          {/* Submit Button */}
-          <button
-            onClick={handleSend}
-            disabled={isPending || isSwitching || !amount || !recipient}
-            className="w-full py-3.5 px-4 bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
-          >
-            {isSwitching ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Switching Network...
-              </>
-            ) : isPending ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Processing...
-              </>
-            ) : (
-              <>
-                {needsNetworkSwitch && (
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              {/* Network switch indicator */}
+              {needsNetworkSwitch && (
+                <div className="mt-2 flex items-center gap-2 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
+                  <span className="text-xs text-amber-700 dark:text-amber-300">
+                    Will auto-switch from {getChainName(currentChainId)} to {selectedNetwork.name}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Token Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Asset
+              </label>
+              <div className="relative">
+                <Listbox value={selectedTokenSymbol} onChange={setSelectedTokenSymbol}>
+                  <div className="relative mt-1">
+                    <Listbox.Button className="relative w-full cursor-default rounded-xl bg-white dark:bg-gray-700 py-3 pl-3 pr-10 text-left border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent sm:text-sm">
+                      <span className="flex items-center truncate">
+                        {(() => {
+                          const logo = getTokenLogoWithFallback(selectedTokenSymbol);
+                          return logo ? (
+                            <img src={logo} alt={selectedTokenSymbol} className="mr-2 h-5 w-5 rounded-full" />
+                          ) : (
+                            <div className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/30 text-xs font-bold text-primary-600 dark:text-primary-400">
+                              {selectedTokenSymbol.slice(0, 1)}
+                            </div>
+                          );
+                        })()}
+                        <span className="block truncate text-gray-900 dark:text-gray-100">{selectedTokenSymbol}</span>
+                      </span>
+                      <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                        <ChevronDown
+                          className="h-5 w-5 text-gray-400"
+                          aria-hidden="true"
+                        />
+                      </span>
+                    </Listbox.Button>
+                    <Transition
+                      as={Fragment}
+                      leave="transition ease-in duration-100"
+                      leaveFrom="opacity-100"
+                      leaveTo="opacity-0"
+                    >
+                      <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white dark:bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-50">
+                        {tokens.map((token, tokenIdx) => (
+                          <Listbox.Option
+                            key={tokenIdx}
+                            className={({ active }) =>
+                              `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-900 dark:text-primary-100' : 'text-gray-900 dark:text-gray-100'
+                              }`
+                            }
+                            value={token.symbol}
+                          >
+                            {({ selected }) => (
+                              <>
+                                <span className="flex items-center truncate">
+                                  {(() => {
+                                    const logo = getTokenLogoWithFallback(token.symbol);
+                                    return logo ? (
+                                      <img src={logo} alt={token.symbol} className="mr-2 h-5 w-5 rounded-full" />
+                                    ) : (
+                                      <div className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600 text-[10px] font-bold text-gray-600 dark:text-gray-300">
+                                        {token.symbol.slice(0, 1)}
+                                      </div>
+                                    );
+                                  })()}
+                                  <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
+                                    {token.symbol}
+                                  </span>
+                                </span>
+                                {selected ? (
+                                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-600 dark:text-primary-400">
+                                    <Check className="h-5 w-5" aria-hidden="true" />
+                                  </span>
+                                ) : null}
+                              </>
+                            )}
+                          </Listbox.Option>
+                        ))}
+                      </Listbox.Options>
+                    </Transition>
+                  </div>
+                </Listbox>
+                <div className="mt-2 flex justify-between text-xs text-gray-500 dark:text-gray-400 px-1">
+                  <span>Balance on {selectedNetwork.name}: {maxAmount.toFixed(4)} {selectedTokenSymbol}</span>
+                  <span>≈ ${((maxAmount * (selectedToken?.valueUSD || 0)) / (selectedToken?.balance || 1)).toFixed(2)}</span>
+                </div>
+              </div>
+
+              {/* Amount */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Amount
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full p-3 pr-16 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent font-mono"
+                  />
+                  <button
+                    onClick={handleMax}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 px-2 py-1 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 text-xs font-bold rounded hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-colors"
+                  >
+                    MAX
+                  </button>
+                </div>
+                {amount && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-right">
+                    ≈ ${estimatedValue.toFixed(2)} USD
+                  </p>
                 )}
-                {needsNetworkSwitch ? `Switch & Send ${selectedTokenSymbol}` : `Send ${selectedTokenSymbol}`}
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
-              </>
-            )}
-          </button>
+              </div>
+
+              {/* Recipient */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Recipient Address
+                </label>
+                <input
+                  type="text"
+                  value={recipient}
+                  onChange={(e) => setRecipient(e.target.value)}
+                  placeholder="0x..."
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent font-mono text-sm"
+                />
+              </div>
+
+              {/* Error */}
+              {error && (
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2">
+                  <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-sm text-red-700 dark:text-red-200">{error}</p>
+                </div>
+              )}
+
+              {/* Submit Button */}
+              <button
+                onClick={handleSend}
+                disabled={isPending || isSwitching || !amount || !recipient}
+                className="w-full py-3.5 px-4 bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
+              >
+                {isSwitching ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Switching Network...
+                  </>
+                ) : isPending ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    {needsNetworkSwitch && (
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    )}
+                    {needsNetworkSwitch ? `Switch & Send ${selectedTokenSymbol}` : `Send ${selectedTokenSymbol}`}
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  );
+        );
 }

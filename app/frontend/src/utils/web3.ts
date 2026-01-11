@@ -17,6 +17,12 @@ let cachedProvider: ethers.Provider | null = null;
 export function wrapProvider(provider: any): any {
   if (!provider) return provider;
 
+  // Helper to deep clone objects to break references to frozen extension objects
+  const deepClone = (obj: any) => {
+    if (obj === null || typeof obj !== 'object') return obj;
+    return JSON.parse(JSON.stringify(obj));
+  };
+
   // Create a clean object with just the necessary methods
   return {
     // Forward specific known properties
@@ -25,22 +31,40 @@ export function wrapProvider(provider: any): any {
     host: provider.host,
     path: provider.path,
 
+    // Some wallets/extensions might rely on this
+    ...provider,
+
     // Intercept request to ensure args are mutable and safe
     request: async (args: { method: string; params?: any[] }) => {
       // Create a completely new request object to ensure it's mutable
       // Some extensions like LastPass freeze the args object
       const method = args.method;
       // Deep copy params to ensure no references to frozen objects remain
-      const params = args.params ? JSON.parse(JSON.stringify(args.params)) : [];
+      const params = args.params ? deepClone(args.params) : [];
 
       return provider.request({ method, params });
     },
 
-    // Safe forwarding of other methods
+    // Safe forwarding of send method (legacy)
+    send: (method: string | any, params?: any) => {
+      if (typeof method === 'string') {
+        return provider.send?.(method, params ? deepClone(params) : params);
+      }
+      // Handle (payload, callback) signature
+      return provider.send?.(deepClone(method), params);
+    },
+
+    // Safe forwarding of sendAsync method (legacy)
+    sendAsync: (payload: any, callback: any) => {
+      return provider.sendAsync?.(deepClone(payload), (error: any, result: any) => {
+        // Ensure result is also safe if needed, though usually we consume it
+        callback(error, result);
+      });
+    },
+
+    // Forward event listeners
     on: (eventName: string, listener: any) => provider.on?.(eventName, listener),
     removeListener: (eventName: string, listener: any) => provider.removeListener?.(eventName, listener),
-    send: (method: string, params: any) => provider.send?.(method, params),
-    sendAsync: (payload: any, callback: any) => provider.sendAsync?.(payload, callback),
   };
 }
 
