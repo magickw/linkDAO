@@ -49,9 +49,9 @@ interface EnhancedFormData {
   duration: number;
   royalty: number;
 
-  // inventory & Inventory
+  // Inventory (stock available for sale)
   inventory: number;
-  unlimitedQuantity: boolean;
+  unlimitedInventory: boolean;
 
   // Security & Trust
   escrowEnabled: boolean;
@@ -249,7 +249,7 @@ const EditListingPage: React.FC = () => {
     duration: 86400,
     royalty: 0,
     inventory: 1,
-    unlimitedQuantity: false,
+    unlimitedInventory: false,
     escrowEnabled: true,
     specifications: {
       weight: {
@@ -362,7 +362,7 @@ const EditListingPage: React.FC = () => {
           duration: 86400,
           royalty: (listing as any).royalty || 0,
           inventory: (listing as any).inventory || listing.inventory || 1,
-          unlimitedQuantity: ((listing as any).inventory || listing.inventory || 1) >= 999999,
+          unlimitedInventory: ((listing as any).inventory || listing.inventory || 1) >= 999999,
           escrowEnabled: listing.escrowEnabled ?? true,
           // Use specifications from transformed data (extracted from metadata)
           specifications: listing.specifications || {
@@ -473,7 +473,7 @@ const EditListingPage: React.FC = () => {
         break;
 
       case 'inventory':
-        if (!formData.unlimitedQuantity && (value < 1)) {
+        if (!formData.unlimitedInventory && (value < 1)) {
           error = 'Inventory must be at least 1';
         }
         break;
@@ -525,9 +525,9 @@ const EditListingPage: React.FC = () => {
       }
     }
 
-    // Quantity validation
-    if (!formData.unlimitedQuantity && formData.inventory < 1) {
-      errors.inventory = 'inventory must be at least 1';
+    // Inventory validation
+    if (!formData.unlimitedInventory && formData.inventory < 1) {
+      errors.inventory = 'Inventory must be at least 1';
     }
 
     // Images validation
@@ -892,9 +892,9 @@ const EditListingPage: React.FC = () => {
         title: formData.title,
         description: formData.description,
         price: parseFloat(formData.price),
-        category: formData.category,
+        categoryId: formData.category,
         currency: formData.currency,
-        inventory: formData.unlimitedQuantity ? 999999 : (formData.inventory || 1),
+        inventory: formData.unlimitedInventory ? 999999 : (formData.inventory || 1),
         tags: formData.tags,
         images: uploadedImageUrls, // Include all image URLs
         condition: formData.condition as 'new' | 'used' | 'refurbished',
@@ -1526,15 +1526,15 @@ const EditListingPage: React.FC = () => {
                     <div className="flex-1">
                       <input
                         type="number"
-                        value={formData.unlimitedQuantity ? '' : formData.inventory}
+                        value={formData.unlimitedInventory ? '' : formData.inventory}
                         onChange={(e) => {
                           const value = parseInt(e.target.value) || 0;
                           handleFormChange('inventory', value);
                         }}
                         min="1"
-                        disabled={formData.unlimitedQuantity}
+                        disabled={formData.unlimitedInventory}
                         className={`w-full px-4 py-3 bg-white/10 border ${fieldErrors.inventory ? 'border-red-500' : 'border-white/20'
-                          } rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${formData.unlimitedQuantity ? 'opacity-50' : ''
+                          } rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${formData.unlimitedInventory ? 'opacity-50' : ''
                           }`}
                         placeholder="Enter inventory"
                       />
@@ -1546,8 +1546,8 @@ const EditListingPage: React.FC = () => {
                       <input
                         type="checkbox"
                         id="unlimited"
-                        checked={formData.unlimitedQuantity}
-                        onChange={(e) => handleFormChange('unlimitedQuantity', e.target.checked)}
+                        checked={formData.unlimitedInventory}
+                        onChange={(e) => handleFormChange('unlimitedInventory', e.target.checked)}
                         className="h-5 w-5 text-indigo-600 rounded focus:ring-indigo-500"
                       />
                       <label htmlFor="unlimited" className="ml-2 text-white">
@@ -1925,7 +1925,7 @@ const EditListingPage: React.FC = () => {
                     <div>
                       <h4 className="text-sm font-medium text-white/70">Inventory</h4>
                       <p className="text-white">
-                        {formData.unlimitedQuantity ? 'Unlimited' : formData.inventory}
+                        {formData.unlimitedInventory ? 'Unlimited' : formData.inventory}
                       </p>
                     </div>
 

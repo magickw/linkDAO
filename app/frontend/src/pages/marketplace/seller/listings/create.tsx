@@ -48,9 +48,9 @@ interface EnhancedFormData {
   duration: number;
   royalty: number;
 
-  // Quantity & Inventory
-  quantity: number;
-  unlimitedQuantity: boolean;
+  // Inventory (stock available for sale)
+  inventory: number;
+  unlimitedInventory: boolean;
 
   // Security & Trust
   escrowEnabled: boolean;
@@ -208,8 +208,8 @@ const CreateListingPage: React.FC = () => {
     listingType: 'FIXED_PRICE',
     duration: 86400,
     royalty: 0,
-    quantity: 1,
-    unlimitedQuantity: false,
+    inventory: 1,
+    unlimitedInventory: false,
     escrowEnabled: true,
     specifications: {
       weight: {
@@ -283,9 +283,9 @@ const CreateListingPage: React.FC = () => {
         }
         break;
 
-      case 'quantity':
+      case 'inventory':
         if (value < 1) {
-          error = 'Quantity must be at least 1';
+          error = 'Inventory must be at least 1';
         }
         break;
     }
@@ -355,9 +355,9 @@ const CreateListingPage: React.FC = () => {
       }
     }
 
-    // Quantity validation
-    if (formData.quantity < 1) {
-      errors.quantity = 'Quantity must be at least 1';
+    // Inventory validation
+    if (formData.inventory < 1) {
+      errors.inventory = 'Inventory must be at least 1';
     }
 
     // Images validation
@@ -463,7 +463,7 @@ const CreateListingPage: React.FC = () => {
       case 'basic':
         return !errors.title && !errors.description && !errors.category;
       case 'details':
-        return !errors.condition && !errors.quantity;
+        return !errors.condition && !errors.inventory;
       case 'pricing':
         return !errors.price;
       case 'shipping':
@@ -672,7 +672,7 @@ const CreateListingPage: React.FC = () => {
         price: formData.price,
         categoryId: formData.category,
         currency: formData.currency,
-        inventory: formData.unlimitedQuantity ? 999999 : formData.quantity,
+        inventory: formData.unlimitedInventory ? 999999 : formData.inventory,
         tags: formData.tags,
         images: uploadedImageUrls, // Include uploaded image URLs
         shipping: formData.itemType === 'PHYSICAL' ? formData.shipping : undefined,
@@ -1299,42 +1299,42 @@ const CreateListingPage: React.FC = () => {
                     </p>
                   </div>
 
-                  {/* Quantity */}
+                  {/* Inventory */}
                   <div>
                     <label className="block text-sm font-medium text-white/90 mb-2">
-                      Quantity
+                      Inventory
                     </label>
                     <div className="space-y-3">
                       <div className="flex items-center gap-4">
                         <input
                           type="number"
-                          value={formData.quantity}
-                          onChange={(e) => handleFormChange('quantity', parseInt(e.target.value) || 1)}
+                          value={formData.inventory}
+                          onChange={(e) => handleFormChange('inventory', parseInt(e.target.value) || 1)}
                           min="1"
-                          max={formData.unlimitedQuantity ? undefined : 999999}
-                          disabled={formData.unlimitedQuantity}
-                          className={`block w-32 rounded-lg bg-white/10 border ${fieldErrors.quantity ? 'border-red-500' : 'border-white/20'
+                          max={formData.unlimitedInventory ? undefined : 999999}
+                          disabled={formData.unlimitedInventory}
+                          className={`block w-32 rounded-lg bg-white/10 border ${fieldErrors.inventory ? 'border-red-500' : 'border-white/20'
                             } text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2 disabled:opacity-50`}
                         />
 
                         <label className="flex items-center gap-2 text-white/80">
                           <input
                             type="checkbox"
-                            checked={formData.unlimitedQuantity}
-                            onChange={(e) => handleFormChange('unlimitedQuantity', e.target.checked)}
+                            checked={formData.unlimitedInventory}
+                            onChange={(e) => handleFormChange('unlimitedInventory', e.target.checked)}
                             className="rounded border-white/20 bg-white/10 text-indigo-500 focus:ring-indigo-400"
                           />
-                          Unlimited quantity
+                          Unlimited inventory
                         </label>
                       </div>
 
-                      {fieldErrors.quantity && (
-                        <p className="text-red-400 text-sm">{fieldErrors.quantity}</p>
+                      {fieldErrors.inventory && (
+                        <p className="text-red-400 text-sm">{fieldErrors.inventory}</p>
                       )}
 
-                      {!formData.unlimitedQuantity && (
+                      {!formData.unlimitedInventory && (
                         <p className="text-xs text-white/60">
-                          Specify the number of items available for sale. Check "Unlimited quantity" for digital products or services with unlimited availability.
+                          Specify the number of items available for sale. Check "Unlimited inventory" for digital products or services with unlimited availability.
                         </p>
                       )}
                     </div>
@@ -1702,7 +1702,7 @@ const CreateListingPage: React.FC = () => {
                           <div className="space-y-2 text-sm text-white/70">
                             <div>Type: {formData.itemType}</div>
                             <div>Condition: {formData.condition}</div>
-                            <div>Quantity: {formData.unlimitedQuantity ? 'Unlimited' : formData.quantity}</div>
+                            <div>Inventory: {formData.unlimitedInventory ? 'Unlimited' : formData.inventory}</div>
                             {formData.escrowEnabled && (
                               <div className="flex items-center gap-2 text-green-400">
                                 <Shield className="h-4 w-4" />
@@ -1737,8 +1737,8 @@ const CreateListingPage: React.FC = () => {
                           <span className="text-white">{formData.condition}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-white/70">Quantity:</span>
-                          <span className="text-white">{formData.unlimitedQuantity ? 'Unlimited' : formData.quantity}</span>
+                          <span className="text-white/70">Inventory:</span>
+                          <span className="text-white">{formData.unlimitedInventory ? 'Unlimited' : formData.inventory}</span>
                         </div>
                       </div>
                     </div>

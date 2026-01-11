@@ -34,27 +34,32 @@ export default function CommunitySettingsModal({
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [activeTab, setActiveTab] = useState<'general' | 'rules' | 'permissions' | 'moderation'>('general');
 
-  // Initialize form data when community changes
+  // Initialize form data when community changes or modal opens
   useEffect(() => {
-    if (community) {
+    if (community && isOpen) {
       setFormData({
-        displayName: community.displayName,
-        description: community.description,
-        category: community.category,
-        tags: [...community.tags],
-        isPublic: community.isPublic,
-        rules: [...community.rules],
-        avatar: community.avatar,
-        banner: community.banner,
-        treasuryAddress: community.treasuryAddress,
-        governanceToken: community.governanceToken,
-        settings: {
+        displayName: community.displayName || '',
+        description: community.description || '',
+        category: community.category || '',
+        slug: community.slug || '',
+        tags: Array.isArray(community.tags) ? [...community.tags] : [],
+        isPublic: community.isPublic ?? true,
+        rules: Array.isArray(community.rules) ? [...community.rules] : [],
+        avatar: community.avatar || '',
+        banner: community.banner || '',
+        treasuryAddress: community.treasuryAddress || '',
+        governanceToken: community.governanceToken || '',
+        settings: community.settings ? {
           ...community.settings,
-          allowedPostTypes: [...community.settings.allowedPostTypes]
+          allowedPostTypes: Array.isArray(community.settings.allowedPostTypes)
+            ? [...community.settings.allowedPostTypes]
+            : []
+        } : {
+          allowedPostTypes: []
         }
       });
     }
-  }, [community]);
+  }, [community, isOpen]);
 
   // Check if user is moderator or admin (case-insensitive)
   const canModerate = isConnected && address && community.moderators.some(
@@ -260,7 +265,7 @@ export default function CommunitySettingsModal({
                       </label>
                       <input
                         type="text"
-                        value={formData.slug || community?.slug || ''}
+                        value={formData.slug || ''}
                         onChange={(e) => handleInputChange('slug', e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       />
@@ -268,7 +273,7 @@ export default function CommunitySettingsModal({
                         Only lowercase letters, numbers, and hyphens allowed
                       </p>
                       <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        Current URL: /communities/{formData.slug || community?.slug}
+                        Current URL: /communities/{formData.slug || community?.slug || 'your-slug'}
                       </p>
                     </div>
 

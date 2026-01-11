@@ -286,12 +286,12 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
         </div>
       </div>
 
-      {/* Center Column - Community Feed */}
-      <div className="col-span-1 lg:col-span-6">
-        {/* Reddit-style Community Header */}
+      {/* Main Content Area - Spans center + right columns for banner */}
+      <div className="col-span-1 lg:col-span-9">
+        {/* Reddit-style Community Header - Full width across center + right sidebar */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-4 overflow-hidden">
           <div
-            className="h-32 bg-gradient-to-r from-blue-500 to-purple-600"
+            className="h-40 lg:h-48 bg-gradient-to-r from-blue-500 to-purple-600"
             style={{
               backgroundImage: communityData.banner ? `url(${communityData.banner})` : undefined,
               backgroundSize: 'cover',
@@ -389,6 +389,11 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
             </p>
           </div>
         </div>
+
+        {/* Nested grid for posts feed and right sidebar below the banner */}
+        <div className="grid grid-cols-1 lg:grid-cols-9 gap-0 lg:gap-6">
+          {/* Center Column - Community Feed */}
+          <div className="col-span-1 lg:col-span-6">
 
         {/* Reddit-style Post Creation & Sorting */}
         <div className="bg-white dark:bg-gray-800 rounded-t-lg shadow-sm border border-gray-200 dark:border-gray-700 border-b-0">
@@ -565,11 +570,11 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
             </div>
           )}
         </div>
-      </div>
+          </div>
 
-      {/* Right Sidebar - Community Info */}
-      <div className="hidden lg:block lg:col-span-3">
-        <div className="sticky top-6 space-y-4">
+          {/* Right Sidebar - Community Info (inside nested grid) */}
+          <div className="hidden lg:block lg:col-span-3">
+            <div className="sticky top-6 space-y-4">
           {/* Reddit-style About Community */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3">
             <h3 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm uppercase tracking-wide">
@@ -761,6 +766,8 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
                 <span className="text-gray-600 dark:text-gray-400">Comments</span>
                 <span className="font-medium text-gray-900 dark:text-white">156</span>
               </div>
+            </div>
+          </div>
             </div>
           </div>
         </div>

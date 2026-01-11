@@ -92,7 +92,7 @@ export default function ChatPage() {
   const [newRecipientAddress, setNewRecipientAddress] = useState('');
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   const [pendingContact, setPendingContact] = useState<Contact | null>(null);
-  const [showRightSidebar, setShowRightSidebar] = useState(true);
+  // Right sidebar state removed - MessagingInterface handles its own sidebar
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Contact modals state
@@ -993,76 +993,11 @@ export default function ChatPage() {
           )}
         </div>
 
-        {/* Right Sidebar - Members/Info (optional, toggle with state) */}
-        {showRightSidebar && selectedConversation && (
-          <div className="w-60 bg-gray-50 dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col">
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-gray-900 dark:text-white">Members</h3>
-                <Settings className="w-4 h-4 text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-900 dark:hover:text-white" />
-              </div>
-            </div>
-            <div className="flex-1 overflow-y-auto p-3">
-              <div className="space-y-2">
-                {selectedConversation.participants.map((participant) => {
-                  const participantAvatarUrl = participant === address ? null : getAvatarUrl(participant);
-                  const participantDisplayName = participant === address ? truncateAddress(participant) : getDisplayName(participant);
-
-                  return (
-                  <div key={participant} className="flex items-center gap-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700/50">
-                    <div className="relative">
-                      <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center overflow-hidden">
-                        {participantAvatarUrl ? (
-                          <img
-                            src={participantAvatarUrl}
-                            alt={participantDisplayName}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                              const parent = e.currentTarget.parentElement;
-                              if (parent) {
-                                parent.innerHTML = '<svg class="w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
-                              }
-                            }}
-                          />
-                        ) : (
-                          <User className="w-4 h-4 text-gray-400" />
-                        )}
-                      </div>
-                      <OnlineStatus
-                        isOnline={onlineUsers.has(participant) || participant === address}
-                        size={10}
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm text-gray-900 dark:text-white truncate">
-                        {participantDisplayName}
-                        {participant === address && <span className="text-xs text-gray-500 dark:text-gray-500 ml-1">(you)</span>}
-                      </div>
-                    </div>
-                  </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Additional sections */}
-            <div className="border-t border-gray-200 dark:border-gray-700">
-              <button className="w-full p-3 text-left text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50 flex items-center justify-between">
-                <span>Pinned Messages</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
-              <button className="w-full p-3 text-left text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50 flex items-center justify-between">
-                <span>Files</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
-              <button className="w-full p-3 text-left text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50 flex items-center justify-between">
-                <span>Active Polls</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Right Sidebar - Members/Info
+            Note: This sidebar is intentionally NOT rendered when MessagingInterface is displayed,
+            as MessagingInterface has its own built-in sidebar for channel views.
+            This prevents the duplicate sidebar issue.
+        */}
       </div>
 
       {/* New Conversation Modal */}
