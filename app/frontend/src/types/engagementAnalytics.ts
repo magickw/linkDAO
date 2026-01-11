@@ -10,7 +10,7 @@ export interface EngagementAnalytics {
   // Breakdown by type
   reactions: number;
   comments: number;
-  shares: number;
+  reposts: number;
   tips: number;
   
   // Change metrics (percentage)
@@ -35,7 +35,7 @@ export interface EngagementTrend {
   posts: number;
   reactions: number;
   comments: number;
-  shares: number;
+  reposts: number;
   tips: number;
   reach: number;
   engagementRate: number;
@@ -49,7 +49,7 @@ export interface PostEngagementMetrics {
   // Engagement metrics
   reactions: number;
   comments: number;
-  shares: number;
+  reposts: number;
   tips: number;
   views: number;
   engagementScore: number;
@@ -152,7 +152,7 @@ export interface EngagementAggregate {
   // Interaction type breakdown
   reactions: number;
   comments: number;
-  shares: number;
+  reposts: number;
   tips: number;
   views: number;
   

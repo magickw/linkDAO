@@ -443,7 +443,7 @@ export class FeedService {
         total: paginatedPosts.length
       });
 
-      // 2. Batch fetch all metrics with GROUP BY (11 queries total instead of 5*N)
+      // 2. Batch fetch all metrics with GROUP BY (13 queries total instead of 5*N)
       const [
         regularReactionsData,
         statusReactionsData,
@@ -456,6 +456,8 @@ export class FeedService {
         regularViewsData,
         statusViewsData,
         userRepostsData,
+        regularSharesData,
+        statusSharesData,
         originalPostsData,
         originalStatusesData
       ] = await Promise.all([
@@ -592,7 +594,35 @@ export class FeedService {
             ))
           : Promise.resolve([]),
 
-        // 12. Fetch original regular posts
+        // 12. Shares count for regular posts (count statuses that are reposts of these posts)
+        allRegularPostIds.length > 0
+          ? db.select({
+            parentId: statuses.parentId,
+            count: sql<number>`COUNT(*)::int`
+          })
+            .from(statuses)
+            .where(and(
+              inArray(statuses.parentId, allRegularPostIds),
+              eq(statuses.isRepost, true)
+            ))
+            .groupBy(statuses.parentId)
+          : Promise.resolve([]),
+
+        // 13. Shares count for statuses (count statuses that are reposts of these statuses)
+        allStatusIds.length > 0
+          ? db.select({
+            parentId: statuses.parentId,
+            count: sql<number>`COUNT(*)::int`
+          })
+            .from(statuses)
+            .where(and(
+              inArray(statuses.parentId, allStatusIds),
+              eq(statuses.isRepost, true)
+            ))
+            .groupBy(statuses.parentId)
+          : Promise.resolve([]),
+
+        // 14. Fetch original regular posts
         paginatedPosts.filter(p => p.parentId && p.isRepost).length > 0
           ? db.select({
             id: posts.id,
@@ -652,6 +682,7 @@ export class FeedService {
       const tipTotalMap = new Map<number | string, number>();
       const commentMap = new Map<number | string, number>();
       const viewMap = new Map<number | string, number>();
+      const repostCountMap = new Map<number | string, number>();
       const repostedSet = new Set<string>();
 
       // Populate maps with regular post data
@@ -668,6 +699,14 @@ export class FeedService {
       statusCommentsData.forEach(c => commentMap.set(c.postId, Number(c.count)));
       statusViewsData.forEach(v => viewMap.set(v.postId, Number(v.count)));
 
+      // Populate repost count map
+      (regularSharesData as any[]).forEach(s => {
+        if (s.parentId) repostCountMap.set(s.parentId, Number(s.count));
+      });
+      (statusSharesData as any[]).forEach(s => {
+        if (s.parentId) repostCountMap.set(s.parentId, Number(s.count));
+      });
+
       // Populate reposted set
       (userRepostsData as any[]).forEach(r => {
         if (r.parentId) repostedSet.add(r.parentId);
@@ -682,7 +721,8 @@ export class FeedService {
         reactions: reactionMap.size,
         tips: tipCountMap.size,
         comments: commentMap.size,
-        views: viewMap.size
+        views: viewMap.size,
+        reposts: repostCountMap.size
       });
 
       // 4. Attach metrics to posts using map lookups (O(1) per post)
@@ -701,6 +741,7 @@ export class FeedService {
         const totalTipAmount = Number(tipTotalMap.get(post.id) || 0);
         const commentCount = Number(commentMap.get(post.id) || 0);
         const viewCount = Number(viewMap.get(post.id) || 0);
+        const repostCount = Number(repostCountMap.get(post.id) || 0);
 
         const isRepostedByMe = repostedSet.has(post.id);
         const rawOriginalPost = post.isRepost && post.parentId ? originalPostsMap.get(post.parentId) : null;
@@ -712,51 +753,15 @@ export class FeedService {
           const originalCommentCount = Number(commentMap.get(rawOriginalPost.id) || 0);
           const originalReactionCount = Number(reactionMap.get(rawOriginalPost.id) || 0);
           const originalViewCount = Number(viewMap.get(rawOriginalPost.id) || 0);
+          const originalRepostCount = Number(repostCountMap.get(rawOriginalPost.id) || 0);
 
           console.log('🔍 [BACKEND FEED] Original post engagement lookup:', {
             originalPostId: rawOriginalPost.id,
             isStatus: rawOriginalPost.isStatus,
-            commentMapSize: commentMap.size,
-            reactionMapSize: reactionMap.size,
-            viewMapSize: viewMap.size,
             commentCount: originalCommentCount,
             reactionCount: originalReactionCount,
             viewCount: originalViewCount,
-            commentMapKeys: Array.from(commentMap.keys()),
-            reactionMapKeys: Array.from(reactionMap.keys())
-          });
-
-          // Count reposts of the original post (shares)
-          // Note: This counts how many times THIS post has been reposted
-          // Check both posts and statuses tables for reposts
-          let originalShareCount = 0;
-
-          if (rawOriginalPost.isStatus) {
-            // Original is a status, check statuses for reposts
-            const [statusReposts] = await db
-              .select({ count: sql<number>`count(*)` })
-              .from(statuses)
-              .where(and(
-                eq(statuses.parentId, rawOriginalPost.id),
-                eq(statuses.isRepost, true)
-              ));
-            originalShareCount = Number(statusReposts?.count) || 0;
-          } else {
-            // Original is a regular post, check posts for reposts
-            const [postReposts] = await db
-              .select({ count: sql<number>`count(*)` })
-              .from(posts)
-              .where(and(
-                eq(posts.parentId, rawOriginalPost.id),
-                eq(posts.isRepost, true)
-              ));
-            originalShareCount = Number(postReposts?.count) || 0;
-          }
-
-          console.log('🔍 [BACKEND FEED] Original post repost count:', {
-            originalPostId: rawOriginalPost.id,
-            isStatus: rawOriginalPost.isStatus,
-            shareCount: originalShareCount
+            repostCount: originalRepostCount
           });
 
           // Transform raw DB result into expected frontend structure
@@ -786,7 +791,7 @@ export class FeedService {
             mentions: [],
             // Use canonical engagement counts from maps (O(1) lookup)
             comments: originalCommentCount,
-            shares: Number(originalShareCount) || 0,
+            reposts: originalRepostCount, // Repost count
             views: originalViewCount,
             reactionCount: originalReactionCount,
             // Use actual upvotes/downvotes from database
@@ -818,6 +823,7 @@ export class FeedService {
           totalTipAmount,
           commentCount,
           viewCount,
+          reposts: repostCount, // Repost count
           isRepostedByMe,
           originalPost,
           engagementScore: score

@@ -71,7 +71,7 @@ export interface EnhancedPost {
   reactions: Reaction[];
   tips: Tip[];
   comments: number;
-  shares: number;
+  reposts: number; // Repost count
   views: number;
   engagementScore: number;
 

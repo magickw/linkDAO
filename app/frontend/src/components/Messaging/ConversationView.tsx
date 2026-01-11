@@ -10,6 +10,7 @@ import { MessageContextMenu, useMessageContextMenu } from './MessageContextMenu'
 import { MessageThreadView } from './MessageThreadView';
 import { MessageEditModal } from './MessageEditModal';
 import { InlineSearchBar } from './MessageSearch';
+import { PresenceIndicator } from './PresenceIndicator';
 import { unifiedMessagingService } from '../../services/unifiedMessagingService';
 import { Search } from 'lucide-react';
 
@@ -40,6 +41,8 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
   const [replyCounts, setReplyCounts] = useState<Record<string, number>>({});
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [otherUserOnline, setOtherUserOnline] = useState(false);
+  const [otherUserLastSeen, setOtherUserLastSeen] = useState<Date | undefined>();
   const { contextMenu, openContextMenu, closeContextMenu } = useMessageContextMenu();
   
   const { socket, isConnected } = useWebSocket({
@@ -110,6 +113,28 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Track other participant's presence
+  useEffect(() => {
+    const otherParticipant = conversation.participants.find(p => p !== currentUserAddress);
+    if (!otherParticipant) return;
+
+    // Check initial online status
+    const isOnline = unifiedMessagingService.isUserOnline(otherParticipant);
+    setOtherUserOnline(isOnline);
+
+    // Subscribe to presence updates
+    const unsubscribe = unifiedMessagingService.on('presence_update', (data) => {
+      if (data.userAddress.toLowerCase() === otherParticipant.toLowerCase()) {
+        setOtherUserOnline(data.isOnline);
+        if (data.lastSeen) {
+          setOtherUserLastSeen(data.lastSeen);
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [conversation.participants, currentUserAddress]);
+
   const loadMessages = async () => {
     try {
       setLoading(true);
@@ -167,19 +192,25 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
   };
 
   const handleMessageDelivered = (data: { messageId: string, status: string }) => {
-    setMessages(prev => prev.map(msg => 
-      msg.id === data.messageId 
-        ? { ...msg, deliveryStatus: data.status as any }
-        : msg
-    ));
-  };
-
-  const handleMessageRead = (data: { messageId: string, status: string }) => {
     setMessages(prev => prev.map(msg =>
       msg.id === data.messageId
         ? { ...msg, deliveryStatus: data.status as any }
         : msg
     ));
+  };
+
+  const handleMessageRead = (data: { conversationId: string, readerAddress?: string, userAddress?: string, readAt: string }) => {
+    // When we receive a read receipt, mark all our messages in this conversation as read
+    // The reader is the person who just read our messages
+    const readerAddr = data.readerAddress || data.userAddress;
+    if (data.conversationId === conversation.id && readerAddr?.toLowerCase() !== currentUserAddress.toLowerCase()) {
+      setMessages(prev => prev.map(msg =>
+        // Mark messages we sent as read (since the other person read them)
+        msg.fromAddress === currentUserAddress && msg.deliveryStatus !== 'read'
+          ? { ...msg, deliveryStatus: 'read' as const }
+          : msg
+      ));
+    }
   };
 
   // Phase 5: Advanced feature handlers
@@ -401,15 +432,32 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
             </button>
           )}
 
-          {/* Participant Avatar */}
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-medium text-sm">
-            {getOtherParticipant().slice(2, 4).toUpperCase()}
+          {/* Participant Avatar with Presence */}
+          <div className="relative">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-medium text-sm">
+              {getOtherParticipant().slice(2, 4).toUpperCase()}
+            </div>
+            <div className="absolute bottom-0 right-0 transform translate-x-0.5 translate-y-0.5">
+              <PresenceIndicator
+                isOnline={otherUserOnline}
+                lastSeen={otherUserLastSeen}
+                size="md"
+              />
+            </div>
           </div>
 
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {truncateAddress(getOtherParticipant())}
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                {truncateAddress(getOtherParticipant())}
+              </h3>
+              <PresenceIndicator
+                isOnline={otherUserOnline}
+                lastSeen={otherUserLastSeen}
+                size="sm"
+                showText={true}
+              />
+            </div>
             <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
               {conversation.isEncrypted && (
                 <>

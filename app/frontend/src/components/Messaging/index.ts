@@ -26,3 +26,8 @@ export { PinnedMessagesPanel, PinnedMessageBanner } from './PinnedMessagesPanel'
 export { MessageContextMenu, useMessageContextMenu, MessageActionsButton } from './MessageContextMenu';
 export { MessageEditModal, InlineMessageEdit } from './MessageEditModal';
 export { default as MessageSearch, HighlightedText, InlineSearchBar } from './MessageSearch';
+
+// Group/Channel Management
+export { GroupManagement } from './GroupManagement';
+export { GroupCreationWizard } from './GroupCreationWizard';
+export { MemberInviteSearch } from './MemberInviteSearch';

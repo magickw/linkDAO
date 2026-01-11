@@ -124,7 +124,7 @@ describe('EnhancedPostCard', () => {
       }
     ],
     comments: 5,
-    shares: 3,
+    reposts: 3,
     views: 100,
     engagementScore: 150,
     socialProof: {

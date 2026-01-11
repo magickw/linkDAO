@@ -649,7 +649,7 @@ export default function PublicProfile() {
                           <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
                             <span>❤️ {post.reactionCount || post.reactions?.length || 0}</span>
                             <span>💬 {post.comments || 0}</span>
-                            <span>🔄 {post.shares || 0}</span>
+                            <span>🔄 {post.reposts || 0}</span>
                           </div>
                           <Link
                             href={`/${profile.handle || walletAddress?.toString().slice(0, 8)}/statuses/${post.id}`}

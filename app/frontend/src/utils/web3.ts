@@ -16,31 +16,28 @@ export function wrapProvider(provider: any): any {
   if (!provider) return provider;
 
   // Create a clean object with just the necessary methods
-  // wrapping the original provider's methods. We avoid using ...provider
-  // because some extensions (like LastPass) inject properties that are read-only
-  // or throw errors when accessed/copied.
   return {
-    // Forward specific known properties that might be checked
+    // Forward specific known properties
     isMetaMask: provider.isMetaMask,
     isStatus: provider.isStatus,
     host: provider.host,
     path: provider.path,
 
-    // Intercept request to ensure args are mutable
+    // Intercept request to ensure args are mutable and safe
     request: async (args: { method: string; params?: any[] }) => {
-      // Create a mutable copy of the request args
-      const requestArgs = {
-        method: args.method,
-        params: args.params ? [...args.params] : []
-      };
-      return provider.request(requestArgs);
+      // Create a completely new request object to ensure it's mutable
+      // Some extensions like LastPass freeze the args object
+      const method = args.method;
+      const params = args.params ? JSON.parse(JSON.stringify(args.params)) : [];
+
+      return provider.request({ method, params });
     },
 
-    // Forward other common methods
-    on: provider.on?.bind(provider),
-    removeListener: provider.removeListener?.bind(provider),
-    send: provider.send?.bind(provider),
-    sendAsync: provider.sendAsync?.bind(provider),
+    // Safe forwarding of other methods
+    on: (eventName: string, listener: any) => provider.on?.(eventName, listener),
+    removeListener: (eventName: string, listener: any) => provider.removeListener?.(eventName, listener),
+    send: (method: string, params: any) => provider.send?.(method, params),
+    sendAsync: (payload: any, callback: any) => provider.sendAsync?.(payload, callback),
   };
 }
 
@@ -163,21 +160,23 @@ export async function getProvider() {
 export async function getSigner() {
   try {
     // Try wagmi wallet client first
+    // Try wagmi wallet client first
     try {
-      const client = await getWalletClient(config);
+      // getWalletClient can throw if connectors are in a bad state
+      const client = await getWalletClient(config).catch(e => {
+        console.warn('Wagmi getWalletClient failed:', e);
+        return null;
+      });
 
       if (client) {
         // Check if the client has the necessary methods before accessing them
-
-        // Removed getChainId(config) call as it was causing crashes in some environments
-        // and we don't strictly need it here for the signer creation
-
         const injectedProvider = (client as any).transport?.provider;
         if (injectedProvider) {
           try {
             // Wrap provider to avoid read-only property errors
             const wrappedProvider = wrapProvider(injectedProvider);
             const provider = new ethers.BrowserProvider(wrappedProvider as any);
+
             // Create provider with network detection disabled to prevent JsonRpcProvider issues
             try {
               // Disable network detection by setting polling: false and staticNetwork

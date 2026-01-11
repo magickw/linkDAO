@@ -1,3 +1,23 @@
+/**
+ * @deprecated This service is deprecated. Please use unifiedMessagingService instead.
+ *
+ * Migration:
+ * ```typescript
+ * // Old
+ * import { conversationManagementService } from '@/services/conversationManagementService';
+ * await conversationManagementService.createGroup({ ... });
+ *
+ * // New
+ * import { unifiedMessagingService } from '@/services/unifiedMessagingService';
+ * await unifiedMessagingService.createGroupConversation({ ... });
+ * ```
+ */
+
+console.warn(
+  '[DEPRECATED] conversationManagementService.ts is deprecated. ' +
+  'Please migrate to unifiedMessagingService.ts for consistent messaging functionality.'
+);
+
 import {
   Conversation,
   ConversationFilter,

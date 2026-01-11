@@ -16,7 +16,7 @@ interface EngagementMetrics {
     stakes: number;
     tips: number;
     views: number;
-    shares: number;
+    reposts: number;
   };
   tokenActivity: {
     totalStaked: number;
@@ -60,7 +60,7 @@ export const EngagementMetricsDisplay: React.FC<EngagementMetricsDisplayProps> =
     const baseScore = (
       votes * 1 +
       post.comments * 2 +
-      post.shares * 3 +
+      post.reposts * 3 +
       post.views * 0.1
     );
 
@@ -91,7 +91,7 @@ export const EngagementMetricsDisplay: React.FC<EngagementMetricsDisplayProps> =
         stakes: Math.round(stakes),
         tips: Math.round(tips),
         views: post.views,
-        shares: post.shares
+        reposts: post.reposts
       },
       tokenActivity: {
         totalStaked: stakes,
@@ -194,12 +194,12 @@ export const EngagementMetricsDisplay: React.FC<EngagementMetricsDisplayProps> =
       description: 'Number of times viewed'
     },
     {
-      label: 'Shares',
-      value: metrics.breakdown.shares,
+      label: 'Reposts',
+      value: metrics.breakdown.reposts,
       icon: '🔄',
       color: 'indigo',
       weight: 3,
-      description: 'Times shared or reposted'
+      description: 'Times reposted'
     }
   ];
 

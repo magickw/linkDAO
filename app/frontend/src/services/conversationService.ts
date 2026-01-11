@@ -1,3 +1,23 @@
+/**
+ * @deprecated This service is deprecated. Please use unifiedMessagingService instead.
+ *
+ * Migration:
+ * ```typescript
+ * // Old
+ * import { ConversationService } from '@/services/conversationService';
+ * const convos = await ConversationService.getConversations();
+ *
+ * // New
+ * import { unifiedMessagingService } from '@/services/unifiedMessagingService';
+ * const convos = await unifiedMessagingService.getConversations();
+ * ```
+ */
+
+console.warn(
+  '[DEPRECATED] conversationService.ts is deprecated. ' +
+  'Please migrate to unifiedMessagingService.ts for consistent messaging functionality.'
+);
+
 import { fetchWithRetry } from '../utils/apiUtils';
 import { API_BASE_URL } from '../config/api';
 import { enhancedAuthService } from './enhancedAuthService';

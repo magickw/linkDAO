@@ -800,48 +800,48 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   };
 
   return (
-    <div className={`flex h-full bg-gray-900 rounded-lg overflow-hidden ${className}`}>
+    <div className={`flex h-full bg-white dark:bg-gray-900 rounded-lg overflow-hidden ${className}`}>
       {/* Channels Sidebar - Hidden on mobile by default or when hideSidebar is true */}
       {!hideSidebar && (
-      <div className={`w-60 border-r border-gray-700 flex flex-col bg-gray-800 ${isMobile ? 'hidden md:block' : ''}`}>
+      <div className={`w-60 border-r border-gray-200 dark:border-gray-700 flex flex-col bg-gray-50 dark:bg-gray-800 ${isMobile ? 'hidden md:block' : ''}`}>
         {/* Header */}
-        <div className="p-4 border-b border-gray-700">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-white flex items-center">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
               <MessageCircle size={20} className="mr-2" />
               LinkDAO Chat
             </h2>
-            <button 
-              className="text-gray-400 hover:text-white"
+            <button
+              className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
               onClick={onClose}
             >
               <X size={16} />
             </button>
           </div>
-          
+
           <div className="relative">
-            <Search size={16} className="absolute left-2 top-2.5 text-gray-400" />
+            <Search size={16} className="absolute left-2 top-2.5 text-gray-500 dark:text-gray-400" />
             <input
               type="text"
               placeholder="Search channels..."
-              className="w-full bg-gray-700 text-white rounded px-8 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded px-8 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
         </div>
 
         {/* DMs Section */}
         <div className="px-2 py-3">
-          <div 
-            className="flex items-center justify-between px-2 py-1 cursor-pointer hover:bg-gray-700 rounded"
+          <div
+            className="flex items-center justify-between px-2 py-1 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
             onClick={() => toggleCategory('direct')}
           >
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center">
-              {channelCategories.find(c => c.id === 'direct')?.isCollapsed ? 
-                <ChevronRight size={14} className="mr-1" /> : 
+            <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center">
+              {channelCategories.find(c => c.id === 'direct')?.isCollapsed ?
+                <ChevronRight size={14} className="mr-1" /> :
                 <ChevronDown size={14} className="mr-1" />}
               Direct Messages
             </h3>
-            <button className="text-gray-400 hover:text-white">
+            <button className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
               <Plus size={14} />
             </button>
           </div>
@@ -864,10 +864,10 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                   return bTime - aTime;
                 })
                 .map(dm => (
-                  <div 
+                  <div
                     key={dm.id}
                     className={`flex items-center px-2 py-1.5 rounded cursor-pointer mb-1 ml-4 ${
-                      isViewingDM && selectedDM === dm.id ? 'bg-gray-700' : 'hover:bg-gray-700'
+                      isViewingDM && selectedDM === dm.id ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'
                     }`}
                     onClick={() => {
                       setIsViewingDM(true);
@@ -880,7 +880,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                         <User size={16} className="text-white" />
                       </div>
                       {/* Online status indicator */}
-                      <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-800 ${
+                      <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-100 dark:border-gray-800 ${
                         dm.isOnline ? 'bg-green-500' : 'bg-gray-500'
                       }`}></div>
                       {/* Typing indicator */}
@@ -898,11 +898,11 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                       )}
                     </div>
                     <div className="ml-2 flex-1 min-w-0">
-                      <div className="text-sm font-medium text-white truncate">
+                      <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
                         {dm.participantEnsName || `${dm.participant.slice(0, 6)}...${dm.participant.slice(-4)}`}
                       </div>
                       {dm.lastMessage && (
-                        <div className="text-xs text-gray-400 truncate">
+                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
                           {dm.lastMessage.content}
                         </div>
                       )}
@@ -917,17 +917,17 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
         <div className="px-2 py-3 flex-1 overflow-y-auto">
           {channelCategories.filter(cat => cat.id !== 'direct').map(category => (
             <div key={category.id} className="mb-3">
-              <div 
-                className="flex items-center justify-between px-2 py-1 cursor-pointer hover:bg-gray-700 rounded"
+              <div
+                className="flex items-center justify-between px-2 py-1 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
                 onClick={() => toggleCategory(category.id)}
               >
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center">
-                  {category.isCollapsed ? 
-                    <ChevronRight size={14} className="mr-1" /> : 
+                <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center">
+                  {category.isCollapsed ?
+                    <ChevronRight size={14} className="mr-1" /> :
                     <ChevronDown size={14} className="mr-1" />}
                   {category.name}
                 </h3>
-                <button className="text-gray-400 hover:text-white">
+                <button className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   <Plus size={14} />
                 </button>
               </div>
@@ -937,10 +937,10 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                   {channels
                     .filter(channel => channel.category === category.id)
                     .map(channel => (
-                      <div 
+                      <div
                         key={channel.id}
                         className={`flex items-center px-2 py-1.5 rounded cursor-pointer mb-1 ${
-                          !isViewingDM && selectedChannel === channel.id ? 'bg-gray-700' : 'hover:bg-gray-700'
+                          !isViewingDM && selectedChannel === channel.id ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'
                         }`}
                         onClick={() => {
                           setIsViewingDM(false);
@@ -952,11 +952,11 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                           {channel.isGated ? (
                             <Tag size={16} className="text-yellow-400 mr-1" />
                           ) : channel.isPrivate ? (
-                            <Lock size={16} className="text-gray-400 mr-1" />
+                            <Lock size={16} className="text-gray-500 dark:text-gray-400 mr-1" />
                           ) : (
-                            <Hash size={16} className="text-gray-400 mr-1" />
+                            <Hash size={16} className="text-gray-500 dark:text-gray-400 mr-1" />
                           )}
-                          <span className="text-sm text-white truncate">
+                          <span className="text-sm text-gray-900 dark:text-white truncate">
                             {channel.icon && <span className="mr-1">{channel.icon}</span>}
                             #{channel.name}
                           </span>
@@ -979,7 +979,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
 
       {/* Cross-Chain Bridge Panel */}
       {showCrossChainBridge && (
-        <div className={`w-80 border-r border-gray-700 bg-gray-800 ${isMobile ? 'hidden lg:block' : ''}`}>
+        <div className={`w-80 border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 ${isMobile ? 'hidden lg:block' : ''}`}>
           <CrossChainBridge 
             className="h-full"
             onBridgeMessage={(message) => {
@@ -996,39 +996,39 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       <div className="flex-1 flex flex-col">
         {/* Channel Header */}
         {!isViewingDM && selectedChannel && (
-          <div className="border-b border-gray-700 p-4 flex items-center justify-between">
+          <div className="border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between">
             <div className="flex items-center">
-              <button 
+              <button
                 onClick={onClose}
-                className={`md:hidden mr-2 ${touchTargetClasses} text-gray-400 hover:text-white`}
+                className={`md:hidden mr-2 ${touchTargetClasses} text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white`}
               >
                 <ArrowLeft size={20} />
               </button>
               <div>
-                <h2 className="text-xl font-bold text-white flex items-center">
-                  {channels.find(c => c.id === selectedChannel)?.icon && 
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center">
+                  {channels.find(c => c.id === selectedChannel)?.icon &&
                     <span className="mr-2">{channels.find(c => c.id === selectedChannel)?.icon}</span>}
-                  <Hash size={24} className="mr-2 text-gray-400" />
+                  <Hash size={24} className="mr-2 text-gray-500 dark:text-gray-400" />
                   {channels.find(c => c.id === selectedChannel)?.name}
                 </h2>
-                <p className="text-sm text-gray-400 hidden sm:block">
+                <p className="text-sm text-gray-500 dark:text-gray-400 hidden sm:block">
                   {channels.find(c => c.id === selectedChannel)?.topic}
                 </p>
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="flex items-center text-sm text-gray-400 hidden sm:flex">
+              <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 hidden sm:flex">
                 <Users size={16} className="mr-1" />
                 {channels.find(c => c.id === selectedChannel)?.memberCount}
               </div>
-              
+
               {/* Cross-Chain Bridge Toggle - Hidden on mobile */}
               <button
                 onClick={() => setShowCrossChainBridge(!showCrossChainBridge)}
                 className={`flex items-center px-3 py-1 rounded text-sm hidden sm:flex ${
-                  showCrossChainBridge 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-700 text-gray-400 hover:text-white'
+                  showCrossChainBridge
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                 }`}
               >
                 <ArrowLeftRight size={14} className="mr-1" />
@@ -1040,11 +1040,11 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
 
         {/* DM Header */}
         {isViewingDM && selectedDM && (
-          <div className="border-b border-gray-700 p-4 flex items-center justify-between">
+          <div className="border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between">
             <div className="flex items-center">
               <button
                 onClick={onClose}
-                className={`md:hidden mr-2 ${touchTargetClasses} text-gray-400 hover:text-white`}
+                className={`md:hidden mr-2 ${touchTargetClasses} text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white`}
               >
                 <ArrowLeft size={20} />
               </button>
@@ -1053,17 +1053,17 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                   <User size={20} className="text-white" />
                 </div>
                 {/* Online status indicator */}
-                <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-800 ${
+                <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-100 dark:border-gray-800 ${
                   dmConversations.find(dm => dm.id === selectedDM)?.isOnline ? 'bg-green-500' : 'bg-gray-500'
                 }`}></div>
               </div>
               <div className="ml-3">
-                <h2 className="text-xl font-bold text-white">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                   {dmConversations.find(dm => dm.id === selectedDM)?.participantEnsName ||
                    participantName ||
                    truncateAddress(dmConversations.find(dm => dm.id === selectedDM)?.participant || participantAddress || '')}
                 </h2>
-                <p className="text-sm text-gray-400 hidden sm:block">
+                <p className="text-sm text-gray-500 dark:text-gray-400 hidden sm:block">
                   {dmConversations.find(dm => dm.id === selectedDM)?.isOnline
                     ? 'Online'
                     : dmConversations.find(dm => dm.id === selectedDM)?.lastSeen
@@ -1074,15 +1074,15 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
             </div>
             <div className="flex items-center space-x-2">
               {/* Voice/Video Call Buttons - Hidden on mobile */}
-              <button className="bg-gray-700 hover:bg-gray-600 text-white rounded-full p-2 hidden sm:block">
+              <button className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-white rounded-full p-2 hidden sm:block">
                 <Phone size={16} />
               </button>
-              <button className="bg-gray-700 hover:bg-gray-600 text-white rounded-full p-2 hidden sm:block">
+              <button className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-white rounded-full p-2 hidden sm:block">
                 <Video size={16} />
               </button>
-              
+
               {/* Encryption Indicator */}
-              <div className="flex items-center space-x-1 text-xs text-green-400">
+              <div className="flex items-center space-x-1 text-xs text-green-500 dark:text-green-400">
                 <Shield size={14} />
                 <span className="hidden sm:inline">Encrypted</span>
               </div>
@@ -1091,16 +1091,16 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
         )}
 
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto p-4 bg-gray-800">
+        <div className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-800">
           {/* Reply banner */}
           {replyingTo && (
-            <div className="bg-blue-900/30 border-l-4 border-blue-500 p-2 mb-2 rounded flex items-center justify-between">
-              <div className="text-sm">
+            <div className="bg-blue-100 dark:bg-blue-900/30 border-l-4 border-blue-500 p-2 mb-2 rounded flex items-center justify-between">
+              <div className="text-sm text-gray-900 dark:text-white">
                 Replying to <span className="font-semibold">{replyingTo.username}</span>
               </div>
-              <button 
+              <button
                 onClick={() => setReplyingTo(null)}
-                className={`${touchTargetClasses} text-gray-400 hover:text-white`}
+                className={`${touchTargetClasses} text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white`}
               >
                 <X size={16} />
               </button>
@@ -1120,8 +1120,8 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                 userBalance={0}
                 className=""
               >
-                <div 
-                  className="hover:bg-gray-750 p-2 rounded"
+                <div
+                  className="hover:bg-gray-100 dark:hover:bg-gray-750 p-2 rounded"
                   id={`message-${message.id}`}
                 >
                 <div className="flex">
@@ -1130,18 +1130,18 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                   </div>
                   <div className="flex-1">
                     <div className="flex items-baseline">
-                      <span className="font-semibold text-white mr-2">
+                      <span className="font-semibold text-gray-900 dark:text-white mr-2">
                         {message.fromAddress === address ? 'You' : message.fromAddress.slice(0, 6) + '...' + message.fromAddress.slice(-4)}
                       </span>
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
                         {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                       {/* Encryption indicator for DM messages */}
                       {isViewingDM && message.isEncrypted && (
-                        <Lock size={12} className="ml-1 text-green-400" />
+                        <Lock size={12} className="ml-1 text-green-500 dark:text-green-400" />
                       )}
                     </div>
-                    <p className="text-gray-200">{parseMentions(message.content)}</p>
+                    <p className="text-gray-700 dark:text-gray-200">{parseMentions(message.content)}</p>
                     
                     {/* Attachments */}
                     {message.attachments && message.attachments.length > 0 && (
@@ -1149,7 +1149,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                         {message.attachments.map((attachment, idx) => (
                           <div key={idx}>
                             {attachment.type === 'nft' && attachment.metadata && (
-                              <div className="bg-gray-700 rounded-lg p-3 border border-gray-600 max-w-sm">
+                              <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 border border-gray-200 dark:border-gray-600 max-w-sm">
                                 <div className="flex items-start space-x-3">
                                   {attachment.metadata.imageUrl && (
                                     <img
@@ -1160,19 +1160,19 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                                   )}
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center mb-1">
-                                      <Image size={14} className="mr-1 text-purple-400" />
-                                      <span className="text-sm font-medium text-white">NFT</span>
+                                      <Image size={14} className="mr-1 text-purple-500 dark:text-purple-400" />
+                                      <span className="text-sm font-medium text-gray-900 dark:text-white">NFT</span>
                                     </div>
-                                    <div className="text-sm text-gray-300 font-medium truncate">
+                                    <div className="text-sm text-gray-700 dark:text-gray-300 font-medium truncate">
                                       {attachment.metadata.tokenName || attachment.name}
                                     </div>
-                                    <div className="text-xs text-gray-400 truncate">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
                                       {attachment.metadata.contractAddress &&
                                         `${attachment.metadata.contractAddress.slice(0, 6)}...${attachment.metadata.contractAddress.slice(-4)}`}
                                       {attachment.metadata.tokenId && ` #${attachment.metadata.tokenId}`}
                                     </div>
                                     {attachment.metadata.price && (
-                                      <div className="text-xs text-green-400 mt-1">
+                                      <div className="text-xs text-green-500 dark:text-green-400 mt-1">
                                         {attachment.metadata.price} ETH
                                       </div>
                                     )}
@@ -1182,33 +1182,33 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                             )}
 
                             {attachment.type === 'transaction' && attachment.metadata && (
-                              <div className="bg-gray-700 rounded-lg p-3 border border-gray-600 max-w-sm">
+                              <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 border border-gray-200 dark:border-gray-600 max-w-sm">
                                 <div className="flex items-center space-x-3">
                                   <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                                    attachment.metadata.status === 'success' ? 'bg-green-500/20 text-green-400' :
-                                    attachment.metadata.status === 'failed' ? 'bg-red-500/20 text-red-400' :
-                                    'bg-yellow-500/20 text-yellow-400'
+                                    attachment.metadata.status === 'success' ? 'bg-green-500/20 text-green-500 dark:text-green-400' :
+                                    attachment.metadata.status === 'failed' ? 'bg-red-500/20 text-red-500 dark:text-red-400' :
+                                    'bg-yellow-500/20 text-yellow-500 dark:text-yellow-400'
                                   }`}>
                                     <Wallet size={16} />
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <div className="text-sm font-medium text-white">Transaction</div>
-                                    <div className="text-xs text-gray-400 truncate">
+                                    <div className="text-sm font-medium text-gray-900 dark:text-white">Transaction</div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
                                       {attachment.metadata.transactionHash &&
                                         `${attachment.metadata.transactionHash.slice(0, 10)}...${attachment.metadata.transactionHash.slice(-8)}`}
                                     </div>
                                     <div className="flex items-center space-x-2 mt-1">
                                       {attachment.metadata.status && (
                                         <span className={`text-xs px-2 py-0.5 rounded ${
-                                          attachment.metadata.status === 'success' ? 'bg-green-500/20 text-green-400' :
-                                          attachment.metadata.status === 'failed' ? 'bg-red-500/20 text-red-400' :
-                                          'bg-yellow-500/20 text-yellow-400'
+                                          attachment.metadata.status === 'success' ? 'bg-green-500/20 text-green-500 dark:text-green-400' :
+                                          attachment.metadata.status === 'failed' ? 'bg-red-500/20 text-red-500 dark:text-red-400' :
+                                          'bg-yellow-500/20 text-yellow-500 dark:text-yellow-400'
                                         }`}>
                                           {attachment.metadata.status}
                                         </span>
                                       )}
                                       {attachment.metadata.gasUsed && (
-                                        <span className="text-xs text-gray-400">
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">
                                           Gas: {attachment.metadata.gasUsed}
                                         </span>
                                       )}
@@ -1226,16 +1226,16 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                                   className="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90"
                                   onClick={() => window.open(attachment.url, '_blank')}
                                 />
-                                <div className="text-xs text-gray-400 mt-1">{attachment.name}</div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{attachment.name}</div>
                               </div>
                             )}
 
                             {(attachment.type === 'file' || attachment.type === 'proposal') && (
-                              <div className="bg-gray-700 rounded p-2 flex items-center max-w-sm cursor-pointer hover:bg-gray-600"
+                              <div className="bg-gray-100 dark:bg-gray-700 rounded p-2 flex items-center max-w-sm cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
                                    onClick={() => window.open(attachment.url, '_blank')}>
-                                {attachment.type === 'proposal' && <Vote size={16} className="mr-2 text-blue-400" />}
-                                {attachment.type === 'file' && <LinkIcon size={16} className="mr-2 text-gray-400" />}
-                                <span className="text-xs text-gray-300 flex-1 truncate">{attachment.name}</span>
+                                {attachment.type === 'proposal' && <Vote size={16} className="mr-2 text-blue-500 dark:text-blue-400" />}
+                                {attachment.type === 'file' && <LinkIcon size={16} className="mr-2 text-gray-500 dark:text-gray-400" />}
+                                <span className="text-xs text-gray-700 dark:text-gray-300 flex-1 truncate">{attachment.name}</span>
                               </div>
                             )}
                           </div>
@@ -1251,34 +1251,34 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                             key={idx}
                             className={`flex items-center rounded px-2 py-1 text-sm ${
                               reaction.users.includes(address || '')
-                                ? 'bg-blue-500/30 text-white'
-                                : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                                ? 'bg-blue-500/30 text-gray-900 dark:text-white'
+                                : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
                             }`}
                             onClick={() => addReaction(message.id, reaction.emoji)}
                             onMouseEnter={(e) => showReactionTooltip(message.id, reaction.emoji, e)}
                             onMouseLeave={hideReactionTooltip}
                           >
                             <span className="mr-1">{reaction.emoji}</span>
-                            <span className="text-gray-300">{reaction.count}</span>
+                            <span className="text-gray-600 dark:text-gray-300">{reaction.count}</span>
                           </button>
                         ))}
-                        
+
                         {/* Reaction picker button */}
                         <button
-                          className={`w-8 h-8 rounded hover:bg-gray-700 flex items-center justify-center text-gray-400 hover:text-white ${touchTargetClasses}`}
+                          className={`w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white ${touchTargetClasses}`}
                           onClick={() => toggleReactionPicker(message.id)}
                         >
                           <span>+</span>
                         </button>
-                        
+
                         {/* Reaction picker popup */}
                         {showReactionPicker.messageId === message.id && showReactionPicker.show && (
-                          <div className="absolute top-full left-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg p-2 shadow-lg z-10">
+                          <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2 shadow-lg z-10">
                             <div className="flex space-x-1">
                               {['👍', '❤️', '😂', '😮', '🔥', '🚀', '👏', '🎉'].map(emoji => (
                                 <button
                                   key={emoji}
-                                  className={`w-8 h-8 rounded hover:bg-gray-700 flex items-center justify-center text-lg ${touchTargetClasses}`}
+                                  className={`w-8 h-8 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-center text-lg ${touchTargetClasses}`}
                                   onClick={() => {
                                     addReaction(message.id, emoji);
                                     setShowReactionPicker({ messageId: '', show: false });
@@ -1294,14 +1294,14 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                         {/* Reaction tooltip */}
                         {reactionTooltip && reactionTooltip.messageId === message.id && reactionTooltip.show && (
                           <div
-                            className="fixed bg-gray-900 border border-gray-700 rounded-lg p-2 shadow-lg z-20 pointer-events-none"
+                            className="fixed bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-2 shadow-lg z-20 pointer-events-none"
                             style={{
                               left: reactionTooltip.position.x,
                               top: reactionTooltip.position.y,
                               transform: 'translate(-50%, -100%)'
                             }}
                           >
-                            <div className="text-xs text-gray-300 whitespace-nowrap">
+                            <div className="text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap">
                               {(() => {
                                 const reaction = message.reactions?.find(r => r.emoji === reactionTooltip.emoji);
                                 if (!reaction) return null;
@@ -1324,22 +1324,22 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                         )}
                       </div>
                     )}
-                    
+
                     {/* Message actions */}
-                    <div className="flex mt-1 space-x-3 text-xs text-gray-400">
-                      <button 
-                        className={`hover:text-white ${touchTargetClasses}`}
+                    <div className="flex mt-1 space-x-3 text-xs text-gray-500 dark:text-gray-400">
+                      <button
+                        className={`hover:text-gray-900 dark:hover:text-white ${touchTargetClasses}`}
                         onClick={() => replyToMessage(message.id, message.fromAddress === address ? 'You' : message.fromAddress.slice(0, 6) + '...' + message.fromAddress.slice(-4))}
                       >
                         Reply
                       </button>
                       {message.threadReplies && message.threadReplies.length > 0 && (
-                        <button 
-                          className={`hover:text-white flex items-center ${touchTargetClasses}`}
+                        <button
+                          className={`hover:text-gray-900 dark:hover:text-white flex items-center ${touchTargetClasses}`}
                           onClick={() => openThread(message.id)}
                         >
                           <span>Thread</span>
-                          <span className="ml-1 bg-gray-700 rounded-full px-1.5 py-0.5">
+                          <span className="ml-1 bg-gray-200 dark:bg-gray-700 rounded-full px-1.5 py-0.5">
                             {message.threadReplies.length}
                           </span>
                         </button>
@@ -1357,22 +1357,22 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
         {/* Thread View Overlay */}
         {showThread.show && (
           <div className="absolute inset-0 bg-black/70 z-20 flex">
-            <div className={`ml-auto w-full md:w-2/3 h-full bg-gray-800 border-l border-gray-700 flex flex-col ${isMobile ? 'w-full' : ''}`}>
-              <div className="p-4 border-b border-gray-700 flex items-center justify-between">
-                <h3 className="font-semibold text-white">Thread</h3>
-                <button 
+            <div className={`ml-auto w-full md:w-2/3 h-full bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col ${isMobile ? 'w-full' : ''}`}>
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                <h3 className="font-semibold text-gray-900 dark:text-white">Thread</h3>
+                <button
                   onClick={closeThread}
-                  className={`${touchTargetClasses} text-gray-400 hover:text-white`}
+                  className={`${touchTargetClasses} text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white`}
                 >
                   <X size={20} />
                 </button>
               </div>
-              
+
               <div className="flex-1 overflow-y-auto p-4">
                 {threadMessages.map((message, index) => (
-                  <div 
-                    key={message.id} 
-                    className={`p-2 rounded ${index === 0 ? 'bg-gray-750 mb-4' : 'hover:bg-gray-750'}`}
+                  <div
+                    key={message.id}
+                    className={`p-2 rounded ${index === 0 ? 'bg-gray-100 dark:bg-gray-750 mb-4' : 'hover:bg-gray-100 dark:hover:bg-gray-750'}`}
                   >
                     <div className="flex">
                       <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center mr-2 flex-shrink-0">
@@ -1380,29 +1380,29 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                       </div>
                       <div className="flex-1">
                         <div className="flex items-baseline">
-                          <span className="font-semibold text-white text-sm mr-2">
+                          <span className="font-semibold text-gray-900 dark:text-white text-sm mr-2">
                             {message.fromAddress === address ? 'You' : message.fromAddress.slice(0, 6) + '...' + message.fromAddress.slice(-4)}
                           </span>
-                          <span className="text-xs text-gray-400">
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
                             {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                           {/* Encryption indicator for DM thread messages */}
                           {isViewingDM && message.isEncrypted && (
-                            <Lock size={12} className="ml-1 text-green-400" />
+                            <Lock size={12} className="ml-1 text-green-500 dark:text-green-400" />
                           )}
                         </div>
-                        <p className="text-gray-200 text-sm">{parseMentions(message.content)}</p>
+                        <p className="text-gray-700 dark:text-gray-200 text-sm">{parseMentions(message.content)}</p>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-              
-              <div className="p-4 border-t border-gray-700">
+
+              <div className="p-4 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex items-end">
                   <textarea
                     placeholder="Reply to thread..."
-                    className="flex-1 bg-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none text-sm"
+                    className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none text-sm"
                     rows={2}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
@@ -1424,15 +1424,15 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
         {/* Invite Link Modal */}
         {showInviteModal && (
           <div className="fixed inset-0 bg-black/70 z-30 flex items-center justify-center p-4">
-            <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 w-full max-w-md">
-              <h3 className="text-lg font-semibold text-white mb-4">Channel Invite Link</h3>
-              <p className="text-sm text-gray-300 mb-4">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Channel Invite Link</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
                 Share this link to invite others to join the channel.
               </p>
 
               {selectedChannel && inviteLinks[selectedChannel] && (
                 <div className="mb-4">
-                  <div className="bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-300 font-mono break-all">
+                  <div className="bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-600 rounded px-3 py-2 text-sm text-gray-700 dark:text-gray-300 font-mono break-all">
                     {inviteLinks[selectedChannel]}
                   </div>
                 </div>
@@ -1446,7 +1446,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                   Copy Link
                 </button>
                 <button
-                  className={`flex-1 bg-gray-700 hover:bg-gray-600 text-white text-sm py-2 rounded ${touchTargetClasses}`}
+                  className={`flex-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-white text-sm py-2 rounded ${touchTargetClasses}`}
                   onClick={() => setShowInviteModal(false)}
                 >
                   Close
@@ -1458,9 +1458,9 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
         {/* Attachment Modal */}
         {showAttachmentModal && (
           <div className="fixed inset-0 bg-black/70 z-30 flex items-center justify-center p-4">
-            <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 w-full max-w-md">
-              <h3 className="text-lg font-semibold text-white mb-4">Share Content</h3>
-              <p className="text-sm text-gray-300 mb-4">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Share Content</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
                 Share NFTs, transactions, images, and files in the channel.
               </p>
 
@@ -1490,7 +1490,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                 </button>
 
                 <button
-                  className={`w-full bg-gray-600 hover:bg-gray-500 text-white text-sm py-3 rounded flex items-center justify-center ${touchTargetClasses}`}
+                  className={`w-full bg-gray-500 dark:bg-gray-600 hover:bg-gray-600 dark:hover:bg-gray-500 text-white text-sm py-3 rounded flex items-center justify-center ${touchTargetClasses}`}
                   onClick={() => setAttachmentType('file')}
                 >
                   <LinkIcon size={16} className="mr-2" />
@@ -1500,7 +1500,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
 
               <div className="flex space-x-2 mt-6">
                 <button
-                  className={`flex-1 bg-gray-700 hover:bg-gray-600 text-white text-sm py-2 rounded ${touchTargetClasses}`}
+                  className={`flex-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-white text-sm py-2 rounded ${touchTargetClasses}`}
                   onClick={() => setShowAttachmentModal(false)}
                 >
                   Cancel
@@ -1509,23 +1509,23 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
 
               {/* NFT Form */}
               {attachmentType === 'nft' && (
-                <div className="mt-4 pt-4 border-t border-gray-700">
-                  <h4 className="text-sm font-medium text-white mb-2">Share NFT</h4>
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Share NFT</h4>
                   <div className="space-y-2">
                     <input
                       type="text"
                       placeholder="Contract Address"
-                      className="w-full bg-gray-700 text-white text-sm rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                     <input
                       type="text"
                       placeholder="Token ID"
-                      className="w-full bg-gray-700 text-white text-sm rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                     <input
                       type="text"
                       placeholder="Price (optional)"
-                      className="w-full bg-gray-700 text-white text-sm rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                     <button
                       className={`w-full bg-purple-600 hover:bg-purple-700 text-white text-sm py-2 rounded ${touchTargetClasses}`}
@@ -1540,15 +1540,15 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
 
               {/* Transaction Form */}
               {attachmentType === 'transaction' && (
-                <div className="mt-4 pt-4 border-t border-gray-700">
-                  <h4 className="text-sm font-medium text-white mb-2">Share Transaction</h4>
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Share Transaction</h4>
                   <div className="space-y-2">
                     <input
                       type="text"
                       placeholder="Transaction Hash"
-                      className="w-full bg-gray-700 text-white text-sm rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
-                    <select className="w-full bg-gray-700 text-white text-sm rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                    <select className="w-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500">
                       <option value="success">Success</option>
                       <option value="failed">Failed</option>
                       <option value="pending">Pending</option>
@@ -1576,7 +1576,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
         )}
 
         {/* Message Input */}
-        <div className="border-t border-gray-700 p-4 relative">
+        <div className="border-t border-gray-200 dark:border-gray-700 p-4 relative">
           <div className="flex items-end">
             <textarea
               value={newMessage}
@@ -1590,26 +1590,26 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                     ? `Message #${channels.find(c => c.id === selectedChannel)?.name || 'channel'}`
                     : 'Select a conversation to start messaging'
               }
-              className="flex-1 bg-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
               rows={1}
             />
 
             {/* Mention Suggestions */}
             {showMentionSuggestions && (
-              <div className="absolute bottom-full left-4 right-4 mb-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg max-h-40 overflow-y-auto z-10">
+              <div className="absolute bottom-full left-4 right-4 mb-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-40 overflow-y-auto z-10">
                 {getMentionSuggestions(mentionQuery).map((user, index) => (
                   <button
                     key={user.address}
-                    className={`w-full px-3 py-2 text-left hover:bg-gray-700 flex items-center space-x-2 ${touchTargetClasses}`}
+                    className={`w-full px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2 ${touchTargetClasses}`}
                     onClick={() => insertMention(user)}
                   >
                     <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center flex-shrink-0">
                       <User size={12} className="text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm text-white truncate">{user.name}</div>
+                      <div className="text-sm text-gray-900 dark:text-white truncate">{user.name}</div>
                       {user.ensName && user.ensName !== user.name && (
-                        <div className="text-xs text-gray-400 truncate">{user.ensName}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.ensName}</div>
                       )}
                     </div>
                   </button>
@@ -1620,18 +1620,18 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
             <button
               onClick={sendChannelMessage}
               disabled={!newMessage.trim() || (!isViewingDM && !selectedChannel)}
-              className={`ml-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg p-3 ${touchTargetClasses}`}
+              className={`ml-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg p-3 ${touchTargetClasses}`}
             >
               <Send size={20} />
             </button>
           </div>
           <div className="flex items-center justify-between mt-2">
-            <div className="flex items-center text-xs text-gray-400">
+            <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
               <span className="mr-4">⌘ Enter to send</span>
               <span className="mr-4">/ for commands</span>
             </div>
             <button
-              className={`flex items-center text-xs text-gray-400 hover:text-white ${touchTargetClasses}`}
+              className={`flex items-center text-xs text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white ${touchTargetClasses}`}
               onClick={() => setShowAttachmentModal(true)}
             >
               <Image size={14} className="mr-1" />
@@ -1642,46 +1642,46 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       </div>
 
       {/* Members Sidebar - only show for channels, not DMs */}
-      <div className={`w-60 border-l border-gray-700 bg-gray-800 hidden md:block ${isViewingDM ? 'hidden' : ''}`}>
-        <div className="p-4 border-b border-gray-700 flex items-center justify-between">
-          <h3 className="font-semibold text-white">Members</h3>
-          <button 
-            className={`text-gray-400 hover:text-white ${touchTargetClasses}`}
+      <div className={`w-60 border-l border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hidden md:block ${isViewingDM ? 'hidden' : ''}`}>
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <h3 className="font-semibold text-gray-900 dark:text-white">Members</h3>
+          <button
+            className={`text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white ${touchTargetClasses}`}
             onClick={() => setShowChannelSettings(!showChannelSettings)}
           >
             <Settings size={16} />
           </button>
         </div>
-        
+
         {/* Channel Settings Panel */}
         {showChannelSettings && (
-          <div className="p-4 border-b border-gray-700 bg-gray-850">
-            <h4 className="font-semibold text-white mb-4">Channel Settings</h4>
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-850">
+            <h4 className="font-semibold text-gray-900 dark:text-white mb-4">Channel Settings</h4>
 
             <div className="mb-4">
-              <h5 className="text-xs text-gray-400 uppercase mb-2">Channel Info</h5>
+              <h5 className="text-xs text-gray-500 dark:text-gray-400 uppercase mb-2">Channel Info</h5>
               <div className="space-y-2">
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">Channel Name</label>
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Channel Name</label>
                   <input
                     type="text"
-                    className="w-full bg-gray-700 text-white text-sm rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 border border-gray-200 dark:border-gray-600"
                     defaultValue={selectedChannel ? (channels.find(c => c.id === selectedChannel)?.name || '') : ''}
                     placeholder="Channel name"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">Channel Topic</label>
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Channel Topic</label>
                   <textarea
-                    className="w-full bg-gray-700 text-white text-sm rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
+                    className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none border border-gray-200 dark:border-gray-600"
                     rows={2}
                     defaultValue={selectedChannel ? (channels.find(c => c.id === selectedChannel)?.topic || '') : ''}
                     placeholder="What's this channel about?"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">Channel Type</label>
-                  <select className="w-full bg-gray-700 text-white text-sm rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Channel Type</label>
+                  <select className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 border border-gray-200 dark:border-gray-600">
                     <option value="public">Public Channel</option>
                     <option value="private">Private Channel</option>
                     <option value="gated">Gated Channel</option>
@@ -1691,40 +1691,40 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
             </div>
 
             <div className="mb-4">
-              <h5 className="text-xs text-gray-400 uppercase mb-2">Notifications</h5>
+              <h5 className="text-xs text-gray-500 dark:text-gray-400 uppercase mb-2">Notifications</h5>
               <div className="space-y-2">
                 <label className="flex items-center">
                   <input
                     type="checkbox"
-                    className="rounded bg-gray-700 border-gray-600"
+                    className="rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
                     checked={notificationSettings.general}
                     onChange={(e) => setNotificationSettings(prev => ({ ...prev, general: e.target.checked }))}
                   />
-                  <span className="ml-2 text-sm text-gray-300">General messages</span>
+                  <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">General messages</span>
                 </label>
                 <label className="flex items-center">
                   <input
                     type="checkbox"
-                    className="rounded bg-gray-700 border-gray-600"
+                    className="rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
                     checked={notificationSettings.mentions}
                     onChange={(e) => setNotificationSettings(prev => ({ ...prev, mentions: e.target.checked }))}
                   />
-                  <span className="ml-2 text-sm text-gray-300">@mentions</span>
+                  <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">@mentions</span>
                 </label>
                 <label className="flex items-center">
                   <input
                     type="checkbox"
-                    className="rounded bg-gray-700 border-gray-600"
+                    className="rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
                     checked={notificationSettings.reactions}
                     onChange={(e) => setNotificationSettings(prev => ({ ...prev, reactions: e.target.checked }))}
                   />
-                  <span className="ml-2 text-sm text-gray-300">Reactions</span>
+                  <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Reactions</span>
                 </label>
               </div>
             </div>
 
             <div className="mb-4">
-              <h5 className="text-xs text-gray-400 uppercase mb-2">Invite Links</h5>
+              <h5 className="text-xs text-gray-500 dark:text-gray-400 uppercase mb-2">Invite Links</h5>
               {selectedChannel && channels.find(c => c.id === selectedChannel)?.isPrivate && (
                 <div className="space-y-2">
                   <button
@@ -1737,40 +1737,40 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                   >
                     Generate Invite Link
                   </button>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
                     Create a link to invite others to this private channel
                   </div>
                 </div>
               )}
               {selectedChannel && !channels.find(c => c.id === selectedChannel)?.isPrivate && (
-                <div className="text-xs text-gray-400">
+                <div className="text-xs text-gray-500 dark:text-gray-400">
                   Invite links are only available for private channels
                 </div>
               )}
             </div>
 
             <div className="mb-4">
-              <h5 className="text-xs text-gray-400 uppercase mb-2">Permissions</h5>
+              <h5 className="text-xs text-gray-500 dark:text-gray-400 uppercase mb-2">Permissions</h5>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-300">Send Messages</span>
-                  <select className="bg-gray-700 text-white text-sm rounded px-2 py-1">
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Send Messages</span>
+                  <select className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-2 py-1 border border-gray-200 dark:border-gray-600">
                     <option value="everyone">Everyone</option>
                     <option value="members">Members only</option>
                     <option value="moderators">Moderators+</option>
                   </select>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-300">Add Reactions</span>
-                  <select className="bg-gray-700 text-white text-sm rounded px-2 py-1">
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Add Reactions</span>
+                  <select className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-2 py-1 border border-gray-200 dark:border-gray-600">
                     <option value="everyone">Everyone</option>
                     <option value="members">Members only</option>
                     <option value="moderators">Moderators+</option>
                   </select>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-300">Manage Channel</span>
-                  <select className="bg-gray-700 text-white text-sm rounded px-2 py-1">
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Manage Channel</span>
+                  <select className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-2 py-1 border border-gray-200 dark:border-gray-600">
                     <option value="admins">Admins only</option>
                     <option value="moderators">Moderators+</option>
                   </select>
@@ -1779,15 +1779,15 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
             </div>
 
             <div className="mb-4">
-              <h5 className="text-xs text-gray-400 uppercase mb-2">Channel Actions</h5>
+              <h5 className="text-xs text-gray-500 dark:text-gray-400 uppercase mb-2">Channel Actions</h5>
               <div className="space-y-1">
-                <button className={`w-full bg-gray-700 hover:bg-gray-600 text-white text-sm py-2 rounded ${touchTargetClasses}`}>
+                <button className={`w-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-white text-sm py-2 rounded ${touchTargetClasses}`}>
                   Invite Members
                 </button>
-                <button className={`w-full bg-gray-700 hover:bg-gray-600 text-white text-sm py-2 rounded ${touchTargetClasses}`}>
+                <button className={`w-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-white text-sm py-2 rounded ${touchTargetClasses}`}>
                   Channel Permissions
                 </button>
-                <button className={`w-full bg-gray-700 hover:bg-gray-600 text-white text-sm py-2 rounded ${touchTargetClasses}`}>
+                <button className={`w-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-white text-sm py-2 rounded ${touchTargetClasses}`}>
                   Manage Members
                 </button>
                 <button className={`w-full bg-red-600 hover:bg-red-700 text-white text-sm py-2 rounded ${touchTargetClasses}`}>
@@ -1801,7 +1801,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                 Save Changes
               </button>
               <button
-                className={`flex-1 bg-gray-700 hover:bg-gray-600 text-white text-sm py-2 rounded ${touchTargetClasses}`}
+                className={`flex-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-white text-sm py-2 rounded ${touchTargetClasses}`}
                 onClick={() => setShowChannelSettings(false)}
               >
                 Cancel
@@ -1813,52 +1813,52 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
         <div className="p-4">
           <div className="space-y-3">
             {channelMembers.map(member => (
-              <div 
-                key={member.address} 
+              <div
+                key={member.address}
                 className="flex items-center group relative"
               >
                 <div className="relative">
                   <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
                     <User size={16} className="text-white" />
                   </div>
-                  <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-800 ${getStatusColor(member.status)}`}></div>
+                  <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-100 dark:border-gray-800 ${getStatusColor(member.status)}`}></div>
                 </div>
                 <div className="ml-2">
-                  <div className="text-sm font-medium text-white flex items-center">
+                  <div className="text-sm font-medium text-gray-900 dark:text-white flex items-center">
                     {member.name}
                     <span className={`ml-2 text-xs px-1.5 py-0.5 rounded ${getRoleColor(member.role)} text-white`}>
                       {getRoleLabel(member.role)}
                     </span>
                   </div>
-                  <div className="text-xs text-gray-400 capitalize">{member.status}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 capitalize">{member.status}</div>
                 </div>
-                
+
                 {/* Hover card with additional info */}
-                <div className="absolute left-full ml-2 top-0 hidden group-hover:block bg-gray-900 border border-gray-700 rounded-lg p-3 w-64 z-10">
+                <div className="absolute left-full ml-2 top-0 hidden group-hover:block bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3 w-64 z-10">
                   <div className="flex items-center mb-2">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center mr-2">
                       <User size={20} className="text-white" />
                     </div>
                     <div>
-                      <div className="font-medium text-white">{member.name}</div>
-                      <div className="text-xs text-gray-400">{member.ensName || member.address.slice(0, 6) + '...' + member.address.slice(-4)}</div>
+                      <div className="font-medium text-gray-900 dark:text-white">{member.name}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">{member.ensName || member.address.slice(0, 6) + '...' + member.address.slice(-4)}</div>
                     </div>
                   </div>
-                  
+
                   <div className="flex justify-between text-xs mb-1">
-                    <span className="text-gray-400">ETH:</span>
-                    <span className="text-white">{member.balance?.eth.toFixed(4) || '0.0000'}</span>
+                    <span className="text-gray-500 dark:text-gray-400">ETH:</span>
+                    <span className="text-gray-900 dark:text-white">{member.balance?.eth.toFixed(4) || '0.0000'}</span>
                   </div>
                   <div className="flex justify-between text-xs">
-                    <span className="text-gray-400">LDAO:</span>
-                    <span className="text-white">{member.balance?.ld?.toLocaleString() || '0'}</span>
+                    <span className="text-gray-500 dark:text-gray-400">LDAO:</span>
+                    <span className="text-gray-900 dark:text-white">{member.balance?.ld?.toLocaleString() || '0'}</span>
                   </div>
-                  
+
                   <div className="mt-2 flex space-x-2">
                     <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs py-1 rounded">
                       Tip
                     </button>
-                    <button className="flex-1 bg-gray-700 hover:bg-gray-600 text-white text-xs py-1 rounded">
+                    <button className="flex-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-white text-xs py-1 rounded">
                       Profile
                     </button>
                   </div>
@@ -1866,27 +1866,27 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
               </div>
             ))}
           </div>
-          
+
           {/* Pinned Messages Section */}
-          <div className="mt-6 pt-4 border-t border-gray-700">
-            <h4 className="text-sm font-semibold text-white mb-2">Pinned Messages</h4>
-            <div className="text-xs text-gray-400">
+          <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Pinned Messages</h4>
+            <div className="text-xs text-gray-500 dark:text-gray-400">
               No pinned messages yet
             </div>
           </div>
-          
+
           {/* Files Section */}
-          <div className="mt-4 pt-4 border-t border-gray-700">
-            <h4 className="text-sm font-semibold text-white mb-2">Files</h4>
-            <div className="text-xs text-gray-400">
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Files</h4>
+            <div className="text-xs text-gray-500 dark:text-gray-400">
               No files shared yet
             </div>
           </div>
-          
+
           {/* Polls Section */}
-          <div className="mt-4 pt-4 border-t border-gray-700">
-            <h4 className="text-sm font-semibold text-white mb-2">Active Polls</h4>
-            <div className="text-xs text-gray-400">
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Active Polls</h4>
+            <div className="text-xs text-gray-500 dark:text-gray-400">
               No active polls
             </div>
           </div>

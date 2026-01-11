@@ -237,7 +237,7 @@ export const EnhancedListingCreation: React.FC = () => {
         sellerWalletAddress: address,
         tokenAddress: '0x0000000000000000000000000000000000000000', // For native token
         price: formData.price,
-        inventory: formData.unlimitedQuantity ? 999999 : formData.inventory,
+        inventory: formData.unlimitedQuantity ? 999999 : (formData.inventory || 1),
         itemType: 'DIGITAL', // Default to digital for now
         listingType: formData.listingType,
         metadataURI: formData.title,

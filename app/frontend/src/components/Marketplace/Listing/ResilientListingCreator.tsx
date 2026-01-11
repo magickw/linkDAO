@@ -151,7 +151,8 @@ export const ResilientListingCreator: React.FC<ResilientListingCreatorProps> = (
         sellerWalletAddress: address,
         tokenAddress: '0x0000000000000000000000000000000000000000',
         price: formData.price,
-        quantity: formData.unlimitedQuantity ? 999999 : formData.quantity,
+        quantity: formData.unlimitedQuantity ? 999999 : (formData.quantity || 1),
+        inventory: formData.unlimitedQuantity ? 999999 : (formData.quantity || 1),
         itemType: 'PHYSICAL',
         listingType: 'FIXED_PRICE',
         metadataURI: JSON.stringify({

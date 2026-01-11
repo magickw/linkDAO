@@ -175,7 +175,7 @@ jest.mock('@/services/feedService', () => ({
           reactions: [],
           tips: [],
           comments: 5,
-          shares: 2,
+          reposts: 2,
           views: 100,
           engagementScore: 150,
           socialProof: {
@@ -199,7 +199,7 @@ jest.mock('@/services/feedService', () => ({
           reactions: [],
           tips: [],
           comments: 3,
-          shares: 1,
+          reposts: 1,
           views: 75,
           engagementScore: 100,
           socialProof: {
@@ -441,7 +441,7 @@ describe('Feed E2E Workflows', () => {
             reactions: [],
             tips: [],
             comments: 0,
-            shares: 0,
+            reposts: 0,
             views: 0,
             engagementScore: 0,
             socialProof: {
@@ -470,7 +470,7 @@ describe('Feed E2E Workflows', () => {
             reactions: [],
             tips: [],
             comments: 0,
-            shares: 0,
+            reposts: 0,
             views: 0,
             engagementScore: 0,
             socialProof: {

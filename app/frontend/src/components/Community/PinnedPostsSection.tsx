@@ -64,7 +64,7 @@ export default function PinnedPostsSection({
                         reactions: [],
                         tips: [],
                         comments: post.commentCount || 0,
-                        shares: 0,
+                        reposts: 0,
                         views: post.viewCount || 0,
                         engagementScore: 0,
 

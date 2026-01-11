@@ -26,7 +26,7 @@ interface EngagementSnapshot {
   reactions: number;
   tips: number;
   comments: number;
-  shares: number;
+  reposts: number;
   views: number;
   totalEngagement: number;
 }
@@ -94,7 +94,7 @@ export default function TrendingDetector({
           reactions: post.reactions.reduce((sum, r) => sum + r.totalAmount, 0),
           tips: post.tips.reduce((sum, t) => sum + t.amount, 0),
           comments: post.comments,
-          shares: post.shares,
+          reposts: post.reposts,
           views: post.views,
           totalEngagement: post.engagementScore
         };
@@ -290,7 +290,7 @@ export default function TrendingDetector({
     const hasReactions = post.reactions.length > 0;
     const hasTips = post.tips.length > 0;
     const hasComments = post.comments > 0;
-    const hasShares = post.shares > 0;
+    const hasShares = post.reposts > 0;
 
     const diversityScore = [hasReactions, hasTips, hasComments, hasShares].filter(Boolean).length / 4;
     score += diversityScore * 0.4;
@@ -372,7 +372,7 @@ export default function TrendingDetector({
       reasons.push('Generating significant discussion');
     }
 
-    if (post.shares > 10) {
+    if (post.reposts > 10) {
       reasons.push('Being widely shared');
     }
 

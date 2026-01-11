@@ -146,13 +146,13 @@ const SimpleMessagingInterface: React.FC<SimpleMessagingInterfaceProps> = ({
   };
 
   return (
-    <div className={`flex h-[600px] bg-gray-900 rounded-lg overflow-hidden ${className}`}>
+    <div className={`flex h-[600px] bg-white dark:bg-gray-900 rounded-lg overflow-hidden ${className}`}>
       {/* Conversations Sidebar */}
-      <div className="w-80 border-r border-gray-700 flex flex-col">
+      <div className="w-80 border-r border-gray-200 dark:border-gray-700 flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b border-gray-700">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-white flex items-center">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
               <MessageCircle size={20} className="mr-2" />
               Messages
             </h2>
@@ -179,22 +179,22 @@ const SimpleMessagingInterface: React.FC<SimpleMessagingInterfaceProps> = ({
           
           {/* Search */}
           <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400" />
             <input
               type="text"
               placeholder="Search conversations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+              className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500"
             />
           </div>
         </div>
 
         {/* New Conversation Modal */}
         {showNewConversation && (
-          <div className="p-4 border-b border-gray-700 bg-gray-800">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-white">New Conversation</h3>
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white">New Conversation</h3>
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -210,7 +210,7 @@ const SimpleMessagingInterface: React.FC<SimpleMessagingInterfaceProps> = ({
                 placeholder="Enter wallet address or ENS..."
                 value={newConversationAddress}
                 onChange={(e) => setNewConversationAddress(e.target.value)}
-                className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-sm"
+                className="flex-1 px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500 text-sm"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     startNewConversation();
@@ -232,7 +232,7 @@ const SimpleMessagingInterface: React.FC<SimpleMessagingInterfaceProps> = ({
         {/* Conversations List */}
         <div className="flex-1 overflow-y-auto">
           {conversations.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-gray-400">
+            <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
               <MessageCircle size={48} className="mb-2 opacity-50" />
               <p>No conversations yet</p>
               <p className="text-sm">Start a new conversation</p>
@@ -246,8 +246,8 @@ const SimpleMessagingInterface: React.FC<SimpleMessagingInterfaceProps> = ({
               .map(conversation => (
                 <motion.div
                   key={conversation.id}
-                  className={`p-4 border-b border-gray-700 cursor-pointer transition-colors ${
-                    selectedConversation === conversation.id ? 'bg-blue-600/20' : 'hover:bg-gray-800'
+                  className={`p-4 border-b border-gray-200 dark:border-gray-700 cursor-pointer transition-colors ${
+                    selectedConversation === conversation.id ? 'bg-blue-100 dark:bg-blue-600/20' : 'hover:bg-gray-100 dark:hover:bg-gray-800'
                   }`}
                   onClick={() => setSelectedConversation(conversation.id)}
                   whileHover={{ backgroundColor: 'rgba(75, 85, 99, 0.5)' }}
@@ -261,16 +261,16 @@ const SimpleMessagingInterface: React.FC<SimpleMessagingInterfaceProps> = ({
                     {/* Conversation Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <p className="font-medium text-white text-sm">
+                        <p className="font-medium text-gray-900 dark:text-white text-sm">
                           {formatAddress(conversation.otherParticipant)}
                         </p>
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
                           {conversation.lastMessage && formatTime(conversation.lastMessage.timestamp)}
                         </span>
                       </div>
-                      
+
                       <div className="flex items-center justify-between mt-1">
-                        <p className="text-sm text-gray-400 truncate">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
                           {conversation.lastMessage?.content || 'No messages yet'}
                         </p>
                         {conversation.unreadCount > 0 && (
@@ -292,22 +292,22 @@ const SimpleMessagingInterface: React.FC<SimpleMessagingInterfaceProps> = ({
         {selectedConversation ? (
           <>
             {/* Chat Header */}
-            <div className="p-4 border-b border-gray-700 bg-gray-800">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
                     <User size={16} className="text-white" />
                   </div>
                   <div>
-                    <h3 className="font-medium text-white">
+                    <h3 className="font-medium text-gray-900 dark:text-white">
                       {formatAddress(conversations.find(c => c.id === selectedConversation)?.otherParticipant || '')}
                     </h3>
-                    <p className="text-xs text-gray-400">Wallet-to-wallet messaging</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Wallet-to-wallet messaging</p>
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-2">
-                  <div className="flex items-center space-x-1 text-xs text-gray-400">
+                  <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
                     <Shield size={12} />
                     <span>Encrypted</span>
                   </div>
@@ -316,7 +316,7 @@ const SimpleMessagingInterface: React.FC<SimpleMessagingInterfaceProps> = ({
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-900">
               {messages.map((message) => (
                 <motion.div
                   key={message.id}
@@ -338,7 +338,7 @@ const SimpleMessagingInterface: React.FC<SimpleMessagingInterfaceProps> = ({
                         className={`px-4 py-2 rounded-2xl ${
                           message.isOwn
                             ? 'bg-blue-600 text-white'
-                            : 'bg-gray-700 text-white'
+                            : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'
                         }`}
                       >
                         <p className="text-sm">{message.content}</p>
@@ -346,7 +346,7 @@ const SimpleMessagingInterface: React.FC<SimpleMessagingInterfaceProps> = ({
 
                       {/* Message Time */}
                       <div className={`flex items-center space-x-1 mt-1 ${message.isOwn ? 'justify-end' : 'justify-start'}`}>
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
                           {formatTime(message.timestamp)}
                         </span>
                       </div>
@@ -357,7 +357,7 @@ const SimpleMessagingInterface: React.FC<SimpleMessagingInterfaceProps> = ({
             </div>
 
             {/* Message Input */}
-            <div className="p-4 border-t border-gray-700 bg-gray-800">
+            <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
               <div className="flex items-center space-x-3">
                 <div className="flex-1 relative">
                   <input
@@ -370,7 +370,7 @@ const SimpleMessagingInterface: React.FC<SimpleMessagingInterfaceProps> = ({
                       }
                     }}
                     placeholder="Type a message..."
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                    className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
@@ -388,13 +388,13 @@ const SimpleMessagingInterface: React.FC<SimpleMessagingInterfaceProps> = ({
           </>
         ) : (
           /* No Conversation Selected */
-          <div className="flex-1 flex items-center justify-center">
+          <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
             <div className="text-center">
-              <MessageCircle size={64} className="mx-auto mb-4 text-gray-600" />
-              <h3 className="text-lg font-medium text-white mb-2">
+              <MessageCircle size={64} className="mx-auto mb-4 text-gray-400 dark:text-gray-600" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
                 Select a conversation
               </h3>
-              <p className="text-gray-400 mb-6">
+              <p className="text-gray-500 dark:text-gray-400 mb-6">
                 Choose a conversation from the sidebar or start a new one
               </p>
               <Button 

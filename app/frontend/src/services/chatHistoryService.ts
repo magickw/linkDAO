@@ -1,3 +1,23 @@
+/**
+ * @deprecated This service is deprecated. Please use unifiedMessagingService instead.
+ *
+ * Migration:
+ * ```typescript
+ * // Old
+ * import { chatHistoryService } from '@/services/chatHistoryService';
+ * const messages = await chatHistoryService.getChatHistory({ conversationId });
+ *
+ * // New
+ * import { unifiedMessagingService } from '@/services/unifiedMessagingService';
+ * const { messages } = await unifiedMessagingService.getMessages(conversationId);
+ * ```
+ */
+
+console.warn(
+  '[DEPRECATED] chatHistoryService.ts is deprecated. ' +
+  'Please migrate to unifiedMessagingService.ts for consistent messaging functionality.'
+);
+
 import { Message as ChatMessage, Conversation, ChatHistoryRequest, ChatHistoryResponse } from '@/types/messaging';
 import { OfflineManager } from './OfflineManager';
 

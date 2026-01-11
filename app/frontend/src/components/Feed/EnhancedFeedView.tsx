@@ -61,7 +61,7 @@ interface EnhancedPost {
   reactions: any[];
   tips: any[];
   comments: number;
-  shares: number;
+  reposts: number;
   views: number;
   engagementScore: number;
 
@@ -268,7 +268,7 @@ const EnhancedFeedView = React.memo(({
       reactions: feedPost.reactions || [],
       tips: feedPost.tips || [],
       comments: feedPost.comments || 0,
-      shares: feedPost.shares || 0,
+      reposts: feedPost.reposts || 0,
       views: feedPost.views || 0,
       engagementScore: feedPost.engagementScore || 0,
       reputationScore: feedPost.reputationScore || 0,

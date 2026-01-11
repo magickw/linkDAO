@@ -41,7 +41,7 @@ interface ActivityData {
   date: string;
   messages: number;
   reactions: number;
-  shares: number;
+  reposts: number;
   newMembers: number;
   activeMembers: number;
 }
@@ -85,7 +85,7 @@ interface ContentMetric {
   engagement: number;
   reach: number;
   reactions: number;
-  shares: number;
+  reposts: number;
   timestamp: Date;
 }
 

@@ -511,7 +511,7 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
                   reactions: post.reactions || [],
                   tips: post.tips || [],
                   comments: typeof post.commentCount === 'number' ? post.commentCount : (post.comments?.length || 0),
-                  shares: post.shares || 0,
+                  reposts: post.reposts || 0,
                   views: post.views || 0,
                   engagementScore: post.engagementScore || 0,
                   createdAt: new Date(post.createdAt),

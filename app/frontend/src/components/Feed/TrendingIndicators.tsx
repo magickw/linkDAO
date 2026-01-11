@@ -60,7 +60,7 @@ export const TrendingIndicators: React.FC<TrendingIndicatorsProps> = ({
 
     // Engagement velocity (engagement per hour)
     const totalEngagement = post.reactions.reduce((sum, r) => sum + r.users.length, 0) + 
-                           post.comments + post.shares;
+                           post.comments + post.reposts;
     const engagementVelocity = hoursSincePost > 0 ? totalEngagement / hoursSincePost : totalEngagement;
 
     // Token activity score

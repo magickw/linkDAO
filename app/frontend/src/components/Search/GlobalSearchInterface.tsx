@@ -43,7 +43,7 @@ export interface SearchResult {
     engagement?: {
       likes: number;
       comments: number;
-      shares: number;
+      reposts: number;
     };
   };
 }

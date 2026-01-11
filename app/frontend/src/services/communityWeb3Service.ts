@@ -236,43 +236,7 @@ export class CommunityWeb3Service {
   }): Promise<string> {
     try {
       // Try to get signer with better error handling
-      let signer;
-      try {
-        signer = await getSigner();
-      } catch (signerError: any) {
-        console.error('Error getting signer:', signerError);
-        // If getSigner fails, try alternative approach using wagmi directly
-        try {
-          const { getWalletClient } = await import('@wagmi/core');
-          const { config } = await import('@/lib/wagmi');
-          const walletClient = await getWalletClient(config);
-
-          const transport = walletClient?.transport as any;
-          if (walletClient && transport?.provider) {
-            const { ethers } = await import('ethers');
-            // Wrap provider to avoid read-only property errors
-            const wrappedProvider = wrapProvider(transport.provider);
-            const provider = new ethers.BrowserProvider(wrappedProvider);
-            signer = await provider.getSigner();
-          }
-        } catch (fallbackError) {
-          console.error('Fallback signer retrieval also failed:', fallbackError);
-          // Try direct window.ethereum as last resort
-          if (typeof window !== 'undefined' && (window as any).ethereum) {
-            try {
-              const { ethers } = await import('ethers');
-              const wrappedProvider = wrapProvider((window as any).ethereum);
-              const provider = new ethers.BrowserProvider(wrappedProvider);
-              signer = await provider.getSigner();
-            } catch (lastResortError) {
-              console.error('Last resort signer creation failed:', lastResortError);
-              throw new Error('No signer available. Please ensure your wallet is connected.');
-            }
-          } else {
-            throw new Error('No signer available. Please ensure your wallet is connected.');
-          }
-        }
-      }
+      const signer = await getSigner();
 
       if (!signer) throw new Error('No signer available. Please ensure your wallet is connected.');
 

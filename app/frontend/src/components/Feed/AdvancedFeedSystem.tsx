@@ -364,7 +364,7 @@ export const AdvancedFeedSystem: React.FC<AdvancedFeedSystemProps> = ({
                 </button>
                 <button className="flex items-center space-x-1 text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200">
                   <span>🔄</span>
-                  <span className="text-sm">{post.shares}</span>
+                  <span className="text-sm">{post.reposts}</span>
                 </button>
               </div>
 

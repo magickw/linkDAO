@@ -96,7 +96,7 @@ export interface EngagementMetrics {
   views: number;
   likes: number;
   comments: number;
-  shares: number;
+  reposts: number;
   tips: number;
   reactions: ReactionCount[];
   engagementRate: number;

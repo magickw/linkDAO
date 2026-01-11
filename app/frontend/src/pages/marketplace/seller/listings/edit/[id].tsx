@@ -894,8 +894,7 @@ const EditListingPage: React.FC = () => {
         price: parseFloat(formData.price),
         category: formData.category,
         currency: formData.currency,
-        quantity: formData.unlimitedQuantity ? 999999 : formData.quantity,
-        inventory: formData.unlimitedQuantity ? 999999 : formData.inventory,
+        inventory: formData.unlimitedQuantity ? 999999 : (formData.inventory || 1),
         tags: formData.tags,
         images: uploadedImageUrls, // Include all image URLs
         condition: formData.condition as 'new' | 'used' | 'refurbished',

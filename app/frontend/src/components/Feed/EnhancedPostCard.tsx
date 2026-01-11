@@ -659,7 +659,7 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
         </button>
 
         <button onClick={() => setShowShareModal(true)}>
-          {post.shares || 'Share'}
+          {post.reposts || 'Share'}
         </button>
 
         {/* Upvote/Downvote Buttons */}

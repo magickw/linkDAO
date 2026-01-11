@@ -68,7 +68,7 @@ jest.mock('./InfiniteScrollFeed', () => {
           reactions: [],
           tips: [],
           comments: 0,
-          shares: 0,
+          reposts: 0,
           views: 0,
           engagementScore: 0,
           socialProof: { followedUsersWhoEngaged: [], totalEngagementFromFollowed: 0, communityLeadersWhoEngaged: [], verifiedUsersWhoEngaged: [] }
@@ -92,7 +92,7 @@ jest.mock('./InfiniteScrollFeed', () => {
           reactions: [],
           tips: [],
           comments: 0,
-          shares: 0,
+          reposts: 0,
           views: 0,
           engagementScore: 0,
           socialProof: { followedUsersWhoEngaged: [], totalEngagementFromFollowed: 0, communityLeadersWhoEngaged: [], verifiedUsersWhoEngaged: [] }
@@ -157,7 +157,7 @@ jest.mock('../../services/feedService', () => ({
         reactions: [],
         tips: [],
         comments: 0,
-        shares: 0,
+        reposts: 0,
         views: 0,
         engagementScore: 0,
         socialProof: { followedUsersWhoEngaged: [], totalEngagementFromFollowed: 0, communityLeadersWhoEngaged: [], verifiedUsersWhoEngaged: [] }

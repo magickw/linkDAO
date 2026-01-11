@@ -59,7 +59,7 @@ interface PostStats {
   views: number;
   likes: number;
   comments: number;
-  shares: number;
+  reposts: number;
   saves: number;
   tips: {
     amount: number;
@@ -438,7 +438,7 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
                   className="flex items-center space-x-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                 >
                   <Share2 className="w-5 h-5" />
-                  <span className="text-sm">{post.stats.shares}</span>
+                  <span className="text-sm">{post.stats.reposts}</span>
                 </button>
 
                 {/* Tip */}

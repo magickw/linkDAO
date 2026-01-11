@@ -112,7 +112,7 @@ function calculateTrendingScore(post: EnhancedPost, config: TrendingAlgorithmCon
     post.reactions.reduce((sum, r) => sum + r.totalAmount, 0) * 2 +
     post.tips.reduce((sum, t) => sum + t.amount, 0) * 3 +
     post.comments * 1.5 +
-    post.shares * 2
+    post.reposts * 2
   );
 
   // Recency score (newer posts get higher scores)

@@ -106,7 +106,7 @@ const PostItem: React.FC<{
           reactions: mappedReactions,
           tips: mappedTips,
           comments: post.comments || 0,
-          shares: post.shares || 0,
+          reposts: post.reposts || 0,
           views: post.views || 0,
           engagementScore: post.engagementScore || 0,
           // Required fields from SharedEnhancedPost

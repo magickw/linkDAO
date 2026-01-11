@@ -15,7 +15,7 @@ interface UserEngagementData {
     reactions: Record<string, number>; // postId -> count
     tips: Record<string, number>; // postId -> amount
     comments: Record<string, number>; // postId -> count
-    shares: Record<string, number>; // postId -> count
+    reposts: Record<string, number>; // postId -> count
     views: Record<string, number>; // postId -> duration
   };
   preferences: {
@@ -237,7 +237,7 @@ export default function PersonalizedFeedEngine({
   // Calculate quality score based on engagement metrics
   const calculateQualityScore = useCallback((post: EnhancedPost): number => {
     const engagementRate = post.views > 0 ? 
-      (post.reactions.reduce((sum, r) => sum + r.totalAmount, 0) + post.comments + post.shares) / post.views : 0;
+      (post.reactions.reduce((sum, r) => sum + r.totalAmount, 0) + post.comments + post.reposts) / post.views : 0;
     
     const tipValue = post.tips.reduce((sum, tip) => sum + tip.amount, 0);
     const hasMedia = post.mediaCids && post.mediaCids.length > 0;
@@ -331,7 +331,7 @@ export default function PersonalizedFeedEngine({
     if (behaviorScore.quality > 0.7 && isHighQuality) alignment += 0.25;
 
     // Social alignment - posts with high interaction for social users
-    const hasHighInteraction = post.comments > 10 || post.shares > 5;
+    const hasHighInteraction = post.comments > 10 || post.reposts > 5;
     if (behaviorScore.social > 0.7 && hasHighInteraction) alignment += 0.25;
 
     // Loyalty alignment - posts from followed creators for loyal users
@@ -421,7 +421,7 @@ function generateMockEngagementData(userAddress: string): UserEngagementData {
       reactions: {},
       tips: {},
       comments: {},
-      shares: {},
+      reposts: {},
       views: {}
     },
     preferences: {

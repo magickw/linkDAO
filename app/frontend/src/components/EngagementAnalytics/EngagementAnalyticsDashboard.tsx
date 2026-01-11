@@ -280,8 +280,8 @@ function OverviewTab({ analytics }: OverviewTabProps) {
             icon="💬"
           />
           <EngagementBar
-            label="Shares"
-            value={analytics.shares}
+            label="Reposts"
+            value={analytics.reposts}
             total={analytics.totalEngagement}
             color="bg-green-500"
             icon="🔄"
@@ -424,7 +424,7 @@ function TrendsTab({ trends }: TrendsTabProps) {
                 💬 {trend.comments}
               </span>
               <span className="text-green-600 dark:text-green-400">
-                🔄 {trend.shares}
+                🔄 {trend.reposts}
               </span>
               <span className="text-yellow-600 dark:text-yellow-400">
                 💰 {trend.tips}
@@ -481,7 +481,7 @@ function PostsTab({ posts }: PostsTabProps) {
                   💬 {post.comments}
                 </span>
                 <span className="text-green-600 dark:text-green-400">
-                  🔄 {post.shares}
+                  🔄 {post.reposts}
                 </span>
                 <span className="text-yellow-600 dark:text-yellow-400">
                   💰 {post.tips}

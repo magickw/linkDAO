@@ -78,7 +78,7 @@ const areEqual = (prevProps: EnhancedPostCardProps, nextProps: EnhancedPostCardP
     prevProps.post.content === nextProps.post.content &&
     prevProps.post.reactions.length === nextProps.post.reactions.length &&
     prevProps.post.comments === nextProps.post.comments &&
-    prevProps.post.shares === nextProps.post.shares &&
+    prevProps.post.reposts === nextProps.post.reposts &&
     prevProps.post.views === nextProps.post.views &&
     prevProps.showPreviews === nextProps.showPreviews &&
     prevProps.showSocialProof === nextProps.showSocialProof &&
@@ -105,6 +105,11 @@ const EnhancedPostCard = React.memo(({
   const [expanded, setExpanded] = useState(false);
   const [showAllPreviews, setShowAllPreviews] = useState(false);
   const [isPinned, setIsPinned] = useState(post.pinnedUntil && new Date(post.pinnedUntil) > new Date());
+
+  // Vote state
+  const [upvoteCount, setUpvoteCount] = useState((post as any).upvotes || 0);
+  const [downvoteCount, setDownvoteCount] = useState((post as any).downvotes || 0);
+  const [userVote, setUserVote] = useState<'upvote' | 'downvote' | null>((post as any).userVote || null);
 
   // Extract video URLs from content for embedding
   const videoEmbeds = useMemo(() => {
@@ -192,8 +197,32 @@ const EnhancedPostCard = React.memo(({
     }
   }, [post.id, addToast]);
 
+  // Sync state with props if post changes
+  useEffect(() => {
+    setUpvoteCount((post as any).upvotes || 0);
+    setDownvoteCount((post as any).downvotes || 0);
+    // Only sync userVote if explicitly provided, to avoid overwriting local optimistic state with null
+    if ((post as any).userVote !== undefined) {
+      setUserVote((post as any).userVote);
+    }
+
+    // Sync repost state
+    setIsRepostedByMe(post.isRepostedByMe);
+    setRepostCount(post.reposts || 0);
+  }, [post]);
+
+  const handleReport = useCallback(() => {
+    // TODO: Implement report modal
+    addToast('Report functionality coming soon', 'info');
+  }, [addToast]);
+
+  const handleHide = useCallback(() => {
+    // TODO: Implement hide functionality
+    addToast('Post hidden from your feed', 'success');
+  }, [addToast]);
+
   const [isRepostedByMe, setIsRepostedByMe] = useState(post.isRepostedByMe);
-  const [repostCount, setRepostCount] = useState(post.shares || 0);
+  const [repostCount, setRepostCount] = useState(post.reposts || 0);
 
   const handleRepost = useCallback(async (postId: string, message?: string, media?: string[], replyRestriction?: string) => {
     try {
@@ -201,7 +230,7 @@ const EnhancedPostCard = React.memo(({
         addToast('Please connect your wallet to repost', 'error');
         return;
       }
-      await PostService.repostPost(postId, address, message, media, replyRestriction);
+      const result = await PostService.repostPost(postId, address, message, media, replyRestriction);
       // Only set isRepostedByMe for simple reposts (no message)
       // Quote reposts (with message) create a new status and shouldn't change the original post's repost button state
       if (!message) {
@@ -210,9 +239,11 @@ const EnhancedPostCard = React.memo(({
       setRepostCount(prev => prev + 1);
       addToast(message ? 'Quote post created successfully!' : 'Post reposted successfully!', 'success');
       // In a real app, you might want to refresh the feed
+      return result;
     } catch (error) {
       console.error('Error reposting:', error);
       addToast('Failed to repost', 'error');
+      throw error;
     }
   }, [address, addToast]);
 
@@ -251,30 +282,6 @@ const EnhancedPostCard = React.memo(({
       addToast('Failed to share post', 'error');
     }
   }, [post.id, post.title, post.content, addToast]);
-
-  const [upvoteCount, setUpvoteCount] = useState((post as any).upvotes || 0);
-  const [downvoteCount, setDownvoteCount] = useState((post as any).downvotes || 0);
-  const [userVote, setUserVote] = useState<'upvote' | 'downvote' | null>((post as any).userVote || (post as any).voteStatus || null);
-
-  // Sync state with props if post changes
-  useEffect(() => {
-    setUpvoteCount((post as any).upvotes || 0);
-    setDownvoteCount((post as any).downvotes || 0);
-    // Only sync userVote if explicitly provided, to avoid overwriting local optimistic state with null
-    if ((post as any).userVote !== undefined) {
-      setUserVote((post as any).userVote);
-    }
-  }, [post]);
-
-  const handleReport = useCallback(() => {
-    // TODO: Implement report modal
-    addToast('Report functionality coming soon', 'info');
-  }, [addToast]);
-
-  const handleHide = useCallback(() => {
-    // TODO: Implement hide functionality
-    addToast('Post hidden from your feed', 'success');
-  }, [addToast]);
 
   // Handle upvote
   const handleUpvote = useCallback(async () => {
@@ -351,9 +358,9 @@ const EnhancedPostCard = React.memo(({
       post.createdAt,
       (post.reactions || []).reduce((sum, r) => sum + r.totalAmount, 0),
       post.comments,
-      post.shares
+      post.reposts
     );
-  }, [post.trendingStatus, post.engagementScore, post.createdAt, post.reactions, post.comments, post.shares]);
+  }, [post.trendingStatus, post.engagementScore, post.createdAt, post.reactions, post.comments, post.reposts]);
 
   // Format timestamp - memoized
   const formatTimestamp = useCallback((dateInput: Date | string) => {

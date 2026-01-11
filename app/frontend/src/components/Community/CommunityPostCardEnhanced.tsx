@@ -973,7 +973,7 @@ function CommunityPostCardEnhanced({
                     communityId: community.id,
                     communityName: community.displayName || community.name,
                     commentCount: comments.length,
-                    shareCount: post.shares || 0,
+                    shareCount: post.reposts || 0,
                     viewCount: post.views || post.viewCount || 0,
                     upvotes: upvoteCount,
                     downvotes: downvoteCount
